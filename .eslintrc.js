@@ -23,7 +23,6 @@ module.exports = {
   },
   // see https://standardjs.com/
   // see https://github.com/standard/eslint-config-standard
-  // see https://github.com/felixge/node-style-guide
   "extends": [
     "eslint:recommended",
     "standard"
