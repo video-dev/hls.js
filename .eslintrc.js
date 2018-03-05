@@ -33,7 +33,10 @@ module.exports = {
   },
   "rules": {
     // our basic style rules
-    "semi": ["error", "always"],
+    "semi": [
+      "error",
+      "always"
+    ],
     "indent": [
       "error",
       2
@@ -46,28 +49,41 @@ module.exports = {
       "error",
       "unix"
     ],
+    // spacing
     "space-infix-ops": 2,
     "space-unary-ops": [2, {"words": true, "nonwords": false}],
     "space-in-parens": ["error", "never"],
     "keyword-spacing": [2, {"before": true, "after": true}],
+    // enforce litteral objects on multiple lines
+    "block-spacing": "error",
+    "curly": ["error", "multi-or-nest", "consistent"],
+    "object-curly-spacing": ["error", "always"],
+    "brace-style": ["error", "1tbs", { "allowSingleLine": true }],
 
-    "one-var": 0,
 
     // limit code block and line length
     /*
-    "max-len": 0,
-    "max-statements": 0,
-    "max-depth": 0,
-    "max-nested-callbacks": 0,
-    "max-params": 0,
-    "max-statements": 0,
-    "max-statements-per-line": 0
+    "max-len": 1,
+    "max-statements": 1,
+    "max-depth": 1,
+    "max-nested-callbacks": 1,
+    "max-params": 1,
+    "max-statements": 1,
+    "max-statements-per-line": 1
     */
 
     // loosening of code-quality rules we may want to fix later
     // (warnings for now)
+
+    // forbid "one var" style, enforce one declaration per variable
+    "one-var": [
+      1,
+      "never"
+    ],
+
     "standard/no-callback-literal": 1,
     "import/first": 1,
+    "no-var": 1,
     "no-empty": 1,
     "no-mixed-operators": 1,
     "no-unused-vars": 1,
