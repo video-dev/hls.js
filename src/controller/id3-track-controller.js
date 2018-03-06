@@ -29,13 +29,13 @@ class ID3TrackController extends EventHandler {
     }
   }
 
-  onMediaDetaching() {
+  onMediaDetaching () {
     clearCurrentCues(this.id3Track);
     this.id3Track = undefined;
     this.media = undefined;
   }
 
-  reuseId3Track(textTracks) {
+  reuseId3Track (textTracks) {
     for (let i = 0; i < textTracks.length; i++) {
       let textTrack = textTracks[i];
       if (textTrack.kind === 'metadata' && textTrack.label === 'id3') {
@@ -49,7 +49,7 @@ class ID3TrackController extends EventHandler {
     return this.media.addTextTrack('metadata', 'id3');
   }
 
-  onFragParsingMetadata(data) {
+  onFragParsingMetadata (data) {
     const fragment = data.frag;
     const samples = data.samples;
 
