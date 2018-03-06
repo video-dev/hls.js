@@ -4,7 +4,6 @@ import SubtitleTrackController from '../../../src/controller/subtitle-track-cont
 import Hls from '../../../src/hls';
 
 describe('SubtitleTrackController', () => {
-
   let subtitleTrackController;
   let videoElement;
 

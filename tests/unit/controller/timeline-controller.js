@@ -4,7 +4,6 @@ import TimelineController from '../../../src/controller/timeline-controller';
 import Hls from '../../../src/hls';
 
 describe('TimelineController', () => {
-
   let timelineController;
   let hls;
 
@@ -13,7 +12,6 @@ describe('TimelineController', () => {
     hls.config.enableWebVTT = true;
     timelineController = new TimelineController(hls);
     timelineController.media = document.createElement('video');
-
   });
 
   it('should set default track to showing when displaySubtitles is true', () => {
