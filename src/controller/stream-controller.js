@@ -1370,7 +1370,7 @@ class StreamController extends TaskLoop {
         if (currentTime !== startPosition) {
           // if startPosition not buffered, let's seek to buffered.start(0)
 
-            logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time${currentTime} `);
+          logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time${currentTime} `);
           media.currentTime = startPosition;
         }
       } else if (this.immediateSwitch) {
