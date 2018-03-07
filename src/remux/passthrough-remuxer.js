@@ -4,28 +4,28 @@
 import Event from '../events';
 
 class PassThroughRemuxer {
-  constructor(observer) {
+  constructor (observer) {
     this.observer = observer;
   }
 
-  destroy() {
+  destroy () {
   }
 
-  resetTimeStamp() {
+  resetTimeStamp () {
   }
 
-  resetInitSegment() {
+  resetInitSegment () {
   }
 
-  remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,rawData) {
-    var observer = this.observer;
-    var streamType = '';
-    if (audioTrack) {
+  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, rawData) {
+    let observer = this.observer;
+    let streamType = '';
+    if (audioTrack)
       streamType += 'audio';
-    }
-    if (videoTrack) {
+
+    if (videoTrack)
       streamType += 'video';
-    }
+
     observer.trigger(Event.FRAG_PARSING_DATA, {
       data1: rawData,
       startPTS: timeOffset,
@@ -34,9 +34,9 @@ class PassThroughRemuxer {
       hasAudio: !!audioTrack,
       hasVideo: !!videoTrack,
       nb: 1,
-      dropped : 0
+      dropped: 0
     });
-    //notify end of parsing
+    // notify end of parsing
     observer.trigger(Event.FRAG_PARSED);
   }
 }

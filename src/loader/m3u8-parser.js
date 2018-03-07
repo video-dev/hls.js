@@ -5,8 +5,8 @@ import Fragment from './fragment';
 import LevelKey from './level-key';
 
 import AttrList from '../utils/attr-list';
-import {logger} from '../utils/logger';
-import {isCodecType} from '../utils/codecs';
+import { logger } from '../utils/logger';
+import { isCodecType } from '../utils/codecs';
 
 /**
  * M3U8 parser
@@ -19,35 +19,32 @@ const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
-  /|(?!#)(\S+)/.source,                          // segment URI, group 3 => the URI (note newline is not eaten)
-  /|#EXT-X-BYTERANGE:*(.+)/.source,              // next segment's byterange, group 4 => range spec (x@y)
-  /|#EXT-X-PROGRAM-DATE-TIME:(.+)/.source,       // next segment's program date/time group 5 => the datetime spec
-  /|#.*/.source                                  // All other non-segment oriented tags will match with all groups empty
+  /|(?!#)(\S+)/.source, // segment URI, group 3 => the URI (note newline is not eaten)
+  /|#EXT-X-BYTERANGE:*(.+)/.source, // next segment's byterange, group 4 => range spec (x@y)
+  /|#EXT-X-PROGRAM-DATE-TIME:(.+)/.source, // next segment's program date/time group 5 => the datetime spec
+  /|#.*/.source // All other non-segment oriented tags will match with all groups empty
 ].join(''), 'g');
 
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 export default class M3U8Parser {
-
-  static findGroup(groups, mediaGroupId) {
-    if (!groups) {
+  static findGroup (groups, mediaGroupId) {
+    if (!groups)
       return null;
-    }
 
     let matchingGroup = null;
 
-    for (let i = 0; i < groups.length; i ++) {
+    for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
-      if (group.id === mediaGroupId) {
+      if (group.id === mediaGroupId)
         matchingGroup = group;
-      }
     }
 
     return matchingGroup;
   }
 
-  static convertAVC1ToAVCOTI(codec) {
-    var result, avcdata = codec.split('.');
+  static convertAVC1ToAVCOTI (codec) {
+    let result, avcdata = codec.split('.');
     if (avcdata.length > 2) {
       result = avcdata.shift() + '.';
       result += parseInt(avcdata.shift()).toString(16);
@@ -58,15 +55,15 @@ export default class M3U8Parser {
     return result;
   }
 
-  static resolve(url, baseUrl) {
+  static resolve (url, baseUrl) {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
-  static parseMasterPlaylist(string, baseurl) {
+  static parseMasterPlaylist (string, baseurl) {
     let levels = [], result;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
-    function setCodecs(codecs, level) {
+    function setCodecs (codecs, level) {
       ['video', 'audio'].forEach((type) => {
         const filtered = codecs.filter((codec) => isCodecType(codec, type));
         if (filtered.length) {
@@ -83,14 +80,14 @@ export default class M3U8Parser {
       level.unknownCodecs = codecs;
     }
 
-    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null){
+    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
 
-      var attrs = level.attrs = new AttrList(result[1]);
+      let attrs = level.attrs = new AttrList(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
-      var resolution = attrs.decimalResolution('RESOLUTION');
-      if(resolution) {
+      let resolution = attrs.decimalResolution('RESOLUTION');
+      if (resolution) {
         level.width = resolution.width;
         level.height = resolution.height;
       }
@@ -99,16 +96,15 @@ export default class M3U8Parser {
 
       setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
 
-      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1)
         level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
-      }
 
       levels.push(level);
     }
     return levels;
   }
 
-  static parseMasterPlaylistMedia(string, baseurl, type, audioGroups=[]) {
+  static parseMasterPlaylistMedia (string, baseurl, type, audioGroups = []) {
     let result;
     let medias = [];
     let id = 0;
@@ -123,13 +119,13 @@ export default class M3U8Parser {
         media.default = (attrs.DEFAULT === 'YES');
         media.autoselect = (attrs.AUTOSELECT === 'YES');
         media.forced = (attrs.FORCED === 'YES');
-        if (attrs.URI) {
+        if (attrs.URI)
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
-        }
+
         media.lang = attrs.LANGUAGE;
-        if (!media.name) {
-            media.name = media.lang;
-        }
+        if (!media.name)
+          media.name = media.lang;
+
         if (audioGroups.length) {
           const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
           media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
@@ -141,16 +137,16 @@ export default class M3U8Parser {
     return medias;
   }
 
-  static parseLevelPlaylist(string, baseurl, id, type) {
-    var currentSN = 0,
-        totalduration = 0,
-        level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
-        levelkey = new LevelKey(),
-        cc = 0,
-        prevFrag = null,
-        frag = new Fragment(),
-        result,
-        i;
+  static parseLevelPlaylist (string, baseurl, id, type) {
+    let currentSN = 0,
+      totalduration = 0,
+      level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
+      levelkey = new LevelKey(),
+      cc = 0,
+      prevFrag = null,
+      frag = new Fragment(),
+      result,
+      i;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
@@ -160,8 +156,8 @@ export default class M3U8Parser {
         frag.duration = parseFloat(duration);
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const title = (' ' + result[2]).slice(1);
-        frag.title = title ? title : null;
-        frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
+        frag.title = title || null;
+        frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
       } else if (result[3]) { // url
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
@@ -175,19 +171,19 @@ export default class M3U8Parser {
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
 
-		  if(level.programDateTime){
-			  if(prevFrag){
-				  if(frag.rawProgramDateTime){//PDT discontinuity found
-					  frag.pdt = Date.parse(frag.rawProgramDateTime);
-				  } else {//Contiguous fragment
-					  frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
-				  }
-			  } else {//First fragment
-				  frag.pdt = Date.parse(level.programDateTime);
-			  }
-			  frag.endPdt = frag.pdt + (frag.duration * 1000);
-		  }		  
-		  
+          if (level.programDateTime) {
+            if (prevFrag) {
+              if (frag.rawProgramDateTime) { // PDT discontinuity found
+                frag.pdt = Date.parse(frag.rawProgramDateTime);
+              } else { // Contiguous fragment
+                frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
+              }
+            } else { // First fragment
+              frag.pdt = Date.parse(level.programDateTime);
+            }
+            frag.endPdt = frag.pdt + (frag.duration * 1000);
+          }
+
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
@@ -198,109 +194,105 @@ export default class M3U8Parser {
         frag.rawByteRange = (' ' + result[4]).slice(1);
         if (prevFrag) {
           const lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
-          if (lastByteRangeEndOffset) {
+          if (lastByteRangeEndOffset)
             frag.lastByteRangeEndOffset = lastByteRangeEndOffset;
-          }
         }
       } else if (result[5]) { // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (level.programDateTime === undefined) {
+        if (level.programDateTime === undefined)
           level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
-        }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
-          if (result[i] !== undefined) {
+          if (result[i] !== undefined)
             break;
-          }
         }
 
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-        const value1 = (' ' + result[i+1]).slice(1);
-        const value2 = (' ' + result[i+2]).slice(1);
+        const value1 = (' ' + result[i + 1]).slice(1);
+        const value2 = (' ' + result[i + 2]).slice(1);
 
         switch (result[i]) {
-          case '#':
-            frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
-            break;
-          case 'PLAYLIST-TYPE':
-            level.type = value1.toUpperCase();
-            break;
-          case 'MEDIA-SEQUENCE':
-            currentSN = level.startSN = parseInt(value1);
-            break;
-          case 'TARGETDURATION':
-            level.targetduration = parseFloat(value1);
-            break;
-          case 'VERSION':
-            level.version = parseInt(value1);
-            break;
-          case 'EXTM3U':
-            break;
-          case 'ENDLIST':
-            level.live = false;
-            break;
-          case 'DIS':
-            cc++;
-            frag.tagList.push(['DIS']);
-            break;
-          case 'DISCONTINUITY-SEQ':
-            cc = parseInt(value1);
-            break;
-          case 'KEY':
-            // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-            var decryptparams = value1;
-            var keyAttrs = new AttrList(decryptparams);
-            var decryptmethod = keyAttrs.enumeratedString('METHOD'),
-                decrypturi = keyAttrs.URI,
-                decryptiv = keyAttrs.hexadecimalInteger('IV');
-            if (decryptmethod) {
-              levelkey = new LevelKey();
-              if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
+        case '#':
+          frag.tagList.push(value2 ? [ value1, value2 ] : [ value1 ]);
+          break;
+        case 'PLAYLIST-TYPE':
+          level.type = value1.toUpperCase();
+          break;
+        case 'MEDIA-SEQUENCE':
+          currentSN = level.startSN = parseInt(value1);
+          break;
+        case 'TARGETDURATION':
+          level.targetduration = parseFloat(value1);
+          break;
+        case 'VERSION':
+          level.version = parseInt(value1);
+          break;
+        case 'EXTM3U':
+          break;
+        case 'ENDLIST':
+          level.live = false;
+          break;
+        case 'DIS':
+          cc++;
+          frag.tagList.push(['DIS']);
+          break;
+        case 'DISCONTINUITY-SEQ':
+          cc = parseInt(value1);
+          break;
+        case 'KEY':
+          // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+          var decryptparams = value1;
+          var keyAttrs = new AttrList(decryptparams);
+          var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+            decrypturi = keyAttrs.URI,
+            decryptiv = keyAttrs.hexadecimalInteger('IV');
+          if (decryptmethod) {
+            levelkey = new LevelKey();
+            if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
+              levelkey.method = decryptmethod;
+              // URI to get the key
+              levelkey.baseuri = baseurl;
+              levelkey.reluri = decrypturi;
+              levelkey.key = null;
+              // Initialization Vector (IV)
+              levelkey.iv = decryptiv;
+            }
+          }
+          break;
+        case 'START':
+          let startParams = value1;
+          let startAttrs = new AttrList(startParams);
+          let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+          // TIME-OFFSET can be 0
+          if (!isNaN(startTimeOffset))
+            level.startTimeOffset = startTimeOffset;
 
-                levelkey.method = decryptmethod;
-                // URI to get the key
-                levelkey.baseuri = baseurl;
-                levelkey.reluri = decrypturi;
-                levelkey.key = null;
-                // Initialization Vector (IV)
-                levelkey.iv = decryptiv;
-              }
-            }
-            break;
-          case 'START':
-            let startParams = value1;
-            let startAttrs = new AttrList(startParams);
-            let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-            //TIME-OFFSET can be 0
-            if ( !isNaN(startTimeOffset) ) {
-              level.startTimeOffset = startTimeOffset;
-            }
-            break;
-          case 'MAP':
-            let mapAttrs = new AttrList(value1);
-            frag.relurl = mapAttrs.URI;
-            frag.rawByteRange = mapAttrs.BYTERANGE;
-            frag.baseurl = baseurl;
-            frag.level = id;
-            frag.type = type;
-            frag.sn = 'initSegment';
-            level.initSegment = frag;
-            frag = new Fragment();
-            break;
-          default:
-            logger.warn(`line parsed but not handled: ${result}`);
-            break;
+          break;
+        case 'MAP':
+          let mapAttrs = new AttrList(value1);
+          frag.relurl = mapAttrs.URI;
+          frag.rawByteRange = mapAttrs.BYTERANGE;
+          frag.baseurl = baseurl;
+          frag.level = id;
+          frag.type = type;
+          frag.sn = 'initSegment';
+          level.initSegment = frag;
+          frag = new Fragment();
+          break;
+        default:
+          logger.warn(`line parsed but not handled: ${result}`);
+          break;
         }
       }
     }
     frag = prevFrag;
-    //logger.log('found ' + level.fragments.length + ' fragments');
-    if(frag && !frag.relurl) {
+    // logger.log('found ' + level.fragments.length + ' fragments');
+    if (frag && !frag.relurl) {
       level.fragments.pop();
-      totalduration-=frag.duration;
+      totalduration -= frag.duration;
     }
     level.totalduration = totalduration;
     level.averagetargetduration = totalduration / level.fragments.length;
@@ -314,7 +306,7 @@ export default class M3U8Parser {
       // but this is to be able to handle SIDX.
       // FIXME: replace string test by a regex that matches
       //        also `m4s` `m4a` `m4v` and other popular extensions
-      if(level.fragments.every((frag) => frag.relurl.endsWith('.mp4'))) {
+      if (level.fragments.every((frag) => frag.relurl.endsWith('.mp4'))) {
         logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
         frag = new Fragment();

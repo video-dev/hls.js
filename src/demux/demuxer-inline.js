@@ -13,37 +13,35 @@ import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
 class DemuxerInline {
-
-  constructor(observer, typeSupported, config, vendor) {
+  constructor (observer, typeSupported, config, vendor) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
     this.vendor = vendor;
   }
 
-  destroy() {
-    var demuxer = this.demuxer;
-    if (demuxer) {
+  destroy () {
+    let demuxer = this.demuxer;
+    if (demuxer)
       demuxer.destroy();
-    }
   }
 
-  push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
+  push (data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       let decrypter = this.decrypter;
-      if (decrypter == null) {
+      if (decrypter == null)
         decrypter = this.decrypter = new Decrypter(this.observer, this.config);
-      }
-      var localthis = this;
+
+      let localthis = this;
       // performance.now() not available on WebWorker, at least on Safari Desktop
-      var startTime;
+      let startTime;
       try {
         startTime = performance.now();
       } catch (error) {
         startTime = Date.now();
       }
       decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
-        var endTime;
+        let endTime;
         try {
           endTime = performance.now();
         } catch (error) {
@@ -57,8 +55,8 @@ class DemuxerInline {
     }
   }
 
-  pushDecrypted(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
-    var demuxer = this.demuxer;
+  pushDecrypted (data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
+    let demuxer = this.demuxer;
     if (!demuxer ||
       // in case of continuity change, or track switch
       // we might switch from content type (AAC container to TS container, or TS to fmp4 for example)
@@ -102,9 +100,9 @@ class DemuxerInline {
       demuxer.resetTimeStamp(defaultInitPTS);
       remuxer.resetTimeStamp(defaultInitPTS);
     }
-    if (typeof demuxer.setDecryptData === 'function') {
+    if (typeof demuxer.setDecryptData === 'function')
       demuxer.setDecryptData(decryptdata);
-    }
+
     demuxer.append(data, timeOffset, contiguous, accurateTimeOffset);
   }
 }

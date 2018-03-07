@@ -1,20 +1,20 @@
-const assert = require("assert");
+const assert = require('assert');
 import BufferHelper from '../../../src/helper/buffer-helper';
 
-function createMockBuffer(buffered) {
+function createMockBuffer (buffered) {
   return {
     start: i => (buffered.length > i) ? buffered[i].startPTS : null,
     end: i => (buffered.length > i) ? buffered[i].endPTS : null,
-    length: buffered.length,
+    length: buffered.length
   };
 }
 
-describe('BufferHelper', function() {
-  describe('isBuffered', function() {
+describe('BufferHelper', function () {
+  describe('isBuffered', function () {
     // |////////|__________|////////////////|
     // 0       0.5         1               2.0
     const media = {
-      get buffered() {
+      get buffered () {
         return createMockBuffer([
           {
             startPTS: 0,
@@ -23,39 +23,39 @@ describe('BufferHelper', function() {
           {
             startPTS: 1,
             endPTS: 2.0
-          },
+          }
         ]);
       }
     };
 
-    it('should return true if media.buffered throw error', function() {
+    it('should return true if media.buffered throw error', function () {
       const invalidMedia = {
-        get buffered() {
-          throw new Error("InvalidStateError");
+        get buffered () {
+          throw new Error('InvalidStateError');
         }
       };
       assert.equal(BufferHelper.isBuffered(invalidMedia, 0), false);
     });
-    it('should return true if some media.buffered includes the position', function() {
+    it('should return true if some media.buffered includes the position', function () {
       assert.equal(BufferHelper.isBuffered(media, 0), true);
       assert.equal(BufferHelper.isBuffered(media, 0.1), true);
       assert.equal(BufferHelper.isBuffered(media, 0.5), true);
       assert.equal(BufferHelper.isBuffered(media, 1), true);
       assert.equal(BufferHelper.isBuffered(media, 2), true);
     });
-    it('should return false if any media.buffered does not includes the position', function() {
+    it('should return false if any media.buffered does not includes the position', function () {
       assert.equal(BufferHelper.isBuffered(media, -0.1), false);
       assert.equal(BufferHelper.isBuffered(media, 0.51), false);
       assert.equal(BufferHelper.isBuffered(media, 0.9), false);
       assert.equal(BufferHelper.isBuffered(media, 2.1), false);
     });
   });
-  describe("bufferInfo", () => {
-    it("should return found buffer info when maxHoleDuration is 0", function() {
+  describe('bufferInfo', () => {
+    it('should return found buffer info when maxHoleDuration is 0', function () {
       // |////////|__________|////////////////|
       // 0       0.5         1               2.0
       const media = {
-        get buffered() {
+        get buffered () {
           return createMockBuffer([
             {
               startPTS: 0,
@@ -64,7 +64,7 @@ describe('BufferHelper', function() {
             {
               startPTS: 1,
               endPTS: 2.0
-            },
+            }
           ]);
         }
       };
@@ -94,11 +94,11 @@ describe('BufferHelper', function() {
         nextStart: undefined
       });
     });
-    it("should return found buffer info when maxHoleDuration is 0.5", function() {
+    it('should return found buffer info when maxHoleDuration is 0.5', function () {
       // |////////|__________|////////////////|
       // 0       0.5         1               2.0
       const media = {
-        get buffered() {
+        get buffered () {
           return createMockBuffer([
             {
               startPTS: 0,
@@ -107,7 +107,7 @@ describe('BufferHelper', function() {
             {
               startPTS: 1,
               endPTS: 2.0
-            },
+            }
           ]);
         }
       };
