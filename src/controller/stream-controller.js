@@ -383,9 +383,14 @@ class StreamController extends TaskLoop {
     if (PDTValue >= lastSegment.endPdt)
       return null;
 
-    return BinarySearch.search(fragments, function (frag) {
-      return PDTValue < frag.pdt ? -1 : PDTValue >= frag.endPdt ? 1 : 0;
-    });
+    for(let seg = 0; seg < fragments.length; ++seg)
+    {
+      let frag = fragments[seg];
+      if(PDTValue < frag.endPdt){
+        return frag;
+      }
+    }
+    return null;
   }
 
   _findFragmentBySN (fragPrevious, fragments, bufferEnd, end) {
@@ -440,7 +445,7 @@ class StreamController extends TaskLoop {
       if (!levelDetails.programDateTime) { // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
         foundFrag = this._findFragmentBySN(fragPrevious, fragments, bufferEnd, end);
       } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = this._findFragmentByPDT(fragments, fragPrevious ? fragPrevious.endPdt + 1 : bufferEnd + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0));
+        foundFrag = this._findFragmentByPDT(fragments, fragPrevious ? fragPrevious.endPdt + 1 : (bufferEnd * 1000) + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0));
       }
     } else {
       // reach end of playlist
@@ -812,6 +817,8 @@ class StreamController extends TaskLoop {
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
     if (!this.loadedmetadata)
       this.nextLoadPosition = this.startPosition = currentTime;
+
+    this.fragPrevious = null;
 
     // tick to speed up processing
     this.tick();
