@@ -135,6 +135,7 @@ function resetGlobals() {
   window.updateLevelInfo = updateLevelInfo;
   window.updatePermalink = updatePermalink;
   window.createfMP4 = createfMP4;
+  window.goToMetricsPermaLink = goToMetricsPermaLink;
 }
 
 function loadSelectedStream() {
