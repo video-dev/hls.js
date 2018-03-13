@@ -76,7 +76,7 @@ describe('LevelController', () => {
     levelController.onManifestLoaded(data);
     levelController.level = nextLevel;
 
-    assert.equal(levelController.hls.trigger.args[1][0], Event.LEVEL_SWITCH);
+    assert.equal(levelController.hls.trigger.args[1][0], Event.LEVEL_SWITCHING);
     assert.equal(levelController.hls.trigger.args[1][1].level, nextLevel);
   });
 });

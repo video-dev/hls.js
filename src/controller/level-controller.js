@@ -169,8 +169,6 @@ export default class LevelController extends EventHandler {
         this.currentLevelIndex = newLevel;
         let levelProperties = levels[newLevel];
         levelProperties.level = newLevel;
-        // LEVEL_SWITCH to be deprecated in next major release
-        hls.trigger(Event.LEVEL_SWITCH, levelProperties);
         hls.trigger(Event.LEVEL_SWITCHING, levelProperties);
       }
       let level = levels[newLevel], levelDetails = level.details;
