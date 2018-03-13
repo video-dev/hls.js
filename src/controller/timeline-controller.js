@@ -255,8 +255,9 @@ class TimelineController extends EventHandler {
     // Parse the WebVTT file contents.
     WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
       const currentTrack = textTracks[frag.trackId];
-      // If text track is disabled in middle of process bailout as
-      // currentTrack.cues will be nullified when track is disabled
+      // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
+      // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
+      // and trying to access getCueById method of cues will throw an exception
       if (currentTrack.mode === 'disabled') {
         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
         return;
