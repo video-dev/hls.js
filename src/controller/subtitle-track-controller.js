@@ -4,27 +4,25 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
-import {logger} from '../utils/logger';
+import { logger } from '../utils/logger';
 
-function filterSubtitleTracks(textTrackList) {
+function filterSubtitleTracks (textTrackList) {
   let tracks = [];
   for (let i = 0; i < textTrackList.length; i++) {
-    if (textTrackList[i].kind === 'subtitles') {
+    if (textTrackList[i].kind === 'subtitles')
       tracks.push(textTrackList[i]);
-    }
   }
   return tracks;
 }
 
 class SubtitleTrackController extends EventHandler {
-
-  constructor(hls) {
+  constructor (hls) {
     super(hls,
-               Event.MEDIA_ATTACHED,
-               Event.MEDIA_DETACHING,
-               Event.MANIFEST_LOADING,
-               Event.MANIFEST_LOADED,
-               Event.SUBTITLE_TRACK_LOADED);
+      Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHING,
+      Event.MANIFEST_LOADING,
+      Event.MANIFEST_LOADED,
+      Event.SUBTITLE_TRACK_LOADED);
     this.tracks = [];
     this.trackId = -1;
     this.media = undefined;
@@ -35,11 +33,10 @@ class SubtitleTrackController extends EventHandler {
     this.subtitleDisplay = false;
   }
 
-  _onTextTracksChanged() {
+  _onTextTracksChanged () {
     // Media is undefined when switching streams via loadSource()
-    if (!this.media) {
+    if (!this.media)
       return;
-    }
 
     let trackId = -1;
     let tracks = filterSubtitleTracks(this.media.textTracks);
@@ -57,16 +54,15 @@ class SubtitleTrackController extends EventHandler {
     this.subtitleTrack = trackId;
   }
 
-  destroy() {
+  destroy () {
     EventHandler.prototype.destroy.call(this);
   }
 
   // Listen for subtitle track change, then extract the current track ID.
-  onMediaAttached(data) {
+  onMediaAttached (data) {
     this.media = data.media;
-    if (!this.media) {
+    if (!this.media)
       return;
-    }
 
     if (this.queuedDefaultTrack !== undefined) {
       this.subtitleTrack = this.queuedDefaultTrack;
@@ -85,31 +81,30 @@ class SubtitleTrackController extends EventHandler {
     }
   }
 
-  onMediaDetaching() {
-    if (!this.media) {
+  onMediaDetaching () {
+    if (!this.media)
       return;
-    }
-    if (this.useTextTrackPolling) {
+
+    if (this.useTextTrackPolling)
       clearInterval(this.subtitlePollingInterval);
-    } else {
+    else
       this.media.textTracks.removeEventListener('change', this.trackChangeListener);
-    }
 
     this.media = undefined;
   }
 
   // Reset subtitle tracks on manifest loading
-  onManifestLoading() {
+  onManifestLoading () {
     this.tracks = [];
     this.trackId = -1;
   }
 
   // Fired whenever a new manifest is loaded.
-  onManifestLoaded(data) {
+  onManifestLoaded (data) {
     let tracks = data.subtitles || [];
     this.tracks = tracks;
     this.trackId = -1;
-    this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, {subtitleTracks : tracks});
+    this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, { subtitleTracks: tracks });
 
     // loop through available subtitle tracks and autoselect default if needed
     // TODO: improve selection logic to handle forced, etc
@@ -119,33 +114,31 @@ class SubtitleTrackController extends EventHandler {
         // if media has not been attached yet, it will fail
         // we keep a reference to the default track id
         // and we'll set subtitleTrack when onMediaAttached is triggered
-        if (this.media) {
+        if (this.media)
           this.subtitleTrack = track.id;
-        } else {
+        else
           this.queuedDefaultTrack = track.id;
-        }
       }
     });
   }
 
   // Trigger subtitle track playlist reload.
-  onTick() {
+  onTick () {
     const trackId = this.trackId;
     const subtitleTrack = this.tracks[trackId];
-    if (!subtitleTrack) {
+    if (!subtitleTrack)
       return;
-    }
 
     const details = subtitleTrack.details;
     // check if we need to load playlist for this subtitle Track
     if (details === undefined || details.live === true) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${trackId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, {url: subtitleTrack.url, id: trackId});
+      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
     }
   }
 
-  onSubtitleTrackLoaded(data) {
+  onSubtitleTrackLoaded (data) {
     if (data.id < this.tracks.length) {
       logger.log(`subtitle track ${data.id} loaded`);
       this.tracks[data.id].details = data.details;
@@ -166,27 +159,26 @@ class SubtitleTrackController extends EventHandler {
   }
 
   /** get alternate subtitle tracks list from playlist **/
-  get subtitleTracks() {
+  get subtitleTracks () {
     return this.tracks;
   }
 
   /** get index of the selected subtitle track (index in subtitle track lists) **/
-  get subtitleTrack() {
-   return this.trackId;
+  get subtitleTrack () {
+    return this.trackId;
   }
 
   /** select a subtitle track, based on its index in subtitle track lists**/
-  set subtitleTrack(subtitleTrackId) {
-    if (this.trackId !== subtitleTrackId) {// || this.tracks[subtitleTrackId].details === undefined) {
+  set subtitleTrack (subtitleTrackId) {
+    if (this.trackId !== subtitleTrackId) { // || this.tracks[subtitleTrackId].details === undefined) {
       this.setSubtitleTrackInternal(subtitleTrackId);
     }
   }
 
- setSubtitleTrackInternal(newId) {
+  setSubtitleTrackInternal (newId) {
     // check if level idx is valid
-    if (newId < -1 || newId >= this.tracks.length) {
+    if (newId < -1 || newId >= this.tracks.length)
       return;
-    }
 
     // stopping live reloading timer if any
     if (this.timer) {
@@ -197,29 +189,26 @@ class SubtitleTrackController extends EventHandler {
     let textTracks = filterSubtitleTracks(this.media.textTracks);
 
     // hide currently enabled subtitle track
-    if (this.trackId !== -1) {
+    if (this.trackId !== -1)
       textTracks[this.trackId].mode = 'disabled';
-    }
 
     this.trackId = newId;
     logger.log(`switching to subtitle track ${newId}`);
-    this.hls.trigger(Event.SUBTITLE_TRACK_SWITCH, {id: newId});
+    this.hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
 
-    if (newId === -1) {
+    if (newId === -1)
       return;
-    }
 
     const subtitleTrack = this.tracks[newId];
-    if(newId < textTracks.length) {
+    if (newId < textTracks.length)
       textTracks[newId].mode = this.subtitleDisplay ? 'showing' : 'hidden';
-    }
 
     // check if we need to load playlist for this subtitle Track
     let details = subtitleTrack.details;
     if (details === undefined || details.live === true) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${newId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, {url: subtitleTrack.url, id: newId});
+      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
     }
   }
 }

@@ -23,7 +23,8 @@ const uglifyJsOptions = {
   mangle: {
     toplevel: true,
     eval: true
-  }
+  },
+  sourceMap: true
 };
 
 const baseConfig = {
@@ -166,7 +167,8 @@ const multiConfig = [
       libraryTarget: 'umd',
       libraryExport: 'default'
     },
-    plugins: getPluginsForConfig('main', true)
+    plugins: getPluginsForConfig('main', true),
+    devtool: 'source-map'
   },
   {
     name: 'light',
@@ -200,7 +202,8 @@ const multiConfig = [
     resolve: {
       alias: getAliasesForLightDist()
     },
-    plugins: getPluginsForConfig('light', true)
+    plugins: getPluginsForConfig('light', true),
+    devtool: 'source-map'
   }
 ].map(config => clone(baseConfig, config));
 
