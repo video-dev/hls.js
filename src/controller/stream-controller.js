@@ -280,6 +280,7 @@ class StreamController extends TaskLoop {
           return;
         }
 
+        // console.log("start fragment", JSON.stringify(fragments[0], null, 4));
         frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
         // if it explicitely returns null don't load any fragment and exit function now
         if (frag === null)
@@ -1365,27 +1366,19 @@ class StreamController extends TaskLoop {
         this.loadedmetadata = true;
         // only adjust currentTime if different from startPosition or if startPosition not buffered
         // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-        let startPosition = media.seeking ? currentTime : this.startPosition,
-          startPositionBuffered = BufferHelper.isBuffered(mediaBuffer, startPosition),
-          firstbufferedPosition = buffered.start(0),
-          startNotBufferedButClose = !startPositionBuffered && (Math.abs(startPosition - firstbufferedPosition) < config.maxSeekHole);
+        const startPosition = media.seeking ? currentTime : this.startPosition;
         // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
-        if (currentTime !== startPosition || startNotBufferedButClose) {
-          logger.log(`target start position:${startPosition}`);
-
+        if (currentTime !== startPosition) {
           // if startPosition not buffered, let's seek to buffered.start(0)
-          if (startNotBufferedButClose) {
-            startPosition = firstbufferedPosition;
-            logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition}`);
-          }
-          logger.log(`adjust currentTime from ${currentTime} to ${startPosition}`);
+
+          logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time${currentTime} `);
           media.currentTime = startPosition;
         }
       } else if (this.immediateSwitch) {
         this.immediateLevelSwitchEnd();
       } else {
         let bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole),
-          expectedPlaying = !(media.paused || // not playing when media is paused
+          expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused and sufficiently buffered
                                 media.ended || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
           jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end
@@ -1430,6 +1423,33 @@ class StreamController extends TaskLoop {
                     return;
                   }
                   lastEndTime = media.buffered.end(i);
+                }
+              }
+              // jump to next buffered fragment
+              // TODO: we should check `config.lowBufferWatchdogPeriod`?
+              const currentFragment = this.getBufferedFrag(currentTime);
+              if (!currentFragment) {
+                const nextBufferedFragment = this.fragmentTracker.getBufferedFragmentAfter(currentTime);
+                if (nextBufferedFragment) {
+                  const nextBufferedStart = nextBufferedFragment.startPTS;
+                  logger.warn(`buffered fragment is not found @${currentTime}, but found next buffered fragment@${nextBufferedStart}`);
+                  // adjust currentTime to nextBufferedFragment's start
+                  // seek to next buffer
+                  // 0.1 is tolerance value to avoid to seek same position
+                  // For example, seek to 1.63333333, but some browser seek to 1.6.
+                  const targetTime = Math.max(nextBufferedStart, media.currentTime + 0.1);
+                  media.currentTime = targetTime;
+                  logger.log(`skipping hole, adjust currentTime from ${currentTime} to next buffered @ ${targetTime}`);
+                  // reset stalled so to rearm watchdog timer
+                  this.stalled = undefined;
+                  hls.trigger(Event.ERROR, {
+                    type: ErrorTypes.MEDIA_ERROR,
+                    details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+                    fatal: false,
+                    hole: targetTime - currentTime,
+                    reason: `buffered fragment is not found in current time@${currentTime}, seeking from ${currentTime} to ${targetTime}`
+                  });
+                  return;
                 }
               }
               if (bufferLen > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {

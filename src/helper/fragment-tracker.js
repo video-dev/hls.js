@@ -35,11 +35,11 @@ export class FragmentTracker extends EventHandler {
   /**
    * Return a Fragment that match the position and levelType.
    * If not found any Fragment, return null
-   * @param {number} position
+   * @param {number} time
    * @param {LevelType} levelType
    * @returns {Fragment|null}
    */
-  getBufferedFrag (position, levelType) {
+  getBufferedFrag (time, levelType) {
     const fragments = this.fragments;
     const bufferedFrags = Object.keys(fragments).filter(key => {
       const fragmentEntity = fragments[key];
@@ -50,7 +50,7 @@ export class FragmentTracker extends EventHandler {
         return false;
 
       const frag = fragmentEntity.body;
-      return frag.startPTS <= position && position <= frag.endPTS;
+      return frag.startPTS <= time && time <= frag.endPTS;
     });
     if (bufferedFrags.length === 0) {
       return null;
@@ -59,6 +59,33 @@ export class FragmentTracker extends EventHandler {
       const bufferedFragKey = bufferedFrags.pop();
       return fragments[bufferedFragKey].body;
     }
+  }
+
+  /**
+   * Return nearest buffered fragment after the `time`
+   * Return null if not found any fragment after the `time`.
+   * @param {number} time
+   * @returns {Fragment|null}
+   */
+  getBufferedFragmentAfter (time) {
+    let bestFragment = null;
+    let minTimePadding = 10e6;
+    Object.keys(this.fragments).forEach(key => {
+      const fragmentEntity = this.fragments[key];
+      if (!fragmentEntity.buffered)
+        return;
+
+      const startTime = fragmentEntity.body.startPTS;
+      if (startTime > time) {
+        // Use the fragment that has the most near from the `time`
+        const timePadding = startTime - time;
+        if (timePadding <= minTimePadding) {
+          bestFragment = fragmentEntity.body;
+          minTimePadding = timePadding;
+        }
+      }
+    });
+    return bestFragment;
   }
 
   /**
