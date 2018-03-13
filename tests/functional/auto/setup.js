@@ -160,7 +160,9 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           window.switchToHighestLevel('next');
         };
         window.setTimeout(function () {
-          callback({ code: video.readyState, logs: window.logString });
+          var readyState = video.readyState;
+          console.log("[log] > readyState:" + readyState );
+          callback({ code: readyState, logs: window.logString });
         }, 12000);
       }, url, config).then(function (result) {
         assert.strictEqual(result.code, 4);
