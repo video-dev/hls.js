@@ -2,7 +2,7 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
- 
+
 
 - [Getting started](#getting-started)
   - [First step: setup and support](#first-step-setup-and-support)
@@ -536,8 +536,8 @@ A value too close from `liveSyncDuration` is likely to cause playback stalls.
 
 (default: `false`)
 
-Override current Media Source duration to `Infinity` for a live broadcast. 
-Useful, if you are building a player which relies on native UI capabilities in modern browsers. 
+Override current Media Source duration to `Infinity` for a live broadcast.
+Useful, if you are building a player which relies on native UI capabilities in modern browsers.
 If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
 
 ### `enableWorker`
@@ -1093,7 +1093,7 @@ get/set : subtitle track id (returned by). Returns -1 if no track is visible. Se
 
 (default: `false`)
 
-get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`. 
+get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`.
 
 ## Live stream API
 
@@ -1142,8 +1142,6 @@ Full list of Events is available below:
     -  data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest }
-  - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested (deprecated in favor of `LEVEL_SWITCHING`)
-    -  data: { level : id of new level }
   - `Hls.Events.LEVEL_SWITCHING`  - fired when a level switch is requested
     -  data: { `level` object (please see [below](#level) for more information) }
   - `Hls.Events.LEVEL_SWITCHED`  - fired when a level switch is effective
@@ -1157,8 +1155,6 @@ Full list of Events is available below:
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment }
   - `Hls.Events.AUDIO_TRACKS_UPDATED`  - fired to notify that audio track lists has been updated
-    -  data: { audioTracks : audioTracks }
-  - `Hls.Events.AUDIO_TRACK_SWITCH`  - fired when an audio track switch occurs (deprecated in favor of `AUDIO_TRACK_SWITCHING`)
     -  data: { audioTracks : audioTracks }
   - `Hls.Events.AUDIO_TRACK_SWITCHING`  - fired when an audio track switching is requested
     -  data: { id : audio track id }
