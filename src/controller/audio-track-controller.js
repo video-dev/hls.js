@@ -121,8 +121,6 @@ class AudioTrackController extends EventHandler {
         type = audioTrack.type,
         url = audioTrack.url,
         eventObj = { id: newId, type: type, url: url };
-      // keep AUDIO_TRACK_SWITCH for legacy reason
-      hls.trigger(Event.AUDIO_TRACK_SWITCH, eventObj);
       hls.trigger(Event.AUDIO_TRACK_SWITCHING, eventObj);
       // check if we need to load playlist for this audio Track
       let details = audioTrack.details;
