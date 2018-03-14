@@ -159,13 +159,19 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
         video.onloadeddata = function () {
           window.switchToHighestLevel('next');
         };
-        window.setTimeout(function () {
-          let readyState = video.readyState;
-          console.log('[log] > readyState:' + readyState);
-          callback({ code: readyState, logs: window.logString });
-        }, 12000);
+        window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
+          var currentTime = video.currentTime;
+          if (data.level === window.hls.levels.length - 1) {
+            console.log('[log] > switched on level:' + data.level);
+            window.setTimeout(function () {
+              var newCurrentTime = video.currentTime;
+              console.log('[log] > currentTime delta :' + (newCurrentTime - currentTime));
+              callback({ code: newCurrentTime > currentTime, logs: window.logString });
+            }, 2000);
+          }
+        });
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 4);
+        assert.strictEqual(result.code, true);
       });
     };
   };
