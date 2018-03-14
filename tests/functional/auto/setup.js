@@ -160,7 +160,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           window.switchToHighestLevel('next');
         };
         window.setTimeout(function () {
-          var readyState = video.readyState;
+          let readyState = video.readyState;
           console.log('[log] > readyState:' + readyState);
           callback({ code: readyState, logs: window.logString });
         }, 12000);
