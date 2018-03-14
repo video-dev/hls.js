@@ -1365,27 +1365,19 @@ class StreamController extends TaskLoop {
         this.loadedmetadata = true;
         // only adjust currentTime if different from startPosition or if startPosition not buffered
         // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-        let startPosition = media.seeking ? currentTime : this.startPosition,
-          startPositionBuffered = BufferHelper.isBuffered(mediaBuffer, startPosition),
-          firstbufferedPosition = buffered.start(0),
-          startNotBufferedButClose = !startPositionBuffered && (Math.abs(startPosition - firstbufferedPosition) < config.maxSeekHole);
+        const startPosition = media.seeking ? currentTime : this.startPosition;
         // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
-        if (currentTime !== startPosition || startNotBufferedButClose) {
-          logger.log(`target start position:${startPosition}`);
-
+        if (currentTime !== startPosition) {
           // if startPosition not buffered, let's seek to buffered.start(0)
-          if (startNotBufferedButClose) {
-            startPosition = firstbufferedPosition;
-            logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition}`);
-          }
-          logger.log(`adjust currentTime from ${currentTime} to ${startPosition}`);
+
+          logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time${currentTime} `);
           media.currentTime = startPosition;
         }
       } else if (this.immediateSwitch) {
         this.immediateLevelSwitchEnd();
       } else {
         let bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole),
-          expectedPlaying = !(media.paused || // not playing when media is paused
+          expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused and sufficiently buffered
                                 media.ended || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
           jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end
