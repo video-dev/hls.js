@@ -91,7 +91,11 @@ export function mergeDetails (oldDetails, newDetails) {
     ccOffset = 0,
     PTSFrag;
 
-    // check if old/new playlists have fragments in common
+  // potentially retrieve cached initsegment
+  if (newDetails.initSegment && oldDetails.initSegment)
+    newDetails.initSegment = oldDetails.initSegment;
+
+  // check if old/new playlists have fragments in common
   if (end < start) {
     newDetails.PTSKnown = false;
     return;
