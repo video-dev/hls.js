@@ -85,7 +85,7 @@ describe('StreamController tests', function () {
   });
 
   describe('PDT vs SN tests for discontinuities with PDT', function () {
-    let PDT = "Fri Sep 15 2017 12:11:01 GMT-0700 (Pacific Daylight Time)";
+    let PDT = "Fri Sep 15 2017 12:11:01:523 GMT-0700 (Pacific Daylight Time)";
     let fragPrevious = {
       pdt: 1505502671523,
       endPdt: 1505502676523,
