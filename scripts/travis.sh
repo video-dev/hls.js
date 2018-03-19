@@ -5,7 +5,7 @@ set -ev
 npm install
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
-	npm run lint && npm run build
+	npm run build:ci
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
 	npm run test:unit
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
