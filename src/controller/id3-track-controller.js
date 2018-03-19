@@ -35,7 +35,7 @@ class ID3TrackController extends EventHandler {
     this.media = undefined;
   }
 
-  reuseId3Track (textTracks) {
+  getID3Track (textTracks) {
     for (let i = 0; i < textTracks.length; i++) {
       let textTrack = textTracks[i];
       if (textTrack.kind === 'metadata' && textTrack.label === 'id3') {
@@ -55,7 +55,7 @@ class ID3TrackController extends EventHandler {
 
     // create track dynamically
     if (!this.id3Track) {
-      this.id3Track = this.reuseId3Track(this.media.textTracks);
+      this.id3Track = this.getID3Track(this.media.textTracks);
       this.id3Track.mode = 'hidden';
     }
 
