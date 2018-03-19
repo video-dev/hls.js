@@ -5,6 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
+import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
   constructor (hls) {
@@ -29,7 +30,23 @@ class ID3TrackController extends EventHandler {
   }
 
   onMediaDetaching () {
+    clearCurrentCues(this.id3Track);
+    this.id3Track = undefined;
     this.media = undefined;
+  }
+
+  getID3Track (textTracks) {
+    for (let i = 0; i < textTracks.length; i++) {
+      let textTrack = textTracks[i];
+      if (textTrack.kind === 'metadata' && textTrack.label === 'id3') {
+        // send 'addtrack' when reusing the textTrack for metadata,
+        // same as what we do for captions
+        sendAddTrackEvent(textTrack, this.media);
+
+        return textTrack;
+      }
+    }
+    return this.media.addTextTrack('metadata', 'id3');
   }
 
   onFragParsingMetadata (data) {
@@ -38,7 +55,7 @@ class ID3TrackController extends EventHandler {
 
     // create track dynamically
     if (!this.id3Track) {
-      this.id3Track = this.media.addTextTrack('metadata', 'id3');
+      this.id3Track = this.getID3Track(this.media.textTracks);
       this.id3Track.mode = 'hidden';
     }
 
