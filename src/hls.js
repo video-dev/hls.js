@@ -243,6 +243,12 @@ export default class Hls {
     return Math.max(this.levelController.firstLevel, this.minAutoLevel);
   }
 
+  /** Return Estimated Bandwidth
+   **/
+  get bandwidthEstimate() {
+    return this.abrController._bwEstimator.getEstimate();
+  }
+
   /** set first level (index of first level referenced in manifest)
   **/
   set firstLevel(newLevel) {
