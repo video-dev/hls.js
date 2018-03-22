@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,8 +134,8 @@
 import { logger } from &apos;../utils/logger&apos;;
 import { ErrorTypes, ErrorDetails } from &apos;../errors&apos;;
 
-export function getAudioConfig(observer, data, offset, audioCodec) {
-  var adtsObjectType, // :int
+export function getAudioConfig (observer, data, offset, audioCodec) {
+  let adtsObjectType, // :int
     adtsSampleingIndex, // :int
     adtsExtensionSampleingIndex, // :int
     adtsChanelConfig, // :int
@@ -255,31 +258,31 @@ export function getAudioConfig(observer, data, offset, audioCodec) {
   return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: (&apos;mp4a.40.&apos; + adtsObjectType), manifestCodec: manifestCodec };
 }
 
-export function isHeaderPattern(data, offset) {
+export function isHeaderPattern (data, offset) {
   return data[offset] === 0xff &amp;&amp; (data[offset + 1] &amp; 0xf6) === 0xf0;
 }
 
-export function getHeaderLength(data, offset) {
-  return (!!(data[offset + 1] &amp; 0x01) ? 7 : 9);
+export function getHeaderLength (data, offset) {
+  return (data[offset + 1] &amp; 0x01 ? 7 : 9);
 }
 
-export function getFullFrameLength(data, offset) {
+export function getFullFrameLength (data, offset) {
   return ((data[offset + 3] &amp; 0x03) &lt;&lt; 11) |
     (data[offset + 4] &lt;&lt; 3) |
     ((data[offset + 5] &amp; 0xE0) &gt;&gt;&gt; 5);
 }
 
-export function isHeader(data, offset) {
+export function isHeader (data, offset) {
   // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
   // Layer bits (position 14 and 15) in header should be always 0 for ADTS
   // More info https://wiki.multimedia.cx/index.php?title=ADTS
-  if (offset + 1 &lt; data.length &amp;&amp; isHeaderPattern(data, offset)) {
+  if (offset + 1 &lt; data.length &amp;&amp; isHeaderPattern(data, offset))
     return true;
-  }
+
   return false;
 }
 
-export function probe(data, offset) {
+export function probe (data, offset) {
   // same as isHeader but we also check that ADTS frame follows last ADTS frame
   // or end of data is reached
   if (offset + 1 &lt; data.length &amp;&amp; isHeaderPattern(data, offset)) {
@@ -287,20 +290,19 @@ export function probe(data, offset) {
     let headerLength = getHeaderLength(data, offset);
     // ADTS frame Length
     let frameLength = headerLength;
-    if (offset + 5 &lt; data.length) {
+    if (offset + 5 &lt; data.length)
       frameLength = getFullFrameLength(data, offset);
-    }
+
     let newOffset = offset + frameLength;
-    if (newOffset === data.length || (newOffset + 1 &lt; data.length &amp;&amp; isHeaderPattern(data, newOffset))) {
+    if (newOffset === data.length || (newOffset + 1 &lt; data.length &amp;&amp; isHeaderPattern(data, newOffset)))
       return true;
-    }
   }
   return false;
 }
 
-export function initTrackConfig(track, observer, data, offset, audioCodec) {
+export function initTrackConfig (track, observer, data, offset, audioCodec) {
   if (!track.samplerate) {
-    var config = getAudioConfig(observer, data, offset, audioCodec);
+    let config = getAudioConfig(observer, data, offset, audioCodec);
     track.config = config.config;
     track.samplerate = config.samplerate;
     track.channelCount = config.channelCount;
@@ -310,13 +312,13 @@ export function initTrackConfig(track, observer, data, offset, audioCodec) {
   }
 }
 
-export function getFrameDuration(samplerate) {
+export function getFrameDuration (samplerate) {
   return 1024 * 90000 / samplerate;
 }
 
-export function parseFrameHeader(data, offset, pts, frameIndex, frameDuration) {
-  var headerLength, frameLength, stamp;
-  var length = data.length;
+export function parseFrameHeader (data, offset, pts, frameIndex, frameDuration) {
+  let headerLength, frameLength, stamp;
+  let length = data.length;
 
   // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
   headerLength = getHeaderLength(data, offset);
@@ -326,23 +328,23 @@ export function parseFrameHeader(data, offset, pts, frameIndex, frameDuration) {
 
   if ((frameLength &gt; 0) &amp;&amp; ((offset + headerLength + frameLength) &lt;= length)) {
     stamp = pts + frameIndex * frameDuration;
-    //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
+    // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
     return { headerLength, frameLength, stamp };
   }
 
   return undefined;
 }
 
-export function appendFrame(track, data, offset, pts, frameIndex) {
-  var frameDuration = getFrameDuration(track.samplerate);
-  var header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
+export function appendFrame (track, data, offset, pts, frameIndex) {
+  let frameDuration = getFrameDuration(track.samplerate);
+  let header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
   if (header) {
-    var stamp = header.stamp;
-    var headerLength = header.headerLength;
-    var frameLength = header.frameLength;
+    let stamp = header.stamp;
+    let headerLength = header.headerLength;
+    let frameLength = header.frameLength;
 
-    //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-    var aacSample = {
+    // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
+    let aacSample = {
       unit: data.subarray(offset + headerLength, offset + headerLength + frameLength),
       pts: stamp,
       dts: stamp
@@ -351,12 +353,11 @@ export function appendFrame(track, data, offset, pts, frameIndex) {
     track.samples.push(aacSample);
     track.len += frameLength;
 
-    return {sample: aacSample, length: frameLength + headerLength};
+    return { sample: aacSample, length: frameLength + headerLength };
   }
 
   return undefined;
 }
-
 </code></pre>
 
 </div>

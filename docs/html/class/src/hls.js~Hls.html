@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -125,13 +128,13 @@
 </nav>
 
 <div class="content" data-ice="content"><div class="header-notice">
-  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import Hls from &apos;<span><a href="file/src/hls.js.html#lineNumber33">hls.js/src/hls.js</a></span>&apos;</code></pre></div>
+  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import Hls from &apos;<span><a href="file/src/hls.js.html#lineNumber32">hls.js/src/hls.js</a></span>&apos;</code></pre></div>
   <span data-ice="access">public</span>
   <span data-ice="kind">class</span>
   
   
   
-  <span data-ice="source">| <span><a href="file/src/hls.js.html#lineNumber33">source</a></span></span>
+  <span data-ice="source">| <span><a href="file/src/hls.js.html#lineNumber32">source</a></span></span>
 </div>
 
 <div class="self-detail detail">
@@ -293,7 +296,7 @@
           
           
           
-          <span class="code" data-ice="name"><span><a href="class/src/hls.js~Hls.html#static-get-Events">Events</a></span></span><span class="code" data-ice="signature">: <span>HlsEvents</span></span>
+          <span class="code" data-ice="name"><span><a href="class/src/hls.js~Hls.html#static-get-Events">Events</a></span></span><span class="code" data-ice="signature">: <span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span>
         </p>
       </div>
       <div>
@@ -1889,7 +1892,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber73">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber71">source</a></span></span>
     </span>
   </h3>
 
@@ -1932,7 +1935,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber83">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber81">source</a></span></span>
     </span>
   </h3>
 
@@ -1975,7 +1978,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber66">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber64">source</a></span></span>
     </span>
   </h3>
 
@@ -2018,7 +2021,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber59">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber57">source</a></span></span>
     </span>
   </h3>
 
@@ -2057,11 +2060,11 @@ as one call (convenience method).</p>
     
     
     
-    <span class="code" data-ice="name">Events</span><span class="code" data-ice="signature">: <span>HlsEvents</span></span>
+    <span class="code" data-ice="name">Events</span><span class="code" data-ice="signature">: <span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber52">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber50">source</a></span></span>
     </span>
   </h3>
 
@@ -2104,7 +2107,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber38">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber36">source</a></span></span>
     </span>
   </h3>
 
@@ -2150,7 +2153,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber45">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber43">source</a></span></span>
     </span>
   </h3>
 
@@ -2208,7 +2211,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber93">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber91">source</a></span></span>
     </span>
   </h3>
 
@@ -2271,7 +2274,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber552">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber543">source</a></span></span>
     </span>
   </h3>
 
@@ -2315,7 +2318,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber561">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber552">source</a></span></span>
     </span>
   </h3>
 
@@ -2359,7 +2362,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber198">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber192">source</a></span></span>
     </span>
   </h3>
 
@@ -2402,7 +2405,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber543">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber534">source</a></span></span>
     </span>
   </h3>
 
@@ -2445,7 +2448,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber463">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber456">source</a></span></span>
     </span>
   </h3>
 
@@ -2489,7 +2492,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber455">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber448">source</a></span></span>
     </span>
   </h3>
 
@@ -2533,7 +2536,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber472">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber465">source</a></span></span>
     </span>
   </h3>
 
@@ -2577,7 +2580,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber114">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber109">source</a></span></span>
     </span>
   </h3>
 
@@ -2620,7 +2623,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber234">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber227">source</a></span></span>
     </span>
   </h3>
 
@@ -2663,7 +2666,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber343">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber336">source</a></span></span>
     </span>
   </h3>
 
@@ -2709,7 +2712,7 @@ That means playback will interrupt at least shortly to re-buffer and re-sync eve
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber333">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber326">source</a></span></span>
     </span>
   </h3>
 
@@ -2753,7 +2756,7 @@ That means playback will interrupt at least shortly to re-buffer and re-sync eve
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber220">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber214">source</a></span></span>
     </span>
   </h3>
 
@@ -2796,7 +2799,7 @@ That means playback will interrupt at least shortly to re-buffer and re-sync eve
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber410">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber403">source</a></span></span>
     </span>
   </h3>
 
@@ -2841,7 +2844,7 @@ falls back to index of first level referenced in manifest</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber418">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber411">source</a></span></span>
     </span>
   </h3>
 
@@ -2885,7 +2888,7 @@ falls back to index of first level referenced in manifest</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber325">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber318">source</a></span></span>
     </span>
   </h3>
 
@@ -2928,7 +2931,7 @@ falls back to index of first level referenced in manifest</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber571">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber561">source</a></span></span>
     </span>
   </h3>
 
@@ -2971,7 +2974,7 @@ falls back to index of first level referenced in manifest</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber383">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber376">source</a></span></span>
     </span>
   </h3>
 
@@ -3017,7 +3020,7 @@ Thus the moment when the quality switch will appear in effect will only be after
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber373">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber366">source</a></span></span>
     </span>
   </h3>
 
@@ -3061,7 +3064,7 @@ Thus the moment when the quality switch will appear in effect will only be after
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber481">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber473">source</a></span></span>
     </span>
   </h3>
 
@@ -3105,7 +3108,7 @@ Thus the moment when the quality switch will appear in effect will only be after
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber504">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber495">source</a></span></span>
     </span>
   </h3>
 
@@ -3149,7 +3152,7 @@ Thus the moment when the quality switch will appear in effect will only be after
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber256">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber249">source</a></span></span>
     </span>
   </h3>
 
@@ -3192,7 +3195,7 @@ Thus the moment when the quality switch will appear in effect will only be after
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber489">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber481">source</a></span></span>
     </span>
   </h3>
 
@@ -3236,7 +3239,7 @@ Thus the moment when the quality switch will appear in effect will only be after
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber173">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber167">source</a></span></span>
     </span>
   </h3>
 
@@ -3279,7 +3282,7 @@ Thus the moment when the quality switch will appear in effect will only be after
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber521">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber512">source</a></span></span>
     </span>
   </h3>
 
@@ -3323,7 +3326,7 @@ Thus the moment when the quality switch will appear in effect will only be after
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber535">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber526">source</a></span></span>
     </span>
   </h3>
 
@@ -3371,7 +3374,7 @@ this value will be resetted to -1 by ABR controller.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber353">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber346">source</a></span></span>
     </span>
   </h3>
 
@@ -3415,7 +3418,7 @@ this value will be resetted to -1 by ABR controller.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber363">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber356">source</a></span></span>
     </span>
   </h3>
 
@@ -3461,7 +3464,7 @@ May abort current loading of data, and flush parts of buffer (outside currently 
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber401">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber394">source</a></span></span>
     </span>
   </h3>
 
@@ -3506,7 +3509,7 @@ Same as <code>loadLevel</code> but will wait for next switch (until current load
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber392">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber385">source</a></span></span>
     </span>
   </h3>
 
@@ -3550,7 +3553,7 @@ Same as <code>loadLevel</code> but will wait for next switch (until current load
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber126">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber121">source</a></span></span>
     </span>
   </h3>
 
@@ -3593,7 +3596,7 @@ Same as <code>loadLevel</code> but will wait for next switch (until current load
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber125">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber120">source</a></span></span>
     </span>
   </h3>
 
@@ -3636,7 +3639,7 @@ Same as <code>loadLevel</code> but will wait for next switch (until current load
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber441">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber434">source</a></span></span>
     </span>
   </h3>
 
@@ -3683,7 +3686,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber430">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber423">source</a></span></span>
     </span>
   </h3>
 
@@ -3730,7 +3733,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber607">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber596">source</a></span></span>
     </span>
   </h3>
 
@@ -3773,7 +3776,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber616">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber605">source</a></span></span>
     </span>
   </h3>
 
@@ -3817,7 +3820,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber588">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber578">source</a></span></span>
     </span>
   </h3>
 
@@ -3861,7 +3864,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber597">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber587">source</a></span></span>
     </span>
   </h3>
 
@@ -3906,7 +3909,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber209">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber203">source</a></span></span>
     </span>
   </h3>
 
@@ -3949,7 +3952,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber579">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber569">source</a></span></span>
     </span>
   </h3>
 
@@ -3993,7 +3996,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber127">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber122">source</a></span></span>
     </span>
   </h3>
 
@@ -4036,7 +4039,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber245">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber238">source</a></span></span>
     </span>
   </h3>
 
@@ -4081,7 +4084,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber115">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber110">source</a></span></span>
     </span>
   </h3>
 
@@ -4127,7 +4130,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber254">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber247">source</a></span></span>
     </span>
   </h3>
 
@@ -4187,7 +4190,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber240">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber233">source</a></span></span>
     </span>
   </h3>
 
@@ -4231,7 +4234,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber263">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber256">source</a></span></span>
     </span>
   </h3>
 
@@ -4275,7 +4278,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber273">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber266">source</a></span></span>
     </span>
   </h3>
 
@@ -4335,7 +4338,7 @@ if -1 : automatic start level selection, playback will start from level matching
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber315">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber308">source</a></span></span>
     </span>
   </h3>
 
@@ -4381,7 +4384,7 @@ as one call (convenience method).</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber288">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber281">source</a></span></span>
     </span>
   </h3>
 
@@ -4443,7 +4446,7 @@ Depending on default config, client starts loading automatically when a source i
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber296">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber289">source</a></span></span>
     </span>
   </h3>
 
@@ -4487,7 +4490,7 @@ Depending on default config, client starts loading automatically when a source i
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber304">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/hls.js.html#lineNumber297">source</a></span></span>
     </span>
   </h3>
 

@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -125,13 +128,13 @@
 </nav>
 
 <div class="content" data-ice="content"><div class="header-notice">
-  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import PlaylistLoader from &apos;<span><a href="file/src/loader/playlist-loader.js.html#lineNumber36">hls.js/src/loader/playlist-loader.js</a></span>&apos;</code></pre></div>
+  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import PlaylistLoader from &apos;<span><a href="file/src/loader/playlist-loader.js.html#lineNumber45">hls.js/src/loader/playlist-loader.js</a></span>&apos;</code></pre></div>
   <span data-ice="access">public</span>
   <span data-ice="kind">class</span>
   
   
   
-  <span data-ice="source">| <span><a href="file/src/loader/playlist-loader.js.html#lineNumber36">source</a></span></span>
+  <span data-ice="source">| <span><a href="file/src/loader/playlist-loader.js.html#lineNumber45">source</a></span></span>
 </div>
 
 <div class="self-detail detail">
@@ -182,6 +185,34 @@
           
           
           <span class="code" data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-ContextType">ContextType</a></span></span><span class="code" data-ice="signature">: <span>*</span></span>
+        </p>
+      </div>
+      <div>
+        
+        
+        
+      </div>
+    </td>
+    <td>
+      
+      
+    </td>
+  </tr>
+<tr data-ice="target">
+    <td>
+      <span class="access" data-ice="access">public</span>
+      <span data-ice="static">static</span>
+      <span class="kind" data-ice="kind">get</span>
+      
+      <span class="override" data-ice="override"></span>
+    </td>
+    <td>
+      <div>
+        <p>
+          
+          
+          
+          <span class="code" data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-LevelType">LevelType</a></span></span><span class="code" data-ice="signature">: <span>*</span></span>
         </p>
       </div>
       <div>
@@ -272,13 +303,14 @@
           
           
           
-          <span class="code" data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-method-mapContextToLevelType">mapContextToLevelType</a></span></span><span class="code" data-ice="signature">(context: <span>*</span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span></span>
+          <span class="code" data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-method-mapContextToLevelType">mapContextToLevelType</a></span></span><span class="code" data-ice="signature">(context: {type: <span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-ContextType">ContextType</a></span>}): <span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-LevelType">LevelType</a></span></span>
         </p>
       </div>
       <div>
         
         
-        
+        <div data-ice="description"><p>Map context.type to LevelType</p>
+</div>
       </div>
     </td>
     <td>
@@ -1239,7 +1271,50 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber52">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber60">source</a></span></span>
+    </span>
+  </h3>
+
+  
+  
+  
+  
+
+  
+
+  <div data-ice="properties">
+</div>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+</div>
+<div class="detail" data-ice="detail">
+  <h3 data-ice="anchor" id="static-get-LevelType">
+    <span class="access" data-ice="access">public</span>
+    <span data-ice="static">static</span>
+    <span class="kind" data-ice="kind">get</span>
+    
+    
+    
+    <span class="code" data-ice="name">LevelType</span><span class="code" data-ice="signature">: <span>*</span></span>
+    <span class="right-info">
+      
+      
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber64">source</a></span></span>
     </span>
   </h3>
 
@@ -1285,7 +1360,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber60">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber72">source</a></span></span>
     </span>
   </h3>
 
@@ -1356,7 +1431,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber78">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber95">source</a></span></span>
     </span>
   </h3>
 
@@ -1429,18 +1504,19 @@ Default loader is XHRLoader (see utils)</p>
     
     
     
-    <span class="code" data-ice="name">mapContextToLevelType</span><span class="code" data-ice="signature">(context: <span>*</span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span></span>
+    <span class="code" data-ice="name">mapContextToLevelType</span><span class="code" data-ice="signature">(context: {type: <span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-ContextType">ContextType</a></span>}): <span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-LevelType">LevelType</a></span></span>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber65">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber82">source</a></span></span>
     </span>
   </h3>
 
   
   
   
-  
+  <div data-ice="description"><p>Map context.type to LevelType</p>
+</div>
 
   
 
@@ -1454,7 +1530,7 @@ Default loader is XHRLoader (see utils)</p>
     
     <tr data-ice="property" data-depth="0">
       <td data-ice="name" class="code" data-depth="0">context</td>
-      <td data-ice="type" class="code"><span>*</span></td>
+      <td data-ice="type" class="code">{type: <span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-ContextType">ContextType</a></span>}</td>
       <td data-ice="appendix"></td>
       <td data-ice="description"></td>
     </tr>
@@ -1468,7 +1544,7 @@ Default loader is XHRLoader (see utils)</p>
     <table>
       <tbody>
         <tr>
-          <td class="return-type code" data-ice="returnType"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span></td>
+          <td class="return-type code" data-ice="returnType"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-LevelType">LevelType</a></span></td>
           
         </tr>
       </tbody>
@@ -1507,7 +1583,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber42">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber50">source</a></span></span>
     </span>
   </h3>
 
@@ -1569,7 +1645,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber49">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber57">source</a></span></span>
     </span>
   </h3>
 
@@ -1615,7 +1691,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber95">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber112">source</a></span></span>
     </span>
   </h3>
 
@@ -1689,7 +1765,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber132">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber148">source</a></span></span>
     </span>
   </h3>
 
@@ -1732,7 +1808,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber122">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber138">source</a></span></span>
     </span>
   </h3>
 
@@ -1776,7 +1852,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber109">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber126">source</a></span></span>
     </span>
   </h3>
 
@@ -1847,7 +1923,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber154">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber170">source</a></span></span>
     </span>
   </h3>
 
@@ -1924,7 +2000,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber253">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber266">source</a></span></span>
     </span>
   </h3>
 
@@ -1996,7 +2072,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber223">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber239">source</a></span></span>
     </span>
   </h3>
 
@@ -2074,7 +2150,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber257">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber270">source</a></span></span>
     </span>
   </h3>
 
@@ -2146,7 +2222,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber146">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber162">source</a></span></span>
     </span>
   </h3>
 
@@ -2205,7 +2281,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber142">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber158">source</a></span></span>
     </span>
   </h3>
 
@@ -2264,7 +2340,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber138">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber154">source</a></span></span>
     </span>
   </h3>
 
@@ -2323,7 +2399,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber150">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber166">source</a></span></span>
     </span>
   </h3>
 
@@ -2382,7 +2458,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber113">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber130">source</a></span></span>
     </span>
   </h3>
 
@@ -2443,7 +2519,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber399">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber401">source</a></span></span>
     </span>
   </h3>
 
@@ -2520,7 +2596,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber261">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber274">source</a></span></span>
     </span>
   </h3>
 
@@ -2597,7 +2673,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber410">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber412">source</a></span></span>
     </span>
   </h3>
 
@@ -2662,7 +2738,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber451">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber452">source</a></span></span>
     </span>
   </h3>
 
@@ -2739,7 +2815,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber383">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber388">source</a></span></span>
     </span>
   </h3>
 
@@ -2804,7 +2880,7 @@ Default loader is XHRLoader (see utils)</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber317">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/loader/playlist-loader.js.html#lineNumber327">source</a></span></span>
     </span>
   </h3>
 

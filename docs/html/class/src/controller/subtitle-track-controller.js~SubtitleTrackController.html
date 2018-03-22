@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -125,13 +128,13 @@
 </nav>
 
 <div class="content" data-ice="content"><div class="header-notice">
-  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import SubtitleTrackController from &apos;<span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber19">hls.js/src/controller/subtitle-track-controller.js</a></span>&apos;</code></pre></div>
+  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import SubtitleTrackController from &apos;<span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber18">hls.js/src/controller/subtitle-track-controller.js</a></span>&apos;</code></pre></div>
   <span data-ice="access">public</span>
   <span data-ice="kind">class</span>
   
   
   
-  <span data-ice="source">| <span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber19">source</a></span></span>
+  <span data-ice="source">| <span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber18">source</a></span></span>
 </div>
 
 <div class="self-detail detail">
@@ -1145,7 +1148,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber21">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber19">source</a></span></span>
     </span>
   </h3>
 
@@ -1191,7 +1194,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber30">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber28">source</a></span></span>
     </span>
   </h3>
 
@@ -1234,7 +1237,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber121">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber120">source</a></span></span>
     </span>
   </h3>
 
@@ -1277,7 +1280,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber35">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber33">source</a></span></span>
     </span>
   </h3>
 
@@ -1363,7 +1366,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber170">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber167">source</a></span></span>
     </span>
   </h3>
 
@@ -1407,7 +1410,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber175">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber172">source</a></span></span>
     </span>
   </h3>
 
@@ -1451,7 +1454,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber165">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber162">source</a></span></span>
     </span>
   </h3>
 
@@ -1495,7 +1498,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber152">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber149">source</a></span></span>
     </span>
   </h3>
 
@@ -1581,7 +1584,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber29">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber27">source</a></span></span>
     </span>
   </h3>
 
@@ -1624,7 +1627,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber28">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber26">source</a></span></span>
     </span>
   </h3>
 
@@ -1713,7 +1716,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber56">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber57">source</a></span></span>
     </span>
   </h3>
 
@@ -1756,7 +1759,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber104">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber103">source</a></span></span>
     </span>
   </h3>
 
@@ -1815,7 +1818,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber98">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber97">source</a></span></span>
     </span>
   </h3>
 
@@ -1858,7 +1861,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber61">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber62">source</a></span></span>
     </span>
   </h3>
 
@@ -1960,7 +1963,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber144">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber141">source</a></span></span>
     </span>
   </h3>
 
@@ -2019,7 +2022,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber128">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber126">source</a></span></span>
     </span>
   </h3>
 
@@ -2062,7 +2065,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber181">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber178">source</a></span></span>
     </span>
   </h3>
 
@@ -2123,7 +2126,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber38">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/subtitle-track-controller.js.html#lineNumber36">source</a></span></span>
     </span>
   </h3>
 

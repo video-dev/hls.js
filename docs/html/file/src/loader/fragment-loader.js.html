@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,36 +134,34 @@
 
 import Event from &apos;../events&apos;;
 import EventHandler from &apos;../event-handler&apos;;
-import {ErrorTypes, ErrorDetails} from &apos;../errors&apos;;
-import {logger} from &apos;../utils/logger&apos;;
+import { ErrorTypes, ErrorDetails } from &apos;../errors&apos;;
+import { logger } from &apos;../utils/logger&apos;;
 
 class FragmentLoader extends EventHandler {
-
-  constructor(hls) {
+  constructor (hls) {
     super(hls, Event.FRAG_LOADING);
     this.loaders = {};
   }
 
-  destroy() {
+  destroy () {
     let loaders = this.loaders;
     for (let loaderName in loaders) {
       let loader = loaders[loaderName];
-      if (loader) {
+      if (loader)
         loader.destroy();
-      }
     }
     this.loaders = {};
 
     super.destroy();
   }
 
-  onFragLoading(data) {
+  onFragLoading (data) {
     const frag = data.frag,
-          type = frag.type,
-          loaders = this.loaders,
-          config = this.hls.config,
-          FragmentILoader = config.fLoader,
-          DefaultILoader = config.loader;
+      type = frag.type,
+      loaders = this.loaders,
+      config = this.hls.config,
+      FragmentILoader = config.fLoader,
+      DefaultILoader = config.loader;
 
     // reset fragment state
     frag.loaded = 0;
@@ -172,14 +173,14 @@ class FragmentLoader extends EventHandler {
     }
 
     loader = loaders[type] = frag.loader =
-      !!config.fLoader ? new FragmentILoader(config) : new DefaultILoader(config);
+      config.fLoader ? new FragmentILoader(config) : new DefaultILoader(config);
 
     let loaderContext, loaderConfig, loaderCallbacks;
 
-    loaderContext = { url : frag.url, frag : frag, responseType : &apos;arraybuffer&apos;, progressData : false};
+    loaderContext = { url: frag.url, frag: frag, responseType: &apos;arraybuffer&apos;, progressData: false };
 
     let start = frag.byteRangeStartOffset,
-        end = frag.byteRangeEndOffset;
+      end = frag.byteRangeEndOffset;
 
     if (!isNaN(start) &amp;&amp; !isNaN(end)) {
       loaderContext.rangeStart = start;
@@ -188,7 +189,7 @@ class FragmentLoader extends EventHandler {
 
     loaderConfig = {
       timeout: config.fragLoadingTimeOut,
-      maxRetry: 0 ,
+      maxRetry: 0,
       retryDelay: 0,
       maxRetryDelay: config.fragLoadingMaxRetryTimeout
     };
@@ -203,37 +204,37 @@ class FragmentLoader extends EventHandler {
     loader.load(loaderContext, loaderConfig, loaderCallbacks);
   }
 
-  loadsuccess(response, stats, context, networkDetails=null) {
+  loadsuccess (response, stats, context, networkDetails = null) {
     let payload = response.data, frag = context.frag;
     // detach fragment loader on load success
     frag.loader = undefined;
     this.loaders[frag.type] = undefined;
-    this.hls.trigger(Event.FRAG_LOADED, {payload: payload, frag: frag, stats: stats, networkDetails: networkDetails});
+    this.hls.trigger(Event.FRAG_LOADED, { payload: payload, frag: frag, stats: stats, networkDetails: networkDetails });
   }
 
-  loaderror(response, context, networkDetails=null) {
+  loaderror (response, context, networkDetails = null) {
     let loader = context.loader;
-    if (loader) {
+    if (loader)
       loader.abort();
-    }
+
     this.loaders[context.type] = undefined;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails});
+    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails });
   }
 
-  loadtimeout(stats, context, networkDetails=null) {
+  loadtimeout (stats, context, networkDetails = null) {
     let loader = context.loader;
-    if (loader) {
+    if (loader)
       loader.abort();
-    }
+
     this.loaders[context.type] = undefined;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails});
+    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails });
   }
 
   // data will be used for progressive parsing
-  loadprogress(stats, context, data, networkDetails=null) { // jshint ignore:line
+  loadprogress (stats, context, data, networkDetails = null) { // jshint ignore:line
     let frag = context.frag;
     frag.loaded = stats.loaded;
-    this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: frag, stats: stats, networkDetails: networkDetails});
+    this.hls.trigger(Event.FRAG_LOAD_PROGRESS, { frag: frag, stats: stats, networkDetails: networkDetails });
   }
 }
 

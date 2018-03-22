@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,133 +134,131 @@
 
 const MpegAudio = {
 
-    BitratesMap: [
-        32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
-        32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384,
-        32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
-        32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256,
-        8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+  BitratesMap: [
+    32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
+    32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384,
+    32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
+    32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256,
+    8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
 
-    SamplingRateMap: [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000],
+  SamplingRateMap: [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000],
 
-    SamplesCoefficients: [
-      // MPEG 2.5
-      [
-        0, // Reserved
-        72, // Layer3
-        144, // Layer2
-        12 // Layer1
-      ],
-      // Reserved
-      [
-        0, // Reserved
-        0, // Layer3
-        0, // Layer2
-        0 // Layer1
-      ],
-      // MPEG 2
-      [
-        0, // Reserved
-        72, // Layer3
-        144, // Layer2
-        12 // Layer1
-      ],
-      // MPEG 1
-      [
-        0, // Reserved
-        144, // Layer3
-        144, // Layer2
-        12 // Layer1
-      ]
-    ],
-
-    BytesInSlot: [
+  SamplesCoefficients: [
+    // MPEG 2.5
+    [
       0, // Reserved
-      1, // Layer3
-      1, // Layer2
-      4 // Layer1
+      72, // Layer3
+      144, // Layer2
+      12 // Layer1
     ],
+    // Reserved
+    [
+      0, // Reserved
+      0, // Layer3
+      0, // Layer2
+      0 // Layer1
+    ],
+    // MPEG 2
+    [
+      0, // Reserved
+      72, // Layer3
+      144, // Layer2
+      12 // Layer1
+    ],
+    // MPEG 1
+    [
+      0, // Reserved
+      144, // Layer3
+      144, // Layer2
+      12 // Layer1
+    ]
+  ],
 
-    appendFrame: function (track, data, offset, pts, frameIndex) {
-        // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
-        if (offset + 24 &gt; data.length) {
-            return undefined;
-        }
+  BytesInSlot: [
+    0, // Reserved
+    1, // Layer3
+    1, // Layer2
+    4 // Layer1
+  ],
 
-        var header = this.parseHeader(data, offset);
-        if (header &amp;&amp; offset + header.frameLength &lt;= data.length) {
-            var frameDuration = header.samplesPerFrame * 90000 / header.sampleRate;
-            var stamp = pts + frameIndex * frameDuration;
-            var sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
+  appendFrame: function (track, data, offset, pts, frameIndex) {
+    // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
+    if (offset + 24 &gt; data.length)
+      return undefined;
 
-            track.config = [];
-            track.channelCount = header.channelCount;
-            track.samplerate = header.sampleRate;
-            track.samples.push(sample);
-            track.len += header.frameLength;
+    let header = this.parseHeader(data, offset);
+    if (header &amp;&amp; offset + header.frameLength &lt;= data.length) {
+      let frameDuration = header.samplesPerFrame * 90000 / header.sampleRate;
+      let stamp = pts + frameIndex * frameDuration;
+      let sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
 
-            return { sample, length: header.frameLength };
-        }
+      track.config = [];
+      track.channelCount = header.channelCount;
+      track.samplerate = header.sampleRate;
+      track.samples.push(sample);
+      track.len += header.frameLength;
 
-        return undefined;
-    },
-
-    parseHeader: function (data, offset) {
-        var headerB = (data[offset + 1] &gt;&gt; 3) &amp; 3;
-        var headerC = (data[offset + 1] &gt;&gt; 1) &amp; 3;
-        var headerE = (data[offset + 2] &gt;&gt; 4) &amp; 15;
-        var headerF = (data[offset + 2] &gt;&gt; 2) &amp; 3;
-        var headerG = (data[offset + 2] &gt;&gt; 1) &amp; 1;
-        if (headerB !== 1 &amp;&amp; headerE !== 0 &amp;&amp; headerE !== 15 &amp;&amp; headerF !== 3) {
-            var columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
-            var bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
-            var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-            var sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
-            var channelCount = data[offset + 3] &gt;&gt; 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-            var sampleCoefficient = MpegAudio.SamplesCoefficients[headerB][headerC];
-            var bytesInSlot = MpegAudio.BytesInSlot[headerC];
-            var samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
-            var frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
-
-            return { sampleRate, channelCount, frameLength, samplesPerFrame };
-        }
-
-        return undefined;
-    },
-
-    isHeaderPattern: function (data, offset) {
-        return data[offset] === 0xff &amp;&amp; (data[offset + 1] &amp; 0xe0) === 0xe0 &amp;&amp; (data[offset + 1] &amp; 0x06) !== 0x00;
-    },
-
-    isHeader: function (data, offset) {
-        // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
-        // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
-        // More info http://www.mp3-tech.org/programmer/frame_header.html
-        if (offset + 1 &lt; data.length &amp;&amp; this.isHeaderPattern(data, offset)) {
-            return true;
-        }
-        return false;
-    },
-
-    probe: function (data, offset) {
-        // same as isHeader but we also check that MPEG frame follows last MPEG frame
-        // or end of data is reached
-        if (offset + 1 &lt; data.length &amp;&amp; this.isHeaderPattern(data, offset)) {
-            // MPEG header Length
-            let headerLength = 4;
-            // MPEG frame Length
-            let header = this.parseHeader(data, offset);
-            let frameLength = headerLength;
-            if (header &amp;&amp; header.frameLength) {
-                frameLength = header.frameLength;
-            }
-            let newOffset = offset + frameLength;
-            if (newOffset === data.length || (newOffset + 1 &lt; data.length &amp;&amp; this.isHeaderPattern(data, newOffset))) {
-                return true;
-            }
-        }
-        return false;
+      return { sample, length: header.frameLength };
     }
+
+    return undefined;
+  },
+
+  parseHeader: function (data, offset) {
+    let headerB = (data[offset + 1] &gt;&gt; 3) &amp; 3;
+    let headerC = (data[offset + 1] &gt;&gt; 1) &amp; 3;
+    let headerE = (data[offset + 2] &gt;&gt; 4) &amp; 15;
+    let headerF = (data[offset + 2] &gt;&gt; 2) &amp; 3;
+    let headerG = (data[offset + 2] &gt;&gt; 1) &amp; 1;
+    if (headerB !== 1 &amp;&amp; headerE !== 0 &amp;&amp; headerE !== 15 &amp;&amp; headerF !== 3) {
+      let columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
+      let bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
+      let columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
+      let sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
+      let channelCount = data[offset + 3] &gt;&gt; 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+      let sampleCoefficient = MpegAudio.SamplesCoefficients[headerB][headerC];
+      let bytesInSlot = MpegAudio.BytesInSlot[headerC];
+      let samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
+      let frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
+
+      return { sampleRate, channelCount, frameLength, samplesPerFrame };
+    }
+
+    return undefined;
+  },
+
+  isHeaderPattern: function (data, offset) {
+    return data[offset] === 0xff &amp;&amp; (data[offset + 1] &amp; 0xe0) === 0xe0 &amp;&amp; (data[offset + 1] &amp; 0x06) !== 0x00;
+  },
+
+  isHeader: function (data, offset) {
+    // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
+    // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
+    // More info http://www.mp3-tech.org/programmer/frame_header.html
+    if (offset + 1 &lt; data.length &amp;&amp; this.isHeaderPattern(data, offset))
+      return true;
+
+    return false;
+  },
+
+  probe: function (data, offset) {
+    // same as isHeader but we also check that MPEG frame follows last MPEG frame
+    // or end of data is reached
+    if (offset + 1 &lt; data.length &amp;&amp; this.isHeaderPattern(data, offset)) {
+      // MPEG header Length
+      let headerLength = 4;
+      // MPEG frame Length
+      let header = this.parseHeader(data, offset);
+      let frameLength = headerLength;
+      if (header &amp;&amp; header.frameLength)
+        frameLength = header.frameLength;
+
+      let newOffset = offset + frameLength;
+      if (newOffset === data.length || (newOffset + 1 &lt; data.length &amp;&amp; this.isHeaderPattern(data, newOffset)))
+        return true;
+    }
+    return false;
+  }
 };
 
 export default MpegAudio;

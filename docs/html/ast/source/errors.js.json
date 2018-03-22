@@ -1,7 +1,7 @@
 {
   "type": "File",
   "start": 0,
-  "end": 4451,
+  "end": 4449,
   "loc": {
     "start": {
       "line": 1,
@@ -15,7 +15,7 @@
   "program": {
     "type": "Program",
     "start": 0,
-    "end": 4451,
+    "end": 4449,
     "loc": {
       "start": {
         "line": 1,
@@ -522,7 +522,7 @@
       {
         "type": "ExportNamedDeclaration",
         "start": 518,
-        "end": 4450,
+        "end": 4448,
         "loc": {
           "start": {
             "line": 18,
@@ -538,7 +538,7 @@
         "declaration": {
           "type": "VariableDeclaration",
           "start": 525,
-          "end": 4450,
+          "end": 4448,
           "loc": {
             "start": {
               "line": 18,
@@ -553,7 +553,7 @@
             {
               "type": "VariableDeclarator",
               "start": 531,
-              "end": 4449,
+              "end": 4447,
               "loc": {
                 "start": {
                   "line": 18,
@@ -585,7 +585,7 @@
               "init": {
                 "type": "ObjectExpression",
                 "start": 546,
-                "end": 4449,
+                "end": 4447,
                 "loc": {
                   "start": {
                     "line": 18,
@@ -1798,7 +1798,7 @@
                   {
                     "type": "ObjectProperty",
                     "start": 3125,
-                    "end": 3162,
+                    "end": 3161,
                     "loc": {
                       "start": {
                         "line": 51,
@@ -1806,7 +1806,7 @@
                       },
                       "end": {
                         "line": 51,
-                        "column": 39
+                        "column": 38
                       }
                     },
                     "method": false,
@@ -1832,16 +1832,16 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 3145,
-                      "end": 3162,
+                      "start": 3144,
+                      "end": 3161,
                       "loc": {
                         "start": {
                           "line": 51,
-                          "column": 22
+                          "column": 21
                         },
                         "end": {
                           "line": 51,
-                          "column": 39
+                          "column": 38
                         }
                       },
                       "extra": {
@@ -1871,8 +1871,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 3294,
-                    "end": 3324,
+                    "start": 3293,
+                    "end": 3323,
                     "loc": {
                       "start": {
                         "line": 53,
@@ -1888,8 +1888,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 3294,
-                      "end": 3308,
+                      "start": 3293,
+                      "end": 3307,
                       "loc": {
                         "start": {
                           "line": 53,
@@ -1906,8 +1906,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 3310,
-                      "end": 3324,
+                      "start": 3309,
+                      "end": 3323,
                       "loc": {
                         "start": {
                           "line": 53,
@@ -1928,8 +1928,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}",
-                        "start": 3166,
-                        "end": 3291,
+                        "start": 3165,
+                        "end": 3290,
                         "loc": {
                           "start": {
                             "line": 52,
@@ -1945,8 +1945,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 3413,
-                    "end": 3447,
+                    "start": 3412,
+                    "end": 3446,
                     "loc": {
                       "start": {
                         "line": 55,
@@ -1962,8 +1962,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 3413,
-                      "end": 3429,
+                      "start": 3412,
+                      "end": 3428,
                       "loc": {
                         "start": {
                           "line": 55,
@@ -1980,8 +1980,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 3431,
-                      "end": 3447,
+                      "start": 3430,
+                      "end": 3446,
                       "loc": {
                         "start": {
                           "line": 55,
@@ -2002,8 +2002,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for decrypt key load timeout error - data: { frag : fragment object}",
-                        "start": 3328,
-                        "end": 3410,
+                        "start": 3327,
+                        "end": 3409,
                         "loc": {
                           "start": {
                             "line": 54,
@@ -2019,8 +2019,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 3586,
-                    "end": 3631,
+                    "start": 3585,
+                    "end": 3630,
                     "loc": {
                       "start": {
                         "line": 57,
@@ -2036,8 +2036,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 3586,
-                      "end": 3608,
+                      "start": 3585,
+                      "end": 3607,
                       "loc": {
                         "start": {
                           "line": 57,
@@ -2054,8 +2054,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 3610,
-                      "end": 3631,
+                      "start": 3609,
+                      "end": 3630,
                       "loc": {
                         "start": {
                           "line": 57,
@@ -2076,8 +2076,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : {  err : exception , mimeType : mimeType }",
-                        "start": 3451,
-                        "end": 3583,
+                        "start": 3450,
+                        "end": 3582,
                         "loc": {
                           "start": {
                             "line": 56,
@@ -2093,8 +2093,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 3710,
-                    "end": 3750,
+                    "start": 3709,
+                    "end": 3749,
                     "loc": {
                       "start": {
                         "line": 59,
@@ -2110,8 +2110,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 3710,
-                      "end": 3729,
+                      "start": 3709,
+                      "end": 3728,
                       "loc": {
                         "start": {
                           "line": 59,
@@ -2128,8 +2128,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 3731,
-                      "end": 3750,
+                      "start": 3730,
+                      "end": 3749,
                       "loc": {
                         "start": {
                           "line": 59,
@@ -2150,8 +2150,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for a buffer append error - data: append error description",
-                        "start": 3635,
-                        "end": 3707,
+                        "start": 3634,
+                        "end": 3706,
                         "loc": {
                           "start": {
                             "line": 58,
@@ -2167,8 +2167,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 3841,
-                    "end": 3887,
+                    "start": 3840,
+                    "end": 3886,
                     "loc": {
                       "start": {
                         "line": 61,
@@ -2184,8 +2184,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 3841,
-                      "end": 3863,
+                      "start": 3840,
+                      "end": 3862,
                       "loc": {
                         "start": {
                           "line": 61,
@@ -2202,8 +2202,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 3865,
-                      "end": 3887,
+                      "start": 3864,
+                      "end": 3886,
                       "loc": {
                         "start": {
                           "line": 61,
@@ -2224,8 +2224,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for a buffer appending error event - data: appending error description",
-                        "start": 3754,
-                        "end": 3838,
+                        "start": 3753,
+                        "end": 3837,
                         "loc": {
                           "start": {
                             "line": 60,
@@ -2241,8 +2241,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 3940,
-                    "end": 3982,
+                    "start": 3939,
+                    "end": 3981,
                     "loc": {
                       "start": {
                         "line": 63,
@@ -2258,8 +2258,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 3940,
-                      "end": 3960,
+                      "start": 3939,
+                      "end": 3959,
                       "loc": {
                         "start": {
                           "line": 63,
@@ -2276,8 +2276,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 3962,
-                      "end": 3982,
+                      "start": 3961,
+                      "end": 3981,
                       "loc": {
                         "start": {
                           "line": 63,
@@ -2298,8 +2298,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for a buffer stalled error event",
-                        "start": 3891,
-                        "end": 3937,
+                        "start": 3890,
+                        "end": 3936,
                         "loc": {
                           "start": {
                             "line": 62,
@@ -2315,8 +2315,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 4026,
-                    "end": 4062,
+                    "start": 4025,
+                    "end": 4061,
                     "loc": {
                       "start": {
                         "line": 65,
@@ -2332,8 +2332,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 4026,
-                      "end": 4043,
+                      "start": 4025,
+                      "end": 4042,
                       "loc": {
                         "start": {
                           "line": 65,
@@ -2350,8 +2350,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 4045,
-                      "end": 4062,
+                      "start": 4044,
+                      "end": 4061,
                       "loc": {
                         "start": {
                           "line": 65,
@@ -2372,8 +2372,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for a buffer full event",
-                        "start": 3986,
-                        "end": 4023,
+                        "start": 3985,
+                        "end": 4022,
                         "loc": {
                           "start": {
                             "line": 64,
@@ -2389,8 +2389,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 4116,
-                    "end": 4159,
+                    "start": 4115,
+                    "end": 4158,
                     "loc": {
                       "start": {
                         "line": 67,
@@ -2406,8 +2406,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 4116,
-                      "end": 4137,
+                      "start": 4115,
+                      "end": 4136,
                       "loc": {
                         "start": {
                           "line": 67,
@@ -2424,8 +2424,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 4139,
-                      "end": 4159,
+                      "start": 4138,
+                      "end": 4158,
                       "loc": {
                         "start": {
                           "line": 67,
@@ -2446,8 +2446,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for a buffer seek over hole event",
-                        "start": 4066,
-                        "end": 4113,
+                        "start": 4065,
+                        "end": 4112,
                         "loc": {
                           "start": {
                             "line": 66,
@@ -2463,8 +2463,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 4270,
-                    "end": 4314,
+                    "start": 4269,
+                    "end": 4312,
                     "loc": {
                       "start": {
                         "line": 69,
@@ -2472,7 +2472,7 @@
                       },
                       "end": {
                         "line": 69,
-                        "column": 46
+                        "column": 45
                       }
                     },
                     "method": false,
@@ -2480,8 +2480,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 4270,
-                      "end": 4291,
+                      "start": 4269,
+                      "end": 4290,
                       "loc": {
                         "start": {
                           "line": 69,
@@ -2498,16 +2498,16 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 4294,
-                      "end": 4314,
+                      "start": 4292,
+                      "end": 4312,
                       "loc": {
                         "start": {
                           "line": 69,
-                          "column": 26
+                          "column": 25
                         },
                         "end": {
                           "line": 69,
-                          "column": 46
+                          "column": 45
                         }
                       },
                       "extra": {
@@ -2520,8 +2520,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)",
-                        "start": 4163,
-                        "end": 4267,
+                        "start": 4162,
+                        "end": 4266,
                         "loc": {
                           "start": {
                             "line": 68,
@@ -2537,8 +2537,8 @@
                   },
                   {
                     "type": "ObjectProperty",
-                    "start": 4408,
-                    "end": 4447,
+                    "start": 4406,
+                    "end": 4445,
                     "loc": {
                       "start": {
                         "line": 71,
@@ -2554,8 +2554,8 @@
                     "computed": false,
                     "key": {
                       "type": "Identifier",
-                      "start": 4408,
-                      "end": 4426,
+                      "start": 4406,
+                      "end": 4424,
                       "loc": {
                         "start": {
                           "line": 71,
@@ -2572,8 +2572,8 @@
                     },
                     "value": {
                       "type": "StringLiteral",
-                      "start": 4428,
-                      "end": 4447,
+                      "start": 4426,
+                      "end": 4445,
                       "loc": {
                         "start": {
                           "line": 71,
@@ -2594,8 +2594,8 @@
                       {
                         "type": "CommentLine",
                         "value": " Identifier for an internal exception happening inside hls.js while handling an event",
-                        "start": 4318,
-                        "end": 4405,
+                        "start": 4316,
+                        "end": 4403,
                         "loc": {
                           "start": {
                             "line": 70,
@@ -2997,8 +2997,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}",
-      "start": 3166,
-      "end": 3291,
+      "start": 3165,
+      "end": 3290,
       "loc": {
         "start": {
           "line": 52,
@@ -3013,8 +3013,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for decrypt key load timeout error - data: { frag : fragment object}",
-      "start": 3328,
-      "end": 3410,
+      "start": 3327,
+      "end": 3409,
       "loc": {
         "start": {
           "line": 54,
@@ -3029,8 +3029,8 @@
     {
       "type": "CommentLine",
       "value": " Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : {  err : exception , mimeType : mimeType }",
-      "start": 3451,
-      "end": 3583,
+      "start": 3450,
+      "end": 3582,
       "loc": {
         "start": {
           "line": 56,
@@ -3045,8 +3045,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer append error - data: append error description",
-      "start": 3635,
-      "end": 3707,
+      "start": 3634,
+      "end": 3706,
       "loc": {
         "start": {
           "line": 58,
@@ -3061,8 +3061,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer appending error event - data: appending error description",
-      "start": 3754,
-      "end": 3838,
+      "start": 3753,
+      "end": 3837,
       "loc": {
         "start": {
           "line": 60,
@@ -3077,8 +3077,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer stalled error event",
-      "start": 3891,
-      "end": 3937,
+      "start": 3890,
+      "end": 3936,
       "loc": {
         "start": {
           "line": 62,
@@ -3093,8 +3093,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer full event",
-      "start": 3986,
-      "end": 4023,
+      "start": 3985,
+      "end": 4022,
       "loc": {
         "start": {
           "line": 64,
@@ -3109,8 +3109,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer seek over hole event",
-      "start": 4066,
-      "end": 4113,
+      "start": 4065,
+      "end": 4112,
       "loc": {
         "start": {
           "line": 66,
@@ -3125,8 +3125,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)",
-      "start": 4163,
-      "end": 4267,
+      "start": 4162,
+      "end": 4266,
       "loc": {
         "start": {
           "line": 68,
@@ -3141,8 +3141,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for an internal exception happening inside hls.js while handling an event",
-      "start": 4318,
-      "end": 4405,
+      "start": 4316,
+      "end": 4403,
       "loc": {
         "start": {
           "line": 70,
@@ -6134,16 +6134,16 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3143,
-      "end": 3144,
+      "start": 3142,
+      "end": 3143,
       "loc": {
         "start": {
           "line": 51,
-          "column": 20
+          "column": 19
         },
         "end": {
           "line": 51,
-          "column": 21
+          "column": 20
         }
       }
     },
@@ -6161,16 +6161,16 @@
         "updateContext": null
       },
       "value": "remuxAllocError",
-      "start": 3145,
-      "end": 3162,
+      "start": 3144,
+      "end": 3161,
       "loc": {
         "start": {
           "line": 51,
-          "column": 22
+          "column": 21
         },
         "end": {
           "line": 51,
-          "column": 39
+          "column": 38
         }
       }
     },
@@ -6187,24 +6187,24 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3162,
-      "end": 3163,
+      "start": 3161,
+      "end": 3162,
       "loc": {
         "start": {
           "line": 51,
-          "column": 39
+          "column": 38
         },
         "end": {
           "line": 51,
-          "column": 40
+          "column": 39
         }
       }
     },
     {
       "type": "CommentLine",
       "value": " Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}",
-      "start": 3166,
-      "end": 3291,
+      "start": 3165,
+      "end": 3290,
       "loc": {
         "start": {
           "line": 52,
@@ -6229,8 +6229,8 @@
         "binop": null
       },
       "value": "KEY_LOAD_ERROR",
-      "start": 3294,
-      "end": 3308,
+      "start": 3293,
+      "end": 3307,
       "loc": {
         "start": {
           "line": 53,
@@ -6255,8 +6255,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3308,
-      "end": 3309,
+      "start": 3307,
+      "end": 3308,
       "loc": {
         "start": {
           "line": 53,
@@ -6282,8 +6282,8 @@
         "updateContext": null
       },
       "value": "keyLoadError",
-      "start": 3310,
-      "end": 3324,
+      "start": 3309,
+      "end": 3323,
       "loc": {
         "start": {
           "line": 53,
@@ -6308,8 +6308,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3324,
-      "end": 3325,
+      "start": 3323,
+      "end": 3324,
       "loc": {
         "start": {
           "line": 53,
@@ -6324,8 +6324,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for decrypt key load timeout error - data: { frag : fragment object}",
-      "start": 3328,
-      "end": 3410,
+      "start": 3327,
+      "end": 3409,
       "loc": {
         "start": {
           "line": 54,
@@ -6350,8 +6350,8 @@
         "binop": null
       },
       "value": "KEY_LOAD_TIMEOUT",
-      "start": 3413,
-      "end": 3429,
+      "start": 3412,
+      "end": 3428,
       "loc": {
         "start": {
           "line": 55,
@@ -6376,8 +6376,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3429,
-      "end": 3430,
+      "start": 3428,
+      "end": 3429,
       "loc": {
         "start": {
           "line": 55,
@@ -6403,8 +6403,8 @@
         "updateContext": null
       },
       "value": "keyLoadTimeOut",
-      "start": 3431,
-      "end": 3447,
+      "start": 3430,
+      "end": 3446,
       "loc": {
         "start": {
           "line": 55,
@@ -6429,8 +6429,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3447,
-      "end": 3448,
+      "start": 3446,
+      "end": 3447,
       "loc": {
         "start": {
           "line": 55,
@@ -6445,8 +6445,8 @@
     {
       "type": "CommentLine",
       "value": " Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : {  err : exception , mimeType : mimeType }",
-      "start": 3451,
-      "end": 3583,
+      "start": 3450,
+      "end": 3582,
       "loc": {
         "start": {
           "line": 56,
@@ -6471,8 +6471,8 @@
         "binop": null
       },
       "value": "BUFFER_ADD_CODEC_ERROR",
-      "start": 3586,
-      "end": 3608,
+      "start": 3585,
+      "end": 3607,
       "loc": {
         "start": {
           "line": 57,
@@ -6497,8 +6497,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3608,
-      "end": 3609,
+      "start": 3607,
+      "end": 3608,
       "loc": {
         "start": {
           "line": 57,
@@ -6524,8 +6524,8 @@
         "updateContext": null
       },
       "value": "bufferAddCodecError",
-      "start": 3610,
-      "end": 3631,
+      "start": 3609,
+      "end": 3630,
       "loc": {
         "start": {
           "line": 57,
@@ -6550,8 +6550,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3631,
-      "end": 3632,
+      "start": 3630,
+      "end": 3631,
       "loc": {
         "start": {
           "line": 57,
@@ -6566,8 +6566,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer append error - data: append error description",
-      "start": 3635,
-      "end": 3707,
+      "start": 3634,
+      "end": 3706,
       "loc": {
         "start": {
           "line": 58,
@@ -6592,8 +6592,8 @@
         "binop": null
       },
       "value": "BUFFER_APPEND_ERROR",
-      "start": 3710,
-      "end": 3729,
+      "start": 3709,
+      "end": 3728,
       "loc": {
         "start": {
           "line": 59,
@@ -6618,8 +6618,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3729,
-      "end": 3730,
+      "start": 3728,
+      "end": 3729,
       "loc": {
         "start": {
           "line": 59,
@@ -6645,8 +6645,8 @@
         "updateContext": null
       },
       "value": "bufferAppendError",
-      "start": 3731,
-      "end": 3750,
+      "start": 3730,
+      "end": 3749,
       "loc": {
         "start": {
           "line": 59,
@@ -6671,8 +6671,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3750,
-      "end": 3751,
+      "start": 3749,
+      "end": 3750,
       "loc": {
         "start": {
           "line": 59,
@@ -6687,8 +6687,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer appending error event - data: appending error description",
-      "start": 3754,
-      "end": 3838,
+      "start": 3753,
+      "end": 3837,
       "loc": {
         "start": {
           "line": 60,
@@ -6713,8 +6713,8 @@
         "binop": null
       },
       "value": "BUFFER_APPENDING_ERROR",
-      "start": 3841,
-      "end": 3863,
+      "start": 3840,
+      "end": 3862,
       "loc": {
         "start": {
           "line": 61,
@@ -6739,8 +6739,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3863,
-      "end": 3864,
+      "start": 3862,
+      "end": 3863,
       "loc": {
         "start": {
           "line": 61,
@@ -6766,8 +6766,8 @@
         "updateContext": null
       },
       "value": "bufferAppendingError",
-      "start": 3865,
-      "end": 3887,
+      "start": 3864,
+      "end": 3886,
       "loc": {
         "start": {
           "line": 61,
@@ -6792,8 +6792,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3887,
-      "end": 3888,
+      "start": 3886,
+      "end": 3887,
       "loc": {
         "start": {
           "line": 61,
@@ -6808,8 +6808,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer stalled error event",
-      "start": 3891,
-      "end": 3937,
+      "start": 3890,
+      "end": 3936,
       "loc": {
         "start": {
           "line": 62,
@@ -6834,8 +6834,8 @@
         "binop": null
       },
       "value": "BUFFER_STALLED_ERROR",
-      "start": 3940,
-      "end": 3960,
+      "start": 3939,
+      "end": 3959,
       "loc": {
         "start": {
           "line": 63,
@@ -6860,8 +6860,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3960,
-      "end": 3961,
+      "start": 3959,
+      "end": 3960,
       "loc": {
         "start": {
           "line": 63,
@@ -6887,8 +6887,8 @@
         "updateContext": null
       },
       "value": "bufferStalledError",
-      "start": 3962,
-      "end": 3982,
+      "start": 3961,
+      "end": 3981,
       "loc": {
         "start": {
           "line": 63,
@@ -6913,8 +6913,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 3982,
-      "end": 3983,
+      "start": 3981,
+      "end": 3982,
       "loc": {
         "start": {
           "line": 63,
@@ -6929,8 +6929,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer full event",
-      "start": 3986,
-      "end": 4023,
+      "start": 3985,
+      "end": 4022,
       "loc": {
         "start": {
           "line": 64,
@@ -6955,8 +6955,8 @@
         "binop": null
       },
       "value": "BUFFER_FULL_ERROR",
-      "start": 4026,
-      "end": 4043,
+      "start": 4025,
+      "end": 4042,
       "loc": {
         "start": {
           "line": 65,
@@ -6981,8 +6981,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4043,
-      "end": 4044,
+      "start": 4042,
+      "end": 4043,
       "loc": {
         "start": {
           "line": 65,
@@ -7008,8 +7008,8 @@
         "updateContext": null
       },
       "value": "bufferFullError",
-      "start": 4045,
-      "end": 4062,
+      "start": 4044,
+      "end": 4061,
       "loc": {
         "start": {
           "line": 65,
@@ -7034,8 +7034,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4062,
-      "end": 4063,
+      "start": 4061,
+      "end": 4062,
       "loc": {
         "start": {
           "line": 65,
@@ -7050,8 +7050,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer seek over hole event",
-      "start": 4066,
-      "end": 4113,
+      "start": 4065,
+      "end": 4112,
       "loc": {
         "start": {
           "line": 66,
@@ -7076,8 +7076,8 @@
         "binop": null
       },
       "value": "BUFFER_SEEK_OVER_HOLE",
-      "start": 4116,
-      "end": 4137,
+      "start": 4115,
+      "end": 4136,
       "loc": {
         "start": {
           "line": 67,
@@ -7102,8 +7102,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4137,
-      "end": 4138,
+      "start": 4136,
+      "end": 4137,
       "loc": {
         "start": {
           "line": 67,
@@ -7129,8 +7129,8 @@
         "updateContext": null
       },
       "value": "bufferSeekOverHole",
-      "start": 4139,
-      "end": 4159,
+      "start": 4138,
+      "end": 4158,
       "loc": {
         "start": {
           "line": 67,
@@ -7155,8 +7155,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4159,
-      "end": 4160,
+      "start": 4158,
+      "end": 4159,
       "loc": {
         "start": {
           "line": 67,
@@ -7171,8 +7171,8 @@
     {
       "type": "CommentLine",
       "value": " Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)",
-      "start": 4163,
-      "end": 4267,
+      "start": 4162,
+      "end": 4266,
       "loc": {
         "start": {
           "line": 68,
@@ -7197,8 +7197,8 @@
         "binop": null
       },
       "value": "BUFFER_NUDGE_ON_STALL",
-      "start": 4270,
-      "end": 4291,
+      "start": 4269,
+      "end": 4290,
       "loc": {
         "start": {
           "line": 69,
@@ -7223,16 +7223,16 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4292,
-      "end": 4293,
+      "start": 4290,
+      "end": 4291,
       "loc": {
         "start": {
           "line": 69,
-          "column": 24
+          "column": 23
         },
         "end": {
           "line": 69,
-          "column": 25
+          "column": 24
         }
       }
     },
@@ -7250,16 +7250,16 @@
         "updateContext": null
       },
       "value": "bufferNudgeOnStall",
-      "start": 4294,
-      "end": 4314,
+      "start": 4292,
+      "end": 4312,
       "loc": {
         "start": {
           "line": 69,
-          "column": 26
+          "column": 25
         },
         "end": {
           "line": 69,
-          "column": 46
+          "column": 45
         }
       }
     },
@@ -7276,24 +7276,24 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4314,
-      "end": 4315,
+      "start": 4312,
+      "end": 4313,
       "loc": {
         "start": {
           "line": 69,
-          "column": 46
+          "column": 45
         },
         "end": {
           "line": 69,
-          "column": 47
+          "column": 46
         }
       }
     },
     {
       "type": "CommentLine",
       "value": " Identifier for an internal exception happening inside hls.js while handling an event",
-      "start": 4318,
-      "end": 4405,
+      "start": 4316,
+      "end": 4403,
       "loc": {
         "start": {
           "line": 70,
@@ -7318,8 +7318,8 @@
         "binop": null
       },
       "value": "INTERNAL_EXCEPTION",
-      "start": 4408,
-      "end": 4426,
+      "start": 4406,
+      "end": 4424,
       "loc": {
         "start": {
           "line": 71,
@@ -7344,8 +7344,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4426,
-      "end": 4427,
+      "start": 4424,
+      "end": 4425,
       "loc": {
         "start": {
           "line": 71,
@@ -7371,8 +7371,8 @@
         "updateContext": null
       },
       "value": "internalException",
-      "start": 4428,
-      "end": 4447,
+      "start": 4426,
+      "end": 4445,
       "loc": {
         "start": {
           "line": 71,
@@ -7396,8 +7396,8 @@
         "postfix": false,
         "binop": null
       },
-      "start": 4448,
-      "end": 4449,
+      "start": 4446,
+      "end": 4447,
       "loc": {
         "start": {
           "line": 72,
@@ -7422,8 +7422,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4449,
-      "end": 4450,
+      "start": 4447,
+      "end": 4448,
       "loc": {
         "start": {
           "line": 72,
@@ -7448,8 +7448,8 @@
         "binop": null,
         "updateContext": null
       },
-      "start": 4451,
-      "end": 4451,
+      "start": 4449,
+      "end": 4449,
       "loc": {
         "start": {
           "line": 73,

@@ -4,44 +4,44 @@
     "filePath": "src/demux/exp-golomb.js",
     "lines": [
       {
-        "lineNumber": 160,
+        "lineNumber": 158,
         "line": "  /**"
       },
       {
-        "lineNumber": 161,
+        "lineNumber": 159,
         "line": "   * Read a sequence parameter set and return some interesting video"
       },
       {
-        "lineNumber": 162,
+        "lineNumber": 160,
         "line": "   * properties. A sequence parameter set is the H264 metadata that"
       },
       {
-        "lineNumber": 163,
+        "lineNumber": 161,
         "line": "   * describes the properties of upcoming video frames."
       },
       {
-        "lineNumber": 164,
+        "lineNumber": 162,
         "line": "   * @param data {Uint8Array} the bytes of a sequence parameter set"
       },
       {
-        "lineNumber": 165,
+        "lineNumber": 163,
         "line": "   * @return {object} an object with configuration parsed from the"
       },
       {
-        "lineNumber": 166,
+        "lineNumber": 164,
         "line": "   * sequence parameter set, including the dimensions of the"
       },
       {
-        "lineNumber": 167,
+        "lineNumber": 165,
         "line": "   * associated video frames."
       },
       {
-        "lineNumber": 168,
+        "lineNumber": 166,
         "line": "   */"
       },
       {
-        "lineNumber": 169,
-        "line": "  readSPS() {"
+        "lineNumber": 167,
+        "line": "  readSPS () {"
       }
     ],
     "codeParams": [],
@@ -54,84 +54,84 @@
     "filePath": "src/demux/mp4demuxer.js",
     "lines": [
       {
-        "lineNumber": 237,
+        "lineNumber": 226,
         "line": "  /**"
       },
       {
-        "lineNumber": 238,
+        "lineNumber": 227,
         "line": "   * Parses an MP4 initialization segment and extracts stream type and"
       },
       {
-        "lineNumber": 239,
+        "lineNumber": 228,
         "line": "   * timescale values for any declared tracks. Timescale values indicate the"
       },
       {
-        "lineNumber": 240,
+        "lineNumber": 229,
         "line": "   * number of clock ticks per second to assume for time-based values"
       },
       {
-        "lineNumber": 241,
+        "lineNumber": 230,
         "line": "   * elsewhere in the MP4."
       },
       {
-        "lineNumber": 242,
+        "lineNumber": 231,
         "line": "   *"
       },
       {
-        "lineNumber": 243,
+        "lineNumber": 232,
         "line": "   * To determine the start time of an MP4, you need two pieces of"
       },
       {
-        "lineNumber": 244,
+        "lineNumber": 233,
         "line": "   * information: the timescale unit and the earliest base media decode"
       },
       {
-        "lineNumber": 245,
+        "lineNumber": 234,
         "line": "   * time. Multiple timescales can be specified within an MP4 but the"
       },
       {
-        "lineNumber": 246,
+        "lineNumber": 235,
         "line": "   * base media decode time is always expressed in the timescale from"
       },
       {
-        "lineNumber": 247,
+        "lineNumber": 236,
         "line": "   * the media header box for the track:"
       },
       {
-        "lineNumber": 248,
+        "lineNumber": 237,
         "line": "   * ```"
       },
       {
-        "lineNumber": 249,
+        "lineNumber": 238,
         "line": "   * moov > trak > mdia > mdhd.timescale"
       },
       {
-        "lineNumber": 250,
+        "lineNumber": 239,
         "line": "   * moov > trak > mdia > hdlr"
       },
       {
-        "lineNumber": 251,
+        "lineNumber": 240,
         "line": "   * ```"
       },
       {
-        "lineNumber": 252,
+        "lineNumber": 241,
         "line": "   * @param init {Uint8Array} the bytes of the init segment"
       },
       {
-        "lineNumber": 253,
+        "lineNumber": 242,
         "line": "   * @return {object} a hash of track type to timescale values or null if"
       },
       {
-        "lineNumber": 254,
+        "lineNumber": 243,
         "line": "   * the init segment is malformed."
       },
       {
-        "lineNumber": 255,
+        "lineNumber": 244,
         "line": "   */"
       },
       {
-        "lineNumber": 256,
-        "line": "  static parseInitSegment(initSegment) {"
+        "lineNumber": 245,
+        "line": "  static parseInitSegment (initSegment) {"
       }
     ],
     "codeParams": [
@@ -146,72 +146,72 @@
     "filePath": "src/demux/mp4demuxer.js",
     "lines": [
       {
-        "lineNumber": 297,
-        "line": "/**"
+        "lineNumber": 284,
+        "line": "  /**"
       },
       {
-        "lineNumber": 298,
+        "lineNumber": 285,
         "line": " * Determine the base media decode start time, in seconds, for an MP4"
       },
       {
-        "lineNumber": 299,
+        "lineNumber": 286,
         "line": " * fragment. If multiple fragments are specified, the earliest time is"
       },
       {
-        "lineNumber": 300,
+        "lineNumber": 287,
         "line": " * returned."
       },
       {
-        "lineNumber": 301,
+        "lineNumber": 288,
         "line": " *"
       },
       {
-        "lineNumber": 302,
+        "lineNumber": 289,
         "line": " * The base media decode time can be parsed from track fragment"
       },
       {
-        "lineNumber": 303,
+        "lineNumber": 290,
         "line": " * metadata:"
       },
       {
-        "lineNumber": 304,
+        "lineNumber": 291,
         "line": " * ```"
       },
       {
-        "lineNumber": 305,
+        "lineNumber": 292,
         "line": " * moof > traf > tfdt.baseMediaDecodeTime"
       },
       {
-        "lineNumber": 306,
+        "lineNumber": 293,
         "line": " * ```"
       },
       {
-        "lineNumber": 307,
+        "lineNumber": 294,
         "line": " * It requires the timescale value from the mdhd to interpret."
       },
       {
-        "lineNumber": 308,
+        "lineNumber": 295,
         "line": " *"
       },
       {
-        "lineNumber": 309,
+        "lineNumber": 296,
         "line": " * @param timescale {object} a hash of track ids to timescale values."
       },
       {
-        "lineNumber": 310,
+        "lineNumber": 297,
         "line": " * @return {number} the earliest base media decode start time for the"
       },
       {
-        "lineNumber": 311,
+        "lineNumber": 298,
         "line": " * fragment, in seconds"
       },
       {
-        "lineNumber": 312,
+        "lineNumber": 299,
         "line": " */"
       },
       {
-        "lineNumber": 313,
-        "line": "static getStartDTS(initData, fragment) {"
+        "lineNumber": 300,
+        "line": "  static getStartDTS (initData, fragment) {"
       }
     ],
     "codeParams": [
@@ -227,20 +227,20 @@
     "filePath": "src/remux/mp4-generator.js",
     "lines": [
       {
-        "lineNumber": 230,
-        "line": "/**"
+        "lineNumber": 229,
+        "line": "  /**"
       },
       {
-        "lineNumber": 231,
+        "lineNumber": 230,
         "line": " * @param tracks... (optional) {array} the tracks associated with this movie"
       },
       {
-        "lineNumber": 232,
+        "lineNumber": 231,
         "line": " */"
       },
       {
-        "lineNumber": 233,
-        "line": "  static moov(tracks) {"
+        "lineNumber": 232,
+        "line": "  static moov (tracks) {"
       }
     ],
     "codeParams": [
@@ -274,7 +274,7 @@
       },
       {
         "lineNumber": 54,
-        "line": "  tick() {"
+        "line": "  tick () {"
       }
     ],
     "codeParams": [],

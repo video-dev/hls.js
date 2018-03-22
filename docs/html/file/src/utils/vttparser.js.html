@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,40 +134,37 @@
 
 import VTTCue from &apos;./vttcue&apos;;
 
-const StringDecoder = function StringDecoder() {
+const StringDecoder = function StringDecoder () {
   return {
-    decode: function(data) {
-      if (!data) {
+    decode: function (data) {
+      if (!data)
         return &apos;&apos;;
-      }
-      if (typeof data !== &apos;string&apos;) {
-        throw new Error(&apos;Error - expected string data.&apos;);
-      }
-      return decodeURIComponent(encodeURIComponent(data));
-        },
-    };
-  };
 
-function VTTParser() {
-    this.window = window;
-    this.state = &apos;INITIAL&apos;;
-    this.buffer = &apos;&apos;;
-    this.decoder = new StringDecoder();
-    this.regionList = [];
+      if (typeof data !== &apos;string&apos;)
+        throw new Error(&apos;Error - expected string data.&apos;);
+
+      return decodeURIComponent(encodeURIComponent(data));
+    }
+  };
+};
+
+function VTTParser () {
+  this.window = window;
+  this.state = &apos;INITIAL&apos;;
+  this.buffer = &apos;&apos;;
+  this.decoder = new StringDecoder();
+  this.regionList = [];
 }
 
-
 // Try to parse input as a time stamp.
-function parseTimeStamp(input) {
-
-  function computeSeconds(h, m, s, f) {
+function parseTimeStamp (input) {
+  function computeSeconds (h, m, s, f) {
     return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + (f | 0) / 1000;
   }
 
-  var m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d{3})/);
-  if (!m) {
+  let m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d{3})/);
+  if (!m)
     return null;
-  }
 
   if (m[3]) {
     // Timestamp takes the form of [hours]:[minutes]:[seconds].[milliseconds]
@@ -181,35 +181,34 @@ function parseTimeStamp(input) {
 
 // A settings object holds key/value pairs and will ignore anything but the first
 // assignment to a specific key.
-function Settings() {
+function Settings () {
   this.values = Object.create(null);
 }
 
 Settings.prototype = {
   // Only accept the first assignment to any key.
-  set: function(k, v) {
-    if (!this.get(k) &amp;&amp; v !== &apos;&apos;) {
+  set: function (k, v) {
+    if (!this.get(k) &amp;&amp; v !== &apos;&apos;)
       this.values[k] = v;
-    }
   },
   // Return the value for a key, or a default value.
   // If &apos;defaultKey&apos; is passed then &apos;dflt&apos; is assumed to be an object with
   // a number of possible default values as properties where &apos;defaultKey&apos; is
   // the key of the property that will be chosen; otherwise it&apos;s assumed to be
   // a single value.
-  get: function(k, dflt, defaultKey) {
-    if (defaultKey) {
+  get: function (k, dflt, defaultKey) {
+    if (defaultKey)
       return this.has(k) ? this.values[k] : dflt[defaultKey];
-    }
+
     return this.has(k) ? this.values[k] : dflt;
   },
   // Check whether we have a value for a key.
-  has: function(k) {
+  has: function (k) {
     return k in this.values;
   },
   // Accept a setting if its one of the given alternatives.
-  alt: function(k, v, a) {
-    for (var n = 0; n &lt; a.length; ++n) {
+  alt: function (k, v, a) {
+    for (let n = 0; n &lt; a.length; ++n) {
       if (v === a[n]) {
         this.set(k, v);
         break;
@@ -217,14 +216,14 @@ Settings.prototype = {
     }
   },
   // Accept a setting if its a valid (signed) integer.
-  integer: function(k, v) {
+  integer: function (k, v) {
     if (/^-?\d+$/.test(v)) { // integer
       this.set(k, parseInt(v, 10));
     }
   },
   // Accept a setting if its a valid percentage.
-  percent: function(k, v) {
-    var m;
+  percent: function (k, v) {
+    let m;
     if ((m = v.match(/^([\d]{1,3})(\.[\d]*)?%$/))) {
       v = parseFloat(v);
       if (v &gt;= 0 &amp;&amp; v &lt;= 100) {
@@ -238,91 +237,91 @@ Settings.prototype = {
 
 // Helper function to parse input into groups separated by &apos;groupDelim&apos;, and
 // interprete each group as a key/value pair separated by &apos;keyValueDelim&apos;.
-function parseOptions(input, callback, keyValueDelim, groupDelim) {
-  var groups = groupDelim ? input.split(groupDelim) : [input];
-  for (var i in groups) {
-    if (typeof groups[i] !== &apos;string&apos;) {
+function parseOptions (input, callback, keyValueDelim, groupDelim) {
+  let groups = groupDelim ? input.split(groupDelim) : [input];
+  for (let i in groups) {
+    if (typeof groups[i] !== &apos;string&apos;)
       continue;
-    }
-    var kv = groups[i].split(keyValueDelim);
-    if (kv.length !== 2) {
+
+    let kv = groups[i].split(keyValueDelim);
+    if (kv.length !== 2)
       continue;
-    }
-    var k = kv[0];
-    var v = kv[1];
+
+    let k = kv[0];
+    let v = kv[1];
     callback(k, v);
   }
 }
 
-var defaults = new VTTCue(0, 0, 0);
+let defaults = new VTTCue(0, 0, 0);
 // &apos;middle&apos; was changed to &apos;center&apos; in the spec: https://github.com/w3c/webvtt/pull/244
 //  Safari doesn&apos;t yet support this change, but FF and Chrome do.
-var center = defaults.align === &apos;middle&apos; ? &apos;middle&apos; : &apos;center&apos;;
+let center = defaults.align === &apos;middle&apos; ? &apos;middle&apos; : &apos;center&apos;;
 
-function parseCue(input, cue, regionList) {
+function parseCue (input, cue, regionList) {
   // Remember the original input if we need to throw an error.
-  var oInput = input;
+  let oInput = input;
   // 4.1 WebVTT timestamp
-  function consumeTimeStamp() {
-    var ts = parseTimeStamp(input);
-    if (ts === null) {
+  function consumeTimeStamp () {
+    let ts = parseTimeStamp(input);
+    if (ts === null)
       throw new Error(&apos;Malformed timestamp: &apos; + oInput);
-    }
+
     // Remove time stamp from input.
     input = input.replace(/^[^\sa-zA-Z-]+/, &apos;&apos;);
     return ts;
   }
 
   // 4.4.2 WebVTT cue settings
-  function consumeCueSettings(input, cue) {
-    var settings = new Settings();
+  function consumeCueSettings (input, cue) {
+    let settings = new Settings();
 
-    parseOptions(input, function(k, v) {
+    parseOptions(input, function (k, v) {
       switch (k) {
-        case &apos;region&apos;:
-          // Find the last region we parsed with the same region id.
-          for (var i = regionList.length - 1; i &gt;= 0; i--) {
-            if (regionList[i].id === v) {
-              settings.set(k, regionList[i].region);
-              break;
-            }
+      case &apos;region&apos;:
+        // Find the last region we parsed with the same region id.
+        for (let i = regionList.length - 1; i &gt;= 0; i--) {
+          if (regionList[i].id === v) {
+            settings.set(k, regionList[i].region);
+            break;
           }
-          break;
-        case &apos;vertical&apos;:
-          settings.alt(k, v, [&apos;rl&apos;, &apos;lr&apos;]);
-          break;
-        case &apos;line&apos;:
-          var vals = v.split(&apos;,&apos;),
-            vals0 = vals[0];
-          settings.integer(k, vals0);
-          if (settings.percent(k, vals0)) {
-            settings.set(&apos;snapToLines&apos;, false);
-          }
-          settings.alt(k, vals0, [&apos;auto&apos;]);
-          if (vals.length === 2) {
-            settings.alt(&apos;lineAlign&apos;, vals[1], [&apos;start&apos;, center, &apos;end&apos;]);
-          }
-          break;
-        case &apos;position&apos;:
-          vals = v.split(&apos;,&apos;);
-          settings.percent(k, vals[0]);
-          if (vals.length === 2) {
-            settings.alt(&apos;positionAlign&apos;, vals[1], [&apos;start&apos;, center, &apos;end&apos;, &apos;line-left&apos;, &apos;line-right&apos;, &apos;auto&apos;]);
-          }
-          break;
-        case &apos;size&apos;:
-          settings.percent(k, v);
-          break;
-        case &apos;align&apos;:
-          settings.alt(k, v, [&apos;start&apos;, center, &apos;end&apos;, &apos;left&apos;, &apos;right&apos;]);
-          break;
+        }
+        break;
+      case &apos;vertical&apos;:
+        settings.alt(k, v, [&apos;rl&apos;, &apos;lr&apos;]);
+        break;
+      case &apos;line&apos;:
+        var vals = v.split(&apos;,&apos;),
+          vals0 = vals[0];
+        settings.integer(k, vals0);
+        if (settings.percent(k, vals0))
+          settings.set(&apos;snapToLines&apos;, false);
+
+        settings.alt(k, vals0, [&apos;auto&apos;]);
+        if (vals.length === 2)
+          settings.alt(&apos;lineAlign&apos;, vals[1], [&apos;start&apos;, center, &apos;end&apos;]);
+
+        break;
+      case &apos;position&apos;:
+        vals = v.split(&apos;,&apos;);
+        settings.percent(k, vals[0]);
+        if (vals.length === 2)
+          settings.alt(&apos;positionAlign&apos;, vals[1], [&apos;start&apos;, center, &apos;end&apos;, &apos;line-left&apos;, &apos;line-right&apos;, &apos;auto&apos;]);
+
+        break;
+      case &apos;size&apos;:
+        settings.percent(k, v);
+        break;
+      case &apos;align&apos;:
+        settings.alt(k, v, [&apos;start&apos;, center, &apos;end&apos;, &apos;left&apos;, &apos;right&apos;]);
+        break;
       }
     }, /:/, /\s/);
 
     // Apply default values for any missing fields.
     cue.region = settings.get(&apos;region&apos;, null);
     cue.vertical = settings.get(&apos;vertical&apos;, &apos;&apos;);
-    var line = settings.get(&apos;line&apos;, &apos;auto&apos;);
+    let line = settings.get(&apos;line&apos;, &apos;auto&apos;);
     if (line === &apos;auto&apos; &amp;&amp; defaults.line === -1) {
       // set numeric line number for Safari
       line = -1;
@@ -332,7 +331,7 @@ function parseCue(input, cue, regionList) {
     cue.snapToLines = settings.get(&apos;snapToLines&apos;, true);
     cue.size = settings.get(&apos;size&apos;, 100);
     cue.align = settings.get(&apos;align&apos;, center);
-    var position = settings.get(&apos;position&apos;, &apos;auto&apos;);
+    let position = settings.get(&apos;position&apos;, &apos;auto&apos;);
     if (position === &apos;auto&apos; &amp;&amp; defaults.position === 50) {
       // set numeric position for Safari
       position = cue.align === &apos;start&apos; || cue.align === &apos;left&apos; ? 0 : cue.align === &apos;end&apos; || cue.align === &apos;right&apos; ? 100 : 50;
@@ -340,191 +339,186 @@ function parseCue(input, cue, regionList) {
     cue.position = position;
   }
 
-  function skipWhitespace() {
+  function skipWhitespace () {
     input = input.replace(/^\s+/, &apos;&apos;);
   }
 
   // 4.1 WebVTT cue timings.
   skipWhitespace();
-  cue.startTime = consumeTimeStamp();   // (1) collect cue start time
+  cue.startTime = consumeTimeStamp(); // (1) collect cue start time
   skipWhitespace();
-  if (input.substr(0, 3) !== &apos;--&gt;&apos;) {     // (3) next characters must match &apos;--&gt;&apos;
+  if (input.substr(0, 3) !== &apos;--&gt;&apos;) { // (3) next characters must match &apos;--&gt;&apos;
     throw new Error(&apos;Malformed time stamp (time stamps must be separated by \&apos;--&gt;\&apos;): &apos; +
       oInput);
   }
   input = input.substr(3);
   skipWhitespace();
-  cue.endTime = consumeTimeStamp();     // (5) collect cue end time
+  cue.endTime = consumeTimeStamp(); // (5) collect cue end time
 
   // 4.1 WebVTT cue settings list.
   skipWhitespace();
   consumeCueSettings(input, cue);
 }
 
-function fixLineBreaks(input) {
+function fixLineBreaks (input) {
   return input.replace(/&lt;br(?: \/)?&gt;/gi, &apos;\n&apos;);
 }
 
 VTTParser.prototype = {
-  parse: function(data) {
-    var self = this;
+  parse: function (data) {
+    let self = this;
 
     // If there is no data then we won&apos;t decode it, but will just try to parse
     // whatever is in buffer already. This may occur in circumstances, for
     // example when flush() is called.
     if (data) {
       // Try to decode the data that we received.
-      self.buffer += self.decoder.decode(data, {stream: true});
+      self.buffer += self.decoder.decode(data, { stream: true });
     }
 
-    function collectNextLine() {
-      var buffer = self.buffer;
-      var pos = 0;
+    function collectNextLine () {
+      let buffer = self.buffer;
+      let pos = 0;
 
       buffer = fixLineBreaks(buffer);
 
-      while (pos &lt; buffer.length &amp;&amp; buffer[pos] !== &apos;\r&apos; &amp;&amp; buffer[pos] !== &apos;\n&apos;) {
+      while (pos &lt; buffer.length &amp;&amp; buffer[pos] !== &apos;\r&apos; &amp;&amp; buffer[pos] !== &apos;\n&apos;)
         ++pos;
-      }
-      var line = buffer.substr(0, pos);
+
+      let line = buffer.substr(0, pos);
       // Advance the buffer early in case we fail below.
-      if (buffer[pos] === &apos;\r&apos;) {
+      if (buffer[pos] === &apos;\r&apos;)
         ++pos;
-      }
-      if (buffer[pos] === &apos;\n&apos;) {
+
+      if (buffer[pos] === &apos;\n&apos;)
         ++pos;
-      }
+
       self.buffer = buffer.substr(pos);
       return line;
     }
 
     // 3.2 WebVTT metadata header syntax
-    function parseHeader(input) {
-      parseOptions(input, function(k, v) {
+    function parseHeader (input) {
+      parseOptions(input, function (k, v) {
         switch (k) {
-          case &apos;Region&apos;:
-            // 3.3 WebVTT region metadata header syntax
-            console.log(&apos;parse region&apos;, v);
-            //parseRegion(v);
-            break;
+        case &apos;Region&apos;:
+          // 3.3 WebVTT region metadata header syntax
+          console.log(&apos;parse region&apos;, v);
+          // parseRegion(v);
+          break;
         }
       }, /:/);
     }
 
     // 5.1 WebVTT file parsing.
     try {
-      var line;
+      let line;
       if (self.state === &apos;INITIAL&apos;) {
         // We can&apos;t start parsing until we have the first line.
-        if (!/\r\n|\n/.test(self.buffer)) {
+        if (!/\r\n|\n/.test(self.buffer))
           return this;
-        }
 
         line = collectNextLine();
         // strip of UTF-8 BOM if any
         // https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
-        var m = line.match(/^(&#xEF;&#xBB;&#xBF;)?WEBVTT([ \t].*)?$/);
-        if (!m || !m[0]) {
+        let m = line.match(/^(&#xEF;&#xBB;&#xBF;)?WEBVTT([ \t].*)?$/);
+        if (!m || !m[0])
           throw new Error(&apos;Malformed WebVTT signature.&apos;);
-        }
 
         self.state = &apos;HEADER&apos;;
       }
 
-      var alreadyCollectedLine = false;
+      let alreadyCollectedLine = false;
       while (self.buffer) {
         // We can&apos;t parse a line until we have the full line.
-        if (!/\r\n|\n/.test(self.buffer)) {
+        if (!/\r\n|\n/.test(self.buffer))
           return this;
-        }
 
-        if (!alreadyCollectedLine) {
+        if (!alreadyCollectedLine)
           line = collectNextLine();
-        } else {
+        else
           alreadyCollectedLine = false;
-        }
 
         switch (self.state) {
-          case &apos;HEADER&apos;:
-            // 13-18 - Allow a header (metadata) under the WEBVTT line.
-            if (/:/.test(line)) {
-              parseHeader(line);
-            } else if (!line) {
-              // An empty line terminates the header and starts the body (cues).
-              self.state = &apos;ID&apos;;
-            }
+        case &apos;HEADER&apos;:
+          // 13-18 - Allow a header (metadata) under the WEBVTT line.
+          if (/:/.test(line)) {
+            parseHeader(line);
+          } else if (!line) {
+            // An empty line terminates the header and starts the body (cues).
+            self.state = &apos;ID&apos;;
+          }
+          continue;
+        case &apos;NOTE&apos;:
+          // Ignore NOTE blocks.
+          if (!line)
+            self.state = &apos;ID&apos;;
+
+          continue;
+        case &apos;ID&apos;:
+          // Check for the start of NOTE blocks.
+          if (/^NOTE($|[ \t])/.test(line)) {
+            self.state = &apos;NOTE&apos;;
+            break;
+          }
+          // 19-29 - Allow any number of line terminators, then initialize new cue values.
+          if (!line)
             continue;
-          case &apos;NOTE&apos;:
-            // Ignore NOTE blocks.
-            if (!line) {
-              self.state = &apos;ID&apos;;
-            }
+
+          self.cue = new VTTCue(0, 0, &apos;&apos;);
+          self.state = &apos;CUE&apos;;
+          // 30-39 - Check if self line contains an optional identifier or timing data.
+          if (line.indexOf(&apos;--&gt;&apos;) === -1) {
+            self.cue.id = line;
             continue;
-          case &apos;ID&apos;:
-            // Check for the start of NOTE blocks.
-            if (/^NOTE($|[ \t])/.test(line)) {
-              self.state = &apos;NOTE&apos;;
-              break;
-            }
-            // 19-29 - Allow any number of line terminators, then initialize new cue values.
-            if (!line) {
-              continue;
-            }
-            self.cue = new VTTCue(0, 0, &apos;&apos;);
-            self.state = &apos;CUE&apos;;
-            // 30-39 - Check if self line contains an optional identifier or timing data.
-            if (line.indexOf(&apos;--&gt;&apos;) === -1) {
-              self.cue.id = line;
-              continue;
-            }
+          }
           // Process line as start of a cue.
-          /*falls through*/
-          case &apos;CUE&apos;:
-            // 40 - Collect cue timings and settings.
-            try {
-              parseCue(line, self.cue, self.regionList);
-            } catch (e) {
-              // In case of an error ignore rest of the cue.
-              self.cue = null;
-              self.state = &apos;BADCUE&apos;;
-              continue;
-            }
-            self.state = &apos;CUETEXT&apos;;
+          /* falls through */
+        case &apos;CUE&apos;:
+          // 40 - Collect cue timings and settings.
+          try {
+            parseCue(line, self.cue, self.regionList);
+          } catch (e) {
+            // In case of an error ignore rest of the cue.
+            self.cue = null;
+            self.state = &apos;BADCUE&apos;;
             continue;
-          case &apos;CUETEXT&apos;:
-            var hasSubstring = line.indexOf(&apos;--&gt;&apos;) !== -1;
-            // 34 - If we have an empty line then report the cue.
-            // 35 - If we have the special substring &apos;--&gt;&apos; then report the cue,
-            // but do not collect the line as we need to process the current
-            // one as a new cue.
-            if (!line || hasSubstring &amp;&amp; (alreadyCollectedLine = true)) {
-              // We are done parsing self cue.
-              if (self.oncue) {
-                self.oncue(self.cue);
-              }
-              self.cue = null;
-              self.state = &apos;ID&apos;;
-              continue;
-            }
-            if (self.cue.text) {
-              self.cue.text += &apos;\n&apos;;
-            }
-            self.cue.text += line;
+          }
+          self.state = &apos;CUETEXT&apos;;
+          continue;
+        case &apos;CUETEXT&apos;:
+          var hasSubstring = line.indexOf(&apos;--&gt;&apos;) !== -1;
+          // 34 - If we have an empty line then report the cue.
+          // 35 - If we have the special substring &apos;--&gt;&apos; then report the cue,
+          // but do not collect the line as we need to process the current
+          // one as a new cue.
+          if (!line || hasSubstring &amp;&amp; (alreadyCollectedLine = true)) {
+            // We are done parsing self cue.
+            if (self.oncue)
+              self.oncue(self.cue);
+
+            self.cue = null;
+            self.state = &apos;ID&apos;;
             continue;
-          case &apos;BADCUE&apos;: // BADCUE
-            // 54-62 - Collect and discard the remaining cue.
-            if (!line) {
-              self.state = &apos;ID&apos;;
-            }
-            continue;
+          }
+          if (self.cue.text)
+            self.cue.text += &apos;\n&apos;;
+
+          self.cue.text += line;
+          continue;
+        case &apos;BADCUE&apos;: // BADCUE
+          // 54-62 - Collect and discard the remaining cue.
+          if (!line)
+            self.state = &apos;ID&apos;;
+
+          continue;
         }
       }
     } catch (e) {
-
       // If we are currently parsing a cue, report what we have.
-      if (self.state === &apos;CUETEXT&apos; &amp;&amp; self.cue &amp;&amp; self.oncue) {
+      if (self.state === &apos;CUETEXT&apos; &amp;&amp; self.cue &amp;&amp; self.oncue)
         self.oncue(self.cue);
-      }
+
       self.cue = null;
       // Enter BADWEBVTT state if header was not parsed correctly otherwise
       // another exception occurred so enter BADCUE state.
@@ -532,8 +526,8 @@ VTTParser.prototype = {
     }
     return this;
   },
-  flush: function() {
-    var self = this;
+  flush: function () {
+    let self = this;
     try {
       // Finish decoding the stream.
       self.buffer += self.decoder.decode();
@@ -545,15 +539,14 @@ VTTParser.prototype = {
       // If we&apos;ve flushed, parsed, and we&apos;re still on the INITIAL state then
       // that means we don&apos;t have enough of the stream to parse the first
       // line.
-      if (self.state === &apos;INITIAL&apos;) {
+      if (self.state === &apos;INITIAL&apos;)
         throw new Error(&apos;Malformed WebVTT signature.&apos;);
-      }
     } catch (e) {
       throw e;
     }
-    if (self.onflush) {
+    if (self.onflush)
       self.onflush();
-    }
+
     return this;
   }
 };

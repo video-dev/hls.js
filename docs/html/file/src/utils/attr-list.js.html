@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -125,88 +128,85 @@
 </nav>
 
 <div class="content" data-ice="content"><h1 data-ice="title">src/utils/attr-list.js</h1>
-<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">const DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/;
-const ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\&quot;.*?\&quot;)|.*?)(?:,|$)/g;
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">const DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/; // eslint-disable-line no-useless-escape
+const ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\&quot;.*?\&quot;)|.*?)(?:,|$)/g; // eslint-disable-line no-useless-escape
 
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
 class AttrList {
-
-  constructor(attrs) {
-    if (typeof attrs === &apos;string&apos;) {
+  constructor (attrs) {
+    if (typeof attrs === &apos;string&apos;)
       attrs = AttrList.parseAttrList(attrs);
-    }
-    for(var attr in attrs){
-      if(attrs.hasOwnProperty(attr)) {
+
+    for (let attr in attrs) {
+      if (attrs.hasOwnProperty(attr))
         this[attr] = attrs[attr];
-      }
     }
   }
 
-  decimalInteger(attrName) {
+  decimalInteger (attrName) {
     const intValue = parseInt(this[attrName], 10);
-    if (intValue &gt; Number.MAX_SAFE_INTEGER) {
+    if (intValue &gt; Number.MAX_SAFE_INTEGER)
       return Infinity;
-    }
+
     return intValue;
   }
 
-  hexadecimalInteger(attrName) {
-    if(this[attrName]) {
+  hexadecimalInteger (attrName) {
+    if (this[attrName]) {
       let stringValue = (this[attrName] || &apos;0x&apos;).slice(2);
       stringValue = ((stringValue.length &amp; 1) ? &apos;0&apos; : &apos;&apos;) + stringValue;
 
       const value = new Uint8Array(stringValue.length / 2);
-      for (let i = 0; i &lt; stringValue.length / 2; i++) {
+      for (let i = 0; i &lt; stringValue.length / 2; i++)
         value[i] = parseInt(stringValue.slice(i * 2, i * 2 + 2), 16);
-      }
+
       return value;
     } else {
       return null;
     }
   }
 
-  hexadecimalIntegerAsNumber(attrName) {
+  hexadecimalIntegerAsNumber (attrName) {
     const intValue = parseInt(this[attrName], 16);
-    if (intValue &gt; Number.MAX_SAFE_INTEGER) {
+    if (intValue &gt; Number.MAX_SAFE_INTEGER)
       return Infinity;
-    }
+
     return intValue;
   }
 
-  decimalFloatingPoint(attrName) {
+  decimalFloatingPoint (attrName) {
     return parseFloat(this[attrName]);
   }
 
-  enumeratedString(attrName) {
+  enumeratedString (attrName) {
     return this[attrName];
   }
 
-  decimalResolution(attrName) {
+  decimalResolution (attrName) {
     const res = DECIMAL_RESOLUTION_REGEX.exec(this[attrName]);
-    if (res === null) {
+    if (res === null)
       return undefined;
-    }
+
     return {
       width: parseInt(res[1], 10),
       height: parseInt(res[2], 10)
     };
   }
 
-  static parseAttrList(input) {
-    var match, attrs = {};
+  static parseAttrList (input) {
+    let match, attrs = {};
     ATTR_LIST_REGEX.lastIndex = 0;
     while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
-      var value = match[2], quote = &apos;&quot;&apos;;
+      let value = match[2], quote = &apos;&quot;&apos;;
 
       if (value.indexOf(quote) === 0 &amp;&amp;
-          value.lastIndexOf(quote) === (value.length-1)) {
+          value.lastIndexOf(quote) === (value.length - 1))
         value = value.slice(1, -1);
-      }
+
       attrs[match[1]] = value;
     }
     return attrs;
   }
-
 }
 
 export default AttrList;

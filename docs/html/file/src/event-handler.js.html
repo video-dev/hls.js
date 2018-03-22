@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,8 +134,8 @@
 *
 */
 
-import {logger} from &apos;./utils/logger&apos;;
-import {ErrorTypes, ErrorDetails} from &apos;./errors&apos;;
+import { logger } from &apos;./utils/logger&apos;;
+import { ErrorTypes, ErrorDetails } from &apos;./errors&apos;;
 import Event from &apos;./events&apos;;
 
 const FORBIDDEN_EVENT_NAMES = new Set([
@@ -142,8 +145,7 @@ const FORBIDDEN_EVENT_NAMES = new Set([
 ]);
 
 class EventHandler {
-
-  constructor(hls, ...events) {
+  constructor (hls, ...events) {
     this.hls = hls;
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
@@ -152,33 +154,33 @@ class EventHandler {
     this.registerListeners();
   }
 
-  destroy() {
+  destroy () {
     this.onHandlerDestroying();
     this.unregisterListeners();
     this.onHandlerDestroyed();
   }
 
-  onHandlerDestroying() {}
-  onHandlerDestroyed() {}
+  onHandlerDestroying () {}
+  onHandlerDestroyed () {}
 
-  isEventHandler() {
+  isEventHandler () {
     return typeof this.handledEvents === &apos;object&apos; &amp;&amp; this.handledEvents.length &amp;&amp; typeof this.onEvent === &apos;function&apos;;
   }
 
-  registerListeners() {
+  registerListeners () {
     if (this.isEventHandler()) {
-      this.handledEvents.forEach(function(event) {
-        if (FORBIDDEN_EVENT_NAMES.has(event)) {
+      this.handledEvents.forEach(function (event) {
+        if (FORBIDDEN_EVENT_NAMES.has(event))
           throw new Error(&apos;Forbidden event-name: &apos; + event);
-        }
+
         this.hls.on(event, this.onEvent);
       }, this);
     }
   }
 
-  unregisterListeners() {
+  unregisterListeners () {
     if (this.isEventHandler()) {
-      this.handledEvents.forEach(function(event) {
+      this.handledEvents.forEach(function (event) {
         this.hls.off(event, this.onEvent);
       }, this);
     }
@@ -187,23 +189,23 @@ class EventHandler {
   /**
    * arguments: event (string), data (any)
    */
-  onEvent(event, data) {
+  onEvent (event, data) {
     this.onEventGeneric(event, data);
   }
 
-  onEventGeneric(event, data) {
-    var eventToFunction = function(event, data) {
-      var funcName = &apos;on&apos; + event.replace(&apos;hls&apos;, &apos;&apos;);
-      if (typeof this[funcName] !== &apos;function&apos;) {
+  onEventGeneric (event, data) {
+    let eventToFunction = function (event, data) {
+      let funcName = &apos;on&apos; + event.replace(&apos;hls&apos;, &apos;&apos;);
+      if (typeof this[funcName] !== &apos;function&apos;)
         throw new Error(`Event ${event} has no generic handler in this ${this.constructor.name} class (tried ${funcName})`);
-      }
+
       return this[funcName].bind(this, data);
     };
     try {
       eventToFunction.call(this, event, data).call();
     } catch (err) {
       logger.error(`An internal error happened while handling event ${event}. Error message: &quot;${err.message}&quot;. Here is a stacktrace:`, err);
-      this.hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event : event, err : err});
+      this.hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, err: err });
     }
   }
 }

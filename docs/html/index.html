@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -185,34 +188,39 @@ hls.js also supports HLS + fmp4, as announced during <a href="https://developer.
 <td><a href="http://www.globo.com"><img src="https://cloud.githubusercontent.com/assets/244265/12556435/dfaceb48-c353-11e5-971b-2c4429725469.png" width="120"></a></td>
 </tr>
 <tr>
-<td><a href="https://www.gl-systemhaus.de/"><img src="https://cloud.githubusercontent.com/assets/13573755/20111430/80a6bebc-a5e8-11e6-8dc1-619b1e936f6d.png" width="120"></a></td>
+<td><a href="https://gunosy.com"><img src="https://images.gunosy.com/logo/gunosy_icon_company_logo.png" width="120"></a></td>
+<td><a href="https://www.gl-systemhaus.de/"><img src="https://user-images.githubusercontent.com/1480052/35802840-f8e85b8a-0a71-11e8-8eb2-eee323e3f159.png" width="120"></a></td>
 <td><a href="http://nettrek.de/"><img src="https://cloud.githubusercontent.com/assets/6525783/20801836/700490de-b7ea-11e6-82bd-e249f91c7bae.jpg" width="120"></a></td>
 <td><a href="https://www.nytimes.com/"><img src="https://cloud.githubusercontent.com/assets/244265/12556385/999aa884-c353-11e5-9102-79df54384498.png" width="120"></a></td>
-<td><a href="https://www.peer5.com/"><img src="https://cloud.githubusercontent.com/assets/1798553/20356424/ba158574-ac24-11e6-95e1-1ae591b11a0a.png" width="120"></a></td>
 </tr>
 <tr>
+<td><a href="https://www.peer5.com/"><img src="https://cloud.githubusercontent.com/assets/1798553/20356424/ba158574-ac24-11e6-95e1-1ae591b11a0a.png" width="120"></a></td>
 <td><a href="http://qbrick.com/"><img src="https://cloud.githubusercontent.com/assets/4909096/20925062/e26e6fc8-bbb4-11e6-99a5-d4762274a342.png" width="120"></a></td>
 <td><a href="https://www.radiantmediaplayer.com/"><img src="https://www.radiantmediaplayer.com/images/radiantmediaplayer-new-logo-640.jpg" width="120"></a></td>
 <td><a href="http://www.rts.ch/"><img src="https://camo.githubusercontent.com/eacade2264a6325191b6cb9bf7a8c0d05a5b628d/68747470733a2f2f7777772e7274732e63682f68756d6d696e67626972642f7265732f696d616765732f7274732f6c6f676f2d7274732d726f7567652e737667" width="120"></a></td>
-<td><a href="https://www.snapstream.com/"><img src="https://cloud.githubusercontent.com/assets/12702747/19316434/0a3601de-9067-11e6-85e2-936b1cb099a0.png" width="120"></a></td>
 </tr>
 <tr>
+<td><a href="https://www.snapstream.com/"><img src="https://cloud.githubusercontent.com/assets/12702747/19316434/0a3601de-9067-11e6-85e2-936b1cb099a0.png" width="120"></a></td>
 <td><a href="https://www.streamamg.com/"><img src="https://www.streamamg.com/wp-content/themes/barebones/_assets/images/streamamg-logo.png" width="120"></a></td>
 <td><a href="https://streamshark.io/"><img src="https://streamsharkio.sa.metacdn.com/wp-content/uploads/2015/10/streamshark-dark.svg" width="120"></a></td>
 <td><a href="http://my.tablotv.com/"><img src="https://camo.githubusercontent.com/9580f10e9bfa8aa7fba52c5cb447bee0757e33da/68747470733a2f2f7777772e7461626c6f74762e636f6d2f7374617469632f696d616765732f7461626c6f5f6c6f676f2e706e67" width="120"></a></td>
-<td><a href="https://www.streamroot.io/"><img src="https://user-images.githubusercontent.com/2803310/34083705-349c8fd0-e375-11e7-92a6-5c38509f4936.png" width="120"></a></td>
 </tr>
 <tr>
+<td><a href="https://www.streamroot.io/"><img src="https://user-images.githubusercontent.com/2803310/34083705-349c8fd0-e375-11e7-92a6-5c38509f4936.png" width="120"></a></td>
 <td><a href="https://www.ted.com/"><img src="http://vignette1.wikia.nocookie.net/tedtalks/images/c/c0/TED_logo.png/revision/20150915192527" width="120"></a></td>
 <td><a href="https://twitter.com/"><img src="https://www.seeklogo.net/wp-content/uploads/2014/12/twitter-logo-vector-download.jpg" width="120"></a></td>
 <td><a href="http://vwflow.com"><img src="https://cloud.githubusercontent.com/assets/8201317/20566816/bc33f51c-b196-11e6-9bd3-afb71a06460b.png" width="120"></a></td>
-<td><a href="https://www.viacom.com/"><img src="http://media.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120"></a></td>
 </tr>
 <tr>
+<td><a href="https://www.viacom.com/"><img src="http://media.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120"></a></td>
 <td><a href="https://vk.com/"><img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120"></a></td>
 <td><a href="https://www.jwplayer.com"><img src="https://s3.amazonaws.com/uploads.hipchat.com/87223/4876411/7Rybnl26ReFzlt3/jw-logo-red.png" width="120"></a></td>
 <td><a href="https://www.france.tv"><img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120"></a></td>
+</tr>
+<tr>
 <td><a href="https://tech.showmax.com"><img src="http://showmax.akamaized.net/e/logo/showmax_black.png" width="120"></a></td>
+<td></td>
+<td></td>
 </tr>
 </tbody>
 </table>
@@ -263,7 +271,7 @@ Prepackaged build is included in the <a href="dist">dist</a> folder:</p>
 <li>Vivaldi for Desktop</li>
 <li>Safari for Mac 8+ (beta)</li>
 </ul>
-<p>Please note: iOS Safari &quot;Mobile&quot; does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video &quot;tag&quot; source URL. See the example below to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.</p>
+<p>Please note: iOS Safari &quot;Mobile&quot; does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video &quot;tag&quot; source URL. See the example above (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.</p>
 <p>When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.</p>
 <h2 id="cors">CORS</h2><p>All HLS resources must be delivered with <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS">CORS headers</a> permitting <code>GET</code> requests.</p>
 <h2 id="features">Features</h2><ul>

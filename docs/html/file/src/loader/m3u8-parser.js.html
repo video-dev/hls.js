@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -132,8 +135,8 @@ import Fragment from &apos;./fragment&apos;;
 import LevelKey from &apos;./level-key&apos;;
 
 import AttrList from &apos;../utils/attr-list&apos;;
-import {logger} from &apos;../utils/logger&apos;;
-import {isCodecType} from &apos;../utils/codecs&apos;;
+import { logger } from &apos;../utils/logger&apos;;
+import { isCodecType } from &apos;../utils/codecs&apos;;
 
 /**
  * M3U8 parser
@@ -146,35 +149,32 @@ const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:&lt;duration&gt;,&lt;title&gt;), group 1 =&gt; duration, group 2 =&gt; title
-  /|(?!#)(\S+)/.source,                          // segment URI, group 3 =&gt; the URI (note newline is not eaten)
-  /|#EXT-X-BYTERANGE:*(.+)/.source,              // next segment&apos;s byterange, group 4 =&gt; range spec (x@y)
-  /|#EXT-X-PROGRAM-DATE-TIME:(.+)/.source,       // next segment&apos;s program date/time group 5 =&gt; the datetime spec
-  /|#.*/.source                                  // All other non-segment oriented tags will match with all groups empty
+  /|(?!#)(\S+)/.source, // segment URI, group 3 =&gt; the URI (note newline is not eaten)
+  /|#EXT-X-BYTERANGE:*(.+)/.source, // next segment&apos;s byterange, group 4 =&gt; range spec (x@y)
+  /|#EXT-X-PROGRAM-DATE-TIME:(.+)/.source, // next segment&apos;s program date/time group 5 =&gt; the datetime spec
+  /|#.*/.source // All other non-segment oriented tags will match with all groups empty
 ].join(&apos;&apos;), &apos;g&apos;);
 
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 export default class M3U8Parser {
-
-  static findGroup(groups, mediaGroupId) {
-    if (!groups) {
+  static findGroup (groups, mediaGroupId) {
+    if (!groups)
       return null;
-    }
 
     let matchingGroup = null;
 
-    for (let i = 0; i &lt; groups.length; i ++) {
+    for (let i = 0; i &lt; groups.length; i++) {
       const group = groups[i];
-      if (group.id === mediaGroupId) {
+      if (group.id === mediaGroupId)
         matchingGroup = group;
-      }
     }
 
     return matchingGroup;
   }
 
-  static convertAVC1ToAVCOTI(codec) {
-    var result, avcdata = codec.split(&apos;.&apos;);
+  static convertAVC1ToAVCOTI (codec) {
+    let result, avcdata = codec.split(&apos;.&apos;);
     if (avcdata.length &gt; 2) {
       result = avcdata.shift() + &apos;.&apos;;
       result += parseInt(avcdata.shift()).toString(16);
@@ -185,15 +185,15 @@ export default class M3U8Parser {
     return result;
   }
 
-  static resolve(url, baseUrl) {
+  static resolve (url, baseUrl) {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
-  static parseMasterPlaylist(string, baseurl) {
+  static parseMasterPlaylist (string, baseurl) {
     let levels = [], result;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
-    function setCodecs(codecs, level) {
+    function setCodecs (codecs, level) {
       [&apos;video&apos;, &apos;audio&apos;].forEach((type) =&gt; {
         const filtered = codecs.filter((codec) =&gt; isCodecType(codec, type));
         if (filtered.length) {
@@ -210,14 +210,14 @@ export default class M3U8Parser {
       level.unknownCodecs = codecs;
     }
 
-    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null){
+    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
 
-      var attrs = level.attrs = new AttrList(result[1]);
+      let attrs = level.attrs = new AttrList(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
-      var resolution = attrs.decimalResolution(&apos;RESOLUTION&apos;);
-      if(resolution) {
+      let resolution = attrs.decimalResolution(&apos;RESOLUTION&apos;);
+      if (resolution) {
         level.width = resolution.width;
         level.height = resolution.height;
       }
@@ -226,16 +226,15 @@ export default class M3U8Parser {
 
       setCodecs([].concat((attrs.CODECS || &apos;&apos;).split(/[ ,]+/)), level);
 
-      if (level.videoCodec &amp;&amp; level.videoCodec.indexOf(&apos;avc1&apos;) !== -1) {
+      if (level.videoCodec &amp;&amp; level.videoCodec.indexOf(&apos;avc1&apos;) !== -1)
         level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
-      }
 
       levels.push(level);
     }
     return levels;
   }
 
-  static parseMasterPlaylistMedia(string, baseurl, type, audioGroups=[]) {
+  static parseMasterPlaylistMedia (string, baseurl, type, audioGroups = []) {
     let result;
     let medias = [];
     let id = 0;
@@ -250,13 +249,13 @@ export default class M3U8Parser {
         media.default = (attrs.DEFAULT === &apos;YES&apos;);
         media.autoselect = (attrs.AUTOSELECT === &apos;YES&apos;);
         media.forced = (attrs.FORCED === &apos;YES&apos;);
-        if (attrs.URI) {
+        if (attrs.URI)
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
-        }
+
         media.lang = attrs.LANGUAGE;
-        if (!media.name) {
-            media.name = media.lang;
-        }
+        if (!media.name)
+          media.name = media.lang;
+
         if (audioGroups.length) {
           const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
           media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
@@ -268,16 +267,16 @@ export default class M3U8Parser {
     return medias;
   }
 
-  static parseLevelPlaylist(string, baseurl, id, type) {
-    var currentSN = 0,
-        totalduration = 0,
-        level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
-        levelkey = new LevelKey(),
-        cc = 0,
-        prevFrag = null,
-        frag = new Fragment(),
-        result,
-        i;
+  static parseLevelPlaylist (string, baseurl, id, type) {
+    let currentSN = 0,
+      totalduration = 0,
+      level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
+      levelkey = new LevelKey(),
+      cc = 0,
+      prevFrag = null,
+      frag = new Fragment(),
+      result,
+      i;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
@@ -287,8 +286,8 @@ export default class M3U8Parser {
         frag.duration = parseFloat(duration);
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const title = (&apos; &apos; + result[2]).slice(1);
-        frag.title = title ? title : null;
-        frag.tagList.push(title ? [ &apos;INF&apos;,duration,title ] : [ &apos;INF&apos;,duration ]);
+        frag.title = title || null;
+        frag.tagList.push(title ? [ &apos;INF&apos;, duration, title ] : [ &apos;INF&apos;, duration ]);
       } else if (result[3]) { // url
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
@@ -302,6 +301,19 @@ export default class M3U8Parser {
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (&apos; &apos; + result[3]).slice(1);
 
+          if (level.programDateTime) {
+            if (prevFrag) {
+              if (frag.rawProgramDateTime) { // PDT discontinuity found
+                frag.pdt = Date.parse(frag.rawProgramDateTime);
+              } else { // Contiguous fragment
+                frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
+              }
+            } else { // First fragment
+              frag.pdt = Date.parse(level.programDateTime);
+            }
+            frag.endPdt = frag.pdt + (frag.duration * 1000);
+          }
+
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
@@ -312,109 +324,105 @@ export default class M3U8Parser {
         frag.rawByteRange = (&apos; &apos; + result[4]).slice(1);
         if (prevFrag) {
           const lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
-          if (lastByteRangeEndOffset) {
+          if (lastByteRangeEndOffset)
             frag.lastByteRangeEndOffset = lastByteRangeEndOffset;
-          }
         }
       } else if (result[5]) { // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (&apos; &apos; + result[5]).slice(1);
         frag.tagList.push([&apos;PROGRAM-DATE-TIME&apos;, frag.rawProgramDateTime]);
-        if (level.programDateTime === undefined) {
+        if (level.programDateTime === undefined)
           level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
-        }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i &lt; result.length; i++) {
-          if (result[i] !== undefined) {
+          if (result[i] !== undefined)
             break;
-          }
         }
 
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-        const value1 = (&apos; &apos; + result[i+1]).slice(1);
-        const value2 = (&apos; &apos; + result[i+2]).slice(1);
+        const value1 = (&apos; &apos; + result[i + 1]).slice(1);
+        const value2 = (&apos; &apos; + result[i + 2]).slice(1);
 
         switch (result[i]) {
-          case &apos;#&apos;:
-            frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
-            break;
-          case &apos;PLAYLIST-TYPE&apos;:
-            level.type = value1.toUpperCase();
-            break;
-          case &apos;MEDIA-SEQUENCE&apos;:
-            currentSN = level.startSN = parseInt(value1);
-            break;
-          case &apos;TARGETDURATION&apos;:
-            level.targetduration = parseFloat(value1);
-            break;
-          case &apos;VERSION&apos;:
-            level.version = parseInt(value1);
-            break;
-          case &apos;EXTM3U&apos;:
-            break;
-          case &apos;ENDLIST&apos;:
-            level.live = false;
-            break;
-          case &apos;DIS&apos;:
-            cc++;
-            frag.tagList.push([&apos;DIS&apos;]);
-            break;
-          case &apos;DISCONTINUITY-SEQ&apos;:
-            cc = parseInt(value1);
-            break;
-          case &apos;KEY&apos;:
-            // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-            var decryptparams = value1;
-            var keyAttrs = new AttrList(decryptparams);
-            var decryptmethod = keyAttrs.enumeratedString(&apos;METHOD&apos;),
-                decrypturi = keyAttrs.URI,
-                decryptiv = keyAttrs.hexadecimalInteger(&apos;IV&apos;);
-            if (decryptmethod) {
-              levelkey = new LevelKey();
-              if ((decrypturi) &amp;&amp; ([&apos;AES-128&apos;, &apos;SAMPLE-AES&apos;, &apos;SAMPLE-AES-CENC&apos;].indexOf(decryptmethod) &gt;= 0)) {
+        case &apos;#&apos;:
+          frag.tagList.push(value2 ? [ value1, value2 ] : [ value1 ]);
+          break;
+        case &apos;PLAYLIST-TYPE&apos;:
+          level.type = value1.toUpperCase();
+          break;
+        case &apos;MEDIA-SEQUENCE&apos;:
+          currentSN = level.startSN = parseInt(value1);
+          break;
+        case &apos;TARGETDURATION&apos;:
+          level.targetduration = parseFloat(value1);
+          break;
+        case &apos;VERSION&apos;:
+          level.version = parseInt(value1);
+          break;
+        case &apos;EXTM3U&apos;:
+          break;
+        case &apos;ENDLIST&apos;:
+          level.live = false;
+          break;
+        case &apos;DIS&apos;:
+          cc++;
+          frag.tagList.push([&apos;DIS&apos;]);
+          break;
+        case &apos;DISCONTINUITY-SEQ&apos;:
+          cc = parseInt(value1);
+          break;
+        case &apos;KEY&apos;:
+          // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+          var decryptparams = value1;
+          var keyAttrs = new AttrList(decryptparams);
+          var decryptmethod = keyAttrs.enumeratedString(&apos;METHOD&apos;),
+            decrypturi = keyAttrs.URI,
+            decryptiv = keyAttrs.hexadecimalInteger(&apos;IV&apos;);
+          if (decryptmethod) {
+            levelkey = new LevelKey();
+            if ((decrypturi) &amp;&amp; ([&apos;AES-128&apos;, &apos;SAMPLE-AES&apos;, &apos;SAMPLE-AES-CENC&apos;].indexOf(decryptmethod) &gt;= 0)) {
+              levelkey.method = decryptmethod;
+              // URI to get the key
+              levelkey.baseuri = baseurl;
+              levelkey.reluri = decrypturi;
+              levelkey.key = null;
+              // Initialization Vector (IV)
+              levelkey.iv = decryptiv;
+            }
+          }
+          break;
+        case &apos;START&apos;:
+          let startParams = value1;
+          let startAttrs = new AttrList(startParams);
+          let startTimeOffset = startAttrs.decimalFloatingPoint(&apos;TIME-OFFSET&apos;);
+          // TIME-OFFSET can be 0
+          if (!isNaN(startTimeOffset))
+            level.startTimeOffset = startTimeOffset;
 
-                levelkey.method = decryptmethod;
-                // URI to get the key
-                levelkey.baseuri = baseurl;
-                levelkey.reluri = decrypturi;
-                levelkey.key = null;
-                // Initialization Vector (IV)
-                levelkey.iv = decryptiv;
-              }
-            }
-            break;
-          case &apos;START&apos;:
-            let startParams = value1;
-            let startAttrs = new AttrList(startParams);
-            let startTimeOffset = startAttrs.decimalFloatingPoint(&apos;TIME-OFFSET&apos;);
-            //TIME-OFFSET can be 0
-            if ( !isNaN(startTimeOffset) ) {
-              level.startTimeOffset = startTimeOffset;
-            }
-            break;
-          case &apos;MAP&apos;:
-            let mapAttrs = new AttrList(value1);
-            frag.relurl = mapAttrs.URI;
-            frag.rawByteRange = mapAttrs.BYTERANGE;
-            frag.baseurl = baseurl;
-            frag.level = id;
-            frag.type = type;
-            frag.sn = &apos;initSegment&apos;;
-            level.initSegment = frag;
-            frag = new Fragment();
-            break;
-          default:
-            logger.warn(`line parsed but not handled: ${result}`);
-            break;
+          break;
+        case &apos;MAP&apos;:
+          let mapAttrs = new AttrList(value1);
+          frag.relurl = mapAttrs.URI;
+          frag.rawByteRange = mapAttrs.BYTERANGE;
+          frag.baseurl = baseurl;
+          frag.level = id;
+          frag.type = type;
+          frag.sn = &apos;initSegment&apos;;
+          level.initSegment = frag;
+          frag = new Fragment();
+          break;
+        default:
+          logger.warn(`line parsed but not handled: ${result}`);
+          break;
         }
       }
     }
     frag = prevFrag;
-    //logger.log(&apos;found &apos; + level.fragments.length + &apos; fragments&apos;);
-    if(frag &amp;&amp; !frag.relurl) {
+    // logger.log(&apos;found &apos; + level.fragments.length + &apos; fragments&apos;);
+    if (frag &amp;&amp; !frag.relurl) {
       level.fragments.pop();
-      totalduration-=frag.duration;
+      totalduration -= frag.duration;
     }
     level.totalduration = totalduration;
     level.averagetargetduration = totalduration / level.fragments.length;
@@ -428,7 +436,7 @@ export default class M3U8Parser {
       // but this is to be able to handle SIDX.
       // FIXME: replace string test by a regex that matches
       //        also `m4s` `m4a` `m4v` and other popular extensions
-      if(level.fragments.every((frag) =&gt; frag.relurl.endsWith(&apos;.mp4&apos;))) {
+      if (level.fragments.every((frag) =&gt; frag.relurl.endsWith(&apos;.mp4&apos;))) {
         logger.warn(&apos;MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX&apos;);
 
         frag = new Fragment();

@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,27 +134,25 @@
 
 import Event from &apos;../events&apos;;
 import EventHandler from &apos;../event-handler&apos;;
-import {logger} from &apos;../utils/logger&apos;;
+import { logger } from &apos;../utils/logger&apos;;
 
-function filterSubtitleTracks(textTrackList) {
+function filterSubtitleTracks (textTrackList) {
   let tracks = [];
   for (let i = 0; i &lt; textTrackList.length; i++) {
-    if (textTrackList[i].kind === &apos;subtitles&apos;) {
+    if (textTrackList[i].kind === &apos;subtitles&apos;)
       tracks.push(textTrackList[i]);
-    }
   }
   return tracks;
 }
 
 class SubtitleTrackController extends EventHandler {
-
-  constructor(hls) {
+  constructor (hls) {
     super(hls,
-               Event.MEDIA_ATTACHED,
-               Event.MEDIA_DETACHING,
-               Event.MANIFEST_LOADING,
-               Event.MANIFEST_LOADED,
-               Event.SUBTITLE_TRACK_LOADED);
+      Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHING,
+      Event.MANIFEST_LOADING,
+      Event.MANIFEST_LOADED,
+      Event.SUBTITLE_TRACK_LOADED);
     this.tracks = [];
     this.trackId = -1;
     this.media = undefined;
@@ -162,17 +163,20 @@ class SubtitleTrackController extends EventHandler {
     this.subtitleDisplay = false;
   }
 
-  _onTextTracksChanged() {
+  _onTextTracksChanged () {
     // Media is undefined when switching streams via loadSource()
-    if (!this.media) {
+    if (!this.media)
       return;
-    }
 
     let trackId = -1;
     let tracks = filterSubtitleTracks(this.media.textTracks);
     for (let id = 0; id &lt; tracks.length; id++) {
-      if (tracks[id].mode === &apos;showing&apos;) {
+      if (tracks[id].mode === &apos;hidden&apos;) {
+        // Do not break in case there is a following track with showing.
         trackId = id;
+      } else if (tracks[id].mode === &apos;showing&apos;) {
+        trackId = id;
+        break;
       }
     }
 
@@ -180,16 +184,15 @@ class SubtitleTrackController extends EventHandler {
     this.subtitleTrack = trackId;
   }
 
-  destroy() {
+  destroy () {
     EventHandler.prototype.destroy.call(this);
   }
 
   // Listen for subtitle track change, then extract the current track ID.
-  onMediaAttached(data) {
+  onMediaAttached (data) {
     this.media = data.media;
-    if (!this.media) {
+    if (!this.media)
       return;
-    }
 
     if (this.queuedDefaultTrack !== undefined) {
       this.subtitleTrack = this.queuedDefaultTrack;
@@ -208,31 +211,30 @@ class SubtitleTrackController extends EventHandler {
     }
   }
 
-  onMediaDetaching() {
-    if (!this.media) {
+  onMediaDetaching () {
+    if (!this.media)
       return;
-    }
-    if (this.useTextTrackPolling) {
+
+    if (this.useTextTrackPolling)
       clearInterval(this.subtitlePollingInterval);
-    } else {
+    else
       this.media.textTracks.removeEventListener(&apos;change&apos;, this.trackChangeListener);
-    }
 
     this.media = undefined;
   }
 
   // Reset subtitle tracks on manifest loading
-  onManifestLoading() {
+  onManifestLoading () {
     this.tracks = [];
     this.trackId = -1;
   }
 
   // Fired whenever a new manifest is loaded.
-  onManifestLoaded(data) {
+  onManifestLoaded (data) {
     let tracks = data.subtitles || [];
     this.tracks = tracks;
     this.trackId = -1;
-    this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, {subtitleTracks : tracks});
+    this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, { subtitleTracks: tracks });
 
     // loop through available subtitle tracks and autoselect default if needed
     // TODO: improve selection logic to handle forced, etc
@@ -242,33 +244,31 @@ class SubtitleTrackController extends EventHandler {
         // if media has not been attached yet, it will fail
         // we keep a reference to the default track id
         // and we&apos;ll set subtitleTrack when onMediaAttached is triggered
-        if (this.media) {
+        if (this.media)
           this.subtitleTrack = track.id;
-        } else {
+        else
           this.queuedDefaultTrack = track.id;
-        }
       }
     });
   }
 
   // Trigger subtitle track playlist reload.
-  onTick() {
+  onTick () {
     const trackId = this.trackId;
     const subtitleTrack = this.tracks[trackId];
-    if (!subtitleTrack) {
+    if (!subtitleTrack)
       return;
-    }
 
     const details = subtitleTrack.details;
     // check if we need to load playlist for this subtitle Track
     if (details === undefined || details.live === true) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${trackId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, {url: subtitleTrack.url, id: trackId});
+      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
     }
   }
 
-  onSubtitleTrackLoaded(data) {
+  onSubtitleTrackLoaded (data) {
     if (data.id &lt; this.tracks.length) {
       logger.log(`subtitle track ${data.id} loaded`);
       this.tracks[data.id].details = data.details;
@@ -289,27 +289,26 @@ class SubtitleTrackController extends EventHandler {
   }
 
   /** get alternate subtitle tracks list from playlist **/
-  get subtitleTracks() {
+  get subtitleTracks () {
     return this.tracks;
   }
 
   /** get index of the selected subtitle track (index in subtitle track lists) **/
-  get subtitleTrack() {
-   return this.trackId;
+  get subtitleTrack () {
+    return this.trackId;
   }
 
   /** select a subtitle track, based on its index in subtitle track lists**/
-  set subtitleTrack(subtitleTrackId) {
-    if (this.trackId !== subtitleTrackId) {// || this.tracks[subtitleTrackId].details === undefined) {
+  set subtitleTrack (subtitleTrackId) {
+    if (this.trackId !== subtitleTrackId) { // || this.tracks[subtitleTrackId].details === undefined) {
       this.setSubtitleTrackInternal(subtitleTrackId);
     }
   }
 
- setSubtitleTrackInternal(newId) {
+  setSubtitleTrackInternal (newId) {
     // check if level idx is valid
-    if (newId &lt; -1 || newId &gt;= this.tracks.length) {
+    if (newId &lt; -1 || newId &gt;= this.tracks.length)
       return;
-    }
 
     // stopping live reloading timer if any
     if (this.timer) {
@@ -320,29 +319,26 @@ class SubtitleTrackController extends EventHandler {
     let textTracks = filterSubtitleTracks(this.media.textTracks);
 
     // hide currently enabled subtitle track
-    if (this.trackId !== -1 &amp;&amp; this.subtitleDisplay) {
-      textTracks[this.trackId].mode = &apos;hidden&apos;;
-    }
+    if (this.trackId !== -1)
+      textTracks[this.trackId].mode = &apos;disabled&apos;;
 
     this.trackId = newId;
     logger.log(`switching to subtitle track ${newId}`);
-    this.hls.trigger(Event.SUBTITLE_TRACK_SWITCH, {id: newId});
+    this.hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
 
-    if (newId === -1) {
+    if (newId === -1)
       return;
-    }
 
-    let subtitleTrack = this.tracks[newId];
-    if (this.subtitleDisplay) {
-      textTracks[newId].mode = &apos;showing&apos;;
-    }
+    const subtitleTrack = this.tracks[newId];
+    if (newId &lt; textTracks.length)
+      textTracks[newId].mode = this.subtitleDisplay ? &apos;showing&apos; : &apos;hidden&apos;;
 
     // check if we need to load playlist for this subtitle Track
     let details = subtitleTrack.details;
     if (details === undefined || details.live === true) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${newId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, {url: subtitleTrack.url, id: newId});
+      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
     }
   }
 }

@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -141,18 +144,17 @@
  * limitations under the License.
  */
 
-export default (function() {
-  if (typeof window !== &apos;undefined&apos; &amp;&amp; window.VTTCue) {
+export default (function () {
+  if (typeof window !== &apos;undefined&apos; &amp;&amp; window.VTTCue)
     return window.VTTCue;
-  }
 
-  var autoKeyword = &apos;auto&apos;;
-  var directionSetting = {
+  let autoKeyword = &apos;auto&apos;;
+  let directionSetting = {
     &apos;&apos;: true,
     lr: true,
     rl: true
   };
-  var alignSetting = {
+  let alignSetting = {
     start: true,
     middle: true,
     end: true,
@@ -160,49 +162,47 @@ export default (function() {
     right: true
   };
 
-  function findDirectionSetting(value) {
-    if (typeof value !== &apos;string&apos;) {
+  function findDirectionSetting (value) {
+    if (typeof value !== &apos;string&apos;)
       return false;
-    }
-    var dir = directionSetting[value.toLowerCase()];
+
+    let dir = directionSetting[value.toLowerCase()];
     return dir ? value.toLowerCase() : false;
   }
 
-  function findAlignSetting(value) {
-    if (typeof value !== &apos;string&apos;) {
+  function findAlignSetting (value) {
+    if (typeof value !== &apos;string&apos;)
       return false;
-    }
-    var align = alignSetting[value.toLowerCase()];
+
+    let align = alignSetting[value.toLowerCase()];
     return align ? value.toLowerCase() : false;
   }
 
-  function extend(obj) {
-    var i = 1;
+  function extend (obj) {
+    let i = 1;
     for (; i &lt; arguments.length; i++) {
-      var cobj = arguments[i];
-      for (var p in cobj) {
+      let cobj = arguments[i];
+      for (let p in cobj)
         obj[p] = cobj[p];
-      }
     }
 
     return obj;
   }
 
-  function VTTCue(startTime, endTime, text) {
-    var cue = this;
-    var isIE8 = (function () {
-      if (typeof navigator === &apos;undefined&apos;) {
+  function VTTCue (startTime, endTime, text) {
+    let cue = this;
+    let isIE8 = (function () {
+      if (typeof navigator === &apos;undefined&apos;)
         return;
-      }
+
       return (/MSIE\s8\.0/).test(navigator.userAgent);
     })();
-    var baseObj = {};
+    let baseObj = {};
 
-    if (isIE8) {
+    if (isIE8)
       cue = document.createElement(&apos;custom&apos;);
-    } else {
+    else
       baseObj.enumerable = true;
-    }
 
     /**
      * Shim implementation specific properties. These properties are not in
@@ -219,20 +219,20 @@ export default (function() {
      * http://dev.w3.org/html5/webvtt/#vttcue-interface
      */
 
-    var _id = &apos;&apos;;
-    var _pauseOnExit = false;
-    var _startTime = startTime;
-    var _endTime = endTime;
-    var _text = text;
-    var _region = null;
-    var _vertical = &apos;&apos;;
-    var _snapToLines = true;
-    var _line = &apos;auto&apos;;
-    var _lineAlign = &apos;start&apos;;
-    var _position = 50;
-    var _positionAlign = &apos;middle&apos;;
-    var _size = 50;
-    var _align = &apos;middle&apos;;
+    let _id = &apos;&apos;;
+    let _pauseOnExit = false;
+    let _startTime = startTime;
+    let _endTime = endTime;
+    let _text = text;
+    let _region = null;
+    let _vertical = &apos;&apos;;
+    let _snapToLines = true;
+    let _line = &apos;auto&apos;;
+    let _lineAlign = &apos;start&apos;;
+    let _position = 50;
+    let _positionAlign = &apos;middle&apos;;
+    let _size = 50;
+    let _align = &apos;middle&apos;;
 
     Object.defineProperty(cue, &apos;id&apos;, extend({}, baseObj, {
       get: function () {
@@ -257,9 +257,9 @@ export default (function() {
         return _startTime;
       },
       set: function (value) {
-        if (typeof value !== &apos;number&apos;) {
+        if (typeof value !== &apos;number&apos;)
           throw new TypeError(&apos;Start time must be set to a number.&apos;);
-        }
+
         _startTime = value;
         this.hasBeenReset = true;
       }
@@ -270,9 +270,9 @@ export default (function() {
         return _endTime;
       },
       set: function (value) {
-        if (typeof value !== &apos;number&apos;) {
+        if (typeof value !== &apos;number&apos;)
           throw new TypeError(&apos;End time must be set to a number.&apos;);
-        }
+
         _endTime = value;
         this.hasBeenReset = true;
       }
@@ -303,11 +303,11 @@ export default (function() {
         return _vertical;
       },
       set: function (value) {
-        var setting = findDirectionSetting(value);
+        let setting = findDirectionSetting(value);
         // Have to check for false because the setting an be an empty string.
-        if (setting === false) {
+        if (setting === false)
           throw new SyntaxError(&apos;An invalid or illegal string was specified.&apos;);
-        }
+
         _vertical = setting;
         this.hasBeenReset = true;
       }
@@ -328,9 +328,9 @@ export default (function() {
         return _line;
       },
       set: function (value) {
-        if (typeof value !== &apos;number&apos; &amp;&amp; value !== autoKeyword) {
+        if (typeof value !== &apos;number&apos; &amp;&amp; value !== autoKeyword)
           throw new SyntaxError(&apos;An invalid number or illegal string was specified.&apos;);
-        }
+
         _line = value;
         this.hasBeenReset = true;
       }
@@ -341,10 +341,10 @@ export default (function() {
         return _lineAlign;
       },
       set: function (value) {
-        var setting = findAlignSetting(value);
-        if (!setting) {
+        let setting = findAlignSetting(value);
+        if (!setting)
           throw new SyntaxError(&apos;An invalid or illegal string was specified.&apos;);
-        }
+
         _lineAlign = setting;
         this.hasBeenReset = true;
       }
@@ -355,9 +355,9 @@ export default (function() {
         return _position;
       },
       set: function (value) {
-        if (value &lt; 0 || value &gt; 100) {
+        if (value &lt; 0 || value &gt; 100)
           throw new Error(&apos;Position must be between 0 and 100.&apos;);
-        }
+
         _position = value;
         this.hasBeenReset = true;
       }
@@ -368,10 +368,10 @@ export default (function() {
         return _positionAlign;
       },
       set: function (value) {
-        var setting = findAlignSetting(value);
-        if (!setting) {
+        let setting = findAlignSetting(value);
+        if (!setting)
           throw new SyntaxError(&apos;An invalid or illegal string was specified.&apos;);
-        }
+
         _positionAlign = setting;
         this.hasBeenReset = true;
       }
@@ -382,9 +382,9 @@ export default (function() {
         return _size;
       },
       set: function (value) {
-        if (value &lt; 0 || value &gt; 100) {
+        if (value &lt; 0 || value &gt; 100)
           throw new Error(&apos;Size must be between 0 and 100.&apos;);
-        }
+
         _size = value;
         this.hasBeenReset = true;
       }
@@ -395,10 +395,10 @@ export default (function() {
         return _align;
       },
       set: function (value) {
-        var setting = findAlignSetting(value);
-        if (!setting) {
+        let setting = findAlignSetting(value);
+        if (!setting)
           throw new SyntaxError(&apos;An invalid or illegal string was specified.&apos;);
-        }
+
         _align = setting;
         this.hasBeenReset = true;
       }
@@ -411,9 +411,8 @@ export default (function() {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-video-element.html#text-track-cue-display-state
     cue.displayState = undefined;
 
-    if (isIE8) {
+    if (isIE8)
       return cue;
-    }
   }
 
   /**
@@ -422,7 +421,7 @@ export default (function() {
 
   VTTCue.prototype.getCueAsHTML = function () {
     // Assume WebVTT.convertCueToDOMTree is on the global.
-    var WebVTT = window.WebVTT;
+    let WebVTT = window.WebVTT;
     return WebVTT.convertCueToDOMTree(window, this.text);
   };
 

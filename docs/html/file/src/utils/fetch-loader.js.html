@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -133,16 +136,15 @@
 */
 
 class FetchLoader {
-
-  constructor(config) {
+  constructor (config) {
     this.fetchSetup = config.fetchSetup;
   }
 
-  destroy() {}
+  destroy () {}
 
-  abort() {}
+  abort () {}
 
-  load(context, config, callbacks) {
+  load (context, config, callbacks) {
     let stats = {
       trequest: performance.now(),
       retry: 0
@@ -152,58 +154,53 @@ class FetchLoader {
     let request;
 
     const initParams = {
-          method: &apos;GET&apos;,
-          mode: &apos;cors&apos;,
-          credentials: &apos;same-origin&apos;
-        };
+      method: &apos;GET&apos;,
+      mode: &apos;cors&apos;,
+      credentials: &apos;same-origin&apos;
+    };
 
     const headersObj = {};
 
-    if (context.rangeEnd) {
+    if (context.rangeEnd)
       headersObj[&apos;Range&apos;] = &apos;bytes=&apos; + context.rangeStart + &apos;-&apos; + String(context.rangeEnd - 1); /* jshint ignore:line */
-    }
 
     initParams.headers = new Headers(headersObj);
 
-    if (this.fetchSetup) {
-      request = this.fetchSetup(context,initParams);
-    } else {
-      request = new Request(context.url,initParams);
-    }
+    if (this.fetchSetup)
+      request = this.fetchSetup(context, initParams);
+    else
+      request = new Request(context.url, initParams);
 
-    let fetchPromise = fetch(request,initParams);
+    let fetchPromise = fetch(request, initParams);
 
     // process fetchPromise
-    let responsePromise = fetchPromise.then(function(response) {
+    let responsePromise = fetchPromise.then(function (response) {
       if (response.ok) {
-        stats.tfirst = Math.max(stats.trequest,performance.now());
+        stats.tfirst = Math.max(stats.trequest, performance.now());
         targetURL = response.url;
-        if (context.responseType === &apos;arraybuffer&apos;) {
+        if (context.responseType === &apos;arraybuffer&apos;)
           return response.arrayBuffer();
-        } else {
+        else
           return response.text();
-        }
       } else {
-        callbacks.onError({text : &apos;fetch, bad network response&apos;}, context);
-        return;
+        callbacks.onError({ text: &apos;fetch, bad network response&apos; }, context);
       }
-    }).catch(function(error) {
-      callbacks.onError({text : error.message}, context);
-      return;
+    }).catch(function (error) {
+      callbacks.onError({ text: error.message }, context);
     });
     // process response Promise
-    responsePromise.then(function(responseData) {
+    responsePromise.then(function (responseData) {
       if (responseData) {
-        stats.tload = Math.max(stats.tfirst,performance.now());
+        stats.tload = Math.max(stats.tfirst, performance.now());
         let len;
-        if (typeof responseData === &apos;string&apos;) {
+        if (typeof responseData === &apos;string&apos;)
           len = responseData.length;
-        } else {
+        else
           len = responseData.byteLength;
-        }
+
         stats.loaded = stats.total = len;
-        let response = { url : targetURL, data : responseData};
-        callbacks.onSuccess(response,stats,context);
+        let response = { url: targetURL, data: responseData };
+        callbacks.onSuccess(response, stats, context);
       }
     });
   }

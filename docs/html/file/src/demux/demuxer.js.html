@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -127,17 +130,16 @@
 <div class="content" data-ice="content"><h1 data-ice="title">src/demux/demuxer.js</h1>
 <pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import Event from &apos;../events&apos;;
 import DemuxerInline from &apos;../demux/demuxer-inline&apos;;
-import {logger} from &apos;../utils/logger&apos;;
-import {ErrorTypes, ErrorDetails} from &apos;../errors&apos;;
+import { logger } from &apos;../utils/logger&apos;;
+import { ErrorTypes, ErrorDetails } from &apos;../errors&apos;;
 import EventEmitter from &apos;events&apos;;
 import work from &apos;webworkify-webpack&apos;;
-import {getMediaSource} from &apos;../helper/mediasource-helper&apos;;
+import { getMediaSource } from &apos;../helper/mediasource-helper&apos;;
 
 const MediaSource = getMediaSource();
 
 class Demuxer {
-
-  constructor(hls, id) {
+  constructor (hls, id) {
     this.hls = hls;
     this.id = id;
     // observer setup
@@ -151,11 +153,11 @@ class Demuxer {
       observer.removeListener(event, ...data);
     };
 
-    var forwardMessage = function(ev,data) {
+    let forwardMessage = function (ev, data) {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
-      hls.trigger(ev,data);
+      hls.trigger(ev, data);
     }.bind(this);
 
     // forward events to main thread
@@ -169,37 +171,37 @@ class Demuxer {
     observer.on(Event.INIT_PTS_FOUND, forwardMessage);
 
     const typeSupported = {
-      mp4 : MediaSource.isTypeSupported(&apos;video/mp4&apos;),
+      mp4: MediaSource.isTypeSupported(&apos;video/mp4&apos;),
       mpeg: MediaSource.isTypeSupported(&apos;audio/mpeg&apos;),
       mp3: MediaSource.isTypeSupported(&apos;audio/mp4; codecs=&quot;mp3&quot;&apos;)
     };
     // navigator.vendor is not always available in Web Worker
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
     const vendor = navigator.vendor;
-    if (config.enableWorker &amp;&amp; (typeof(Worker) !== &apos;undefined&apos;)) {
-        logger.log(&apos;demuxing in webworker&apos;);
-        let w;
-        try {
-          w = this.w = work(require.resolve(&apos;../demux/demuxer-worker.js&apos;));
-          this.onwmsg = this.onWorkerMessage.bind(this);
-          w.addEventListener(&apos;message&apos;, this.onwmsg);
-          w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : &apos;demuxerWorker&apos;, err : { message : event.message + &apos; (&apos; + event.filename + &apos;:&apos; + event.lineno + &apos;)&apos; }});};
-          w.postMessage({cmd: &apos;init&apos;, typeSupported : typeSupported, vendor : vendor, id : id, config: JSON.stringify(config)});
-        } catch(err) {
-          logger.error(&apos;error while initializing DemuxerWorker, fallback on DemuxerInline&apos;);
-          if (w) {
-            // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-            URL.revokeObjectURL(w.objectURL);
-          }
-          this.demuxer = new DemuxerInline(observer,typeSupported,config,vendor);
-          this.w = undefined;
+    if (config.enableWorker &amp;&amp; (typeof (Worker) !== &apos;undefined&apos;)) {
+      logger.log(&apos;demuxing in webworker&apos;);
+      let w;
+      try {
+        w = this.w = work(require.resolve(&apos;../demux/demuxer-worker.js&apos;));
+        this.onwmsg = this.onWorkerMessage.bind(this);
+        w.addEventListener(&apos;message&apos;, this.onwmsg);
+        w.onerror = function (event) { hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: &apos;demuxerWorker&apos;, err: { message: event.message + &apos; (&apos; + event.filename + &apos;:&apos; + event.lineno + &apos;)&apos; } }); };
+        w.postMessage({ cmd: &apos;init&apos;, typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
+      } catch (err) {
+        logger.error(&apos;error while initializing DemuxerWorker, fallback on DemuxerInline&apos;);
+        if (w) {
+          // revoke the Object URL that was used to create demuxer worker, so as not to leak it
+          URL.revokeObjectURL(w.objectURL);
         }
-      } else {
-        this.demuxer = new DemuxerInline(observer,typeSupported,config, vendor);
+        this.demuxer = new DemuxerInline(observer, typeSupported, config, vendor);
+        this.w = undefined;
       }
+    } else {
+      this.demuxer = new DemuxerInline(observer, typeSupported, config, vendor);
+    }
   }
 
-  destroy() {
+  destroy () {
     let w = this.w;
     if (w) {
       w.removeEventListener(&apos;message&apos;, this.onwmsg);
@@ -219,60 +221,58 @@ class Demuxer {
     }
   }
 
-  push(data, initSegment, audioCodec, videoCodec, frag, duration,accurateTimeOffset,defaultInitPTS) {
+  push (data, initSegment, audioCodec, videoCodec, frag, duration, accurateTimeOffset, defaultInitPTS) {
     const w = this.w;
-    const timeOffset = !isNaN(frag.startDTS) ? frag.startDTS  : frag.start;
+    const timeOffset = !isNaN(frag.startDTS) ? frag.startDTS : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
     const discontinuity = !(lastFrag &amp;&amp; (frag.cc === lastFrag.cc));
     const trackSwitch = !(lastFrag &amp;&amp; (frag.level === lastFrag.level));
-    const nextSN = lastFrag &amp;&amp; (frag.sn === (lastFrag.sn+1));
+    const nextSN = lastFrag &amp;&amp; (frag.sn === (lastFrag.sn + 1));
     const contiguous = !trackSwitch &amp;&amp; nextSN;
-    if (discontinuity) {
+    if (discontinuity)
       logger.log(`${this.id}:discontinuity detected`);
-    }
-    if (trackSwitch) {
+
+    if (trackSwitch)
       logger.log(`${this.id}:switch detected`);
-    }
+
     this.frag = frag;
     if (w) {
       // post fragment payload as transferable objects for ArrayBuffer (no copy)
-      w.postMessage({cmd: &apos;demux&apos;, data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, data instanceof ArrayBuffer ? [data] : []);
+      w.postMessage({ cmd: &apos;demux&apos;, data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS }, data instanceof ArrayBuffer ? [data] : []);
     } else {
       let demuxer = this.demuxer;
-      if (demuxer) {
-        demuxer.push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS);
-      }
+      if (demuxer)
+        demuxer.push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
     }
   }
 
-  onWorkerMessage(ev) {
+  onWorkerMessage (ev) {
     let data = ev.data,
-        hls = this.hls;
-    switch(data.event) {
-      case &apos;init&apos;:
-        // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-        URL.revokeObjectURL(this.w.objectURL);
-        break;
+      hls = this.hls;
+    switch (data.event) {
+    case &apos;init&apos;:
+      // revoke the Object URL that was used to create demuxer worker, so as not to leak it
+      URL.revokeObjectURL(this.w.objectURL);
+      break;
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
-      case Event.FRAG_PARSING_DATA:
-        data.data.data1 = new Uint8Array(data.data1);
-        if (data.data2) {
-          data.data.data2 = new Uint8Array(data.data2);
-        }
-        /* falls through */
-      default:
-        data.data = data.data || {};
-        data.data.frag = this.frag;
-        data.data.id = this.id;
-        hls.trigger(data.event, data.data);
-        break;
+    case Event.FRAG_PARSING_DATA:
+      data.data.data1 = new Uint8Array(data.data1);
+      if (data.data2)
+        data.data.data2 = new Uint8Array(data.data2);
+
+      /* falls through */
+    default:
+      data.data = data.data || {};
+      data.data.frag = this.frag;
+      data.data.id = this.id;
+      hls.trigger(data.event, data.data);
+      break;
     }
   }
 }
 
 export default Demuxer;
-
 </code></pre>
 
 </div>

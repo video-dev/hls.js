@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -127,76 +130,76 @@
 <div class="content" data-ice="content"><h1 data-ice="title">src/utils/codecs.js</h1>
 <pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">// from http://mp4ra.org/codecs.html
 const sampleEntryCodesISO = {
-    audio: {
-        &apos;a3ds&apos;: true,
-        &apos;ac-3&apos;: true,
-        &apos;ac-4&apos;: true,
-        &apos;alac&apos;: true,
-        &apos;alaw&apos;: true,
-        &apos;dra1&apos;: true,
-        &apos;dts+&apos;: true,
-        &apos;dts-&apos;: true,
-        &apos;dtsc&apos;: true,
-        &apos;dtse&apos;: true,
-        &apos;dtsh&apos;: true,
-        &apos;ec-3&apos;: true,
-        &apos;enca&apos;: true,
-        &apos;g719&apos;: true,
-        &apos;g726&apos;: true,
-        &apos;m4ae&apos;: true,
-        &apos;mha1&apos;: true,
-        &apos;mha2&apos;: true,
-        &apos;mhm1&apos;: true,
-        &apos;mhm2&apos;: true,
-        &apos;mlpa&apos;: true,
-        &apos;mp4a&apos;: true,
-        &apos;raw &apos;: true,
-        &apos;Opus&apos;: true,
-        &apos;samr&apos;: true,
-        &apos;sawb&apos;: true,
-        &apos;sawp&apos;: true,
-        &apos;sevc&apos;: true,
-        &apos;sqcp&apos;: true,
-        &apos;ssmv&apos;: true,
-        &apos;twos&apos;: true,
-        &apos;ulaw&apos;: true
-    },
-    video: {
-        &apos;avc1&apos;: true,
-        &apos;avc2&apos;: true,
-        &apos;avc3&apos;: true,
-        &apos;avc4&apos;: true,
-        &apos;avcp&apos;: true,
-        &apos;drac&apos;: true,
-        &apos;dvav&apos;: true,
-        &apos;dvhe&apos;: true,
-        &apos;encv&apos;: true,
-        &apos;hev1&apos;: true,
-        &apos;hvc1&apos;: true,
-        &apos;mjp2&apos;: true,
-        &apos;mp4v&apos;: true,
-        &apos;mvc1&apos;: true,
-        &apos;mvc2&apos;: true,
-        &apos;mvc3&apos;: true,
-        &apos;mvc4&apos;: true,
-        &apos;resv&apos;: true,
-        &apos;rv60&apos;: true,
-        &apos;s263&apos;: true,
-        &apos;svc1&apos;: true,
-        &apos;svc2&apos;: true,
-        &apos;vc-1&apos;: true,
-        &apos;vp08&apos;: true,
-        &apos;vp09&apos;: true
-    }
+  audio: {
+    &apos;a3ds&apos;: true,
+    &apos;ac-3&apos;: true,
+    &apos;ac-4&apos;: true,
+    &apos;alac&apos;: true,
+    &apos;alaw&apos;: true,
+    &apos;dra1&apos;: true,
+    &apos;dts+&apos;: true,
+    &apos;dts-&apos;: true,
+    &apos;dtsc&apos;: true,
+    &apos;dtse&apos;: true,
+    &apos;dtsh&apos;: true,
+    &apos;ec-3&apos;: true,
+    &apos;enca&apos;: true,
+    &apos;g719&apos;: true,
+    &apos;g726&apos;: true,
+    &apos;m4ae&apos;: true,
+    &apos;mha1&apos;: true,
+    &apos;mha2&apos;: true,
+    &apos;mhm1&apos;: true,
+    &apos;mhm2&apos;: true,
+    &apos;mlpa&apos;: true,
+    &apos;mp4a&apos;: true,
+    &apos;raw &apos;: true,
+    &apos;Opus&apos;: true,
+    &apos;samr&apos;: true,
+    &apos;sawb&apos;: true,
+    &apos;sawp&apos;: true,
+    &apos;sevc&apos;: true,
+    &apos;sqcp&apos;: true,
+    &apos;ssmv&apos;: true,
+    &apos;twos&apos;: true,
+    &apos;ulaw&apos;: true
+  },
+  video: {
+    &apos;avc1&apos;: true,
+    &apos;avc2&apos;: true,
+    &apos;avc3&apos;: true,
+    &apos;avc4&apos;: true,
+    &apos;avcp&apos;: true,
+    &apos;drac&apos;: true,
+    &apos;dvav&apos;: true,
+    &apos;dvhe&apos;: true,
+    &apos;encv&apos;: true,
+    &apos;hev1&apos;: true,
+    &apos;hvc1&apos;: true,
+    &apos;mjp2&apos;: true,
+    &apos;mp4v&apos;: true,
+    &apos;mvc1&apos;: true,
+    &apos;mvc2&apos;: true,
+    &apos;mvc3&apos;: true,
+    &apos;mvc4&apos;: true,
+    &apos;resv&apos;: true,
+    &apos;rv60&apos;: true,
+    &apos;s263&apos;: true,
+    &apos;svc1&apos;: true,
+    &apos;svc2&apos;: true,
+    &apos;vc-1&apos;: true,
+    &apos;vp08&apos;: true,
+    &apos;vp09&apos;: true
+  }
 };
 
-function isCodecType(codec, type) {
-    const typeCodes = sampleEntryCodesISO[type];
-    return !!typeCodes &amp;&amp; typeCodes[codec.slice(0, 4)] === true;
+function isCodecType (codec, type) {
+  const typeCodes = sampleEntryCodesISO[type];
+  return !!typeCodes &amp;&amp; typeCodes[codec.slice(0, 4)] === true;
 }
 
-function isCodecSupportedInMp4(codec, type) {
-    return MediaSource.isTypeSupported(`${type || &apos;video&apos;}/mp4;codecs=&quot;${codec}&quot;`);
+function isCodecSupportedInMp4 (codec, type) {
+  return MediaSource.isTypeSupported(`${type || &apos;video&apos;}/mp4;codecs=&quot;${codec}&quot;`);
 }
 
 export { isCodecType, isCodecSupportedInMp4 };

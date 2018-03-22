@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -365,7 +368,7 @@
           
           
           
-          <span class="code" data-ice="name"><span><a href="class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-detectEvictedFragments">detectEvictedFragments</a></span></span><span class="code" data-ice="signature">(elementaryStream: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">String</a></span>, timeRange: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span>)</span>
+          <span class="code" data-ice="name"><span><a href="class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-detectEvictedFragments">detectEvictedFragments</a></span></span><span class="code" data-ice="signature">(elementaryStream: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">String</a></span>, timeRange: <span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span>)</span>
         </p>
       </div>
       <div>
@@ -404,6 +407,35 @@ Fragments will need to be reloaded when the buffer is freed up, removing partial
         
         <div data-ice="description"><p>Checks if the fragment passed in is loaded in the buffer properly
 Partially loaded fragments will be registered as a partial fragment</p>
+</div>
+      </div>
+    </td>
+    <td>
+      
+      
+    </td>
+  </tr>
+<tr data-ice="target">
+    <td>
+      <span class="access" data-ice="access">public</span>
+      
+      
+      
+      <span class="override" data-ice="override"></span>
+    </td>
+    <td>
+      <div>
+        <p>
+          
+          
+          
+          <span class="code" data-ice="name"><span><a href="class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getBufferedFrag">getBufferedFrag</a></span></span><span class="code" data-ice="signature">(position: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></span>, levelType: <span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-LevelType">LevelType</a></span>): <span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span> | <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null">null</a></span></span>
+        </p>
+      </div>
+      <div>
+        
+        
+        <div data-ice="description"><p>Return a Fragment that match the position and levelType.</p>
 </div>
       </div>
     </td>
@@ -518,6 +550,35 @@ Partially loaded fragments will be registered as a partial fragment</p>
         
         
         
+      </div>
+    </td>
+    <td>
+      
+      
+    </td>
+  </tr>
+<tr data-ice="target">
+    <td>
+      <span class="access" data-ice="access">public</span>
+      
+      
+      
+      <span class="override" data-ice="override"></span>
+    </td>
+    <td>
+      <div>
+        <p>
+          
+          
+          
+          <span class="code" data-ice="name"><span><a href="class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-hasFragment">hasFragment</a></span></span><span class="code" data-ice="signature">(fragment: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></span></span>
+        </p>
+      </div>
+      <div>
+        
+        
+        <div data-ice="description"><p>Return true if fragment tracker has the fragment.</p>
+</div>
       </div>
     </td>
     <td>
@@ -660,6 +721,35 @@ Partially loaded fragments will be registered as a partial fragment</p>
         
         
         <div data-ice="description"><p>Fires when a fragment loading is completed</p>
+</div>
+      </div>
+    </td>
+    <td>
+      
+      
+    </td>
+  </tr>
+<tr data-ice="target">
+    <td>
+      <span class="access" data-ice="access">public</span>
+      
+      
+      
+      <span class="override" data-ice="override"></span>
+    </td>
+    <td>
+      <div>
+        <p>
+          
+          
+          
+          <span class="code" data-ice="name"><span><a href="class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-removeAllFragments">removeAllFragments</a></span></span><span class="code" data-ice="signature">()</span>
+        </p>
+      </div>
+      <div>
+        
+        
+        <div data-ice="description"><p>Remove all fragments from fragment tracker.</p>
 </div>
       </div>
     </td>
@@ -1034,7 +1124,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber13">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber12">source</a></span></span>
     </span>
   </h3>
 
@@ -1080,7 +1170,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber20">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber19">source</a></span></span>
     </span>
   </h3>
 
@@ -1123,7 +1213,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber25">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber24">source</a></span></span>
     </span>
   </h3>
 
@@ -1166,7 +1256,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber22">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber21">source</a></span></span>
     </span>
   </h3>
 
@@ -1209,7 +1299,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber23">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber22">source</a></span></span>
     </span>
   </h3>
 
@@ -1255,7 +1345,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber28">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber27">source</a></span></span>
     </span>
   </h3>
 
@@ -1294,11 +1384,11 @@ Partially loaded fragments will be registered as a partial fragment</p>
     
     
     
-    <span class="code" data-ice="name">detectEvictedFragments</span><span class="code" data-ice="signature">(elementaryStream: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">String</a></span>, timeRange: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span>)</span>
+    <span class="code" data-ice="name">detectEvictedFragments</span><span class="code" data-ice="signature">(elementaryStream: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">String</a></span>, timeRange: <span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span>)</span>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber43">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber71">source</a></span></span>
     </span>
   </h3>
 
@@ -1329,7 +1419,7 @@ Fragments will need to be reloaded when the buffer is freed up, removing partial
     </tr>
 <tr data-ice="property" data-depth="0">
       <td data-ice="name" class="code" data-depth="0">timeRange</td>
-      <td data-ice="type" class="code"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span></td>
+      <td data-ice="type" class="code"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></td>
       <td data-ice="appendix"></td>
       <td data-ice="description"><p>TimeRange object from a sourceBuffer</p>
 </td>
@@ -1368,7 +1458,7 @@ Fragments will need to be reloaded when the buffer is freed up, removing partial
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber71">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber99">source</a></span></span>
     </span>
   </h3>
 
@@ -1419,6 +1509,85 @@ Partially loaded fragments will be registered as a partial fragment</p>
   
 </div>
 <div class="detail" data-ice="detail">
+  <h3 data-ice="anchor" id="instance-method-getBufferedFrag">
+    <span class="access" data-ice="access">public</span>
+    
+    
+    
+    
+    
+    <span class="code" data-ice="name">getBufferedFrag</span><span class="code" data-ice="signature">(position: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></span>, levelType: <span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-LevelType">LevelType</a></span>): <span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span> | <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null">null</a></span></span>
+    <span class="right-info">
+      
+      
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber42">source</a></span></span>
+    </span>
+  </h3>
+
+  
+  
+  
+  <div data-ice="description"><p>Return a Fragment that match the position and levelType.
+If not found any Fragment, return null</p>
+</div>
+
+  
+
+  <div data-ice="properties"><div data-ice="properties">
+  <h4 data-ice="title">Params:</h4>
+  <table class="params">
+    <thead>
+    <tr><td>Name</td><td>Type</td><td>Attribute</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+    
+    <tr data-ice="property" data-depth="0">
+      <td data-ice="name" class="code" data-depth="0">position</td>
+      <td data-ice="type" class="code"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></span></td>
+      <td data-ice="appendix"></td>
+      <td data-ice="description"></td>
+    </tr>
+<tr data-ice="property" data-depth="0">
+      <td data-ice="name" class="code" data-depth="0">levelType</td>
+      <td data-ice="type" class="code"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-LevelType">LevelType</a></span></td>
+      <td data-ice="appendix"></td>
+      <td data-ice="description"></td>
+    </tr>
+</tbody>
+  </table>
+</div>
+</div>
+
+  <div class="return-params" data-ice="returnParams">
+    <h4>Return:</h4>
+    <table>
+      <tbody>
+        <tr>
+          <td class="return-type code" data-ice="returnType"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span> | <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null">null</a></span></td>
+          
+        </tr>
+      </tbody>
+    </table>
+    <div data-ice="returnProperties">
+</div>
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+</div>
+<div class="detail" data-ice="detail">
   <h3 data-ice="anchor" id="instance-method-getBufferedTimes">
     <span class="access" data-ice="access">public</span>
     
@@ -1430,7 +1599,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber86">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber116">source</a></span></span>
     </span>
   </h3>
 
@@ -1513,7 +1682,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber121">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber151">source</a></span></span>
     </span>
   </h3>
 
@@ -1584,7 +1753,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber130">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber160">source</a></span></span>
     </span>
   </h3>
 
@@ -1657,7 +1826,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber156">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber186">source</a></span></span>
     </span>
   </h3>
 
@@ -1719,6 +1888,78 @@ Partially loaded fragments will be registered as a partial fragment</p>
   
 </div>
 <div class="detail" data-ice="detail">
+  <h3 data-ice="anchor" id="instance-method-hasFragment">
+    <span class="access" data-ice="access">public</span>
+    
+    
+    
+    
+    
+    <span class="code" data-ice="name">hasFragment</span><span class="code" data-ice="signature">(fragment: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></span></span>
+    <span class="right-info">
+      
+      
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber267">source</a></span></span>
+    </span>
+  </h3>
+
+  
+  
+  
+  <div data-ice="description"><p>Return true if fragment tracker has the fragment.</p>
+</div>
+
+  
+
+  <div data-ice="properties"><div data-ice="properties">
+  <h4 data-ice="title">Params:</h4>
+  <table class="params">
+    <thead>
+    <tr><td>Name</td><td>Type</td><td>Attribute</td><td>Description</td></tr>
+    </thead>
+    <tbody>
+    
+    <tr data-ice="property" data-depth="0">
+      <td data-ice="name" class="code" data-depth="0">fragment</td>
+      <td data-ice="type" class="code"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span></td>
+      <td data-ice="appendix"></td>
+      <td data-ice="description"></td>
+    </tr>
+</tbody>
+  </table>
+</div>
+</div>
+
+  <div class="return-params" data-ice="returnParams">
+    <h4>Return:</h4>
+    <table>
+      <tbody>
+        <tr>
+          <td class="return-type code" data-ice="returnType"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean">boolean</a></span></td>
+          
+        </tr>
+      </tbody>
+    </table>
+    <div data-ice="returnProperties">
+</div>
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+</div>
+<div class="detail" data-ice="detail">
   <h3 data-ice="anchor" id="instance-method-isPartial">
     <span class="access" data-ice="access">public</span>
     
@@ -1730,7 +1971,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber174">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber203">source</a></span></span>
     </span>
   </h3>
 
@@ -1801,7 +2042,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber180">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber209">source</a></span></span>
     </span>
   </h3>
 
@@ -1884,7 +2125,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber214">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber246">source</a></span></span>
     </span>
   </h3>
 
@@ -1944,7 +2185,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber226">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber258">source</a></span></span>
     </span>
   </h3>
 
@@ -2004,7 +2245,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber200">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber229">source</a></span></span>
     </span>
   </h3>
 
@@ -2053,6 +2294,50 @@ Partially loaded fragments will be registered as a partial fragment</p>
   
 </div>
 <div class="detail" data-ice="detail">
+  <h3 data-ice="anchor" id="instance-method-removeAllFragments">
+    <span class="access" data-ice="access">public</span>
+    
+    
+    
+    
+    
+    <span class="code" data-ice="name">removeAllFragments</span><span class="code" data-ice="signature">()</span>
+    <span class="right-info">
+      
+      
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber284">source</a></span></span>
+    </span>
+  </h3>
+
+  
+  
+  
+  <div data-ice="description"><p>Remove all fragments from fragment tracker.</p>
+</div>
+
+  
+
+  <div data-ice="properties">
+</div>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+</div>
+<div class="detail" data-ice="detail">
   <h3 data-ice="anchor" id="instance-method-removeFragment">
     <span class="access" data-ice="access">public</span>
     
@@ -2064,7 +2349,7 @@ Partially loaded fragments will be registered as a partial fragment</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber234">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/helper/fragment-tracker.js.html#lineNumber276">source</a></span></span>
     </span>
   </h3>
 

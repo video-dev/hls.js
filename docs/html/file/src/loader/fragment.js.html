@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,8 +134,7 @@ import URLToolkit from &apos;url-toolkit&apos;;
 import LevelKey from &apos;./level-key&apos;;
 
 export default class Fragment {
-
-  constructor() {
+  constructor () {
     this._url = null;
     this._byteRange = null;
     this._decryptdata = null;
@@ -140,8 +142,8 @@ export default class Fragment {
 
     // Holds the types of data this fragment supports
     this._elementaryStreams = {
-      [Fragment.ElementaryStreamTypes.AUDIO] : false,
-      [Fragment.ElementaryStreamTypes.VIDEO] : false
+      [Fragment.ElementaryStreamTypes.AUDIO]: false,
+      [Fragment.ElementaryStreamTypes.VIDEO]: false
     };
   }
 
@@ -150,46 +152,44 @@ export default class Fragment {
    *
    * @enum
    */
-  static get ElementaryStreamTypes() {
+  static get ElementaryStreamTypes () {
     return {
       AUDIO: &apos;audio&apos;,
       VIDEO: &apos;video&apos;
     };
   }
 
-  get url() {
-    if (!this._url &amp;&amp; this.relurl) {
+  get url () {
+    if (!this._url &amp;&amp; this.relurl)
       this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
-    }
+
     return this._url;
   }
 
-  set url(value) {
+  set url (value) {
     this._url = value;
   }
 
-  get programDateTime() {
-    if (!this._programDateTime &amp;&amp; this.rawProgramDateTime) {
+  get programDateTime () {
+    if (!this._programDateTime &amp;&amp; this.rawProgramDateTime)
       this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
-    }
+
     return this._programDateTime;
   }
 
-  get byteRange() {
-    if (!this._byteRange &amp;&amp; !this.rawByteRange) {
+  get byteRange () {
+    if (!this._byteRange &amp;&amp; !this.rawByteRange)
       return [];
-    }
 
-    if (this._byteRange) {
+    if (this._byteRange)
       return this._byteRange;
-    }
 
     let byteRange = [];
     if (this.rawByteRange) {
       const params = this.rawByteRange.split(&apos;@&apos;, 2);
       if (params.length === 1) {
         const lastByteRangeEndOffset = this.lastByteRangeEndOffset;
-        byteRange[0] = lastByteRangeEndOffset ? lastByteRangeEndOffset : 0;
+        byteRange[0] = lastByteRangeEndOffset || 0;
       } else {
         byteRange[0] = parseInt(params[1]);
       }
@@ -202,32 +202,32 @@ export default class Fragment {
   /**
    * @type {number}
    */
-  get byteRangeStartOffset() {
+  get byteRangeStartOffset () {
     return this.byteRange[0];
   }
 
-  get byteRangeEndOffset() {
+  get byteRangeEndOffset () {
     return this.byteRange[1];
   }
 
-  get decryptdata() {
-    if (!this._decryptdata) {
+  get decryptdata () {
+    if (!this._decryptdata)
       this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
-    }
+
     return this._decryptdata;
   }
 
   /**
    * @param {ElementaryStreamType} type
    */
-  addElementaryStream(type) {
+  addElementaryStream (type) {
     this._elementaryStreams[type] = true;
   }
 
   /**
    * @param {ElementaryStreamType} type
    */
-  hasElementaryStream(type) {
+  hasElementaryStream (type) {
     return this._elementaryStreams[type] === true;
   }
 
@@ -235,12 +235,11 @@ export default class Fragment {
    * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
    * @returns {Uint8Array}
    */
-  createInitializationVector(segmentNumber) {
-    var uint8View = new Uint8Array(16);
+  createInitializationVector (segmentNumber) {
+    let uint8View = new Uint8Array(16);
 
-    for (var i = 12; i &lt; 16; i++) {
+    for (let i = 12; i &lt; 16; i++)
       uint8View[i] = (segmentNumber &gt;&gt; 8 * (15 - i)) &amp; 0xff;
-    }
 
     return uint8View;
   }
@@ -251,8 +250,8 @@ export default class Fragment {
    * @param segmentNumber - the fragment&apos;s segment number
    * @returns {*} - an object to be applied as a fragment&apos;s decryptdata
    */
-  fragmentDecryptdataFromLevelkey(levelkey, segmentNumber) {
-    var decryptdata = levelkey;
+  fragmentDecryptdataFromLevelkey (levelkey, segmentNumber) {
+    let decryptdata = levelkey;
 
     if (levelkey &amp;&amp; levelkey.method &amp;&amp; levelkey.uri &amp;&amp; !levelkey.iv) {
       decryptdata = new LevelKey();

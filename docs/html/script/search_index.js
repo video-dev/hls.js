@@ -198,6 +198,12 @@ window.esdocSearchIndex = [
     "class"
   ],
   [
+    "hls.js/src/events.js~hlsevents",
+    "variable/index.html#static-variable-HlsEvents",
+    "<span>HlsEvents</span> <span class=\"search-result-import-path\">hls.js/src/events.js</span>",
+    "variable"
+  ],
+  [
     "hls.js/src/demux/id3.js~id3",
     "class/src/demux/id3.js~ID3.html",
     "<span>ID3</span> <span class=\"search-result-import-path\">hls.js/src/demux/id3.js</span>",
@@ -288,6 +294,12 @@ window.esdocSearchIndex = [
     "class"
   ],
   [
+    "hls.js/src/controller/stream-controller.js~state",
+    "variable/index.html#static-variable-State",
+    "<span>State</span> <span class=\"search-result-import-path\">hls.js/src/controller/stream-controller.js</span>",
+    "variable"
+  ],
+  [
     "hls.js/src/controller/stream-controller.js~streamcontroller",
     "class/src/controller/stream-controller.js~StreamController.html",
     "<span>StreamController</span> <span class=\"search-result-import-path\">hls.js/src/controller/stream-controller.js</span>",
@@ -363,6 +375,12 @@ window.esdocSearchIndex = [
     "hls.js/src/demux/adts.js~appendframe",
     "function/index.html#static-function-appendFrame",
     "<span>appendFrame</span> <span class=\"search-result-import-path\">hls.js/src/demux/adts.js</span>",
+    "function"
+  ],
+  [
+    "hls.js/src/utils/texttrack-utils.js~clearcurrentcues",
+    "function/index.html#static-function-clearCurrentCues",
+    "<span>clearCurrentCues</span> <span class=\"search-result-import-path\">hls.js/src/utils/texttrack-utils.js</span>",
     "function"
   ],
   [
@@ -508,6 +526,12 @@ window.esdocSearchIndex = [
     "variable/index.html#static-variable-requestMediaKeySystemAccess",
     "<span>requestMediaKeySystemAccess</span> <span class=\"search-result-import-path\">hls.js/src/helper/mediakeys-helper.js</span>",
     "variable"
+  ],
+  [
+    "hls.js/src/utils/texttrack-utils.js~sendaddtrackevent",
+    "function/index.html#static-function-sendAddTrackEvent",
+    "<span>sendAddTrackEvent</span> <span class=\"search-result-import-path\">hls.js/src/utils/texttrack-utils.js</span>",
+    "function"
   ],
   [
     "hls.js/src/utils/discontinuities.js~shouldalignondiscontinuities",
@@ -901,13 +925,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/abr-controller.js~abrcontroller#nextautolevel",
-    "class/src/controller/abr-controller.js~AbrController.html#instance-get-nextAutoLevel",
+    "class/src/controller/abr-controller.js~AbrController.html#instance-set-nextAutoLevel",
     "src/controller/abr-controller.js~AbrController#nextAutoLevel",
     "member"
   ],
   [
     "src/controller/abr-controller.js~abrcontroller#nextautolevel",
-    "class/src/controller/abr-controller.js~AbrController.html#instance-set-nextAutoLevel",
+    "class/src/controller/abr-controller.js~AbrController.html#instance-get-nextAutoLevel",
     "src/controller/abr-controller.js~AbrController#nextAutoLevel",
     "member"
   ],
@@ -2076,6 +2100,12 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
+    "src/controller/id3-track-controller.js~id3trackcontroller#getid3track",
+    "class/src/controller/id3-track-controller.js~ID3TrackController.html#instance-method-getID3Track",
+    "src/controller/id3-track-controller.js~ID3TrackController#getID3Track",
+    "method"
+  ],
+  [
     "src/controller/id3-track-controller.js~id3trackcontroller#id3track",
     "class/src/controller/id3-track-controller.js~ID3TrackController.html#instance-member-id3Track",
     "src/controller/id3-track-controller.js~ID3TrackController#id3Track",
@@ -2167,13 +2197,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#level",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-level",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-level",
     "src/controller/level-controller.js~LevelController#level",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#level",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-level",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-level",
     "src/controller/level-controller.js~LevelController#level",
     "member"
   ],
@@ -2197,13 +2227,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#manuallevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-manualLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-manualLevel",
     "src/controller/level-controller.js~LevelController#manualLevel",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#manuallevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-manualLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-manualLevel",
     "src/controller/level-controller.js~LevelController#manualLevel",
     "member"
   ],
@@ -2269,13 +2299,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#startlevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-startLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-startLevel",
     "src/controller/level-controller.js~LevelController#startLevel",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#startlevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-startLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-startLevel",
     "src/controller/level-controller.js~LevelController#startLevel",
     "member"
   ],
@@ -2302,12 +2332,6 @@ window.esdocSearchIndex = [
     "file/src/controller/stream-controller.js.html",
     "src/controller/stream-controller.js",
     "file"
-  ],
-  [
-    "src/controller/stream-controller.js~streamcontroller#_bufferedfrags",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-member-_bufferedFrags",
-    "src/controller/stream-controller.js~StreamController#_bufferedFrags",
-    "member"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#_checkappendedparsed",
@@ -2349,6 +2373,18 @@ window.esdocSearchIndex = [
     "src/controller/stream-controller.js~streamcontroller#_findfragment",
     "class/src/controller/stream-controller.js~StreamController.html#instance-method-_findFragment",
     "src/controller/stream-controller.js~StreamController#_findFragment",
+    "method"
+  ],
+  [
+    "src/controller/stream-controller.js~streamcontroller#_findfragmentbypdt",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_findFragmentByPDT",
+    "src/controller/stream-controller.js~StreamController#_findFragmentByPDT",
+    "method"
+  ],
+  [
+    "src/controller/stream-controller.js~streamcontroller#_findfragmentbysn",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_findFragmentBySN",
+    "src/controller/stream-controller.js~StreamController#_findFragmentBySN",
     "method"
   ],
   [
@@ -2545,13 +2581,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#livesyncposition",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-set-liveSyncPosition",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-get-liveSyncPosition",
     "src/controller/stream-controller.js~StreamController#liveSyncPosition",
     "member"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#livesyncposition",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-get-liveSyncPosition",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-set-liveSyncPosition",
     "src/controller/stream-controller.js~StreamController#liveSyncPosition",
     "member"
   ],
@@ -2803,13 +2839,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#state",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-set-state",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-get-state",
     "src/controller/stream-controller.js~StreamController#state",
     "member"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#state",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-get-state",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-set-state",
     "src/controller/stream-controller.js~StreamController#state",
     "member"
   ],
@@ -3292,12 +3328,6 @@ window.esdocSearchIndex = [
     "class/src/controller/timeline-controller.js~TimelineController.html#instance-member-prevCC",
     "src/controller/timeline-controller.js~TimelineController#prevCC",
     "member"
-  ],
-  [
-    "src/controller/timeline-controller.js~timelinecontroller#sendaddtrackevent",
-    "class/src/controller/timeline-controller.js~TimelineController.html#instance-method-sendAddTrackEvent",
-    "src/controller/timeline-controller.js~TimelineController#sendAddTrackEvent",
-    "method"
   ],
   [
     "src/controller/timeline-controller.js~timelinecontroller#texttracks",
@@ -4644,12 +4674,6 @@ window.esdocSearchIndex = [
     "file"
   ],
   [
-    "src/events.js~hlsevent",
-    "typedef/index.html#static-typedef-HlsEvent",
-    "src/events.js~HlsEvent",
-    "typedef"
-  ],
-  [
     "src/helper/aac.js",
     "file/src/helper/aac.js.html",
     "src/helper/aac.js",
@@ -4716,6 +4740,12 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
+    "src/helper/fragment-tracker.js~fragmenttracker#getbufferedfrag",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getBufferedFrag",
+    "src/helper/fragment-tracker.js~FragmentTracker#getBufferedFrag",
+    "method"
+  ],
+  [
     "src/helper/fragment-tracker.js~fragmenttracker#getbufferedtimes",
     "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getBufferedTimes",
     "src/helper/fragment-tracker.js~FragmentTracker#getBufferedTimes",
@@ -4737,6 +4767,12 @@ window.esdocSearchIndex = [
     "src/helper/fragment-tracker.js~fragmenttracker#getstate",
     "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getState",
     "src/helper/fragment-tracker.js~FragmentTracker#getState",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#hasfragment",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-hasFragment",
+    "src/helper/fragment-tracker.js~FragmentTracker#hasFragment",
     "method"
   ],
   [
@@ -4767,6 +4803,12 @@ window.esdocSearchIndex = [
     "src/helper/fragment-tracker.js~fragmenttracker#onfragloaded",
     "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-onFragLoaded",
     "src/helper/fragment-tracker.js~FragmentTracker#onFragLoaded",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#removeallfragments",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-removeAllFragments",
+    "src/helper/fragment-tracker.js~FragmentTracker#removeAllFragments",
     "method"
   ],
   [
@@ -4825,13 +4867,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#audiotrack",
-    "class/src/hls.js~Hls.html#instance-get-audioTrack",
+    "class/src/hls.js~Hls.html#instance-set-audioTrack",
     "src/hls.js~Hls#audioTrack",
     "member"
   ],
   [
     "src/hls.js~hls#audiotrack",
-    "class/src/hls.js~Hls.html#instance-set-audioTrack",
+    "class/src/hls.js~Hls.html#instance-get-audioTrack",
     "src/hls.js~Hls#audioTrack",
     "member"
   ],
@@ -4885,13 +4927,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#currentlevel",
-    "class/src/hls.js~Hls.html#instance-set-currentLevel",
+    "class/src/hls.js~Hls.html#instance-get-currentLevel",
     "src/hls.js~Hls#currentLevel",
     "member"
   ],
   [
     "src/hls.js~hls#currentlevel",
-    "class/src/hls.js~Hls.html#instance-get-currentLevel",
+    "class/src/hls.js~Hls.html#instance-set-currentLevel",
     "src/hls.js~Hls#currentLevel",
     "member"
   ],
@@ -4987,13 +5029,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#nextautolevel",
-    "class/src/hls.js~Hls.html#instance-get-nextAutoLevel",
+    "class/src/hls.js~Hls.html#instance-set-nextAutoLevel",
     "src/hls.js~Hls#nextAutoLevel",
     "member"
   ],
   [
     "src/hls.js~hls#nextautolevel",
-    "class/src/hls.js~Hls.html#instance-set-nextAutoLevel",
+    "class/src/hls.js~Hls.html#instance-get-nextAutoLevel",
     "src/hls.js~Hls#nextAutoLevel",
     "member"
   ],
@@ -5011,13 +5053,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#nextloadlevel",
-    "class/src/hls.js~Hls.html#instance-get-nextLoadLevel",
+    "class/src/hls.js~Hls.html#instance-set-nextLoadLevel",
     "src/hls.js~Hls#nextLoadLevel",
     "member"
   ],
   [
     "src/hls.js~hls#nextloadlevel",
-    "class/src/hls.js~Hls.html#instance-set-nextLoadLevel",
+    "class/src/hls.js~Hls.html#instance-get-nextLoadLevel",
     "src/hls.js~Hls#nextLoadLevel",
     "member"
   ],
@@ -5065,25 +5107,25 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#subtitledisplay",
-    "class/src/hls.js~Hls.html#instance-set-subtitleDisplay",
-    "src/hls.js~Hls#subtitleDisplay",
-    "member"
-  ],
-  [
-    "src/hls.js~hls#subtitledisplay",
     "class/src/hls.js~Hls.html#instance-get-subtitleDisplay",
     "src/hls.js~Hls#subtitleDisplay",
     "member"
   ],
   [
-    "src/hls.js~hls#subtitletrack",
-    "class/src/hls.js~Hls.html#instance-set-subtitleTrack",
-    "src/hls.js~Hls#subtitleTrack",
+    "src/hls.js~hls#subtitledisplay",
+    "class/src/hls.js~Hls.html#instance-set-subtitleDisplay",
+    "src/hls.js~Hls#subtitleDisplay",
     "member"
   ],
   [
     "src/hls.js~hls#subtitletrack",
     "class/src/hls.js~Hls.html#instance-get-subtitleTrack",
+    "src/hls.js~Hls#subtitleTrack",
+    "member"
+  ],
+  [
+    "src/hls.js~hls#subtitletrack",
+    "class/src/hls.js~Hls.html#instance-set-subtitleTrack",
     "src/hls.js~Hls#subtitleTrack",
     "member"
   ],
@@ -5119,13 +5161,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls.defaultconfig",
-    "class/src/hls.js~Hls.html#static-set-DefaultConfig",
+    "class/src/hls.js~Hls.html#static-get-DefaultConfig",
     "src/hls.js~Hls.DefaultConfig",
     "member"
   ],
   [
     "src/hls.js~hls.defaultconfig",
-    "class/src/hls.js~Hls.html#static-get-DefaultConfig",
+    "class/src/hls.js~Hls.html#static-set-DefaultConfig",
     "src/hls.js~Hls.DefaultConfig",
     "member"
   ],
@@ -5613,6 +5655,12 @@ window.esdocSearchIndex = [
     "src/loader/playlist-loader.js~playlistloader.contexttype",
     "class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-ContextType",
     "src/loader/playlist-loader.js~PlaylistLoader.ContextType",
+    "member"
+  ],
+  [
+    "src/loader/playlist-loader.js~playlistloader.leveltype",
+    "class/src/loader/playlist-loader.js~PlaylistLoader.html#static-get-LevelType",
+    "src/loader/playlist-loader.js~PlaylistLoader.LevelType",
     "member"
   ],
   [
@@ -6532,6 +6580,12 @@ window.esdocSearchIndex = [
     "class/src/utils/output-filter.js~OutputFilter.html#instance-member-track",
     "src/utils/output-filter.js~OutputFilter#track",
     "member"
+  ],
+  [
+    "src/utils/texttrack-utils.js",
+    "file/src/utils/texttrack-utils.js.html",
+    "src/utils/texttrack-utils.js",
+    "file"
   ],
   [
     "src/utils/time-ranges.js",

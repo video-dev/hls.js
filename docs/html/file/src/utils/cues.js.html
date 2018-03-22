@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -127,65 +130,50 @@
 <div class="content" data-ice="content"><h1 data-ice="title">src/utils/cues.js</h1>
 <pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import { fixLineBreaks } from &apos;./vttparser&apos;;
 
-export function newCue(track, startTime, endTime, captionScreen) {
-  var row;
-  var cue;
-  var indenting;
-  var indent;
-  var text;
-  var VTTCue = window.VTTCue || window.TextTrackCue;
+export function newCue (track, startTime, endTime, captionScreen) {
+  let row;
+  let cue;
+  let indenting;
+  let indent;
+  let text;
+  let VTTCue = window.VTTCue || window.TextTrackCue;
 
-  for (var r=0; r&lt;captionScreen.rows.length; r++)
-  {
+  for (let r = 0; r &lt; captionScreen.rows.length; r++) {
     row = captionScreen.rows[r];
     indenting = true;
     indent = 0;
     text = &apos;&apos;;
 
-    if (!row.isEmpty())
-    {
-      for (var c=0; c&lt;row.chars.length; c++)
-      {
-        if (row.chars[c].uchar.match(/\s/) &amp;&amp; indenting)
-        {
+    if (!row.isEmpty()) {
+      for (let c = 0; c &lt; row.chars.length; c++) {
+        if (row.chars[c].uchar.match(/\s/) &amp;&amp; indenting) {
           indent++;
-        }
-        else
-        {
+        } else {
           text += row.chars[c].uchar;
           indenting = false;
         }
       }
-      //To be used for cleaning-up orphaned roll-up captions
+      // To be used for cleaning-up orphaned roll-up captions
       row.cueStartTime = startTime;
 
       // Give a slight bump to the endTime if it&apos;s equal to startTime to avoid a SyntaxError in IE
       if (startTime === endTime)
-      {
         endTime += 0.0001;
-      }
 
       cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
 
       if (indent &gt;= 16)
-      {
         indent--;
-      }
       else
-      {
         indent++;
-      }
 
       // VTTCue.line get&apos;s flakey when using controls, so let&apos;s now include line 13&amp;14
       // also, drop line 1 since it&apos;s to close to the top
       if (navigator.userAgent.match(/Firefox\//))
-      {
         cue.line = r + 1;
-      }
       else
-      {
         cue.line = (r &gt; 7 ? r - 2 : r + 1);
-      }
+
       cue.align = &apos;left&apos;;
       // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
       cue.position = Math.max(0, Math.min(100, 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0)));
@@ -193,7 +181,6 @@ export function newCue(track, startTime, endTime, captionScreen) {
     }
   }
 }
-
 </code></pre>
 
 </div>

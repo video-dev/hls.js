@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -129,11 +132,10 @@
  * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
 */
 
-import {logger} from &apos;../utils/logger&apos;;
+import { logger } from &apos;../utils/logger&apos;;
 
 class ExpGolomb {
-
-  constructor(data) {
+  constructor (data) {
     this.data = data;
     // the number of bytes left to examine in this.data
     this.bytesAvailable = data.byteLength;
@@ -144,16 +146,16 @@ class ExpGolomb {
   }
 
   // ():void
-  loadWord() {
-    var
+  loadWord () {
+    let
       data = this.data,
       bytesAvailable = this.bytesAvailable,
       position = data.byteLength - bytesAvailable,
       workingBytes = new Uint8Array(4),
       availableBytes = Math.min(4, bytesAvailable);
-    if (availableBytes === 0) {
+    if (availableBytes === 0)
       throw new Error(&apos;no bytes available&apos;);
-    }
+
     workingBytes.set(data.subarray(position, position + availableBytes));
     this.word = new DataView(workingBytes.buffer).getUint32(0);
     // track the amount of this.data that has been processed
@@ -162,8 +164,8 @@ class ExpGolomb {
   }
 
   // (count:int):void
-  skipBits(count) {
-    var skipBytes; // :int
+  skipBits (count) {
+    let skipBytes; // :int
     if (this.bitsAvailable &gt; count) {
       this.word &lt;&lt;= count;
       this.bitsAvailable -= count;
@@ -179,32 +181,31 @@ class ExpGolomb {
   }
 
   // (size:int):uint
-  readBits(size) {
-    var
+  readBits (size) {
+    let
       bits = Math.min(this.bitsAvailable, size), // :uint
       valu = this.word &gt;&gt;&gt; (32 - bits); // :uint
-    if (size &gt; 32) {
+    if (size &gt; 32)
       logger.error(&apos;Cannot read more than 32 bits at a time&apos;);
-    }
+
     this.bitsAvailable -= bits;
-    if (this.bitsAvailable &gt; 0) {
+    if (this.bitsAvailable &gt; 0)
       this.word &lt;&lt;= bits;
-    } else if (this.bytesAvailable &gt; 0) {
+    else if (this.bytesAvailable &gt; 0)
       this.loadWord();
-    }
+
     bits = size - bits;
-    if (bits &gt; 0 &amp;&amp; this.bitsAvailable) {
+    if (bits &gt; 0 &amp;&amp; this.bitsAvailable)
       return valu &lt;&lt; bits | this.readBits(bits);
-    } else {
+    else
       return valu;
-    }
   }
 
   // ():uint
-  skipLZ() {
-    var leadingZeroCount; // :uint
+  skipLZ () {
+    let leadingZeroCount; // :uint
     for (leadingZeroCount = 0; leadingZeroCount &lt; this.bitsAvailable; ++leadingZeroCount) {
-      if (0 !== (this.word &amp; (0x80000000 &gt;&gt;&gt; leadingZeroCount))) {
+      if ((this.word &amp; (0x80000000 &gt;&gt;&gt; leadingZeroCount)) !== 0) {
         // the first bit of working word is 1
         this.word &lt;&lt;= leadingZeroCount;
         this.bitsAvailable -= leadingZeroCount;
@@ -217,24 +218,24 @@ class ExpGolomb {
   }
 
   // ():void
-  skipUEG() {
+  skipUEG () {
     this.skipBits(1 + this.skipLZ());
   }
 
   // ():void
-  skipEG() {
+  skipEG () {
     this.skipBits(1 + this.skipLZ());
   }
 
   // ():uint
-  readUEG() {
-    var clz = this.skipLZ(); // :uint
+  readUEG () {
+    let clz = this.skipLZ(); // :uint
     return this.readBits(clz + 1) - 1;
   }
 
   // ():int
-  readEG() {
-    var valu = this.readUEG(); // :int
+  readEG () {
+    let valu = this.readUEG(); // :int
     if (0x01 &amp; valu) {
       // the number is odd if the low order bit is set
       return (1 + valu) &gt;&gt;&gt; 1; // add 1 to make it even, and divide by 2
@@ -245,21 +246,21 @@ class ExpGolomb {
 
   // Some convenience functions
   // :Boolean
-  readBoolean() {
-    return 1 === this.readBits(1);
+  readBoolean () {
+    return this.readBits(1) === 1;
   }
 
   // ():int
-  readUByte() {
+  readUByte () {
     return this.readBits(8);
   }
 
   // ():int
-  readUShort() {
+  readUShort () {
     return this.readBits(16);
   }
-    // ():int
-  readUInt() {
+  // ():int
+  readUInt () {
     return this.readBits(32);
   }
 
@@ -270,8 +271,8 @@ class ExpGolomb {
    * @param count {number} the number of entries in this scaling list
    * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
    */
-  skipScalingList(count) {
-    var
+  skipScalingList (count) {
+    let
       lastScale = 8,
       nextScale = 8,
       j,
@@ -294,13 +295,13 @@ class ExpGolomb {
    * sequence parameter set, including the dimensions of the
    * associated video frames.
    */
-  readSPS() {
-    var
+  readSPS () {
+    let
       frameCropLeftOffset = 0,
       frameCropRightOffset = 0,
       frameCropTopOffset = 0,
       frameCropBottomOffset = 0,
-      profileIdc,profileCompat,levelIdc,
+      profileIdc, profileCompat, levelIdc,
       numRefFramesInPicOrderCntCycle, picWidthInMbsMinus1,
       picHeightInMapUnitsMinus1,
       frameMbsOnlyFlag,
@@ -319,22 +320,22 @@ class ExpGolomb {
     profileIdc = readUByte(); // profile_idc
     profileCompat = readBits(5); // constraint_set[0-4]_flag, u(5)
     skipBits(3); // reserved_zero_3bits u(3),
-    levelIdc = readUByte(); //level_idc u(8)
+    levelIdc = readUByte(); // level_idc u(8)
     skipUEG(); // seq_parameter_set_id
     // some profiles have more optional data we don&apos;t need
     if (profileIdc === 100 ||
         profileIdc === 110 ||
         profileIdc === 122 ||
         profileIdc === 244 ||
-        profileIdc === 44  ||
-        profileIdc === 83  ||
-        profileIdc === 86  ||
+        profileIdc === 44 ||
+        profileIdc === 83 ||
+        profileIdc === 86 ||
         profileIdc === 118 ||
         profileIdc === 128) {
-      var chromaFormatIdc = readUEG();
-      if (chromaFormatIdc === 3) {
+      let chromaFormatIdc = readUEG();
+      if (chromaFormatIdc === 3)
         skipBits(1); // separate_colour_plane_flag
-      }
+
       skipUEG(); // bit_depth_luma_minus8
       skipUEG(); // bit_depth_chroma_minus8
       skipBits(1); // qpprime_y_zero_transform_bypass_flag
@@ -342,36 +343,34 @@ class ExpGolomb {
         scalingListCount = (chromaFormatIdc !== 3) ? 8 : 12;
         for (i = 0; i &lt; scalingListCount; i++) {
           if (readBoolean()) { // seq_scaling_list_present_flag[ i ]
-            if (i &lt; 6) {
+            if (i &lt; 6)
               skipScalingList(16);
-            } else {
+            else
               skipScalingList(64);
-            }
           }
         }
       }
     }
     skipUEG(); // log2_max_frame_num_minus4
-    var picOrderCntType = readUEG();
+    let picOrderCntType = readUEG();
     if (picOrderCntType === 0) {
-      readUEG(); //log2_max_pic_order_cnt_lsb_minus4
+      readUEG(); // log2_max_pic_order_cnt_lsb_minus4
     } else if (picOrderCntType === 1) {
       skipBits(1); // delta_pic_order_always_zero_flag
       skipEG(); // offset_for_non_ref_pic
       skipEG(); // offset_for_top_to_bottom_field
       numRefFramesInPicOrderCntCycle = readUEG();
-      for(i = 0; i &lt; numRefFramesInPicOrderCntCycle; i++) {
+      for (i = 0; i &lt; numRefFramesInPicOrderCntCycle; i++)
         skipEG(); // offset_for_ref_frame[ i ]
-      }
     }
     skipUEG(); // max_num_ref_frames
     skipBits(1); // gaps_in_frame_num_value_allowed_flag
     picWidthInMbsMinus1 = readUEG();
     picHeightInMapUnitsMinus1 = readUEG();
     frameMbsOnlyFlag = readBits(1);
-    if (frameMbsOnlyFlag === 0) {
+    if (frameMbsOnlyFlag === 0)
       skipBits(1); // mb_adaptive_frame_field_flag
-    }
+
     skipBits(1); // direct_8x8_inference_flag
     if (readBoolean()) { // frame_cropping_flag
       frameCropLeftOffset = readUEG();
@@ -379,44 +378,44 @@ class ExpGolomb {
       frameCropTopOffset = readUEG();
       frameCropBottomOffset = readUEG();
     }
-    let pixelRatio = [1,1];
+    let pixelRatio = [1, 1];
     if (readBoolean()) {
       // vui_parameters_present_flag
       if (readBoolean()) {
         // aspect_ratio_info_present_flag
         const aspectRatioIdc = readUByte();
         switch (aspectRatioIdc) {
-          case 1: pixelRatio = [1,1]; break;
-          case 2: pixelRatio = [12,11]; break;
-          case 3: pixelRatio = [10,11]; break;
-          case 4: pixelRatio = [16,11]; break;
-          case 5: pixelRatio = [40,33]; break;
-          case 6: pixelRatio = [24,11]; break;
-          case 7: pixelRatio = [20,11]; break;
-          case 8: pixelRatio = [32,11]; break;
-          case 9: pixelRatio = [80,33]; break;
-          case 10: pixelRatio = [18,11]; break;
-          case 11: pixelRatio = [15,11]; break;
-          case 12: pixelRatio = [64,33]; break;
-          case 13: pixelRatio = [160,99]; break;
-          case 14: pixelRatio = [4,3]; break;
-          case 15: pixelRatio = [3,2]; break;
-          case 16: pixelRatio = [2,1]; break;
-          case 255: {
-            pixelRatio = [readUByte() &lt;&lt; 8 | readUByte(), readUByte() &lt;&lt; 8 | readUByte()];
-            break;
-          }
+        case 1: pixelRatio = [1, 1]; break;
+        case 2: pixelRatio = [12, 11]; break;
+        case 3: pixelRatio = [10, 11]; break;
+        case 4: pixelRatio = [16, 11]; break;
+        case 5: pixelRatio = [40, 33]; break;
+        case 6: pixelRatio = [24, 11]; break;
+        case 7: pixelRatio = [20, 11]; break;
+        case 8: pixelRatio = [32, 11]; break;
+        case 9: pixelRatio = [80, 33]; break;
+        case 10: pixelRatio = [18, 11]; break;
+        case 11: pixelRatio = [15, 11]; break;
+        case 12: pixelRatio = [64, 33]; break;
+        case 13: pixelRatio = [160, 99]; break;
+        case 14: pixelRatio = [4, 3]; break;
+        case 15: pixelRatio = [3, 2]; break;
+        case 16: pixelRatio = [2, 1]; break;
+        case 255: {
+          pixelRatio = [readUByte() &lt;&lt; 8 | readUByte(), readUByte() &lt;&lt; 8 | readUByte()];
+          break;
+        }
         }
       }
     }
     return {
       width: Math.ceil((((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2)),
-      height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
-      pixelRatio : pixelRatio
+      height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
+      pixelRatio: pixelRatio
     };
   }
 
-  readSliceType() {
+  readSliceType () {
     // skip NALu type
     this.readUByte();
     // discard first_mb_in_slice

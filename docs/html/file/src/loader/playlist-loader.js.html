@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -138,9 +141,9 @@
 
 import Event from &apos;../events&apos;;
 import EventHandler from &apos;../event-handler&apos;;
-import {ErrorTypes, ErrorDetails} from &apos;../errors&apos;;
+import { ErrorTypes, ErrorDetails } from &apos;../errors&apos;;
 
-import {logger} from &apos;../utils/logger&apos;;
+import { logger } from &apos;../utils/logger&apos;;
 
 import MP4Demuxer from &apos;../demux/mp4demuxer&apos;;
 import M3U8Parser from &apos;./m3u8-parser&apos;;
@@ -158,15 +161,23 @@ const ContextType = {
 };
 
 /**
+ * @enum {string}
+ */
+const LevelType = {
+  MAIN: &apos;main&apos;,
+  AUDIO: &apos;audio&apos;,
+  SUBTITLE: &apos;subtitle&apos;
+};
+
+/**
  * @constructor
  */
 class PlaylistLoader extends EventHandler {
-
   /**
    * @constructs
    * @param {Hls} hls
    */
-  constructor(hls) {
+  constructor (hls) {
     super(hls,
       Event.MANIFEST_LOADING,
       Event.LEVEL_LOADING,
@@ -176,33 +187,42 @@ class PlaylistLoader extends EventHandler {
     this.loaders = {};
   }
 
-  static get ContextType() {
+  static get ContextType () {
     return ContextType;
+  }
+
+  static get LevelType () {
+    return LevelType;
   }
 
   /**
    * @param {ContextType} type
    * @returns {boolean}
    */
-  static canHaveQualityLevels(type) {
+  static canHaveQualityLevels (type) {
     return (type !== ContextType.AUDIO_TRACK &amp;&amp;
       type !== ContextType.SUBTITLE_TRACK);
   }
 
-  static mapContextToLevelType(context) {
-    const {type} = context;
+  /**
+   * Map context.type to LevelType
+   * @param {{type: ContextType}} context
+   * @returns {LevelType}
+   */
+  static mapContextToLevelType (context) {
+    const { type } = context;
 
-    switch(type) {
+    switch (type) {
     case ContextType.AUDIO_TRACK:
-      return &apos;audio&apos;;
+      return LevelType.AUDIO;
     case ContextType.SUBTITLE_TRACK:
-      return &apos;subtitle&apos;;
+      return LevelType.SUBTITLE;
     default:
-      return &apos;main&apos;;
+      return LevelType.MAIN;
     }
   }
 
-  static getResponseUrl(response, context) {
+  static getResponseUrl (response, context) {
     let url = response.url;
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     // data-uri mode also not supported (but no need to detect redirection)
@@ -219,7 +239,7 @@ class PlaylistLoader extends EventHandler {
    * @param {object} context
    * @returns {XHRLoader} or other compatible configured overload
    */
-  createInternalLoader(context) {
+  createInternalLoader (context) {
     const config = this.hls.config;
     const PLoader = config.pLoader;
     const Loader = config.loader;
@@ -233,52 +253,51 @@ class PlaylistLoader extends EventHandler {
     return loader;
   }
 
-  getInternalLoader(context) {
+  getInternalLoader (context) {
     return this.loaders[context.type];
   }
 
-  resetInternalLoader(contextType) {
-    if (this.loaders[contextType]) {
+  resetInternalLoader (contextType) {
+    if (this.loaders[contextType])
       delete this.loaders[contextType];
-    }
   }
 
   /**
    * Call `destroy` on all internal loader instances mapped (one per context type)
    */
-  destroyInternalLoaders() {
+  destroyInternalLoaders () {
     for (let contextType in this.loaders) {
       let loader = this.loaders[contextType];
-      if (loader) {
+      if (loader)
         loader.destroy();
-      }
+
       this.resetInternalLoader(contextType);
     }
   }
 
-  destroy() {
+  destroy () {
     this.destroyInternalLoaders();
 
     super.destroy();
   }
 
-  onManifestLoading(data) {
-    this.load(data.url, {type: ContextType.MANIFEST});
+  onManifestLoading (data) {
+    this.load(data.url, { type: ContextType.MANIFEST });
   }
 
-  onLevelLoading(data) {
-    this.load(data.url, {type: ContextType.LEVEL, level: data.level, id: data.id});
+  onLevelLoading (data) {
+    this.load(data.url, { type: ContextType.LEVEL, level: data.level, id: data.id });
   }
 
-  onAudioTrackLoading(data) {
-    this.load(data.url, {type: ContextType.AUDIO_TRACK, id: data.id});
+  onAudioTrackLoading (data) {
+    this.load(data.url, { type: ContextType.AUDIO_TRACK, id: data.id });
   }
 
-  onSubtitleTrackLoading(data) {
-    this.load(data.url, {type: ContextType.SUBTITLE_TRACK, id: data.id});
+  onSubtitleTrackLoading (data) {
+    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, id: data.id });
   }
 
-  load(url, context) {
+  load (url, context) {
     const config = this.hls.config;
 
     // Check if a loader for this context already exists
@@ -286,7 +305,7 @@ class PlaylistLoader extends EventHandler {
     if (loader) {
       const loaderContext = loader.context;
       if (loaderContext &amp;&amp; loaderContext.url === url) { // same URL can&apos;t overlap
-        logger.trace(`playlist request ongoing`);
+        logger.trace(&apos;playlist request ongoing&apos;);
         return false;
       } else {
         logger.warn(`aborting previous loader for type: ${context.type}`);
@@ -294,13 +313,13 @@ class PlaylistLoader extends EventHandler {
       }
     }
     let maxRetry,
-        timeout,
-        retryDelay,
-        maxRetryDelay;
+      timeout,
+      retryDelay,
+      maxRetryDelay;
 
     // apply different configs for retries depending on
     // context (manifest, level, audio/subs playlist)
-    switch(context.type) {
+    switch (context.type) {
     case ContextType.MANIFEST:
       maxRetry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
@@ -347,8 +366,7 @@ class PlaylistLoader extends EventHandler {
     return true;
   }
 
-  loadsuccess(response, stats, context, networkDetails=null) {
-
+  loadsuccess (response, stats, context, networkDetails = null) {
     if (context.isSidxRequest) {
       this._handleSidxRequest(response, context);
       this._handlePlaylistLoaded(response, stats, context, networkDetails);
@@ -360,7 +378,7 @@ class PlaylistLoader extends EventHandler {
     const string = response.data;
 
     stats.tload = performance.now();
-    //stats.mtime = new Date(target.getResponseHeader(&apos;Last-Modified&apos;));
+    // stats.mtime = new Date(target.getResponseHeader(&apos;Last-Modified&apos;));
 
     // Validate if it is an M3U8 at all
     if (string.indexOf(&apos;#EXTM3U&apos;) !== 0) {
@@ -369,24 +387,21 @@ class PlaylistLoader extends EventHandler {
     }
 
     // Check if chunk-list or master
-    if (string.indexOf(&apos;#EXTINF:&apos;) &gt; 0) {
+    if (string.indexOf(&apos;#EXTINF:&apos;) &gt; 0)
       this._handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
-    } else {
+    else
       this._handleMasterPlaylist(response, stats, context, networkDetails);
-    }
-
   }
 
-  loaderror(response, context, networkDetails = null) {
+  loaderror (response, context, networkDetails = null) {
     this._handleNetworkError(context, networkDetails);
   }
 
-  loadtimeout(stats, context, networkDetails = null) {
+  loadtimeout (stats, context, networkDetails = null) {
     this._handleNetworkError(context, networkDetails);
   }
 
-  _handleMasterPlaylist(response, stats, context, networkDetails) {
-
+  _handleMasterPlaylist (response, stats, context, networkDetails) {
     const hls = this.hls;
     const string = response.data;
 
@@ -412,9 +427,8 @@ class PlaylistLoader extends EventHandler {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
       let embeddedAudioFound = false;
       audioTracks.forEach(audioTrack =&gt; {
-        if(!audioTrack.url) {
+        if (!audioTrack.url)
           embeddedAudioFound = true;
-        }
       });
 
       // if no embedded audio track defined, but audio codec signaled in quality level,
@@ -424,8 +438,8 @@ class PlaylistLoader extends EventHandler {
       if (embeddedAudioFound === false &amp;&amp; levels[0].audioCodec &amp;&amp; !levels[0].attrs.AUDIO) {
         logger.log(&apos;audio codec signaled in quality level, but no embedded audio track signaled, create one&apos;);
         audioTracks.unshift({
-          type : &apos;main&apos;,
-          name : &apos;main&apos;
+          type: &apos;main&apos;,
+          name: &apos;main&apos;
         });
       }
     }
@@ -438,14 +452,12 @@ class PlaylistLoader extends EventHandler {
       stats,
       networkDetails
     });
-
   }
 
-  _handleTrackOrLevelPlaylist(response, stats, context, networkDetails) {
-
+  _handleTrackOrLevelPlaylist (response, stats, context, networkDetails) {
     const hls = this.hls;
 
-    const {id, level, type} = context;
+    const { id, level, type } = context;
 
     const url = PlaylistLoader.getResponseUrl(response, context);
 
@@ -462,7 +474,6 @@ class PlaylistLoader extends EventHandler {
     // We fire the manifest-loaded event anyway with the parsed level-details
     // by creating a single-level structure for it.
     if (type === ContextType.MANIFEST) {
-
       const singleLevel = {
         url,
         details: levelDetails
@@ -470,12 +481,11 @@ class PlaylistLoader extends EventHandler {
 
       hls.trigger(Event.MANIFEST_LOADED, {
         levels: [singleLevel],
-        audioTracks : [],
+        audioTracks: [],
         url,
         stats,
         networkDetails
       });
-
     }
 
     // save parsing time
@@ -497,33 +507,28 @@ class PlaylistLoader extends EventHandler {
         responseType: &apos;arraybuffer&apos;
       });
       return;
-
     }
 
     // extend the context with the new levelDetails property
     context.levelDetails = levelDetails;
 
     this._handlePlaylistLoaded(response, stats, context, networkDetails);
-
   }
 
-  _handleSidxRequest(response, context) {
+  _handleSidxRequest (response, context) {
     const sidxInfo = MP4Demuxer.parseSegmentIndex(new Uint8Array(response.data));
     sidxInfo.references.forEach((segmentRef, index) =&gt; {
-
       const segRefInfo = segmentRef.info;
       const frag = context.levelDetails.fragments[index];
 
-      if(frag.byteRange.length === 0) {
+      if (frag.byteRange.length === 0)
         frag.rawByteRange = String(1 + segRefInfo.end - segRefInfo.start) + &apos;@&apos; + String(segRefInfo.start);
-      }
-
     });
 
     context.levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + &apos;@0&apos;;
   }
 
-  _handleManifestParsingError(response, context, reason, networkDetails) {
+  _handleManifestParsingError (response, context, reason, networkDetails) {
     this.hls.trigger(Event.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
@@ -534,14 +539,13 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handleNetworkError(context, networkDetails) {
-
+  _handleNetworkError (context, networkDetails) {
     let details;
     let fatal;
 
-    const loader = context.loader;
+    const loader = this.getInternalLoader(context);
 
-    switch(context.type) {
+    switch (context.type) {
     case ContextType.MANIFEST:
       details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
       fatal = true;
@@ -575,9 +579,8 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handlePlaylistLoaded(response, stats, context, networkDetails) {
-
-    const {type, level, id, levelDetails} = context;
+  _handlePlaylistLoaded (response, stats, context, networkDetails) {
+    const { type, level, id, levelDetails } = context;
 
     if (!levelDetails.targetduration) {
       this._handleManifestParsingError(response, context, &apos;invalid target duration&apos;, networkDetails);
@@ -586,7 +589,6 @@ class PlaylistLoader extends EventHandler {
 
     const canHaveLevels = PlaylistLoader.canHaveQualityLevels(context.type);
     if (canHaveLevels) {
-
       this.hls.trigger(Event.LEVEL_LOADED, {
         details: levelDetails,
         level: level || 0,
@@ -594,10 +596,8 @@ class PlaylistLoader extends EventHandler {
         stats,
         networkDetails
       });
-
     } else {
-
-      switch(type) {
+      switch (type) {
       case ContextType.AUDIO_TRACK:
         this.hls.trigger(Event.AUDIO_TRACK_LOADED, {
           details: levelDetails,
@@ -615,15 +615,11 @@ class PlaylistLoader extends EventHandler {
         });
         break;
       }
-
     }
-
   }
-
 }
 
 export default PlaylistLoader;
-
 </code></pre>
 
 </div>

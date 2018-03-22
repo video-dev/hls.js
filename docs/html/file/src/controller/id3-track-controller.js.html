@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -132,41 +135,57 @@
 import Event from &apos;../events&apos;;
 import EventHandler from &apos;../event-handler&apos;;
 import ID3 from &apos;../demux/id3&apos;;
+import { sendAddTrackEvent, clearCurrentCues } from &apos;../utils/texttrack-utils&apos;;
 
 class ID3TrackController extends EventHandler {
-
-  constructor(hls) {
+  constructor (hls) {
     super(hls,
-               Event.MEDIA_ATTACHED,
-               Event.MEDIA_DETACHING,
-               Event.FRAG_PARSING_METADATA);
+      Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHING,
+      Event.FRAG_PARSING_METADATA);
     this.id3Track = undefined;
     this.media = undefined;
   }
 
-  destroy() {
+  destroy () {
     EventHandler.prototype.destroy.call(this);
   }
 
   // Add ID3 metatadata text track.
-  onMediaAttached(data) {
+  onMediaAttached (data) {
     this.media = data.media;
     if (!this.media) {
-      return;
+
     }
   }
 
-  onMediaDetaching() {
+  onMediaDetaching () {
+    clearCurrentCues(this.id3Track);
+    this.id3Track = undefined;
     this.media = undefined;
   }
 
-  onFragParsingMetadata(data) {
+  getID3Track (textTracks) {
+    for (let i = 0; i &lt; textTracks.length; i++) {
+      let textTrack = textTracks[i];
+      if (textTrack.kind === &apos;metadata&apos; &amp;&amp; textTrack.label === &apos;id3&apos;) {
+        // send &apos;addtrack&apos; when reusing the textTrack for metadata,
+        // same as what we do for captions
+        sendAddTrackEvent(textTrack, this.media);
+
+        return textTrack;
+      }
+    }
+    return this.media.addTextTrack(&apos;metadata&apos;, &apos;id3&apos;);
+  }
+
+  onFragParsingMetadata (data) {
     const fragment = data.frag;
     const samples = data.samples;
 
     // create track dynamically
     if (!this.id3Track) {
-      this.id3Track = this.media.addTextTrack(&apos;metadata&apos;, &apos;id3&apos;);
+      this.id3Track = this.getID3Track(this.media.textTracks);
       this.id3Track.mode = &apos;hidden&apos;;
     }
 
@@ -179,14 +198,13 @@ class ID3TrackController extends EventHandler {
       const frames = ID3.getID3Frames(samples[i].data);
       if (frames) {
         const startTime = samples[i].pts;
-        let endTime = i &lt; samples.length - 1 ? samples[i+1].pts : fragment.endPTS;
+        let endTime = i &lt; samples.length - 1 ? samples[i + 1].pts : fragment.endPTS;
 
         // Give a slight bump to the endTime if it&apos;s equal to startTime to avoid a SyntaxError in IE
-        if (startTime === endTime) {
+        if (startTime === endTime)
           endTime += 0.0001;
-        }
 
-        for(let j = 0; j &lt; frames.length; j++) {
+        for (let j = 0; j &lt; frames.length; j++) {
           const frame = frames[j];
           // Safari doesn&apos;t put the timestamp frame in the TextTrack
           if (!ID3.isTimeStampFrame(frame)) {

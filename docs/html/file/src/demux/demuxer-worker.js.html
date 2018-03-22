@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -130,14 +133,14 @@
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
  */
 
- import DemuxerInline from &apos;../demux/demuxer-inline&apos;;
- import Event from &apos;../events&apos;;
- import {enableLogs} from &apos;../utils/logger&apos;;
- import EventEmitter from &apos;events&apos;;
+import DemuxerInline from &apos;../demux/demuxer-inline&apos;;
+import Event from &apos;../events&apos;;
+import { enableLogs } from &apos;../utils/logger&apos;;
+import EventEmitter from &apos;events&apos;;
 
-var DemuxerWorker = function (self) {
+let DemuxerWorker = function (self) {
   // observer setup
-  var observer = new EventEmitter();
+  let observer = new EventEmitter();
   observer.trigger = function trigger (event, ...data) {
     observer.emit(event, event, ...data);
   };
@@ -146,30 +149,30 @@ var DemuxerWorker = function (self) {
     observer.removeListener(event, ...data);
   };
 
-  var forwardMessage = function(ev,data) {
-    self.postMessage({event: ev, data:data });
+  let forwardMessage = function (ev, data) {
+    self.postMessage({ event: ev, data: data });
   };
 
   self.addEventListener(&apos;message&apos;, function (ev) {
-    var data = ev.data;
-    //console.log(&apos;demuxer cmd:&apos; + data.cmd);
+    let data = ev.data;
+    // console.log(&apos;demuxer cmd:&apos; + data.cmd);
     switch (data.cmd) {
-      case &apos;init&apos;:
-        let config = JSON.parse(data.config);
-        self.demuxer = new DemuxerInline(observer, data.typeSupported, config, data.vendor);
-        try {
-          enableLogs(config.debug === true);
-        } catch(err) {
-          console.warn(&apos;demuxerWorker: unable to enable logs&apos;);
-        }
-        // signal end of worker init
-        forwardMessage(&apos;init&apos;,null);
-        break;
-      case &apos;demux&apos;:
-        self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset,data.discontinuity, data.trackSwitch,data.contiguous,data.duration,data.accurateTimeOffset,data.defaultInitPTS);
-        break;
-      default:
-        break;
+    case &apos;init&apos;:
+      let config = JSON.parse(data.config);
+      self.demuxer = new DemuxerInline(observer, data.typeSupported, config, data.vendor);
+      try {
+        enableLogs(config.debug === true);
+      } catch (err) {
+        console.warn(&apos;demuxerWorker: unable to enable logs&apos;);
+      }
+      // signal end of worker init
+      forwardMessage(&apos;init&apos;, null);
+      break;
+    case &apos;demux&apos;:
+      self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.discontinuity, data.trackSwitch, data.contiguous, data.duration, data.accurateTimeOffset, data.defaultInitPTS);
+      break;
+    default:
+      break;
     }
   });
 
@@ -183,9 +186,9 @@ var DemuxerWorker = function (self) {
   observer.on(Event.INIT_PTS_FOUND, forwardMessage);
 
   // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
-  observer.on(Event.FRAG_PARSING_DATA, function(ev, data) {
+  observer.on(Event.FRAG_PARSING_DATA, function (ev, data) {
     let transferable = [];
-    let message = {event: ev, data:data};
+    let message = { event: ev, data: data };
     if (data.data1) {
       message.data1 = data.data1.buffer;
       transferable.push(data.data1.buffer);
@@ -196,12 +199,11 @@ var DemuxerWorker = function (self) {
       transferable.push(data.data2.buffer);
       delete data.data2;
     }
-    self.postMessage(message,transferable);
+    self.postMessage(message, transferable);
   });
 };
 
 export default DemuxerWorker;
-
 </code></pre>
 
 </div>

@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -1407,7 +1410,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber88">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber85">source</a></span></span>
     </span>
   </h3>
 
@@ -1487,7 +1490,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber54">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber52">source</a></span></span>
     </span>
   </h3>
 
@@ -1560,7 +1563,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber66">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber64">source</a></span></span>
     </span>
   </h3>
 
@@ -1634,7 +1637,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber38">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber37">source</a></span></span>
     </span>
   </h3>
 
@@ -1680,7 +1683,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber125">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber122">source</a></span></span>
     </span>
   </h3>
 
@@ -1723,7 +1726,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber124">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber121">source</a></span></span>
     </span>
   </h3>
 
@@ -1766,7 +1769,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber127">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber124">source</a></span></span>
     </span>
   </h3>
 
@@ -1809,7 +1812,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber126">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber123">source</a></span></span>
     </span>
   </h3>
 
@@ -1852,7 +1855,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber40">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber39">source</a></span></span>
     </span>
   </h3>
 
@@ -1895,7 +1898,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber142">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber139">source</a></span></span>
     </span>
   </h3>
 
@@ -1938,7 +1941,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber39">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber38">source</a></span></span>
     </span>
   </h3>
 
@@ -1981,7 +1984,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber115">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber112">source</a></span></span>
     </span>
   </h3>
 
@@ -2024,7 +2027,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber42">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber41">source</a></span></span>
     </span>
   </h3>
 
@@ -2067,7 +2070,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber43">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber42">source</a></span></span>
     </span>
   </h3>
 
@@ -2110,7 +2113,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber41">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber40">source</a></span></span>
     </span>
   </h3>
 
@@ -2153,7 +2156,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber128">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber125">source</a></span></span>
     </span>
   </h3>
 
@@ -2198,7 +2201,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber119">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber116">source</a></span></span>
     </span>
   </h3>
 
@@ -2241,7 +2244,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber118">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber115">source</a></span></span>
     </span>
   </h3>
 
@@ -2284,7 +2287,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber129">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber126">source</a></span></span>
     </span>
   </h3>
 
@@ -2327,7 +2330,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber120">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber117">source</a></span></span>
     </span>
   </h3>
 
@@ -2370,7 +2373,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber337">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber331">source</a></span></span>
     </span>
   </h3>
 
@@ -2413,7 +2416,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber116">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber113">source</a></span></span>
     </span>
   </h3>
 
@@ -2456,7 +2459,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber121">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber118">source</a></span></span>
     </span>
   </h3>
 
@@ -2502,7 +2505,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber139">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber136">source</a></span></span>
     </span>
   </h3>
 
@@ -2579,7 +2582,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber314">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber308">source</a></span></span>
     </span>
   </h3>
 
@@ -2674,7 +2677,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber325">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber319">source</a></span></span>
     </span>
   </h3>
 
@@ -2769,7 +2772,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber336">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber330">source</a></span></span>
     </span>
   </h3>
 
@@ -2812,7 +2815,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber887">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber870">source</a></span></span>
     </span>
   </h3>
 
@@ -2884,7 +2887,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber521">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber514">source</a></span></span>
     </span>
   </h3>
 
@@ -2949,14 +2952,14 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber114">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber111">source</a></span></span>
     </span>
   </h3>
 
   
   
   
-  <div data-ice="description"><p>Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start) 
+  <div data-ice="description"><p>Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start)
 Resets all internal track instances of the demuxer.</p>
 </div>
 
@@ -3029,7 +3032,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber136">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber133">source</a></span></span>
     </span>
   </h3>
 
@@ -3072,7 +3075,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber46">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber45">source</a></span></span>
     </span>
   </h3>
 
@@ -3133,7 +3136,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber775">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber758">source</a></span></span>
     </span>
   </h3>
 
@@ -3188,7 +3191,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber754">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber740">source</a></span></span>
     </span>
   </h3>
 
@@ -3253,7 +3256,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber928">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber910">source</a></span></span>
     </span>
   </h3>
 
@@ -3312,7 +3315,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber789">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber772">source</a></span></span>
     </span>
   </h3>
 
@@ -3383,7 +3386,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber544">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber536">source</a></span></span>
     </span>
   </h3>
 
@@ -3448,7 +3451,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber1033">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber1013">source</a></span></span>
     </span>
   </h3>
 
@@ -3507,7 +3510,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber1009">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber989">source</a></span></span>
     </span>
   </h3>
 
@@ -3566,7 +3569,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber341">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber335">source</a></span></span>
     </span>
   </h3>
 
@@ -3643,7 +3646,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber425">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber419">source</a></span></span>
     </span>
   </h3>
 
@@ -3714,7 +3717,7 @@ Resets all internal track instances of the demuxer.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber347">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/demux/tsdemuxer.js.html#lineNumber341">source</a></span></span>
     </span>
   </h3>
 

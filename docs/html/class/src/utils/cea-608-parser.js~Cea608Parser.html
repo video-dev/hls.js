@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -125,13 +128,13 @@
 </nav>
 
 <div class="content" data-ice="content"><div class="header-notice">
-  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import Cea608Parser from &apos;<span><a href="file/src/utils/cea-608-parser.js.html#lineNumber827">hls.js/src/utils/cea-608-parser.js</a></span>&apos;</code></pre></div>
+  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import Cea608Parser from &apos;<span><a href="file/src/utils/cea-608-parser.js.html#lineNumber806">hls.js/src/utils/cea-608-parser.js</a></span>&apos;</code></pre></div>
   <span data-ice="access">public</span>
   <span data-ice="kind">class</span>
   
   
   
-  <span data-ice="source">| <span><a href="file/src/utils/cea-608-parser.js.html#lineNumber827">source</a></span></span>
+  <span data-ice="source">| <span><a href="file/src/utils/cea-608-parser.js.html#lineNumber806">source</a></span></span>
 </div>
 
 <div class="self-detail detail">
@@ -830,7 +833,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber829">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber807">source</a></span></span>
     </span>
   </h3>
 
@@ -876,7 +879,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber836">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber814">source</a></span></span>
     </span>
   </h3>
 
@@ -919,7 +922,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber832">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber810">source</a></span></span>
     </span>
   </h3>
 
@@ -962,7 +965,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber833">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber811">source</a></span></span>
     </span>
   </h3>
 
@@ -1005,7 +1008,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber839">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber817">source</a></span></span>
     </span>
   </h3>
 
@@ -1048,7 +1051,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber830">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber808">source</a></span></span>
     </span>
   </h3>
 
@@ -1091,7 +1094,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber834">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber812">source</a></span></span>
     </span>
   </h3>
 
@@ -1134,7 +1137,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber835">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber813">source</a></span></span>
     </span>
   </h3>
 
@@ -1177,7 +1180,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber838">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber816">source</a></span></span>
     </span>
   </h3>
 
@@ -1220,7 +1223,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber831">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber809">source</a></span></span>
     </span>
   </h3>
 
@@ -1263,7 +1266,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber837">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber815">source</a></span></span>
     </span>
   </h3>
 
@@ -1309,7 +1312,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber853">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber831">source</a></span></span>
     </span>
   </h3>
 
@@ -1375,7 +1378,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1154">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1123">source</a></span></span>
     </span>
   </h3>
 
@@ -1435,7 +1438,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber842">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber820">source</a></span></span>
     </span>
   </h3>
 
@@ -1506,7 +1509,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1038">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1011">source</a></span></span>
     </span>
   </h3>
 
@@ -1585,7 +1588,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1104">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1076">source</a></span></span>
     </span>
   </h3>
 
@@ -1664,7 +1667,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1063">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1036">source</a></span></span>
     </span>
   </h3>
 
@@ -1743,7 +1746,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber906">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber884">source</a></span></span>
     </span>
   </h3>
 
@@ -1822,7 +1825,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber977">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber952">source</a></span></span>
     </span>
   </h3>
 
@@ -1900,7 +1903,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1001">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber976">source</a></span></span>
     </span>
   </h3>
 
@@ -1979,7 +1982,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1141">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber1111">source</a></span></span>
     </span>
   </h3>
 
@@ -2023,7 +2026,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber846">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/utils/cea-608-parser.js.html#lineNumber824">source</a></span></span>
     </span>
   </h3>
 

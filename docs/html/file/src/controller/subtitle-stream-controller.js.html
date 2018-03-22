@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -130,20 +133,19 @@
 */
 
 import Event from &apos;../events&apos;;
-import {logger} from &apos;../utils/logger&apos;;
+import { logger } from &apos;../utils/logger&apos;;
 import Decrypter from &apos;../crypt/decrypter&apos;;
 import TaskLoop from &apos;../task-loop&apos;;
 
 const State = {
-  STOPPED : &apos;STOPPED&apos;,
-  IDLE : &apos;IDLE&apos;,
-  KEY_LOADING : &apos;KEY_LOADING&apos;,
-  FRAG_LOADING : &apos;FRAG_LOADING&apos;
+  STOPPED: &apos;STOPPED&apos;,
+  IDLE: &apos;IDLE&apos;,
+  KEY_LOADING: &apos;KEY_LOADING&apos;,
+  FRAG_LOADING: &apos;FRAG_LOADING&apos;
 };
 
 class SubtitleStreamController extends TaskLoop {
-
-  constructor(hls) {
+  constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.ERROR,
@@ -163,12 +165,12 @@ class SubtitleStreamController extends TaskLoop {
     this.decrypter = new Decrypter(hls.observer, hls.config);
   }
 
-  onHandlerDestroyed() {
+  onHandlerDestroyed () {
     this.state = State.STOPPED;
   }
 
   // Remove all queued items and create a new, empty queue for each track.
-  clearVttFragQueues() {
+  clearVttFragQueues () {
     this.vttFragQueues = {};
     this.tracks.forEach(track =&gt; {
       this.vttFragQueues[track.id] = [];
@@ -176,95 +178,93 @@ class SubtitleStreamController extends TaskLoop {
   }
 
   // If no frag is being processed and queue isn&apos;t empty, initiate processing of next frag in line.
-  nextFrag() {
-    if(this.currentlyProcessing === null &amp;&amp; this.currentTrackId &gt; -1 &amp;&amp; this.vttFragQueues[this.currentTrackId].length) {
+  nextFrag () {
+    if (this.currentlyProcessing === null &amp;&amp; this.currentTrackId &gt; -1 &amp;&amp; this.vttFragQueues[this.currentTrackId].length) {
       let frag = this.currentlyProcessing = this.vttFragQueues[this.currentTrackId].shift();
       this.fragCurrent = frag;
-      this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
+      this.hls.trigger(Event.FRAG_LOADING, { frag: frag });
       this.state = State.FRAG_LOADING;
     }
   }
 
   // When fragment has finished processing, add sn to list of completed if successful.
-  onSubtitleFragProcessed(data) {
-    if(data.success) {
+  onSubtitleFragProcessed (data) {
+    if (data.success)
       this.vttFragSNsProcessed[data.frag.trackId].push(data.frag.sn);
-    }
+
     this.currentlyProcessing = null;
     this.state = State.IDLE;
     this.nextFrag();
   }
 
-  onMediaAttached() {
+  onMediaAttached () {
     this.state = State.IDLE;
   }
 
   // If something goes wrong, procede to next frag, if we were processing one.
-  onError(data) {
+  onError (data) {
     let frag = data.frag;
     // don&apos;t handle frag error not related to subtitle fragment
-    if (frag &amp;&amp; frag.type !== &apos;subtitle&apos;) {
+    if (frag &amp;&amp; frag.type !== &apos;subtitle&apos;)
       return;
-    }
-    if(this.currentlyProcessing) {
+
+    if (this.currentlyProcessing) {
       this.currentlyProcessing = null;
       this.nextFrag();
     }
   }
 
-  doTick() {
-    switch(this.state) {
-      case State.IDLE:
-        const tracks = this.tracks;
-        let trackId = this.currentTrackId;
+  doTick () {
+    switch (this.state) {
+    case State.IDLE:
+      const tracks = this.tracks;
+      let trackId = this.currentTrackId;
 
-        const processedFragSNs = this.vttFragSNsProcessed[trackId],
-            fragQueue = this.vttFragQueues[trackId],
-            currentFragSN = !!this.currentlyProcessing ? this.currentlyProcessing.sn : -1;
+      const processedFragSNs = this.vttFragSNsProcessed[trackId],
+        fragQueue = this.vttFragQueues[trackId],
+        currentFragSN = this.currentlyProcessing ? this.currentlyProcessing.sn : -1;
 
-        const alreadyProcessed = function(frag) {
-          return processedFragSNs.indexOf(frag.sn) &gt; -1;
-        };
+      const alreadyProcessed = function (frag) {
+        return processedFragSNs.indexOf(frag.sn) &gt; -1;
+      };
 
-        const alreadyInQueue = function(frag) {
-          return fragQueue.some(fragInQueue =&gt; {return fragInQueue.sn === frag.sn;});
-        };
+      const alreadyInQueue = function (frag) {
+        return fragQueue.some(fragInQueue =&gt; { return fragInQueue.sn === frag.sn; });
+      };
 
         // exit if tracks don&apos;t exist
-        if (!tracks) {
-          break;
-        }
-        var trackDetails;
+      if (!tracks)
+        break;
 
-        if (trackId &lt; tracks.length) {
-          trackDetails = tracks[trackId].details;
-        }
+      var trackDetails;
 
-        if (typeof trackDetails === &apos;undefined&apos;) {
-          break;
-        }
+      if (trackId &lt; tracks.length)
+        trackDetails = tracks[trackId].details;
 
-        // Add all fragments that haven&apos;t been, aren&apos;t currently being and aren&apos;t waiting to be processed, to queue.
-        trackDetails.fragments.forEach(frag =&gt;&#xA0;{
-          if(!(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag))) {
-            // Load key if subtitles are encrypted
-            if ((frag.decryptdata &amp;&amp; frag.decryptdata.uri != null) &amp;&amp; (frag.decryptdata.key == null)) {
-              logger.log(`Loading key for ${frag.sn}`);
-              this.state = State.KEY_LOADING;
-              this.hls.trigger(Event.KEY_LOADING, {frag: frag});
-            } else {
-              // Frags don&apos;t know their subtitle track ID, so let&apos;s just add that...
-              frag.trackId = trackId;
-              fragQueue.push(frag);
-              this.nextFrag();
-            }
+      if (typeof trackDetails === &apos;undefined&apos;)
+        break;
+
+      // Add all fragments that haven&apos;t been, aren&apos;t currently being and aren&apos;t waiting to be processed, to queue.
+      trackDetails.fragments.forEach(frag =&gt;&#xA0;{
+        if (!(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag))) {
+          // Load key if subtitles are encrypted
+          if ((frag.decryptdata &amp;&amp; frag.decryptdata.uri != null) &amp;&amp; (frag.decryptdata.key == null)) {
+            logger.log(`Loading key for ${frag.sn}`);
+            this.state = State.KEY_LOADING;
+            this.hls.trigger(Event.KEY_LOADING, { frag: frag });
+          } else {
+            // Frags don&apos;t know their subtitle track ID, so let&apos;s just add that...
+            frag.trackId = trackId;
+            fragQueue.push(frag);
+            this.nextFrag();
           }
-        });
-      }
+        }
+      });
+    }
   }
 
   // Got all new subtitle tracks.
-  onSubtitleTracksUpdated(data) {
+  onSubtitleTracksUpdated (data) {
     logger.log(&apos;subtitle tracks updated&apos;);
     this.tracks = data.subtitleTracks;
     this.clearVttFragQueues();
@@ -274,52 +274,60 @@ class SubtitleStreamController extends TaskLoop {
     });
   }
 
-  onSubtitleTrackSwitch(data) {
+  onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
-    this.clearVttFragQueues();
+    if (this.currentTrackId === -1)
+      return;
+
+    // Check if track was already loaded and if so make sure we finish
+    // downloading its frags, if not all have been downloaded yet
+    const currentTrack = this.tracks[this.currentTrackId];
+    let details = currentTrack.details;
+    if (details !== undefined)
+      this.tick();
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded() {
+  onSubtitleTrackLoaded () {
     this.tick();
   }
 
-  onKeyLoaded() {
+  onKeyLoaded () {
     if (this.state === State.KEY_LOADING) {
       this.state = State.IDLE;
       this.tick();
     }
   }
 
-  onFragLoaded(data) {
-    var fragCurrent = this.fragCurrent,
-        decryptData = data.frag.decryptdata;
+  onFragLoaded (data) {
+    let fragCurrent = this.fragCurrent,
+      decryptData = data.frag.decryptdata;
     let fragLoaded = data.frag,
-        hls = this.hls;
+      hls = this.hls;
     if (this.state === State.FRAG_LOADING &amp;&amp;
         fragCurrent &amp;&amp;
         data.frag.type === &apos;subtitle&apos; &amp;&amp;
         fragCurrent.sn === data.frag.sn) {
-          // check to see if the payload needs to be decrypted
-          if ((data.payload.byteLength &gt; 0) &amp;&amp; (decryptData != null) &amp;&amp; (decryptData.key != null) &amp;&amp; (decryptData.method === &apos;AES-128&apos;)) {
-            var startTime;
-            try {
-              startTime = performance.now();
-            } catch (error) {
-              startTime = Date.now();
-            }
-            // decrypt the subtitles
-            this.decrypter.decrypt(data.payload, decryptData.key.buffer, decryptData.iv.buffer, function(decryptedData) {
-              var endTime;
-              try {
-                endTime = performance.now();
-              } catch (error) {
-                endTime = Date.now();
-              }
-              hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload : decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
-            });
-          }
+      // check to see if the payload needs to be decrypted
+      if ((data.payload.byteLength &gt; 0) &amp;&amp; (decryptData != null) &amp;&amp; (decryptData.key != null) &amp;&amp; (decryptData.method === &apos;AES-128&apos;)) {
+        let startTime;
+        try {
+          startTime = performance.now();
+        } catch (error) {
+          startTime = Date.now();
         }
+        // decrypt the subtitles
+        this.decrypter.decrypt(data.payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {
+          let endTime;
+          try {
+            endTime = performance.now();
+          } catch (error) {
+            endTime = Date.now();
+          }
+          hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload: decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
+        });
+      }
+    }
   }
 }
 export default SubtitleStreamController;

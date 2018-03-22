@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -128,70 +131,64 @@
 <pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/**
  * MP4 demuxer
  */
-import {logger} from &apos;../utils/logger&apos;;
+import { logger } from &apos;../utils/logger&apos;;
 import Event from &apos;../events&apos;;
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
- class MP4Demuxer {
-
-  constructor(observer, remuxer) {
+class MP4Demuxer {
+  constructor (observer, remuxer) {
     this.observer = observer;
     this.remuxer = remuxer;
   }
 
-  resetTimeStamp(initPTS) {
+  resetTimeStamp (initPTS) {
     this.initPTS = initPTS;
   }
 
-  resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
-
-    //jshint unused:false
+  resetInitSegment (initSegment, audioCodec, videoCodec, duration) {
+    // jshint unused:false
     if (initSegment &amp;&amp; initSegment.byteLength) {
-
       const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
 
       // default audio codec if nothing specified
       // TODO : extract that from initsegment
-      if (audioCodec == null) {
+      if (audioCodec == null)
         audioCodec = &apos;mp4a.40.5&apos;;
-      }
-      if (videoCodec == null) {
+
+      if (videoCodec == null)
         videoCodec = &apos;avc1.42e01e&apos;;
 
-      }
       const tracks = {};
-      if(initData.audio &amp;&amp; initData.video) {
-        tracks.audiovideo = { container : &apos;video/mp4&apos;, codec : audioCodec + &apos;,&apos; + videoCodec, initSegment : duration ? initSegment : null };
+      if (initData.audio &amp;&amp; initData.video) {
+        tracks.audiovideo = { container: &apos;video/mp4&apos;, codec: audioCodec + &apos;,&apos; + videoCodec, initSegment: duration ? initSegment : null };
       } else {
-        if (initData.audio) {
-          tracks.audio = { container : &apos;audio/mp4&apos;, codec : audioCodec, initSegment : duration ? initSegment : null };
-        }
-        if (initData.video) {
-          tracks.video = { container : &apos;video/mp4&apos;, codec : videoCodec, initSegment : duration ? initSegment : null };
-        }
+        if (initData.audio)
+          tracks.audio = { container: &apos;audio/mp4&apos;, codec: audioCodec, initSegment: duration ? initSegment : null };
+
+        if (initData.video)
+          tracks.video = { container: &apos;video/mp4&apos;, codec: videoCodec, initSegment: duration ? initSegment : null };
       }
       this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { tracks });
     } else {
-      if (audioCodec) {
+      if (audioCodec)
         this.audioCodec = audioCodec;
-      }
-      if (videoCodec) {
+
+      if (videoCodec)
         this.videoCodec = videoCodec;
-      }
     }
   }
 
-  static probe(data) {
+  static probe (data) {
     // ensure we find a moof box in the first 16 kB
-    return MP4Demuxer.findBox( { data : data, start : 0, end : Math.min(data.length, 16384) } ,[&apos;moof&apos;]).length &gt; 0;
+    return MP4Demuxer.findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, [&apos;moof&apos;]).length &gt; 0;
   }
 
-  static bin2str(buffer) {
+  static bin2str (buffer) {
     return String.fromCharCode.apply(null, buffer);
   }
 
-  static readUint16(buffer, offset) {
+  static readUint16 (buffer, offset) {
     if (buffer.data) {
       offset += buffer.start;
       buffer = buffer.data;
@@ -203,7 +200,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     return val &lt; 0 ? 65536 + val : val;
   }
 
-  static readUint32(buffer, offset) {
+  static readUint32 (buffer, offset) {
     if (buffer.data) {
       offset += buffer.start;
       buffer = buffer.data;
@@ -216,22 +213,21 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     return val &lt; 0 ? 4294967296 + val : val;
   }
 
-  static writeUint32(buffer, offset, value) {
+  static writeUint32 (buffer, offset, value) {
     if (buffer.data) {
       offset += buffer.start;
       buffer = buffer.data;
     }
     buffer[offset] = value &gt;&gt; 24;
-    buffer[offset+1] = (value &gt;&gt; 16) &amp; 0xff;
-    buffer[offset+2] = (value &gt;&gt; 8) &amp; 0xff;
-    buffer[offset+3] = value &amp; 0xff;
+    buffer[offset + 1] = (value &gt;&gt; 16) &amp; 0xff;
+    buffer[offset + 2] = (value &gt;&gt; 8) &amp; 0xff;
+    buffer[offset + 3] = value &amp; 0xff;
   }
 
-
   // Find the data for a box specified by its path
-  static findBox(data,path) {
-    var results = [],
-        i, size, type, end, subresults, start, endbox;
+  static findBox (data, path) {
+    let results = [],
+      i, size, type, end, subresults, start, endbox;
 
     if (data.data) {
       start = data.start;
@@ -253,17 +249,15 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
       endbox = size &gt; 1 ? i + size : end;
 
       if (type === path[0]) {
-
         if (path.length === 1) {
           // this is the end of the path and we&apos;ve found the box we were
           // looking for
-          results.push({ data : data, start : i + 8, end : endbox});
+          results.push({ data: data, start: i + 8, end: endbox });
         } else {
           // recursively search for the next box along the path
-          subresults = MP4Demuxer.findBox({ data : data, start : i +8, end : endbox }, path.slice(1));
-          if (subresults.length) {
+          subresults = MP4Demuxer.findBox({ data: data, start: i + 8, end: endbox }, path.slice(1));
+          if (subresults.length)
             results = results.concat(subresults);
-          }
         }
       }
       i = endbox;
@@ -273,8 +267,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     return results;
   }
 
-  static parseSegmentIndex(initSegment) {
-
+  static parseSegmentIndex (initSegment) {
     const moov = MP4Demuxer.findBox(initSegment, [&apos;moov&apos;])[0];
     const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
 
@@ -282,9 +275,8 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     let sidx = MP4Demuxer.findBox(initSegment, [&apos;sidx&apos;]);
     let references;
 
-    if (!sidx || !sidx[0]) {
+    if (!sidx || !sidx[0])
       return null;
-    }
 
     references = [];
     sidx = sidx[0];
@@ -302,11 +294,11 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     let earliestPresentationTime = 0;
     let firstOffset = 0;
 
-    if (version === 0) {
+    if (version === 0)
       index += 8;
-    } else {
+    else
       index += 16;
-    }
+
     // skip reserved
     index += 2;
 
@@ -381,10 +373,9 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
    * @return {object} a hash of track type to timescale values or null if
    * the init segment is malformed.
    */
-  static parseInitSegment(initSegment) {
-
-    var result = [];
-    var traks = MP4Demuxer.findBox(initSegment, [&apos;moov&apos;, &apos;trak&apos;]);
+  static parseInitSegment (initSegment) {
+    let result = [];
+    let traks = MP4Demuxer.findBox(initSegment, [&apos;moov&apos;, &apos;trak&apos;]);
 
     traks.forEach(trak =&gt; {
       const tkhd = MP4Demuxer.findBox(trak, [&apos;tkhd&apos;])[0];
@@ -401,18 +392,18 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
 
           const hdlr = MP4Demuxer.findBox(trak, [&apos;mdia&apos;, &apos;hdlr&apos;])[0];
           if (hdlr) {
-            const hdlrType = MP4Demuxer.bin2str(hdlr.data.subarray(hdlr.start+8, hdlr.start+12));
-            let type = {&apos;soun&apos; : &apos;audio&apos;, &apos;vide&apos; : &apos;video&apos;}[hdlrType];
+            const hdlrType = MP4Demuxer.bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
+            let type = { &apos;soun&apos;: &apos;audio&apos;, &apos;vide&apos;: &apos;video&apos; }[hdlrType];
             if (type) {
-                 // extract codec info. TODO : parse codec details to be able to build MIME type
-                  let codecBox = MP4Demuxer.findBox( trak, [&apos;mdia&apos;,&apos;minf&apos;,&apos;stbl&apos;,&apos;stsd&apos;]);
-                  if (codecBox.length) {
-                    codecBox = codecBox[0];
-                    let codecType = MP4Demuxer.bin2str(codecBox.data.subarray(codecBox.start+12, codecBox.start+16));
-                    logger.log(`MP4Demuxer:${type}:${codecType} found`);
-                  }
-              result[trackId] = { timescale : timescale , type : type};
-              result[type] = { timescale : timescale , id : trackId};
+              // extract codec info. TODO : parse codec details to be able to build MIME type
+              let codecBox = MP4Demuxer.findBox(trak, [&apos;mdia&apos;, &apos;minf&apos;, &apos;stbl&apos;, &apos;stsd&apos;]);
+              if (codecBox.length) {
+                codecBox = codecBox[0];
+                let codecType = MP4Demuxer.bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
+                logger.log(`MP4Demuxer:${type}:${codecType} found`);
+              }
+              result[trackId] = { timescale: timescale, type: type };
+              result[type] = { timescale: timescale, id: trackId };
             }
           }
         }
@@ -421,8 +412,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     return result;
   }
 
-
-/**
+  /**
  * Determine the base media decode start time, in seconds, for an MP4
  * fragment. If multiple fragments are specified, the earliest time is
  * returned.
@@ -438,94 +428,93 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
  * @return {number} the earliest base media decode start time for the
  * fragment, in seconds
  */
-static getStartDTS(initData, fragment) {
-  var trafs, baseTimes, result;
+  static getStartDTS (initData, fragment) {
+    let trafs, baseTimes, result;
 
-  // we need info from two childrend of each track fragment box
-  trafs = MP4Demuxer.findBox(fragment, [&apos;moof&apos;, &apos;traf&apos;]);
+    // we need info from two childrend of each track fragment box
+    trafs = MP4Demuxer.findBox(fragment, [&apos;moof&apos;, &apos;traf&apos;]);
 
-  // determine the start times for each track
-  baseTimes = [].concat.apply([], trafs.map(function(traf) {
-    return MP4Demuxer.findBox(traf, [&apos;tfhd&apos;]).map(function(tfhd) {
-      var id, scale, baseTime;
+    // determine the start times for each track
+    baseTimes = [].concat.apply([], trafs.map(function (traf) {
+      return MP4Demuxer.findBox(traf, [&apos;tfhd&apos;]).map(function (tfhd) {
+        let id, scale, baseTime;
 
+        // get the track id from the tfhd
+        id = MP4Demuxer.readUint32(tfhd, 4);
+        // assume a 90kHz clock if no timescale was specified
+        scale = initData[id].timescale || 90e3;
+
+        // get the base media decode time from the tfdt
+        baseTime = MP4Demuxer.findBox(traf, [&apos;tfdt&apos;]).map(function (tfdt) {
+          let version, result;
+
+          version = tfdt.data[tfdt.start];
+          result = MP4Demuxer.readUint32(tfdt, 4);
+          if (version === 1) {
+            result *= Math.pow(2, 32);
+
+            result += MP4Demuxer.readUint32(tfdt, 8);
+          }
+          return result;
+        })[0];
+        // convert base time to seconds
+        return baseTime / scale;
+      });
+    }));
+
+    // return the minimum
+    result = Math.min.apply(null, baseTimes);
+    return isFinite(result) ? result : 0;
+  }
+
+  static offsetStartDTS (initData, fragment, timeOffset) {
+    MP4Demuxer.findBox(fragment, [&apos;moof&apos;, &apos;traf&apos;]).map(function (traf) {
+      return MP4Demuxer.findBox(traf, [&apos;tfhd&apos;]).map(function (tfhd) {
       // get the track id from the tfhd
-      id = MP4Demuxer.readUint32(tfhd, 4);
-      // assume a 90kHz clock if no timescale was specified
-      scale = initData[id].timescale || 90e3;
+        let id = MP4Demuxer.readUint32(tfhd, 4);
+        // assume a 90kHz clock if no timescale was specified
+        let timescale = initData[id].timescale || 90e3;
 
-      // get the base media decode time from the tfdt
-      baseTime = MP4Demuxer.findBox(traf, [&apos;tfdt&apos;]).map(function(tfdt) {
-        var version, result;
-
-        version = tfdt.data[tfdt.start];
-        result = MP4Demuxer.readUint32(tfdt, 4);
-        if (version ===  1) {
-          result *= Math.pow(2, 32);
-
-          result += MP4Demuxer.readUint32(tfdt, 8);
-        }
-        return result;
-      })[0];
-      // convert base time to seconds
-      return baseTime / scale;
-    });
-  }));
-
-  // return the minimum
-  result = Math.min.apply(null, baseTimes);
-  return isFinite(result) ? result : 0;
-}
-
-static offsetStartDTS(initData,fragment,timeOffset) {
-  MP4Demuxer.findBox(fragment, [&apos;moof&apos;, &apos;traf&apos;]).map(function(traf) {
-    return MP4Demuxer.findBox(traf, [&apos;tfhd&apos;]).map(function(tfhd) {
-      // get the track id from the tfhd
-      var id = MP4Demuxer.readUint32(tfhd, 4);
-      // assume a 90kHz clock if no timescale was specified
-      var timescale = initData[id].timescale || 90e3;
-
-      // get the base media decode time from the tfdt
-      MP4Demuxer.findBox(traf, [&apos;tfdt&apos;]).map(function(tfdt) {
-        var version = tfdt.data[tfdt.start];
-        var baseMediaDecodeTime = MP4Demuxer.readUint32(tfdt, 4);
-        if (version === 0) {
-          MP4Demuxer.writeUint32(tfdt, 4, baseMediaDecodeTime - timeOffset*timescale);
-        } else {
-          baseMediaDecodeTime *= Math.pow(2, 32);
-          baseMediaDecodeTime += MP4Demuxer.readUint32(tfdt, 8);
-          baseMediaDecodeTime -= timeOffset*timescale;
-          baseMediaDecodeTime = Math.max(baseMediaDecodeTime,0);
-          const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
-          const lower = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
-          MP4Demuxer.writeUint32(tfdt, 4, upper);
-          MP4Demuxer.writeUint32(tfdt, 8, lower);
-        }
+        // get the base media decode time from the tfdt
+        MP4Demuxer.findBox(traf, [&apos;tfdt&apos;]).map(function (tfdt) {
+          let version = tfdt.data[tfdt.start];
+          let baseMediaDecodeTime = MP4Demuxer.readUint32(tfdt, 4);
+          if (version === 0) {
+            MP4Demuxer.writeUint32(tfdt, 4, baseMediaDecodeTime - timeOffset * timescale);
+          } else {
+            baseMediaDecodeTime *= Math.pow(2, 32);
+            baseMediaDecodeTime += MP4Demuxer.readUint32(tfdt, 8);
+            baseMediaDecodeTime -= timeOffset * timescale;
+            baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
+            const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
+            const lower = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
+            MP4Demuxer.writeUint32(tfdt, 4, upper);
+            MP4Demuxer.writeUint32(tfdt, 8, lower);
+          }
+        });
       });
     });
-  });
-}
+  }
 
   // feed incoming data to the front of the parsing pipeline
-  append(data, timeOffset,contiguous,accurateTimeOffset) {
+  append (data, timeOffset, contiguous, accurateTimeOffset) {
     let initData = this.initData;
-    if(!initData) {
+    if (!initData) {
       this.resetInitSegment(data, this.audioCodec, this.videoCodec, false);
       initData = this.initData;
     }
     let startDTS, initPTS = this.initPTS;
     if (initPTS === undefined) {
-      let startDTS = MP4Demuxer.getStartDTS(initData,data);
+      let startDTS = MP4Demuxer.getStartDTS(initData, data);
       this.initPTS = initPTS = startDTS - timeOffset;
-      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS});
+      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS });
     }
-    MP4Demuxer.offsetStartDTS(initData,data,initPTS);
-    startDTS = MP4Demuxer.getStartDTS(initData,data);
-    this.remuxer.remux(initData.audio, initData.video, null, null, startDTS, contiguous,accurateTimeOffset,data);
+    MP4Demuxer.offsetStartDTS(initData, data, initPTS);
+    startDTS = MP4Demuxer.getStartDTS(initData, data);
+    this.remuxer.remux(initData.audio, initData.video, null, null, startDTS, contiguous, accurateTimeOffset, data);
   }
 
-  destroy() {}
-
+  destroy () {}
 }
 
 export default MP4Demuxer;

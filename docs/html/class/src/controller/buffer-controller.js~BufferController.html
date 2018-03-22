@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -1929,7 +1932,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber15">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber14">source</a></span></span>
     </span>
   </h3>
 
@@ -1975,7 +1978,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber487">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber477">source</a></span></span>
     </span>
   </h3>
 
@@ -2018,7 +2021,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber161">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber160">source</a></span></span>
     </span>
   </h3>
 
@@ -2061,7 +2064,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber219">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber216">source</a></span></span>
     </span>
   </h3>
 
@@ -2104,7 +2107,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber79">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber78">source</a></span></span>
     </span>
   </h3>
 
@@ -2147,7 +2150,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber370">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber363">source</a></span></span>
     </span>
   </h3>
 
@@ -2190,7 +2193,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber159">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber158">source</a></span></span>
     </span>
   </h3>
 
@@ -2233,7 +2236,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber154">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber153">source</a></span></span>
     </span>
   </h3>
 
@@ -2276,7 +2279,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber153">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber152">source</a></span></span>
     </span>
   </h3>
 
@@ -2319,7 +2322,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber108">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber107">source</a></span></span>
     </span>
   </h3>
 
@@ -2362,7 +2365,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber107">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber106">source</a></span></span>
     </span>
   </h3>
 
@@ -2405,7 +2408,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber106">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber105">source</a></span></span>
     </span>
   </h3>
 
@@ -2448,7 +2451,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber40">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber39">source</a></span></span>
     </span>
   </h3>
 
@@ -2491,7 +2494,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber39">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber38">source</a></span></span>
     </span>
   </h3>
 
@@ -2534,7 +2537,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber485">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber475">source</a></span></span>
     </span>
   </h3>
 
@@ -2577,7 +2580,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber41">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber40">source</a></span></span>
     </span>
   </h3>
 
@@ -2620,7 +2623,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber160">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber159">source</a></span></span>
     </span>
   </h3>
 
@@ -2663,7 +2666,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber158">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber157">source</a></span></span>
     </span>
   </h3>
 
@@ -2706,7 +2709,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber97">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber96">source</a></span></span>
     </span>
   </h3>
 
@@ -2749,7 +2752,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber42">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber41">source</a></span></span>
     </span>
   </h3>
 
@@ -2794,7 +2797,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber32">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber31">source</a></span></span>
     </span>
   </h3>
 
@@ -2837,7 +2840,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber34">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber33">source</a></span></span>
     </span>
   </h3>
 
@@ -2880,7 +2883,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber30">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber29">source</a></span></span>
     </span>
   </h3>
 
@@ -2923,7 +2926,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber343">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber337">source</a></span></span>
     </span>
   </h3>
 
@@ -2966,7 +2969,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber438">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber429">source</a></span></span>
     </span>
   </h3>
 
@@ -3009,7 +3012,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber36">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber35">source</a></span></span>
     </span>
   </h3>
 
@@ -3055,7 +3058,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber340">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber334">source</a></span></span>
     </span>
   </h3>
 
@@ -3098,7 +3101,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber178">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber177">source</a></span></span>
     </span>
   </h3>
 
@@ -3141,7 +3144,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber280">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber274">source</a></span></span>
     </span>
   </h3>
 
@@ -3200,7 +3203,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber45">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber44">source</a></span></span>
     </span>
   </h3>
 
@@ -3243,7 +3246,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber464">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber454">source</a></span></span>
     </span>
   </h3>
 
@@ -3286,7 +3289,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber428">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber419">source</a></span></span>
     </span>
   </h3>
 
@@ -3329,7 +3332,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber543">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber531">source</a></span></span>
     </span>
   </h3>
 
@@ -3412,7 +3415,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber316">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber310">source</a></span></span>
     </span>
   </h3>
 
@@ -3471,7 +3474,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber305">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber299">source</a></span></span>
     </span>
   </h3>
 
@@ -3530,7 +3533,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber266">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber261">source</a></span></span>
     </span>
   </h3>
 
@@ -3589,7 +3592,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber325">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber319">source</a></span></span>
     </span>
   </h3>
 
@@ -3648,7 +3651,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber367">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber360">source</a></span></span>
     </span>
   </h3>
 
@@ -3707,7 +3710,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber249">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber244">source</a></span></span>
     </span>
   </h3>
 
@@ -3750,7 +3753,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber49">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber48">source</a></span></span>
     </span>
   </h3>
 
@@ -3809,7 +3812,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber374">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber367">source</a></span></span>
     </span>
   </h3>
 
@@ -3868,7 +3871,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber85">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber84">source</a></span></span>
     </span>
   </h3>
 
@@ -3927,7 +3930,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber100">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber99">source</a></span></span>
     </span>
   </h3>
 
@@ -3986,7 +3989,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber119">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber118">source</a></span></span>
     </span>
   </h3>
 
@@ -4029,7 +4032,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber194">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber193">source</a></span></span>
     </span>
   </h3>
 
@@ -4072,7 +4075,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber198">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber197">source</a></span></span>
     </span>
   </h3>
 
@@ -4115,7 +4118,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber167">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber166">source</a></span></span>
     </span>
   </h3>
 
@@ -4158,7 +4161,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber203">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber201">source</a></span></span>
     </span>
   </h3>
 
@@ -4201,7 +4204,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber240">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber235">source</a></span></span>
     </span>
   </h3>
 
@@ -4260,7 +4263,7 @@ More details: <a href="https://github.com/video-dev/hls.js/issues/355">https://g
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber387">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/buffer-controller.js.html#lineNumber380">source</a></span></span>
     </span>
   </h3>
 

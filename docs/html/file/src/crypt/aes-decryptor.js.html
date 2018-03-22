@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -126,22 +129,21 @@
 
 <div class="content" data-ice="content"><h1 data-ice="title">src/crypt/aes-decryptor.js</h1>
 <pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">// PKCS7
-export function removePadding(buffer) {
+export function removePadding (buffer) {
   const outputBytes = buffer.byteLength;
   const paddingBytes = outputBytes &amp;&amp; (new DataView(buffer)).getUint8(outputBytes - 1);
-  if (paddingBytes) {
+  if (paddingBytes)
     return buffer.slice(0, outputBytes - paddingBytes);
-  } else {
+  else
     return buffer;
-  }
 }
 
 class AESDecryptor {
-  constructor() {
+  constructor () {
     // Static after running initTable
     this.rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
-    this.subMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
-    this.invSubMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
+    this.subMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+    this.invSubMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
     this.sBox = new Uint32Array(256);
     this.invSBox = new Uint32Array(256);
 
@@ -152,16 +154,16 @@ class AESDecryptor {
   }
 
   // Using view.getUint32() also swaps the byte order.
-  uint8ArrayToUint32Array_(arrayBuffer) {
+  uint8ArrayToUint32Array_ (arrayBuffer) {
     let view = new DataView(arrayBuffer);
     let newArray = new Uint32Array(4);
-    for (let i = 0; i &lt; 4; i++) {
+    for (let i = 0; i &lt; 4; i++)
       newArray[i] = view.getUint32(i * 4);
-    }
+
     return newArray;
   }
 
-  initTable() {
+  initTable () {
     let sBox = this.sBox;
     let invSBox = this.invSBox;
     let subMix = this.subMix;
@@ -169,7 +171,7 @@ class AESDecryptor {
     let subMix1 = subMix[1];
     let subMix2 = subMix[2];
     let subMix3 = subMix[3];
-    let invSubMix  = this.invSubMix;
+    let invSubMix = this.invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
@@ -180,11 +182,10 @@ class AESDecryptor {
     let xi = 0;
     let i = 0;
     for (i = 0; i &lt; 256; i++) {
-      if (i &lt; 128) {
+      if (i &lt; 128)
         d[i] = i &lt;&lt; 1;
-      } else {
+      else
         d[i] = (i &lt;&lt; 1) ^ 0x11b;
-      }
     }
 
     for (i = 0; i &lt; 256; i++) {
@@ -222,7 +223,7 @@ class AESDecryptor {
     }
   }
 
-  expandKey(keyBuffer) {
+  expandKey (keyBuffer) {
     // convert keyBuffer to Uint32Array
     let key = this.uint8ArrayToUint32Array_(keyBuffer);
     let sameKey = true;
@@ -233,16 +234,14 @@ class AESDecryptor {
       offset++;
     }
 
-    if (sameKey) {
+    if (sameKey)
       return;
-    }
 
     this.key = key;
     let keySize = this.keySize = key.length;
 
-    if (keySize !== 4 &amp;&amp; keySize !== 6 &amp;&amp; keySize !== 8) {
+    if (keySize !== 4 &amp;&amp; keySize !== 6 &amp;&amp; keySize !== 8)
       throw new Error(&apos;Invalid aes key size=&apos; + keySize);
-    }
 
     let ksRows = this.ksRows = (keySize + 6 + 1) * 4;
     let ksRow;
@@ -253,7 +252,7 @@ class AESDecryptor {
     let sbox = this.sBox;
     let rcon = this.rcon;
 
-    let invSubMix  = this.invSubMix;
+    let invSubMix = this.invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
@@ -278,7 +277,7 @@ class AESDecryptor {
 
         // Mix Rcon
         t ^= rcon[(ksRow / keySize) | 0] &lt;&lt; 24;
-      } else if (keySize &gt; 6 &amp;&amp; ksRow % keySize === 4)  {
+      } else if (keySize &gt; 6 &amp;&amp; ksRow % keySize === 4) {
         // Sub word
         t = (sbox[t &gt;&gt;&gt; 24] &lt;&lt; 24) | (sbox[(t &gt;&gt;&gt; 16) &amp; 0xff] &lt;&lt; 16) | (sbox[(t &gt;&gt;&gt; 8) &amp; 0xff] &lt;&lt; 8) | sbox[t &amp; 0xff];
       }
@@ -288,33 +287,31 @@ class AESDecryptor {
 
     for (invKsRow = 0; invKsRow &lt; ksRows; invKsRow++) {
       ksRow = ksRows - invKsRow;
-      if (invKsRow &amp; 3) {
+      if (invKsRow &amp; 3)
         t = keySchedule[ksRow];
-      } else {
+      else
         t = keySchedule[ksRow - 4];
-      }
 
-      if (invKsRow &lt; 4 || ksRow &lt;= 4) {
+      if (invKsRow &lt; 4 || ksRow &lt;= 4)
         invKeySchedule[invKsRow] = t;
-      } else {
+      else
         invKeySchedule[invKsRow] = invSubMix0[sbox[t &gt;&gt;&gt; 24]] ^ invSubMix1[sbox[(t &gt;&gt;&gt; 16) &amp; 0xff]] ^ invSubMix2[sbox[(t &gt;&gt;&gt; 8) &amp; 0xff]] ^ invSubMix3[sbox[t &amp; 0xff]];
-      }
 
       invKeySchedule[invKsRow] = invKeySchedule[invKsRow] &gt;&gt;&gt; 0;
     }
   }
 
   // Adding this as a method greatly improves performance.
-  networkToHostOrderSwap(word) {
+  networkToHostOrderSwap (word) {
     return (word &lt;&lt; 24) | ((word &amp; 0xff00) &lt;&lt; 8) | ((word &amp; 0xff0000) &gt;&gt; 8) | (word &gt;&gt;&gt; 24);
   }
 
-  decrypt(inputArrayBuffer, offset, aesIV, removePKCS7Padding) {
+  decrypt (inputArrayBuffer, offset, aesIV, removePKCS7Padding) {
     let nRounds = this.keySize + 6;
     let invKeySchedule = this.invKeySchedule;
     let invSBOX = this.invSBox;
 
-    let invSubMix  = this.invSubMix;
+    let invSubMix = this.invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
@@ -333,7 +330,7 @@ class AESDecryptor {
     let s0, s1, s2, s3;
     let inputWords0, inputWords1, inputWords2, inputWords3;
 
-    var ksRow, i;
+    let ksRow, i;
     let swapWord = this.networkToHostOrderSwap;
 
     while (offset &lt; inputInt32.length) {
@@ -389,7 +386,7 @@ class AESDecryptor {
     return removePKCS7Padding ? removePadding(outputInt32.buffer) : outputInt32.buffer;
   }
 
-  destroy() {
+  destroy () {
     this.key = undefined;
     this.keySize = undefined;
     this.ksRows = undefined;

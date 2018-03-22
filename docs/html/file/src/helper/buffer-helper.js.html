@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,52 +134,21 @@
 
 const BufferHelper = {
   /**
-   * filter fragments potentially evicted from buffer.
-   */
-  filterEvictedFragments: function(bufferedFrags, media) {
-    try {
-      if (media) {
-        // Cache `media.buffered` at first for performance
-        // accessing `media.buffered` have a cost
-        const mediaBuffered = media.buffered;
-        // accessing MediaElement property through a function call should be quite expensive
-        const bufferedPositions = [];
-        for (let i = 0; i &lt; mediaBuffered.length; i++) {
-          bufferedPositions.push({ start: mediaBuffered.start(i), end: mediaBuffered.end(i) });
-        }
-        return bufferedFrags.filter(frag =&gt; {
-          const position = (frag.startPTS + frag.endPTS) / 2;
-          for (let i = 0; i &lt; bufferedPositions.length; i++) {
-            if (position &gt;= bufferedPositions[i].start &amp;&amp; position &lt;= bufferedPositions[i].end) {
-              return true;
-            }
-          }
-          return false;
-        });
-      }
-    } catch (error) {
-      // InvalidStateError: Failed to read the &apos;buffered&apos; property from &apos;SourceBuffer&apos;:
-      // This SourceBuffer has been removed from the parent media source
-    }
-    return [];
-  },
-  /**
    * Return true if `media`&apos;s buffered include `position`
    * @param {HTMLMediaElement|SourceBuffer} media
    * @param {number} position
    * @returns {boolean}
    */
-  isBuffered : function(media,position) {
+  isBuffered: function (media, position) {
     try {
       if (media) {
         let buffered = media.buffered;
         for (let i = 0; i &lt; buffered.length; i++) {
-          if (position &gt;= buffered.start(i) &amp;&amp; position &lt;= buffered.end(i)) {
+          if (position &gt;= buffered.start(i) &amp;&amp; position &lt;= buffered.end(i))
             return true;
-          }
         }
       }
-    } catch(error) {
+    } catch (error) {
       // this is to catch
       // InvalidStateError: Failed to read the &apos;buffered&apos; property from &apos;SourceBuffer&apos;:
       // This SourceBuffer has been removed from the parent media source
@@ -184,52 +156,50 @@ const BufferHelper = {
     return false;
   },
 
-  bufferInfo : function(media, pos,maxHoleDuration) {
+  bufferInfo: function (media, pos, maxHoleDuration) {
     try {
       if (media) {
-        var vbuffered = media.buffered, buffered = [],i;
-        for (i = 0; i &lt; vbuffered.length; i++) {
-          buffered.push({start: vbuffered.start(i), end: vbuffered.end(i)});
-        }
-        return this.bufferedInfo(buffered,pos,maxHoleDuration);
+        let vbuffered = media.buffered, buffered = [], i;
+        for (i = 0; i &lt; vbuffered.length; i++)
+          buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+
+        return this.bufferedInfo(buffered, pos, maxHoleDuration);
       }
-    } catch(error) {
-        // this is to catch
-        // InvalidStateError: Failed to read the &apos;buffered&apos; property from &apos;SourceBuffer&apos;:
-        // This SourceBuffer has been removed from the parent media source
+    } catch (error) {
+      // this is to catch
+      // InvalidStateError: Failed to read the &apos;buffered&apos; property from &apos;SourceBuffer&apos;:
+      // This SourceBuffer has been removed from the parent media source
     }
-    return {len: 0, start: pos, end: pos, nextStart : undefined} ;
+    return { len: 0, start: pos, end: pos, nextStart: undefined };
   },
 
-  bufferedInfo : function(buffered,pos,maxHoleDuration) {
-    var buffered2 = [],
-        // bufferStart and bufferEnd are buffer boundaries around current video position
-        bufferLen,bufferStart, bufferEnd,bufferStartNext,i;
+  bufferedInfo: function (buffered, pos, maxHoleDuration) {
+    let buffered2 = [],
+      // bufferStart and bufferEnd are buffer boundaries around current video position
+      bufferLen, bufferStart, bufferEnd, bufferStartNext, i;
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
     buffered.sort(function (a, b) {
-      var diff = a.start - b.start;
-      if (diff) {
+      let diff = a.start - b.start;
+      if (diff)
         return diff;
-      } else {
+      else
         return b.end - a.end;
-      }
     });
     // there might be some small holes between buffer time range
     // consider that holes smaller than maxHoleDuration are irrelevant and build another
     // buffer time range representations that discards those holes
     for (i = 0; i &lt; buffered.length; i++) {
-      var buf2len = buffered2.length;
-      if(buf2len) {
-        var buf2end = buffered2[buf2len - 1].end;
+      let buf2len = buffered2.length;
+      if (buf2len) {
+        let buf2end = buffered2[buf2len - 1].end;
         // if small hole (value between 0 or maxHoleDuration ) or overlapping (negative)
-        if((buffered[i].start - buf2end) &lt; maxHoleDuration) {
+        if ((buffered[i].start - buf2end) &lt; maxHoleDuration) {
           // merge overlapping time ranges
           // update lastRange.end only if smaller than item.end
           // e.g.  [ 1, 15] with  [ 2,8] =&gt; [ 1,15] (no need to modify lastRange.end)
           // whereas [ 1, 8] with  [ 2,15] =&gt; [ 1,15] ( lastRange should switch from [1,8] to [1,15])
-          if(buffered[i].end &gt; buf2end) {
+          if (buffered[i].end &gt; buf2end)
             buffered2[buf2len - 1].end = buffered[i].end;
-          }
         } else {
           // big hole
           buffered2.push(buffered[i]);
@@ -240,9 +210,9 @@ const BufferHelper = {
       }
     }
     for (i = 0, bufferLen = 0, bufferStart = bufferEnd = pos; i &lt; buffered2.length; i++) {
-      var start =  buffered2[i].start,
-          end = buffered2[i].end;
-      //logger.log(&apos;buf start/end:&apos; + buffered.start(i) + &apos;/&apos; + buffered.end(i));
+      let start = buffered2[i].start,
+        end = buffered2[i].end;
+      // logger.log(&apos;buf start/end:&apos; + buffered.start(i) + &apos;/&apos; + buffered.end(i));
       if ((pos + maxHoleDuration) &gt;= start &amp;&amp; pos &lt; end) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferStart = start;
@@ -253,7 +223,7 @@ const BufferHelper = {
         break;
       }
     }
-    return {len: bufferLen, start: bufferStart, end: bufferEnd, nextStart : bufferStartNext};
+    return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
   }
 };
 

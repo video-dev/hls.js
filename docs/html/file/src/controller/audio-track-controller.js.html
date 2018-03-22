@@ -34,8 +34,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
-<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
@@ -49,6 +49,7 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
 <li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
@@ -113,6 +114,8 @@
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
 <li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
@@ -131,68 +134,66 @@
 
 import Event from &apos;../events&apos;;
 import EventHandler from &apos;../event-handler&apos;;
-import {logger} from &apos;../utils/logger&apos;;
-import {ErrorTypes} from &apos;../errors&apos;;
+import { logger } from &apos;../utils/logger&apos;;
+import { ErrorTypes } from &apos;../errors&apos;;
 
 class AudioTrackController extends EventHandler {
-
-  constructor(hls) {
+  constructor (hls) {
     super(hls, Event.MANIFEST_LOADING,
-               Event.MANIFEST_PARSED,
-               Event.AUDIO_TRACK_LOADED,
-               Event.ERROR);
+      Event.MANIFEST_PARSED,
+      Event.AUDIO_TRACK_LOADED,
+      Event.ERROR);
     this.ticks = 0;
     this.ontick = this.tick.bind(this);
   }
 
-  destroy() {
+  destroy () {
     this.cleanTimer();
     EventHandler.prototype.destroy.call(this);
   }
 
-  cleanTimer() {
+  cleanTimer () {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
     }
   }
 
-  tick() {
+  tick () {
     this.ticks++;
     if (this.ticks === 1) {
       this.doTick();
-      if (this.ticks &gt; 1) {
+      if (this.ticks &gt; 1)
         setTimeout(this.tick, 1);
-      }
+
       this.ticks = 0;
     }
   }
 
-  doTick() {
+  doTick () {
     this.updateTrack(this.trackId);
   }
 
-  onError(data) {
-    if(data.fatal &amp;&amp; data.type === ErrorTypes.NETWORK_ERROR) {
+  onError (data) {
+    if (data.fatal &amp;&amp; data.type === ErrorTypes.NETWORK_ERROR)
       this.cleanTimer();
-    }
   }
 
-  onManifestLoading() {
+  onManifestLoading () {
     // reset audio tracks on manifest loading
     this.tracks = [];
     this.trackId = -1;
   }
 
-  onManifestParsed(data) {
+  onManifestParsed (data) {
     let tracks = data.audioTracks || [];
     let defaultFound = false;
     this.tracks = tracks;
-    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, {audioTracks : tracks});
+    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
     // loop through available audio tracks and autoselect default if needed
     let id = 0;
     tracks.forEach(track =&gt; {
-      if(track.default &amp;&amp; !defaultFound) {
+      if (track.default &amp;&amp; !defaultFound) {
         this.audioTrack = id;
         defaultFound = true;
         return;
@@ -205,7 +206,7 @@ class AudioTrackController extends EventHandler {
     }
   }
 
-  onAudioTrackLoaded(data) {
+  onAudioTrackLoaded (data) {
     if (data.id &lt; this.tracks.length) {
       logger.log(`audioTrack ${data.id} loaded`);
       this.tracks[data.id].details = data.details;
@@ -223,23 +224,22 @@ class AudioTrackController extends EventHandler {
   }
 
   /** get alternate audio tracks list from playlist **/
-  get audioTracks() {
+  get audioTracks () {
     return this.tracks;
   }
 
   /** get index of the selected audio track (index in audio track lists) **/
-  get audioTrack() {
-   return this.trackId;
+  get audioTrack () {
+    return this.trackId;
   }
 
   /** select an audio track, based on its index in audio track lists**/
-  set audioTrack(audioTrackId) {
-    if (this.trackId !== audioTrackId || this.tracks[audioTrackId].details === undefined) {
+  set audioTrack (audioTrackId) {
+    if (this.trackId !== audioTrackId || this.tracks[audioTrackId].details === undefined)
       this.setAudioTrackInternal(audioTrackId);
-    }
   }
 
- setAudioTrackInternal(newId) {
+  setAudioTrackInternal (newId) {
     // check if level idx is valid
     if (newId &gt;= 0 &amp;&amp; newId &lt; this.tracks.length) {
       // stopping live reloading timer if any
@@ -247,24 +247,22 @@ class AudioTrackController extends EventHandler {
       this.trackId = newId;
       logger.log(`switching to audioTrack ${newId}`);
       let audioTrack = this.tracks[newId],
-          hls = this.hls,
-          type = audioTrack.type,
-          url = audioTrack.url,
-          eventObj = {id: newId, type : type, url : url};
-      // keep AUDIO_TRACK_SWITCH for legacy reason
-      hls.trigger(Event.AUDIO_TRACK_SWITCH, eventObj);
+        hls = this.hls,
+        type = audioTrack.type,
+        url = audioTrack.url,
+        eventObj = { id: newId, type: type, url: url };
       hls.trigger(Event.AUDIO_TRACK_SWITCHING, eventObj);
-       // check if we need to load playlist for this audio Track
-       let details = audioTrack.details;
+      // check if we need to load playlist for this audio Track
+      let details = audioTrack.details;
       if (url &amp;&amp; (details === undefined || details.live === true)) {
         // track not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for audioTrack ${newId}`);
-        hls.trigger(Event.AUDIO_TRACK_LOADING, {url: url, id: newId});
+        hls.trigger(Event.AUDIO_TRACK_LOADING, { url: url, id: newId });
       }
     }
   }
 
-  updateTrack(newId) {
+  updateTrack (newId) {
     // check if level idx is valid
     if (newId &gt;= 0 &amp;&amp; newId &lt; this.tracks.length) {
       // stopping live reloading timer if any
@@ -272,12 +270,12 @@ class AudioTrackController extends EventHandler {
       this.trackId = newId;
       logger.log(`updating audioTrack ${newId}`);
       let audioTrack = this.tracks[newId], url = audioTrack.url;
-       // check if we need to load playlist for this audio Track
-       let details = audioTrack.details;
+      // check if we need to load playlist for this audio Track
+      let details = audioTrack.details;
       if (url &amp;&amp; (details === undefined || details.live === true)) {
         // track not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for audioTrack ${newId}`);
-        this.hls.trigger(Event.AUDIO_TRACK_LOADING, {url: url, id: newId});
+        this.hls.trigger(Event.AUDIO_TRACK_LOADING, { url: url, id: newId });
       }
     }
   }
