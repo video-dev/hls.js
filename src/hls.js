@@ -246,7 +246,8 @@ export default class Hls {
   /** Return Estimated Bandwidth
    **/
   get bandwidthEstimate() {
-    return this.abrController._bwEstimator.getEstimate();
+    const bwEstimator = this.abrController._bwEstimator;
+    return bwEstimator ? bwEstimator.getEstimate() : NaN;
   }
 
   /** set first level (index of first level referenced in manifest)
