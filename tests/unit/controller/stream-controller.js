@@ -85,14 +85,14 @@ describe('StreamController tests', function () {
   });
 
   describe('PDT vs SN tests for discontinuities with PDT', function () {
-    let PDT = "Fri Sep 15 2017 12:11:01:523 GMT-0700 (Pacific Daylight Time)";
+    let PDT = 'Fri Sep 15 2017 12:11:01:523 GMT-0700 (Pacific Daylight Time)';
     let fragPrevious = {
       pdt: 1505502671523,
       endPdt: 1505502676523,
       duration: 5.000,
       level: 1,
       start: 10.000,
-      sn: 2, //Fragment with PDT 1505502671523 in level 1 does not have the same sn as in level 2 where cc is 1
+      sn: 2, // Fragment with PDT 1505502671523 in level 1 does not have the same sn as in level 2 where cc is 1
       cc: 0
     };
 

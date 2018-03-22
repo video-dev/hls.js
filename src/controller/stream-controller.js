@@ -383,12 +383,10 @@ class StreamController extends TaskLoop {
     if (PDTValue >= lastSegment.endPdt)
       return null;
 
-    for(let seg = 0; seg < fragments.length; ++seg)
-    {
+    for (let seg = 0; seg < fragments.length; ++seg) {
       let frag = fragments[seg];
-      if(PDTValue < frag.endPdt){
+      if (PDTValue < frag.endPdt)
         return frag;
-      }
     }
     return null;
   }
