@@ -268,7 +268,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   loadtimeout (stats, context, networkDetails = null) {
-    this._handleNetworkError(context, networkDetails);
+    this._handleNetworkError(context, networkDetails, true);
   }
 
   _handleMasterPlaylist (response, stats, context, networkDetails) {
@@ -409,7 +409,7 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handleNetworkError (context, networkDetails) {
+  _handleNetworkError (context, networkDetails, timeout = false) {
     let details;
     let fatal;
 
@@ -417,15 +417,15 @@ class PlaylistLoader extends EventHandler {
 
     switch (context.type) {
     case ContextType.MANIFEST:
-      details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
+      details = (timeout ? ErrorDetails.MANIFEST_LOAD_TIMEOUT : ErrorDetails.MANIFEST_LOAD_ERROR);
       fatal = true;
       break;
     case ContextType.LEVEL:
-      details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
+      details = (timeout ? ErrorDetails.LEVEL_LOAD_TIMEOUT : ErrorDetails.LEVEL_LOAD_ERROR);
       fatal = false;
       break;
     case ContextType.AUDIO_TRACK:
-      details = ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT;
+      details = (timeout ? ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT : ErrorDetails.AUDIO_TRACK_LOAD_ERROR);
       fatal = false;
       break;
     default:
