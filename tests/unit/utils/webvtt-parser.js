@@ -70,7 +70,6 @@ describe('WebVTTParser', function () {
     assert.equal(cue.text, 'Never drink liquid nitrogen.');
   });
 
-
   it('can handle this redbull.tv stream', () => {
     const vtt = `WEBVTT
                  X-TIMESTAMP-MAP=MPEGTS:131940,LOCAL:00:00:00.000
@@ -90,11 +89,11 @@ describe('WebVTTParser', function () {
     //   document.getElementsByTagName('video')[0].textTracks[1].cues[0].startTime
     assert.equal(cues[0].startTime, 15.547266666666667);
     assert.equal(cues[0].endTime, 17.68326666666667);
-    assert.equal(cues[0].text, `I'm thinking if possible,`)
+    assert.equal(cues[0].text, 'I\'m thinking if possible,');
 
     assert.equal(cues[1].startTime, 17.850266666666666);
     assert.equal(cues[1].endTime, 20.953266666666668);
-    assert.equal(cues[1].text, `in a perfect world,`)
+    assert.equal(cues[1].text, 'in a perfect world,');
   });
 
   it('can handle this stream from SVT', () => {
@@ -114,12 +113,12 @@ describe('WebVTTParser', function () {
     const cues = parse(vtt, initPTS);
     assert.equal(2, cues.length);
 
-    assert.equal(cues[0].startTime, 23.180333333333332);  // safari says 23.18
-    assert.equal(cues[0].endTime,   29.420333333333332);  // safari says 29.419
-    assert.equal(cues[0].text, `Det är onsdag, och jag hoppas\natt ni har papper och penna-`)
+    assert.equal(cues[0].startTime, 23.180333333333332); // safari says 23.18
+    assert.equal(cues[0].endTime, 29.420333333333332); // safari says 29.419
+    assert.equal(cues[0].text, 'Det är onsdag, och jag hoppas\natt ni har papper och penna-');
 
-    assert.equal(cues[1].startTime, 29.580333333333332);  // safari says 29.58
-    assert.equal(cues[1].endTime,   35.580333333333336);  // safari says 35.58
-    assert.equal(cues[1].text, `-sinnet vaket och öronen spetsade. Vi\ntävlar i konst, litteratur och musik.`)
+    assert.equal(cues[1].startTime, 29.580333333333332); // safari says 29.58
+    assert.equal(cues[1].endTime, 35.580333333333336); // safari says 35.58
+    assert.equal(cues[1].text, '-sinnet vaket och öronen spetsade. Vi\ntävlar i konst, litteratur och musik.');
   });
 });
