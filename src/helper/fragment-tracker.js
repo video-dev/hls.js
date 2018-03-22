@@ -99,16 +99,18 @@ export class FragmentTracker extends EventHandler {
   detectPartialFragments (fragment) {
     let fragKey = this.getFragmentKey(fragment);
     let fragmentEntity = this.fragments[fragKey];
-    fragmentEntity.buffered = true;
+    if (fragmentEntity) {
+      fragmentEntity.buffered = true;
 
-    Object.keys(this.timeRanges).forEach(elementaryStream => {
-      if (fragment.hasElementaryStream(elementaryStream) === true) {
-        let timeRange = this.timeRanges[elementaryStream];
-        // Check for malformed fragments
-        // Gaps need to be calculated for each elementaryStream
-        fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
-      }
-    });
+      Object.keys(this.timeRanges).forEach(elementaryStream => {
+        if (fragment.hasElementaryStream(elementaryStream) === true) {
+          let timeRange = this.timeRanges[elementaryStream];
+          // Check for malformed fragments
+          // Gaps need to be calculated for each elementaryStream
+          fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
+        }
+      });
+    }
   }
 
   getBufferedTimes (startPTS, endPTS, timeRange) {
@@ -226,13 +228,16 @@ export class FragmentTracker extends EventHandler {
    */
   onFragLoaded (e) {
     let fragment = e.frag;
-    let fragKey = this.getFragmentKey(fragment);
-    let fragmentEntity = {
-      body: fragment,
-      range: Object.create(null),
-      buffered: false
-    };
-    this.fragments[fragKey] = fragmentEntity;
+    // dont track initsegment (for which sn is not a number)
+    if (!isNaN(fragment.sn)) {
+      let fragKey = this.getFragmentKey(fragment);
+      let fragmentEntity = {
+        body: fragment,
+        range: Object.create(null),
+        buffered: false
+      };
+      this.fragments[fragKey] = fragmentEntity;
+    }
   }
 
   /**
