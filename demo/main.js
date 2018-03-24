@@ -170,6 +170,31 @@ function trimEventHistory() {
   trimArray(events.bitrate, x);
 }
 
+function trimArray( target, limit ) {
+  if( limit < 0 ) {
+    return;
+  }
+
+  while(target.length > limit )
+  {
+    target.shift();
+  }
+}
+
+function trimEventHistory() {
+  const x = limitMetrics;
+
+  if( x < 0) {
+    return;
+  }
+
+  trimArray(events.load, x);
+  trimArray(events.buffer, x);
+  trimArray(events.video, x);
+  trimArray(events.level, x);
+  trimArray(events.bitrate, x);
+}
+
 function loadSelectedStream() {
 
   url = $('#streamURL').val()
