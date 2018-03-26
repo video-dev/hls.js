@@ -14,15 +14,14 @@ export default class LevelController extends EventHandler {
       Event.MANIFEST_LOADED,
       Event.LEVEL_LOADED,
       Event.FRAG_LOADED,
-      Event.ERROR
-    );
+      Event.ERROR);
     this.canload = false;
     this.currentLevelIndex = null;
     this.manualLevelIndex = -1;
     this.timer = null;
   }
 
-  destroy () {
+  onHandlerDestroying () {
     this.cleanTimer();
     this.manualLevelIndex = -1;
   }
@@ -170,8 +169,6 @@ export default class LevelController extends EventHandler {
         this.currentLevelIndex = newLevel;
         let levelProperties = levels[newLevel];
         levelProperties.level = newLevel;
-        // LEVEL_SWITCH to be deprecated in next major release
-        hls.trigger(Event.LEVEL_SWITCH, levelProperties);
         hls.trigger(Event.LEVEL_SWITCHING, levelProperties);
       }
       let level = levels[newLevel], levelDetails = level.details;
@@ -247,7 +244,6 @@ export default class LevelController extends EventHandler {
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:
     case ErrorDetails.FRAG_LOAD_TIMEOUT:
-    case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
     case ErrorDetails.KEY_LOAD_ERROR:
     case ErrorDetails.KEY_LOAD_TIMEOUT:
       levelIndex = data.frag.level;

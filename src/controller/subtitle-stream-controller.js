@@ -30,6 +30,7 @@ class SubtitleStreamController extends TaskLoop {
     this.vttFragSNsProcessed = {};
     this.vttFragQueues = undefined;
     this.currentlyProcessing = null;
+    this.state = State.STOPPED;
     this.currentTrackId = -1;
     this.decrypter = new Decrypter(hls.observer, hls.config);
   }
