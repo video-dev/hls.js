@@ -61,7 +61,7 @@ const demoConfig = clone(baseConfig, {
   devtool: 'source-map'
 });
 
-
+// FIXME: rename to getPluginsForConfigType
 function getPluginsForConfig(type, minify = false) {
   // common plugins.
 
@@ -73,14 +73,16 @@ function getPluginsForConfig(type, minify = false) {
     '\n'
   );
 
+  // functional plugins
   const plugins = [
-    new webpack.optimize.OccurrenceOrderPlugin(),
     new webpack.DefinePlugin(defineConstants)
   ];
 
+  // minification / optimization plugins
+  // we can not use them in debug mode, to optimize for build speed
   if (minify) {
-    // minification plugins.
     return plugins.concat([
+      new webpack.optimize.OccurrenceOrderPlugin(),
       new webpack.optimize.UglifyJsPlugin(uglifyJsOptions),
       new webpack.LoaderOptionsPlugin({
         minimize: true,
@@ -102,6 +104,7 @@ function getPluginsForConfig(type, minify = false) {
   return plugins;
 }
 
+// FIXME: rename to getConstantsForConfigType
 function getConstantsForConfig(type) {
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
@@ -213,6 +216,7 @@ multiConfig.push(demoConfig);
 module.exports = (envArgs) => {
   if (!envArgs) {
     // If no arguments are specified, return every configuration
+    console.log('No environment args found, using all configs')
     return multiConfig;
   }
 
@@ -220,10 +224,13 @@ module.exports = (envArgs) => {
   const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
   // Filter out config with name
   const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
+
   if (!enabledConfig) {
     console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
     return;
   }
+
+  console.log('\nFound webpack -env args, only building for config name:', enabledConfigName, '\n')
 
   return [enabledConfig, demoConfig];
 };
