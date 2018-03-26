@@ -11,12 +11,12 @@ const levels = [
   {
     width: 540,
     height: 540,
-    bandwidth: 2000,
+    bandwidth: 2000
   },
   {
     width: 540,
     height: 540,
-    bandwidth: 3000,
+    bandwidth: 3000
   },
   {
     width: 720,

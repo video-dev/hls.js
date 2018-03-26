@@ -1,5 +1,5 @@
-var BinarySearch = {
-    /**
+let BinarySearch = {
+  /**
      * Searches for an item in an array which matches a certain condition.
      * This requires the condition to only match one item in the array,
      * and for the array to be ordered.
@@ -14,30 +14,27 @@ var BinarySearch = {
      *
      * @return {*} The object if it is found or null otherwise.
      */
-    search: function(list, comparisonFunction) {
-        var minIndex = 0;
-        var maxIndex = list.length - 1;
-        var currentIndex = null;
-        var currentElement = null;
-     
-        while (minIndex <= maxIndex) {
-            currentIndex = (minIndex + maxIndex) / 2 | 0;
-            currentElement = list[currentIndex];
-            
-            var comparisonResult = comparisonFunction(currentElement);
-            if (comparisonResult > 0) {
-                minIndex = currentIndex + 1;
-            }
-            else if (comparisonResult < 0) {
-                maxIndex = currentIndex - 1;
-            }
-            else {
-                return currentElement;
-            }
-        }
-     
-        return null;
+  search: function (list, comparisonFunction) {
+    let minIndex = 0;
+    let maxIndex = list.length - 1;
+    let currentIndex = null;
+    let currentElement = null;
+
+    while (minIndex <= maxIndex) {
+      currentIndex = (minIndex + maxIndex) / 2 | 0;
+      currentElement = list[currentIndex];
+
+      let comparisonResult = comparisonFunction(currentElement);
+      if (comparisonResult > 0)
+        minIndex = currentIndex + 1;
+      else if (comparisonResult < 0)
+        maxIndex = currentIndex - 1;
+      else
+        return currentElement;
     }
+
+    return null;
+  }
 };
 
 export default BinarySearch;

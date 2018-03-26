@@ -7,7 +7,7 @@ const mockReferenceFrag = {
   startPTS: 20,
   endPTS: 24,
   duration: 4,
-  cc: 0,
+  cc: 0
 };
 
 const mockFrags = [
@@ -16,7 +16,7 @@ const mockFrags = [
     startPTS: 0,
     endPTS: 4,
     duration: 4,
-    cc: 0,
+    cc: 0
   },
   {
     start: 4,
@@ -34,9 +34,8 @@ const mockFrags = [
   }
 ];
 
-
 describe('level-helper', function () {
-  it ('adjusts level fragments with overlapping CC range using a reference fragment', function () {
+  it('adjusts level fragments with overlapping CC range using a reference fragment', function () {
     const details = {
       fragments: mockFrags.slice(0),
       PTSKnown: false
@@ -70,21 +69,19 @@ describe('level-helper', function () {
     assert.equal(true, details.PTSKnown);
   });
 
-
-it ('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
-
-    const lastFrag = { cc : 0 };
+  it('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
+    const lastFrag = { cc: 0 };
     const lastLevel = {
-      details : {
-        PTSKnown : true,
-        programDateTime : new Date('2017-08-28 00:00:00'),
-        fragments : [
+      details: {
+        PTSKnown: true,
+        programDateTime: new Date('2017-08-28 00:00:00'),
+        fragments: [
           {
             start: 20,
             startPTS: 20,
             endPTS: 24,
             duration: 4,
-            cc: 0,
+            cc: 0
           },
           {
             start: 24,
@@ -104,73 +101,72 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
       }
     };
 
-    var details = {
+    let details = {
       fragments: [
-          {
-            start: 0,
-            startPTS: 0,
-            endPTS: 4,
-            duration: 4,
-            cc: 2,
-          },
-          {
-            start: 4,
-            startPTS: 4,
-            endPTS: 8,
-            duration: 4,
-            cc: 2
-          },
-          {
-            start: 8,
-            startPTS: 8,
-            endPTS: 16,
-            duration: 8,
-            cc: 3
-          }
-        ],
+        {
+          start: 0,
+          startPTS: 0,
+          endPTS: 4,
+          duration: 4,
+          cc: 2
+        },
+        {
+          start: 4,
+          startPTS: 4,
+          endPTS: 8,
+          duration: 4,
+          cc: 2
+        },
+        {
+          start: 8,
+          startPTS: 8,
+          endPTS: 16,
+          duration: 8,
+          cc: 3
+        }
+      ],
       PTSKnown: false,
-      programDateTime : new Date('2017-08-28 00:00:50'),
-      startCC : 2,
-      endCC : 3
+      programDateTime: new Date('2017-08-28 00:00:50'),
+      startCC: 2,
+      endCC: 3
     };
 
-    var detailsExpected = {
-        fragments : [
-          {
-            start: 70,
-            startPTS: 70,
-            endPTS: 74,
-            duration: 4,
-            cc: 2
-          },
-          {
-            start: 74,
-            startPTS: 74,
-            endPTS: 78,
-            duration: 4,
-            cc: 2
-          },
-          {
-            start: 78,
-            startPTS: 78,
-            endPTS: 86,
-            duration: 8,
-            cc: 3
-          }
-        ],
+    let detailsExpected = {
+      fragments: [
+        {
+          start: 70,
+          startPTS: 70,
+          endPTS: 74,
+          duration: 4,
+          cc: 2
+        },
+        {
+          start: 74,
+          startPTS: 74,
+          endPTS: 78,
+          duration: 4,
+          cc: 2
+        },
+        {
+          start: 78,
+          startPTS: 78,
+          endPTS: 86,
+          duration: 8,
+          cc: 3
+        }
+      ],
       PTSKnown: true,
-      programDateTime : new Date('2017-08-28 00:00:50'),
-      startCC : 2,
-      endCC : 3
+      programDateTime: new Date('2017-08-28 00:00:50'),
+      startCC: 2,
+      endCC: 3
     };
-    alignDiscontinuities(lastFrag,lastLevel,details);
-    assert.deepEqual(detailsExpected,details);
+    alignDiscontinuities(lastFrag, lastLevel, details);
+    assert.deepEqual(detailsExpected, details);
   });
-
 
   it('finds the first fragment in an array which matches the CC of the first fragment in another array', function () {
     const prevDetails = {
-      fragments: [mockReferenceFrag, { cc: 1  }]
+      fragments: [mockReferenceFrag, { cc: 1 }]
     };
     const curDetails = {
       fragments: mockFrags
