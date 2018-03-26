@@ -256,8 +256,8 @@ class PlaylistLoader extends EventHandler {
       return;
     }
 
-    // Check if chunk-list or master
-    if (string.indexOf('#EXTINF:') > 0)
+    // Check if chunk-list or master. handle empty chunk list case (first EXTINF not signaled, but TARGETDURATION present)
+    if (string.indexOf('#EXTINF:') > 0 || string.indexOf('#EXT-X-TARGETDURATION:') > 0)
       this._handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
     else
       this._handleMasterPlaylist(response, stats, context, networkDetails);
