@@ -6621,7 +6621,18 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
     var levels = m3u8_parser.parseMasterPlaylist(string, url);
     if (!levels.length) {
-      this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
+      if (type === ContextType.MANIFEST) {
+        this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
+      } else {
+        hls.trigger(events["a" /* default */].ERROR, {
+          type: errors["b" /* ErrorTypes */].NETWORK_ERROR,
+          details: errors["a" /* ErrorDetails */].LEVEL_EMPTY_ERROR,
+          fatal: false,
+          url: url,
+          reason: 'no fragments found in level',
+          level: context.level
+        });
+      }
       return;
     }
 
