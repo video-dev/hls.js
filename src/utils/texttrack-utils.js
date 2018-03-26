@@ -13,8 +13,18 @@ export function sendAddTrackEvent (track, videoEl) {
 }
 
 export function clearCurrentCues (track) {
-  if (track && track.cues) {
-    while (track.cues.length > 0)
+  if (track) {
+    let trackMode = track.mode;
+
+    // When track.mode is disabled, track.cues will be null.
+    // To guarantee the removal of cues, we need to temporarily
+    // change the mode to hidden
+    if (trackMode === 'disabled')
+      track.mode = 'hidden';
+
+    while (track.cues && track.cues.length > 0)
       track.removeCue(track.cues[0]);
+
+    track.mode = trackMode;
   }
 }

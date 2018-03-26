@@ -310,7 +310,7 @@ export default class Hls {
     this.attachMedia(media);
   }
 
-  removeLevel(levelIndex, urlId = 0) {
+  removeLevel (levelIndex, urlId = 0) {
     this.levelController.removeLevel(levelIndex, urlId);
   }
 
@@ -408,7 +408,7 @@ export default class Hls {
 
   /** Return Estimated Bandwidth
    **/
-  get bandwidthEstimate() {
+  get bandwidthEstimate () {
     const bwEstimator = this.abrController._bwEstimator;
     return bwEstimator ? bwEstimator.getEstimate() : NaN;
   }
