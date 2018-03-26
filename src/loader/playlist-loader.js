@@ -279,7 +279,7 @@ class PlaylistLoader extends EventHandler {
 
     const levels = M3U8Parser.parseMasterPlaylist(string, url);
     if (!levels.length) {
-      if (type === ContextType.MANIFEST) {
+      if (context.type === ContextType.MANIFEST) {
         this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
       } else {
         hls.trigger(Event.ERROR, {
