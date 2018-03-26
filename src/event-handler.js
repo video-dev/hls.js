@@ -8,6 +8,8 @@ import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
 import Event from './events';
 
+const DEBUG_LOG_ENABLED_DEFAULT = false;
+
 const FORBIDDEN_EVENT_NAMES = new Set([
   'hlsEventGeneric',
   'hlsHandlerDestroying',
@@ -20,6 +22,12 @@ class EventHandler {
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
     this.useGenericHandler = true;
+
+    /**
+     * @member {boolean} _debugLogEnabled
+     * @private
+     */
+    this._debugLogEnabled = DEBUG_LOG_ENABLED_DEFAULT;
 
     this.registerListeners();
   }
@@ -64,6 +72,9 @@ class EventHandler {
   }
 
   onEventGeneric (event, data) {
+    if (this._debugLogEnabled)
+      logger.debug('Enter handling event:', event);
+
     let eventToFunction = function (event, data) {
       let funcName = 'on' + event.replace('hls', '');
       if (typeof this[funcName] !== 'function')
@@ -77,6 +88,13 @@ class EventHandler {
       logger.error(`An internal error happened while handling event ${event}. Error message: "${err.message}". Here is a stacktrace:`, err);
       this.hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, err: err });
     }
+
+    if (this._debugLogEnabled)
+      logger.debug('Done handling event:', event);
+  }
+
+  setDebugLogEnabled (enabled) {
+    this._debugLogEnabled = enabled;
   }
 }
 
