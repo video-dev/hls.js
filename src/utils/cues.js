@@ -1,13 +1,12 @@
 import { fixLineBreaks } from './vttparser';
-import VTTCue from './vttcue';
 
-export function createCues(startTime, endTime, captionScreen) {
+export function newCue (track, startTime, endTime, captionScreen) {
   let row;
   let cue;
   let indenting;
   let indent;
   let text;
-  const cues = [];
+  let VTTCue = window.VTTCue || window.TextTrackCue;
 
   for (let r = 0; r < captionScreen.rows.length; r++) {
     row = captionScreen.rows[r];
@@ -15,23 +14,21 @@ export function createCues(startTime, endTime, captionScreen) {
     indent = 0;
     text = '';
 
-      if (!row.isEmpty()){
-
-        for (var c=0; c<row.chars.length; c++){
-
-          if (row.chars[c].uchar.match(/\s/) && indenting){
-
-            indent++;
-          }
-          else
-          {
-            text += row.chars[c].uchar;
-            indenting = false;
-          }
+    if (!row.isEmpty()) {
+      for (let c = 0; c < row.chars.length; c++) {
+        if (row.chars[c].uchar.match(/\s/) && indenting) {
+          indent++;
+        } else {
+          text += row.chars[c].uchar;
+          indenting = false;
         }
-        //To be used for cleaning-up orphaned roll-up captions
-        row.cueStartTime = startTime;
+      }
+      // To be used for cleaning-up orphaned roll-up captions
+      row.cueStartTime = startTime;
 
+      // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
+      if (startTime === endTime)
+        endTime += 0.0001;
         // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
         if (startTime === endTime){
 
@@ -40,14 +37,10 @@ export function createCues(startTime, endTime, captionScreen) {
 
       cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
 
-        if (indent >= 16){
-
-          indent--;
-        }
-        else
-        {
-          indent++;
-        }
+      if (indent >= 16)
+        indent--;
+      else
+        indent++;
 
         // The row value specifies which of the fifteen screen rows should contain the caption text
         // https://en.wikipedia.org/wiki/EIA-608#Control_commands
