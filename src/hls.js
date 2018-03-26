@@ -21,6 +21,8 @@ import { FragmentTracker } from './helper/fragment-tracker';
 import HlsEvents from './events';
 import EventEmitter from 'events';
 
+const ENABLE_TRACE_LOG_EVENT_TRIGGER = false;
+
 // polyfill for IE11
 require('string.prototype.endswith');
 
@@ -111,6 +113,9 @@ export default class Hls {
     // observer setup
     let observer = this.observer = new EventEmitter();
     observer.trigger = function trigger (event, ...data) {
+      if (ENABLE_TRACE_LOG_EVENT_TRIGGER)
+        logger.trace('Event triggered:', event);
+
       observer.emit(event, event, ...data);
     };
 
