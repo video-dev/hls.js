@@ -9,6 +9,7 @@ describe('TimelineController', () => {
 
   beforeEach(() => {
     hls = new Hls();
+    hls.config.renderNatively = true;
     hls.config.enableWebVTT = true;
     timelineController = new TimelineController(hls);
     timelineController.media = document.createElement('video');
