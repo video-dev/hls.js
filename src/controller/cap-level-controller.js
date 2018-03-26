@@ -12,7 +12,7 @@ class CapLevelController extends EventHandler {
       Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED,
       Event.LEVELS_UPDATED);
-	}
+  }
 
   destroy () {
     if (this.hls.config.capLevelToPlayerSize) {
@@ -47,11 +47,11 @@ class CapLevelController extends EventHandler {
     }
   }
 
-  onLevelsUpdated(data) {
-	  this.levels = data.levels;
+  onLevelsUpdated (data) {
+    this.levels = data.levels;
   }
 
-  detectPlayerSize() {
+  detectPlayerSize () {
     if (this.media && this.mediaHeight > 0 && this.mediaWidth > 0) {
       let levelsLength = this.levels ? this.levels.length : 0;
       if (levelsLength) {

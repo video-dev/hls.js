@@ -4,7 +4,7 @@
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-export function getAudioConfig(observer, data, offset, audioCodec) {
+export function getAudioConfig (observer, data, offset, audioCodec) {
   let adtsObjectType, // :int
     adtsSampleingIndex, // :int
     adtsExtensionSampleingIndex, // :int

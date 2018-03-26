@@ -160,11 +160,11 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           window.switchToHighestLevel('next');
         };
         window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
-          var currentTime = video.currentTime;
+          let currentTime = video.currentTime;
           if (data.level === window.hls.levels.length - 1) {
             console.log('[log] > switched on level:' + data.level);
             window.setTimeout(function () {
-              var newCurrentTime = video.currentTime;
+              let newCurrentTime = video.currentTime;
               console.log('[log] > currentTime delta :' + (newCurrentTime - currentTime));
               callback({ code: newCurrentTime > currentTime, logs: window.logString });
             }, 2000);

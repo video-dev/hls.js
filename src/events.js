@@ -46,8 +46,6 @@ const HlsEvents = {
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
-  LEVEL_UPDATED: 'hlsLevelUpdated',
-  // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVELS_UPDATED: 'hlsLevelsUpdated',
   // fired to notify that levels have changed outside of a manifest parsing event - data: { levels }
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',

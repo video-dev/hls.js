@@ -179,11 +179,10 @@ class StreamController extends TaskLoop {
 
     // if we have not yet loaded any fragment, start loading from start position
     let pos = 0;
-    if (this.loadedmetadata) {
+    if (this.loadedmetadata)
       pos = media.currentTime;
-    } else if (this.nextLoadPosition) {
+    else if (this.nextLoadPosition)
       pos = this.nextLoadPosition;
-    }
 
     // determine next load level
     let level = hls.nextLoadLevel,
@@ -600,7 +599,7 @@ class StreamController extends TaskLoop {
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-      if(currentTime > this.lastCurrentTime)
+      if (currentTime > this.lastCurrentTime)
         this.lastCurrentTime = currentTime;
 
       if (BufferHelper.isBuffered(video, currentTime)) {
@@ -1484,11 +1483,11 @@ class StreamController extends TaskLoop {
     this.fragPrevious = null;
   }
 
-  onLevelsUpdated(data) {
+  onLevelsUpdated (data) {
     this.levels = data.levels;
   }
 
-  swapAudioCodec() {
+  swapAudioCodec () {
     this.audioCodecSwap = !this.audioCodecSwap;
   }
 
