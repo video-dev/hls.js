@@ -6,7 +6,7 @@
 
 ### Resolves issues:
 
-### CheckLists
+### Checklist
 
 - [ ] changes have been done against master branch, and PR does not conflict
 - [ ] no commits have been done in dist folder (we will take care of updating it)
