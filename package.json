@@ -19,14 +19,10 @@
   "scripts": {
     "build": "webpack --progress",
     "build:watch": "webpack --progress --watch",
-    "build:analyze": "ANALYZE=true webpack --progress",
     "build:release": "npm run build && npm run test && git add dist/* && git commit -m 'Update dist' && npm run docs:release",
     "commit:release": "npm run build:release && git add dist/* && git commit -m 'update dist'",
     "dev": "webpack-dev-server --progress --env.debug --port 8000",
     "docs": "esdoc",
-    "docs:clean": "rm -Rf html/docs",
-    "docs:update": "git add docs/html && git commit docs/html -m 'Update docs'",
-    "docs:release": "npm run docs:clean && npm run docs:generate && npm run docs:update",
     "lint": "eslint src/ && eslint/test",
     "lint:fix": "eslint src/ tests/ --fix",
     "pre-push": "npm run lint && npm run test:unit",
@@ -34,13 +30,14 @@
     "release:patch": "mversion p && npm run build:release",
     "release:minor": "mversion mi && npm run build:release",
     "release:major": "mversion ma && npm run build:release",
-    "start": "npm run dev",
     "test": "npm run test:unit && npm run test:func",
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/setup.js --timeout 40000"
   },
-  "dependencies": {},
+  "dependencies": {
+
+  },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
     "babel-core": "^6.25.0",
