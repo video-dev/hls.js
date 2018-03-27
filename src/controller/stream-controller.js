@@ -1473,9 +1473,10 @@ class StreamController extends TaskLoop {
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-    this.fragmentTracker.detectEvictedFragments(Fragment.ElementaryStreamTypes.VIDEO, media.buffered);
-
+    if (media) {
+      // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+      this.fragmentTracker.detectEvictedFragments(Fragment.ElementaryStreamTypes.VIDEO, media.buffered);
+    }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
     // reset reference to frag
