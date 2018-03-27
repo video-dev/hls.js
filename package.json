@@ -16,14 +16,6 @@
     "url": "https://github.com/video-dev/hls.js/issues"
   },
   "main": "./dist/hls.js",
-  "nyc": {
-    "reporter": [
-      "lcov"
-    ],
-    "exclude": [
-      "tests"
-    ]
-  },
   "scripts": {
     "build": "webpack --progress",
     "build:watch": "webpack --progress --watch",
@@ -31,17 +23,13 @@
     "build:release": "npm run build && npm run test && git add dist/* && git commit -m 'Update dist' && npm run docs:release",
     "commit:release": "npm run build:release && git add dist/* && git commit -m 'update dist'",
     "dev": "webpack-dev-server --progress --env.debug --port 8000",
-    "docs": "npm run docs:generate",
-    "docs:generate": "esdoc",
+    "docs": "esdoc",
     "docs:clean": "rm -Rf html/docs",
     "docs:update": "git add docs/html && git commit docs/html -m 'Update docs'",
     "docs:release": "npm run docs:clean && npm run docs:generate && npm run docs:update",
-    "lint": "npm run lint:src && npm run lint:tests",
+    "lint": "eslint src/ && eslint/test",
     "lint:fix": "eslint src/ tests/ --fix",
-    "lint:src": "eslint src/",
-    "lint:tests": "eslint tests/",
-    "precommit": "./scripts/precommit",
-    "pretest": "npm run lint",
+    "pre-push": "npm run lint && npm run test:unit",
     "release:pre": "mversion prerelease && npm run build:release",
     "release:patch": "mversion p && npm run build:release",
     "release:minor": "mversion mi && npm run build:release",
@@ -53,7 +41,6 @@
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/setup.js --timeout 40000"
   },
   "dependencies": {
-    "string.prototype.endswith": "^0.2.0",
     "url-toolkit": "^2.1.2"
   },
   "devDependencies": {
