@@ -23,7 +23,7 @@
     "commit:release": "npm run build:release && git add dist/* && git commit -m 'update dist'",
     "dev": "webpack-dev-server --progress --env.debug --port 8000",
     "docs": "esdoc",
-    "lint": "eslint src/ && eslint/test",
+    "lint": "eslint src/ && eslint test/",
     "lint:fix": "eslint src/ tests/ --fix",
     "pre-push": "npm run lint && npm run test:unit",
     "release:pre": "mversion prerelease && npm run build:release",
