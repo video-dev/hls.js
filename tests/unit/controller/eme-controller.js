@@ -46,8 +46,8 @@ describe('EMEController', () => {
     emeController.onMediaAttached({ media });
     emeController.onManifestParsed({ media });
 
-    media.setMediaKeys.callCount.should.be.equal(0);
-    reqMediaKsAccessSpy.callCount.should.be.equal(0);
+    assert.equal(media.setMediaKeys.callCount, 0);
+    assert.equal(reqMediaKsAccessSpy.callCount, 0);
   });
 
   it('should request keys when `emeEnabled` is true (but not set them)', (done) => {
@@ -64,14 +64,14 @@ describe('EMEController', () => {
 
     emeController.onMediaAttached({ media });
 
-    media.setMediaKeys.callCount.should.be.equal(0);
-    reqMediaKsAccessSpy.callCount.should.be.equal(0);
+    assert.equal(media.setMediaKeys.callCount, 0);
+    assert.equal(reqMediaKsAccessSpy.callCount, 0);
 
     emeController.onManifestParsed({ levels: fakeLevels });
 
     setTimeout(() => {
-      media.setMediaKeys.callCount.should.be.equal(0);
-      reqMediaKsAccessSpy.callCount.should.be.equal(1);
+      assert.equal(media.setMediaKeys.callCount, 0);
+      assert.equal(reqMediaKsAccessSpy.callCount, 1);
       done();
     }, 0);
   });
