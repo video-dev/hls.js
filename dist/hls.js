@@ -1496,14 +1496,14 @@ function isUndefined(arg) {
         if (!opts.alwaysNormalize) {
           return baseURL;
         }
-        var basePartsForNormalise = this.parseURL(baseURL);
-        if (!baseParts) {
+        var basePartsForNormalise = URLToolkit.parseURL(baseURL);
+        if (!basePartsForNormalise) {
           throw new Error('Error trying to parse base URL.');
         }
         basePartsForNormalise.path = URLToolkit.normalizePath(basePartsForNormalise.path);
         return URLToolkit.buildURLFromParts(basePartsForNormalise);
       }
-      var relativeParts = this.parseURL(relativeURL);
+      var relativeParts = URLToolkit.parseURL(relativeURL);
       if (!relativeParts) {
         throw new Error('Error trying to parse relative URL.');
       }
@@ -1516,7 +1516,7 @@ function isUndefined(arg) {
         relativeParts.path = URLToolkit.normalizePath(relativeParts.path);
         return URLToolkit.buildURLFromParts(relativeParts);
       }
-      var baseParts = this.parseURL(baseURL);
+      var baseParts = URLToolkit.parseURL(baseURL);
       if (!baseParts) {
         throw new Error('Error trying to parse base URL.');
       }
@@ -15606,9 +15606,13 @@ var hls_Hls = function () {
       return Math.max(this.levelController.firstLevel, this.minAutoLevel);
     }
 
+    /** Return Estimated Bandwidth
+     **/
+    ,
+
+
     /** set first level (index of first level referenced in manifest)
     **/
-    ,
     set: function set(newLevel) {
       logger["b" /* logger */].log('set firstLevel:' + newLevel);
       this.levelController.firstLevel = newLevel;
@@ -15619,6 +15623,12 @@ var hls_Hls = function () {
         if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
     **/
 
+  }, {
+    key: 'bandwidthEstimate',
+    get: function get() {
+      var bwEstimator = this.abrController._bwEstimator;
+      return bwEstimator ? bwEstimator.getEstimate() : NaN;
+    }
   }, {
     key: 'startLevel',
     get: function get() {
