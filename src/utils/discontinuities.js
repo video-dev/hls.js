@@ -78,7 +78,7 @@ export function alignDiscontinuities (lastFrag, lastLevel, details) {
     }
   }
   // try to align using programDateTime attribute (if available)
-  if (details.PTSKnown === false && lastLevel && lastLevel.details) {
+  if (details.PTSKnown === false && lastLevel && lastLevel.details && lastLevel.details.fragments && lastLevel.details.fragments.length) {
     // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
     // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
     // then we can deduce that playlist B sliding is 1000+8 = 1008s

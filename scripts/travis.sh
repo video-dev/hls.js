@@ -2,10 +2,13 @@
 # https://docs.travis-ci.com/user/customizing-the-build/#Implementing-Complex-Build-Steps
 set -ev
 
-npm install
+npm install --quiet
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
 	npm run lint && npm run build
+  # check that hls.js doesn't error if requiring in node
+  # see https://github.com/video-dev/hls.js/pull/1642
+  node -e 'require("./" + require("./package.json").main)'
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
 	npm run test:unit
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then

@@ -445,7 +445,8 @@ class StreamController extends TaskLoop {
       if (!levelDetails.programDateTime) { // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
         foundFrag = this._findFragmentBySN(fragPrevious, fragments, bufferEnd, end);
       } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = this._findFragmentByPDT(fragments, (bufferEnd * 1000) + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0));
+        // compute PDT of bufferEnd: PDT(bufferEnd) = 1000*bufferEnd + PDT(start) = 1000*bufferEnd + PDT(level) - level sliding
+        foundFrag = this._findFragmentByPDT(fragments, (bufferEnd * 1000) + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0) - 1000 * start);
       }
     } else {
       // reach end of playlist
@@ -1474,9 +1475,10 @@ class StreamController extends TaskLoop {
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-    this.fragmentTracker.detectEvictedFragments(Fragment.ElementaryStreamTypes.VIDEO, media.buffered);
-
+    if (media) {
+      // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+      this.fragmentTracker.detectEvictedFragments(Fragment.ElementaryStreamTypes.VIDEO, media.buffered);
+    }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
     // reset reference to frag
