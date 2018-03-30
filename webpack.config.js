@@ -1,5 +1,3 @@
-'use strict';
-
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
@@ -43,7 +41,7 @@ const baseConfig = {
         }
       }
     ]
-  }
+  },
 };
 
 const demoConfig = clone(baseConfig, {
@@ -63,8 +61,7 @@ const demoConfig = clone(baseConfig, {
   devtool: 'source-map'
 });
 
-
-function getPluginsForConfig(type, minify) {
+function getPluginsForConfig(type, minify = false) {
   // common plugins.
 
   const defineConstants = getConstantsForConfig(type);

@@ -306,7 +306,7 @@ export default class M3U8Parser {
       // but this is to be able to handle SIDX.
       // FIXME: replace string test by a regex that matches
       //        also `m4s` `m4a` `m4v` and other popular extensions
-      if (level.fragments.every((frag) => frag.relurl.endsWith('.mp4'))) {
+      if (level.fragments.every((frag) => endsWith(frag.relurl, '.mp4'))) {
         logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
         frag = new Fragment();
@@ -323,4 +323,8 @@ export default class M3U8Parser {
 
     return level;
   }
+}
+
+function endsWith (str, search) {
+  return str.substring(str.length - search.length, str.length) === search;
 }

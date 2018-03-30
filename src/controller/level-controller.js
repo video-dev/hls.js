@@ -355,7 +355,8 @@ export default class LevelController extends EventHandler {
       let newDetails = data.details;
       // if current playlist is a live playlist, arm a timer to reload it
       if (newDetails.live) {
-        let reloadInterval = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration),
+        const targetdurationMs = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration);
+        let reloadInterval = targetdurationMs,
           curDetails = curLevel.details;
         if (curDetails && newDetails.endSN === curDetails.endSN) {
           // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
@@ -366,9 +367,9 @@ export default class LevelController extends EventHandler {
         }
         // decrement reloadInterval with level loading delay
         reloadInterval -= performance.now() - data.stats.trequest;
-        // in any case, don't reload more than every second
-        reloadInterval = Math.max(1000, Math.round(reloadInterval));
-        logger.log(`live playlist, reload in ${reloadInterval} ms`);
+        // in any case, don't reload more than half of target duration
+        reloadInterval = Math.max(targetdurationMs / 2, Math.round(reloadInterval));
+        logger.log(`live playlist, reload in ${Math.round(reloadInterval)} ms`);
         this.timer = setTimeout(() => this.loadLevel(), reloadInterval);
       } else {
         this.cleanTimer();

@@ -6597,8 +6597,8 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
       return;
     }
 
-    // Check if chunk-list or master
-    if (string.indexOf('#EXTINF:') > 0) this._handleTrackOrLevelPlaylist(response, stats, context, networkDetails);else this._handleMasterPlaylist(response, stats, context, networkDetails);
+    // Check if chunk-list or master. handle empty chunk list case (first EXTINF not signaled, but TARGETDURATION present)
+    if (string.indexOf('#EXTINF:') > 0 || string.indexOf('#EXT-X-TARGETDURATION:') > 0) this._handleTrackOrLevelPlaylist(response, stats, context, networkDetails);else this._handleMasterPlaylist(response, stats, context, networkDetails);
   };
 
   PlaylistLoader.prototype.loaderror = function loaderror(response, context) {
@@ -6610,7 +6610,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
   PlaylistLoader.prototype.loadtimeout = function loadtimeout(stats, context) {
     var networkDetails = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-    this._handleNetworkError(context, networkDetails);
+    this._handleNetworkError(context, networkDetails, true);
   };
 
   PlaylistLoader.prototype._handleMasterPlaylist = function _handleMasterPlaylist(response, stats, context, networkDetails) {
@@ -6766,6 +6766,8 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
   };
 
   PlaylistLoader.prototype._handleNetworkError = function _handleNetworkError(context, networkDetails) {
+    var timeout = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
     var details = void 0;
     var fatal = void 0;
 
@@ -6773,15 +6775,15 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
     switch (context.type) {
       case ContextType.MANIFEST:
-        details = errors["a" /* ErrorDetails */].MANIFEST_LOAD_TIMEOUT;
+        details = timeout ? errors["a" /* ErrorDetails */].MANIFEST_LOAD_TIMEOUT : errors["a" /* ErrorDetails */].MANIFEST_LOAD_ERROR;
         fatal = true;
         break;
       case ContextType.LEVEL:
-        details = errors["a" /* ErrorDetails */].LEVEL_LOAD_TIMEOUT;
+        details = timeout ? errors["a" /* ErrorDetails */].LEVEL_LOAD_TIMEOUT : errors["a" /* ErrorDetails */].LEVEL_LOAD_ERROR;
         fatal = false;
         break;
       case ContextType.AUDIO_TRACK:
-        details = errors["a" /* ErrorDetails */].AUDIO_TRACK_LOAD_TIMEOUT;
+        details = timeout ? errors["a" /* ErrorDetails */].AUDIO_TRACK_LOAD_TIMEOUT : errors["a" /* ErrorDetails */].AUDIO_TRACK_LOAD_ERROR;
         fatal = false;
         break;
       default:
@@ -7967,7 +7969,7 @@ function alignDiscontinuities(lastFrag, lastLevel, details) {
     }
   }
   // try to align using programDateTime attribute (if available)
-  if (details.PTSKnown === false && lastLevel && lastLevel.details) {
+  if (details.PTSKnown === false && lastLevel && lastLevel.details && lastLevel.details.fragments && lastLevel.details.fragments.length) {
     // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
     // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
     // then we can deduce that playlist B sliding is 1000+8 = 1008s
@@ -8524,7 +8526,8 @@ var stream_controller_StreamController = function (_TaskLoop) {
         foundFrag = this._findFragmentBySN(fragPrevious, fragments, bufferEnd, end);
       } else {
         // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = this._findFragmentByPDT(fragments, bufferEnd * 1000 + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0));
+        // compute PDT of bufferEnd: PDT(bufferEnd) = 1000*bufferEnd + PDT(start) = 1000*bufferEnd + PDT(level) - level sliding
+        foundFrag = this._findFragmentByPDT(fragments, bufferEnd * 1000 + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0) - 1000 * start);
       }
     } else {
       // reach end of playlist
@@ -9892,7 +9895,8 @@ var level_controller_LevelController = function (_EventHandler) {
       var newDetails = data.details;
       // if current playlist is a live playlist, arm a timer to reload it
       if (newDetails.live) {
-        var reloadInterval = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration),
+        var targetdurationMs = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration);
+        var reloadInterval = targetdurationMs,
             curDetails = curLevel.details;
         if (curDetails && newDetails.endSN === curDetails.endSN) {
           // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
@@ -9903,9 +9907,9 @@ var level_controller_LevelController = function (_EventHandler) {
         }
         // decrement reloadInterval with level loading delay
         reloadInterval -= performance.now() - data.stats.trequest;
-        // in any case, don't reload more than every second
-        reloadInterval = Math.max(1000, Math.round(reloadInterval));
-        logger["b" /* logger */].log('live playlist, reload in ' + reloadInterval + ' ms');
+        // in any case, don't reload more than half of target duration
+        reloadInterval = Math.max(targetdurationMs / 2, Math.round(reloadInterval));
+        logger["b" /* logger */].log('live playlist, reload in ' + Math.round(reloadInterval) + ' ms');
         this.timer = setTimeout(function () {
           return _this3.loadLevel();
         }, reloadInterval);
@@ -16165,7 +16169,7 @@ var hls_Hls = function () {
      * @type {string}
      */
     get: function get() {
-      return "0.9.0";
+      return "0.9.1";
     }
   }, {
     key: 'Events',
