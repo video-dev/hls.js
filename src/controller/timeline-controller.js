@@ -55,20 +55,8 @@ class TimelineController extends EventHandler {
     };
 
     if (this.config.enableCEA708Captions) {
-      let channel1 = {
-        'newCue': (startTime, endTime, screen) => {
-          this.createCaptionsTrack('textTrack1');
-          this.addCues('textTrack1', startTime, endTime, screen);
-        }
-      };
-
-      let channel2 = {
-        'newCue': (startTime, endTime, screen) => {
-          this.createCaptionsTrack('textTrack2');
-          this.addCues('textTrack2', startTime, endTime, screen);
-        }
-      };
-
+      const channel1 = new OutputFilter(this, 'textTrack1');
+      const channel2 = new OutputFilter(this, 'textTrack2');
       this.cea608Parser = new Cea608Parser(0, channel1, channel2);
     }
   }
