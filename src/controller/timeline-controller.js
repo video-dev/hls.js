@@ -117,40 +117,41 @@ class TimelineController extends EventHandler {
   }
 
   createCaptionsTrack (trackName) {
+    if (this.captionsTracks[trackName]) {
+        return;
+    }
     if (this.config.renderNatively) {
-      this.createNativeTrack(trackName);
+        this.createNativeTrack(trackName);
     } else {
-      this.createNonNativeTrack(trackName);
+        this.createNonNativeTrack(trackName);
     }
   }
 
   createNativeTrack(trackName) {
     const { label, languageCode } = this.captionsProperties[trackName];
     const captionsTracks = this.captionsTracks;
-    if (!captionsTracks[trackName]) {
-      // Enable reuse of existing text track.
-      const existingTrack = this.getExistingTrack(trackName);
-      if (!existingTrack) {
-        const textTrack = this.createTextTrack('captions', label, languageCode);
-        if (textTrack) {
-          // Set a special property on the track so we know it's managed by Hls.js
-          textTrack[trackName] = true;
-          captionsTracks[trackName] = textTrack;
-        }
-      } else {
-        captionsTracks[trackName] = existingTrack;
-        clearCurrentCues(captionsTracks[trackName]);
-        sendAddTrackEvent(captionsTracks[trackName], this.media);
+    // Enable reuse of existing text track.
+    const existingTrack = this.getExistingTrack(trackName);
+    if (!existingTrack) {
+      const textTrack = this.createTextTrack('captions', label, languageCode);
+      if (textTrack) {
+        // Set a special property on the track so we know it's managed by Hls.js
+        textTrack[trackName] = true;
+        captionsTracks[trackName] = textTrack;
       }
+    } else {
+      captionsTracks[trackName] = existingTrack;
+      clearCurrentCues(captionsTracks[trackName]);
+      sendAddTrackEvent(captionsTracks[trackName], this.media);
     }
   }
 
   createNonNativeTrack(trackName) {
     // Create a list of a single track for the provider to consume
     const { captionsTracks, captionsProperties } = this;
-    const { name, label } = captionsProperties[trackName];
+    const { label } = captionsProperties[trackName];
     const track = {
-      '_id': name,
+      '_id': trackName,
       label,
       kind: 'captions',
       'default': false
