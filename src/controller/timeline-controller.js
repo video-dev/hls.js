@@ -39,16 +39,28 @@ class TimelineController extends EventHandler {
     this.unparsedVttFrags = [];
     this.initPTS = undefined;
     this.cueRanges = [];
+    this.captionsTracks = {};
+
+    this.captionsProperties = {
+      textTrack1: {
+        label: this.config.captionsTextTrack1Label,
+        languageCode: this.config.captionsTextTrack1LanguageCode
+      },
+      textTrack2: {
+        label: this.config.captionsTextTrack2Label,
+        languageCode: this.config.captionsTextTrack2LanguageCode
+      }
+    };
 
     if (this.config.enableCEA708Captions) {
-      let channel1 = new OutputFilter(this, 1);
-      let channel2 = new OutputFilter(this, 2);
+      let channel1 = new OutputFilter(this, 'textTrack1');
+      let channel2 = new OutputFilter(this, 'textTrack2');
 
       this.cea608Parser = new Cea608Parser(0, channel1, channel2);
     }
   }
 
-  addCues (channel, startTime, endTime, screen) {
+  addCues (trackName, startTime, endTime, screen) {
     // skip cues which overlap more than 50% with previously parsed time ranges
     const ranges = this.cueRanges;
     let merged = false;
@@ -66,7 +78,7 @@ class TimelineController extends EventHandler {
     if (!merged)
       ranges.push([startTime, endTime]);
 
-    this.Cues.newCue(this[channel], startTime, endTime, screen);
+    this.Cues.newCue(this.captionsTracks[trackName], startTime, endTime, screen);
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
@@ -84,35 +96,35 @@ class TimelineController extends EventHandler {
     }
   }
 
-  getExistingTrack (channelNumber) {
-    const media = this.media;
+  getExistingTrack (trackName) {
+    const { media } = this;
     if (media) {
       for (let i = 0; i < media.textTracks.length; i++) {
         let textTrack = media.textTracks[i];
-        let propName = 'textTrack' + channelNumber;
-        if (textTrack[propName] === true)
+        if (textTrack[trackName])
           return textTrack;
       }
     }
     return null;
   }
 
-  createCaptionsTrack (track) {
-    let trackVar = 'textTrack' + track;
-    if (!this[trackVar]) {
+  createCaptionsTrack (trackName) {
+    const { label, languageCode } = this.captionsProperties[trackName];
+    const captionsTracks = this.captionsTracks;
+    if (!captionsTracks[trackName]) {
       // Enable reuse of existing text track.
-      let existingTrack = this.getExistingTrack(track);
+      const existingTrack = this.getExistingTrack(trackName);
       if (!existingTrack) {
-        const textTrack = this.createTextTrack('captions', this.config['captionsTextTrack' + track + 'Label'], this.config['captionsTextTrack' + track + 'LanguageCode']);
+        const textTrack = this.createTextTrack('captions', label, languageCode);
         if (textTrack) {
-          textTrack[trackVar] = true;
-          this[trackVar] = textTrack;
+          // Set a special property on the track so we know it's managed by Hls.js
+          textTrack[trackName] = true;
+          captionsTracks[trackName] = textTrack;
         }
       } else {
-        this[trackVar] = existingTrack;
-        clearCurrentCues(this[trackVar]);
-
-        sendAddTrackEvent(this[trackVar], this.media);
+        captionsTracks[trackName] = existingTrack;
+        clearCurrentCues(captionsTracks[trackName]);
+        sendAddTrackEvent(captionsTracks[trackName], this.media);
       }
     }
   }
@@ -133,8 +145,11 @@ class TimelineController extends EventHandler {
   }
 
   onMediaDetaching () {
-    clearCurrentCues(this.textTrack1);
-    clearCurrentCues(this.textTrack2);
+    const { captionsTracks } = this;
+    Object.keys(captionsTracks).forEach(trackName => {
+      clearCurrentCues(captionsTracks[trackName]);
+      delete captionsTracks[trackName];
+    });
   }
 
   onManifestLoading () {
