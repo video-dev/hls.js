@@ -1,5 +1,6 @@
 const assert = require('assert');
 
+import sinon from 'sinon';
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import Hls from '../../../src/hls';
 
@@ -52,7 +53,7 @@ describe('SubtitleTrackController', () => {
     });
   });
 
-  describe('setSubtitleTrackInternal', () => {
+  describe('set subtitleTrack', () => {
     it('should set active text track mode to showing', () => {
       videoElement.textTracks[0].mode = 'disabled';
 
@@ -79,6 +80,41 @@ describe('SubtitleTrackController', () => {
       subtitleTrackController.subtitleTrack = 1;
 
       assert.strictEqual(videoElement.textTracks[0].mode, 'disabled');
+    });
+
+    it('should do nothing if called with out of bound indicies', function () {
+      const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
+      subtitleTrackController.subtitleTrack = 5;
+      subtitleTrackController.subtitleTrack = -2;
+      assert.equal(stopTimerSpy.callCount, 0);
+    });
+
+    it('should dispatch SUBTITLE_TRACK_SWITCH if passed -1', function () {
+      const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
+      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.trackId = 0;
+      subtitleTrackController.subtitleTrack = -1;
+      assert.equal(stopTimerSpy.callCount, 1);
+      assert.equal(triggerSpy.callCount, 1);
+      assert.equal(triggerSpy.firstCall.calledWith('hlsSubtitleTrackSwitch'), true);
+    });
+
+    describe('_toggleTrackModes', function () {
+      // This can be the case when setting the subtitleTrack before Hls.js attaches to the mediaElement
+      it('should not throw an exception if trackId is out of the mediaElement text track bounds', function () {
+        subtitleTrackController.trackId = 2;
+        subtitleTrackController._toggleTrackModes(1);
+      });
+
+      it('should disable all textTracks if called with -1', function () {
+        [].slice.call(videoElement.textTracks).forEach(t => {
+          t.mode = 'showing';
+        });
+        subtitleTrackController._toggleTrackModes(-1);
+        [].slice.call(videoElement.textTracks).forEach(t => {
+          assert.equal(t.mode, 'disabled');
+        });
+      });
     });
   });
 });

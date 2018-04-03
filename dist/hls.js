@@ -14836,16 +14836,19 @@ var timeline_controller_TimelineController = function (_EventHandler) {
   };
 
   TimelineController.prototype._parseVTTs = function _parseVTTs(frag, payload) {
+    var _this5 = this;
+
     var vttCCs = this.vttCCs;
     if (!vttCCs[frag.cc]) {
       vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
       this.prevCC = frag.cc;
     }
-    var textTracks = this.textTracks,
-        hls = this.hls;
+    var tracks = this.config.renderNatively ? this.textTracks : this.tracks;
+    var hls = this.hls;
 
     // Parse the WebVTT file contents.
     webvtt_parser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+<<<<<<< Updated upstream
       var currentTrack = textTracks[frag.trackId];
       // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
       // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
@@ -14853,6 +14856,19 @@ var timeline_controller_TimelineController = function (_EventHandler) {
       if (currentTrack.mode === 'disabled') {
         hls.trigger(events["a" /* default */].SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
         return;
+=======
+      var currentTrack = tracks[frag.trackId];
+
+      if (_this5.config.renderNatively) {
+        cues.filter(function (cue) {
+          return !currentTrack.cues.getCueById(cue.id);
+        }).forEach(function (cue) {
+          currentTrack.addCue(cue);
+        });
+      } else {
+        var trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
+        hls.trigger(events["a" /* default */].CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
+>>>>>>> Stashed changes
       }
       // Add cues and trigger event with success true.
       cues.forEach(function (cue) {
@@ -15123,9 +15139,16 @@ var subtitle_track_controller_SubtitleTrackController = function (_EventHandler)
     }
 
     var textTracks = filterSubtitleTracks(this.media.textTracks);
+    if (textTracks.length) {
+      // hide currently enabled subtitle track
+      if (this.trackId < textTracks.length) {
+        textTracks[this.trackId].mode = 'disabled';
+      }
 
-    // hide currently enabled subtitle track
-    if (this.trackId !== -1) textTracks[this.trackId].mode = 'disabled';
+      if (newId < textTracks.length) {
+        textTracks[newId].mode = this.subtitleDisplay ? 'showing' : 'hidden';
+      }
+    }
 
     this.trackId = newId;
     logger["b" /* logger */].log('switching to subtitle track ' + newId);
@@ -15134,11 +15157,10 @@ var subtitle_track_controller_SubtitleTrackController = function (_EventHandler)
     if (newId === -1) return;
 
     var subtitleTrack = this.tracks[newId];
-    if (newId < textTracks.length) textTracks[newId].mode = this.subtitleDisplay ? 'showing' : 'hidden';
 
     // check if we need to load playlist for this subtitle Track
     var details = subtitleTrack.details;
-    if (details === undefined || details.live === true) {
+    if (details && details.live === true) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger["b" /* logger */].log('(re)loading playlist for subtitle track ' + newId);
       this.hls.trigger(events["a" /* default */].SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
