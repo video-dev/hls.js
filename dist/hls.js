@@ -6305,7 +6305,7 @@ var m3u8_parser_M3U8Parser = function () {
       // FIXME: replace string test by a regex that matches
       //        also `m4s` `m4a` `m4v` and other popular extensions
       if (level.fragments.every(function (frag) {
-        return frag.relurl.endsWith('.mp4');
+        return endsWith(frag.relurl, '.mp4');
       })) {
         logger["b" /* logger */].warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
@@ -6328,6 +6328,11 @@ var m3u8_parser_M3U8Parser = function () {
 }();
 
 /* harmony default export */ var m3u8_parser = (m3u8_parser_M3U8Parser);
+
+
+function endsWith(str, search) {
+  return str.substring(str.length - search.length, str.length) === search;
+}
 // CONCATENATED MODULE: ./src/loader/playlist-loader.js
 var playlist_loader__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -6621,7 +6626,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
     var levels = m3u8_parser.parseMasterPlaylist(string, url);
     if (!levels.length) {
-      if (type === ContextType.MANIFEST) {
+      if (context.type === ContextType.MANIFEST) {
         this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
       } else {
         hls.trigger(events["a" /* default */].ERROR, {
@@ -9489,9 +9494,10 @@ var stream_controller_StreamController = function (_TaskLoop) {
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     var media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-    this.fragmentTracker.detectEvictedFragments(fragment.ElementaryStreamTypes.VIDEO, media.buffered);
-
+    if (media) {
+      // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+      this.fragmentTracker.detectEvictedFragments(fragment.ElementaryStreamTypes.VIDEO, media.buffered);
+    }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
     // reset reference to frag
@@ -14358,11 +14364,11 @@ var Cea608Parser = function () {
 function output_filter__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var OutputFilter = function () {
-  function OutputFilter(timelineController, track) {
+  function OutputFilter(timelineController, trackName) {
     output_filter__classCallCheck(this, OutputFilter);
 
     this.timelineController = timelineController;
-    this.track = track;
+    this.trackName = trackName;
     this.startTime = null;
     this.endTime = null;
     this.screen = null;
@@ -14371,7 +14377,7 @@ var OutputFilter = function () {
   OutputFilter.prototype.dispatchCue = function dispatchCue() {
     if (this.startTime === null) return;
 
-    this.timelineController.addCues('textTrack' + this.track, this.startTime, this.endTime, this.screen);
+    this.timelineController.addCues(this.trackName, this.startTime, this.endTime, this.screen);
     this.startTime = null;
   };
 
@@ -14380,7 +14386,7 @@ var OutputFilter = function () {
 
     this.endTime = endTime;
     this.screen = screen;
-    this.timelineController.createCaptionsTrack(this.track);
+    this.timelineController.createCaptionsTrack(this.trackName);
   };
 
   return OutputFilter;
@@ -14624,78 +14630,27 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     _this.unparsedVttFrags = [];
     _this.initPTS = undefined;
     _this.cueRanges = [];
-    _this.manifestCaptionsLabels = {};
+    _this.captionsTracks = {};
+    _this.captionsProperties = {
+      textTrack1: {
+        label: _this.config.captionsTextTrack1Label,
+        languageCode: _this.config.captionsTextTrack1LanguageCode
+      },
+      textTrack2: {
+        label: _this.config.captionsTextTrack2Label,
+        languageCode: _this.config.captionsTextTrack2LanguageCode
+      }
+    };
 
     if (_this.config.enableCEA708Captions) {
-      var _self = _this;
-      var captionsLabels = _this.manifestCaptionsLabels;
-
-      var channel1 = {
-        'newCue': function newCue(startTime, endTime, screen) {
-          if (!_self.textTrack1) {
-            if (_self.config.renderNatively) {
-              // Enable reuse of existing text track.
-              var existingTrack1 = _self.getExistingTrack('1');
-              if (!existingTrack1) {
-                _self.textTrack1 = _self.createTextTrack('captions', captionsLabels.captionsTextTrack1Label, captionsLabels.captionsTextTrack1LanguageCode);
-                _self.textTrack1.textTrack1 = true;
-              } else {
-                _self.textTrack1 = existingTrack1;
-                clearCurrentCues(_self.textTrack1);
-                _self.textTrack1.inuse = true;
-              }
-            } else {
-              // Create a list of a single track for the provider to consume
-              _self.textTrack1 = {
-                '_id': 'textTrack1',
-                'label': captionsLabels.captionsTextTrack1Label,
-                'kind': 'captions',
-                'default': false
-              };
-              _self.hls.trigger(events["a" /* default */].NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [_self.textTrack1] });
-            }
-          }
-
-          _self.addCues('textTrack1', startTime, endTime, screen);
-        }
-      };
-
-      var channel2 = {
-        'newCue': function newCue(startTime, endTime, screen) {
-          if (!_self.textTrack2) {
-            if (_self.config.renderNatively) {
-              // Enable reuse of existing text track.
-              var existingTrack2 = _self.getExistingTrack('2');
-              if (!existingTrack2) {
-                _self.textTrack2 = _self.createTextTrack('captions', captionsLabels.captionsTextTrack2Label, captionsLabels.captionsTextTrack2LanguageCode);
-                _self.textTrack2.textTrack2 = true;
-              } else {
-                _self.textTrack2 = existingTrack2;
-                clearCurrentCues(_self.textTrack2);
-                _self.textTrack2.inuse = true;
-              }
-            } else {
-              // Create a list of a single track for the provider to consume
-              _self.textTrack2 = {
-                '_id': 'textTrack2',
-                'label': captionsLabels.captionsTextTrack2Label,
-                'kind': 'captions',
-                'default': false
-              };
-              _self.hls.trigger(events["a" /* default */].NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [_self.textTrack2] });
-            }
-          }
-
-          _self.addCues('textTrack2', startTime, endTime, screen);
-        }
-      };
-
+      var channel1 = new output_filter(_this, 'textTrack1');
+      var channel2 = new output_filter(_this, 'textTrack2');
       _this.cea608Parser = new cea_608_parser(0, channel1, channel2);
     }
     return _this;
   }
 
-  TimelineController.prototype.addCues = function addCues(channel, startTime, endTime, screen) {
+  TimelineController.prototype.addCues = function addCues(trackName, startTime, endTime, screen) {
     var _this2 = this;
 
     // skip cues which overlap more than 50% with previously parsed time ranges
@@ -14716,10 +14671,10 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     var cues = this.Cues.createCues(startTime, endTime, screen);
     if (this.config.renderNatively) {
       cues.forEach(function (cue) {
-        _this2[channel].addCue(cue);
+        _this2.captionsTracks[trackName].addCue(cue);
       });
     } else {
-      this.hls.trigger(events["a" /* default */].CUES_PARSED, { type: 'captions', cues: cues, track: channel });
+      this.hls.trigger(events["a" /* default */].CUES_PARSED, { type: 'captions', cues: cues, track: trackName });
     }
   };
 
@@ -14741,36 +14696,60 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     }
   };
 
-  TimelineController.prototype.getExistingTrack = function getExistingTrack(channelNumber) {
-    var media = this.media;
+  TimelineController.prototype.getExistingTrack = function getExistingTrack(trackName) {
+    var media = this.media.media;
+
     if (media) {
       for (var i = 0; i < media.textTracks.length; i++) {
         var textTrack = media.textTracks[i];
-        var propName = 'textTrack' + channelNumber;
-        if (textTrack[propName] === true) return textTrack;
+        if (textTrack[trackName]) return textTrack;
       }
     }
     return null;
   };
 
-  TimelineController.prototype.createCaptionsTrack = function createCaptionsTrack(track) {
-    var trackVar = 'textTrack' + track;
-    if (!this[trackVar]) {
-      // Enable reuse of existing text track.
-      var existingTrack = this.getExistingTrack(track);
-      if (!existingTrack) {
-        var textTrack = this.createTextTrack('captions', this.config['captionsTextTrack' + track + 'Label'], this.config['captionsTextTrack' + track + 'LanguageCode']);
-        if (textTrack) {
-          textTrack[trackVar] = true;
-          this[trackVar] = textTrack;
-        }
-      } else {
-        this[trackVar] = existingTrack;
-        clearCurrentCues(this[trackVar]);
+  TimelineController.prototype.createCaptionsTrack = function createCaptionsTrack(trackName) {
+    if (this.captionsTracks[trackName]) return;
 
-        sendAddTrackEvent(this[trackVar], this.media);
+    if (this.config.renderNatively) this.createNativeTrack(trackName);else this.createNonNativeTrack(trackName);
+  };
+
+  TimelineController.prototype.createNativeTrack = function createNativeTrack(trackName) {
+    var _captionsProperties$t = this.captionsProperties[trackName],
+        label = _captionsProperties$t.label,
+        languageCode = _captionsProperties$t.languageCode;
+
+    var captionsTracks = this.captionsTracks;
+    // Enable reuse of existing text track.
+    var existingTrack = this.getExistingTrack(trackName);
+    if (!existingTrack) {
+      var textTrack = this.createTextTrack('captions', label, languageCode);
+      if (textTrack) {
+        // Set a special property on the track so we know it's managed by Hls.js
+        textTrack[trackName] = true;
+        captionsTracks[trackName] = textTrack;
       }
+    } else {
+      captionsTracks[trackName] = existingTrack;
+      clearCurrentCues(captionsTracks[trackName]);
+      sendAddTrackEvent(captionsTracks[trackName], this.media);
     }
+  };
+
+  TimelineController.prototype.createNonNativeTrack = function createNonNativeTrack(trackName) {
+    // Create a list of a single track for the provider to consume
+    var captionsTracks = this.captionsTracks,
+        captionsProperties = this.captionsProperties;
+    var label = captionsProperties[trackName].label;
+
+    var track = {
+      '_id': trackName,
+      label: label,
+      kind: 'captions',
+      'default': false
+    };
+    captionsTracks[trackName] = track;
+    this.hls.trigger(events["a" /* default */].NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
   };
 
   TimelineController.prototype.createTextTrack = function createTextTrack(kind, label, lang) {
@@ -14788,10 +14767,12 @@ var timeline_controller_TimelineController = function (_EventHandler) {
   };
 
   TimelineController.prototype.onMediaDetaching = function onMediaDetaching() {
-    clearCurrentCues(this.textTrack1);
-    clearCurrentCues(this.textTrack2);
-    delete this.textTrack1;
-    delete this.textTrack2;
+    var captionsTracks = this.captionsTracks;
+
+    Object.keys(captionsTracks).forEach(function (trackName) {
+      clearCurrentCues(captionsTracks[trackName]);
+      delete captionsTracks[trackName];
+    });
   };
 
   TimelineController.prototype.onManifestLoading = function onManifestLoading() {
@@ -14820,12 +14801,6 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = undefined;
     this.cueRanges = [];
-    var captionsLabels = this.manifestCaptionsLabels;
-
-    captionsLabels.captionsTextTrack1Label = 'Unknown CC';
-    captionsLabels.captionsTextTrack1LanguageCode = 'en';
-    captionsLabels.captionsTextTrack2Label = 'Unknown CC';
-    captionsLabels.captionsTextTrack2LanguageCode = 'es';
 
     if (this.config.enableWebVTT) {
       var sameTracks = this.tracks && data.subtitles && this.tracks.length === data.subtitles.length;
@@ -14861,20 +14836,17 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     }
 
     if (this.config.enableCEA708Captions && data.captions) {
-      var index = void 0;
-      var instreamIdMatch = void 0;
-
       data.captions.forEach(function (captionsTrack) {
-        instreamIdMatch = /(?:CC|SERVICE)([1-2])/.exec(captionsTrack.instreamId);
+        var instreamIdMatch = /(?:CC|SERVICE)([1-2])/.exec(captionsTrack.instreamId);
 
         if (!instreamIdMatch) return;
 
-        index = instreamIdMatch[1];
-        captionsLabels['captionsTextTrack' + index + 'Label'] = captionsTrack.name;
+        var index = instreamIdMatch[1];
+        this.captionsProperties[index].name = captionsTrack.name;
 
         if (captionsTrack.lang) {
           // optional attribute
-          captionsLabels['captionsTextTrack' + index + 'LanguageCode'] = captionsTrack.lang;
+          this.captionsProperties[index].languageCode = captionsTrack.lang;
         }
       });
     }
@@ -14928,7 +14900,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     webvtt_parser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
       var currentTrack = textTracks[frag.trackId];
 
-      if (self.config.renderNatively) {
+      if (this.config.renderNatively) {
         cues.filter(function (cue) {
           return !currentTrack.cues.getCueById(cue.id);
         }).forEach(function (cue) {
@@ -15996,7 +15968,7 @@ var eme_controller_EMEController = function (_EventHandler) {
 /* harmony default export */ var eme_controller = (eme_controller_EMEController);
 // CONCATENATED MODULE: ./src/helper/mediakeys-helper.js
 var requestMediaKeySystemAccess = function () {
-  if (window.navigator && window.navigator.requestMediaKeySystemAccess) return window.navigator.requestMediaKeySystemAccess.bind(window.navigator);else return null;
+  if (typeof window !== 'undefined' && window.navigator && window.navigator.requestMediaKeySystemAccess) return window.navigator.requestMediaKeySystemAccess.bind(window.navigator);else return null;
 }();
 
 
@@ -16138,9 +16110,6 @@ function hls__classCallCheck(instance, Constructor) { if (!(instance instanceof 
 
 
 
-
-// polyfill for IE11
-__webpack_require__(13);
 
 /**
  * @module Hls
@@ -17085,72 +17054,6 @@ var DemuxerWorker = function DemuxerWorker(self) {
 /* 12 */
 /***/ (function(module, exports) {
 
-
-
-/***/ }),
-/* 13 */
-/***/ (function(module, exports) {
-
-/*! http://mths.be/endswith v0.2.0 by @mathias */
-if (!String.prototype.endsWith) {
-	(function() {
-		'use strict'; // needed to support `apply`/`call` with `undefined`/`null`
-		var defineProperty = (function() {
-			// IE 8 only supports `Object.defineProperty` on DOM elements
-			try {
-				var object = {};
-				var $defineProperty = Object.defineProperty;
-				var result = $defineProperty(object, object, object) && $defineProperty;
-			} catch(error) {}
-			return result;
-		}());
-		var toString = {}.toString;
-		var endsWith = function(search) {
-			if (this == null) {
-				throw TypeError();
-			}
-			var string = String(this);
-			if (search && toString.call(search) == '[object RegExp]') {
-				throw TypeError();
-			}
-			var stringLength = string.length;
-			var searchString = String(search);
-			var searchLength = searchString.length;
-			var pos = stringLength;
-			if (arguments.length > 1) {
-				var position = arguments[1];
-				if (position !== undefined) {
-					// `ToInteger`
-					pos = position ? Number(position) : 0;
-					if (pos != pos) { // better `isNaN`
-						pos = 0;
-					}
-				}
-			}
-			var end = Math.min(Math.max(pos, 0), stringLength);
-			var start = end - searchLength;
-			if (start < 0) {
-				return false;
-			}
-			var index = -1;
-			while (++index < searchLength) {
-				if (string.charCodeAt(start + index) != searchString.charCodeAt(index)) {
-					return false;
-				}
-			}
-			return true;
-		};
-		if (defineProperty) {
-			defineProperty(String.prototype, 'endsWith', {
-				'value': endsWith,
-				'configurable': true,
-				'writable': true
-			});
-		} else {
-			String.prototype.endsWith = endsWith;
-		}
-	}());
-}
 
 
 /***/ })

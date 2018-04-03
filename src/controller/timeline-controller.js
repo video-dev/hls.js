@@ -46,7 +46,7 @@ class TimelineController extends EventHandler {
     this.captionsProperties = {
       textTrack1: {
         label: this.config.captionsTextTrack1Label,
-        languageCode: this.config.captionsTextTrack1LanguageCode,
+        languageCode: this.config.captionsTextTrack1LanguageCode
       },
       textTrack2: {
         label: this.config.captionsTextTrack2Label,
@@ -117,17 +117,16 @@ class TimelineController extends EventHandler {
   }
 
   createCaptionsTrack (trackName) {
-    if (this.captionsTracks[trackName]) {
-        return;
-    }
-    if (this.config.renderNatively) {
-        this.createNativeTrack(trackName);
-    } else {
-        this.createNonNativeTrack(trackName);
-    }
+    if (this.captionsTracks[trackName])
+      return;
+
+    if (this.config.renderNatively)
+      this.createNativeTrack(trackName);
+    else
+      this.createNonNativeTrack(trackName);
   }
 
-  createNativeTrack(trackName) {
+  createNativeTrack (trackName) {
     const { label, languageCode } = this.captionsProperties[trackName];
     const captionsTracks = this.captionsTracks;
     // Enable reuse of existing text track.
@@ -146,7 +145,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  createNonNativeTrack(trackName) {
+  createNonNativeTrack (trackName) {
     // Create a list of a single track for the provider to consume
     const { captionsTracks, captionsProperties } = this;
     const { label } = captionsProperties[trackName];
@@ -250,9 +249,8 @@ class TimelineController extends EventHandler {
       data.captions.forEach(function (captionsTrack) {
         let instreamIdMatch = /(?:CC|SERVICE)([1-2])/.exec(captionsTrack.instreamId);
 
-        if (!instreamIdMatch) {
+        if (!instreamIdMatch)
           return;
-        }
 
         let index = instreamIdMatch[1];
         this.captionsProperties[index].name = captionsTrack.name;
