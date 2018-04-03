@@ -1091,7 +1091,7 @@ get/set : subtitle track id (returned by). Returns -1 if no track is visible. Se
 
 ### `hls.subtitleDisplay`
 
-(default: `false`)
+(default: `true`)
 
 get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`.
 
