@@ -56,8 +56,9 @@ export default class TaskLoop extends EventHandler {
     this._tickCallCount++;
     if (this._tickCallCount === 1) {
       this.doTick();
-      if (this._tickCallCount > 1)
+      if (this._tickCallCount > 1) {
         setTimeout(this.tick.bind(this), 0);
+      }
 
       this._tickCallCount = 0;
     }

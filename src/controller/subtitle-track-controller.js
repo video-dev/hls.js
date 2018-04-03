@@ -9,8 +9,9 @@ import { logger } from '../utils/logger';
 function filterSubtitleTracks (textTrackList) {
   let tracks = [];
   for (let i = 0; i < textTrackList.length; i++) {
-    if (textTrackList[i].kind === 'subtitles')
+    if (textTrackList[i].kind === 'subtitles') {
       tracks.push(textTrackList[i]);
+    }
   }
   return tracks;
 }
@@ -35,8 +36,9 @@ class SubtitleTrackController extends EventHandler {
 
   _onTextTracksChanged () {
     // Media is undefined when switching streams via loadSource()
-    if (!this.media)
+    if (!this.media) {
       return;
+    }
 
     let trackId = -1;
     let tracks = filterSubtitleTracks(this.media.textTracks);
@@ -61,8 +63,9 @@ class SubtitleTrackController extends EventHandler {
   // Listen for subtitle track change, then extract the current track ID.
   onMediaAttached (data) {
     this.media = data.media;
-    if (!this.media)
+    if (!this.media) {
       return;
+    }
 
     if (this.queuedDefaultTrack !== undefined) {
       this.subtitleTrack = this.queuedDefaultTrack;
@@ -82,13 +85,15 @@ class SubtitleTrackController extends EventHandler {
   }
 
   onMediaDetaching () {
-    if (!this.media)
+    if (!this.media) {
       return;
+    }
 
-    if (this.useTextTrackPolling)
+    if (this.useTextTrackPolling) {
       clearInterval(this.subtitlePollingInterval);
-    else
+    } else {
       this.media.textTracks.removeEventListener('change', this.trackChangeListener);
+    }
 
     this.media = undefined;
   }
@@ -114,10 +119,11 @@ class SubtitleTrackController extends EventHandler {
         // if media has not been attached yet, it will fail
         // we keep a reference to the default track id
         // and we'll set subtitleTrack when onMediaAttached is triggered
-        if (this.media)
+        if (this.media) {
           this.subtitleTrack = track.id;
-        else
+        } else {
           this.queuedDefaultTrack = track.id;
+        }
       }
     });
   }
@@ -126,8 +132,9 @@ class SubtitleTrackController extends EventHandler {
   onTick () {
     const trackId = this.trackId;
     const subtitleTrack = this.tracks[trackId];
-    if (!subtitleTrack)
+    if (!subtitleTrack) {
       return;
+    }
 
     const details = subtitleTrack.details;
     // check if we need to load playlist for this subtitle Track
@@ -177,8 +184,9 @@ class SubtitleTrackController extends EventHandler {
 
   setSubtitleTrackInternal (newId) {
     // check if level idx is valid
-    if (newId < -1 || newId >= this.tracks.length)
+    if (newId < -1 || newId >= this.tracks.length) {
       return;
+    }
 
     // stopping live reloading timer if any
     if (this.timer) {
@@ -189,19 +197,22 @@ class SubtitleTrackController extends EventHandler {
     let textTracks = filterSubtitleTracks(this.media.textTracks);
 
     // hide currently enabled subtitle track
-    if (this.trackId !== -1)
+    if (this.trackId !== -1) {
       textTracks[this.trackId].mode = 'disabled';
+    }
 
     this.trackId = newId;
     logger.log(`switching to subtitle track ${newId}`);
     this.hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
 
-    if (newId === -1)
+    if (newId === -1) {
       return;
+    }
 
     const subtitleTrack = this.tracks[newId];
-    if (newId < textTracks.length)
+    if (newId < textTracks.length) {
       textTracks[newId].mode = this.subtitleDisplay ? 'showing' : 'hidden';
+    }
 
     // check if we need to load playlist for this subtitle Track
     let details = subtitleTrack.details;

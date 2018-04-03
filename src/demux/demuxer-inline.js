@@ -22,15 +22,17 @@ class DemuxerInline {
 
   destroy () {
     let demuxer = this.demuxer;
-    if (demuxer)
+    if (demuxer) {
       demuxer.destroy();
+    }
   }
 
   push (data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       let decrypter = this.decrypter;
-      if (decrypter == null)
+      if (decrypter == null) {
         decrypter = this.decrypter = new Decrypter(this.observer, this.config);
+      }
 
       let localthis = this;
       // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -100,8 +102,9 @@ class DemuxerInline {
       demuxer.resetTimeStamp(defaultInitPTS);
       remuxer.resetTimeStamp(defaultInitPTS);
     }
-    if (typeof demuxer.setDecryptData === 'function')
+    if (typeof demuxer.setDecryptData === 'function') {
       demuxer.setDecryptData(decryptdata);
+    }
 
     demuxer.append(data, timeOffset, contiguous, accurateTimeOffset);
   }

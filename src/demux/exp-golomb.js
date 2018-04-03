@@ -23,8 +23,9 @@ class ExpGolomb {
       position = data.byteLength - bytesAvailable,
       workingBytes = new Uint8Array(4),
       availableBytes = Math.min(4, bytesAvailable);
-    if (availableBytes === 0)
+    if (availableBytes === 0) {
       throw new Error('no bytes available');
+    }
 
     workingBytes.set(data.subarray(position, position + availableBytes));
     this.word = new DataView(workingBytes.buffer).getUint32(0);
@@ -55,20 +56,23 @@ class ExpGolomb {
     let
       bits = Math.min(this.bitsAvailable, size), // :uint
       valu = this.word >>> (32 - bits); // :uint
-    if (size > 32)
+    if (size > 32) {
       logger.error('Cannot read more than 32 bits at a time');
+    }
 
     this.bitsAvailable -= bits;
-    if (this.bitsAvailable > 0)
+    if (this.bitsAvailable > 0) {
       this.word <<= bits;
-    else if (this.bytesAvailable > 0)
+    } else if (this.bytesAvailable > 0) {
       this.loadWord();
+    }
 
     bits = size - bits;
-    if (bits > 0 && this.bitsAvailable)
+    if (bits > 0 && this.bitsAvailable) {
       return valu << bits | this.readBits(bits);
-    else
+    } else {
       return valu;
+    }
   }
 
   // ():uint
@@ -203,8 +207,9 @@ class ExpGolomb {
         profileIdc === 118 ||
         profileIdc === 128) {
       let chromaFormatIdc = readUEG();
-      if (chromaFormatIdc === 3)
-        skipBits(1); // separate_colour_plane_flag
+      if (chromaFormatIdc === 3) {
+        skipBits(1);
+      } // separate_colour_plane_flag
 
       skipUEG(); // bit_depth_luma_minus8
       skipUEG(); // bit_depth_chroma_minus8
@@ -213,10 +218,11 @@ class ExpGolomb {
         scalingListCount = (chromaFormatIdc !== 3) ? 8 : 12;
         for (i = 0; i < scalingListCount; i++) {
           if (readBoolean()) { // seq_scaling_list_present_flag[ i ]
-            if (i < 6)
+            if (i < 6) {
               skipScalingList(16);
-            else
+            } else {
               skipScalingList(64);
+            }
           }
         }
       }
@@ -230,16 +236,18 @@ class ExpGolomb {
       skipEG(); // offset_for_non_ref_pic
       skipEG(); // offset_for_top_to_bottom_field
       numRefFramesInPicOrderCntCycle = readUEG();
-      for (i = 0; i < numRefFramesInPicOrderCntCycle; i++)
-        skipEG(); // offset_for_ref_frame[ i ]
+      for (i = 0; i < numRefFramesInPicOrderCntCycle; i++) {
+        skipEG();
+      } // offset_for_ref_frame[ i ]
     }
     skipUEG(); // max_num_ref_frames
     skipBits(1); // gaps_in_frame_num_value_allowed_flag
     picWidthInMbsMinus1 = readUEG();
     picHeightInMapUnitsMinus1 = readUEG();
     frameMbsOnlyFlag = readBits(1);
-    if (frameMbsOnlyFlag === 0)
-      skipBits(1); // mb_adaptive_frame_field_flag
+    if (frameMbsOnlyFlag === 0) {
+      skipBits(1);
+    } // mb_adaptive_frame_field_flag
 
     skipBits(1); // direct_8x8_inference_flag
     if (readBoolean()) { // frame_cropping_flag

@@ -111,5 +111,6 @@ if (__USE_ALT_AUDIO__) {
   hlsDefaultConfig.audioTrackController = AudioTrackController;
 }
 
-if (__USE_EME_DRM__)
+if (__USE_EME_DRM__) {
   hlsDefaultConfig.emeController = EMEController;
+}
