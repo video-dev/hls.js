@@ -30,7 +30,7 @@ class SubtitleTrackController extends EventHandler {
     /**
      * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
      */
-    this.subtitleDisplay = false;
+    this.subtitleDisplay = true;
   }
 
   _onTextTracksChanged () {
