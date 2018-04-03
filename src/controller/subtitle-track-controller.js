@@ -64,7 +64,7 @@ class SubtitleTrackController extends EventHandler {
     if (!this.media)
       return;
 
-    if (!this.queuedDefaultTrack) {
+    if (this.queuedDefaultTrack) {
       this.subtitleTrack = this.queuedDefaultTrack;
       delete this.queuedDefaultTrack;
     }
@@ -182,7 +182,7 @@ class SubtitleTrackController extends EventHandler {
    */
   setSubtitleTrackInternal (newId) {
     const { hls, tracks } = this;
-    if (newId < -1 || newId >= tracks.length)
+    if (typeof newId !== 'number' || newId < -1 || newId >= tracks.length)
       return;
 
     this._stopTimer();
