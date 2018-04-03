@@ -824,7 +824,7 @@ class AudioStreamController extends TaskLoop {
       break;
     case ErrorDetails.BUFFER_FULL_ERROR:
       // if in appending state
-      if (data.parent === 'audio' && (this.state === State.PARSING || this.state === State.PARSED)) {
+      if (data.parent === 'audio' && (this.state === State.PARSING || this.state === State.PARSED)) {
         const media = this.mediaBuffer,
           currentTime = this.media.currentTime,
           mediaBuffered = media && BufferHelper.isBuffered(media, currentTime) && BufferHelper.isBuffered(media, currentTime + 0.5);

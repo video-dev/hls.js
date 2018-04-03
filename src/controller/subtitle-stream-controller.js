@@ -122,7 +122,7 @@ class SubtitleStreamController extends TaskLoop {
       }
 
       // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
-      trackDetails.fragments.forEach(frag => {
+      trackDetails.fragments.forEach(frag => {
         if (!(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag))) {
           // Load key if subtitles are encrypted
           if ((frag.decryptdata && frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {

@@ -88,7 +88,7 @@ module.exports = {
     'no-console': 1,
     'no-fallthrough': 1,
     'no-case-declarations': 1,
-    'no-irregular-whitespace': 1,
+    'no-irregular-whitespace': 2,
     'no-self-assign': 1,
     'new-cap': 1,
     'no-undefined': 1
