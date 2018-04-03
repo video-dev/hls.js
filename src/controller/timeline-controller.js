@@ -305,12 +305,12 @@ class TimelineController extends EventHandler {
       vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
       this.prevCC = frag.cc;
     }
-    let textTracks = this.textTracks,
-      hls = this.hls;
+    const tracks = (this.config.renderNatively) ? this.textTracks : this.tracks;
+    const hls = this.hls;
 
     // Parse the WebVTT file contents.
-    WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
-      const currentTrack = textTracks[frag.trackId];
+    WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, (cues) => {
+      const currentTrack = tracks[frag.trackId];
 
       if (this.config.renderNatively) {
         cues.filter(cue => !currentTrack.cues.getCueById(cue.id))
