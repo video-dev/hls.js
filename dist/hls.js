@@ -14899,6 +14899,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     // Parse the WebVTT file contents.
     webvtt_parser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
       var currentTrack = textTracks[frag.trackId];
+<<<<<<< HEAD
 
       if (this.config.renderNatively) {
         cues.filter(function (cue) {
@@ -14909,6 +14910,14 @@ var timeline_controller_TimelineController = function (_EventHandler) {
       } else {
         var trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
         hls.trigger(events["a" /* default */].CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
+=======
+      // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
+      // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
+      // and trying to access getCueById method of cues will throw an exception
+      if (currentTrack.mode === 'disabled') {
+        hls.trigger(events["a" /* default */].SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
+        return;
+>>>>>>> bugfix/subtitle-track-undefined
       }
       hls.trigger(events["a" /* default */].SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     }, function (e) {
