@@ -130,6 +130,11 @@ describe('SubtitleTrackController', () => {
       assert.equal(stopTimerSpy.callCount, 0);
     });
 
+    it('should do nothing if called with a non-number', function () {
+      subtitleTrackController.subtitleTrack = undefined;
+      subtitleTrackController.subtitleTrack = null;
+    });
+
     describe('_toggleTrackModes', function () {
       // This can be the case when setting the subtitleTrack before Hls.js attaches to the mediaElement
       it('should not throw an exception if trackId is out of the mediaElement text track bounds', function () {
