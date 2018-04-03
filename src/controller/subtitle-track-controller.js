@@ -218,8 +218,10 @@ class SubtitleTrackController extends EventHandler {
    */
   _toggleTrackModes (newId) {
     const { media, subtitleDisplay, trackId } = this;
-    const textTracks = filterSubtitleTracks(media.textTracks);
+    if (!media)
+      return;
 
+    const textTracks = filterSubtitleTracks(media.textTracks);
     if (newId === -1) {
       [].slice.call(textTracks).forEach(track => {
         track.mode = 'disabled';

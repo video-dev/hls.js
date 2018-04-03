@@ -131,6 +131,11 @@ describe('SubtitleTrackController', () => {
           assert.equal(t.mode, 'disabled');
         });
       });
+
+      it('should not throw an exception if the mediaElement does not exist', function () {
+        subtitleTrackController.media = null;
+        subtitleTrackController._toggleTrackModes(1);
+      });
     });
   });
 });
