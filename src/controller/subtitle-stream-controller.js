@@ -146,14 +146,13 @@ class SubtitleStreamController extends TaskLoop {
 
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
-    if (this.currentTrackId === -1)
+    if (!this.tracks || this.currentTrackId === -1)
       return;
 
     // Check if track was already loaded and if so make sure we finish
     // downloading its frags, if not all have been downloaded yet
     const currentTrack = this.tracks[this.currentTrackId];
-    let details = currentTrack.details;
-    if (details !== undefined)
+    if (currentTrack && currentTrack.details)
       this.tick();
   }
 
