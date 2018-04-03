@@ -15,7 +15,7 @@ describe('SubtitleTrackController', () => {
     subtitleTrackController = new SubtitleTrackController(hls);
 
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = [{ id: 0 }, { id: 1 }];
+    subtitleTrackController.tracks = [{ id: 0 }, { id: 1 }, { id: 2, details: { live: true }, url: 'foo' }];
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
@@ -82,6 +82,22 @@ describe('SubtitleTrackController', () => {
       assert.strictEqual(videoElement.textTracks[0].mode, 'disabled');
     });
 
+    it('should trigger SUBTITLE_TRACK_SWITCH', function () {
+      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.trackId = 0;
+      subtitleTrackController.subtitleTrack = 1;
+      assert.equal(triggerSpy.callCount, 1);
+      assert.equal(triggerSpy.firstCall.calledWith('hlsSubtitleTrackSwitch', { id: 1 }), true);
+    });
+
+    it('should trigger SUBTITLE_TRACK_LOADING if the track is live', function () {
+      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.trackId = 0;
+      subtitleTrackController.subtitleTrack = 2;
+      assert.equal(triggerSpy.callCount, 2);
+      assert.equal(triggerSpy.secondCall.calledWith('hlsSubtitleTrackLoading', { url: 'foo', id: 2 }), true);
+    });
+
     it('should do nothing if called with out of bound indicies', function () {
       const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
       subtitleTrackController.subtitleTrack = 5;
@@ -89,20 +105,20 @@ describe('SubtitleTrackController', () => {
       assert.equal(stopTimerSpy.callCount, 0);
     });
 
-    it('should dispatch SUBTITLE_TRACK_SWITCH if passed -1', function () {
+    it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
       const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
       const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
       assert.equal(stopTimerSpy.callCount, 1);
       assert.equal(triggerSpy.callCount, 1);
-      assert.equal(triggerSpy.firstCall.calledWith('hlsSubtitleTrackSwitch'), true);
+      assert.equal(triggerSpy.firstCall.calledWith('hlsSubtitleTrackSwitch', { id: -1 }), true);
     });
 
     describe('_toggleTrackModes', function () {
       // This can be the case when setting the subtitleTrack before Hls.js attaches to the mediaElement
       it('should not throw an exception if trackId is out of the mediaElement text track bounds', function () {
-        subtitleTrackController.trackId = 2;
+        subtitleTrackController.trackId = 3;
         subtitleTrackController._toggleTrackModes(1);
       });
 

@@ -195,7 +195,7 @@ class SubtitleTrackController extends EventHandler {
     // check if we need to load playlist for this subtitle Track
     const subtitleTrack = tracks[newId];
     const details = subtitleTrack.details;
-    if (details && details.live === true) {
+    if (details && details.live) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${newId}`);
       hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
