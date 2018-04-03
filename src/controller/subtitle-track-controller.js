@@ -25,7 +25,7 @@ class SubtitleTrackController extends EventHandler {
       Event.SUBTITLE_TRACK_LOADED);
     this.tracks = [];
     this.trackId = -1;
-    this.media = undefined;
+    this.media = null;
 
     /**
      * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
@@ -64,7 +64,7 @@ class SubtitleTrackController extends EventHandler {
     if (!this.media)
       return;
 
-    if (this.queuedDefaultTrack !== undefined) {
+    if (!this.queuedDefaultTrack) {
       this.subtitleTrack = this.queuedDefaultTrack;
       delete this.queuedDefaultTrack;
     }
@@ -90,7 +90,7 @@ class SubtitleTrackController extends EventHandler {
     else
       this.media.textTracks.removeEventListener('change', this.trackChangeListener);
 
-    this.media = undefined;
+    this.media = null;
   }
 
   // Reset subtitle tracks on manifest loading

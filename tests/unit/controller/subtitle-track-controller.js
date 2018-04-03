@@ -15,7 +15,7 @@ describe('SubtitleTrackController', () => {
     subtitleTrackController = new SubtitleTrackController(hls);
 
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = [{ id: 0 }, { id: 1 }, { id: 2, details: { live: true }, url: 'foo' }];
+    subtitleTrackController.tracks = [{ id: 0, url: 'baz', details: { live: false } }, { id: 1, url: 'bar' }, { id: 2, details: { live: true }, url: 'foo' }];
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
@@ -86,11 +86,36 @@ describe('SubtitleTrackController', () => {
       const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
-      assert.equal(triggerSpy.callCount, 1);
+      assert.equal(triggerSpy.callCount, 2);
       assert.equal(triggerSpy.firstCall.calledWith('hlsSubtitleTrackSwitch', { id: 1 }), true);
     });
 
-    it('should trigger SUBTITLE_TRACK_LOADING if the track is live', function () {
+    it('should trigger SUBTITLE_TRACK_LOADING if the track has no details', function () {
+      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.trackId = 0;
+      subtitleTrackController.subtitleTrack = 1;
+      assert.equal(triggerSpy.callCount, 2);
+      assert.equal(triggerSpy.secondCall.calledWith('hlsSubtitleTrackLoading', { url: 'bar', id: 1 }), true);
+    });
+
+    it('should not trigger SUBTITLE_TRACK_LOADING if the track has details and is not live', function () {
+      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.trackId = 1;
+      subtitleTrackController.subtitleTrack = 0;
+      assert.equal(triggerSpy.callCount, 1);
+      assert.equal(triggerSpy.firstCall.calledWith('hlsSubtitleTrackSwitch', { id: 0 }), true);
+    });
+
+    it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
+      const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
+      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.trackId = 0;
+      subtitleTrackController.subtitleTrack = -1;
+      assert.equal(stopTimerSpy.callCount, 1);
+      assert.equal(triggerSpy.firstCall.calledWith('hlsSubtitleTrackSwitch', { id: -1 }), true);
+    });
+
+    it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {
       const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 2;
@@ -103,16 +128,6 @@ describe('SubtitleTrackController', () => {
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
       assert.equal(stopTimerSpy.callCount, 0);
-    });
-
-    it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
-      const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
-      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
-      subtitleTrackController.trackId = 0;
-      subtitleTrackController.subtitleTrack = -1;
-      assert.equal(stopTimerSpy.callCount, 1);
-      assert.equal(triggerSpy.callCount, 1);
-      assert.equal(triggerSpy.firstCall.calledWith('hlsSubtitleTrackSwitch', { id: -1 }), true);
     });
 
     describe('_toggleTrackModes', function () {
