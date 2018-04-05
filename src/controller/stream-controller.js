@@ -1358,103 +1358,52 @@ class StreamController extends TaskLoop {
     return false;
   }
 
+  /**
+   * Checks the health of the buffer and attempts to resolve playback stalls.
+   * @private
+   */
   _checkBuffer () {
-    let media = this.media,
-      config = this.config;
-    // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
-    if (media && media.readyState) {
-      let currentTime = media.currentTime,
-        mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
-        buffered = mediaBuffer.buffered;
-      // adjust currentTime to start position on loaded metadata
-      if (!this.loadedmetadata && buffered.length) {
-        this.loadedmetadata = true;
-        // only adjust currentTime if different from startPosition or if startPosition not buffered
-        // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-        const startPosition = media.seeking ? currentTime : this.startPosition;
-        // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
-        if (currentTime !== startPosition) {
-          // if startPosition not buffered, let's seek to buffered.start(0)
+    const { config, media } = this;
+    if (!media || !media.readyState) {
+      // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
+      return;
+    }
 
-          logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time${currentTime} `);
-          media.currentTime = startPosition;
-        }
-      } else if (this.immediateSwitch) {
-        this.immediateLevelSwitchEnd();
-      } else {
-        let bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole),
-          expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused and sufficiently buffered
-                                media.ended || // not playing when media is ended
-                                media.buffered.length === 0), // not playing if nothing buffered
-          jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end
-          playheadMoving = currentTime !== this.lastCurrentTime;
+    const currentTime = media.currentTime;
+    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+    const buffered = mediaBuffer.buffered;
 
-        if (playheadMoving) {
-          // played moving, but was previously stalled => now not stuck anymore
-          if (this.stallReported) {
-            logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(performance.now() - this.stalled)}ms`);
-            this.stallReported = false;
-          }
-          this.stalled = undefined;
-          this.nudgeRetry = 0;
-        } else {
-          // playhead not moving
-          if (expectedPlaying) {
-            // playhead not moving BUT media expected to play
-            const tnow = performance.now();
-            const hls = this.hls;
-            if (!this.stalled) {
-              // stall just detected, store current time
-              this.stalled = tnow;
-              this.stallReported = false;
-            } else {
-              // playback already stalled, check stalling duration
-              // if stalling for more than a given threshold, let's try to recover
-              const stalledDuration = tnow - this.stalled;
-              const bufferLen = bufferInfo.len;
-              let nudgeRetry = this.nudgeRetry || 0;
-              // Check if fragment is broken
-              let partial = this.fragmentTracker.getPartialFragment(currentTime);
-              if (partial !== null) {
-                let lastEndTime = 0;
-                // Check if currentTime is between unbuffered regions of partial fragments
-                for (let i = 0; i < media.buffered.length; i++) {
-                  let startTime = media.buffered.start(i);
-                  if (currentTime >= lastEndTime && currentTime < startTime) {
-                    media.currentTime = Math.max(startTime, media.currentTime + 0.1);
-                    logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${media.currentTime}`);
-                    this.stalled = undefined;
-                    hls.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, reason: `fragment loaded with buffer holes, seeking from ${currentTime} to ${media.currentTime}`, frag: partial });
-                    return;
-                  }
-                  lastEndTime = media.buffered.end(i);
-                }
-              }
-              if (bufferLen > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
-                // report stalled error once
-                if (!this.stallReported) {
-                  this.stallReported = true;
-                  logger.warn(`playback stalling in high buffer @${currentTime}`);
-                  hls.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false, buffer: bufferLen });
-                }
-                // reset stalled so to rearm watchdog timer
-                this.stalled = undefined;
-                this.nudgeRetry = ++nudgeRetry;
-                if (nudgeRetry < config.nudgeMaxRetry) {
-                  const currentTime = media.currentTime;
-                  const targetTime = currentTime + nudgeRetry * config.nudgeOffset;
-                  logger.log(`adjust currentTime from ${currentTime} to ${targetTime}`);
-                  // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
-                  media.currentTime = targetTime;
-                  hls.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_NUDGE_ON_STALL, fatal: false });
-                } else {
-                  logger.error(`still stuck in high buffer @${currentTime} after ${config.nudgeMaxRetry}, raise fatal error`);
-                  hls.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: true });
-                }
-              }
-            }
-          }
+    if (!this.loadedmetadata && buffered.length) {
+      this.loadedmetadata = true;
+      this._seekToStartPos();
+    } else if (this.immediateSwitch) {
+      this.immediateLevelSwitchEnd();
+    } else {
+      const expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused and sufficiently buffered
+        media.ended || // not playing when media is ended
+        media.buffered.length === 0); // not playing if nothing buffered
+      const tnow = performance.now();
+
+      if (currentTime !== this.lastCurrentTime) {
+        // The playhead is now moving, but was previously stalled
+        if (this.stallReported) {
+          logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(tnow - this.stalled)}ms`);
+          this.stallReported = false;
         }
+        this.stalled = null;
+        this.nudgeRetry = 0;
+      } else if (expectedPlaying) {
+        // The playhead isn't moving but it should be
+        // Allow some slack time to for small stalls to resolve themselves
+        if (!this.stalled) {
+          this.stalled = tnow;
+          this.stallReported = true;
+          return;
+        }
+
+        const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
+        const stalledDuration = tnow - this.stalled;
+        this._tryFixBufferStall(bufferInfo, stalledDuration);
       }
     }
   }
@@ -1496,6 +1445,132 @@ class StreamController extends TaskLoop {
   computeLivePosition (sliding, levelDetails) {
     let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
     return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
+  }
+
+  /**
+   * Detects and attempts to fix known buffer stalling issues.
+   * @param bufferInfo - The properties of the current buffer.
+   * @param stalledDuration - The amount of time Hls.js has been stalling for.
+   * @private
+   */
+  _tryFixBufferStall (bufferInfo, stalledDuration) {
+    const { config, media } = this;
+    const currentTime = media.currentTime;
+    const jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
+
+    const partial = this.fragmentTracker.getPartialFragment(currentTime);
+    if (partial) {
+      this._reportStall(bufferInfo.len);
+      // Try to skip over the buffer hole caused by a partial fragment
+      // This method isn't limited by the size of the gap between buffered ranges
+      this._trySkipBufferHole(partial);
+    }
+
+    if (bufferInfo.len > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
+      this._reportStall(bufferInfo.len);
+      // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
+      // We only try to jump the hole if it's under the configured size
+      // Reset stalled so to rearm watchdog timer
+      this.stalled = null;
+      this._tryNudgeBuffer();
+    }
+  }
+
+  /**
+   * Triggers a BUFFER_STALLED_ERROR event, but only once per stall period.
+   * @param bufferLen - The playhead distance from the end of the current buffer segment.
+   * @private
+   */
+  _reportStall (bufferLen) {
+    const { hls, media, stallReported } = this;
+    if (!stallReported) {
+      // Report stalled error once
+      this.stallReported = true;
+      logger.warn(`Playback stalling at @${media.currentTime} due to low buffer`);
+      hls.trigger(Event.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_STALLED_ERROR,
+        fatal: false,
+        buffer: bufferLen
+      });
+    }
+  }
+
+  /**
+   * Attempts to fix buffer stalls by jumping over known gaps caused by partial fragments
+   * @param partial - The partial fragment found at the current time (where playback is stalling).
+   * @private
+   */
+  _trySkipBufferHole (partial) {
+    const { hls, media } = this;
+    const currentTime = media.currentTime;
+    let lastEndTime = 0;
+    // Check if currentTime is between unbuffered regions of partial fragments
+    for (let i = 0; i < media.buffered.length; i++) {
+      let startTime = media.buffered.start(i);
+      if (currentTime >= lastEndTime && currentTime < startTime) {
+        media.currentTime = Math.max(startTime, media.currentTime + 0.1);
+        logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${media.currentTime}`);
+        this.stalled = null;
+        hls.trigger(Event.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+          fatal: false,
+          reason: `fragment loaded with buffer holes, seeking from ${currentTime} to ${media.currentTime}`,
+          frag: partial
+        });
+        return;
+      }
+      lastEndTime = media.buffered.end(i);
+    }
+  }
+
+  /**
+   * Attempts to fix buffer stalls by advancing the mediaElement's current time by a small amount.
+   * @private
+   */
+  _tryNudgeBuffer () {
+    const { config, hls, media } = this;
+    const currentTime = media.currentTime;
+    let nudgeRetry = this.nudgeRetry || 0;
+    this.nudgeRetry = ++nudgeRetry;
+
+    if (nudgeRetry < config.nudgeMaxRetry) {
+      const targetTime = currentTime + nudgeRetry * config.nudgeOffset;
+      logger.log(`adjust currentTime from ${currentTime} to ${targetTime}`);
+      // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
+      media.currentTime = targetTime;
+      hls.trigger(Event.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
+        fatal: false
+      });
+    } else {
+      logger.error(`still stuck in high buffer @${currentTime} after ${config.nudgeMaxRetry}, raise fatal error`);
+      hls.trigger(Event.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_STALLED_ERROR,
+        fatal: true
+      });
+    }
+  }
+
+  /**
+   * Seeks to the set startPosition if not equal to the mediaElement's current time.
+   * @private
+   */
+  _seekToStartPos () {
+    const { media } = this;
+    const currentTime = media.currentTime;
+    // only adjust currentTime if different from startPosition or if startPosition not buffered
+    // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
+    const startPosition = media.seeking ? currentTime : this.startPosition;
+    // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
+    if (currentTime !== startPosition) {
+      // if startPosition not buffered, let's seek to buffered.start(0)
+      logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time ${currentTime} `);
+      media.currentTime = startPosition;
+    }
   }
 
   get liveSyncPosition () {
