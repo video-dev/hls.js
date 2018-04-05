@@ -105,7 +105,5 @@ export default class TaskLoop extends EventHandler {
    * For subclass to implement task logic
    * @abstract
    */
-  doTick () {
-    throw new Error('TaskLoop is abstract and `doTick` must be implemented');
-  }
+  doTick () {}
 }
