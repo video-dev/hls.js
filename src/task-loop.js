@@ -20,6 +20,7 @@ export default class TaskLoop extends EventHandler {
     this._tickInterval = null;
     this._tickTimer = null;
     this._tickCallCount = 0;
+    this._boundTick = this.tick.bind(this);
   }
 
   /**
@@ -51,7 +52,7 @@ export default class TaskLoop extends EventHandler {
    */
   setInterval (millis) {
     if (!this._tickInterval) {
-      this._tickInterval = setInterval(this.tick.bind(this, false), millis);
+      this._tickInterval = setInterval(this._boundTick, millis);
       return true;
     }
     return false;
@@ -94,7 +95,7 @@ export default class TaskLoop extends EventHandler {
       if (this._tickCallCount > 1) {
         // make sure only one timer exists at any time at max
         this.clearNextTick();
-        this._tickTimer = setTimeout(this.tick.bind(this), 0);
+        this._tickTimer = setTimeout(this._boundTick, 0);
       }
 
       this._tickCallCount = 0;
