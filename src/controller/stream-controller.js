@@ -1356,6 +1356,10 @@ class StreamController extends TaskLoop {
     return false;
   }
 
+  /**
+   * Checks the health of the buffer and attempts to resolve playback stalls.
+   * @private
+   */
   _checkBuffer () {
     const { config, media } = this;
     if (!media || !media.readyState) {
@@ -1437,6 +1441,12 @@ class StreamController extends TaskLoop {
     return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
   }
 
+  /**
+   * Detects and attempts to fix known buffer stalling issues.
+   * @param bufferInfo - The properties of the current buffer.
+   * @param stalledDuration - The amount of time Hls.js has been stalling for.
+   * @private
+   */
   _tryFixBufferStall (bufferInfo, stalledDuration) {
     const { config, media } = this;
     const currentTime = media.currentTime;
@@ -1460,6 +1470,11 @@ class StreamController extends TaskLoop {
     }
   }
 
+  /**
+   * Triggers a BUFFER_STALLED_ERROR event, but only once per stall period.
+   * @param bufferLen - The playhead distance from the end of the current buffer segment.
+   * @private
+   */
   _reportStall (bufferLen) {
     const { hls, media, stallReported } = this;
     if (!stallReported) {
@@ -1475,6 +1490,11 @@ class StreamController extends TaskLoop {
     }
   }
 
+  /**
+   * Attempts to fix buffer stalls by jumping over known gaps caused by partial fragments
+   * @param partial - The partial fragment found at the current time (where playback is stalling).
+   * @private
+   */
   _trySkipBufferHole (partial) {
     const { hls, media } = this;
     const currentTime = media.currentTime;
@@ -1499,6 +1519,10 @@ class StreamController extends TaskLoop {
     }
   }
 
+  /**
+   * Attempts to fix buffer stalls by advancing the mediaElement's current time by a small amount.
+   * @private
+   */
   _tryNudgeBuffer () {
     const { config, hls, media } = this;
     const currentTime = media.currentTime;
@@ -1525,6 +1549,10 @@ class StreamController extends TaskLoop {
     }
   }
 
+  /**
+   * Seeks to the set startPosition if not equal to the mediaElement's current time.
+   * @private
+   */
   _seekToStartPos () {
     const { media } = this;
     const currentTime = media.currentTime;
