@@ -1,8 +1,8 @@
 import assert from 'assert';
 import sinon from 'sinon';
-import StreamController from "../../../src/controller/stream-controller";
-import {FragmentTracker} from "../../../src/helper/fragment-tracker";
-import Hls from "../../../src/hls";
+import StreamController from '../../../src/controller/stream-controller';
+import { FragmentTracker } from '../../../src/helper/fragment-tracker';
+import Hls from '../../../src/hls';
 import Event from '../../../src/events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
 
