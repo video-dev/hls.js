@@ -264,7 +264,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   loaderror (response, context, networkDetails = null) {
-    this._handleNetworkError(context, networkDetails);
+    this._handleNetworkError(response, context, networkDetails);
   }
 
   loadtimeout (stats, context, networkDetails = null) {
@@ -420,7 +420,7 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handleNetworkError (context, networkDetails, timeout = false) {
+  _handleNetworkError (response, context, networkDetails, timeout = false) {
     let details;
     let fatal;
 
@@ -455,6 +455,7 @@ class PlaylistLoader extends EventHandler {
       fatal,
       url: loader.url,
       loader,
+      response,
       context,
       networkDetails
     });
