@@ -2,11 +2,15 @@
 # https://docs.travis-ci.com/user/customizing-the-build/#Implementing-Complex-Build-Steps
 set -ev
 
-npm install
+npm install --quiet
+
 if [ "${TRAVIS_MODE}" = "build" ]; then
-	npm run build
+	npm run lint && npm run build
+  # check that hls.js doesn't error if requiring in node
+  # see https://github.com/video-dev/hls.js/pull/1642
+  node -e 'require("./" + require("./package.json").main)'
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
-	npm run test
+	npm run test:unit
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 	npm run build
 	n=0
@@ -19,7 +23,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 			echo "Waiting ${delay} seconds..."
 			sleep $delay
 		fi
-		npm run testfunc && break
+		npm run test:func && break
 		n=$[$n+1]
 	done
 	if [ ${n} = ${maxRetries} ]; then

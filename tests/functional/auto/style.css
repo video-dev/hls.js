@@ -1,0 +1,36 @@
+body {
+  background-color: #cccccc;
+}
+
+#log {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  color: #ff0000;
+  overflow: hidden;
+  font-size: 20px;
+  z-index: 999;
+}
+
+#log .inner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  background-color: rgba(255, 255, 255, 0.75);
+}
+
+#log .inner .line {
+  margin: 0;
+  padding: 3px 15px;
+  border-width: 1px;
+  border-color: #aaaaaa;
+  border-style: none;
+  border-bottom-style: solid;
+  white-space: pre-wrap;
+}
