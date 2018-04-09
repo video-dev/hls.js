@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/utils/vttparser.js | hls.js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="JavaScript HLS client using MediaSourceExtension"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="hls.js"><meta property="twitter:description" content="JavaScript HLS client using MediaSourceExtension"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/video-dev/hls.js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/event-handler.js~EventHandler.html">EventHandler</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/hls.js~Hls.html">Hls</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/buffer-controller.js~BufferController.html">BufferController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/cap-level-controller.js~CapLevelController.html">CapLevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/eme-controller.js~EMEController.html">EMEController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fps-controller.js~FPSController.html">FPSController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/id3-track-controller.js~ID3TrackController.html">ID3TrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/level-controller.js~LevelController.html">LevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/stream-controller.js~StreamController.html">StreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/fast-aes-key.js~FastAESKey.html">FastAESKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-removePadding">removePadding</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#demux">demux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/aacdemuxer.js~AACDemuxer.html">AACDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer-inline.js~DemuxerInline.html">DemuxerInline</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer.js~Demuxer.html">Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/exp-golomb.js~ExpGolomb.html">ExpGolomb</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/id3.js~ID3.html">ID3</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp3demuxer.js~MP3Demuxer.html">MP3Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp4demuxer.js~MP4Demuxer.html">MP4Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/sample-aes.js~SampleAesDecrypter.html">SampleAesDecrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/tsdemuxer.js~TSDemuxer.html">TSDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-appendFrame">appendFrame</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getAudioConfig">getAudioConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFrameDuration">getFrameDuration</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFullFrameLength">getFullFrameLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getHeaderLength">getHeaderLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-initTrackConfig">initTrackConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeader">isHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeaderPattern">isHeaderPattern</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-parseFrameHeader">parseFrameHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-probe">probe</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-DemuxerWorker">DemuxerWorker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-utf8ArrayToStr">utf8ArrayToStr</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-MpegAudio">MpegAudio</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#helper">helper</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/helper/aac.js~AAC.html">AAC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/helper/fragment-tracker.js~FragmentTracker.html">FragmentTracker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isSupported">isSupported</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-mergeDetails">mergeDetails</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updatePTS">updatePTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getMediaSource">getMediaSource</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BufferHelper">BufferHelper</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-FragmentState">FragmentState</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-requestMediaKeySystemAccess">requestMediaKeySystemAccess</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#loader">loader</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment-loader.js~FragmentLoader.html">FragmentLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/key-loader.js~KeyLoader.html">KeyLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level-key.js~LevelKey.html">LevelKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/m3u8-parser.js~M3U8Parser.html">M3U8Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html">PlaylistLoader</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#remux">remux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/dummy-remuxer.js~DummyRemuxer.html">DummyRemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-generator.js~MP4.html">MP4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-remuxer.js~MP4Remuxer.html">MP4Remuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/passthrough-remuxer.js~PassThroughRemuxer.html">PassThroughRemuxer</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#utils">utils</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/attr-list.js~AttrList.html">AttrList</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/cea-608-parser.js~Cea608Parser.html">Cea608Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma-bandwidth-estimator.js~EwmaBandWidthEstimator.html">EwmaBandWidthEstimator</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma.js~EWMA.html">EWMA</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/fetch-loader.js~FetchLoader.html">FetchLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/output-filter.js~OutputFilter.html">OutputFilter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/xhr-loader.js~XhrLoader.html">XhrLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecSupportedInMp4">isCodecSupportedInMp4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecType">isCodecType</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-newCue">newCue</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-adjustPts">adjustPts</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignDiscontinuities">alignDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findDiscontinuousReferenceFrag">findDiscontinuousReferenceFrag</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFirstFragWithCC">findFirstFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Hex">Hex</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-logger">logger</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-WebVTTParser">WebVTTParser</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/utils/vttparser.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/*
+ * Source: https://github.com/mozilla/vtt.js/blob/master/dist/vtt.js#L1716
+ */
+
+import VTTCue from &apos;./vttcue&apos;;
+
+const StringDecoder = function StringDecoder () {
+  return {
+    decode: function (data) {
+      if (!data)
+        return &apos;&apos;;
+
+      if (typeof data !== &apos;string&apos;)
+        throw new Error(&apos;Error - expected string data.&apos;);
+
+      return decodeURIComponent(encodeURIComponent(data));
+    }
+  };
+};
+
+function VTTParser () {
+  this.window = window;
+  this.state = &apos;INITIAL&apos;;
+  this.buffer = &apos;&apos;;
+  this.decoder = new StringDecoder();
+  this.regionList = [];
+}
+
+// Try to parse input as a time stamp.
+function parseTimeStamp (input) {
+  function computeSeconds (h, m, s, f) {
+    return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + (f | 0) / 1000;
+  }
+
+  let m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d{3})/);
+  if (!m)
+    return null;
+
+  if (m[3]) {
+    // Timestamp takes the form of [hours]:[minutes]:[seconds].[milliseconds]
+    return computeSeconds(m[1], m[2], m[3].replace(&apos;:&apos;, &apos;&apos;), m[4]);
+  } else if (m[1] &gt; 59) {
+    // Timestamp takes the form of [hours]:[minutes].[milliseconds]
+    // First position is hours as it&apos;s over 59.
+    return computeSeconds(m[1], m[2], 0, m[4]);
+  } else {
+    // Timestamp takes the form of [minutes]:[seconds].[milliseconds]
+    return computeSeconds(0, m[1], m[2], m[4]);
+  }
+}
+
+// A settings object holds key/value pairs and will ignore anything but the first
+// assignment to a specific key.
+function Settings () {
+  this.values = Object.create(null);
+}
+
+Settings.prototype = {
+  // Only accept the first assignment to any key.
+  set: function (k, v) {
+    if (!this.get(k) &amp;&amp; v !== &apos;&apos;)
+      this.values[k] = v;
+  },
+  // Return the value for a key, or a default value.
+  // If &apos;defaultKey&apos; is passed then &apos;dflt&apos; is assumed to be an object with
+  // a number of possible default values as properties where &apos;defaultKey&apos; is
+  // the key of the property that will be chosen; otherwise it&apos;s assumed to be
+  // a single value.
+  get: function (k, dflt, defaultKey) {
+    if (defaultKey)
+      return this.has(k) ? this.values[k] : dflt[defaultKey];
+
+    return this.has(k) ? this.values[k] : dflt;
+  },
+  // Check whether we have a value for a key.
+  has: function (k) {
+    return k in this.values;
+  },
+  // Accept a setting if its one of the given alternatives.
+  alt: function (k, v, a) {
+    for (let n = 0; n &lt; a.length; ++n) {
+      if (v === a[n]) {
+        this.set(k, v);
+        break;
+      }
+    }
+  },
+  // Accept a setting if its a valid (signed) integer.
+  integer: function (k, v) {
+    if (/^-?\d+$/.test(v)) { // integer
+      this.set(k, parseInt(v, 10));
+    }
+  },
+  // Accept a setting if its a valid percentage.
+  percent: function (k, v) {
+    let m;
+    if ((m = v.match(/^([\d]{1,3})(\.[\d]*)?%$/))) {
+      v = parseFloat(v);
+      if (v &gt;= 0 &amp;&amp; v &lt;= 100) {
+        this.set(k, v);
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+// Helper function to parse input into groups separated by &apos;groupDelim&apos;, and
+// interprete each group as a key/value pair separated by &apos;keyValueDelim&apos;.
+function parseOptions (input, callback, keyValueDelim, groupDelim) {
+  let groups = groupDelim ? input.split(groupDelim) : [input];
+  for (let i in groups) {
+    if (typeof groups[i] !== &apos;string&apos;)
+      continue;
+
+    let kv = groups[i].split(keyValueDelim);
+    if (kv.length !== 2)
+      continue;
+
+    let k = kv[0];
+    let v = kv[1];
+    callback(k, v);
+  }
+}
+
+let defaults = new VTTCue(0, 0, 0);
+// &apos;middle&apos; was changed to &apos;center&apos; in the spec: https://github.com/w3c/webvtt/pull/244
+//  Safari doesn&apos;t yet support this change, but FF and Chrome do.
+let center = defaults.align === &apos;middle&apos; ? &apos;middle&apos; : &apos;center&apos;;
+
+function parseCue (input, cue, regionList) {
+  // Remember the original input if we need to throw an error.
+  let oInput = input;
+  // 4.1 WebVTT timestamp
+  function consumeTimeStamp () {
+    let ts = parseTimeStamp(input);
+    if (ts === null)
+      throw new Error(&apos;Malformed timestamp: &apos; + oInput);
+
+    // Remove time stamp from input.
+    input = input.replace(/^[^\sa-zA-Z-]+/, &apos;&apos;);
+    return ts;
+  }
+
+  // 4.4.2 WebVTT cue settings
+  function consumeCueSettings (input, cue) {
+    let settings = new Settings();
+
+    parseOptions(input, function (k, v) {
+      switch (k) {
+      case &apos;region&apos;:
+        // Find the last region we parsed with the same region id.
+        for (let i = regionList.length - 1; i &gt;= 0; i--) {
+          if (regionList[i].id === v) {
+            settings.set(k, regionList[i].region);
+            break;
+          }
+        }
+        break;
+      case &apos;vertical&apos;:
+        settings.alt(k, v, [&apos;rl&apos;, &apos;lr&apos;]);
+        break;
+      case &apos;line&apos;:
+        var vals = v.split(&apos;,&apos;),
+          vals0 = vals[0];
+        settings.integer(k, vals0);
+        if (settings.percent(k, vals0))
+          settings.set(&apos;snapToLines&apos;, false);
+
+        settings.alt(k, vals0, [&apos;auto&apos;]);
+        if (vals.length === 2)
+          settings.alt(&apos;lineAlign&apos;, vals[1], [&apos;start&apos;, center, &apos;end&apos;]);
+
+        break;
+      case &apos;position&apos;:
+        vals = v.split(&apos;,&apos;);
+        settings.percent(k, vals[0]);
+        if (vals.length === 2)
+          settings.alt(&apos;positionAlign&apos;, vals[1], [&apos;start&apos;, center, &apos;end&apos;, &apos;line-left&apos;, &apos;line-right&apos;, &apos;auto&apos;]);
+
+        break;
+      case &apos;size&apos;:
+        settings.percent(k, v);
+        break;
+      case &apos;align&apos;:
+        settings.alt(k, v, [&apos;start&apos;, center, &apos;end&apos;, &apos;left&apos;, &apos;right&apos;]);
+        break;
+      }
+    }, /:/, /\s/);
+
+    // Apply default values for any missing fields.
+    cue.region = settings.get(&apos;region&apos;, null);
+    cue.vertical = settings.get(&apos;vertical&apos;, &apos;&apos;);
+    let line = settings.get(&apos;line&apos;, &apos;auto&apos;);
+    if (line === &apos;auto&apos; &amp;&amp; defaults.line === -1) {
+      // set numeric line number for Safari
+      line = -1;
+    }
+    cue.line = line;
+    cue.lineAlign = settings.get(&apos;lineAlign&apos;, &apos;start&apos;);
+    cue.snapToLines = settings.get(&apos;snapToLines&apos;, true);
+    cue.size = settings.get(&apos;size&apos;, 100);
+    cue.align = settings.get(&apos;align&apos;, center);
+    let position = settings.get(&apos;position&apos;, &apos;auto&apos;);
+    if (position === &apos;auto&apos; &amp;&amp; defaults.position === 50) {
+      // set numeric position for Safari
+      position = cue.align === &apos;start&apos; || cue.align === &apos;left&apos; ? 0 : cue.align === &apos;end&apos; || cue.align === &apos;right&apos; ? 100 : 50;
+    }
+    cue.position = position;
+  }
+
+  function skipWhitespace () {
+    input = input.replace(/^\s+/, &apos;&apos;);
+  }
+
+  // 4.1 WebVTT cue timings.
+  skipWhitespace();
+  cue.startTime = consumeTimeStamp(); // (1) collect cue start time
+  skipWhitespace();
+  if (input.substr(0, 3) !== &apos;--&gt;&apos;) { // (3) next characters must match &apos;--&gt;&apos;
+    throw new Error(&apos;Malformed time stamp (time stamps must be separated by \&apos;--&gt;\&apos;): &apos; +
+      oInput);
+  }
+  input = input.substr(3);
+  skipWhitespace();
+  cue.endTime = consumeTimeStamp(); // (5) collect cue end time
+
+  // 4.1 WebVTT cue settings list.
+  skipWhitespace();
+  consumeCueSettings(input, cue);
+}
+
+function fixLineBreaks (input) {
+  return input.replace(/&lt;br(?: \/)?&gt;/gi, &apos;\n&apos;);
+}
+
+VTTParser.prototype = {
+  parse: function (data) {
+    let self = this;
+
+    // If there is no data then we won&apos;t decode it, but will just try to parse
+    // whatever is in buffer already. This may occur in circumstances, for
+    // example when flush() is called.
+    if (data) {
+      // Try to decode the data that we received.
+      self.buffer += self.decoder.decode(data, { stream: true });
+    }
+
+    function collectNextLine () {
+      let buffer = self.buffer;
+      let pos = 0;
+
+      buffer = fixLineBreaks(buffer);
+
+      while (pos &lt; buffer.length &amp;&amp; buffer[pos] !== &apos;\r&apos; &amp;&amp; buffer[pos] !== &apos;\n&apos;)
+        ++pos;
+
+      let line = buffer.substr(0, pos);
+      // Advance the buffer early in case we fail below.
+      if (buffer[pos] === &apos;\r&apos;)
+        ++pos;
+
+      if (buffer[pos] === &apos;\n&apos;)
+        ++pos;
+
+      self.buffer = buffer.substr(pos);
+      return line;
+    }
+
+    // 3.2 WebVTT metadata header syntax
+    function parseHeader (input) {
+      parseOptions(input, function (k, v) {
+        switch (k) {
+        case &apos;Region&apos;:
+          // 3.3 WebVTT region metadata header syntax
+          console.log(&apos;parse region&apos;, v);
+          // parseRegion(v);
+          break;
+        }
+      }, /:/);
+    }
+
+    // 5.1 WebVTT file parsing.
+    try {
+      let line;
+      if (self.state === &apos;INITIAL&apos;) {
+        // We can&apos;t start parsing until we have the first line.
+        if (!/\r\n|\n/.test(self.buffer))
+          return this;
+
+        line = collectNextLine();
+        // strip of UTF-8 BOM if any
+        // https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
+        let m = line.match(/^(&#xEF;&#xBB;&#xBF;)?WEBVTT([ \t].*)?$/);
+        if (!m || !m[0])
+          throw new Error(&apos;Malformed WebVTT signature.&apos;);
+
+        self.state = &apos;HEADER&apos;;
+      }
+
+      let alreadyCollectedLine = false;
+      while (self.buffer) {
+        // We can&apos;t parse a line until we have the full line.
+        if (!/\r\n|\n/.test(self.buffer))
+          return this;
+
+        if (!alreadyCollectedLine)
+          line = collectNextLine();
+        else
+          alreadyCollectedLine = false;
+
+        switch (self.state) {
+        case &apos;HEADER&apos;:
+          // 13-18 - Allow a header (metadata) under the WEBVTT line.
+          if (/:/.test(line)) {
+            parseHeader(line);
+          } else if (!line) {
+            // An empty line terminates the header and starts the body (cues).
+            self.state = &apos;ID&apos;;
+          }
+          continue;
+        case &apos;NOTE&apos;:
+          // Ignore NOTE blocks.
+          if (!line)
+            self.state = &apos;ID&apos;;
+
+          continue;
+        case &apos;ID&apos;:
+          // Check for the start of NOTE blocks.
+          if (/^NOTE($|[ \t])/.test(line)) {
+            self.state = &apos;NOTE&apos;;
+            break;
+          }
+          // 19-29 - Allow any number of line terminators, then initialize new cue values.
+          if (!line)
+            continue;
+
+          self.cue = new VTTCue(0, 0, &apos;&apos;);
+          self.state = &apos;CUE&apos;;
+          // 30-39 - Check if self line contains an optional identifier or timing data.
+          if (line.indexOf(&apos;--&gt;&apos;) === -1) {
+            self.cue.id = line;
+            continue;
+          }
+          // Process line as start of a cue.
+          /* falls through */
+        case &apos;CUE&apos;:
+          // 40 - Collect cue timings and settings.
+          try {
+            parseCue(line, self.cue, self.regionList);
+          } catch (e) {
+            // In case of an error ignore rest of the cue.
+            self.cue = null;
+            self.state = &apos;BADCUE&apos;;
+            continue;
+          }
+          self.state = &apos;CUETEXT&apos;;
+          continue;
+        case &apos;CUETEXT&apos;:
+          var hasSubstring = line.indexOf(&apos;--&gt;&apos;) !== -1;
+          // 34 - If we have an empty line then report the cue.
+          // 35 - If we have the special substring &apos;--&gt;&apos; then report the cue,
+          // but do not collect the line as we need to process the current
+          // one as a new cue.
+          if (!line || hasSubstring &amp;&amp; (alreadyCollectedLine = true)) {
+            // We are done parsing self cue.
+            if (self.oncue)
+              self.oncue(self.cue);
+
+            self.cue = null;
+            self.state = &apos;ID&apos;;
+            continue;
+          }
+          if (self.cue.text)
+            self.cue.text += &apos;\n&apos;;
+
+          self.cue.text += line;
+          continue;
+        case &apos;BADCUE&apos;: // BADCUE
+          // 54-62 - Collect and discard the remaining cue.
+          if (!line)
+            self.state = &apos;ID&apos;;
+
+          continue;
+        }
+      }
+    } catch (e) {
+      // If we are currently parsing a cue, report what we have.
+      if (self.state === &apos;CUETEXT&apos; &amp;&amp; self.cue &amp;&amp; self.oncue)
+        self.oncue(self.cue);
+
+      self.cue = null;
+      // Enter BADWEBVTT state if header was not parsed correctly otherwise
+      // another exception occurred so enter BADCUE state.
+      self.state = self.state === &apos;INITIAL&apos; ? &apos;BADWEBVTT&apos; : &apos;BADCUE&apos;;
+    }
+    return this;
+  },
+  flush: function () {
+    let self = this;
+    try {
+      // Finish decoding the stream.
+      self.buffer += self.decoder.decode();
+      // Synthesize the end of the current cue or region.
+      if (self.cue || self.state === &apos;HEADER&apos;) {
+        self.buffer += &apos;\n\n&apos;;
+        self.parse();
+      }
+      // If we&apos;ve flushed, parsed, and we&apos;re still on the INITIAL state then
+      // that means we don&apos;t have enough of the stream to parse the first
+      // line.
+      if (self.state === &apos;INITIAL&apos;)
+        throw new Error(&apos;Malformed WebVTT signature.&apos;);
+    } catch (e) {
+      throw e;
+    }
+    if (self.onflush)
+      self.onflush();
+
+    return this;
+  }
+};
+
+export { fixLineBreaks };
+
+export default VTTParser;
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.0.4)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

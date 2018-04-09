@@ -1,10 +1,16 @@
+# MacOS
 .DS_Store
+
+# npm
 node_modules/*
-bower_components/*
-/streams.js
-lib
 npm-debug.log
-.nyc_output/
+bower_components/*
+
+# Coverage
 coverage/
-# ignore JetBrains
+
+# JetBrains
 .idea/*
+
+# Build reports
+dist/bundle-analyzer-report.*

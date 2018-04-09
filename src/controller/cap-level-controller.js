@@ -6,36 +6,34 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 
 class CapLevelController extends EventHandler {
-	constructor(hls) {
+  constructor (hls) {
     super(hls,
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED,
       Event.LEVELS_UPDATED);
-	}
+  }
 
-	destroy() {
+  destroy () {
     if (this.hls.config.capLevelToPlayerSize) {
       this.media = this.restrictedLevels = null;
       this.autoLevelCapping = Number.POSITIVE_INFINITY;
-      if (this.timer) {
+      if (this.timer)
         this.timer = clearInterval(this.timer);
-      }
     }
   }
 
-  onFpsDropLevelCapping(data) {
-	  // Don't add a restricted level more than once
-    if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels)) {
+  onFpsDropLevelCapping (data) {
+    // Don't add a restricted level more than once
+    if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels))
       this.restrictedLevels.push(data.droppedLevel);
-    }
   }
 
-	onMediaAttaching(data) {
+  onMediaAttaching (data) {
     this.media = data.media instanceof HTMLVideoElement ? data.media : null;
   }
 
-  onManifestParsed(data) {
+  onManifestParsed (data) {
     const hls = this.hls;
     this.restrictedLevels = [];
     // Only fire getMaxLevel or detectPlayerSize if video is expected in the manifest
@@ -49,11 +47,11 @@ class CapLevelController extends EventHandler {
     }
   }
 
-  onLevelsUpdated(data) {
-	  this.levels = data.levels;
+  onLevelsUpdated (data) {
+    this.levels = data.levels;
   }
 
-  detectPlayerSize() {
+  detectPlayerSize () {
     if (this.media && this.mediaHeight > 0 && this.mediaWidth > 0) {
       let levelsLength = this.levels ? this.levels.length : 0;
       if (levelsLength) {
@@ -72,10 +70,9 @@ class CapLevelController extends EventHandler {
   /*
   * returns level should be the one with the dimensions equal or greater than the media (player) dimensions (so the video will be downscaled)
   */
-  getMaxLevel(capLevelIndex) {
-    if (!this.levels) {
+  getMaxLevel (capLevelIndex) {
+    if (!this.levels)
       return -1;
-    }
 
     const validLevels = this.levels.filter((level, index) =>
       CapLevelController.isLevelAllowed(index, this.restrictedLevels) && index <= capLevelIndex
@@ -84,7 +81,7 @@ class CapLevelController extends EventHandler {
     return CapLevelController.getMaxLevelByMediaSize(validLevels, this.mediaWidth, this.mediaHeight);
   }
 
-  get mediaWidth() {
+  get mediaWidth () {
     let width;
     const media = this.media;
     if (media) {
@@ -94,7 +91,7 @@ class CapLevelController extends EventHandler {
     return width;
   }
 
-  get mediaHeight() {
+  get mediaHeight () {
     let height;
     const media = this.media;
     if (media) {
@@ -104,29 +101,28 @@ class CapLevelController extends EventHandler {
     return height;
   }
 
-  static get contentScaleFactor() {
+  static get contentScaleFactor () {
     let pixelRatio = 1;
     try {
-      pixelRatio =  window.devicePixelRatio;
-    } catch(e) {}
+      pixelRatio = window.devicePixelRatio;
+    } catch (e) {}
     return pixelRatio;
   }
 
-  static isLevelAllowed(level, restrictedLevels = []) {
+  static isLevelAllowed (level, restrictedLevels = []) {
     return restrictedLevels.indexOf(level) === -1;
   }
 
-  static getMaxLevelByMediaSize(levels, width, height) {
-    if (!levels || (levels && !levels.length)) {
+  static getMaxLevelByMediaSize (levels, width, height) {
+    if (!levels || (levels && !levels.length))
       return -1;
-    }
 
     // Levels can have the same dimensions but differing bandwidths - since levels are ordered, we can look to the next
     // to determine whether we've chosen the greatest bandwidth for the media's dimensions
     const atGreatestBandiwdth = (curLevel, nextLevel) => {
-      if (!nextLevel) {
+      if (!nextLevel)
         return true;
-      }
+
       return curLevel.width !== nextLevel.width || curLevel.height !== nextLevel.height;
     };
 
@@ -134,7 +130,7 @@ class CapLevelController extends EventHandler {
     // the max level
     let maxLevelIndex = levels.length - 1;
 
-    for (let i = 0; i < levels.length; i+= 1) {
+    for (let i = 0; i < levels.length; i += 1) {
       const level = levels[i];
       if ((level.width >= width || level.height >= height) && atGreatestBandiwdth(level, levels[i + 1])) {
         maxLevelIndex = i;

@@ -1,4 +1,4 @@
-function noop() {}
+function noop () {}
 
 const fakeLogger = {
   trace: noop,
@@ -11,9 +11,9 @@ const fakeLogger = {
 
 let exportedLogger = fakeLogger;
 
-/*globals self: false */
+/* globals self: false */
 
-//let lastCallTime;
+// let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
 //   const now = Date.now();
 //   const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
@@ -22,35 +22,35 @@ let exportedLogger = fakeLogger;
 //   return msg;
 // }
 
-function formatMsg(type, msg) {
-  msg = '[' +  type + '] > ' + msg;
+function formatMsg (type, msg) {
+  msg = '[' + type + '] > ' + msg;
   return msg;
 }
 
-function consolePrintFn(type) {
+function consolePrintFn (type) {
   const func = self.console[type];
   if (func) {
-    return function(...args) {
-      if(args[0]) {
+    return function (...args) {
+      if (args[0])
         args[0] = formatMsg(type, args[0]);
-      }
+
       func.apply(self.console, args);
     };
   }
   return noop;
 }
 
-function exportLoggerFunctions(debugConfig, ...functions) {
-  functions.forEach(function(type) {
+function exportLoggerFunctions (debugConfig, ...functions) {
+  functions.forEach(function (type) {
     exportedLogger[type] = debugConfig[type] ? debugConfig[type].bind(debugConfig) : consolePrintFn(type);
   });
 }
 
-export var enableLogs = function(debugConfig) {
+export var enableLogs = function (debugConfig) {
   if (debugConfig === true || typeof debugConfig === 'object') {
     exportLoggerFunctions(debugConfig,
       // Remove out from list here to hard-disable a log-level
-      //'trace',
+      // 'trace',
       'debug',
       'log',
       'info',
@@ -60,12 +60,11 @@ export var enableLogs = function(debugConfig) {
     // Some browsers don't allow to use bind on console object anyway
     // fallback to default if needed
     try {
-     exportedLogger.log();
+      exportedLogger.log();
     } catch (e) {
       exportedLogger = fakeLogger;
     }
-  }
-  else {
+  } else {
     exportedLogger = fakeLogger;
   }
 };
