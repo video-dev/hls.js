@@ -442,7 +442,7 @@ class PlaylistLoader extends EventHandler {
       type: ErrorTypes.NETWORK_ERROR,
       details,
       fatal,
-      url: loader.url,
+      url: context.url,
       loader,
       context,
       networkDetails
