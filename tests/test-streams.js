@@ -142,5 +142,11 @@ module.exports = {
     widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }
-  )
+  ),
+  audioOnlyMultipleLevels: {
+    'url': 'https://s3.amazonaws.com/bob.jwplayer.com/~alex/121628/new_master.m3u8',
+    'description': 'Multiple non-alternate audio levels',
+    'live': false,
+    'abr': false
+  }
 };
