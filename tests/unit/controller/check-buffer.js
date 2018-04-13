@@ -26,7 +26,7 @@ describe('checkBuffer', function () {
       for (let i = 1; i < config.nudgeMaxRetry; i++) {
         let expected = media.currentTime + (i * config.nudgeOffset);
         streamController._tryNudgeBuffer();
-        assert.equal(expected, media.currentTime);
+        assert.strictEqual(expected, media.currentTime);
       }
       assert(triggerSpy.alwaysCalledWith(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
@@ -38,7 +38,7 @@ describe('checkBuffer', function () {
     it('should not increment the currentTime if the max amount of nudges has been attempted', function () {
       config.nudgeMaxRetry = 0;
       streamController._tryNudgeBuffer();
-      assert.equal(0, media.currentTime);
+      assert.strictEqual(0, media.currentTime);
       assert(triggerSpy.calledWith(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
@@ -119,14 +119,14 @@ describe('checkBuffer', function () {
     it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
       streamController.startPosition = 5;
       streamController._seekToStartPos();
-      assert.equal(5, media.currentTime);
+      assert.strictEqual(5, media.currentTime);
     });
 
     it('should not seek to startPosition when it is buffered', function () {
       streamController.startPosition = 5;
       media.currentTime = 5;
       streamController._seekToStartPos();
-      assert.equal(5, media.currentTime);
+      assert.strictEqual(5, media.currentTime);
     });
   });
 
@@ -174,7 +174,7 @@ describe('checkBuffer', function () {
       mockMedia.buffered.length = 0;
       streamController._checkBuffer();
       assert(seekStub.notCalled);
-      assert.equal(streamController.loadedmetadata, undefined);
+      assert.strictEqual(streamController.loadedmetadata, undefined);
     });
 
     it('should complete the immediate switch if signalled', function () {
@@ -193,7 +193,7 @@ describe('checkBuffer', function () {
       streamController._checkBuffer();
 
       // The first _checkBuffer call made while stalling just sets stall flags
-      assert.equal(typeof streamController.stalled, 'number');
+      assert.strictEqual(typeof streamController.stalled, 'number');
       assert(streamController.stallReported);
 
       streamController._checkBuffer();
@@ -209,9 +209,9 @@ describe('checkBuffer', function () {
       const fixStallStub = sinon.stub(streamController, '_tryFixBufferStall');
       streamController._checkBuffer();
 
-      assert.equal(streamController.stalled, null);
-      assert.equal(streamController.nudgeRetry, 0);
-      assert.equal(streamController.stallReported, false);
+      assert.strictEqual(streamController.stalled, null);
+      assert.strictEqual(streamController.nudgeRetry, 0);
+      assert.strictEqual(streamController.stallReported, false);
       assert(fixStallStub.notCalled);
     });
   });
