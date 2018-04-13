@@ -119,14 +119,14 @@ describe('checkBuffer', function () {
     it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
       streamController.startPosition = 5;
       streamController._seekToStartPos();
-      assert(5, media.currentTime);
+      assert.equal(5, media.currentTime);
     });
 
     it('should not seek to startPosition when it is buffered', function () {
       streamController.startPosition = 5;
       media.currentTime = 5;
       streamController._seekToStartPos();
-      assert(5, media.currentTime);
+      assert.equal(5, media.currentTime);
     });
   });
 

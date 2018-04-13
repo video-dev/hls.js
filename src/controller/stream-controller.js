@@ -1362,7 +1362,7 @@ class StreamController extends TaskLoop {
    */
   _checkBuffer () {
     const { config, media } = this;
-    if (!media || !media.readyState) {
+    if (!media || media.readyState === 0) {
       // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
       return;
     }
@@ -1526,8 +1526,8 @@ class StreamController extends TaskLoop {
   _tryNudgeBuffer () {
     const { config, hls, media } = this;
     const currentTime = media.currentTime;
-    let nudgeRetry = this.nudgeRetry || 0;
-    this.nudgeRetry = ++nudgeRetry;
+    const nudgeRetry = (this.nudgeRetry || 0) + 1;
+    this.nudgeRetry = nudgeRetry;
 
     if (nudgeRetry < config.nudgeMaxRetry) {
       const targetTime = currentTime + nudgeRetry * config.nudgeOffset;
