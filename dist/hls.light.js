@@ -6092,6 +6092,7 @@ var m3u8_parser_M3U8Parser = function () {
       var attrs = new attr_list(result[1]);
       if (attrs.TYPE === type) {
         media.groupId = attrs['GROUP-ID'];
+        media.instreamId = attrs['INSTREAM-ID'];
         media.name = attrs.NAME;
         media.type = type;
         media.default = attrs.DEFAULT === 'YES';
@@ -6633,6 +6634,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
     var audioTracks = m3u8_parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
     var subtitles = m3u8_parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    var captions = m3u8_parser.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -6658,6 +6660,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
       levels: levels,
       audioTracks: audioTracks,
       subtitles: subtitles,
+      captions: captions,
       url: url,
       stats: stats,
       networkDetails: networkDetails
