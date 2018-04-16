@@ -43,10 +43,11 @@ class TSDemuxer {
   }
 
   setDecryptData (decryptdata) {
-    if ((decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'SAMPLE-AES'))
+    if ((decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'SAMPLE-AES')) {
       this.sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptdata, this.discardEPB);
-    else
+    } else {
       this.sampleAes = null;
+    }
   }
 
   static probe (data) {
@@ -54,8 +55,9 @@ class TSDemuxer {
     if (syncOffset < 0) {
       return false;
     } else {
-      if (syncOffset)
+      if (syncOffset) {
         logger.warn(`MPEG2-TS detected but first sync word found @ offset ${syncOffset}, junk ahead ?`);
+      }
 
       return true;
     }
@@ -67,10 +69,11 @@ class TSDemuxer {
     let i = 0;
     while (i < scanwindow) {
       // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
-      if (data[i] === 0x47 && data[i + 188] === 0x47 && data[i + 2 * 188] === 0x47)
+      if (data[i] === 0x47 && data[i + 188] === 0x47 && data[i + 2 * 188] === 0x47) {
         return i;
-      else
+      } else {
         i++;
+      }
     }
     return -1;
   }
@@ -172,16 +175,18 @@ class TSDemuxer {
         if (atf > 1) {
           offset = start + 5 + data[start + 4];
           // continue if there is only adaptation field
-          if (offset === (start + 188))
+          if (offset === (start + 188)) {
             continue;
+          }
         } else {
           offset = start + 4;
         }
         switch (pid) {
         case avcId:
           if (stt) {
-            if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined)
+            if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
               parseAVCPES(pes, false);
+            }
 
             avcData = { data: [], size: 0 };
           }
@@ -193,10 +198,11 @@ class TSDemuxer {
         case audioId:
           if (stt) {
             if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
-              if (audioTrack.isAAC)
+              if (audioTrack.isAAC) {
                 parseAACPES(pes);
-              else
+              } else {
                 parseMPEGPES(pes);
+              }
             }
             audioData = { data: [], size: 0 };
           }
@@ -207,8 +213,9 @@ class TSDemuxer {
           break;
         case id3Id:
           if (stt) {
-            if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined)
+            if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
               parseID3PES(pes);
+            }
 
             id3Data = { data: [], size: 0 };
           }
@@ -218,14 +225,16 @@ class TSDemuxer {
           }
           break;
         case 0:
-          if (stt)
+          if (stt) {
             offset += data[offset] + 1;
+          }
 
           pmtId = this._pmtId = parsePAT(data, offset);
           break;
         case pmtId:
-          if (stt)
+          if (stt) {
             offset += data[offset] + 1;
+          }
 
           let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true, this.sampleAes != null);
 
@@ -236,8 +245,9 @@ class TSDemuxer {
           // NOTE this is only the PID of the track as found in TS,
           // but we are not using this for MP4 track IDs.
           avcId = parsedPIDs.avc;
-          if (avcId > 0)
+          if (avcId > 0) {
             avcTrack.pid = avcId;
+          }
 
           audioId = parsedPIDs.audio;
           if (audioId > 0) {
@@ -245,8 +255,9 @@ class TSDemuxer {
             audioTrack.isAAC = parsedPIDs.isAAC;
           }
           id3Id = parsedPIDs.id3;
-          if (id3Id > 0)
+          if (id3Id > 0) {
             id3Track.pid = id3Id;
+          }
 
           if (unknownPIDs && !pmtParsed) {
             logger.log('reparse from beginning');
@@ -277,15 +288,17 @@ class TSDemuxer {
     }
 
     if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
-      if (audioTrack.isAAC)
+      if (audioTrack.isAAC) {
         parseAACPES(pes);
-      else
+      } else {
         parseMPEGPES(pes);
+      }
 
       audioTrack.pesData = null;
     } else {
-      if (audioData && audioData.size)
+      if (audioData && audioData.size) {
         logger.log('last AAC PES packet truncated,might overlap between fragments');
+      }
 
       // either audioData null or PES truncated, keep it for next frag parsing
       audioTrack.pesData = audioData;
@@ -299,10 +312,11 @@ class TSDemuxer {
       id3Track.pesData = id3Data;
     }
 
-    if (this.sampleAes == null)
+    if (this.sampleAes == null) {
       this.remuxer.remux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
-    else
+    } else {
       this.decryptAndRemux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+    }
   }
 
   decryptAndRemux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
@@ -360,16 +374,18 @@ class TSDemuxer {
         // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
       case 0x0f:
         // logger.log('AAC PID:'  + pid);
-        if (result.audio === -1)
+        if (result.audio === -1) {
           result.audio = pid;
+        }
 
         break;
 
         // Packetized metadata (ID3)
       case 0x15:
         // logger.log('ID3 PID:'  + pid);
-        if (result.id3 === -1)
+        if (result.id3 === -1) {
           result.id3 = pid;
+        }
 
         break;
 
@@ -383,8 +399,9 @@ class TSDemuxer {
         // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
       case 0x1b:
         // logger.log('AVC PID:'  + pid);
-        if (result.avc === -1)
+        if (result.avc === -1) {
           result.avc = pid;
+        }
 
         break;
 
@@ -419,8 +436,9 @@ class TSDemuxer {
   _parsePES (stream) {
     let i = 0, frag, pesFlags, pesPrefix, pesLen, pesHdrLen, pesData, pesPts, pesDts, payloadStartOffset, data = stream.data;
     // safety check
-    if (!stream || stream.size === 0)
+    if (!stream || stream.size === 0) {
       return null;
+    }
 
     // we might need up to 19 bytes to read PES header
     // if first chunk of data is less than 19 bytes, let's merge it with following ones until we get 19 bytes
@@ -439,8 +457,9 @@ class TSDemuxer {
       pesLen = (frag[4] << 8) + frag[5];
       // if PES parsed length is not zero and greater than total received length, stop parsing. PES might be truncated
       // minus 6 : PES header size
-      if (pesLen && pesLen > stream.size - 6)
+      if (pesLen && pesLen > stream.size - 6) {
         return null;
+      }
 
       pesFlags = frag[7];
       if (pesFlags & 0xC0) {
@@ -529,8 +548,9 @@ class TSDemuxer {
         avcTrack.dropped++;
       }
     }
-    if (avcSample.debug.length)
+    if (avcSample.debug.length) {
       logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug);
+    }
   }
 
   _parseAVCPES (pes, last) {
@@ -562,11 +582,13 @@ class TSDemuxer {
       // NDR
       case 1:
         push = true;
-        if (!avcSample)
+        if (!avcSample) {
           avcSample = this.avcSample = createAVCSample(true, pes.pts, pes.dts, '');
+        }
 
-        if (debug)
+        if (debug) {
           avcSample.debug += 'NDR ';
+        }
 
         avcSample.frame = true;
         let data = unit.data;
@@ -579,19 +601,22 @@ class TSDemuxer {
           // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
           // I slice: A slice that is not an SI slice that is decoded using intra prediction only.
           // if (sliceType === 2 || sliceType === 7) {
-          if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9)
+          if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
             avcSample.key = true;
+          }
         }
         break;
         // IDR
       case 5:
         push = true;
         // handle PES not starting with AUD
-        if (!avcSample)
+        if (!avcSample) {
           avcSample = this.avcSample = createAVCSample(true, pes.pts, pes.dts, '');
+        }
 
-        if (debug)
+        if (debug) {
           avcSample.debug += 'IDR ';
+        }
 
         avcSample.key = true;
         avcSample.frame = true;
@@ -599,8 +624,9 @@ class TSDemuxer {
         // SEI
       case 6:
         push = true;
-        if (debug && avcSample)
+        if (debug && avcSample) {
           avcSample.debug += 'SEI ';
+        }
 
         expGolombDecoder = new ExpGolomb(this.discardEPB(unit.data));
 
@@ -663,8 +689,9 @@ class TSDemuxer {
               }
             }
           } else if (payloadSize < expGolombDecoder.bytesAvailable) {
-            for (i = 0; i < payloadSize; i++)
+            for (i = 0; i < payloadSize; i++) {
               expGolombDecoder.readUByte();
+            }
           }
         }
         break;
@@ -672,8 +699,9 @@ class TSDemuxer {
       case 7:
         push = true;
         spsfound = true;
-        if (debug && avcSample)
+        if (debug && avcSample) {
           avcSample.debug += 'SPS ';
+        }
 
         if (!track.sps) {
           expGolombDecoder = new ExpGolomb(unit.data);
@@ -687,8 +715,9 @@ class TSDemuxer {
           let codecstring = 'avc1.';
           for (i = 0; i < 3; i++) {
             let h = codecarray[i].toString(16);
-            if (h.length < 2)
+            if (h.length < 2) {
               h = '0' + h;
+            }
 
             codecstring += h;
           }
@@ -698,19 +727,22 @@ class TSDemuxer {
         // PPS
       case 8:
         push = true;
-        if (debug && avcSample)
+        if (debug && avcSample) {
           avcSample.debug += 'PPS ';
+        }
 
-        if (!track.pps)
+        if (!track.pps) {
           track.pps = [unit.data];
+        }
 
         break;
         // AUD
       case 9:
         push = false;
         track.audFound = true;
-        if (avcSample)
+        if (avcSample) {
           pushAccesUnit(avcSample, track);
+        }
 
         avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
         break;
@@ -720,8 +752,9 @@ class TSDemuxer {
         break;
       default:
         push = false;
-        if (avcSample)
+        if (avcSample) {
           avcSample.debug += 'unknown NAL ' + unit.type + ' ';
+        }
 
         break;
       }
@@ -887,8 +920,9 @@ class TSDemuxer {
 
     // If no Emulation Prevention Bytes were found just return the original
     // array
-    if (EPBPositions.length === 0)
+    if (EPBPositions.length === 0) {
       return data;
+    }
 
     // Create a new array to hold the NAL unit data
     newLength = length - EPBPositions.length;
@@ -924,8 +958,9 @@ class TSDemuxer {
     }
     // look for ADTS header (0xFFFx)
     for (offset = startOffset, len = data.length; offset < len - 1; offset++) {
-      if (ADTS.isHeader(data, offset))
+      if (ADTS.isHeader(data, offset)) {
         break;
+      }
     }
     // if ADTS header does not start straight from the beginning of the PES payload, raise an error
     if (offset) {
@@ -939,8 +974,9 @@ class TSDemuxer {
       }
       logger.warn(`parsing error:${reason}`);
       this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
-      if (fatal)
+      if (fatal) {
         return;
+      }
     }
 
     ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
@@ -976,11 +1012,12 @@ class TSDemuxer {
       }
     }
 
-    if (offset < len)
+    if (offset < len) {
       aacOverFlow = data.subarray(offset, len);
-    // logger.log(`AAC: overflow detected:${len-offset}`);
-    else
+      // logger.log(`AAC: overflow detected:${len-offset}`);
+    } else {
       aacOverFlow = null;
+    }
 
     this.aacOverFlow = aacOverFlow;
     this.aacLastPTS = stamp;

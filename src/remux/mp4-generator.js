@@ -150,8 +150,9 @@ class MP4 {
       len = i,
       result;
     // calculate the total size we need to allocate
-    while (i--)
+    while (i--) {
       size += payload[i].byteLength;
+    }
 
     result = new Uint8Array(size);
     result[0] = (size >> 24) & 0xff;
@@ -218,10 +219,11 @@ class MP4 {
   }
 
   static minf (track) {
-    if (track.type === 'audio')
+    if (track.type === 'audio') {
       return MP4.box(MP4.types.minf, MP4.box(MP4.types.smhd, MP4.SMHD), MP4.DINF, MP4.stbl(track));
-    else
+    } else {
       return MP4.box(MP4.types.minf, MP4.box(MP4.types.vmhd, MP4.VMHD), MP4.DINF, MP4.stbl(track));
+    }
   }
 
   static moof (sn, baseMediaDecodeTime, track) {
@@ -235,8 +237,9 @@ class MP4 {
       i = tracks.length,
       boxes = [];
 
-    while (i--)
+    while (i--) {
       boxes[i] = MP4.trak(tracks[i]);
+    }
 
     return MP4.box.apply(null, [MP4.types.moov, MP4.mvhd(tracks[0].timescale, tracks[0].duration)].concat(boxes).concat(MP4.mvex(tracks)));
   }
@@ -246,8 +249,9 @@ class MP4 {
       i = tracks.length,
       boxes = [];
 
-    while (i--)
+    while (i--) {
       boxes[i] = MP4.trex(tracks[i]);
+    }
 
     return MP4.box.apply(null, [MP4.types.mvex].concat(boxes));
   }
@@ -460,8 +464,9 @@ class MP4 {
 
   static stsd (track) {
     if (track.type === 'audio') {
-      if (!track.isAAC && track.codec === 'mp3')
+      if (!track.isAAC && track.codec === 'mp3') {
         return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
+      }
 
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
     } else {
@@ -632,8 +637,9 @@ class MP4 {
   }
 
   static initSegment (tracks) {
-    if (!MP4.types)
+    if (!MP4.types) {
       MP4.init();
+    }
 
     let movie = MP4.moov(tracks), result;
     result = new Uint8Array(MP4.FTYP.byteLength + movie.byteLength);

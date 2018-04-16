@@ -100,8 +100,14 @@ var hls = void 0,
     stats = void 0,
     tracks = void 0,
     fmp4Data = void 0,
-    enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
-autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)), enableWorker = JSON.parse(getURLParam('enableWorker', true)), levelCapping = JSON.parse(getURLParam('levelCapping', -1)), defaultAudioCodec = getURLParam('defaultAudioCodec', undefined), widevineLicenseUrl = getURLParam('widevineLicenseURL', undefined), dumpfMP4 = getURLParam('dumpfMP4', false);
+    enableStreaming = JSON.parse(getURLParam('enableStreaming', true)),
+    autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
+    enableWorker = JSON.parse(getURLParam('enableWorker', true)),
+    levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
+    limitMetrics = JSON.parse(getURLParam('limitMetrics', -1)),
+    defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
+    widevineLicenseUrl = getURLParam('widevineLicenseURL', undefined),
+    dumpfMP4 = getURLParam('dumpfMP4', false);
 
 var video = $('#video')[0];
 
@@ -162,6 +168,11 @@ $(document).ready(function () {
     updatePermalink();
   });
 
+  $('#limitMetrics').change(function () {
+    limitMetrics = this.value;
+    updatePermalink();
+  });
+
   $('#levelCapping').change(function () {
     levelCapping = this.value;
     updatePermalink();
@@ -172,6 +183,7 @@ $(document).ready(function () {
     updatePermalink();
   });
 
+  $('#limitMetrics').val(limitMetrics);
   $('#enableStreaming').prop('checked', enableStreaming);
   $('#autoRecoverError').prop('checked', autoRecoverError);
   $('#enableWorker').prop('checked', enableWorker);
@@ -213,6 +225,30 @@ function resetGlobals() {
   window.updatePermalink = updatePermalink;
   window.createfMP4 = createfMP4;
   window.goToMetricsPermaLink = goToMetricsPermaLink;
+}
+
+function trimArray(target, limit) {
+  if (limit < 0) {
+    return;
+  }
+
+  while (target.length > limit) {
+    target.shift();
+  }
+}
+
+function trimEventHistory() {
+  var x = limitMetrics;
+
+  if (x < 0) {
+    return;
+  }
+
+  trimArray(events.load, x);
+  trimArray(events.buffer, x);
+  trimArray(events.video, x);
+  trimArray(events.level, x);
+  trimArray(events.bitrate, x);
 }
 
 function loadSelectedStream() {
@@ -284,6 +320,7 @@ function loadSelectedStream() {
         time: performance.now() - events.t0,
         type: 'Media attached'
       });
+      trimEventHistory();
     });
 
     hls.on(Hls.Events.MEDIA_DETACHED, function () {
@@ -294,6 +331,7 @@ function loadSelectedStream() {
         time: performance.now() - events.t0,
         type: 'Media detached'
       });
+      trimEventHistory();
     });
 
     hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (event, data) {
@@ -303,6 +341,7 @@ function loadSelectedStream() {
         type: data.id + ' init segment'
       };
       events.video.push(event);
+      trimEventHistory();
     });
 
     hls.on(Hls.Events.FRAG_PARSING_METADATA, function (event, data) {
@@ -315,6 +354,7 @@ function loadSelectedStream() {
         id: data.level,
         bitrate: Math.round(hls.levels[data.level].bitrate / 1000)
       });
+      trimEventHistory();
       updateLevelInfo();
     });
 
@@ -330,6 +370,7 @@ function loadSelectedStream() {
         duration: data.stats.tload - data.stats.tfirst
       };
       events.load.push(event);
+      trimEventHistory();
       refreshCanvas();
     });
 
@@ -339,6 +380,7 @@ function loadSelectedStream() {
         levelNb: data.levels.length,
         levelParsed: 0
       };
+      trimEventHistory();
       updateLevelInfo();
     });
 
@@ -355,6 +397,7 @@ function loadSelectedStream() {
         name: '@' + data.id
       };
       events.video.push(event);
+      trimEventHistory();
       lastAudioTrackSwitchingIdx = events.video.length - 1;
     });
 
@@ -370,6 +413,7 @@ function loadSelectedStream() {
         lastAudioTrackSwitchingIdx = undefined;
       }
       events.video.push(event);
+      trimEventHistory();
     });
 
     hls.on(Hls.Events.LEVEL_LOADED, function (event, data) {
@@ -396,6 +440,7 @@ function loadSelectedStream() {
       stats.levelParsingUs = Math.round(1000 * this.sumLevelParsingMs / stats.levelParsed);
       console.log('parsing level duration :' + stats.levelParsingUs + 'us,count:' + stats.levelParsed);
       events.load.push(event);
+      trimEventHistory();
       refreshCanvas();
     });
 
@@ -413,6 +458,7 @@ function loadSelectedStream() {
         duration: data.stats.tload - data.stats.tfirst
       };
       events.load.push(event);
+      trimEventHistory();
       refreshCanvas();
     });
 
@@ -445,6 +491,7 @@ function loadSelectedStream() {
         });
         hls.bufferTimer = window.setInterval(checkBuffer, 100);
       }
+      trimEventHistory();
       refreshCanvas();
       updateLevelInfo();
 
@@ -497,6 +544,7 @@ function loadSelectedStream() {
         name: data.level
       };
       events.video.push(event);
+      trimEventHistory();
       refreshCanvas();
       updateLevelInfo();
     });
@@ -508,6 +556,7 @@ function loadSelectedStream() {
         name: data.frag.sn + ' @ ' + data.frag.level
       };
       events.video.push(event);
+      trimEventHistory();
       refreshCanvas();
       updateLevelInfo();
       stats.tagList = data.frag.tagList;
@@ -689,6 +738,7 @@ function loadSelectedStream() {
         name: data.currentDropped + '/' + data.currentDecoded
       };
       events.video.push(evt);
+      trimEventHistory();
       if (stats) {
         if (stats.fpsDropEvent === undefined) {
           stats.fpsDropEvent = 1;
@@ -797,6 +847,8 @@ function handleVideoEvent(evt) {
   if (evt.type === 'seeked') {
     events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
   }
+
+  trimEventHistory();
 }
 
 function handleMediaError() {
@@ -867,6 +919,7 @@ function checkBuffer() {
             type: 'buffering',
             time: performance.now() - events.t0
           });
+          trimEventHistory();
           // we are in buffering state
           bufferingIdx = events.video.length - 1;
         }
@@ -903,6 +956,7 @@ function checkBuffer() {
       }
     }
     events.buffer.push(event);
+    trimEventHistory();
     refreshCanvas();
 
     var log = 'Duration:' + v.duration + '<br>' + 'Buffered:' + timeRangesToString(v.buffered) + '<br>' + 'Seekable:' + timeRangesToString(v.seekable) + '<br>' + 'Played:' + timeRangesToString(v.played) + '<br>';
@@ -1178,7 +1232,7 @@ function getURLParam(sParam, defaultValue) {
 function updatePermalink() {
 
   var url = $('#streamURL').val();
-  var hlsLink = document.URL.split('?')[0] + '?src=' + encodeURIComponent(url) + '&enableStreaming=' + enableStreaming + '&autoRecoverError=' + autoRecoverError + '&enableWorker=' + enableWorker + '&dumpfMP4=' + dumpfMP4 + '&levelCapping=' + levelCapping + '&defaultAudioCodec=' + defaultAudioCodec + '&widevineLicenseURL=' + escape(widevineLicenseUrl);
+  var hlsLink = document.URL.split('?')[0] + '?src=' + encodeURIComponent(url) + '&enableStreaming=' + enableStreaming + '&autoRecoverError=' + autoRecoverError + '&enableWorker=' + enableWorker + '&dumpfMP4=' + dumpfMP4 + '&levelCapping=' + levelCapping + '&limitMetrics=' + limitMetrics + '&defaultAudioCodec=' + defaultAudioCodec + '&widevineLicenseURL=' + escape(widevineLicenseUrl);
 
   $('#StreamPermalink').html('<a href="' + hlsLink + '">' + hlsLink + '</a>');
 }
@@ -1242,7 +1296,9 @@ function createTestStream(url, description) {
  * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
  */
 function createTestStreamWithConfig(target, config) {
-  if ((typeof target === 'undefined' ? 'undefined' : _typeof(target)) !== 'object') throw new Error('target should be object');
+  if ((typeof target === 'undefined' ? 'undefined' : _typeof(target)) !== 'object') {
+    throw new Error('target should be object');
+  }
 
   var testStream = createTestStream(target.url, target.description, target.live, target.abr, target.blacklist_ua);
 

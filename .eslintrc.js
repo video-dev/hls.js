@@ -55,9 +55,9 @@ module.exports = {
     "keyword-spacing": [2, {"before": true, "after": true}],
     // enforce litteral objects on multiple lines
     "block-spacing": "error",
-    "curly": ["error", "multi-or-nest", "consistent"],
+    "curly": 2,
     "object-curly-spacing": ["error", "always"],
-    "brace-style": ["error", "1tbs", { "allowSingleLine": true }],
+    "brace-style": ["error", "1tbs", { "allowSingleLine": false }],
 
 
     // limit code block and line length

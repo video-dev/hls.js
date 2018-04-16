@@ -28,8 +28,9 @@ class SampleAesDecrypter {
       decryptedData = new Uint8Array(decryptedData);
       curUnit.set(decryptedData, 16);
 
-      if (!sync)
+      if (!sync) {
         localthis.decryptAacSamples(samples, sampleIndex + 1, callback);
+      }
     });
   }
 
@@ -40,15 +41,17 @@ class SampleAesDecrypter {
         return;
       }
 
-      if (samples[sampleIndex].unit.length < 32)
+      if (samples[sampleIndex].unit.length < 32) {
         continue;
+      }
 
       let sync = this.decrypter.isSync();
 
       this.decryptAacSample(samples, sampleIndex, callback, sync);
 
-      if (!sync)
+      if (!sync) {
         return;
+      }
     }
   }
 
@@ -57,8 +60,9 @@ class SampleAesDecrypter {
     let encryptedDataLen = Math.floor((decodedData.length - 48) / 160) * 16 + 16;
     let encryptedData = new Int8Array(encryptedDataLen);
     let outputPos = 0;
-    for (let inputPos = 32; inputPos <= decodedData.length - 16; inputPos += 160, outputPos += 16)
+    for (let inputPos = 32; inputPos <= decodedData.length - 16; inputPos += 160, outputPos += 16) {
       encryptedData.set(decodedData.subarray(inputPos, inputPos + 16), outputPos);
+    }
 
     return encryptedData;
   }
@@ -66,8 +70,9 @@ class SampleAesDecrypter {
   getAvcDecryptedUnit (decodedData, decryptedData) {
     decryptedData = new Uint8Array(decryptedData);
     let inputPos = 0;
-    for (let outputPos = 32; outputPos <= decodedData.length - 16; outputPos += 160, inputPos += 16)
+    for (let outputPos = 32; outputPos <= decodedData.length - 16; outputPos += 160, inputPos += 16) {
       decodedData.set(decryptedData.subarray(inputPos, inputPos + 16), outputPos);
+    }
 
     return decodedData;
   }
@@ -80,8 +85,9 @@ class SampleAesDecrypter {
     this.decryptBuffer(encryptedData.buffer, function (decryptedData) {
       curUnit.data = localthis.getAvcDecryptedUnit(decodedData, decryptedData);
 
-      if (!sync)
+      if (!sync) {
         localthis.decryptAvcSamples(samples, sampleIndex, unitIndex + 1, callback);
+      }
     });
   }
 
@@ -94,19 +100,22 @@ class SampleAesDecrypter {
 
       let curUnits = samples[sampleIndex].units;
       for (;; unitIndex++) {
-        if (unitIndex >= curUnits.length)
+        if (unitIndex >= curUnits.length) {
           break;
+        }
 
         let curUnit = curUnits[unitIndex];
-        if (curUnit.length <= 48 || (curUnit.type !== 1 && curUnit.type !== 5))
+        if (curUnit.length <= 48 || (curUnit.type !== 1 && curUnit.type !== 5)) {
           continue;
+        }
 
         let sync = this.decrypter.isSync();
 
         this.decryptAvcSample(samples, sampleIndex, unitIndex, callback, curUnit, sync);
 
-        if (!sync)
+        if (!sync) {
           return;
+        }
       }
     }
   }

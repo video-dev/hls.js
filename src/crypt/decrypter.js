@@ -34,8 +34,9 @@ class Decrypter {
         this.logEnabled = false;
       }
       let decryptor = this.decryptor;
-      if (!decryptor)
+      if (!decryptor) {
         this.decryptor = decryptor = new AESDecryptor();
+      }
 
       decryptor.expandKey(key);
       callback(decryptor.decrypt(data, 0, iv, this.removePKCS7Padding));
