@@ -246,17 +246,17 @@ class TimelineController extends EventHandler {
     }
 
     if (this.config.enableCEA708Captions && data.captions) {
-      data.captions.forEach(function (captionsTrack) {
+      data.captions.forEach(captionsTrack => {
         let instreamIdMatch = /(?:CC|SERVICE)([1-2])/.exec(captionsTrack.instreamId);
 
         if (!instreamIdMatch)
           return;
 
-        let index = instreamIdMatch[1];
-        this.captionsProperties[index].name = captionsTrack.name;
+        let trackName = `textTrack${instreamIdMatch[1]}`;
+        this.captionsProperties[trackName].label = captionsTrack.name;
 
         if (captionsTrack.lang) { // optional attribute
-          this.captionsProperties[index].languageCode = captionsTrack.lang;
+          this.captionsProperties[trackName].languageCode = captionsTrack.lang;
         }
       });
     }

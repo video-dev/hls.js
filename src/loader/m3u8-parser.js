@@ -114,6 +114,7 @@ export default class M3U8Parser {
       const attrs = new AttrList(result[1]);
       if (attrs.TYPE === type) {
         media.groupId = attrs['GROUP-ID'];
+        media.instreamId = attrs['INSTREAM-ID'];
         media.name = attrs.NAME;
         media.type = type;
         media.default = (attrs.DEFAULT === 'YES');
