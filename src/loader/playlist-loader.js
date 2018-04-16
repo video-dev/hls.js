@@ -303,6 +303,7 @@ class PlaylistLoader extends EventHandler {
 
     let audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
     let subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    let captions = M3U8Parser.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -329,6 +330,7 @@ class PlaylistLoader extends EventHandler {
       levels,
       audioTracks,
       subtitles,
+      captions,
       url,
       stats,
       networkDetails
