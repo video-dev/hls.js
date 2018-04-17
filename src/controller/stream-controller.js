@@ -57,6 +57,7 @@ class StreamController extends TaskLoop {
     this.config = hls.config;
     this.audioCodecSwap = false;
     this._state = State.STOPPED;
+    this.stallReported = false;
   }
 
   onHandlerDestroying () {
@@ -1397,7 +1398,6 @@ class StreamController extends TaskLoop {
         // Allow some slack time to for small stalls to resolve themselves
         if (!this.stalled) {
           this.stalled = tnow;
-          this.stallReported = true;
           return;
         }
 

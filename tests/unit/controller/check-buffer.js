@@ -50,6 +50,7 @@ describe('checkBuffer', function () {
   describe('_reportStall', function () {
     it('should report a stall with the current buffer length if it has not already been reported', function () {
       streamController._reportStall(42);
+      assert.ok(streamController.stallReported);
       assert(triggerSpy.calledWith(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
@@ -192,12 +193,12 @@ describe('checkBuffer', function () {
       setExpectedPlaying();
       streamController._checkBuffer();
 
-      // The first _checkBuffer call made while stalling just sets stall flags
+      // The first _checkBuffer call made while stalling just sets the stall time
       assert.equal(typeof streamController.stalled, 'number');
-      assert(streamController.stallReported);
+      assert.equal(streamController.stallReported, false);
 
       streamController._checkBuffer();
-      assert(fixStallStub.calledOnce);
+      assert.ok(fixStallStub.calledOnce);
     });
 
     it('should reset stall flags when no longer stalling', function () {
