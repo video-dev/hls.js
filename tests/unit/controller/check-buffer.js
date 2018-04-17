@@ -86,7 +86,7 @@ describe('checkBuffer', function () {
       const nudgeStub = sinon.stub(streamController, '_tryNudgeBuffer');
       streamController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
       assert(nudgeStub.notCalled);
-      assert(reportStallSpy.notCalled);
+      assert(reportStallSpy.calledOnce);
     });
 
     it('should not nudge when too far from the buffer end', function () {
@@ -95,7 +95,7 @@ describe('checkBuffer', function () {
       const nudgeStub = sinon.stub(streamController, '_tryNudgeBuffer');
       streamController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
       assert(nudgeStub.notCalled);
-      assert(reportStallSpy.notCalled);
+      assert(reportStallSpy.calledOnce);
     });
 
     it('should try to jump partial fragments when detected', function () {
@@ -111,7 +111,7 @@ describe('checkBuffer', function () {
       const skipHoleStub = sinon.stub(streamController, '_trySkipBufferHole');
       streamController._tryFixBufferStall({ len: 0 });
       assert(skipHoleStub.notCalled);
-      assert(reportStallSpy.notCalled);
+      assert(reportStallSpy.calledOnce);
     });
   });
 
@@ -194,7 +194,7 @@ describe('checkBuffer', function () {
 
       // The first _checkBuffer call made while stalling just sets stall flags
       assert.strictEqual(typeof streamController.stalled, 'number');
-      assert(streamController.stallReported);
+      assert.equal(streamController.stallReported, false);
 
       streamController._checkBuffer();
       assert(fixStallStub.calledOnce);

@@ -55,6 +55,7 @@ class StreamController extends TaskLoop {
     this.config = hls.config;
     this.audioCodecSwap = false;
     this._state = State.STOPPED;
+    this.stallReported = false;
   }
 
   onHandlerDestroying () {
