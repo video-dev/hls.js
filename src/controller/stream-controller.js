@@ -1397,7 +1397,6 @@ class StreamController extends TaskLoop {
         // Allow some slack time to for small stalls to resolve themselves
         if (!this.stalled) {
           this.stalled = tnow;
-          this.stallReported = true;
           return;
         }
 
