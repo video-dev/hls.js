@@ -1395,7 +1395,6 @@ class StreamController extends TaskLoop {
         // Allow some slack time to for small stalls to resolve themselves
         if (!this.stalled) {
           this.stalled = tnow;
-          this.stallReported = true;
           return;
         }
 
@@ -1452,16 +1451,15 @@ class StreamController extends TaskLoop {
     const currentTime = media.currentTime;
     const jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 
+    this._reportStall(bufferInfo.len);
     const partial = this.fragmentTracker.getPartialFragment(currentTime);
     if (partial) {
-      this._reportStall(bufferInfo.len);
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
       this._trySkipBufferHole(partial);
     }
 
     if (bufferInfo.len > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
-      this._reportStall(bufferInfo.len);
       // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
       // We only try to jump the hole if it's under the configured size
       // Reset stalled so to rearm watchdog timer
