@@ -14,7 +14,8 @@ export function sendAddTrackEvent (track, videoEl) {
 
 export function clearCurrentCues (track) {
   if (track && track.cues) {
-    while (track.cues.length > 0)
+    while (track.cues.length > 0) {
       track.removeCue(track.cues[0]);
+    }
   }
 }

@@ -25,8 +25,9 @@ function setupConsoleLogRedirection () {
   var methods = ['log', 'debug', 'info', 'warn', 'error'];
   methods.forEach(function (methodName) {
     var original = window.console[methodName];
-    if (!original)
+    if (!original) {
       return;
+    }
 
     window.console[methodName] = function () {
       append(methodName, Array.prototype.slice.call(arguments).map(JSON.stringify).join(' '));
@@ -37,21 +38,24 @@ function setupConsoleLogRedirection () {
 
 // Object.assign polyfill
 function objectAssign (target, firstSource) {
-  if (target === undefined || target === null)
+  if (target === undefined || target === null) {
     throw new TypeError('Cannot convert first argument to object');
+  }
 
   var to = Object(target);
   for (var i = 1; i < arguments.length; i++) {
     var nextSource = arguments[i];
-    if (nextSource === undefined || nextSource === null)
+    if (nextSource === undefined || nextSource === null) {
       continue;
+    }
 
     var keysArray = Object.keys(Object(nextSource));
     for (var nextIndex = 0, len = keysArray.length; nextIndex < len; nextIndex++) {
       var nextKey = keysArray[nextIndex];
       var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
-      if (desc !== undefined && desc.enumerable)
+      if (desc !== undefined && desc.enumerable) {
         to[nextKey] = nextSource[nextKey];
+      }
     }
   }
   return to;
@@ -59,8 +63,9 @@ function objectAssign (target, firstSource) {
 
 function startStream (streamUrl, config, callback) {
   var Hls = window.Hls;
-  if (!Hls)
+  if (!Hls) {
     throw new Error('Hls not installed');
+  }
 
   if (Hls.isSupported()) {
     if (hls) {

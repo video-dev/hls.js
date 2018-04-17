@@ -23,8 +23,9 @@ function createTestStream (url, description, live = false, abr = true, blacklist
  * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
  */
 function createTestStreamWithConfig (target, config) {
-  if (typeof target !== 'object')
+  if (typeof target !== 'object') {
     throw new Error('target should be object');
+  }
 
   const testStream = createTestStream(target.url, target.description, target.live, target.abr, target.blacklist_ua);
 

@@ -69,8 +69,9 @@ export default class Hls {
    * @type {HlsConfig}
    */
   static get DefaultConfig () {
-    if (!Hls.defaultConfig)
+    if (!Hls.defaultConfig) {
       return hlsDefaultConfig;
+    }
 
     return Hls.defaultConfig;
   }
@@ -91,19 +92,22 @@ export default class Hls {
   constructor (config = {}) {
     let defaultConfig = Hls.DefaultConfig;
 
-    if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration))
+    if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+    }
 
     for (let prop in defaultConfig) {
       if (prop in config) continue;
       config[prop] = defaultConfig[prop];
     }
 
-    if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount)
+    if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
+    }
 
-    if (config.liveMaxLatencyDuration !== undefined && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === undefined))
+    if (config.liveMaxLatencyDuration !== undefined && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === undefined)) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"');
+    }
 
     enableLogs(config.debug);
     this.config = config;
@@ -158,8 +162,9 @@ export default class Hls {
      * @var {ICoreComponent | Controller}
      */
     let Controller = config.audioStreamController;
-    if (Controller)
+    if (Controller) {
       networkControllers.push(new Controller(this, fragmentTracker));
+    }
 
     /**
      * @member {INetworkController[]} networkControllers
@@ -217,8 +222,9 @@ export default class Hls {
 
     // optional subtitle controller
     [config.subtitleStreamController, config.timelineController].forEach(Controller => {
-      if (Controller)
+      if (Controller) {
         coreComponents.push(new Controller(this));
+      }
     });
 
     /**
@@ -234,7 +240,9 @@ export default class Hls {
     logger.log('destroy');
     this.trigger(HlsEvents.DESTROYING);
     this.detachMedia();
-    this.coreComponents.concat(this.networkControllers).forEach(component => { component.destroy(); });
+    this.coreComponents.concat(this.networkControllers).forEach(component => {
+      component.destroy();
+    });
     this.url = null;
     this.observer.removeAllListeners();
     this._autoLevelCapping = -1;
@@ -280,7 +288,9 @@ export default class Hls {
    */
   startLoad (startPosition = -1) {
     logger.log(`startLoad(${startPosition})`);
-    this.networkControllers.forEach(controller => { controller.startLoad(startPosition); });
+    this.networkControllers.forEach(controller => {
+      controller.startLoad(startPosition);
+    });
   }
 
   /**
@@ -288,7 +298,9 @@ export default class Hls {
    */
   stopLoad () {
     logger.log('stopLoad');
-    this.networkControllers.forEach(controller => { controller.stopLoad(); });
+    this.networkControllers.forEach(controller => {
+      controller.stopLoad();
+    });
   }
 
   /**
@@ -435,8 +447,9 @@ export default class Hls {
     logger.log(`set startLevel:${newLevel}`);
     const hls = this;
     // if not in automatic start level detection, ensure startLevel is greater than minAutoLevel
-    if (newLevel !== -1)
+    if (newLevel !== -1) {
       newLevel = Math.max(newLevel, hls.minAutoLevel);
+    }
 
     hls.levelController.startLevel = newLevel;
   }
@@ -482,8 +495,9 @@ export default class Hls {
     let hls = this, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate, len = levels ? levels.length : 0;
     for (let i = 0; i < len; i++) {
       const levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate;
-      if (levelNextBitrate > minAutoBitrate)
+      if (levelNextBitrate > minAutoBitrate) {
         return i;
+      }
     }
     return 0;
   }
@@ -497,10 +511,11 @@ export default class Hls {
     const levels = hls.levels;
     const autoLevelCapping = hls.autoLevelCapping;
     let maxAutoLevel;
-    if (autoLevelCapping === -1 && levels && levels.length)
+    if (autoLevelCapping === -1 && levels && levels.length) {
       maxAutoLevel = levels.length - 1;
-    else
+    } else {
       maxAutoLevel = autoLevelCapping;
+    }
 
     return maxAutoLevel;
   }
@@ -551,8 +566,9 @@ export default class Hls {
    */
   set audioTrack (audioTrackId) {
     const audioTrackController = this.audioTrackController;
-    if (audioTrackController)
+    if (audioTrackController) {
       audioTrackController.audioTrack = audioTrackId;
+    }
   }
 
   /**
@@ -586,8 +602,9 @@ export default class Hls {
    */
   set subtitleTrack (subtitleTrackId) {
     const subtitleTrackController = this.subtitleTrackController;
-    if (subtitleTrackController)
+    if (subtitleTrackController) {
       subtitleTrackController.subtitleTrack = subtitleTrackId;
+    }
   }
 
   /**
@@ -604,7 +621,8 @@ export default class Hls {
    */
   set subtitleDisplay (value) {
     const subtitleTrackController = this.subtitleTrackController;
-    if (subtitleTrackController)
+    if (subtitleTrackController) {
       subtitleTrackController.subtitleDisplay = value;
+    }
   }
 }

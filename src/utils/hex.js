@@ -7,8 +7,9 @@ const Hex = {
     let i, str = '';
     for (i = 0; i < array.length; i++) {
       let h = array[i].toString(16);
-      if (h.length < 2)
+      if (h.length < 2) {
         h = '0' + h;
+      }
 
       str += h;
     }

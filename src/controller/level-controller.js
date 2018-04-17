@@ -44,13 +44,15 @@ export default class LevelController extends EventHandler {
       levels.forEach(level => {
         level.loadError = 0;
         const levelDetails = level.details;
-        if (levelDetails && levelDetails.live)
+        if (levelDetails && levelDetails.live) {
           level.details = undefined;
+        }
       });
     }
     // speed up live playlist refresh if timer exists
-    if (this.timer !== null)
+    if (this.timer !== null) {
       this.loadLevel();
+    }
   }
 
   stopLoad () {
@@ -77,8 +79,9 @@ export default class LevelController extends EventHandler {
 
       // erase audio codec info if browser does not support mp4a.40.34.
       // demuxer will autodetect codec and fallback to mpeg/audio
-      if (chromeOrFirefox === true && level.audioCodec && level.audioCodec.indexOf('mp4a.40.34') !== -1)
+      if (chromeOrFirefox === true && level.audioCodec && level.audioCodec.indexOf('mp4a.40.34') !== -1) {
         level.audioCodec = undefined;
+      }
 
       levelFromSet = levelSet[level.bitrate];
 
@@ -93,16 +96,18 @@ export default class LevelController extends EventHandler {
     });
 
     // remove audio-only level if we also have levels with audio+video codecs signalled
-    if (videoCodecFound === true && audioCodecFound === true)
+    if (videoCodecFound === true && audioCodecFound === true) {
       levels = levels.filter(({ videoCodec }) => !!videoCodec);
+    }
 
     // only keep levels with supported audio/video codecs
     levels = levels.filter(({ audioCodec, videoCodec }) => {
       return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
     });
 
-    if (data.audioTracks)
+    if (data.audioTracks) {
       audioTracks = data.audioTracks.filter(track => !track.audioCodec || isCodecSupportedInMp4(track.audioCodec, 'audio'));
+    }
 
     if (levels.length > 0) {
       // start bitrate is the first bitrate of the manifest
@@ -152,8 +157,9 @@ export default class LevelController extends EventHandler {
     let levels = this._levels;
     if (levels) {
       newLevel = Math.min(newLevel, levels.length - 1);
-      if (this.currentLevelIndex !== newLevel || levels[newLevel].details === undefined)
+      if (this.currentLevelIndex !== newLevel || levels[newLevel].details === undefined) {
         this.setLevelInternal(newLevel);
+      }
     }
   }
 
@@ -196,11 +202,13 @@ export default class LevelController extends EventHandler {
 
   set manualLevel (newLevel) {
     this.manualLevelIndex = newLevel;
-    if (this._startLevel === undefined)
+    if (this._startLevel === undefined) {
       this._startLevel = newLevel;
+    }
 
-    if (newLevel !== -1)
+    if (newLevel !== -1) {
       this.level = newLevel;
+    }
   }
 
   get firstLevel () {
@@ -216,10 +224,11 @@ export default class LevelController extends EventHandler {
     // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
     if (this._startLevel === undefined) {
       let configStartLevel = this.hls.config.startLevel;
-      if (configStartLevel !== undefined)
+      if (configStartLevel !== undefined) {
         return configStartLevel;
-      else
+      } else {
         return this._firstLevel;
+      }
     } else {
       return this._startLevel;
     }
@@ -231,8 +240,9 @@ export default class LevelController extends EventHandler {
 
   onError (data) {
     if (data.fatal === true) {
-      if (data.type === ErrorTypes.NETWORK_ERROR)
+      if (data.type === ErrorTypes.NETWORK_ERROR) {
         this.cleanTimer();
+      }
 
       return;
     }
@@ -260,8 +270,9 @@ export default class LevelController extends EventHandler {
       break;
     }
 
-    if (levelIndex !== undefined)
+    if (levelIndex !== undefined) {
       this.recoverLevel(data, levelIndex, levelError, fragmentError);
+    }
   }
 
   /**
@@ -390,15 +401,17 @@ export default class LevelController extends EventHandler {
   }
 
   get nextLoadLevel () {
-    if (this.manualLevelIndex !== -1)
+    if (this.manualLevelIndex !== -1) {
       return this.manualLevelIndex;
-    else
+    } else {
       return this.hls.nextAutoLevel;
+    }
   }
 
   set nextLoadLevel (nextLevel) {
     this.level = nextLevel;
-    if (this.manualLevelIndex === -1)
+    if (this.manualLevelIndex === -1) {
       this.hls.nextAutoLevel = nextLevel;
+    }
   }
 }

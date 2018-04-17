@@ -30,8 +30,9 @@ export default class Fragment {
   }
 
   get url () {
-    if (!this._url && this.relurl)
+    if (!this._url && this.relurl) {
       this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
+    }
 
     return this._url;
   }
@@ -41,18 +42,21 @@ export default class Fragment {
   }
 
   get programDateTime () {
-    if (!this._programDateTime && this.rawProgramDateTime)
+    if (!this._programDateTime && this.rawProgramDateTime) {
       this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
+    }
 
     return this._programDateTime;
   }
 
   get byteRange () {
-    if (!this._byteRange && !this.rawByteRange)
+    if (!this._byteRange && !this.rawByteRange) {
       return [];
+    }
 
-    if (this._byteRange)
+    if (this._byteRange) {
       return this._byteRange;
+    }
 
     let byteRange = [];
     if (this.rawByteRange) {
@@ -81,8 +85,9 @@ export default class Fragment {
   }
 
   get decryptdata () {
-    if (!this._decryptdata)
+    if (!this._decryptdata) {
       this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
+    }
 
     return this._decryptdata;
   }
@@ -108,8 +113,9 @@ export default class Fragment {
   createInitializationVector (segmentNumber) {
     let uint8View = new Uint8Array(16);
 
-    for (let i = 12; i < 16; i++)
+    for (let i = 12; i < 16; i++) {
       uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+    }
 
     return uint8View;
   }
