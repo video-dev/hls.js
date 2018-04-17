@@ -322,8 +322,9 @@ class AudioStreamController extends TaskLoop {
             hls.trigger(Event.KEY_LOADING, { frag: frag });
           } else {
             logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
-            // Check if fragment is not loaded
-            if (this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
+            // only load if fragment is not loaded or if in audio switch
+            // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+            if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
               this.fragCurrent = frag;
               this.startFragRequested = true;
               if (!isNaN(frag.sn))
