@@ -8150,6 +8150,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     _this.config = hls.config;
     _this.audioCodecSwap = false;
     _this._state = State.STOPPED;
+    _this.stallReported = false;
     return _this;
   }
 
@@ -9403,7 +9404,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
         // Allow some slack time to for small stalls to resolve themselves
         if (!this.stalled) {
           this.stalled = tnow;
-          this.stallReported = true;
           return;
         }
 

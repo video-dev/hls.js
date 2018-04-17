@@ -11,7 +11,7 @@ const env = process.env;
 
 const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES ;
 const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
-const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
+const addEMESupport = false;
 const runAnalyzer = !!env.ANALYZE;
 
 const uglifyJsOptions = {
