@@ -41,8 +41,8 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <video id="video"></video>
 <script>
+  var video = document.getElementById('video');
   if(Hls.isSupported()) {
-    var video = document.getElementById('video');
     var hls = new Hls();
     hls.loadSource('https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8');
     hls.attachMedia(video);
