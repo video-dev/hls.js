@@ -220,7 +220,7 @@ class SubtitleTrackController extends EventHandler {
    */
   _toggleTrackModes (newId) {
     const { media, hls, subtitleDisplay, trackId } = this;
-    if (!media || !hls.renderNatively)
+    if (!media || !hls.config.renderNatively)
       return;
 
     const textTracks = filterSubtitleTracks(media.textTracks);
