@@ -81,8 +81,9 @@ class AudioStreamController extends TaskLoop {
 
       // If we are waiting we need to demux/remux the waiting frag
       // With the new initPTS
-      if (this.state === State.WAITING_INIT_PTS)
+      if (this.state === State.WAITING_INIT_PTS) {
         this.tick();
+      }
     }
   }
 
@@ -110,8 +111,9 @@ class AudioStreamController extends TaskLoop {
   stopLoad () {
     let frag = this.fragCurrent;
     if (frag) {
-      if (frag.loader)
+      if (frag.loader) {
         frag.loader.abort();
+      }
 
       this.fragmentTracker.removeFragment(frag);
       this.fragCurrent = null;
@@ -153,16 +155,18 @@ class AudioStreamController extends TaskLoop {
     case State.IDLE:
       const tracks = this.tracks;
       // audio tracks not received => exit loop
-      if (!tracks)
+      if (!tracks) {
         break;
+      }
 
       // if video not attached AND
       // start fragment already requested OR start frag prefetch disable
       // exit loop
       // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
       if (!this.media &&
-          (this.startFragRequested || !config.startFragPrefetch))
+          (this.startFragRequested || !config.startFragPrefetch)) {
         break;
+      }
 
       // determine next candidate fragment to be loaded, based on current position and
       //  end of buffer position
@@ -171,8 +175,9 @@ class AudioStreamController extends TaskLoop {
         pos = this.media.currentTime;
       } else {
         pos = this.nextLoadPosition;
-        if (pos === undefined)
+        if (pos === undefined) {
           break;
+        }
       }
       let media = this.mediaBuffer ? this.mediaBuffer : this.media,
         videoBuffer = this.videoBuffer ? this.videoBuffer : this.media,
@@ -278,24 +283,27 @@ class AudioStreamController extends TaskLoop {
             // logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
             // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
             let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration);
-            if ((candidate.start + candidate.duration - candidateLookupTolerance) <= bufferEnd)
+            if ((candidate.start + candidate.duration - candidateLookupTolerance) <= bufferEnd) {
               return 1;
-            // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
-            else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start)
+            } else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start) {
+              // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
               return -1;
+            }
 
             return 0;
           };
 
           if (bufferEnd < end) {
-            if (bufferEnd > end - maxFragLookUpTolerance)
+            if (bufferEnd > end - maxFragLookUpTolerance) {
               maxFragLookUpTolerance = 0;
+            }
 
             // Prefer the next fragment if it's within tolerance
-            if (fragNext && !fragmentWithinToleranceTest(fragNext))
+            if (fragNext && !fragmentWithinToleranceTest(fragNext)) {
               foundFrag = fragNext;
-            else
+            } else {
               foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
+            }
           } else {
             // reach end of playlist
             foundFrag = fragments[fragLen - 1];
@@ -322,12 +330,14 @@ class AudioStreamController extends TaskLoop {
             hls.trigger(Event.KEY_LOADING, { frag: frag });
           } else {
             logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
-            // Check if fragment is not loaded
-            if (this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
+            // only load if fragment is not loaded or if in audio switch
+            // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+            if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
               this.fragCurrent = frag;
               this.startFragRequested = true;
-              if (!isNaN(frag.sn))
+              if (!isNaN(frag.sn)) {
                 this.nextLoadPosition = frag.start + frag.duration;
+              }
 
               hls.trigger(Event.FRAG_LOADING, { frag });
               this.state = State.FRAG_LOADING;
@@ -339,8 +349,9 @@ class AudioStreamController extends TaskLoop {
     case State.WAITING_TRACK:
       track = this.tracks[this.trackId];
       // check if playlist is already loaded
-      if (track && track.details)
+      if (track && track.details) {
         this.state = State.IDLE;
+      }
 
       break;
     case State.FRAG_LOADING_WAITING_RETRY:
@@ -356,8 +367,9 @@ class AudioStreamController extends TaskLoop {
       break;
     case State.WAITING_INIT_PTS:
       const videoTrackCC = this.videoTrackCC;
-      if (this.initPTS[videoTrackCC] === undefined)
+      if (this.initPTS[videoTrackCC] === undefined) {
         break;
+      }
 
       // Ensure we don't get stuck in the WAITING_INIT_PTS state if the waiting frag CC doesn't match any initPTS
       const waitingFrag = this.waitingFragment;
@@ -398,8 +410,9 @@ class AudioStreamController extends TaskLoop {
     media.addEventListener('seeking', this.onvseeking);
     media.addEventListener('ended', this.onvended);
     let config = this.config;
-    if (this.tracks && config.autoStartLoad)
+    if (this.tracks && config.autoStartLoad) {
       this.startLoad(config.startPosition);
+    }
   }
 
   onMediaDetaching () {
@@ -425,8 +438,9 @@ class AudioStreamController extends TaskLoop {
       // switch to IDLE state to check for potential new fragment
       this.state = State.IDLE;
     }
-    if (this.media)
+    if (this.media) {
       this.lastCurrentTime = this.media.currentTime;
+    }
 
     // tick to speed up processing
     this.tick();
@@ -487,10 +501,11 @@ class AudioStreamController extends TaskLoop {
         sliding = newDetails.fragments[0].start;
         // TODO
         // this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
-        if (newDetails.PTSKnown)
+        if (newDetails.PTSKnown) {
           logger.log(`live audio playlist sliding:${sliding.toFixed(3)}`);
-        else
+        } else {
           logger.log('live audio playlist - outdated PTS, unknown sliding');
+        }
       } else {
         newDetails.PTSKnown = false;
         logger.log('live audio playlist - first load, unknown sliding');
@@ -516,8 +531,9 @@ class AudioStreamController extends TaskLoop {
       this.nextLoadPosition = this.startPosition;
     }
     // only switch batck to IDLE state if we were waiting for track to start downloading a new fragment
-    if (this.state === State.WAITING_TRACK)
+    if (this.state === State.WAITING_TRACK) {
       this.state = State.IDLE;
+    }
 
     // trigger handler right now
     this.tick();
@@ -557,8 +573,9 @@ class AudioStreamController extends TaskLoop {
         this.state = State.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
         this.appended = false;
-        if (!this.demuxer)
+        if (!this.demuxer) {
           this.demuxer = new Demuxer(this.hls, 'audio');
+        }
 
         // Check if we have video initPTS
         // If not we need to wait for it
@@ -591,8 +608,9 @@ class AudioStreamController extends TaskLoop {
       let tracks = data.tracks, track;
 
       // delete any video track found on audio demuxer
-      if (tracks.video)
+      if (tracks.video) {
         delete tracks.video;
+      }
 
       // include levelCodec in audio and video tracks
       track = tracks.audio;
@@ -674,8 +692,9 @@ class AudioStreamController extends TaskLoop {
 
       if (!this.audioSwitch) {
         [data.data1, data.data2].forEach(buffer => {
-          if (buffer && buffer.length)
+          if (buffer && buffer.length) {
             pendingData.push({ type: data.type, data: buffer, parent: 'audio', content: 'data' });
+          }
         });
         if (!appendOnBufferFlush && pendingData.length) {
           pendingData.forEach(appendObj => {
@@ -722,8 +741,9 @@ class AudioStreamController extends TaskLoop {
       this.mediaBuffer = audioTrack.buffer;
       this.loadedmetadata = true;
     }
-    if (data.tracks.video)
+    if (data.tracks.video) {
       this.videoBuffer = data.tracks.video.buffer;
+    }
   }
 
   onBufferAppended (data) {
@@ -760,18 +780,20 @@ class AudioStreamController extends TaskLoop {
   onError (data) {
     let frag = data.frag;
     // don't handle frag error not related to audio fragment
-    if (frag && frag.type !== 'audio')
+    if (frag && frag.type !== 'audio') {
       return;
+    }
 
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:
     case ErrorDetails.FRAG_LOAD_TIMEOUT:
       if (!data.fatal) {
         let loadError = this.fragLoadError;
-        if (loadError)
+        if (loadError) {
           loadError++;
-        else
+        } else {
           loadError = 1;
+        }
 
         let config = this.config;
         if (loadError <= config.fragLoadingMaxRetry) {

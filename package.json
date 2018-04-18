@@ -1,6 +1,6 @@
 {
   "name": "hls.js",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
@@ -76,7 +76,7 @@
     "eslint-plugin-standard": "^3.0.1",
     "http-server": "^0.11.0",
     "husky": "^0.14.3",
-    "istanbul-instrumenter-loader": "^2.0.0",
+    "istanbul-instrumenter-loader": "^3.0.1",
     "jshint": "^2.9.4",
     "karma": "^2.0.0",
     "karma-chrome-launcher": "^2.2.0",

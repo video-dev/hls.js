@@ -90,14 +90,12 @@ export default class TaskLoop extends EventHandler {
   tick () {
     this._tickCallCount++;
     if (this._tickCallCount === 1) {
-      this.doTick();
       // re-entrant: schedule a call on the next tick
       if (this._tickCallCount > 1) {
         // make sure only one timer exists at any time at max
         this.clearNextTick();
         this._tickTimer = setTimeout(this._boundTick, 0);
       }
-
       this._tickCallCount = 0;
     }
   }

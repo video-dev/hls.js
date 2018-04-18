@@ -23,29 +23,35 @@ class MP4Demuxer {
 
       // default audio codec if nothing specified
       // TODO : extract that from initsegment
-      if (audioCodec == null)
+      if (audioCodec == null) {
         audioCodec = 'mp4a.40.5';
+      }
 
-      if (videoCodec == null)
+      if (videoCodec == null) {
         videoCodec = 'avc1.42e01e';
+      }
 
       const tracks = {};
       if (initData.audio && initData.video) {
         tracks.audiovideo = { container: 'video/mp4', codec: audioCodec + ',' + videoCodec, initSegment: duration ? initSegment : null };
       } else {
-        if (initData.audio)
+        if (initData.audio) {
           tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment: duration ? initSegment : null };
+        }
 
-        if (initData.video)
+        if (initData.video) {
           tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment: duration ? initSegment : null };
+        }
       }
       this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { tracks });
     } else {
-      if (audioCodec)
+      if (audioCodec) {
         this.audioCodec = audioCodec;
+      }
 
-      if (videoCodec)
+      if (videoCodec) {
         this.videoCodec = videoCodec;
+      }
     }
   }
 
@@ -126,8 +132,9 @@ class MP4Demuxer {
         } else {
           // recursively search for the next box along the path
           subresults = MP4Demuxer.findBox({ data: data, start: i + 8, end: endbox }, path.slice(1));
-          if (subresults.length)
+          if (subresults.length) {
             results = results.concat(subresults);
+          }
         }
       }
       i = endbox;
@@ -145,8 +152,9 @@ class MP4Demuxer {
     let sidx = MP4Demuxer.findBox(initSegment, ['sidx']);
     let references;
 
-    if (!sidx || !sidx[0])
+    if (!sidx || !sidx[0]) {
       return null;
+    }
 
     references = [];
     sidx = sidx[0];
@@ -164,10 +172,11 @@ class MP4Demuxer {
     let earliestPresentationTime = 0;
     let firstOffset = 0;
 
-    if (version === 0)
+    if (version === 0) {
       index += 8;
-    else
+    } else {
       index += 16;
+    }
 
     // skip reserved
     index += 2;

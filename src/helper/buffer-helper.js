@@ -14,8 +14,9 @@ const BufferHelper = {
       if (media) {
         let buffered = media.buffered;
         for (let i = 0; i < buffered.length; i++) {
-          if (position >= buffered.start(i) && position <= buffered.end(i))
+          if (position >= buffered.start(i) && position <= buffered.end(i)) {
             return true;
+          }
         }
       }
     } catch (error) {
@@ -30,8 +31,9 @@ const BufferHelper = {
     try {
       if (media) {
         let vbuffered = media.buffered, buffered = [], i;
-        for (i = 0; i < vbuffered.length; i++)
+        for (i = 0; i < vbuffered.length; i++) {
           buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+        }
 
         return this.bufferedInfo(buffered, pos, maxHoleDuration);
       }
@@ -50,10 +52,11 @@ const BufferHelper = {
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
     buffered.sort(function (a, b) {
       let diff = a.start - b.start;
-      if (diff)
+      if (diff) {
         return diff;
-      else
+      } else {
         return b.end - a.end;
+      }
     });
     // there might be some small holes between buffer time range
     // consider that holes smaller than maxHoleDuration are irrelevant and build another
@@ -68,8 +71,9 @@ const BufferHelper = {
           // update lastRange.end only if smaller than item.end
           // e.g.  [ 1, 15] with  [ 2,8] => [ 1,15] (no need to modify lastRange.end)
           // whereas [ 1, 8] with  [ 2,15] => [ 1,15] ( lastRange should switch from [1,8] to [1,15])
-          if (buffered[i].end > buf2end)
+          if (buffered[i].end > buf2end) {
             buffered2[buf2len - 1].end = buffered[i].end;
+          }
         } else {
           // big hole
           buffered2.push(buffered[i]);
