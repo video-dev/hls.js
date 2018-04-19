@@ -6,13 +6,21 @@ import EventHandler from './event-handler';
  * TaskLoop allows to schedule a task function being called repeatedly on the main loop,
  * scheduled asynchroneously, avoiding recursive calls in the same tick.
  *
+ * It will be assured that the task execution method only gets called once per main loop tick,
+ * no matter how often it gets requested for execution. Execution in further ticks will be scheduled accordingly.
+ *
  * The task can be scheduled as an interval repeatedly with a period as parameter.
  *
  * Sub-classes need to implement the doTick method which will effectively have the task execution routine.
  *
  * The class has a tick function that will schedule the doTick call. It may be called synchroneously
  * only for a stack-depth of one. On re-entrant calls, sub-sequent calls are scheduled for next main loop ticks.
+ *
+ * When the task execution ("tick" method) is called in re-entrant way this is detected and
+ * we are limiting the task execution per call stack to exactly one, but scheduling/post-poning further
+ * task processing on the next main loop iteration (also known as "next tick" in the Node/JS runtime lingo).
  */
+
 export default class TaskLoop extends EventHandler {
   constructor (hls, ...events) {
     super(hls, ...events);
@@ -90,8 +98,9 @@ export default class TaskLoop extends EventHandler {
   tick () {
     this._tickCallCount++;
     if (this._tickCallCount === 1) {
-      // re-entrant: schedule a call on the next tick
       this.doTick();
+      // re-entrant call to tick from previous doTick call stack
+      // -> schedule a call on the next main loop iteration to process this task processing request
       if (this._tickCallCount > 1) {
         // make sure only one timer exists at any time at max
         this.clearNextTick();
