@@ -9,7 +9,9 @@ describe('SubtitleTrackController', () => {
   let videoElement;
 
   beforeEach(() => {
-    const hls = new Hls();
+    const hls = new Hls({
+      renderNatively: true
+    });
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
