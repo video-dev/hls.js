@@ -227,8 +227,9 @@ class SubtitleTrackController extends EventHandler {
    */
   _toggleTrackModes (newId) {
     const { media, subtitleDisplay, trackId } = this;
-    if (!media)
+    if (!media) {
       return;
+    }
 
     const textTracks = filterSubtitleTracks(media.textTracks);
     if (newId === -1) {
@@ -237,13 +238,15 @@ class SubtitleTrackController extends EventHandler {
       });
     } else {
       const oldTrack = textTracks[trackId];
-      if (oldTrack)
+      if (oldTrack) {
         oldTrack.mode = 'disabled';
+      }
     }
 
     const nextTrack = textTracks[newId];
-    if (nextTrack)
+    if (nextTrack) {
       nextTrack.mode = subtitleDisplay ? 'showing' : 'hidden';
+    }
   }
 }
 
