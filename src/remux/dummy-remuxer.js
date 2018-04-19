@@ -29,8 +29,9 @@ class DummyRemuxer {
     while (track.samples.length) {
       avcSample = track.samples.shift();
       // loop through AVC sample NALUs
-      while (avcSample.units.length)
+      while (avcSample.units.length) {
         unit = avcSample.units.shift();
+      }
     }
     // please lint
     timeOffset = timeOffset;

@@ -23,8 +23,9 @@ function createTestStream (url, description, live = false, abr = true, blacklist
  * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
  */
 function createTestStreamWithConfig (target, config) {
-  if (typeof target !== 'object')
+  if (typeof target !== 'object') {
     throw new Error('target should be object');
+  }
 
   const testStream = createTestStream(target.url, target.description, target.live, target.abr, target.blacklist_ua);
 
@@ -142,5 +143,11 @@ module.exports = {
     widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }
-  )
+  ),
+  audioOnlyMultipleLevels: {
+    'url': 'https://s3.amazonaws.com/bob.jwplayer.com/~alex/121628/new_master.m3u8',
+    'description': 'Multiple non-alternate audio levels',
+    'live': false,
+    'abr': false
+  }
 };

@@ -59,8 +59,9 @@ class SubtitleStreamController extends TaskLoop {
 
   // When fragment has finished processing, add sn to list of completed if successful.
   onSubtitleFragProcessed (data) {
-    if (data.success)
+    if (data.success) {
       this.vttFragSNsProcessed[data.frag.trackId].push(data.frag.sn);
+    }
 
     this.currentlyProcessing = null;
     this.state = State.IDLE;
@@ -75,8 +76,9 @@ class SubtitleStreamController extends TaskLoop {
   onError (data) {
     let frag = data.frag;
     // don't handle frag error not related to subtitle fragment
-    if (frag && frag.type !== 'subtitle')
+    if (frag && frag.type !== 'subtitle') {
       return;
+    }
 
     if (this.currentlyProcessing) {
       this.currentlyProcessing = null;
@@ -99,20 +101,25 @@ class SubtitleStreamController extends TaskLoop {
       };
 
       const alreadyInQueue = function (frag) {
-        return fragQueue.some(fragInQueue => { return fragInQueue.sn === frag.sn; });
+        return fragQueue.some(fragInQueue => {
+          return fragInQueue.sn === frag.sn;
+        });
       };
 
         // exit if tracks don't exist
-      if (!tracks)
+      if (!tracks) {
         break;
+      }
 
       var trackDetails;
 
-      if (trackId < tracks.length)
+      if (trackId < tracks.length) {
         trackDetails = tracks[trackId].details;
+      }
 
-      if (typeof trackDetails === 'undefined')
+      if (typeof trackDetails === 'undefined') {
         break;
+      }
 
       // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
       trackDetails.fragments.forEach(frag => {
@@ -146,14 +153,16 @@ class SubtitleStreamController extends TaskLoop {
 
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
-    if (!this.tracks || this.currentTrackId === -1)
+    if (!this.tracks || this.currentTrackId === -1) {
       return;
+    }
 
     // Check if track was already loaded and if so make sure we finish
     // downloading its frags, if not all have been downloaded yet
     const currentTrack = this.tracks[this.currentTrackId];
-    if (currentTrack && currentTrack.details)
+    if (currentTrack && currentTrack.details) {
       this.tick();
+    }
   }
 
   // Got a new set of subtitle fragments.

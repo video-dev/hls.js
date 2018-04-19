@@ -41,8 +41,8 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <video id="video"></video>
 <script>
+  var video = document.getElementById('video');
   if(Hls.isSupported()) {
-    var video = document.getElementById('video');
     var hls = new Hls();
     hls.loadSource('https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8');
     hls.attachMedia(video);
@@ -79,7 +79,7 @@ HTMLVideoElement control and events could be used seamlessly.
 |[<img src="https://cloud.githubusercontent.com/assets/12702747/19316434/0a3601de-9067-11e6-85e2-936b1cb099a0.png" width="120">](https://www.snapstream.com/)|[<img src="https://www.streamamg.com/wp-content/themes/barebones/_assets/images/streamamg-logo.png" width="120">](https://www.streamamg.com/)|[<img src="https://streamsharkio.sa.metacdn.com/wp-content/uploads/2015/10/streamshark-dark.svg" width="120">](https://streamshark.io/)|[<img src="https://camo.githubusercontent.com/9580f10e9bfa8aa7fba52c5cb447bee0757e33da/68747470733a2f2f7777772e7461626c6f74762e636f6d2f7374617469632f696d616765732f7461626c6f5f6c6f676f2e706e67" width="120">](http://my.tablotv.com/)|
 |[<img src="https://user-images.githubusercontent.com/2803310/34083705-349c8fd0-e375-11e7-92a6-5c38509f4936.png" width="120">](https://www.streamroot.io/)|[<img src="http://vignette1.wikia.nocookie.net/tedtalks/images/c/c0/TED_logo.png/revision/20150915192527" width="120">](https://www.ted.com/)|[<img src="https://www.seeklogo.net/wp-content/uploads/2014/12/twitter-logo-vector-download.jpg" width="120">](https://twitter.com/)|[<img src="https://cloud.githubusercontent.com/assets/8201317/20566816/bc33f51c-b196-11e6-9bd3-afb71a06460b.png" width="120">](http://vwflow.com)|
 |[<img src="http://media.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)|[<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)|[<img src="https://s3.amazonaws.com/uploads.hipchat.com/87223/4876411/7Rybnl26ReFzlt3/jw-logo-red.png" width="120">](https://www.jwplayer.com)|[<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)|
-|[<img src="http://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)| | | |
+|[<img src="http://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)|[<img src="https://static3.1tv.ru/assets/web/logo-8ff7c63246d8df0397233927db52edbb.svg" width="120" height="120">](https://www.1tv.ru/) | | |
 
 
 

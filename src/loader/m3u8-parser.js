@@ -29,15 +29,17 @@ const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.
 
 export default class M3U8Parser {
   static findGroup (groups, mediaGroupId) {
-    if (!groups)
+    if (!groups) {
       return null;
+    }
 
     let matchingGroup = null;
 
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
-      if (group.id === mediaGroupId)
+      if (group.id === mediaGroupId) {
         matchingGroup = group;
+      }
     }
 
     return matchingGroup;
@@ -96,8 +98,9 @@ export default class M3U8Parser {
 
       setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
 
-      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1)
+      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
         level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
+      }
 
       levels.push(level);
     }
@@ -119,12 +122,14 @@ export default class M3U8Parser {
         media.default = (attrs.DEFAULT === 'YES');
         media.autoselect = (attrs.AUTOSELECT === 'YES');
         media.forced = (attrs.FORCED === 'YES');
-        if (attrs.URI)
+        if (attrs.URI) {
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
+        }
 
         media.lang = attrs.LANGUAGE;
-        if (!media.name)
+        if (!media.name) {
           media.name = media.lang;
+        }
 
         if (audioGroups.length) {
           const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
@@ -194,20 +199,23 @@ export default class M3U8Parser {
         frag.rawByteRange = (' ' + result[4]).slice(1);
         if (prevFrag) {
           const lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
-          if (lastByteRangeEndOffset)
+          if (lastByteRangeEndOffset) {
             frag.lastByteRangeEndOffset = lastByteRangeEndOffset;
+          }
         }
       } else if (result[5]) { // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (level.programDateTime === undefined)
+        if (level.programDateTime === undefined) {
           level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
+        }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
-          if (result[i] !== undefined)
+          if (result[i] !== undefined) {
             break;
+          }
         }
 
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
@@ -267,8 +275,9 @@ export default class M3U8Parser {
           let startAttrs = new AttrList(startParams);
           let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
           // TIME-OFFSET can be 0
-          if (!isNaN(startTimeOffset))
+          if (!isNaN(startTimeOffset)) {
             level.startTimeOffset = startTimeOffset;
+          }
 
           break;
         case 'MAP':

@@ -150,8 +150,8 @@ Let's
 
   <video id="video"></video>
   <script>
+    var video = document.getElementById('video');
     if (Hls.isSupported()) {
-      var video = document.getElementById('video');
       var hls = new Hls();
       // bind them together
       hls.attachMedia(video);

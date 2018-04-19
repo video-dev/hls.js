@@ -28,8 +28,9 @@ class ID3 {
         // check version is within range
         if (data[offset + 3] < 0xFF && data[offset + 4] < 0xFF) {
           // check size is within range
-          if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80)
+          if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80) {
             return true;
+          }
         }
       }
     }
@@ -53,8 +54,9 @@ class ID3 {
         // check version is within range
         if (data[offset + 3] < 0xFF && data[offset + 4] < 0xFF) {
           // check size is within range
-          if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80)
+          if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80) {
             return true;
+          }
         }
       }
     }
@@ -87,8 +89,9 @@ class ID3 {
       offset += length;
     }
 
-    if (length > 0)
+    if (length > 0) {
       return data.subarray(front, front + length);
+    }
 
     return undefined;
   }
@@ -111,8 +114,9 @@ class ID3 {
     const frames = ID3.getID3Frames(data);
     for (let i = 0; i < frames.length; i++) {
       const frame = frames[i];
-      if (ID3.isTimeStampFrame(frame))
+      if (ID3.isTimeStampFrame(frame)) {
         return ID3._readTimeStamp(frame);
+      }
     }
 
     return undefined;
@@ -159,27 +163,30 @@ class ID3 {
       while (offset + 8 < end) {
         const frameData = ID3._getFrameData(id3Data.subarray(offset));
         const frame = ID3._decodeFrame(frameData);
-        if (frame)
+        if (frame) {
           frames.push(frame);
+        }
 
         // skip frame header and frame data
         offset += frameData.size + 10;
       }
 
-      if (ID3.isFooter(id3Data, offset))
+      if (ID3.isFooter(id3Data, offset)) {
         offset += 10;
+      }
     }
 
     return frames;
   }
 
   static _decodeFrame (frame) {
-    if (frame.type === 'PRIV')
+    if (frame.type === 'PRIV') {
       return ID3._decodePrivFrame(frame);
-    else if (frame.type[0] === 'T')
+    } else if (frame.type[0] === 'T') {
       return ID3._decodeTextFrame(frame);
-    else if (frame.type[0] === 'W')
+    } else if (frame.type[0] === 'W') {
       return ID3._decodeURLFrame(frame);
+    }
 
     return undefined;
   }
@@ -196,8 +203,9 @@ class ID3 {
                        data[7];
       timestamp /= 45;
 
-      if (pts33Bit)
-        timestamp += 47721858.84; // 2^32 / 90
+      if (pts33Bit) {
+        timestamp += 47721858.84;
+      } // 2^32 / 90
 
       return Math.round(timestamp);
     }
@@ -209,8 +217,9 @@ class ID3 {
     /*
     Format: <text string>\0<binary data>
     */
-    if (frame.size < 2)
+    if (frame.size < 2) {
       return undefined;
+    }
 
     const owner = ID3._utf8ArrayToStr(frame.data, true);
     const privateData = new Uint8Array(frame.data.subarray(owner.length + 1));
@@ -219,8 +228,9 @@ class ID3 {
   }
 
   static _decodeTextFrame (frame) {
-    if (frame.size < 2)
+    if (frame.size < 2) {
       return undefined;
+    }
 
     if (frame.type === 'TXXX') {
       /*
@@ -253,8 +263,9 @@ class ID3 {
       [0]   = {Text Encoding}
       [1-?] = {Description}\0{URL}
       */
-      if (frame.size < 2)
+      if (frame.size < 2) {
         return undefined;
+      }
 
       let index = 1;
       const description = ID3._utf8ArrayToStr(frame.data.subarray(index));

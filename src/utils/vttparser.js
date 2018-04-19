@@ -7,11 +7,13 @@ import VTTCue from './vttcue';
 const StringDecoder = function StringDecoder () {
   return {
     decode: function (data) {
-      if (!data)
+      if (!data) {
         return '';
+      }
 
-      if (typeof data !== 'string')
+      if (typeof data !== 'string') {
         throw new Error('Error - expected string data.');
+      }
 
       return decodeURIComponent(encodeURIComponent(data));
     }
@@ -33,8 +35,9 @@ function parseTimeStamp (input) {
   }
 
   let m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d{3})/);
-  if (!m)
+  if (!m) {
     return null;
+  }
 
   if (m[3]) {
     // Timestamp takes the form of [hours]:[minutes]:[seconds].[milliseconds]
@@ -58,8 +61,9 @@ function Settings () {
 Settings.prototype = {
   // Only accept the first assignment to any key.
   set: function (k, v) {
-    if (!this.get(k) && v !== '')
+    if (!this.get(k) && v !== '') {
       this.values[k] = v;
+    }
   },
   // Return the value for a key, or a default value.
   // If 'defaultKey' is passed then 'dflt' is assumed to be an object with
@@ -67,8 +71,9 @@ Settings.prototype = {
   // the key of the property that will be chosen; otherwise it's assumed to be
   // a single value.
   get: function (k, dflt, defaultKey) {
-    if (defaultKey)
+    if (defaultKey) {
       return this.has(k) ? this.values[k] : dflt[defaultKey];
+    }
 
     return this.has(k) ? this.values[k] : dflt;
   },
@@ -110,12 +115,14 @@ Settings.prototype = {
 function parseOptions (input, callback, keyValueDelim, groupDelim) {
   let groups = groupDelim ? input.split(groupDelim) : [input];
   for (let i in groups) {
-    if (typeof groups[i] !== 'string')
+    if (typeof groups[i] !== 'string') {
       continue;
+    }
 
     let kv = groups[i].split(keyValueDelim);
-    if (kv.length !== 2)
+    if (kv.length !== 2) {
       continue;
+    }
 
     let k = kv[0];
     let v = kv[1];
@@ -134,8 +141,9 @@ function parseCue (input, cue, regionList) {
   // 4.1 WebVTT timestamp
   function consumeTimeStamp () {
     let ts = parseTimeStamp(input);
-    if (ts === null)
+    if (ts === null) {
       throw new Error('Malformed timestamp: ' + oInput);
+    }
 
     // Remove time stamp from input.
     input = input.replace(/^[^\sa-zA-Z-]+/, '');
@@ -164,19 +172,22 @@ function parseCue (input, cue, regionList) {
         var vals = v.split(','),
           vals0 = vals[0];
         settings.integer(k, vals0);
-        if (settings.percent(k, vals0))
+        if (settings.percent(k, vals0)) {
           settings.set('snapToLines', false);
+        }
 
         settings.alt(k, vals0, ['auto']);
-        if (vals.length === 2)
+        if (vals.length === 2) {
           settings.alt('lineAlign', vals[1], ['start', center, 'end']);
+        }
 
         break;
       case 'position':
         vals = v.split(',');
         settings.percent(k, vals[0]);
-        if (vals.length === 2)
+        if (vals.length === 2) {
           settings.alt('positionAlign', vals[1], ['start', center, 'end', 'line-left', 'line-right', 'auto']);
+        }
 
         break;
       case 'size':
@@ -252,16 +263,19 @@ VTTParser.prototype = {
 
       buffer = fixLineBreaks(buffer);
 
-      while (pos < buffer.length && buffer[pos] !== '\r' && buffer[pos] !== '\n')
+      while (pos < buffer.length && buffer[pos] !== '\r' && buffer[pos] !== '\n') {
         ++pos;
+      }
 
       let line = buffer.substr(0, pos);
       // Advance the buffer early in case we fail below.
-      if (buffer[pos] === '\r')
+      if (buffer[pos] === '\r') {
         ++pos;
+      }
 
-      if (buffer[pos] === '\n')
+      if (buffer[pos] === '\n') {
         ++pos;
+      }
 
       self.buffer = buffer.substr(pos);
       return line;
@@ -285,15 +299,17 @@ VTTParser.prototype = {
       let line;
       if (self.state === 'INITIAL') {
         // We can't start parsing until we have the first line.
-        if (!/\r\n|\n/.test(self.buffer))
+        if (!/\r\n|\n/.test(self.buffer)) {
           return this;
+        }
 
         line = collectNextLine();
         // strip of UTF-8 BOM if any
         // https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
         let m = line.match(/^(ï»¿)?WEBVTT([ \t].*)?$/);
-        if (!m || !m[0])
+        if (!m || !m[0]) {
           throw new Error('Malformed WebVTT signature.');
+        }
 
         self.state = 'HEADER';
       }
@@ -301,13 +317,15 @@ VTTParser.prototype = {
       let alreadyCollectedLine = false;
       while (self.buffer) {
         // We can't parse a line until we have the full line.
-        if (!/\r\n|\n/.test(self.buffer))
+        if (!/\r\n|\n/.test(self.buffer)) {
           return this;
+        }
 
-        if (!alreadyCollectedLine)
+        if (!alreadyCollectedLine) {
           line = collectNextLine();
-        else
+        } else {
           alreadyCollectedLine = false;
+        }
 
         switch (self.state) {
         case 'HEADER':
@@ -321,8 +339,9 @@ VTTParser.prototype = {
           continue;
         case 'NOTE':
           // Ignore NOTE blocks.
-          if (!line)
+          if (!line) {
             self.state = 'ID';
+          }
 
           continue;
         case 'ID':
@@ -332,8 +351,9 @@ VTTParser.prototype = {
             break;
           }
           // 19-29 - Allow any number of line terminators, then initialize new cue values.
-          if (!line)
+          if (!line) {
             continue;
+          }
 
           self.cue = new VTTCue(0, 0, '');
           self.state = 'CUE';
@@ -364,30 +384,34 @@ VTTParser.prototype = {
           // one as a new cue.
           if (!line || hasSubstring && (alreadyCollectedLine = true)) {
             // We are done parsing self cue.
-            if (self.oncue)
+            if (self.oncue) {
               self.oncue(self.cue);
+            }
 
             self.cue = null;
             self.state = 'ID';
             continue;
           }
-          if (self.cue.text)
+          if (self.cue.text) {
             self.cue.text += '\n';
+          }
 
           self.cue.text += line;
           continue;
         case 'BADCUE': // BADCUE
           // 54-62 - Collect and discard the remaining cue.
-          if (!line)
+          if (!line) {
             self.state = 'ID';
+          }
 
           continue;
         }
       }
     } catch (e) {
       // If we are currently parsing a cue, report what we have.
-      if (self.state === 'CUETEXT' && self.cue && self.oncue)
+      if (self.state === 'CUETEXT' && self.cue && self.oncue) {
         self.oncue(self.cue);
+      }
 
       self.cue = null;
       // Enter BADWEBVTT state if header was not parsed correctly otherwise
@@ -409,13 +433,15 @@ VTTParser.prototype = {
       // If we've flushed, parsed, and we're still on the INITIAL state then
       // that means we don't have enough of the stream to parse the first
       // line.
-      if (self.state === 'INITIAL')
+      if (self.state === 'INITIAL') {
         throw new Error('Malformed WebVTT signature.');
+      }
     } catch (e) {
       throw e;
     }
-    if (self.onflush)
+    if (self.onflush) {
       self.onflush();
+    }
 
     return this;
   }

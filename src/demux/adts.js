@@ -146,8 +146,9 @@ export function isHeader (data, offset) {
   // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
   // Layer bits (position 14 and 15) in header should be always 0 for ADTS
   // More info https://wiki.multimedia.cx/index.php?title=ADTS
-  if (offset + 1 < data.length && isHeaderPattern(data, offset))
+  if (offset + 1 < data.length && isHeaderPattern(data, offset)) {
     return true;
+  }
 
   return false;
 }
@@ -160,12 +161,14 @@ export function probe (data, offset) {
     let headerLength = getHeaderLength(data, offset);
     // ADTS frame Length
     let frameLength = headerLength;
-    if (offset + 5 < data.length)
+    if (offset + 5 < data.length) {
       frameLength = getFullFrameLength(data, offset);
+    }
 
     let newOffset = offset + frameLength;
-    if (newOffset === data.length || (newOffset + 1 < data.length && isHeaderPattern(data, newOffset)))
+    if (newOffset === data.length || (newOffset + 1 < data.length && isHeaderPattern(data, newOffset))) {
       return true;
+    }
   }
   return false;
 }

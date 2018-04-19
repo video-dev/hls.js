@@ -149,8 +149,8 @@ hls.js also supports HLS + fmp4, as announced during <a href="https://developer.
 <h2 id="getting-started">Getting Started</h2><pre><code class="lang-html"><code class="source-code prettyprint">&lt;script src=&quot;https://cdn.jsdelivr.net/npm/hls.js@latest&quot;&gt;&lt;/script&gt;
 &lt;video id=&quot;video&quot;&gt;&lt;/video&gt;
 &lt;script&gt;
+  var video = document.getElementById(&apos;video&apos;);
   if(Hls.isSupported()) {
-    var video = document.getElementById(&apos;video&apos;);
     var hls = new Hls();
     hls.loadSource(&apos;https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8&apos;);
     hls.attachMedia(video);
