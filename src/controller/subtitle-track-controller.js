@@ -9,7 +9,9 @@ import { logger } from '../utils/logger';
 function filterSubtitleTracks (textTrackList) {
   let tracks = [];
   for (let i = 0; i < textTrackList.length; i++) {
-    if (textTrackList[i].kind === 'subtitles')
+    const track = textTrackList[i];
+    // Edge adds a track without a label; we don't want to use it
+    if (track.kind === 'subtitles' && track.label)
       tracks.push(textTrackList[i]);
   }
   return tracks;
@@ -35,7 +37,7 @@ class SubtitleTrackController extends EventHandler {
 
   _onTextTracksChanged () {
     // Media is undefined when switching streams via loadSource()
-    if (!this.media)
+    if (!this.media || !this.hls.config.renderNatively)
       return;
 
     let trackId = -1;
@@ -217,8 +219,8 @@ class SubtitleTrackController extends EventHandler {
    * @private
    */
   _toggleTrackModes (newId) {
-    const { media, subtitleDisplay, trackId } = this;
-    if (!media)
+    const { media, hls, subtitleDisplay, trackId } = this;
+    if (!media || !hls.config.renderNatively)
       return;
 
     const textTracks = filterSubtitleTracks(media.textTracks);
