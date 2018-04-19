@@ -91,6 +91,7 @@ export default class TaskLoop extends EventHandler {
     this._tickCallCount++;
     if (this._tickCallCount === 1) {
       // re-entrant: schedule a call on the next tick
+      this.doTick();
       if (this._tickCallCount > 1) {
         // make sure only one timer exists at any time at max
         this.clearNextTick();
