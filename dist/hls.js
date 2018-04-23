@@ -9405,7 +9405,8 @@ var stream_controller_StreamController = function (_TaskLoop) {
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
     } else {
-      var expectedPlaying = !(media.paused && media.readyState > 1 || // not playing when media is paused and sufficiently buffered
+      var expectedPlaying = !(media.paused || // not playing when media is paused
+      media.readyState < 2 || // not playing when insufficiently buffered
       media.ended || // not playing when media is ended
       media.buffered.length === 0); // not playing if nothing buffered
       var tnow = performance.now();
@@ -9487,15 +9488,16 @@ var stream_controller_StreamController = function (_TaskLoop) {
     var currentTime = media.currentTime;
     var jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 
-    this._reportStall(bufferInfo.len);
     var partial = this.fragmentTracker.getPartialFragment(currentTime);
     if (partial) {
+      this._reportStall(bufferInfo.len);
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
       this._trySkipBufferHole(partial);
     }
 
     if (bufferInfo.len > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
+      this._reportStall(bufferInfo.len);
       // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
       // We only try to jump the hole if it's under the configured size
       // Reset stalled so to rearm watchdog timer
