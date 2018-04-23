@@ -1397,13 +1397,17 @@ class StreamController extends TaskLoop {
       } else if (expectedPlaying) {
         // The playhead isn't moving but it should be
         // Allow some slack time to for small stalls to resolve themselves
+        const stalledDuration = tnow - this.stalled;
+        console.log(tnow)
+        const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
         if (!this.stalled) {
           this.stalled = tnow;
           return;
+        } else if (stalledDuration >= 1000) {
+          // Report stalling after trying to fix
+          this._reportStall(bufferInfo.len);
         }
 
-        const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
-        const stalledDuration = tnow - this.stalled;
         this._tryFixBufferStall(bufferInfo, stalledDuration);
       }
     }
@@ -1472,10 +1476,6 @@ class StreamController extends TaskLoop {
       // Reset stalled so to rearm watchdog timer
       this.stalled = null;
       this._tryNudgeBuffer();
-    }
-
-    if (stalledDuration > 1000) {
-      this._reportStall(bufferInfo.len);
     }
   }
 
