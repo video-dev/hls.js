@@ -1,53 +1,51 @@
-/*
- * audio track controller
-*/
-
 import Event from '../events';
-import EventHandler from '../event-handler';
+import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
-import { ErrorTypes } from '../errors';
+import { ErrorTypes, ErrorDetails } from '../errors';
 
-class AudioTrackController extends EventHandler {
+/**
+ * Audio-track controller
+ */
+class AudioTrackController extends TaskLoop {
   constructor (hls) {
     super(hls, Event.MANIFEST_LOADING,
       Event.MANIFEST_PARSED,
       Event.AUDIO_TRACK_LOADED,
       Event.ERROR);
-    this.ticks = 0;
-    this.ontick = this.tick.bind(this);
+
+    /**
+     * @member {AudioTrack[]}
+     */
+    this.tracks = [];
+
+    /**
+     * @member {number} trackId
+     */
+    this.trackId = -1;
+
+    /**
+     * List of blacklisted audio track IDs (that have caused failure)
+     * @member {number[]}
+     */
+    this.trackIdBlacklist = Object.create(null);
   }
 
-  destroy () {
-    this.cleanTimer();
-    EventHandler.prototype.destroy.call(this);
-  }
-
-  cleanTimer () {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-  }
-
-  tick () {
-    this.ticks++;
-    if (this.ticks === 1) {
-      this.doTick();
-      if (this.ticks > 1) {
-        setTimeout(this.tick, 1);
-      }
-
-      this.ticks = 0;
-    }
-  }
-
-  doTick () {
-    this.updateTrack(this.trackId);
-  }
-
+  /**
+   *
+   * @param {ErrorEventData} data
+   */
   onError (data) {
     if (data.fatal && data.type === ErrorTypes.NETWORK_ERROR) {
-      this.cleanTimer();
+      this.clearInterval();
+    }
+
+    switch (data.details) {
+    case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
+      logger.warn('Network failure on audio-track id:', data.context.id);
+      this._handleLoadError();
+      break;
+    default:
+      break;
     }
   }
 
@@ -83,74 +81,140 @@ class AudioTrackController extends EventHandler {
       logger.log(`audioTrack ${data.id} loaded`);
       this.tracks[data.id].details = data.details;
       // check if current playlist is a live playlist
-      if (data.details.live && !this.timer) {
+      if (data.details.live && !this.hasInterval()) {
         // if live playlist we will have to reload it periodically
         // set reload period to playlist target duration
-        this.timer = setInterval(this.ontick, 1000 * data.details.targetduration);
+        const updatePeriodMs = data.details.targetduration * 1000;
+        this.setInterval(updatePeriodMs);
       }
-      if (!data.details.live && this.timer) {
+      if (!data.details.live && this.hasInterval()) {
         // playlist is not live and timer is armed : stopping it
-        this.cleanTimer();
+        this.clearInterval();
       }
     }
   }
 
-  /** get alternate audio tracks list from playlist **/
+  /**
+   * @type {AudioTrack[]} Audio-track list
+   */
   get audioTracks () {
     return this.tracks;
   }
 
-  /** get index of the selected audio track (index in audio track lists) **/
+  /**
+   * @type {number} Index in audio-tracks list
+   */
   get audioTrack () {
     return this.trackId;
   }
 
-  /** select an audio track, based on its index in audio track lists**/
-  set audioTrack (audioTrackId) {
-    if (this.trackId !== audioTrackId || this.tracks[audioTrackId].details === undefined) {
-      this.setAudioTrackInternal(audioTrackId);
+  set audioTrack (newId) {
+    // noop on same audio track id as already set
+    if (this.trackId === newId) {
+      logger.debug('Same id as current audio-track passed, no-op');
+      return;
+    }
+
+    // check if level idx is valid
+    if (newId < 0 || newId >= this.tracks.length) {
+      logger.warn('Invalid id passed to audio-track controller');
+      return;
+    }
+
+    const audioTrack = this.tracks[newId];
+    if (typeof audioTrack !== 'object') {
+      logger.error('Inconsistent audio-track list!');
+      return;
+    }
+
+    logger.log(`Now switching to audio-track index ${newId}`);
+
+    // stopping live reloading timer if any
+    this.clearInterval();
+    this.trackId = newId;
+
+    const { url, type, id } = audioTrack;
+    this.hls.trigger(Event.AUDIO_TRACK_SWITCHING, { id, type, url });
+    this._loadTrackDetailsIfNeeded(audioTrack);
+  }
+
+  /**
+   * @override
+   */
+  doTick () {
+    this._updateTrack(this.trackId);
+  }
+
+  /**
+   * @param {AudioTrack} audioTrack
+   * @returns {boolean}
+   */
+  _needsTrackLoading (audioTrack) {
+    const { details } = audioTrack;
+
+    if (!details) {
+      return true;
+    } else if (details.live) {
+      return true;
     }
   }
 
-  setAudioTrackInternal (newId) {
-    // check if level idx is valid
-    if (newId >= 0 && newId < this.tracks.length) {
-      // stopping live reloading timer if any
-      this.cleanTimer();
-      this.trackId = newId;
-      logger.log(`switching to audioTrack ${newId}`);
-      let audioTrack = this.tracks[newId],
-        hls = this.hls,
-        type = audioTrack.type,
-        url = audioTrack.url,
-        eventObj = { id: newId, type: type, url: url };
-      hls.trigger(Event.AUDIO_TRACK_SWITCHING, eventObj);
-      // check if we need to load playlist for this audio Track
-      let details = audioTrack.details;
-      if (url && (details === undefined || details.live === true)) {
-        // track not retrieved yet, or live playlist we need to (re)load it
-        logger.log(`(re)loading playlist for audioTrack ${newId}`);
-        hls.trigger(Event.AUDIO_TRACK_LOADING, { url: url, id: newId });
-      }
+  /**
+   * @private
+   * @param {AudioTrack} audioTrack
+   */
+  _loadTrackDetailsIfNeeded (audioTrack) {
+    if (this._needsTrackLoading(audioTrack)) {
+      const { url, id } = audioTrack;
+      // track not retrieved yet, or live playlist we need to (re)load it
+      logger.log(`loading audio-track playlist for id: ${id}`);
+      this.hls.trigger(Event.AUDIO_TRACK_LOADING, { url, id });
     }
   }
 
-  updateTrack (newId) {
+  /**
+   * @private
+   * @param {number} newId
+   */
+  _updateTrack (newId) {
     // check if level idx is valid
-    if (newId >= 0 && newId < this.tracks.length) {
-      // stopping live reloading timer if any
-      this.cleanTimer();
-      this.trackId = newId;
-      logger.log(`updating audioTrack ${newId}`);
-      let audioTrack = this.tracks[newId], url = audioTrack.url;
-      // check if we need to load playlist for this audio Track
-      let details = audioTrack.details;
-      if (url && (details === undefined || details.live === true)) {
-        // track not retrieved yet, or live playlist we need to (re)load it
-        logger.log(`(re)loading playlist for audioTrack ${newId}`);
-        this.hls.trigger(Event.AUDIO_TRACK_LOADING, { url: url, id: newId });
+    if (newId < 0 || newId >= this.tracks.length) {
+      return;
+    }
+
+    // stopping live reloading timer if any
+    this.clearInterval();
+    this.trackId = newId;
+    logger.log(`trying to update audio-track ${newId}`);
+    const audioTrack = this.tracks[newId];
+    this._loadTrackDetailsIfNeeded(audioTrack);
+  }
+
+  /**
+   * @private
+   */
+  _handleLoadError () {
+    // First, let's black list current track id
+    this.trackIdBlacklist[this.trackId] = true;
+
+    // Let's try to fall back on a functional audio-track
+    const previousId = this.trackId;
+    let newId = this.trackId;
+    while (this.trackIdBlacklist[newId]) {
+      newId++;
+      if (newId >= this.tracks.length) {
+        newId = 0;
+      }
+
+      if (newId === previousId) {
+        logger.warn('No fallback audio-track found!');
+        return;
       }
     }
+
+    logger.log('Attempting audio-track fallback id:', newId);
+
+    this.audioTrack = newId;
   }
 }
 
