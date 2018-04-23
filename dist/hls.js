@@ -15110,7 +15110,9 @@ function subtitle_track_controller__inherits(subClass, superClass) { if (typeof 
 function filterSubtitleTracks(textTrackList) {
   var tracks = [];
   for (var i = 0; i < textTrackList.length; i++) {
-    if (textTrackList[i].kind === 'subtitles') tracks.push(textTrackList[i]);
+    var track = textTrackList[i];
+    // Edge adds a track without a label; we don't want to use it
+    if (track.kind === 'subtitles' && track.label) tracks.push(textTrackList[i]);
   }
   return tracks;
 }
@@ -15136,7 +15138,7 @@ var subtitle_track_controller_SubtitleTrackController = function (_EventHandler)
 
   SubtitleTrackController.prototype._onTextTracksChanged = function _onTextTracksChanged() {
     // Media is undefined when switching streams via loadSource()
-    if (!this.media) return;
+    if (!this.media || !this.hls.config.renderNatively) return;
 
     var trackId = -1;
     var tracks = filterSubtitleTracks(this.media.textTracks);
@@ -15310,10 +15312,11 @@ var subtitle_track_controller_SubtitleTrackController = function (_EventHandler)
 
   SubtitleTrackController.prototype._toggleTrackModes = function _toggleTrackModes(newId) {
     var media = this.media,
+        hls = this.hls,
         subtitleDisplay = this.subtitleDisplay,
         trackId = this.trackId;
 
-    if (!media) return;
+    if (!media || !hls.config.renderNatively) return;
 
     var textTracks = filterSubtitleTracks(media.textTracks);
     if (newId === -1) {
