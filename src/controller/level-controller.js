@@ -22,11 +22,11 @@ export default class LevelController extends EventHandler {
   }
 
   onHandlerDestroying () {
-    this.cleanTimer();
+    this.clearTimer();
     this.manualLevelIndex = -1;
   }
 
-  cleanTimer () {
+  clearTimer () {
     if (this.timer !== null) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -157,7 +157,7 @@ export default class LevelController extends EventHandler {
     let levels = this._levels;
     if (levels) {
       newLevel = Math.min(newLevel, levels.length - 1);
-      if (this.currentLevelIndex !== newLevel || levels[newLevel].details === undefined) {
+      if (this.currentLevelIndex !== newLevel || !levels[newLevel].details) {
         this.setLevelInternal(newLevel);
       }
     }
@@ -169,7 +169,7 @@ export default class LevelController extends EventHandler {
     // check if level idx is valid
     if (newLevel >= 0 && newLevel < levels.length) {
       // stopping live reloading timer if any
-      this.cleanTimer();
+      this.clearTimer();
       if (this.currentLevelIndex !== newLevel) {
         logger.log(`switching to level ${newLevel}`);
         this.currentLevelIndex = newLevel;
@@ -241,7 +241,7 @@ export default class LevelController extends EventHandler {
   onError (data) {
     if (data.fatal === true) {
       if (data.type === ErrorTypes.NETWORK_ERROR) {
-        this.cleanTimer();
+        this.clearTimer();
       }
 
       return;
@@ -308,7 +308,7 @@ export default class LevelController extends EventHandler {
         logger.error(`level controller, cannot recover from ${errorDetails} error`);
         this.currentLevelIndex = null;
         // stopping live reloading timer if any
-        this.cleanTimer();
+        this.clearTimer();
         // switch error to fatal
         errorEvent.fatal = true;
         return;
@@ -321,9 +321,10 @@ export default class LevelController extends EventHandler {
       redundantLevels = level.url.length;
 
       if (redundantLevels > 1 && level.loadError < redundantLevels) {
-        logger.warn(`level controller, ${errorDetails} for level ${levelIndex}: switching to redundant stream id ${level.urlId}`);
         level.urlId = (level.urlId + 1) % redundantLevels;
         level.details = undefined;
+
+        logger.warn(`level controller, ${errorDetails} for level ${levelIndex}: switching to redundant stream id ${level.urlId}`);
       } else {
         // Search for available level
         if (this.manualLevelIndex === -1) {
@@ -383,19 +384,27 @@ export default class LevelController extends EventHandler {
         logger.log(`live playlist, reload in ${Math.round(reloadInterval)} ms`);
         this.timer = setTimeout(() => this.loadLevel(), reloadInterval);
       } else {
-        this.cleanTimer();
+        this.clearTimer();
       }
     }
   }
 
   loadLevel () {
-    let level, urlIndex;
+    logger.debug('call to loadLevel');
 
-    if (this.currentLevelIndex !== null && this.canload === true) {
-      level = this._levels[this.currentLevelIndex];
-      if (level !== undefined && level.url.length > 0) {
-        urlIndex = level.urlId;
-        this.hls.trigger(Event.LEVEL_LOADING, { url: level.url[urlIndex], level: this.currentLevelIndex, id: urlIndex });
+    if (this.currentLevelIndex !== null && this.canload) {
+      const levelObject = this._levels[this.currentLevelIndex];
+
+      if (typeof levelObject === 'object' &&
+        levelObject.url.length > 0) {
+        const level = this.currentLevelIndex;
+        const urlIndex = levelObject.urlId;
+        const url = levelObject.url[urlIndex];
+        const id = urlIndex;
+
+        logger.log(`Attempt loading level id ${level} with URL index ${id}`);
+
+        this.hls.trigger(Event.LEVEL_LOADING, { url, level, id });
       }
     }
   }
