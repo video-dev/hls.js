@@ -1511,19 +1511,21 @@ class StreamController extends TaskLoop {
 
     const partial = this.fragmentTracker.getPartialFragment(currentTime);
     if (partial) {
-      this._reportStall(bufferInfo.len);
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
       this._trySkipBufferHole(partial);
     }
 
     if (bufferInfo.len > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
-      this._reportStall(bufferInfo.len);
       // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
       // We only try to jump the hole if it's under the configured size
       // Reset stalled so to rearm watchdog timer
       this.stalled = null;
       this._tryNudgeBuffer();
+    }
+
+    if (stalledDuration > 1000) {
+      this._reportStall(bufferInfo.len);
     }
   }
 
