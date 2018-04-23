@@ -2,7 +2,7 @@
 # https://docs.travis-ci.com/user/customizing-the-build/#Implementing-Complex-Build-Steps
 set -ev
 
-npm install
+npm install --quiet
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
 	npm run lint && npm run build

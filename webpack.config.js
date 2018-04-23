@@ -41,7 +41,7 @@ const baseConfig = {
         }
       }
     ]
-  }
+  },
 };
 
 const demoConfig = clone(baseConfig, {
@@ -60,7 +60,6 @@ const demoConfig = clone(baseConfig, {
   plugins: [],
   devtool: 'source-map'
 });
-
 
 function getPluginsForConfig(type, minify = false) {
   // common plugins.
