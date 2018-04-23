@@ -1455,7 +1455,6 @@ class StreamController extends TaskLoop {
         // The playhead isn't moving but it should be
         // Allow some slack time to for small stalls to resolve themselves
         const stalledDuration = tnow - this.stalled;
-        console.log(tnow)
         const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
         if (!this.stalled) {
           this.stalled = tnow;
