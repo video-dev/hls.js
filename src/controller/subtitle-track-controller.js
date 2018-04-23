@@ -138,7 +138,7 @@ class SubtitleTrackController extends EventHandler {
 
     const details = subtitleTrack.details;
     // check if we need to load playlist for this subtitle Track
-    if (details === undefined || details.live === true) {
+    if (!details || details.live) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${trackId}`);
       this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
@@ -177,7 +177,7 @@ class SubtitleTrackController extends EventHandler {
 
   /** select a subtitle track, based on its index in subtitle track lists**/
   set subtitleTrack (subtitleTrackId) {
-    if (this.trackId !== subtitleTrackId) { // || this.tracks[subtitleTrackId].details === undefined) {
+    if (this.trackId !== subtitleTrackId) {
       this.setSubtitleTrackInternal(subtitleTrackId);
     }
   }
@@ -216,7 +216,7 @@ class SubtitleTrackController extends EventHandler {
 
     // check if we need to load playlist for this subtitle Track
     let details = subtitleTrack.details;
-    if (details === undefined || details.live === true) {
+    if (!details || details.live) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${newId}`);
       this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
