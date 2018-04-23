@@ -11,6 +11,8 @@ describe('checkBuffer', function () {
   let config;
   let media;
   let triggerSpy;
+  const sandbox = sinon.sandbox.create();
+
   beforeEach(function () {
     media = document.createElement('video');
     const hls = new Hls({});
@@ -19,6 +21,10 @@ describe('checkBuffer', function () {
     streamController.media = media;
     config = hls.config;
     triggerSpy = sinon.spy(hls, 'trigger');
+  });
+
+  afterEach(function () {
+    sandbox.restore();
   });
 
   describe('_tryNudgeBuffer', function () {
@@ -66,52 +72,42 @@ describe('checkBuffer', function () {
   });
 
   describe('_tryFixBufferStall', function () {
-    let reportStallSpy;
-    beforeEach(function () {
-      reportStallSpy = sinon.spy(streamController, '_reportStall');
-    });
-
     it('should nudge when stalling close to the buffer end', function () {
       const mockBufferInfo = { len: 1 };
       const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
-      const nudgeStub = sinon.stub(streamController, '_tryNudgeBuffer');
+      const nudgeStub = sandbox.stub(streamController, '_tryNudgeBuffer');
       streamController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
       assert(nudgeStub.calledOnce);
-      assert(reportStallSpy.calledOnce);
     });
 
     it('should not nudge when briefly stalling close to the buffer end', function () {
       const mockBufferInfo = { len: 1 };
       const mockStallDuration = (config.highBufferWatchdogPeriod / 2) * 1000;
-      const nudgeStub = sinon.stub(streamController, '_tryNudgeBuffer');
+      const nudgeStub = sandbox.stub(streamController, '_tryNudgeBuffer');
       streamController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
       assert(nudgeStub.notCalled);
-      assert(reportStallSpy.notCalled);
     });
 
     it('should not nudge when too far from the buffer end', function () {
       const mockBufferInfo = { len: 0.25 };
       const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
-      const nudgeStub = sinon.stub(streamController, '_tryNudgeBuffer');
+      const nudgeStub = sandbox.stub(streamController, '_tryNudgeBuffer');
       streamController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
       assert(nudgeStub.notCalled);
-      assert(reportStallSpy.notCalled);
     });
 
     it('should try to jump partial fragments when detected', function () {
-      sinon.stub(streamController.fragmentTracker, 'getPartialFragment').returns({});
-      const skipHoleStub = sinon.stub(streamController, '_trySkipBufferHole');
+      sandbox.stub(streamController.fragmentTracker, 'getPartialFragment').returns({});
+      const skipHoleStub = sandbox.stub(streamController, '_trySkipBufferHole');
       streamController._tryFixBufferStall({ len: 0 });
       assert(skipHoleStub.calledOnce);
-      assert(reportStallSpy.calledOnce);
     });
 
     it('should not try to jump partial fragments when none are detected', function () {
-      sinon.stub(streamController.fragmentTracker, 'getPartialFragment').returns(null);
-      const skipHoleStub = sinon.stub(streamController, '_trySkipBufferHole');
+      sandbox.stub(streamController.fragmentTracker, 'getPartialFragment').returns(null);
+      const skipHoleStub = sandbox.stub(streamController, '_trySkipBufferHole');
       streamController._tryFixBufferStall({ len: 0 });
       assert(skipHoleStub.notCalled);
-      assert(reportStallSpy.notCalled);
     });
   });
 
@@ -132,6 +128,7 @@ describe('checkBuffer', function () {
 
   describe('_checkBuffer', function () {
     let mockMedia;
+    let reportStallSpy;
     beforeEach(function () {
       mockMedia = {
         readyState: 1,
@@ -140,9 +137,12 @@ describe('checkBuffer', function () {
         }
       };
       streamController.media = mockMedia;
+      reportStallSpy = sandbox.spy(streamController, '_reportStall');
     });
 
     function setExpectedPlaying () {
+      streamController.loadedmetadata = true;
+      streamController.immediateSwitch = false;
       mockMedia.paused = false;
       mockMedia.readyState = 4;
       mockMedia.currentTime = 4;
@@ -155,14 +155,14 @@ describe('checkBuffer', function () {
     });
 
     it('should seek to start pos when metadata has not yet been loaded', function () {
-      const seekStub = sinon.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController._checkBuffer();
       assert(seekStub.calledOnce);
       assert(streamController.loadedmetadata);
     });
 
     it('should not seek to start pos when metadata has been loaded', function () {
-      const seekStub = sinon.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.loadedmetadata = true;
       streamController._checkBuffer();
       assert(seekStub.notCalled);
@@ -170,7 +170,7 @@ describe('checkBuffer', function () {
     });
 
     it('should not seek to start pos when nothing has been buffered', function () {
-      const seekStub = sinon.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       mockMedia.buffered.length = 0;
       streamController._checkBuffer();
       assert(seekStub.notCalled);
@@ -178,7 +178,7 @@ describe('checkBuffer', function () {
     });
 
     it('should complete the immediate switch if signalled', function () {
-      const levelSwitchStub = sinon.stub(streamController, 'immediateLevelSwitchEnd');
+      const levelSwitchStub = sandbox.stub(streamController, 'immediateLevelSwitchEnd');
       streamController.loadedmetadata = true;
       streamController.immediateSwitch = true;
       streamController._checkBuffer();
@@ -186,9 +186,7 @@ describe('checkBuffer', function () {
     });
 
     it('should try to fix a stall if expected to be playing', function () {
-      streamController.loadedmetadata = true;
-      streamController.immediateSwitch = false;
-      const fixStallStub = sinon.stub(streamController, '_tryFixBufferStall');
+      const fixStallStub = sandbox.stub(streamController, '_tryFixBufferStall');
       setExpectedPlaying();
       streamController._checkBuffer();
 
@@ -206,13 +204,25 @@ describe('checkBuffer', function () {
       streamController.nudgeRetry = 1;
       streamController.stalled = 4200;
       streamController.lastCurrentTime = 1;
-      const fixStallStub = sinon.stub(streamController, '_tryFixBufferStall');
+      const fixStallStub = sandbox.stub(streamController, '_tryFixBufferStall');
       streamController._checkBuffer();
 
       assert.strictEqual(streamController.stalled, null);
       assert.strictEqual(streamController.nudgeRetry, 0);
       assert.strictEqual(streamController.stallReported, false);
       assert(fixStallStub.notCalled);
+    });
+
+    it('should trigger reportStall when stalling for 1 second or longer', function () {
+      setExpectedPlaying();
+      const clock = sandbox.useFakeTimers(0);
+      clock.tick(1000);
+      streamController.stalled = 1;
+      streamController._checkBuffer();
+      assert(reportStallSpy.notCalled);
+      clock.tick(1001);
+      streamController._checkBuffer();
+      assert(reportStallSpy.calledOnce);
     });
   });
 });
