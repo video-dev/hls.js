@@ -279,18 +279,7 @@ class PlaylistLoader extends EventHandler {
 
     const levels = M3U8Parser.parseMasterPlaylist(string, url);
     if (!levels.length) {
-      if (context.type === ContextType.MANIFEST) {
-        this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
-      } else {
-        hls.trigger(Event.ERROR, {
-          type: ErrorTypes.NETWORK_ERROR,
-          details: ErrorDetails.LEVEL_EMPTY_ERROR,
-          fatal: false,
-          url: url,
-          reason: 'no fragments found in level',
-          level: context.level
-        });
-      }
+      this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
       return;
     }
 
@@ -348,9 +337,20 @@ class PlaylistLoader extends EventHandler {
     const levelType = PlaylistLoader.mapContextToLevelType(context);
 
     const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType);
-
     // set stats on level structure
     levelDetails.tload = stats.tload;
+
+    if (!levelDetails.fragments.length) {
+      hls.trigger(Event.ERROR, {
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.LEVEL_EMPTY_ERROR,
+        fatal: false,
+        url: url,
+        reason: 'no fragments found in level',
+        level: context.level
+      });
+      return;
+    }
 
     // We have done our first request (Manifest-type) and receive
     // not a master playlist but a chunk-list (track/level)
