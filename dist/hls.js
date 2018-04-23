@@ -9405,8 +9405,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
     } else {
-      var expectedPlaying = !(media.paused || // not playing when media is paused
-      media.readyState < 2 || // not playing when insufficiently buffered
+      var expectedPlaying = !(media.paused && media.readyState > 1 || // not playing when media is paused and sufficiently buffered
       media.ended || // not playing when media is ended
       media.buffered.length === 0); // not playing if nothing buffered
       var tnow = performance.now();
