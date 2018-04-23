@@ -126,23 +126,26 @@
 
       <br>
 
-      <canvas id="buffered_c" height="15" class="videoCentered" onclick="onClickBufferedRange(event);"></canvas>
+      <canvas id="bufferedCanvas" height="15" class="videoCentered" onclick="onClickBufferedRange(event);"></canvas>
 
       <br><br>
 
-      <pre id="HlsStatus" class="center" style="white-space: pre-wrap;"></pre>
+      <label class="center">Status:</label>
+      <pre id="statusOut" class="center" style="white-space: pre-wrap;"></pre>
 
+      <label class="center">Error:</label>
+      <pre id="errorOut" class="center" style="white-space: pre-wrap;"></pre>
+      
       <div class="center" style="text-align: center;" id="toggleButtons">
-        <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">Playback controls</button>
-        <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">Quality-level controls</button>
-        <button type="button" class="btn btn-sm" onclick="$('#AudioTrackControl').toggle();">Audio-track controls</button>
-        <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">Metrics-display</button>
-        <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">Stats-display</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('playbackControlTab');">Playback controls</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('qualityLevelControlTab');">Quality-level controls</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('audioTrackControlTab');">Audio-track controls</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('metricsDisplayTab'); showMetrics();">Metrics-display</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('statsDisplayTab');">Stats-display</button>
       </div>
 
-      <div class="center" id='PlaybackControl'>
+      <div class="center" id='playbackControlTab'>
         <h4>Playback controls</h4>
-
         <center>
             <p>
               <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].play()">Play</button>
@@ -155,7 +158,7 @@
             </p>
 
             <p>
-              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
+              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">Seek to </button>
               <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}">
             </p>
 
@@ -181,13 +184,13 @@
 
       </div>
 
-      <div class="center" id='QualityLevelControl'>
+      <div class="center" id='qualityLevelControlTab'>
         <h4>Quality-level controls</h4>
         <center>
             <table>
                 <tr>
                   <td>
-                    <p>Currently played level</p>
+                    <p>Currently played level:</p>
                   </td>
                   <td>
                     <div id="currentLevelControl" style="display: inline;"></div>
@@ -195,7 +198,7 @@
                 </tr>
                 <tr>
                   <td>
-                    <p>Next level loaded</p>
+                    <p>Next level loaded:</p>
                   </td>
                   <td>
                     <div id="nextLevelControl" style="display: inline;"></div>
@@ -203,7 +206,7 @@
                 </tr>
                 <tr>
                   <td>
-                    <p>Currently loaded level</p>
+                    <p>Currently loaded level:</p>
                   </td>
                   <td>
                     <div id="loadLevelControl" style="display: inline;"></div>
@@ -211,7 +214,7 @@
                 </tr>
                 <tr>
                   <td>
-                    <p>Cap-limit level (maximum)</p>
+                    <p>Cap-limit level (maximum):</p>
                   </td>
                   <td>
                     <div id="levelCappingControl" style="display: inline;"></div>
@@ -221,7 +224,7 @@
         </center>
       </div>
 
-      <div class="center" id='AudioTrackControl'>
+      <div class="center" id='audioTrackControlTab'>
         <h4>Audio-track controls</h4>
         <table>
           <tr>
@@ -232,7 +235,7 @@
         </table>
       </div>
 
-      <div class="center" id='MetricsDisplay'>
+      <div class="center" id='metricsDisplayTab'>
         <h4>Real-time metrics</h4>
         <div id="metricsButton">
           <button type="button" class="btn btn-xs btn-info" onclick="$('#metricsButtonWindow').toggle();$('#metricsButtonFixed').toggle();windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
@@ -267,10 +270,10 @@
         </div>
       </div>
 
-      <div class="center" id='StatsDisplay'>
+      <div class="center" id='statsDisplayTab'>
         <h4>Stats</h4>
-        <pre id='HlsStats'></pre>
-        <div id="buffered_log"></div>
+        <pre id="bufferedOut"></pre>
+        <pre id='statisticsOut'></pre>
       </div>
 
     </div>

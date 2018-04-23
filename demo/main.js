@@ -1,34 +1,39 @@
 const testStreams = require('../tests/test-streams');
 
 const defaultTestStreamUrl = testStreams['bbb'].url;
+const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl))
+
+let demoConfig = getURLParam('demoConfig', null)
+if (demoConfig) {
+  demoConfig = JSON.parse(atob(demoConfig))
+} else {
+  demoConfig = {}
+}
+
+let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
+let autoRecoverError = getDemoConfigPropOrDefault('autoRecoverError', true);
+let enableWorker = getDemoConfigPropOrDefault('enableWorker', true);
+let levelCapping = getDemoConfigPropOrDefault('levelCapping', -1);
+let limitMetrics = getDemoConfigPropOrDefault('limitMetrics', -1);
+let defaultAudioCodec = getDemoConfigPropOrDefault('defaultAudioCodec', undefined);
+let widevineLicenseUrl = getDemoConfigPropOrDefault('widevineLicenseURL', undefined);
+let dumpfMP4 = getDemoConfigPropOrDefault('dumpfMP4', false);
 
 let bufferingIdx = -1;
-
 let selectedTestStream = null;
-
-let lastSeekingIdx,
-  lastStartPosition,
-  lastDuration,
-  lastAudioTrackSwitchingIdx;
-
-let hls,
-    url,
-    events,
-    stats,
-    tracks,
-    fmp4Data,
-    enableStreaming = JSON.parse(getURLParam('enableStreaming', true)),
-    autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
-    enableWorker = JSON.parse(getURLParam('enableWorker', true)),
-    levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
-    limitMetrics = JSON.parse(getURLParam('limitMetrics', -1)),
-    defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
-    widevineLicenseUrl = getURLParam('widevineLicenseURL', undefined),
-    dumpfMP4 = getURLParam('dumpfMP4', false);
-
 let video = $('#video')[0];
+let startTime = Date.now()
 
-video.volume = 0.05;
+let lastSeekingIdx;
+let lastStartPosition;
+let lastDuration;
+let lastAudioTrackSwitchingIdx;
+let hls;
+let url;
+let events;
+let stats;
+let tracks;
+let fmp4Data;
 
 $(document).ready(function() {
 
@@ -54,14 +59,11 @@ $(document).ready(function() {
 
   $('#videoSize').change(function() {
     $('#video').width($('#videoSize').val());
-    $('#buffered_c').width($('#videoSize').val());
+    $('#bufferedCanvas').width($('#videoSize').val());
   });
 
-  $('#PlaybackControl').hide();
-  $('#QualityLevelControl').hide();
-  $('#AudioTrackControl').hide();
-  $('#MetricsDisplay').hide();
-  $('#StatsDisplay').hide();
+  hideAllTabs();
+
   $('#metricsButtonWindow').toggle(windowSliding);
   $('#metricsButtonFixed').toggle(!windowSliding);
 
@@ -101,17 +103,19 @@ $(document).ready(function() {
   });
 
   $('#limitMetrics').val(limitMetrics);
-  $('#enableStreaming').prop( 'checked', enableStreaming );
-  $('#autoRecoverError').prop( 'checked', autoRecoverError );
-  $('#enableWorker').prop( 'checked', enableWorker );
-  $('#dumpfMP4').prop( 'checked', dumpfMP4 );
+  $('#enableStreaming').prop('checked', enableStreaming );
+  $('#autoRecoverError').prop('checked', autoRecoverError );
+  $('#enableWorker').prop('checked', enableWorker );
+  $('#dumpfMP4').prop('checked', dumpfMP4 );
   $('#levelCapping').val(levelCapping);
   $('#defaultAudioCodec').val(defaultAudioCodec || 'undefined');
-  $('h2').append(' <a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
 
+  $('h2').append(' <a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
   $('#currentVersion').html('Hls version:' + Hls.version);
 
-  $('#streamURL').val(decodeURIComponent(getURLParam('src', defaultTestStreamUrl)))
+  $('#streamURL').val(sourceURL)
+
+  video.volume = 0.05;
 
   loadSelectedStream();
 
@@ -143,6 +147,7 @@ function resetGlobals() {
   window.updatePermalink = updatePermalink;
   window.createfMP4 = createfMP4;
   window.goToMetricsPermaLink = goToMetricsPermaLink;
+  window.toggleTab = toggleTab
 }
 
 function trimArray( target, limit ) {
@@ -159,7 +164,7 @@ function trimArray( target, limit ) {
 function trimEventHistory() {
   const x = limitMetrics;
 
-  if( x < 0) {
+  if(x < 0) {
     return;
   }
 
@@ -188,11 +193,11 @@ function loadSelectedStream() {
     }
 
     if(!enableStreaming) {
-      $('#HlsStatus').text('Streaming disabled');
+      logStatus('Streaming disabled');
       return;
     }
 
-    $('#HlsStatus').text('loading ' + url);
+    logStatus('Loading ' + url);
 
     resetGlobals();
 
@@ -226,14 +231,14 @@ function loadSelectedStream() {
 
     window.hls = hls = new Hls(hlsConfig);
 
-    $('#HlsStatus').text('loading manifest and attaching video element...');
+    logStatus('Loading manifest and attaching video element...');
 
     hls.loadSource(url);
     hls.autoLevelCapping = levelCapping;
     hls.attachMedia(video);
 
     hls.on(Hls.Events.MEDIA_ATTACHED, function() {
-      $('#HlsStatus').text('MediaSource attached...');
+      logStatus('Media element attached');
       bufferingIdx = -1;
       events.video.push({
         time: performance.now() - events.t0,
@@ -243,7 +248,7 @@ function loadSelectedStream() {
     });
 
     hls.on(Hls.Events.MEDIA_DETACHED, function() {
-      $('#HlsStatus').text('MediaSource detached...');
+      logStatus('Media element detached');
       bufferingIdx = -1;
       tracks = [];
       events.video.push({
@@ -294,7 +299,8 @@ function loadSelectedStream() {
     });
 
     hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
-      $('#HlsStatus').text('manifest successfully loaded,' + hls.levels.length + ' levels found');
+      logStatus('No of quality levels found: ' + hls.levels.length);
+      logStatus('Manifest successfully loaded');
       stats = {
         levelNb    : data.levels.length,
         levelParsed: 0
@@ -304,11 +310,12 @@ function loadSelectedStream() {
     });
 
     hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function(event, data) {
-      $('#HlsStatus').text(data.audioTracks.length + ' audio tracks found');
+      logStatus('No of audio tracks found: ' + data.audioTracks.length);
       updateAudioTrackInfo();
     });
 
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, function(event, data) {
+      logStatus('Audio track switching...');
       updateAudioTrackInfo();
       var event = {
         time: performance.now() - events.t0,
@@ -321,6 +328,7 @@ function loadSelectedStream() {
     });
 
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function(event, data) {
+      logStatus('Audio track switched');
       updateAudioTrackInfo();
       var event = {
         time: performance.now() - events.t0,
@@ -544,81 +552,82 @@ function loadSelectedStream() {
       switch(data.details) {
         case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
           try {
-            $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>HTTP response code:' + data.response.code + ' <br>' + data.response.text);
-            if(data.response.code === 0)
-            {$('#HlsStatus').append('this might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension');}
-
+            $('#errorOut').html('Cannot load <a href="' + data.context.url + '">' + url + '</a><br>HTTP response code:' + data.response.code + ' <br>' + data.response.text);
+            if(data.response.code === 0){
+              $('#errorOut').append('This might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension');
+            }
           } catch(err) {
-            $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>Reason:Load ' + data.response.text);
+            $('#errorOut').html('Cannot load <a href="' + data.context.url + '">' + url + '</a><br>Response body: ' + data.response.text);
           }
           break;
         case Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT:
-          $('#HlsStatus').text('timeout while loading manifest');
+          logError('Timeout while loading manifest');
           break;
         case Hls.ErrorDetails.MANIFEST_PARSING_ERROR:
-          $('#HlsStatus').text('error while parsing manifest:' + data.reason);
+          logError('Error while parsing manifest:' + data.reason);
           break;
         case Hls.ErrorDetails.LEVEL_LOAD_ERROR:
-          $('#HlsStatus').text('error while loading level playlist');
+          logError('Error while loading level playlist');
           break;
         case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
-          $('#HlsStatus').text('timeout while loading level playlist');
+          logError('Timeout while loading level playlist');
           break;
         case Hls.ErrorDetails.LEVEL_SWITCH_ERROR:
-          $('#HlsStatus').text('error while trying to switch to level ' + data.level);
+          logError('Error while trying to switch to level ' + data.level);
           break;
         case Hls.ErrorDetails.FRAG_LOAD_ERROR:
-          $('#HlsStatus').text('error while loading fragment ' + data.frag.url);
+          logError('Error while loading fragment ' + data.frag.url);
           break;
         case Hls.ErrorDetails.FRAG_LOAD_TIMEOUT:
-          $('#HlsStatus').text('timeout while loading fragment ' + data.frag.url);
+          logError('Timeout while loading fragment ' + data.frag.url);
           break;
         case Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR:
-          $('#HlsStatus').text('Frag Loop Loading Error');
+          logError('Fragment-loop loading error');
           break;
         case Hls.ErrorDetails.FRAG_DECRYPT_ERROR:
-          $('#HlsStatus').text('Decrypting Error:' + data.reason);
+          logError('Decrypting error:' + data.reason);
           break;
         case Hls.ErrorDetails.FRAG_PARSING_ERROR:
-          $('#HlsStatus').text('Parsing Error:' + data.reason);
+          logError('Parsing error:' + data.reason);
           break;
         case Hls.ErrorDetails.KEY_LOAD_ERROR:
-          $('#HlsStatus').text('error while loading key ' + data.frag.decryptdata.uri);
+          logError('Error while loading key ' + data.frag.decryptdata.uri);
           break;
         case Hls.ErrorDetails.KEY_LOAD_TIMEOUT:
-          $('#HlsStatus').text('timeout while loading key ' + data.frag.decryptdata.uri);
+          logError('Timeout while loading key ' + data.frag.decryptdata.uri);
           break;
         case Hls.ErrorDetails.BUFFER_APPEND_ERROR:
-          $('#HlsStatus').text('Buffer Append Error');
+          logError('Buffer append error');
           break;
         case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
-          $('#HlsStatus').text('Buffer Add Codec Error for ' + data.mimeType + ':' + data.err.message);
+          logError('Buffer add codec error for ' + data.mimeType + ':' + data.err.message);
           break;
         case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
-          $('#HlsStatus').text('Buffer Appending Error');
+          logError('Buffer appending error');
+          break;
+        case Hls.ErrorDetails.BUFFER_STALLED_ERROR:
+          logError('Buffer stalled error');
           break;
         default:
           break;
       }
       if(data.fatal) {
-        console.log('fatal error :' + data.details);
+        console.log('Fatal error :' + data.details);
         switch(data.type) {
           case Hls.ErrorTypes.MEDIA_ERROR:
             handleMediaError();
             break;
           case Hls.ErrorTypes.NETWORK_ERROR:
-            $('#HlsStatus').append(',network error ...');
+            logError('A network error occured');
             break;
           default:
-            $('#HlsStatus').append(', unrecoverable error');
+            logError('An unrecoverable error occured');
             hls.destroy();
             break;
         }
-        console.log($('#HlsStatus').text());
       }
       if(!stats) {
-        stats = {
-        };
+        stats = {};
       }
       // track all errors independently
       if (stats[data.details] === undefined)
@@ -628,13 +637,13 @@ function loadSelectedStream() {
 
       // track fatal error
       if (data.fatal) {
-        if (stats.fatalError === undefined)
-        {stats.fatalError = 1;}
-        else
-        {stats.fatalError += 1;}
-
+        if (stats.fatalError === undefined) {
+          stats.fatalError = 1;
+        } else {
+          stats.fatalError += 1;
+        }
       }
-      $('#HlsStats').text(JSON.stringify(sortObject(stats), null, '\t'));
+      $('#statisticsOut').text(JSON.stringify(sortObject(stats), null, '\t'));
     });
 
     hls.on(Hls.Events.BUFFER_CREATED, function(event, data) {
@@ -642,8 +651,9 @@ function loadSelectedStream() {
     });
 
     hls.on(Hls.Events.BUFFER_APPENDING, function(event, data) {
-      if (dumpfMP4)
-      {fmp4Data[data.type].push(data.data);}
+      if (dumpfMP4) {
+        fmp4Data[data.type].push(data.data);
+      }
     });
 
     hls.on(Hls.Events.FPS_DROP, function(event, data) {
@@ -677,11 +687,11 @@ function loadSelectedStream() {
     video.addEventListener('loadeddata', handleVideoEvent);
     video.addEventListener('durationchange', handleVideoEvent);
   } else {
-    if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1)
-    {$('#HlsStatus').text('you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>');}
-    else
-    {$('#HlsStatus').text('your Browser does not support MediaSourceExtension / MP4 mediasource');}
-
+    if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
+      logStatus('You are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>');
+    } else {
+      logStatus('Your Browser does not support MediaSourceExtension / MP4 mediasource');
+    }
   }
 }
 
@@ -736,7 +746,7 @@ function handleVideoEvent(evt) {
         if (mediaError.message)
         {errorTxt += ' - ' + mediaError.message;}
 
-        $('#HlsStatus').text(errorTxt);
+        logStatus(errorTxt);
         console.error(errorTxt);
       }
       break;
@@ -766,16 +776,16 @@ function handleMediaError() {
     let now = performance.now();
     if(!recoverDecodingErrorDate || (now - recoverDecodingErrorDate) > 3000) {
       recoverDecodingErrorDate = performance.now();
-      $('#HlsStatus').append(',try to recover media Error ...');
+      $('#statusOut').append(', trying to recover media error.');
       hls.recoverMediaError();
     } else {
       if(!recoverSwapAudioCodecDate || (now - recoverSwapAudioCodecDate) > 3000) {
         recoverSwapAudioCodecDate = performance.now();
-        $('#HlsStatus').append(',try to swap Audio Codec and recover media Error ...');
+        $('#statusOut').append(', trying to swap audio codec and recover media error.');
         hls.swapAudioCodec();
         hls.recoverMediaError();
       } else {
-        $('#HlsStatus').append(',cannot recover, last media error recovery failed ...');
+        $('#statusOut').append(', cannot recover. Last media error recovery failed.');
       }
     }
   }
@@ -783,15 +793,16 @@ function handleMediaError() {
 
 function timeRangesToString(r) {
   let log = '';
-  for (let i=0; i<r.length; i++)
-  {log += '[' + r.start(i) + ',' + r.end(i) + ']';}
-
+  for (let i=0; i<r.length; i++) {
+    log += '[' + r.start(i) + ', ' + r.end(i) + ']';
+    log += ' ';
+  }
   return log;
 }
 
 function checkBuffer() {
   let v = $('#video')[0];
-  let canvas = $('#buffered_c')[0];
+  let canvas = $('#bufferedCanvas')[0];
   let ctx = canvas.getContext('2d');
   let r = v.buffered;
   let bufferingDuration;
@@ -866,32 +877,35 @@ function checkBuffer() {
     trimEventHistory();
     refreshCanvas();
 
-    let log = 'Duration:'
-              + v.duration + '<br>'
-              + 'Buffered:'
-              + timeRangesToString(v.buffered) + '<br>'
-              + 'Seekable:'
-              + timeRangesToString(v.seekable) + '<br>'
-              + 'Played:'
-              + timeRangesToString(v.played) + '<br>';
+    let log = 'Duration: '
+              + v.duration + '\n'
+              + 'Buffered: '
+              + timeRangesToString(v.buffered) + '\n'
+              + 'Seekable: '
+              + timeRangesToString(v.seekable) + '\n'
+              + 'Played: '
+              + timeRangesToString(v.played) + '\n';
 
     if (hls.media) {
-      for(let type in tracks)
-      {log += type + ' Buffered:' + timeRangesToString(tracks[type].buffer.buffered) + '<br>';}
+      for(let type in tracks) {
+        log += 'Buffer for ' + type + ' contains: ' + timeRangesToString(tracks[type].buffer.buffered) + '\n';
+      }
 
-
-      let videoPlaybackQuality = v.getVideoPlaybackQuality;
+      const videoPlaybackQuality = v.getVideoPlaybackQuality;
       if(videoPlaybackQuality && typeof (videoPlaybackQuality) === typeof (Function)) {
-        log+='Dropped Frames:'+ v.getVideoPlaybackQuality().droppedVideoFrames + '<br>';
-        log+='Corrupted Frames:'+ v.getVideoPlaybackQuality().corruptedVideoFrames + '<br>';
+        log += 'Dropped frames: '+ v.getVideoPlaybackQuality().droppedVideoFrames + '\n';
+        log += 'Corrupted frames:'+ v.getVideoPlaybackQuality().corruptedVideoFrames + '\n';
       } else if(v.webkitDroppedFrameCount) {
-        log+='Dropped Frames:'+ v.webkitDroppedFrameCount + '<br>';
+        log+='Dropped frames:'+ v.webkitDroppedFrameCount + '\n';
       }
     }
-    $('#buffered_log').html(log);
-    $('#HlsStats').text(JSON.stringify(sortObject(stats), null, '\t'));
+    $('#bufferedOut').text(log);
+
+    $('#statisticsOut').text(JSON.stringify(sortObject(stats), null, '\t'));
+
     ctx.fillStyle = 'blue';
-    let x = v.currentTime / v.duration * canvas.width;
+
+    const x = v.currentTime / v.duration * canvas.width;
     ctx.fillRect(x, 0, 2, 15);
   }
 
@@ -913,14 +927,14 @@ function sortObject(obj) {
 
 function showCanvas()  {
   showMetrics();
-  $('#buffered_log').show();
-  $('#buffered_c').show();
+  $('#bufferedOut').show();
+  $('#bufferedCanvas').show();
 }
 
 function hideCanvas()  {
   hideMetrics();
-  $('#buffered_log').hide();
-  $('#buffered_c').hide();
+  $('#bufferedOut').hide();
+  $('#bufferedCanvas').hide();
 }
 
 function getMetrics() {
@@ -971,7 +985,7 @@ function minsecs(ts) {
 }
 
 function onClickBufferedRange(event) {
-  let canvas = $('#buffered_c')[0];
+  let canvas = $('#bufferedCanvas')[0];
   let v = $('#video')[0];
   let target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
   v.currentTime = target;
@@ -1031,9 +1045,10 @@ function updateLevelInfo() {
       html1 += button_disabled;
     }
 
-    let levelName = i, label = level2label(i);
+    let levelName = i; 
+    let label = level2label(i);
     if(label) {
-      levelName += '(' + level2label(i) + ')';
+      levelName += ' (' + level2label(i) + 'p)';
     }
 
     html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
@@ -1118,14 +1133,18 @@ function level2label(index) {
       if (level.height) {
         return(level.height + 'p / ' + Math.round(level.bitrate / 1024) + 'kb');
       } else {
-        if(level.bitrate)
-        {return(Math.round(level.bitrate / 1024) + 'kb');}
-        else
-        {return null;}
-
+        if(level.bitrate) {
+          return(Math.round(level.bitrate / 1024) + 'kb');
+        } else {
+          return null;
+        }
       }
     }
   }
+}
+
+function getDemoConfigPropOrDefault(propName, defaultVal) {
+  return typeof demoConfig[propName] !== 'undefined' ? demoConfig[propName] : defaultVal; 
 }
 
 function getURLParam(sParam, defaultValue) {
@@ -1141,19 +1160,27 @@ function getURLParam(sParam, defaultValue) {
 }
 
 function updatePermalink() {
-
   const url = $('#streamURL').val();
-  const hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url) +
-                    '&enableStreaming=' + enableStreaming +
-                    '&autoRecoverError=' + autoRecoverError +
-                    '&enableWorker=' + enableWorker +
-                    '&dumpfMP4=' + dumpfMP4 +
-                    '&levelCapping=' + levelCapping +
-                    '&limitMetrics=' + limitMetrics +
-                    '&defaultAudioCodec=' + defaultAudioCodec +
-                    '&widevineLicenseURL=' + escape(widevineLicenseUrl);
 
-  $('#StreamPermalink').html('<a href="' + hlsLink + '">' + hlsLink + '</a>');
+  const demoConfig = {
+    enableStreaming,
+    autoRecoverError,
+    enableWorker,
+    dumpfMP4,
+    levelCapping,
+    limitMetrics,
+    defaultAudioCodec,
+    widevineLicenseUrl: escape(widevineLicenseUrl)
+  }
+
+  console.log(demoConfig)
+
+  const serializedDemoConfig = btoa(JSON.stringify(demoConfig))
+
+  const baseURL = document.URL.split('?')[0]
+  const permalinkURL = baseURL + `?src=${encodeURIComponent(url)}&demoConfig=${serializedDemoConfig}`
+
+  $('#StreamPermalink').html('<a href="' + permalinkURL + '">' + permalinkURL + '</a>');
 }
 
 function createfMP4(type) {
@@ -1176,4 +1203,39 @@ function arrayConcat(inputArray) {
     offset += element.length;
   });
   return result;
+}
+
+function hideAllTabs() {
+  $('#playbackControlTab').hide();
+  $('#qualityLevelControlTab').hide();
+  $('#audioTrackControlTab').hide();
+  $('#metricsDisplayTab').hide();
+  $('#statsDisplayTab').hide();
+}
+
+function toggleTab(tabElId) {
+  hideAllTabs();
+  hideMetrics();
+  $('#' + tabElId).show();
+}
+
+function appendLog(textElId, message) {
+  const el = $('#' + textElId)
+  let logText = el.text()
+  if (logText.length) {
+    logText += '\n'
+  }
+  const timestamp = (Date.now() - startTime) / 1000
+  const newMessage = timestamp + ' | ' + message
+  logText += newMessage
+  // update
+  el.text(logText)
+}
+
+function logStatus(message) {
+  appendLog('statusOut', message)
+}
+
+function logError(message) {
+  appendLog('errorOut', message)
 }
