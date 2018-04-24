@@ -40,6 +40,7 @@
     "lint:fix": "eslint src/ tests/ --fix",
     "lint:src": "eslint src/",
     "lint:tests": "eslint tests/",
+    "lint:demo": "eslint demo/",
     "precommit": "./scripts/precommit",
     "pretest": "npm run lint",
     "release:pre": "mversion prerelease && npm run build:release",
