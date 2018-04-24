@@ -1396,13 +1396,16 @@ class StreamController extends TaskLoop {
       } else if (expectedPlaying) {
         // The playhead isn't moving but it should be
         // Allow some slack time to for small stalls to resolve themselves
+        const stalledDuration = tnow - this.stalled;
+        const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
         if (!this.stalled) {
           this.stalled = tnow;
           return;
+        } else if (stalledDuration >= 1000) {
+          // Report stalling after trying to fix
+          this._reportStall(bufferInfo.len);
         }
 
-        const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
-        const stalledDuration = tnow - this.stalled;
         this._tryFixBufferStall(bufferInfo, stalledDuration);
       }
     }
@@ -1458,7 +1461,6 @@ class StreamController extends TaskLoop {
     const currentTime = media.currentTime;
     const jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 
-    this._reportStall(bufferInfo.len);
     const partial = this.fragmentTracker.getPartialFragment(currentTime);
     if (partial) {
       // Try to skip over the buffer hole caused by a partial fragment
