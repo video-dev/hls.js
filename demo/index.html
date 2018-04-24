@@ -137,15 +137,15 @@
       <pre id="errorOut" class="center" style="white-space: pre-wrap;"></pre>
       
       <div class="center" style="text-align: center;" id="toggleButtons">
-        <button type="button" class="btn btn-sm" onclick="toggleTab('playbackControlTab');">Playback controls</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('qualityLevelControlTab');">Quality-level controls</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('audioTrackControlTab');">Audio-track controls</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('metricsDisplayTab'); showMetrics();">Metrics-display</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('statsDisplayTab');">Stats-display</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('playbackControlTab');">Playback</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('qualityLevelControlTab');">Quality-levels</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('audioTrackControlTab');">Audio-tracks</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('statsDisplayTab');">Buffer &amp; Statistics</button>
+        <button type="button" class="btn btn-sm" onclick="toggleTab('metricsDisplayTab'); showMetrics();">Real-time metrics</button>
       </div>
 
       <div class="center" id='playbackControlTab'>
-        <h4>Playback controls</h4>
+        <h4>Playback</h4>
         <center>
             <p>
               <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].play()">Play</button>
@@ -185,7 +185,7 @@
       </div>
 
       <div class="center" id='qualityLevelControlTab'>
-        <h4>Quality-level controls</h4>
+        <h4>Quality-levels</h4>
         <center>
             <table>
                 <tr>
@@ -225,11 +225,11 @@
       </div>
 
       <div class="center" id='audioTrackControlTab'>
-        <h4>Audio-track controls</h4>
+        <h4>Audio-tracks</h4>
         <table>
           <tr>
-            <td>Current audio-track</td>
-            <td width=10px></td>
+            <td>Current audio-track:</td>
+            <td width=10px>None selected</td>
             <td> <div id="audioTrackControl" style="display: inline;"></div> </td>
           </tr>
         </table>
@@ -271,8 +271,10 @@
       </div>
 
       <div class="center" id='statsDisplayTab'>
-        <h4>Stats</h4>
+        <h4>Buffer &amp; Statistics</h4>
+        <label>Buffer state:</label>
         <pre id="bufferedOut"></pre>
+        <label>General stats:</label>
         <pre id='statisticsOut'></pre>
       </div>
 
