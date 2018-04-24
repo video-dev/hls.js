@@ -1381,7 +1381,6 @@ class StreamController extends TaskLoop {
       this.immediateLevelSwitchEnd();
     } else {
       const expectedPlaying = !(media.paused || // not playing when media is paused
-        media.readyState < 2 || // not playing when insufficiently buffered
         media.ended || // not playing when media is ended
         media.buffered.length === 0); // not playing if nothing buffered
       const tnow = performance.now();
