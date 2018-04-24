@@ -298,5 +298,185 @@ describe('StreamController tests', function () {
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, fragments[4], 'Expected sn 4, found sn segment ' + resultSN);
     });
+
+    it('Unit test _loadFragmentOrKey shouldn`t set startFragRequested if fragment is already buffered', function () {
+      const frag = {
+        duration: 5,
+        title: null,
+        type: 'main',
+        start: 30,
+        sn: 304674916,
+        level: 3,
+        cc: 0,
+        pdt: 1523374580000,
+        endPdt: 1523374585000
+      };
+
+      const fragments = [
+        {
+          rawProgramDateTime: '2018-04-10T15:35:50+00:00',
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 0,
+          sn: 304674910,
+          level: 3,
+          cc: 0,
+          pdt: 1523374550000,
+          endPdt: 1523374555000
+        },
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 5,
+          sn: 304674911,
+          level: 3,
+          cc: 0,
+          pdt: 1523374555000,
+          endPdt: 1523374560000
+        },
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 10,
+          sn: 304674912,
+          level: 3,
+          cc: 0,
+          pdt: 1523374560000,
+          endPdt: 1523374565000
+        },
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 15,
+          sn: 304674913,
+          level: 3,
+          cc: 0,
+          pdt: 1523374565000,
+          endPdt: 1523374570000
+        },
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 20,
+          sn: 304674914,
+          level: 3,
+          cc: 0,
+          pdt: 1523374570000,
+          endPdt: 1523374575000
+        },
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 25,
+          sn: 304674915,
+          level: 3,
+          cc: 0,
+          pdt: 1523374575000,
+          endPdt: 1523374580000
+        },
+        frag,
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 35,
+          sn: 304674917,
+          level: 3,
+          cc: 0,
+          pdt: 1523374585000,
+          endPdt: 1523374590000
+        },
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 40,
+          sn: 304674918,
+          level: 3,
+          cc: 0,
+          pdt: 1523374590000,
+          endPdt: 1523374595000
+        },
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 45,
+          sn: 304674919,
+          level: 3,
+          cc: 0,
+          pdt: 1523374595000,
+          endPdt: 1523374600000
+        },
+        {
+          duration: 5,
+          title: null,
+          type: 'main',
+          start: 50,
+          sn: 304674920,
+          level: 3,
+          cc: 0,
+          pdt: 1523374600000,
+          endPdt: 1523374605000
+        }
+      ];
+
+      const levelDetails = {
+        type: null,
+        version: 3,
+        fragments: fragments,
+        live: true,
+        startSN: 304674910,
+        targetduration: 5,
+        programDateTime: '2018-04-10T15:35:50.000Z',
+        totalduration: 55,
+        averagetargetduration: 5,
+        endSN: 304674920,
+        startCC: 0,
+        endCC: 0,
+        tload: 114321.40000001527,
+        PTSKnown: false
+      };
+
+      const hls = {
+        config: {},
+        on: function () {},
+        trigger: function () {}
+      };
+
+      const fragmentTracker = new FragmentTracker(hls);
+
+      fragments.forEach((fragment) => {
+        fragmentTracker.onFragLoaded({
+          frag: fragment
+        });
+      });
+
+      fragmentTracker.fragments[fragmentTracker.getFragmentKey(frag)].buffered = true;
+
+      const streamController = new StreamController(hls, fragmentTracker);
+
+      const initialStartFragRequestedValue = streamController.startFragRequested;
+      assert.equal(
+        streamController.startFragRequested,
+        undefined,
+        'Initial value of startFragRequested should be undefined, but got ' + initialStartFragRequestedValue
+      );
+
+      streamController._loadFragmentOrKey(frag, 3, levelDetails, 164.960394, 165);
+
+      const resultStartFragRequestedValue = streamController.startFragRequested;
+      assert.equal(
+        streamController.startFragRequested,
+        undefined,
+        'Result value of startFragRequested should be undefined, but got ' + resultStartFragRequestedValue
+      );
+    });
   });
 });

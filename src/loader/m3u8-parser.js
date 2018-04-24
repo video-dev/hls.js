@@ -137,7 +137,7 @@ export default class M3U8Parser {
     return medias;
   }
 
-  static parseLevelPlaylist (string, baseurl, id, type) {
+  static parseLevelPlaylist (string, baseurl, id, type, levelUrlId) {
     let currentSN = 0,
       totalduration = 0,
       level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
@@ -167,6 +167,7 @@ export default class M3U8Parser {
           frag.sn = sn;
           frag.level = id;
           frag.cc = cc;
+          frag.urlId = levelUrlId;
           frag.baseurl = baseurl;
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
