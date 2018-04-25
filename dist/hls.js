@@ -9405,7 +9405,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
     } else {
-      var expectedPlaying = !(media.paused && media.readyState > 1 || // not playing when media is paused and sufficiently buffered
+      var expectedPlaying = !(media.paused || // not playing when media is paused
       media.ended || // not playing when media is ended
       media.buffered.length === 0); // not playing if nothing buffered
       var tnow = performance.now();
@@ -9421,13 +9421,16 @@ var stream_controller_StreamController = function (_TaskLoop) {
       } else if (expectedPlaying) {
         // The playhead isn't moving but it should be
         // Allow some slack time to for small stalls to resolve themselves
+        var stalledDuration = tnow - this.stalled;
+        var bufferInfo = buffer_helper.bufferInfo(media, currentTime, config.maxBufferHole);
         if (!this.stalled) {
           this.stalled = tnow;
           return;
+        } else if (stalledDuration >= 1000) {
+          // Report stalling after trying to fix
+          this._reportStall(bufferInfo.len);
         }
 
-        var bufferInfo = buffer_helper.bufferInfo(media, currentTime, config.maxBufferHole);
-        var stalledDuration = tnow - this.stalled;
         this._tryFixBufferStall(bufferInfo, stalledDuration);
       }
     }
@@ -9487,7 +9490,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
     var currentTime = media.currentTime;
     var jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 
-    this._reportStall(bufferInfo.len);
     var partial = this.fragmentTracker.getPartialFragment(currentTime);
     if (partial) {
       // Try to skip over the buffer hole caused by a partial fragment
