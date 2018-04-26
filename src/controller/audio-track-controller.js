@@ -110,8 +110,8 @@ class AudioTrackController extends TaskLoop {
 
   set audioTrack (newId) {
     // noop on same audio track id as already set
-    if (this.trackId === newId) {
-      logger.debug('Same id as current audio-track passed, no-op');
+    if (this.trackId === newId && this.tracks[this.trackId].details) {
+      logger.debug('Same id as current audio-track passed, and track details available -> no-op');
       return;
     }
 
