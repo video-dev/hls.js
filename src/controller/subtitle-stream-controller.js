@@ -18,6 +18,7 @@ class SubtitleStreamController extends TaskLoop {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHING,
       Event.ERROR,
       Event.KEY_LOADED,
       Event.FRAG_LOADED,
@@ -29,10 +30,12 @@ class SubtitleStreamController extends TaskLoop {
     this.config = hls.config;
     this.vttFragSNsProcessed = {};
     this.vttFragQueues = undefined;
+    this.vttFragQueuesSpliceIndex = undefined;
     this.currentlyProcessing = null;
     this.state = State.STOPPED;
     this.currentTrackId = -1;
     this.decrypter = new Decrypter(hls.observer, hls.config);
+    this.loadPosition = hls.config.startPosition;
   }
 
   onHandlerDestroyed () {
@@ -42,15 +45,34 @@ class SubtitleStreamController extends TaskLoop {
   // Remove all queued items and create a new, empty queue for each track.
   clearVttFragQueues () {
     this.vttFragQueues = {};
+    this.vttFragQueuesSpliceIndex = {};
     this.tracks.forEach(track => {
       this.vttFragQueues[track.id] = [];
+      this.vttFragQueuesSpliceIndex[track.id] = -1;
     });
   }
 
   // If no frag is being processed and queue isn't empty, initiate processing of next frag in line.
   nextFrag () {
-    if (this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
-      let frag = this.currentlyProcessing = this.vttFragQueues[this.currentTrackId].shift();
+    const trackQueue = this.vttFragQueues[this.currentTrackId];
+    if (this.currentlyProcessing === null && this.currentTrackId > -1 && trackQueue.length) {
+      let spliceIndex = this.vttFragQueuesSpliceIndex[this.currentTrackId];
+      // identify where in the queue to splice based on loadPosition
+      // loadPosition is changed when seeking and if subtitle track is switched
+      if (this.loadPosition > -1 || spliceIndex === -1 || !trackQueue[spliceIndex]) {
+        for (let i = 0; i < trackQueue.length; i++) {
+          if (trackQueue[i].start > this.loadPosition) {
+            spliceIndex = i;
+            break;
+          }
+        }
+        if (spliceIndex === -1) {
+          spliceIndex = 0;
+        }
+        this.vttFragQueuesSpliceIndex[this.currentTrackId] = spliceIndex;
+        this.loadPosition = -1;
+      }
+      let frag = this.currentlyProcessing = trackQueue.splice(spliceIndex, 1)[0];
       this.fragCurrent = frag;
       this.hls.trigger(Event.FRAG_LOADING, { frag: frag });
       this.state = State.FRAG_LOADING;
@@ -68,8 +90,25 @@ class SubtitleStreamController extends TaskLoop {
     this.nextFrag();
   }
 
-  onMediaAttached () {
+  onMediaAttached (data) {
+    let media = this.media = data.media;
+    this.onvseeked = this.onMediaSeeked.bind(this);
+    media.addEventListener('seeked', this.onvseeked);
     this.state = State.IDLE;
+  }
+
+  onMediaDetaching () {
+    let media = this.media;
+    if (media) {
+      media.removeEventListener('seeked', this.onvseeked);
+    }
+    this.media = null;
+  }
+
+  onMediaSeeked () {
+    if (this.media) {
+      this.loadPosition = this.media.currentTime;
+    }
   }
 
   // If something goes wrong, procede to next frag, if we were processing one.
@@ -161,6 +200,9 @@ class SubtitleStreamController extends TaskLoop {
     // downloading its frags, if not all have been downloaded yet
     const currentTrack = this.tracks[this.currentTrackId];
     let details = currentTrack.details;
+    if (this.media) {
+      this.loadPosition = this.media.currentTime;
+    }
     if (details !== undefined) {
       this.tick();
     }
