@@ -6,7 +6,7 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
-import BufferHelper from '../helper/buffer-helper';
+import { BufferHelper } from './buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
