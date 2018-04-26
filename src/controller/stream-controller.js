@@ -3,7 +3,7 @@
 */
 
 import BinarySearch from '../utils/binary-search';
-import { BufferHelper } from './buffer-helper';
+import { BufferHelper } from '../utils/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { FragmentState } from './fragment-tracker';
