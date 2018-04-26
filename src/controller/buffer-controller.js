@@ -6,7 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { getMediaSource } from '../helper/mediasource-helper';
+import { getMediaSource } from '../utils/mediasource-helper';
 
 const MediaSource = getMediaSource();
 
