@@ -88,6 +88,11 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
       version: browserConfig.version,
       commandTimeout: 90
     };
+    if (browserConfig.name === 'chrome') {
+      capabilities.chromeOptions = {
+        args: ['--autoplay-policy=no-user-gesture-required']
+      };
+    }
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
       capabilities.build = 'HLSJS-' + process.env.TRAVIS_BUILD_NUMBER;
