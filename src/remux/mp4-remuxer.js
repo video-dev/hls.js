@@ -2,11 +2,13 @@
  * fMP4 remuxer
 */
 
-import AAC from '../helper/aac';
+import AAC from './aac-helper';
+import MP4 from './mp4-generator';
+
 import Event from '../events';
-import { logger } from '../utils/logger';
-import MP4 from '../remux/mp4-generator';
 import { ErrorTypes, ErrorDetails } from '../errors';
+
+import { logger } from '../utils/logger';
 
 // 10 seconds
 const MAX_SILENT_FRAME_DURATION = 10 * 1000;
