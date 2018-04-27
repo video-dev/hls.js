@@ -11,15 +11,19 @@ class CapLevelController extends EventHandler {
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED);
+
+    this.autoLevelCapping = Number.POSITIVE_INFINITY;
+    this.firstLevel = null;
+    this.levels = [];
+    this.media = null;
+    this.restrictedLevels = [];
+    this.timer = null;
   }
 
   destroy () {
     if (this.hls.config.capLevelToPlayerSize) {
-      this.media = this.restrictedLevels = null;
-      this.autoLevelCapping = Number.POSITIVE_INFINITY;
-      if (this.timer) {
-        this.timer = clearInterval(this.timer);
-      }
+      this.media = null;
+      this._stopCapping();
     }
   }
 
@@ -35,16 +39,17 @@ class CapLevelController extends EventHandler {
   }
 
   onManifestParsed (data) {
-    const hls = this.hls;
     this.restrictedLevels = [];
-    // Only fire getMaxLevel or detectPlayerSize if video is expected in the manifest
-    if (hls.config.capLevelToPlayerSize && (data.video || (data.levels.length && data.altAudio))) {
-      this.autoLevelCapping = Number.POSITIVE_INFINITY;
-      this.levels = data.levels;
-      hls.firstLevel = this.getMaxLevel(data.firstLevel);
-      clearInterval(this.timer);
-      this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
-      this.detectPlayerSize();
+    this.levels = data.levels;
+    this.firstLevel = data.firstLevel;
+  }
+
+  // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
+  // to the first level
+  onBufferCodecs (data) {
+    const hls = this.hls;
+    if (hls.config.capLevelToPlayerSize && data.video) {
+      this._startCapping();
     }
   }
 
@@ -77,6 +82,24 @@ class CapLevelController extends EventHandler {
     );
 
     return CapLevelController.getMaxLevelByMediaSize(validLevels, this.mediaWidth, this.mediaHeight);
+  }
+
+  _startCapping () {
+    this.autoLevelCapping = Number.POSITIVE_INFINITY;
+    this.hls.firstLevel = this.getMaxLevel(this.firstLevel);
+    clearInterval(this.timer);
+    this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
+    this.detectPlayerSize();
+  }
+
+  _stopCapping () {
+    this.restrictedLevels = [];
+    this.firstLevel = null;
+    this.autoLevelCapping = Number.POSITIVE_INFINITY;
+    if (this.timer) {
+      this.timer = clearInterval(this.timer);
+      this.timer = null;
+    }
   }
 
   get mediaWidth () {
