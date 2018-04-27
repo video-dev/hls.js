@@ -31,11 +31,11 @@ class SubtitleStreamController extends TaskLoop {
     this.vttFragSNsProcessed = {};
     this.vttFragQueues = undefined;
     this.vttFragQueuesSpliceIndex = undefined;
+    this.findQueSpliceIndex = false;
     this.currentlyProcessing = null;
     this.state = State.STOPPED;
     this.currentTrackId = -1;
     this.decrypter = new Decrypter(hls.observer, hls.config);
-    this.loadPosition = hls.config.startPosition;
   }
 
   onHandlerDestroyed () {
@@ -57,21 +57,21 @@ class SubtitleStreamController extends TaskLoop {
     const trackQueue = this.vttFragQueues[this.currentTrackId];
     if (this.currentlyProcessing === null && this.currentTrackId > -1 && trackQueue.length) {
       let spliceIndex = this.vttFragQueuesSpliceIndex[this.currentTrackId];
-      // identify where in the queue to splice based on loadPosition
-      // loadPosition is changed when seeking and if subtitle track is switched
-      if (this.loadPosition > -1 || spliceIndex === -1 || !trackQueue[spliceIndex]) {
+      // findQueSpliceIndex is true after seek or subtitle change
+      // identify where in the queue to splice based on media.currentTime
+      if (this.media && (this.findQueSpliceIndex || !trackQueue[spliceIndex])) {
         for (let i = 0; i < trackQueue.length; i++) {
-          if (trackQueue[i].start > this.loadPosition) {
-            spliceIndex = i;
+          if (trackQueue[i].start > this.media.currentTime) {
+            spliceIndex = i - 1;
             break;
           }
         }
-        if (spliceIndex === -1) {
-          spliceIndex = 0;
-        }
-        this.vttFragQueuesSpliceIndex[this.currentTrackId] = spliceIndex;
-        this.loadPosition = -1;
+        this.findQueSpliceIndex = false;
       }
+      if (spliceIndex === -1) {
+        spliceIndex = 0;
+      }
+      this.vttFragQueuesSpliceIndex[this.currentTrackId] = spliceIndex;
       let frag = this.currentlyProcessing = trackQueue.splice(spliceIndex, 1)[0];
       this.fragCurrent = frag;
       this.hls.trigger(Event.FRAG_LOADING, { frag: frag });
@@ -106,9 +106,7 @@ class SubtitleStreamController extends TaskLoop {
   }
 
   onMediaSeeked () {
-    if (this.media) {
-      this.loadPosition = this.media.currentTime;
-    }
+    this.findQueSpliceIndex = true;
   }
 
   // If something goes wrong, procede to next frag, if we were processing one.
@@ -196,13 +194,12 @@ class SubtitleStreamController extends TaskLoop {
       return;
     }
 
+    this.findQueSpliceIndex = true;
+
     // Check if track was already loaded and if so make sure we finish
     // downloading its frags, if not all have been downloaded yet
     const currentTrack = this.tracks[this.currentTrackId];
     let details = currentTrack.details;
-    if (this.media) {
-      this.loadPosition = this.media.currentTime;
-    }
     if (details !== undefined) {
       this.tick();
     }
