@@ -33,7 +33,8 @@ class AbrController extends EventHandler {
   onFragLoading (data) {
     let frag = data.frag;
     if (frag.type === 'main') {
-      if (!this.timer)
+      if (!this.timer) {
+        this.fragCurrent = frag;
         this.timer = setInterval(this.onCheck, 100);
 
       // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
@@ -54,7 +55,6 @@ class AbrController extends EventHandler {
         }
         this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
-      this.fragCurrent = frag;
     }
   }
 
@@ -64,7 +64,11 @@ class AbrController extends EventHandler {
       we compute expected time of arrival of the complete fragment.
       we compare it to expected time of buffer starvation
     */
-    let hls = this.hls, v = hls.media, frag = this.fragCurrent, loader = frag.loader, minAutoLevel = hls.minAutoLevel;
+    const hls = this.hls;
+    const v = hls.media;
+    const frag = this.fragCurrent;
+    const minAutoLevel = hls.minAutoLevel;
+    const loader = frag.loader;
 
     // if loader has been destroyed or loading has been aborted, stop timer and return
     if (!loader || (loader.stats && loader.stats.aborted)) {
