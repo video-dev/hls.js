@@ -82,7 +82,6 @@ function retry (cb, numAttempts, interval) {
 describe('testing hls.js playback in the browser on "' + browserDescription + '"', function () {
   beforeEach(function () {
     let capabilities = {
-      name: '"' + stream.description + '" on "' + browserDescription + '"',
       browserName: browserConfig.name,
       platform: browserConfig.platform,
       version: browserConfig.version,
@@ -99,7 +98,9 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
       this.browser = new webdriver.Builder();
     }
     this.browser = this.browser.withCapabilities(capabilities).build();
-    this.browser.manage().timeouts().setScriptTimeout(75000);
+    this.browser.manage().setTimeouts({ script: 75000 }).catch(function (err) {
+      console.log('setTimeouts: ' + err);
+    });
     console.log('Retrieving web driver session...');
     return this.browser.getSession().then(function (session) {
       console.log('Web driver session id: ' + session.getId());
@@ -156,31 +157,31 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
     };
   };
 
-  const testSmoothSwitch = function (url, config) {
-    return function () {
-      return this.browser.executeAsyncScript(function (url, config) {
-        let callback = arguments[arguments.length - 1];
-        window.startStream(url, config, callback);
-        const video = window.video;
-        video.onloadeddata = function () {
-          window.switchToHighestLevel('next');
-        };
-        window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
-          let currentTime = video.currentTime;
-          if (data.level === window.hls.levels.length - 1) {
-            console.log('[log] > switched on level:' + data.level);
-            window.setTimeout(function () {
-              let newCurrentTime = video.currentTime;
-              console.log('[log] > currentTime delta :' + (newCurrentTime - currentTime));
-              callback({ code: newCurrentTime > currentTime, logs: window.logString });
-            }, 2000);
-          }
-        });
-      }, url, config).then(function (result) {
-        assert.strictEqual(result.code, true);
-      });
-    };
-  };
+  // const testSmoothSwitch = function (url, config) {
+  //   return function () {
+  //     return this.browser.executeAsyncScript(function (url, config) {
+  //       let callback = arguments[arguments.length - 1];
+  //       window.startStream(url, config, callback);
+  //       const video = window.video;
+  //       video.onloadeddata = function () {
+  //         window.switchToHighestLevel('next');
+  //       };
+  //       window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
+  //         let currentTime = video.currentTime;
+  //         if (data.level === window.hls.levels.length - 1) {
+  //           console.log('[log] > switched on level:' + data.level);
+  //           window.setTimeout(function () {
+  //             let newCurrentTime = video.currentTime;
+  //             console.log('[log] > currentTime delta :' + (newCurrentTime - currentTime));
+  //             callback({ code: newCurrentTime > currentTime, logs: window.logString });
+  //           }, 2000);
+  //         }
+  //       });
+  //     }, url, config).then(function (result) {
+  //       assert.strictEqual(result.code, true);
+  //     });
+  //   };
+  // };
 
   const testSeekOnLive = function (url, config) {
     return function () {
@@ -202,72 +203,72 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
     };
   };
 
-  const testSeekOnVOD = function (url, config) {
-    return function () {
-      return this.browser.executeAsyncScript(function (url, config) {
-        let callback = arguments[arguments.length - 1];
-        window.startStream(url, config, callback);
-        const video = window.video;
-        video.onloadeddata = function () {
-          window.setTimeout(function () {
-            video.currentTime = video.duration - 5;
-          }, 5000);
-        };
-        video.onended = function () {
-          callback({ code: 'ended', logs: window.logString });
-        };
-      }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'ended');
-      });
-    };
-  };
+  // const testSeekOnVOD = function (url, config) {
+  //   return function () {
+  //     return this.browser.executeAsyncScript(function (url, config) {
+  //       let callback = arguments[arguments.length - 1];
+  //       window.startStream(url, config, callback);
+  //       const video = window.video;
+  //       video.onloadeddata = function () {
+  //         window.setTimeout(function () {
+  //           video.currentTime = video.duration - 5;
+  //         }, 5000);
+  //       };
+  //       video.onended = function () {
+  //         callback({ code: 'ended', logs: window.logString });
+  //       };
+  //     }, url, config).then(function (result) {
+  //       assert.strictEqual(result.code, 'ended');
+  //     });
+  //   };
+  // };
 
-  const testSeekEndVOD = function (url, config) {
-    return function () {
-      return this.browser.executeAsyncScript(function (url, config) {
-        let callback = arguments[arguments.length - 1];
-        window.startStream(url, config, callback);
-        const video = window.video;
-        video.onloadeddata = function () {
-          window.setTimeout(function () {
-            video.currentTime = video.duration;
-          }, 5000);
-        };
-        video.onended = function () {
-          callback({ code: 'ended', logs: window.logString });
-        };
-      }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'ended');
-      });
-    };
-  };
+  // const testSeekEndVOD = function (url, config) {
+  //   return function () {
+  //     return this.browser.executeAsyncScript(function (url, config) {
+  //       let callback = arguments[arguments.length - 1];
+  //       window.startStream(url, config, callback);
+  //       const video = window.video;
+  //       video.onloadeddata = function () {
+  //         window.setTimeout(function () {
+  //           video.currentTime = video.duration;
+  //         }, 5000);
+  //       };
+  //       video.onended = function () {
+  //         callback({ code: 'ended', logs: window.logString });
+  //       };
+  //     }, url, config).then(function (result) {
+  //       assert.strictEqual(result.code, 'ended');
+  //     });
+  //   };
+  // };
 
-  const testIsPlayingVOD = function (url, config) {
-    return function () {
-      return this.browser.executeAsyncScript(function (url, config) {
-        let callback = arguments[arguments.length - 1];
-        window.startStream(url, config, callback);
-        const video = window.video;
-        video.onloadeddata = function () {
-          let expectedPlaying = !(video.paused || // not playing when video is paused
-            video.ended || // not playing when video is ended
-            video.buffered.length === 0); // not playing if nothing buffered
-          let currentTime = video.currentTime;
-          if (expectedPlaying) {
-            window.setTimeout(function () {
-              console.log('video expected playing. [last currentTime/new currentTime]=[' + currentTime + '/' + video.currentTime + ']');
-              callback({ playing: currentTime !== video.currentTime });
-            }, 5000);
-          } else {
-            console.log('video not playing. [paused/ended/buffered.length]=[' + video.paused + '/' + video.ended + '/' + video.buffered.length + ']');
-            callback({ playing: false });
-          }
-        };
-      }, url, config).then(function (result) {
-        assert.strictEqual(result.playing, true);
-      });
-    };
-  };
+  // const testIsPlayingVOD = function (url, config) {
+  //   return function () {
+  //     return this.browser.executeAsyncScript(function (url, config) {
+  //       let callback = arguments[arguments.length - 1];
+  //       window.startStream(url, config, callback);
+  //       const video = window.video;
+  //       video.onloadeddata = function () {
+  //         let expectedPlaying = !(video.paused || // not playing when video is paused
+  //           video.ended || // not playing when video is ended
+  //           video.buffered.length === 0); // not playing if nothing buffered
+  //         let currentTime = video.currentTime;
+  //         if (expectedPlaying) {
+  //           window.setTimeout(function () {
+  //             console.log('video expected playing. [last currentTime/new currentTime]=[' + currentTime + '/' + video.currentTime + ']');
+  //             callback({ playing: currentTime !== video.currentTime });
+  //           }, 5000);
+  //         } else {
+  //           console.log('video not playing. [paused/ended/buffered.length]=[' + video.paused + '/' + video.ended + '/' + video.buffered.length + ']');
+  //           callback({ playing: false });
+  //         }
+  //       };
+  //     }, url, config).then(function (result) {
+  //       assert.strictEqual(result.playing, true);
+  //     });
+  //   };
+  // };
 
   for (let name in streams) {
     var stream = streams[name];
@@ -276,14 +277,14 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
     if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
       it('should receive video loadeddata event for ' + stream.description, testLoadedData(url, config));
       if (stream.abr) {
-        it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url, config));
+        // it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url, config));
       }
 
       if (stream.live) {
         it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url, config));
       } else {
-        it('should play ' + stream.description, testIsPlayingVOD(url, config));
-        it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url, config));
+        // it('should play ' + stream.description, testIsPlayingVOD(url, config));
+        // it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url, config));
         // it('should seek on end and receive video ended event for ' + stream.description, testSeekEndVOD(url));
       }
     }
