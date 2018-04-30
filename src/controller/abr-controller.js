@@ -13,10 +13,12 @@ import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 
 class AbrController extends EventHandler {
   constructor (hls) {
-    super(hls, Event.FRAG_LOADING,
+    super(hls,
+      Event.FRAG_LOADING,
       Event.FRAG_LOADED,
       Event.FRAG_BUFFERED,
-      Event.ERROR);
+      Event.ERROR,
+      Event.BUFFER_CODECS);
     this.lastLoadedFragLevel = 0;
     this._nextAutoLevel = -1;
     this.hls = hls;
