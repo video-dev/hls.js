@@ -10,7 +10,8 @@ class CapLevelController extends EventHandler {
     super(hls,
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
-      Event.MANIFEST_PARSED);
+      Event.MANIFEST_PARSED,
+      Event.BUFFER_CODECS);
 
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.firstLevel = null;
