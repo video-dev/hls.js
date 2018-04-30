@@ -40,17 +40,24 @@ class CapLevelController extends EventHandler {
   }
 
   onManifestParsed (data) {
+    const hls = this.hls;
     this.restrictedLevels = [];
     this.levels = data.levels;
     this.firstLevel = data.firstLevel;
+    if (hls.config.capLevelToPlayerSize && (data.video || (data.levels.length && data.altAudio))) {
+      // Start capping immediately if the manifest has signaled video codecs
+      this._startCapping();
+    }
   }
 
   // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
   // to the first level
   onBufferCodecs (data) {
     const hls = this.hls;
-    if (hls.config.capLevelToPlayerSize && data.video)
+    if (hls.config.capLevelToPlayerSize && data.video) {
+      // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
       this._startCapping();
+    }
   }
 
   onLevelsUpdated (data) {
@@ -88,6 +95,10 @@ class CapLevelController extends EventHandler {
   }
 
   _startCapping () {
+    if (this.timer) {
+      // Don't reset capping if started twice; this can happen if the manifest signals a video codec
+      return;
+    }
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.hls.firstLevel = this.getMaxLevel(this.firstLevel);
     clearInterval(this.timer);

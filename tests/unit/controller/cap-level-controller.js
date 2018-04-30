@@ -129,5 +129,15 @@ describe('CapLevelController', function () {
       assert.strictEqual(capLevelController.firstLevel, data.firstLevel);
       assert.strictEqual(capLevelController.restrictedLevels.length, 0);
     });
+
+    it('should start capping in MANIFEST_PARSED if a video codec was signaled', function () {
+      capLevelController.onManifestParsed({ video: {} });
+      assert(startCappingSpy.calledOnce);
+    });
+
+    it('should start capping in MANIFEST_PARSED if a levels and altAudio were signaled', function () {
+      capLevelController.onManifestParsed({ levels: [{}], altAudio: true });
+      assert(startCappingSpy.calledOnce);
+    });
   });
 });
