@@ -520,7 +520,7 @@ class StreamController extends TaskLoop {
         this.nextLoadPosition = frag.start + frag.duration;
 
       // Allow backtracked fragments to load
-      if (frag.backtracked || fragState === FragmentState.NOT_LOADED) {
+      if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 
@@ -1115,9 +1115,9 @@ class StreamController extends TaskLoop {
           if (!frag.backtracked) {
             const levelDetails = level.details;
             if (levelDetails && frag.sn === levelDetails.startSN) {
-              logger.warn('missing video frame(s) on first frag, appending with gap');
+              logger.warn('missing video frame(s) on first frag, appending with gap', frag.sn);
             } else {
-              logger.warn('missing video frame(s), backtracking fragment');
+              logger.warn('missing video frame(s), backtracking fragment', frag.sn);
               // Return back to the IDLE state without appending to buffer
               // Causes findFragments to backtrack a segment and find the keyframe
               // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
@@ -1130,7 +1130,7 @@ class StreamController extends TaskLoop {
               return;
             }
           } else {
-            logger.warn('Already backtracked on this fragment, appending with the gap');
+            logger.warn('Already backtracked on this fragment, appending with the gap', frag.sn);
           }
         } else {
           // Only reset the backtracked flag if we've loaded the frag without any dropped frames
