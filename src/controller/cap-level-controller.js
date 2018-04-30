@@ -48,9 +48,8 @@ class CapLevelController extends EventHandler {
   // to the first level
   onBufferCodecs (data) {
     const hls = this.hls;
-    if (hls.config.capLevelToPlayerSize && data.video) {
+    if (hls.config.capLevelToPlayerSize && data.video)
       this._startCapping();
-    }
   }
 
   onLevelsUpdated (data) {
@@ -99,10 +98,8 @@ class CapLevelController extends EventHandler {
     this.restrictedLevels = [];
     this.firstLevel = null;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
-    if (this.timer) {
-      this.timer = clearInterval(this.timer);
-      this.timer = null;
-    }
+    clearInterval(this.timer);
+    this.timer = null;
   }
 
   get mediaWidth () {
