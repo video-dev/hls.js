@@ -157,31 +157,31 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
     };
   };
 
-  // const testSmoothSwitch = function (url, config) {
-  //   return function () {
-  //     return this.browser.executeAsyncScript(function (url, config) {
-  //       let callback = arguments[arguments.length - 1];
-  //       window.startStream(url, config, callback);
-  //       const video = window.video;
-  //       video.onloadeddata = function () {
-  //         window.switchToHighestLevel('next');
-  //       };
-  //       window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
-  //         let currentTime = video.currentTime;
-  //         if (data.level === window.hls.levels.length - 1) {
-  //           console.log('[log] > switched on level:' + data.level);
-  //           window.setTimeout(function () {
-  //             let newCurrentTime = video.currentTime;
-  //             console.log('[log] > currentTime delta :' + (newCurrentTime - currentTime));
-  //             callback({ code: newCurrentTime > currentTime, logs: window.logString });
-  //           }, 2000);
-  //         }
-  //       });
-  //     }, url, config).then(function (result) {
-  //       assert.strictEqual(result.code, true);
-  //     });
-  //   };
-  // };
+  const testSmoothSwitch = function (url, config) {
+    return function () {
+      return this.browser.executeAsyncScript(function (url, config) {
+        let callback = arguments[arguments.length - 1];
+        window.startStream(url, config, callback);
+        const video = window.video;
+        video.onloadeddata = function () {
+          window.switchToHighestLevel('next');
+        };
+        window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
+          let currentTime = video.currentTime;
+          if (data.level === window.hls.levels.length - 1) {
+            console.log('[log] > switched on level:' + data.level);
+            window.setTimeout(function () {
+              let newCurrentTime = video.currentTime;
+              console.log('[log] > currentTime delta :' + (newCurrentTime - currentTime));
+              callback({ code: newCurrentTime > currentTime, logs: window.logString });
+            }, 2000);
+          }
+        });
+      }, url, config).then(function (result) {
+        assert.strictEqual(result.code, true);
+      });
+    };
+  };
 
   const testSeekOnLive = function (url, config) {
     return function () {
@@ -277,7 +277,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
     if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
       it('should receive video loadeddata event for ' + stream.description, testLoadedData(url, config));
       if (stream.abr) {
-        // it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url, config));
+        it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url, config));
       }
 
       if (stream.live) {
