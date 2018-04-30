@@ -35,28 +35,29 @@ class AbrController extends EventHandler {
   onFragLoading (data) {
     let frag = data.frag;
     if (frag.type === 'main') {
-      if (!this.timer)
+      if (!this.timer) {
+        this.fragCurrent = frag;
         this.timer = setInterval(this.onCheck, 100);
 
-      // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
-      // so we need to wait for stream manifest / playlist type to instantiate it.
-      if (!this._bwEstimator) {
-        let hls = this.hls,
-          level = data.frag.level,
-          isLive = hls.levels[level].details.live,
-          config = hls.config,
-          ewmaFast, ewmaSlow;
+        // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
+        // so we need to wait for stream manifest / playlist type to instantiate it.
+        if (!this._bwEstimator) {
+          let hls = this.hls,
+            level = data.frag.level,
+            isLive = hls.levels[level].details.live,
+            config = hls.config,
+            ewmaFast, ewmaSlow;
 
-        if (isLive) {
-          ewmaFast = config.abrEwmaFastLive;
-          ewmaSlow = config.abrEwmaSlowLive;
-        } else {
-          ewmaFast = config.abrEwmaFastVoD;
-          ewmaSlow = config.abrEwmaSlowVoD;
+          if (isLive) {
+            ewmaFast = config.abrEwmaFastLive;
+            ewmaSlow = config.abrEwmaSlowLive;
+          } else {
+            ewmaFast = config.abrEwmaFastVoD;
+            ewmaSlow = config.abrEwmaSlowVoD;
+          }
+          this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
         }
-        this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
-      this.fragCurrent = frag;
     }
   }
 
@@ -66,7 +67,11 @@ class AbrController extends EventHandler {
       we compute expected time of arrival of the complete fragment.
       we compare it to expected time of buffer starvation
     */
-    let hls = this.hls, v = hls.media, frag = this.fragCurrent, loader = frag.loader, minAutoLevel = hls.minAutoLevel;
+    const hls = this.hls;
+    const v = hls.media;
+    const frag = this.fragCurrent;
+    const minAutoLevel = hls.minAutoLevel;
+    const loader = frag.loader;
 
     // if loader has been destroyed or loading has been aborted, stop timer and return
     if (!loader || (loader.stats && loader.stats.aborted)) {
