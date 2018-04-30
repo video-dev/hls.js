@@ -37,23 +37,24 @@ class AbrController extends EventHandler {
         this.fragCurrent = frag;
         this.timer = setInterval(this.onCheck, 100);
 
-      // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
-      // so we need to wait for stream manifest / playlist type to instantiate it.
-      if (!this._bwEstimator) {
-        let hls = this.hls,
-          level = data.frag.level,
-          isLive = hls.levels[level].details.live,
-          config = hls.config,
-          ewmaFast, ewmaSlow;
+        // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
+        // so we need to wait for stream manifest / playlist type to instantiate it.
+        if (!this._bwEstimator) {
+          let hls = this.hls,
+            level = data.frag.level,
+            isLive = hls.levels[level].details.live,
+            config = hls.config,
+            ewmaFast, ewmaSlow;
 
-        if (isLive) {
-          ewmaFast = config.abrEwmaFastLive;
-          ewmaSlow = config.abrEwmaSlowLive;
-        } else {
-          ewmaFast = config.abrEwmaFastVoD;
-          ewmaSlow = config.abrEwmaSlowVoD;
+          if (isLive) {
+            ewmaFast = config.abrEwmaFastLive;
+            ewmaSlow = config.abrEwmaSlowLive;
+          } else {
+            ewmaFast = config.abrEwmaFastVoD;
+            ewmaSlow = config.abrEwmaSlowVoD;
+          }
+          this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
         }
-        this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
     }
   }
