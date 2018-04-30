@@ -8609,7 +8609,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
       if (!isNaN(frag.sn) && !frag.bitrateTest) this.nextLoadPosition = frag.start + frag.duration;
 
       // Allow backtracked fragments to load
-      if (frag.backtracked || fragState === FragmentState.NOT_LOADED) {
+      if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 
@@ -9140,9 +9140,9 @@ var stream_controller_StreamController = function (_TaskLoop) {
           if (!frag.backtracked) {
             var levelDetails = level.details;
             if (levelDetails && frag.sn === levelDetails.startSN) {
-              logger["b" /* logger */].warn('missing video frame(s) on first frag, appending with gap');
+              logger["b" /* logger */].warn('missing video frame(s) on first frag, appending with gap', frag.sn);
             } else {
-              logger["b" /* logger */].warn('missing video frame(s), backtracking fragment');
+              logger["b" /* logger */].warn('missing video frame(s), backtracking fragment', frag.sn);
               // Return back to the IDLE state without appending to buffer
               // Causes findFragments to backtrack a segment and find the keyframe
               // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
@@ -9155,7 +9155,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
               return;
             }
           } else {
-            logger["b" /* logger */].warn('Already backtracked on this fragment, appending with the gap');
+            logger["b" /* logger */].warn('Already backtracked on this fragment, appending with the gap', frag.sn);
           }
         } else {
           // Only reset the backtracked flag if we've loaded the frag without any dropped frames
@@ -10290,28 +10290,30 @@ var abr_controller_AbrController = function (_EventHandler) {
   AbrController.prototype.onFragLoading = function onFragLoading(data) {
     var frag = data.frag;
     if (frag.type === 'main') {
-      if (!this.timer) this.timer = setInterval(this.onCheck, 100);
+      if (!this.timer) {
+        this.fragCurrent = frag;
+        this.timer = setInterval(this.onCheck, 100);
 
-      // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
-      // so we need to wait for stream manifest / playlist type to instantiate it.
-      if (!this._bwEstimator) {
-        var hls = this.hls,
-            level = data.frag.level,
-            isLive = hls.levels[level].details.live,
-            config = hls.config,
-            ewmaFast = void 0,
-            ewmaSlow = void 0;
+        // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
+        // so we need to wait for stream manifest / playlist type to instantiate it.
+        if (!this._bwEstimator) {
+          var hls = this.hls,
+              level = data.frag.level,
+              isLive = hls.levels[level].details.live,
+              config = hls.config,
+              ewmaFast = void 0,
+              ewmaSlow = void 0;
 
-        if (isLive) {
-          ewmaFast = config.abrEwmaFastLive;
-          ewmaSlow = config.abrEwmaSlowLive;
-        } else {
-          ewmaFast = config.abrEwmaFastVoD;
-          ewmaSlow = config.abrEwmaSlowVoD;
+          if (isLive) {
+            ewmaFast = config.abrEwmaFastLive;
+            ewmaSlow = config.abrEwmaSlowLive;
+          } else {
+            ewmaFast = config.abrEwmaFastVoD;
+            ewmaSlow = config.abrEwmaSlowVoD;
+          }
+          this._bwEstimator = new ewma_bandwidth_estimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
         }
-        this._bwEstimator = new ewma_bandwidth_estimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
-      this.fragCurrent = frag;
     }
   };
 
@@ -10321,11 +10323,11 @@ var abr_controller_AbrController = function (_EventHandler) {
       we compute expected time of arrival of the complete fragment.
       we compare it to expected time of buffer starvation
     */
-    var hls = this.hls,
-        v = hls.media,
-        frag = this.fragCurrent,
-        loader = frag.loader,
-        minAutoLevel = hls.minAutoLevel;
+    var hls = this.hls;
+    var v = hls.media;
+    var frag = this.fragCurrent;
+    var minAutoLevel = hls.minAutoLevel;
+    var loader = frag.loader;
 
     // if loader has been destroyed or loading has been aborted, stop timer and return
     if (!loader || loader.stats && loader.stats.aborted) {
@@ -17035,38 +17037,81 @@ function webpackBootstrapFunc (modules) {
   return f.default || f // try to call default if defined to also support babel esmodule exports
 }
 
+var moduleNameReqExp = '[\\.|\\-|\\+|\\w|\/|@]+'
+var dependencyRegExp = '\\((\/\\*.*?\\*\/)?\s?.*?(' + moduleNameReqExp + ').*?\\)' // additional chars when output.pathinfo is true
+
 // http://stackoverflow.com/a/2593661/130442
 function quoteRegExp (str) {
   return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&')
 }
 
-function getModuleDependencies (module) {
-  var retval = []
+function getModuleDependencies (sources, module, queueName) {
+  var retval = {}
+  retval[queueName] = []
+
   var fnString = module.toString()
   var wrapperSignature = fnString.match(/^function\s?\(\w+,\s*\w+,\s*(\w+)\)/)
   if (!wrapperSignature) return retval
-
   var webpackRequireName = wrapperSignature[1]
-  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + '\\((\/\\*.*?\\*\/)?\s?.*?([\\.|\\-|\\w|\/|@]+).*?\\)', 'g') // additional chars when output.pathinfo is true
+
+  // main bundle deps
+  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + dependencyRegExp, 'g')
   var match
   while ((match = re.exec(fnString))) {
-    retval.push(match[3])
+    if (match[3] === 'dll-reference') continue
+    retval[queueName].push(match[3])
   }
+
+  // dll deps
+  re = new RegExp('\\(' + quoteRegExp(webpackRequireName) + '\\("(dll-reference\\s(' + moduleNameReqExp + '))"\\)\\)' + dependencyRegExp, 'g')
+  while ((match = re.exec(fnString))) {
+    if (!sources[match[2]]) {
+      retval[queueName].push(match[1])
+      sources[match[2]] = __webpack_require__(match[1]).m
+    }
+    retval[match[2]] = retval[match[2]] || []
+    retval[match[2]].push(match[4])
+  }
+
   return retval
 }
 
-function getRequiredModules (sources, moduleId) {
-  var modulesQueue = [moduleId]
-  var requiredModules = []
-  var seenModules = {}
+function hasValuesInQueues (queues) {
+  var keys = Object.keys(queues)
+  return keys.reduce(function (hasValues, key) {
+    return hasValues || queues[key].length > 0
+  }, false)
+}
 
-  while (modulesQueue.length) {
-    var moduleToCheck = modulesQueue.pop()
-    if (seenModules[moduleToCheck] || !sources[moduleToCheck]) continue
-    seenModules[moduleToCheck] = true
-    requiredModules.push(moduleToCheck)
-    var newModules = getModuleDependencies(sources[moduleToCheck])
-    modulesQueue = modulesQueue.concat(newModules)
+function getRequiredModules (sources, moduleId) {
+  var modulesQueue = {
+    main: [moduleId]
+  }
+  var requiredModules = {
+    main: []
+  }
+  var seenModules = {
+    main: {}
+  }
+
+  while (hasValuesInQueues(modulesQueue)) {
+    var queues = Object.keys(modulesQueue)
+    for (var i = 0; i < queues.length; i++) {
+      var queueName = queues[i]
+      var queue = modulesQueue[queueName]
+      var moduleToCheck = queue.pop()
+      seenModules[queueName] = seenModules[queueName] || {}
+      if (seenModules[queueName][moduleToCheck] || !sources[queueName][moduleToCheck]) continue
+      seenModules[queueName][moduleToCheck] = true
+      requiredModules[queueName] = requiredModules[queueName] || []
+      requiredModules[queueName].push(moduleToCheck)
+      var newModules = getModuleDependencies(sources, sources[queueName][moduleToCheck], queueName)
+      var newModulesKeys = Object.keys(newModules)
+      for (var j = 0; j < newModulesKeys.length; j++) {
+        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]] || []
+        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]].concat(newModules[newModulesKeys[j]])
+      }
+    }
   }
 
   return requiredModules
@@ -17074,10 +17119,25 @@ function getRequiredModules (sources, moduleId) {
 
 module.exports = function (moduleId, options) {
   options = options || {}
-  var sources = __webpack_require__.m
+  var sources = {
+    main: __webpack_require__.m
+  }
 
-  var requiredModules = options.all ? Object.keys(sources) : getRequiredModules(sources, moduleId)
-  var src = '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[id].toString() }).join(',') + '})(self);'
+  var requiredModules = options.all ? { main: Object.keys(sources) } : getRequiredModules(sources, moduleId)
+
+  var src = ''
+
+  Object.keys(requiredModules).filter(function (m) { return m !== 'main' }).forEach(function (module) {
+    var entryModule = 0
+    while (requiredModules[module][entryModule]) {
+      entryModule++
+    }
+    requiredModules[module].push(entryModule)
+    sources[module][entryModule] = '(function(module, exports, __webpack_require__) { module.exports = __webpack_require__; })'
+    src = src + 'var ' + module + ' = (' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(entryModule)) + ')({' + requiredModules[module].map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[module][id].toString() }).join(',') + '});\n'
+  })
+
+  src = src + '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.main.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources.main[id].toString() }).join(',') + '})(self);'
 
   var blob = new window.Blob([src], { type: 'text/javascript' })
   if (options.bare) { return blob }
