@@ -17,8 +17,7 @@ class AbrController extends EventHandler {
       Event.FRAG_LOADING,
       Event.FRAG_LOADED,
       Event.FRAG_BUFFERED,
-      Event.ERROR,
-      Event.BUFFER_CODECS);
+      Event.ERROR);
     this.lastLoadedFragLevel = 0;
     this._nextAutoLevel = -1;
     this.hls = hls;
