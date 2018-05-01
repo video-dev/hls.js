@@ -307,7 +307,13 @@ class StreamController extends TaskLoop {
     }
 
     if (frag) {
-      this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
+      if (frag.keyLoadNeeded) {
+        logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
+        this._loadKey(frag);
+      } else {
+        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
+        this._loadFragment(frag);
+      }
     }
   }
 
@@ -523,41 +529,38 @@ class StreamController extends TaskLoop {
     return frag;
   }
 
-  _loadFragmentOrKey (frag, level, levelDetails, pos, bufferEnd) {
-    // logger.log('loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-    if ((frag.decryptdata && frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
-      logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
-      this.state = State.KEY_LOADING;
-      this.hls.trigger(Event.KEY_LOADING, { frag });
-    } else {
-      logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
-      // Check if fragment is not loaded
-      let fragState = this.fragmentTracker.getState(frag);
+  _loadKey (frag) {
+    this.state = State.KEY_LOADING;
+    this.hls.trigger(Event.KEY_LOADING, { frag });
+  }
 
-      this.fragCurrent = frag;
-      this.startFragRequested = true;
-      // Don't update nextLoadPosition for fragments which are not buffered
-      if (!isNaN(frag.sn) && !frag.bitrateTest) {
-        this.nextLoadPosition = frag.start + frag.duration;
+  _loadFragment (frag) {
+    // Check if fragment is not loaded
+    let fragState = this.fragmentTracker.getState(frag);
+
+    this.fragCurrent = frag;
+    this.startFragRequested = true;
+    // Don't update nextLoadPosition for fragments which are not buffered
+    if (!isNaN(frag.sn) && !frag.bitrateTest) {
+      this.nextLoadPosition = frag.start + frag.duration;
+    }
+
+    // Allow backtracked fragments to load
+    if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
+      frag.autoLevel = this.hls.autoLevelEnabled;
+      frag.bitrateTest = this.bitrateTest;
+
+      this.hls.trigger(Event.FRAG_LOADING, { frag });
+      // lazy demuxer init, as this could take some time ... do it during frag loading
+      if (!this.demuxer) {
+        this.demuxer = new Demuxer(this.hls, 'main');
       }
 
-      // Allow backtracked fragments to load
-      if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
-        frag.autoLevel = this.hls.autoLevelEnabled;
-        frag.bitrateTest = this.bitrateTest;
-
-        this.hls.trigger(Event.FRAG_LOADING, { frag });
-        // lazy demuxer init, as this could take some time ... do it during frag loading
-        if (!this.demuxer) {
-          this.demuxer = new Demuxer(this.hls, 'main');
-        }
-
-        this.state = State.FRAG_LOADING;
-      } else if (fragState === FragmentState.APPENDING) {
-        // Lower the buffer size and try again
-        if (this._reduceMaxBufferLength(frag.duration)) {
-          this.fragmentTracker.removeFragment(frag);
-        }
+      this.state = State.FRAG_LOADING;
+    } else if (fragState === FragmentState.APPENDING) {
+      // Lower the buffer size and try again
+      if (this._reduceMaxBufferLength(frag.duration)) {
+        this.fragmentTracker.removeFragment(frag);
       }
     }
   }
