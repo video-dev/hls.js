@@ -65,11 +65,11 @@ module.exports = {
     'blacklist_ua': ['internet explorer']
   },
   issue666: {
-     'url': 'https://video-dev.github.io/streams/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
-     'description': 'hls.js/issues/666',
-     'live': false,
-     'abr': false,
-     'blacklist_ua': ['internet explorer']
+    'url': 'https://video-dev.github.io/streams/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    'description': 'hls.js/issues/666',
+    'live': false,
+    'abr': false,
+    'blacklist_ua': ['internet explorer']
   },
   issue649: {
     'url': 'http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
