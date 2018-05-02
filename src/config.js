@@ -18,7 +18,7 @@ import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
 
-import { requestMediaKeySystemAccess } from './helper/mediakeys-helper';
+import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 
 export var hlsDefaultConfig = {
   autoStartLoad: true, // used by stream-controller
