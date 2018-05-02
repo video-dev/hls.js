@@ -92,7 +92,7 @@ module.exports = {
   },
   /*
   bbbAES: {
-    'url': 'https://video-dev.github.io/streams/playlists/sample_aes/index.m3u8',
+    'url': 'https://video-dev.github.io/streams/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
