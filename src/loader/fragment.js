@@ -92,8 +92,8 @@ export default class Fragment {
     return this._decryptdata;
   }
 
-  get keyLoadNeeded() {
-    return (this.decryptdata && this.decryptdata.uri != null) && (this.decryptdata.key == null);
+  get encrypted () {
+    return !!((this.decryptdata && this.decryptdata.uri !== null) && (this.decryptdata.key === null));
   }
 
   /**

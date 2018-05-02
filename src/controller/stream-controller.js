@@ -307,7 +307,7 @@ class StreamController extends TaskLoop {
     }
 
     if (frag) {
-      if (frag.keyLoadNeeded) {
+      if (frag.encrypted) {
         logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
       } else {
