@@ -64,14 +64,13 @@ module.exports = {
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
-  // Disabled test-stream due to bandwidth issues
-  // issue666: {
-  //   'url': 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8',
-  //   'description': 'hls.js/issues/666',
-  //   'live': false,
-  //   'abr': false,
-  //   'blacklist_ua': ['internet explorer']
-  // },
+  issue666: {
+     'url': 'https://video-dev.github.io/streams/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+     'description': 'hls.js/issues/666',
+     'live': false,
+     'abr': false,
+     'blacklist_ua': ['internet explorer']
+  },
   issue649: {
     'url': 'http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
     'description': 'hls.js/issues/649',
@@ -91,13 +90,14 @@ module.exports = {
     'live': false,
     'abr': true
   },
-  // Disabled test-stream due to bandwidth issues
-  // bbbAES: {
-  //   'url': 'http://streambox.fr/playlists/sample_aes/index.m3u8',
-  //   'description': 'SAMPLE-AES encrypted',
-  //   'live': false,
-  //   'abr': false
-  // },
+  /*
+  bbbAES: {
+    'url': 'https://video-dev.github.io/streams/playlists/sample_aes/index.m3u8',
+    'description': 'SAMPLE-AES encrypted',
+    'live': false,
+    'abr': false
+  },
+  */
   mp3Audio: {
     'url': 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
     'description': 'MP3 VOD demo',
