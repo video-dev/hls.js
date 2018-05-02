@@ -255,7 +255,7 @@ describe('StreamController tests', function () {
       assert.strictEqual(streamController.state, State.FRAG_LOADING);
     }
 
-    function assertNotLoadingState() {
+    function assertNotLoadingState () {
       assert(triggerSpy.notCalled);
       assert(hls.state !== State.FRAG_LOADING);
     }
