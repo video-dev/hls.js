@@ -37,7 +37,7 @@ class TimelineController extends EventHandler {
     this.textTracks = [];
     this.tracks = [];
     this.unparsedVttFrags = [];
-    this.initPTS = undefined;
+    this.initPTS = [];
     this.cueRanges = [];
     this.captionsTracks = {};
 
@@ -85,17 +85,19 @@ class TimelineController extends EventHandler {
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
   onInitPtsFound (data) {
-    if (typeof this.initPTS === 'undefined') {
-      this.initPTS = data.initPTS;
+    let demuxerId = data.id, cc = data.frag.cc, initPTS = data.initPTS;
+    if (demuxerId === 'main') {
+      this.initPTS[cc] = initPTS;
     }
 
     // Due to asynchrony, initial PTS may arrive later than the first VTT fragments are loaded.
     // Parse any unparsed fragments upon receiving the initial PTS.
     if (this.unparsedVttFrags.length) {
-      this.unparsedVttFrags.forEach(frag => {
+      const unparsedVttFrags = this.unparsedVttFrags;
+      this.unparsedVttFrags = [];
+      unparsedVttFrags.forEach(frag => {
         this.onFragLoaded(frag);
       });
-      this.unparsedVttFrags = [];
     }
   }
 
@@ -180,7 +182,7 @@ class TimelineController extends EventHandler {
   onManifestLoaded (data) {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
-    this.initPTS = undefined;
+    this.initPTS = [];
     this.cueRanges = [];
 
     if (this.config.enableWebVTT) {
@@ -233,7 +235,7 @@ class TimelineController extends EventHandler {
     else if (frag.type === 'subtitle') {
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
-        if (typeof this.initPTS === 'undefined') {
+        if (this.initPTS[frag.cc] === undefined) {
           this.unparsedVttFrags.push(data);
           return;
         }
@@ -260,7 +262,7 @@ class TimelineController extends EventHandler {
       hls = this.hls;
 
     // Parse the WebVTT file contents.
-    WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+    WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, function (cues) {
       const currentTrack = textTracks[frag.trackId];
       // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
       // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
@@ -299,7 +301,7 @@ class TimelineController extends EventHandler {
       frag = data.frag;
 
     if (frag.type === 'subtitle') {
-      if (typeof this.initPTS === 'undefined') {
+      if (this.initPTS[frag.cc] === undefined) {
         this.unparsedVttFrags.push(data);
         return;
       }

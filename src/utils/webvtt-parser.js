@@ -58,6 +58,29 @@ const calculateOffset = function (vttCCs, cc, presentationTime) {
   vttCCs.presentationOffset = presentationTime;
 };
 
+const ptsNormalize = function (value, reference) {
+  let offset;
+  if (reference === undefined) {
+    return value;
+  }
+
+  if (reference < value) {
+    // - 2^33
+    offset = -8589934592;
+  } else {
+    // + 2^33
+    offset = 8589934592;
+  }
+  /* PTS is 33bit (from 0 to 2^33 -1)
+    if diff between value and reference is bigger than half of the amplitude (2^32) then it means that
+    PTS looping occured. fill the gap */
+  while (Math.abs(value - reference) > 4294967296) {
+    value += offset;
+  }
+
+  return value;
+};
+
 const WebVTTParser = {
   parse: function (vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
     // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
@@ -94,7 +117,7 @@ const WebVTTParser = {
 
       if (presentationTime) {
         // If we have MPEGTS, offset = presentation time + discontinuity offset
-        cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
+        cueOffset = presentationTime - vttCCs.presentationOffset;
       }
 
       cue.startTime += cueOffset - localTime;
@@ -140,10 +163,7 @@ const WebVTTParser = {
           });
           try {
             // Calculate subtitle offset in milliseconds.
-            // If sync PTS is less than zero, we have a 33-bit wraparound, which is fixed by adding 2^33 = 8589934592.
-            syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;
-            // Adjust MPEGTS by sync PTS.
-            mpegTs -= syncPTS;
+            mpegTs = ptsNormalize(mpegTs - syncPTS, vttCCs.ccOffset * 90000);
             // Convert cue time to seconds
             localTime = cueString2millis(cueTime) / 1000;
             // Convert MPEGTS to seconds from 90kHz.
