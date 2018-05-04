@@ -31,23 +31,21 @@ class AbrController extends EventHandler {
   }
 
   onFragLoading (data) {
-    const hls = this.hls;
-    const config = this.hls.config;
     const frag = data.frag;
-
-    let ewmaFast, ewmaSlow;
-
     if (frag.type === 'main') {
       if (!this.timer) {
         this.timer = setInterval(this.onCheck, 100);
       }
 
-      // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
+      // lazy init of BwEstimator, rationale is that we use different params for Live/VoD
       // so we need to wait for stream manifest / playlist type to instantiate it.
       if (!this._bwEstimator) {
-        let level = data.frag.level;
-
+        const hls = this.hls;
+        const config = hls.config;
+        const level = data.frag.level;
         const isLive = hls.levels[level].details.live;
+
+        let ewmaFast, ewmaSlow;
         if (isLive) {
           ewmaFast = config.abrEwmaFastLive;
           ewmaSlow = config.abrEwmaSlowLive;
@@ -57,9 +55,9 @@ class AbrController extends EventHandler {
         }
         this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
-      this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
+
+      this.fragCurrent = frag;
     }
-    this.fragCurrent = frag;
   }
 
   _abandonRulesCheck () {
@@ -142,7 +140,7 @@ class AbrController extends EventHandler {
   }
 
   onFragLoaded (data) {
-    let frag = data.frag;
+    const frag = data.frag;
     if (frag.type === 'main' && !isNaN(frag.sn)) {
       // stop monitoring bw once frag loaded
       this.clearTimer();
@@ -169,7 +167,8 @@ class AbrController extends EventHandler {
   }
 
   onFragBuffered (data) {
-    let stats = data.stats, frag = data.frag;
+    const stats = data.stats;
+    const frag = data.frag;
     // only update stats on first frag buffering
     // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
     // and leading to wrong bw estimation
