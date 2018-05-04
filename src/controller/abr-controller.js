@@ -42,7 +42,7 @@ class AbrController extends EventHandler {
       if (!this._bwEstimator) {
         const hls = this.hls;
         const config = hls.config;
-        const level = data.frag.level;
+        const level = frag.level;
         const isLive = hls.levels[level].details.live;
 
         let ewmaFast, ewmaSlow;
