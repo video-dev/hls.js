@@ -18,6 +18,7 @@ class SubtitleStreamController extends TaskLoop {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHING,
       Event.ERROR,
       Event.KEY_LOADED,
       Event.FRAG_LOADED,
@@ -29,6 +30,8 @@ class SubtitleStreamController extends TaskLoop {
     this.config = hls.config;
     this.vttFragSNsProcessed = {};
     this.vttFragQueues = undefined;
+    this.vttFragQueuesSpliceIndex = undefined;
+    this.findQueSpliceIndex = false;
     this.currentlyProcessing = null;
     this.state = State.STOPPED;
     this.currentTrackId = -1;
@@ -42,15 +45,34 @@ class SubtitleStreamController extends TaskLoop {
   // Remove all queued items and create a new, empty queue for each track.
   clearVttFragQueues () {
     this.vttFragQueues = {};
+    this.vttFragQueuesSpliceIndex = {};
     this.tracks.forEach(track => {
       this.vttFragQueues[track.id] = [];
+      this.vttFragQueuesSpliceIndex[track.id] = -1;
     });
   }
 
   // If no frag is being processed and queue isn't empty, initiate processing of next frag in line.
   nextFrag () {
-    if (this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
-      let frag = this.currentlyProcessing = this.vttFragQueues[this.currentTrackId].shift();
+    const trackQueue = this.vttFragQueues[this.currentTrackId];
+    if (this.currentlyProcessing === null && this.currentTrackId > -1 && trackQueue.length) {
+      let spliceIndex = this.vttFragQueuesSpliceIndex[this.currentTrackId];
+      // findQueSpliceIndex is true after seek or subtitle change
+      // identify where in the queue to splice based on media.currentTime
+      if (this.media && (this.findQueSpliceIndex || !trackQueue[spliceIndex])) {
+        for (let i = 0; i < trackQueue.length; i++) {
+          if (trackQueue[i].start > this.media.currentTime) {
+            spliceIndex = i - 1;
+            break;
+          }
+        }
+        this.findQueSpliceIndex = false;
+      }
+      if (spliceIndex === -1) {
+        spliceIndex = 0;
+      }
+      this.vttFragQueuesSpliceIndex[this.currentTrackId] = spliceIndex;
+      let frag = this.currentlyProcessing = trackQueue.splice(spliceIndex, 1)[0];
       this.fragCurrent = frag;
       this.hls.trigger(Event.FRAG_LOADING, { frag: frag });
       this.state = State.FRAG_LOADING;
@@ -68,8 +90,23 @@ class SubtitleStreamController extends TaskLoop {
     this.nextFrag();
   }
 
-  onMediaAttached () {
+  onMediaAttached (data) {
+    let media = this.media = data.media;
+    this.onvseeked = this.onMediaSeeked.bind(this);
+    media.addEventListener('seeked', this.onvseeked);
     this.state = State.IDLE;
+  }
+
+  onMediaDetaching () {
+    let media = this.media;
+    if (media) {
+      media.removeEventListener('seeked', this.onvseeked);
+    }
+    this.media = null;
+  }
+
+  onMediaSeeked () {
+    this.findQueSpliceIndex = true;
   }
 
   // If something goes wrong, procede to next frag, if we were processing one.
@@ -156,6 +193,8 @@ class SubtitleStreamController extends TaskLoop {
     if (this.currentTrackId === -1) {
       return;
     }
+
+    this.findQueSpliceIndex = true;
 
     // Check if track was already loaded and if so make sure we finish
     // downloading its frags, if not all have been downloaded yet
