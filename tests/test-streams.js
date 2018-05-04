@@ -132,10 +132,12 @@ module.exports = {
     'live': false,
     'abr': false
   },
+  /*
   uspHLSAteam: createTestStream(
     'http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199',
     'A-Team movie trailer - HLS by Unified Streaming Platform'
   ),
+  */
   angelOneShakaWidevine: createTestStreamWithConfig({
     url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8',
     description: 'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
