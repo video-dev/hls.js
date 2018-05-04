@@ -50,7 +50,7 @@
     "test": "npm run test:unit && npm run test:func",
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
-    "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/setup.js --timeout 40000"
+    "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/setup.js --timeout 60000"
   },
   "dependencies": {
     "string.prototype.endswith": "^0.2.0",
