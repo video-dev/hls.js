@@ -365,7 +365,9 @@ function loadSelectedStream() {
 
     stats.levelParsed++;
     stats.levelParsingUs = Math.round(1000*this.sumLevelParsingMs / stats.levelParsed);
-    console.log('parsing level duration :' + stats.levelParsingUs + 'us,count:' + stats.levelParsed);
+
+    //console.log('parsing level duration :' + stats.levelParsingUs + 'us,count:' + stats.levelParsed);
+
     events.load.push(event);
     trimEventHistory();
     refreshCanvas();
