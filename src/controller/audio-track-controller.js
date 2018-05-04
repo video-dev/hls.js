@@ -197,22 +197,27 @@ class AudioTrackController extends TaskLoop {
     // First, let's black list current track id
     this.trackIdBlacklist[this.trackId] = true;
 
-    // Let's try to fall back on a functional audio-track
+    // Let's try to fall back on a functional audio-track with the same group ID
     const previousId = this.trackId;
+    const { groupId } = this.tracks[previousId];
+
+    logger.warn('Loading failed on audio track id:', previousId, 'group id:', groupId);
+
+    // Find a non-blacklisted track ID with the same group ID
     let newId = this.trackId;
-    while (this.trackIdBlacklist[newId]) {
+    while (this.trackIdBlacklist[newId] && this.tracks[newId].groupId === groupId) {
       newId++;
       if (newId >= this.tracks.length) {
         newId = 0;
       }
 
       if (newId === previousId) {
-        logger.warn('No fallback audio-track found!');
+        logger.warn('No fallback audio-track found for group id:', groupId);
         return;
       }
     }
 
-    logger.log('Attempting audio-track fallback id:', newId);
+    logger.log('Attempting audio-track fallback id:', newId, 'group id:', groupId);
 
     this.audioTrack = newId;
   }
