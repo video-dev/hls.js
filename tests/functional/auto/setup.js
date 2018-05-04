@@ -90,7 +90,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
     };
     if (browserConfig.name === 'chrome') {
       capabilities.chromeOptions = {
-        args: ['--autoplay-policy=no-user-gesture-required']
+        args: ['--autoplay-policy=no-user-gesture-required', '--disable-web-security']
       };
     }
     if (onTravis) {
