@@ -59,7 +59,7 @@ const calculateOffset = function (vttCCs, cc, presentationTime) {
 };
 
 const WebVTTParser = {
-  parse: function (vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
+  parse: function (vttByteArray, initPTS, vttCCs, cc, callBack, errorCallBack) {
     // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
     let re = /\r\n|\n\r|\n|\r/g;
     // Uint8Array.prototype.reduce is not implemented in IE11
@@ -139,6 +139,17 @@ const WebVTTParser = {
             }
           });
           try {
+            let syncPTS = initPTS;
+            // Set syncPTS to the first mpegTS value available for each discontinuity
+            // or initPTS if mpegTS isn't available
+            let currCC = vttCCs[cc];
+            if (mpegTs && currCC.syncPTS === undefined) {
+              currCC.syncPTS = mpegTs;
+            }
+            if (currCC.syncPTS !== undefined) {
+              syncPTS = currCC.syncPTS;
+            }
+
             // Calculate subtitle offset in milliseconds.
             // If sync PTS is less than zero, we have a 33-bit wraparound, which is fixed by adding 2^33 = 8589934592.
             syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;
