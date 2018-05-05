@@ -2,7 +2,7 @@ import assert from 'assert';
 import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import Event from '../../../src/events';
-import { FragmentTracker } from '../../../src/helper/fragment-tracker';
+import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import StreamController, { State } from '../../../src/controller/stream-controller';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 
