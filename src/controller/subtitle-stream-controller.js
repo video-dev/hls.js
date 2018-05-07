@@ -6,7 +6,7 @@ import Event from '../events';
 import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import TaskLoop from '../task-loop';
-import BufferHelper from '../helper/buffer-helper';
+import { BufferHelper } from '../utils/buffer-helper';
 import BinarySearch from '../utils/binary-search';
 
 const State = {
