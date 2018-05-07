@@ -18,7 +18,7 @@
   "main": "./dist/hls.js",
   "scripts": {
     "build": "webpack",
-    "build:watch": "webpack --watch",
+    "build:watch": "webpack --env.debug --watch",
     "build:release": "npm run build && npm run test && git add dist/* && git commit -m 'Update dist' && npm run docs:release",
     "commit:release": "npm run build:release && git add dist/* && git commit -m 'update dist'",
     "dev": "webpack-dev-server --progress --env.debug --port 8000",

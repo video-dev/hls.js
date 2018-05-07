@@ -15,7 +15,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
-import { calculateNextPDT, findFragmentByPDT, findFragmentBySN } from './fragment-finders';
+import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest } from './fragment-finders';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -374,15 +374,20 @@ class StreamController extends TaskLoop {
 
   _findFragment (start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
     const config = this.hls.config;
+    const fragBySN = () => findFragmentBySN(fragPrevious, fragments, bufferEnd, end, config.maxFragLookUpTolerance);
     let frag;
     let foundFrag;
 
     if (bufferEnd < end) {
       if (!levelDetails.programDateTime) { // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = findFragmentBySN(fragPrevious, fragments, bufferEnd, end, config.maxFragLookUpTolerance);
+        foundFrag = fragBySN();
       } else {
         // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
         foundFrag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, fragPrevious, levelDetails));
+        if (fragmentWithinToleranceTest(bufferEnd, config.maxFragLookUpTolerance, foundFrag)) {
+          // fragmentWithToleranceTest returns 0 if the frag is within tolerance; 1 or -1 otherwise
+          foundFrag = fragBySN();
+        }
       }
     } else {
       // reach end of playlist
