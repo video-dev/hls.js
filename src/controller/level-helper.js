@@ -1,6 +1,11 @@
 /**
- * Level Helper class, providing methods dealing with playlist sliding and drift
-*/
+ * @module LevelHelper
+ *
+ * Providing methods dealing with playlist sliding and drift
+ *
+ * TODO: Create an actual `Level` class/model that deals with all this logic in an object-oriented-manner.
+ *
+ * */
 
 import { logger } from '../utils/logger';
 

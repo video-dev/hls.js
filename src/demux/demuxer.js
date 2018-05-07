@@ -1,10 +1,11 @@
+import EventEmitter from 'events';
+import work from 'webworkify-webpack';
+
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import EventEmitter from 'events';
-import work from 'webworkify-webpack';
-import { getMediaSource } from '../helper/mediasource-helper';
+import { getMediaSource } from '../utils/mediasource-helper';
 
 const MediaSource = getMediaSource();
 
