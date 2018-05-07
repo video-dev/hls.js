@@ -127,7 +127,7 @@ describe('StreamController tests', function () {
 
       let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
-      assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
+      assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     it('PDT search choosing fragment after starting/seeking to a new position (bufferEnd used)', function () {
@@ -136,7 +136,7 @@ describe('StreamController tests', function () {
 
       let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, mediaSeekingTime, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
-      assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
+      assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     it('PDT serch hitting empty discontinuity', function () {

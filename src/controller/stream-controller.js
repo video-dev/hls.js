@@ -385,6 +385,7 @@ class StreamController extends TaskLoop {
         // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
         foundFrag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, fragPrevious, levelDetails));
         if (fragmentWithinToleranceTest(bufferEnd, config.maxFragLookUpTolerance, foundFrag)) {
+          // Fall back to SN order if finding by PDT returns a frag which won't fit within the stream
           // fragmentWithToleranceTest returns 0 if the frag is within tolerance; 1 or -1 otherwise
           foundFrag = fragBySN();
         }
