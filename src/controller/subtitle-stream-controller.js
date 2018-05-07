@@ -125,7 +125,7 @@ class SubtitleStreamController extends TaskLoop {
       trackDetails.fragments.forEach(frag => {
         if (!(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag))) {
           // Load key if subtitles are encrypted
-          if ((frag.decryptdata && frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
+          if (frag.encrypted) {
             logger.log(`Loading key for ${frag.sn}`);
             this.state = State.KEY_LOADING;
             this.hls.trigger(Event.KEY_LOADING, { frag: frag });

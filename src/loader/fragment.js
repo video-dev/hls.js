@@ -92,6 +92,10 @@ export default class Fragment {
     return this._decryptdata;
   }
 
+  get encrypted () {
+    return !!((this.decryptdata && this.decryptdata.uri !== null) && (this.decryptdata.key === null));
+  }
+
   /**
    * @param {ElementaryStreamType} type
    */
