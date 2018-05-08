@@ -2,10 +2,9 @@ import assert from 'assert';
 import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import Event from '../../../src/events';
-import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
+import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import StreamController, { State } from '../../../src/controller/stream-controller';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
-import Fragment from '../../../src/loader/fragment';
 import { mockFragments } from '../../mocks/data';
 
 describe('StreamController tests', function () {
@@ -99,16 +98,9 @@ describe('StreamController tests', function () {
     let end = mockFragments[mockFragments.length - 1].start + mockFragments[mockFragments.length - 1].duration;
 
     it('SN search choosing wrong fragment (3 instead of 2) after level loaded', function () {
-      let config = {};
-      let hls = {
-        config: config,
-        on: function () {}
-      };
       levelDetails.programDateTime = null;
 
-      let streamController = new StreamController(hls);
       let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
-
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
@@ -117,7 +109,6 @@ describe('StreamController tests', function () {
     it('SN search choosing the right segment if fragPrevious is not available', function () {
       levelDetails.programDateTime = null;
 
-      let streamController = new StreamController(hls);
       let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 2, found sn segment ' + resultSN);
@@ -147,6 +138,17 @@ describe('StreamController tests', function () {
       let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, discontinuityPDTHit, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[1], 'Expected sn 1, found sn segment ' + resultSN);
+    });
+
+    it('finds the next fragment by SN if finding by PDT returns a frag out of tolerance', function () {
+      levelDetails.programDateTime = PDT;
+      const fragments = [mockFragments[0], mockFragments[0], mockFragments[1]];
+      const bufferEnd = fragments[1].start + fragments[1].duration;
+      const end = fragments[2].start + fragments[2].duration;
+
+      const expected = fragments[2];
+      const actual = streamController._findFragment(0, fragments[1], fragments.length, fragments, bufferEnd, end, levelDetails);
+      assert.strictEqual(expected, actual);
     });
   });
 
