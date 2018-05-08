@@ -169,9 +169,5 @@ module.exports = {
   pdtOneValue: {
     url: 'https://playertest.longtailvideo.com/adaptive/aviion/manifest.m3u8',
     description: 'One PDT, no discontinuities'
-  },
-  pdtDvr: {
-    url: 'https://b028.wpc.azureedge.net/80B028/Samples/a38e6323-95e9-4f1f-9b38-75eba91704e4/5f2ce531-d508-49fb-8152-647eba422aec.ism/Manifest(format=m3u8-aapl-v3)',
-    description: 'DVR stream with PDTs'
   }
 };
