@@ -164,7 +164,7 @@ class SubtitleStreamController extends TaskLoop {
           foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
         }
 
-        if (foundFrag && (foundFrag.decryptdata && foundFrag.decryptdata.uri != null) && (foundFrag.decryptdata.key == null)) {
+        if (foundFrag && foundFrag.encrypted) {
           logger.log(`Loading key for ${foundFrag.sn}`);
           this.state = State.KEY_LOADING;
           this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });

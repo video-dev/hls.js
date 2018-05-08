@@ -324,7 +324,7 @@ class AudioStreamController extends TaskLoop {
         }
         if (frag) {
           // logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-          if (frag.decryptdata && (frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
+          if (frag.encrypted) {
             logger.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
             this.state = State.KEY_LOADING;
             hls.trigger(Event.KEY_LOADING, { frag: frag });
