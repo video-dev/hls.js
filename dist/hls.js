@@ -8116,138 +8116,6 @@ var TaskLoop = function (_EventHandler) {
 }(event_handler);
 
 /* harmony default export */ var task_loop = (TaskLoop);
-// CONCATENATED MODULE: ./src/controller/fragment-finders.js
-
-
-/**
- * Calculates the PDT of the next load position. This calculation is either based on the PDT of the previous frag, or
- * the estimated start PDT of the entire level. Calculating from the previous frag is preferable since it is able to deal
- * with large gaps in PDT following discontinuities.
- * @param {number} [start = 0] - The PTS of the first fragment within the level
- * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {*} fragPrevious - The last frag successfully appended
- * @param {*} levelDetails - An object containing the parsed and computed properties of the currently playing level
- * @returns {number} nextPdt - The computed PDT
- */
-function calculateNextPDT() {
-  var start = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-  var bufferEnd = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-  var fragPrevious = arguments[2];
-  var levelDetails = arguments[3];
-
-  var nextPdt = 0;
-  if (fragPrevious && fragPrevious.pdt) {
-    nextPdt = fragPrevious.pdt + fragPrevious.duration * 1000;
-  } else if (levelDetails.programDateTime) {
-    nextPdt = bufferEnd * 1000 + Date.parse(levelDetails.programDateTime) - 1000 * start;
-  }
-  return nextPdt;
-}
-
-/**
- * Finds the first fragment whose endPDT value exceeds the given PDT.
- * @param {Array} fragments - The array of candidate fragments
- * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
- * @returns {*|null} fragment - The best matching fragment
- */
-function findFragmentByPDT(fragments) {
-  var PDTValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
-  if (!fragments || !fragments.length || PDTValue === null) {
-    return null;
-  }
-
-  // if less than start
-  var firstSegment = fragments[0];
-
-  if (PDTValue < firstSegment.pdt) {
-    return null;
-  }
-
-  var lastSegment = fragments[fragments.length - 1];
-
-  if (PDTValue >= lastSegment.endPdt) {
-    return null;
-  }
-
-  for (var seg = 0; seg < fragments.length; ++seg) {
-    var frag = fragments[seg];
-    if (PDTValue < frag.endPdt) {
-      return frag;
-    }
-  }
-  return null;
-}
-
-/**
- * Finds a fragment based on the SN of the previous fragment; or based on the needs of the current buffer.
- * This method compensates for small buffer gaps by applying a tolerance to the start of any candidate fragment, thus
- * breaking any traps which would cause the same fragment to be continuously selected within a small range.
- * @param {*} fragPrevious - The last frag successfully appended
- * @param {Array} fragments - The array of candidate fragments
- * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {number} [end = 0] - The computed end time of the stream
- * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start can be within in order to be considered contiguous
- * @returns {*} foundFrag - The best matching fragment
- */
-function findFragmentBySN(fragPrevious, fragments) {
-  var bufferEnd = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-  var end = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-  var maxFragLookUpTolerance = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-
-  var foundFrag = void 0;
-  var fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : null;
-  if (bufferEnd < end) {
-    if (bufferEnd > end - maxFragLookUpTolerance) {
-      maxFragLookUpTolerance = 0;
-    }
-
-    // Prefer the next fragment if it's within tolerance
-    if (fragNext && !fragment_finders_fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
-      foundFrag = fragNext;
-    } else {
-      foundFrag = binary_search.search(fragments, fragment_finders_fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
-    }
-  }
-  return foundFrag;
-}
-
-/**
- * The test function used by the findFragmentBySn's BinarySearch to look for the best match to the current buffer conditions.
- * @param {*} candidate - The fragment to test
- * @param {number} [bufferEnd = 0] - The end of the current buffered range the playhead is currently within
- * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
- * @returns {number} - 0 if it matches, 1 if too low, -1 if too high
- */
-function fragment_finders_fragmentWithinToleranceTest() {
-  var bufferEnd = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-  var maxFragLookUpTolerance = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-  var candidate = arguments[2];
-
-  // offset should be within fragment boundary - config.maxFragLookUpTolerance
-  // this is to cope with situations like
-  // bufferEnd = 9.991
-  // frag[Ø] : [0,10]
-  // frag[1] : [10,20]
-  // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
-  //              frag start               frag start+duration
-  //                  |-----------------------------|
-  //              <--->                         <--->
-  //  ...--------><-----------------------------><---------....
-  // previous frag         matching fragment         next frag
-  //  return -1             return 0                 return 1
-  // logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-  // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
-  var candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0));
-  if (candidate.start + candidate.duration - candidateLookupTolerance <= bufferEnd) {
-    return 1;
-  } else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start) {
-    // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
-    return -1;
-  }
-
-  return 0;
-}
 // CONCATENATED MODULE: ./src/controller/stream-controller.js
 var stream_controller__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -8260,7 +8128,6 @@ function stream_controller__inherits(subClass, superClass) { if (typeof superCla
 /*
  * Stream Controller
 */
-
 
 
 
@@ -8588,7 +8455,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
           }
         } else {
           // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-          frag = findFragmentByPDT(fragments, fragPrevious.endPdt + 1);
+          frag = this._findFragmentByPDT(fragments, fragPrevious.endPdt + 1);
         }
       }
       if (!frag) {
@@ -8602,25 +8469,75 @@ var stream_controller_StreamController = function (_TaskLoop) {
     return frag;
   };
 
+  StreamController.prototype._findFragmentByPDT = function _findFragmentByPDT(fragments, PDTValue) {
+    if (!fragments || PDTValue === undefined) return null;
+
+    // if less than start
+    var firstSegment = fragments[0];
+
+    if (PDTValue < firstSegment.pdt) return null;
+
+    var lastSegment = fragments[fragments.length - 1];
+
+    if (PDTValue >= lastSegment.endPdt) return null;
+
+    for (var seg = 0; seg < fragments.length; ++seg) {
+      var frag = fragments[seg];
+      if (PDTValue < frag.endPdt) return frag;
+    }
+    return null;
+  };
+
+  StreamController.prototype._findFragmentBySN = function _findFragmentBySN(fragPrevious, fragments, bufferEnd, end) {
+    var config = this.hls.config;
+    var foundFrag = void 0;
+    var maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+    var fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
+    var fragmentWithinToleranceTest = function fragmentWithinToleranceTest(candidate) {
+      // offset should be within fragment boundary - config.maxFragLookUpTolerance
+      // this is to cope with situations like
+      // bufferEnd = 9.991
+      // frag[Ø] : [0,10]
+      // frag[1] : [10,20]
+      // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
+      //              frag start               frag start+duration
+      //                  |-----------------------------|
+      //              <--->                         <--->
+      //  ...--------><-----------------------------><---------....
+      // previous frag         matching fragment         next frag
+      //  return -1             return 0                 return 1
+      // logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
+      // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
+      var candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0));
+      if (candidate.start + candidate.duration - candidateLookupTolerance <= bufferEnd) return 1;
+      // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
+      else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start) return -1;
+
+      return 0;
+    };
+
+    if (bufferEnd < end) {
+      if (bufferEnd > end - maxFragLookUpTolerance) maxFragLookUpTolerance = 0;
+
+      // Prefer the next fragment if it's within tolerance
+      if (fragNext && !fragmentWithinToleranceTest(fragNext)) foundFrag = fragNext;else foundFrag = binary_search.search(fragments, fragmentWithinToleranceTest);
+    }
+    return foundFrag;
+  };
+
   StreamController.prototype._findFragment = function _findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
     var config = this.hls.config;
-    var fragBySN = function fragBySN() {
-      return findFragmentBySN(fragPrevious, fragments, bufferEnd, end, config.maxFragLookUpTolerance);
-    };
     var frag = void 0;
     var foundFrag = void 0;
 
     if (bufferEnd < end) {
       if (!levelDetails.programDateTime) {
         // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = fragBySN();
+        foundFrag = this._findFragmentBySN(fragPrevious, fragments, bufferEnd, end);
       } else {
         // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, fragPrevious, levelDetails));
-        if (fragment_finders_fragmentWithinToleranceTest(bufferEnd, config.maxFragLookUpTolerance, foundFrag)) {
-          // fragmentWithToleranceTest returns 0 if the frag is within tolerance; 1 or -1 otherwise
-          foundFrag = fragBySN();
-        }
+        // compute PDT of bufferEnd: PDT(bufferEnd) = 1000*bufferEnd + PDT(start) = 1000*bufferEnd + PDT(level) - level sliding
+        foundFrag = this._findFragmentByPDT(fragments, bufferEnd * 1000 + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0) - 1000 * start);
       }
     } else {
       // reach end of playlist
@@ -17156,38 +17073,81 @@ function webpackBootstrapFunc (modules) {
   return f.default || f // try to call default if defined to also support babel esmodule exports
 }
 
+var moduleNameReqExp = '[\\.|\\-|\\+|\\w|\/|@]+'
+var dependencyRegExp = '\\((\/\\*.*?\\*\/)?\s?.*?(' + moduleNameReqExp + ').*?\\)' // additional chars when output.pathinfo is true
+
 // http://stackoverflow.com/a/2593661/130442
 function quoteRegExp (str) {
   return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&')
 }
 
-function getModuleDependencies (module) {
-  var retval = []
+function getModuleDependencies (sources, module, queueName) {
+  var retval = {}
+  retval[queueName] = []
+
   var fnString = module.toString()
   var wrapperSignature = fnString.match(/^function\s?\(\w+,\s*\w+,\s*(\w+)\)/)
   if (!wrapperSignature) return retval
-
   var webpackRequireName = wrapperSignature[1]
-  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + '\\((\/\\*.*?\\*\/)?\s?.*?([\\.|\\-|\\w|\/|@]+).*?\\)', 'g') // additional chars when output.pathinfo is true
+
+  // main bundle deps
+  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + dependencyRegExp, 'g')
   var match
   while ((match = re.exec(fnString))) {
-    retval.push(match[3])
+    if (match[3] === 'dll-reference') continue
+    retval[queueName].push(match[3])
   }
+
+  // dll deps
+  re = new RegExp('\\(' + quoteRegExp(webpackRequireName) + '\\("(dll-reference\\s(' + moduleNameReqExp + '))"\\)\\)' + dependencyRegExp, 'g')
+  while ((match = re.exec(fnString))) {
+    if (!sources[match[2]]) {
+      retval[queueName].push(match[1])
+      sources[match[2]] = __webpack_require__(match[1]).m
+    }
+    retval[match[2]] = retval[match[2]] || []
+    retval[match[2]].push(match[4])
+  }
+
   return retval
 }
 
-function getRequiredModules (sources, moduleId) {
-  var modulesQueue = [moduleId]
-  var requiredModules = []
-  var seenModules = {}
+function hasValuesInQueues (queues) {
+  var keys = Object.keys(queues)
+  return keys.reduce(function (hasValues, key) {
+    return hasValues || queues[key].length > 0
+  }, false)
+}
 
-  while (modulesQueue.length) {
-    var moduleToCheck = modulesQueue.pop()
-    if (seenModules[moduleToCheck] || !sources[moduleToCheck]) continue
-    seenModules[moduleToCheck] = true
-    requiredModules.push(moduleToCheck)
-    var newModules = getModuleDependencies(sources[moduleToCheck])
-    modulesQueue = modulesQueue.concat(newModules)
+function getRequiredModules (sources, moduleId) {
+  var modulesQueue = {
+    main: [moduleId]
+  }
+  var requiredModules = {
+    main: []
+  }
+  var seenModules = {
+    main: {}
+  }
+
+  while (hasValuesInQueues(modulesQueue)) {
+    var queues = Object.keys(modulesQueue)
+    for (var i = 0; i < queues.length; i++) {
+      var queueName = queues[i]
+      var queue = modulesQueue[queueName]
+      var moduleToCheck = queue.pop()
+      seenModules[queueName] = seenModules[queueName] || {}
+      if (seenModules[queueName][moduleToCheck] || !sources[queueName][moduleToCheck]) continue
+      seenModules[queueName][moduleToCheck] = true
+      requiredModules[queueName] = requiredModules[queueName] || []
+      requiredModules[queueName].push(moduleToCheck)
+      var newModules = getModuleDependencies(sources, sources[queueName][moduleToCheck], queueName)
+      var newModulesKeys = Object.keys(newModules)
+      for (var j = 0; j < newModulesKeys.length; j++) {
+        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]] || []
+        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]].concat(newModules[newModulesKeys[j]])
+      }
+    }
   }
 
   return requiredModules
@@ -17195,10 +17155,25 @@ function getRequiredModules (sources, moduleId) {
 
 module.exports = function (moduleId, options) {
   options = options || {}
-  var sources = __webpack_require__.m
+  var sources = {
+    main: __webpack_require__.m
+  }
 
-  var requiredModules = options.all ? Object.keys(sources) : getRequiredModules(sources, moduleId)
-  var src = '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[id].toString() }).join(',') + '})(self);'
+  var requiredModules = options.all ? { main: Object.keys(sources) } : getRequiredModules(sources, moduleId)
+
+  var src = ''
+
+  Object.keys(requiredModules).filter(function (m) { return m !== 'main' }).forEach(function (module) {
+    var entryModule = 0
+    while (requiredModules[module][entryModule]) {
+      entryModule++
+    }
+    requiredModules[module].push(entryModule)
+    sources[module][entryModule] = '(function(module, exports, __webpack_require__) { module.exports = __webpack_require__; })'
+    src = src + 'var ' + module + ' = (' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(entryModule)) + ')({' + requiredModules[module].map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[module][id].toString() }).join(',') + '});\n'
+  })
+
+  src = src + '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.main.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources.main[id].toString() }).join(',') + '})(self);'
 
   var blob = new window.Blob([src], { type: 'text/javascript' })
   if (options.bare) { return blob }
