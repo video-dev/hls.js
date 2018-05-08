@@ -387,8 +387,8 @@ class StreamController extends TaskLoop {
         if (!foundFrag || fragmentWithinToleranceTest(bufferEnd, config.maxFragLookUpTolerance, foundFrag)) {
           // Fall back to SN order if finding by PDT returns a frag which won't fit within the stream
           // fragmentWithToleranceTest returns 0 if the frag is within tolerance; 1 or -1 otherwise
-          logger.warn(`Frag found by PDT search did not fit within tolerance; falling back to finding by SN`);
-            foundFrag = fragBySN();
+          logger.warn('Frag found by PDT search did not fit within tolerance; falling back to finding by SN');
+          foundFrag = fragBySN();
         }
       }
     } else {
