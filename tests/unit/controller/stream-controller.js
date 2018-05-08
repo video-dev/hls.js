@@ -2,10 +2,11 @@ import assert from 'assert';
 import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import Event from '../../../src/events';
-import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
 import StreamController, { State } from '../../../src/controller/stream-controller';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { mockFragments } from '../../mocks/data';
+import Fragment from '../../../src/loader/fragment';
 
 describe('StreamController tests', function () {
   let hls;
@@ -119,7 +120,7 @@ describe('StreamController tests', function () {
 
       let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
-      assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
+      assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     it('PDT search choosing fragment after starting/seeking to a new position (bufferEnd used)', function () {
@@ -128,7 +129,7 @@ describe('StreamController tests', function () {
 
       let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, mediaSeekingTime, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
-      assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
+      assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     it('PDT serch hitting empty discontinuity', function () {

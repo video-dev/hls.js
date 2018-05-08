@@ -15,7 +15,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
-import { calculateNextPDT, findFragmentByPDT, findFragmentBySN } from './fragment-finders';
+import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest } from './fragment-finders';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -407,8 +407,8 @@ class StreamController extends TaskLoop {
         if (!foundFrag || fragmentWithinToleranceTest(bufferEnd, config.maxFragLookUpTolerance, foundFrag)) {
           // Fall back to SN order if finding by PDT returns a frag which won't fit within the stream
           // fragmentWithToleranceTest returns 0 if the frag is within tolerance; 1 or -1 otherwise
-          logger.warn(`Frag found by PDT search did not fit within tolerance; falling back to finding by SN`);
-            foundFrag = fragBySN();
+          logger.warn('Frag found by PDT search did not fit within tolerance; falling back to finding by SN');
+          foundFrag = fragBySN();
         }
       }
     } else {
