@@ -1,23 +1,22 @@
 import BinarySearch from '../utils/binary-search';
 
 /**
- * Calculates the PDT of the next load position. This calculation is either based on the PDT of the previous frag, or
- * the estimated start PDT of the entire level. Calculating from the previous frag is preferable since it is able to deal
- * with large gaps in PDT following discontinuities.
+ * Calculates the PDT of the next load position.
+ * bufferEnd in this function is usually the position of the playhead.
  * @param {number} [start = 0] - The PTS of the first fragment within the level
  * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {*} fragPrevious - The last frag successfully appended
  * @param {*} levelDetails - An object containing the parsed and computed properties of the currently playing level
  * @returns {number} nextPdt - The computed PDT
  */
-export function calculateNextPDT (start = 0, bufferEnd = 0, fragPrevious, levelDetails) {
-  let nextPdt = 0;
-  if (fragPrevious && fragPrevious.pdt) {
-    nextPdt = fragPrevious.pdt + (fragPrevious.duration * 1000);
-  } else if (levelDetails.programDateTime) {
-    nextPdt = (bufferEnd * 1000) + Date.parse(levelDetails.programDateTime) - (1000 * start);
+export function calculateNextPDT (start = 0, bufferEnd = 0, levelDetails) {
+  let pdt = 0;
+  if (levelDetails.programDateTime) {
+    const parsedDateInt = Date.parse(levelDetails.programDateTime);
+    if (!isNaN(parsedDateInt)) {
+      pdt = (bufferEnd * 1000) + parsedDateInt - (1000 * start);
+    }
   }
-  return nextPdt;
+  return pdt;
 }
 
 /**

@@ -158,28 +158,20 @@ describe('Fragment finders', function () {
       programDateTime: '2012-12-06T19:10:03+00:00'
     };
 
-    it('calculates based on fragPrevious if available', function () {
-      const expected = 1505502671523 + 5 * 1000;
-      const actual = calculateNextPDT(5, 10, fragPrevious, levelDetails);
-      assert.strictEqual(expected, actual);
-    });
-
-    it('calculates based on levelDetails if fragPrevious does not exist', function () {
+    it('calculates based on levelDetails', function () {
       const expected = 1354821003000 + (10 * 1000) - (1000 * 5);
-      const actual = calculateNextPDT(5, 10, null, levelDetails);
+      const actual = calculateNextPDT(5, 10, levelDetails);
       assert.strictEqual(expected, actual);
     });
 
-    it('calculates based on levelDetails if fragPrevious does not have a pdt', function () {
-      const mockFragPrevious = fragPrevious;
-      delete mockFragPrevious.pdt;
-      const expected = 1354821003000 + (10 * 1000) - (1000 * 5);
-      const actual = calculateNextPDT(5, 10, mockFragPrevious, levelDetails);
-      assert.strictEqual(expected, actual);
+    it('returns 0 if levelDetails does not have programDateTime', function () {
+      const actual = calculateNextPDT(5, 10, {});
+      assert.strictEqual(0, actual);
     });
 
-    it('returns 0 if there are no PDTs available', function () {
-      const actual = calculateNextPDT(5, 10, {}, {});
+    it('returns 0 if the parsed PDT would be NaN', function () {
+      levelDetails.programDateTime = 'foo';
+      const actual = calculateNextPDT(5, 10, levelDetails);
       assert.strictEqual(0, actual);
     });
   });
