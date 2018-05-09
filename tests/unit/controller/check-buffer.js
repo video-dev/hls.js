@@ -214,7 +214,7 @@ describe('checkBuffer', function () {
       assert(fixStallStub.notCalled);
     });
 
-    it('should trigger reportStall when stalling for 1 second or longer', function () {
+    it.skip('should trigger reportStall when stalling for 1 second or longer', function () {
       setExpectedPlaying();
       const clock = sandbox.useFakeTimers(0);
       clock.tick(1000);

@@ -142,5 +142,21 @@ module.exports = {
     widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }
-  )
+  ),
+  pdtDuplicate: {
+    url: 'https://playertest.longtailvideo.com/adaptive/artbeats/manifest.m3u8',
+    description: 'Stream with duplicate sequential PDT values'
+  },
+  pdtLargeGap: {
+    url: 'https://playertest.longtailvideo.com/adaptive/boxee/playlist.m3u8',
+    description: 'PDTs with large gaps following discontinuities'
+  },
+  pdtBadValues: {
+    url: 'https://playertest.longtailvideo.com/adaptive/progdatime/playlist2.m3u8',
+    description: 'PDTs with bad values'
+  },
+  pdtOneValue: {
+    url: 'https://playertest.longtailvideo.com/adaptive/aviion/manifest.m3u8',
+    description: 'One PDT, no discontinuities'
+  }
 };
