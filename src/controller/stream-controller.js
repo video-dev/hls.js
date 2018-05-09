@@ -15,6 +15,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
+import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest } from './fragment-finders';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -357,7 +358,7 @@ class StreamController extends TaskLoop {
               logger.log(`live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
           }
         } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-          frag = this._findFragmentByPDT(fragments, fragPrevious.endPdt + 1);
+          frag = findFragmentByPDT(fragments, fragPrevious.endPdt + 1);
         }
       }
       if (!frag) {
@@ -371,83 +372,24 @@ class StreamController extends TaskLoop {
     return frag;
   }
 
-  _findFragmentByPDT (fragments, PDTValue) {
-    if (!fragments || PDTValue === undefined)
-      return null;
-
-    // if less than start
-    let firstSegment = fragments[0];
-
-    if (PDTValue < firstSegment.pdt)
-      return null;
-
-    let lastSegment = fragments[fragments.length - 1];
-
-    if (PDTValue >= lastSegment.endPdt)
-      return null;
-
-    for (let seg = 0; seg < fragments.length; ++seg) {
-      let frag = fragments[seg];
-      if (PDTValue < frag.endPdt)
-        return frag;
-    }
-    return null;
-  }
-
-  _findFragmentBySN (fragPrevious, fragments, bufferEnd, end) {
-    const config = this.hls.config;
-    let foundFrag;
-    let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
-    const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
-    let fragmentWithinToleranceTest = (candidate) => {
-      // offset should be within fragment boundary - config.maxFragLookUpTolerance
-      // this is to cope with situations like
-      // bufferEnd = 9.991
-      // frag[Ø] : [0,10]
-      // frag[1] : [10,20]
-      // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
-      //              frag start               frag start+duration
-      //                  |-----------------------------|
-      //              <--->                         <--->
-      //  ...--------><-----------------------------><---------....
-      // previous frag         matching fragment         next frag
-      //  return -1             return 0                 return 1
-      // logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-      // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
-      let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0));
-      if (candidate.start + candidate.duration - candidateLookupTolerance <= bufferEnd)
-        return 1;
-      // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
-      else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start)
-        return -1;
-
-      return 0;
-    };
-
-    if (bufferEnd < end) {
-      if (bufferEnd > end - maxFragLookUpTolerance)
-        maxFragLookUpTolerance = 0;
-
-      // Prefer the next fragment if it's within tolerance
-      if (fragNext && !fragmentWithinToleranceTest(fragNext))
-        foundFrag = fragNext;
-      else
-        foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
-    }
-    return foundFrag;
-  }
-
   _findFragment (start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
     const config = this.hls.config;
+    const fragBySN = () => findFragmentBySN(fragPrevious, fragments, bufferEnd, end, config.maxFragLookUpTolerance);
     let frag;
     let foundFrag;
 
     if (bufferEnd < end) {
       if (!levelDetails.programDateTime) { // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = this._findFragmentBySN(fragPrevious, fragments, bufferEnd, end);
-      } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        // compute PDT of bufferEnd: PDT(bufferEnd) = 1000*bufferEnd + PDT(start) = 1000*bufferEnd + PDT(level) - level sliding
-        foundFrag = this._findFragmentByPDT(fragments, (bufferEnd * 1000) + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0) - 1000 * start);
+        foundFrag = fragBySN();
+      } else {
+        // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
+        foundFrag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, levelDetails));
+        if (!foundFrag || fragmentWithinToleranceTest(bufferEnd, config.maxFragLookUpTolerance, foundFrag)) {
+          // Fall back to SN order if finding by PDT returns a frag which won't fit within the stream
+          // fragmentWithToleranceTest returns 0 if the frag is within tolerance; 1 or -1 otherwise
+          logger.warn('Frag found by PDT search did not fit within tolerance; falling back to finding by SN');
+          foundFrag = fragBySN();
+        }
       }
     } else {
       // reach end of playlist
