@@ -34,6 +34,7 @@ class AbrController extends EventHandler {
     const frag = data.frag;
     if (frag.type === 'main') {
       if (!this.timer) {
+        this.fragCurrent = frag;
         this.timer = setInterval(this.onCheck, 100);
       }
 
@@ -55,8 +56,6 @@ class AbrController extends EventHandler {
         }
         this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
-
-      this.fragCurrent = frag;
     }
   }
 
