@@ -788,6 +788,7 @@ class StreamController extends TaskLoop {
     this.fragmentTracker.removeAllFragments();
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
+    this.fragPlaying = null;
   }
 
   onManifestParsed (data) {
@@ -809,7 +810,6 @@ class StreamController extends TaskLoop {
 
     this.levels = data.levels;
     this.startFragRequested = false;
-    this.fragPlaying = null;
     let config = this.config;
     if (config.autoStartLoad || this.forceStartLoad)
       this.hls.startLoad(config.startPosition);
