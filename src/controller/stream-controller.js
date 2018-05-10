@@ -809,6 +809,7 @@ class StreamController extends TaskLoop {
 
     this.levels = data.levels;
     this.startFragRequested = false;
+    this.fragPlaying = null;
     let config = this.config;
     if (config.autoStartLoad || this.forceStartLoad)
       this.hls.startLoad(config.startPosition);
