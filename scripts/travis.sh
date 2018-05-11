@@ -36,11 +36,15 @@ elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
 
   # update the version
   node ./scripts/set-canary-version.js
-  # write the token to config
-  # see https://docs.npmjs.com/private-modules/ci-server-config
-  echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
-  npm publish --tag canary
-  echo "Published canary."
+  if [[ $(node ./check-already-published.js) = "not published" ]]; then
+    # write the token to config
+    # see https://docs.npmjs.com/private-modules/ci-server-config
+    echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
+    npm publish --tag canary
+    echo "Published canary."
+  else
+    echo "Canary already published."
+  fi
 else
 	echo "Unknown travis mode: ${TRAVIS_MODE}" 1>&2
 	exit 1
