@@ -26,7 +26,7 @@ export function calculateNextPDT (start = 0, bufferEnd = 0, levelDetails) {
  * @returns {*|null} fragment - The best matching fragment
  */
 export function findFragmentByPDT (fragments, PDTValue = null) {
-  if (!Array.isArray(fragments) || PDTValue === null) {
+  if (!Array.isArray(fragments) || !fragments.length || PDTValue === null) {
     return null;
   }
 
