@@ -85,6 +85,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
     if (!stream) {
       throw new Error('Stream not defined');
     }
+
     let capabilities = {
       name: '"' + stream.description + '" on "' + browserDescription + '"',
       browserName: browserConfig.name,

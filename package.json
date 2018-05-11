@@ -67,7 +67,7 @@
     "chromedriver": "^2.38.3",
     "cross-env": "^5.0.2",
     "deep-strict-equal": "^0.2.0",
-    "esdoc": "^1.0.4",
+    "esdoc": "^1.1.0",
     "esdoc-standard-plugin": "^1.0.0",
     "eslint": "^4.13.1",
     "eslint-config-standard": "^11.0.0",
