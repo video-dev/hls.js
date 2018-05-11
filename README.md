@@ -39,6 +39,8 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<!-- Or if you want a more recent version -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
@@ -122,6 +124,10 @@ If you want to bundle the application yourself, use node
 
 ```
 npm install hls.js
+```
+or for the lastest version from master
+```
+npm install hls.js@canary
 ```
 
 **NOTE:** `hls.light.*.js` dist files do not include subtitling and alternate-audio features.
