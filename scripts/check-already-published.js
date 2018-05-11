@@ -1,4 +1,3 @@
-const fs = require('fs');
 const package = require('../package.json');
 
 try {
