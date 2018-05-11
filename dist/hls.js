@@ -8976,6 +8976,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     this.fragmentTracker.removeAllFragments();
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
+    this.fragPlaying = null;
   };
 
   StreamController.prototype.onManifestParsed = function onManifestParsed(data) {
