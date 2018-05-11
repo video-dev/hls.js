@@ -31,7 +31,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 		exit 1
 	fi
 elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
-	npm run lint
+  npm run lint
   npm run build
 
   # update the version
