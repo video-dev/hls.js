@@ -41,6 +41,7 @@ elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
     npm run lint
     npm run build
     testNodeRequire
+    npm run test:unit
     # write the token to config
     # see https://docs.npmjs.com/private-modules/ci-server-config
     echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
