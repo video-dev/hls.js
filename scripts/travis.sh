@@ -31,12 +31,11 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 		exit 1
 	fi
 elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
-  npm run lint
-  npm run build
-
   # update the version
   node ./scripts/set-canary-version.js
   if [[ $(node ./check-already-published.js) = "not published" ]]; then
+    npm run lint
+    npm run build
     # write the token to config
     # see https://docs.npmjs.com/private-modules/ci-server-config
     echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
