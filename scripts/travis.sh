@@ -37,7 +37,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
   # update the version
   node ./scripts/set-canary-version.js
-  if [[ $(node ./check-already-published.js) = "not published" ]]; then
+  if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
     npm run lint
     npm run build
     testNodeRequire
