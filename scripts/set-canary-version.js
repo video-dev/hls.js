@@ -6,7 +6,7 @@ try {
   let matched = false;
   let newVersion = package.version.replace(/^(\d+)\.(\d+)\.(\d+).*$/, function(_, major, minor, patch) {
     matched = true;
-    return major + '.' + minor + '.' + (parseInt(patch) + 1);
+    return major + '.' + minor + '.' + (parseInt(patch, 10) + 1);
   });
   if (!matched) {
     throw new Error('Error calculating version.');
@@ -24,5 +24,5 @@ process.exit(0);
 
 
 function getCommitNum() {
-  return parseInt(require('child_process').execSync('git rev-list --count HEAD').toString());
+  return parseInt(require('child_process').execSync('git rev-list --count HEAD').toString(), 10);
 }
