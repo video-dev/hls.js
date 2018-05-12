@@ -2,14 +2,18 @@
 # https://docs.travis-ci.com/user/customizing-the-build/#Implementing-Complex-Build-Steps
 set -ev
 
+function testNodeRequire {
+  # check that hls.js doesn't error if requiring in node
+  # see https://github.com/video-dev/hls.js/pull/1642
+  node -e 'require("./" + require("./package.json").main)'
+}
+
 npm install
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
   npm run lint
   npm run build
-  # check that hls.js doesn't error if requiring in node
-  # see https://github.com/video-dev/hls.js/pull/1642
-  node -e 'require("./" + require("./package.json").main)'
+  testNodeRequire
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
 	npm run test:unit
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
@@ -36,6 +40,7 @@ elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
   if [[ $(node ./check-already-published.js) = "not published" ]]; then
     npm run lint
     npm run build
+    testNodeRequire
     # write the token to config
     # see https://docs.npmjs.com/private-modules/ci-server-config
     echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
