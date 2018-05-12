@@ -22,7 +22,7 @@ jobs:
   include:
     # publish canary package if on master
     - stage: required
-      if: branch = master
+      if: branch = master AND type != pull_request
       env: TRAVIS_MODE=releaseCanary
     # Required tests
     - stage: required
