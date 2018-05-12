@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/video-dev/hls.js.svg?branch=master)](https://travis-ci.org/video-dev/hls.js)
-[![npm][npm-image]][npm-url]
+[![npm](https://img.shields.io/npm/v/hls.js.svg?style=flat)](https://npmjs.org/package/hls.js)
+[![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
 [![Greenkeeper badge](https://badges.greenkeeper.io/video-dev/hls.js.svg)](https://greenkeeper.io/)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 
@@ -260,6 +261,3 @@ Click [here](/docs/design.md) for details.
 ### Tested With
 
 [<img src="https://cloud.githubusercontent.com/assets/7864462/12837037/452a17c6-cb73-11e5-9f39-fc96893bc9bf.png" alt="Browser Stack Logo" width="300">](https://www.browserstack.com/)
-
-[npm-image]: https://img.shields.io/npm/v/hls.js.svg?style=flat
-[npm-url]: https://npmjs.org/package/hls.js
