@@ -39,7 +39,7 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent version -->
+<!-- Or if you want a more recent canary version -->
 <!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
@@ -125,7 +125,7 @@ If you want to bundle the application yourself, use node
 ```
 npm install hls.js
 ```
-or for the lastest version from master
+or for the version from master (canary)
 ```
 npm install hls.js@canary
 ```
