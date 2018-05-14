@@ -1423,6 +1423,7 @@ class StreamController extends TaskLoop {
    */
   _checkBuffer () {
     const { config, media } = this;
+    const stallDebounceInterval = 1000;
     if (!media || media.readyState === 0) {
       // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
       return;
@@ -1459,7 +1460,7 @@ class StreamController extends TaskLoop {
         if (!this.stalled) {
           this.stalled = tnow;
           return;
-        } else if (stalledDuration >= 1000) {
+        } else if (stalledDuration >= stallDebounceInterval) {
           // Report stalling after trying to fix
           this._reportStall(bufferInfo.len);
         }
