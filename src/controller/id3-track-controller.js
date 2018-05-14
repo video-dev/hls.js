@@ -5,41 +5,57 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
+import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
-
-  constructor(hls) {
+  constructor (hls) {
     super(hls,
-               Event.MEDIA_ATTACHED,
-               Event.MEDIA_DETACHING,
-               Event.FRAG_PARSING_METADATA);
+      Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHING,
+      Event.FRAG_PARSING_METADATA);
     this.id3Track = undefined;
     this.media = undefined;
   }
 
-  destroy() {
+  destroy () {
     EventHandler.prototype.destroy.call(this);
   }
 
   // Add ID3 metatadata text track.
-  onMediaAttached(data) {
+  onMediaAttached (data) {
     this.media = data.media;
     if (!this.media) {
-      return;
+
     }
   }
 
-  onMediaDetaching() {
+  onMediaDetaching () {
+    clearCurrentCues(this.id3Track);
+    this.id3Track = undefined;
     this.media = undefined;
   }
 
-  onFragParsingMetadata(data) {
+  getID3Track (textTracks) {
+    for (let i = 0; i < textTracks.length; i++) {
+      let textTrack = textTracks[i];
+      if (textTrack.kind === 'metadata' && textTrack.label === 'id3') {
+        // send 'addtrack' when reusing the textTrack for metadata,
+        // same as what we do for captions
+        sendAddTrackEvent(textTrack, this.media);
+
+        return textTrack;
+      }
+    }
+    return this.media.addTextTrack('metadata', 'id3');
+  }
+
+  onFragParsingMetadata (data) {
     const fragment = data.frag;
     const samples = data.samples;
 
     // create track dynamically
     if (!this.id3Track) {
-      this.id3Track = this.media.addTextTrack('metadata', 'id3');
+      this.id3Track = this.getID3Track(this.media.textTracks);
       this.id3Track.mode = 'hidden';
     }
 
@@ -52,14 +68,14 @@ class ID3TrackController extends EventHandler {
       const frames = ID3.getID3Frames(samples[i].data);
       if (frames) {
         const startTime = samples[i].pts;
-        let endTime = i < samples.length - 1 ? samples[i+1].pts : fragment.endPTS;
+        let endTime = i < samples.length - 1 ? samples[i + 1].pts : fragment.endPTS;
 
         // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
         if (startTime === endTime) {
           endTime += 0.0001;
         }
 
-        for(let j = 0; j < frames.length; j++) {
+        for (let j = 0; j < frames.length; j++) {
           const frame = frames[j];
           // Safari doesn't put the timestamp frame in the TextTrack
           if (!ID3.isTimeStampFrame(frame)) {

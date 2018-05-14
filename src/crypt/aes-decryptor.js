@@ -1,5 +1,5 @@
 // PKCS7
-export function removePadding(buffer) {
+export function removePadding (buffer) {
   const outputBytes = buffer.byteLength;
   const paddingBytes = outputBytes && (new DataView(buffer)).getUint8(outputBytes - 1);
   if (paddingBytes) {
@@ -10,11 +10,11 @@ export function removePadding(buffer) {
 }
 
 class AESDecryptor {
-  constructor() {
+  constructor () {
     // Static after running initTable
     this.rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
-    this.subMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
-    this.invSubMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
+    this.subMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+    this.invSubMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
     this.sBox = new Uint32Array(256);
     this.invSBox = new Uint32Array(256);
 
@@ -25,16 +25,17 @@ class AESDecryptor {
   }
 
   // Using view.getUint32() also swaps the byte order.
-  uint8ArrayToUint32Array_(arrayBuffer) {
+  uint8ArrayToUint32Array_ (arrayBuffer) {
     let view = new DataView(arrayBuffer);
     let newArray = new Uint32Array(4);
     for (let i = 0; i < 4; i++) {
       newArray[i] = view.getUint32(i * 4);
     }
+
     return newArray;
   }
 
-  initTable() {
+  initTable () {
     let sBox = this.sBox;
     let invSBox = this.invSBox;
     let subMix = this.subMix;
@@ -42,7 +43,7 @@ class AESDecryptor {
     let subMix1 = subMix[1];
     let subMix2 = subMix[2];
     let subMix3 = subMix[3];
-    let invSubMix  = this.invSubMix;
+    let invSubMix = this.invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
@@ -95,7 +96,7 @@ class AESDecryptor {
     }
   }
 
-  expandKey(keyBuffer) {
+  expandKey (keyBuffer) {
     // convert keyBuffer to Uint32Array
     let key = this.uint8ArrayToUint32Array_(keyBuffer);
     let sameKey = true;
@@ -126,7 +127,7 @@ class AESDecryptor {
     let sbox = this.sBox;
     let rcon = this.rcon;
 
-    let invSubMix  = this.invSubMix;
+    let invSubMix = this.invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
@@ -151,7 +152,7 @@ class AESDecryptor {
 
         // Mix Rcon
         t ^= rcon[(ksRow / keySize) | 0] << 24;
-      } else if (keySize > 6 && ksRow % keySize === 4)  {
+      } else if (keySize > 6 && ksRow % keySize === 4) {
         // Sub word
         t = (sbox[t >>> 24] << 24) | (sbox[(t >>> 16) & 0xff] << 16) | (sbox[(t >>> 8) & 0xff] << 8) | sbox[t & 0xff];
       }
@@ -178,16 +179,16 @@ class AESDecryptor {
   }
 
   // Adding this as a method greatly improves performance.
-  networkToHostOrderSwap(word) {
+  networkToHostOrderSwap (word) {
     return (word << 24) | ((word & 0xff00) << 8) | ((word & 0xff0000) >> 8) | (word >>> 24);
   }
 
-  decrypt(inputArrayBuffer, offset, aesIV, removePKCS7Padding) {
+  decrypt (inputArrayBuffer, offset, aesIV, removePKCS7Padding) {
     let nRounds = this.keySize + 6;
     let invKeySchedule = this.invKeySchedule;
     let invSBOX = this.invSBox;
 
-    let invSubMix  = this.invSubMix;
+    let invSubMix = this.invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
@@ -206,7 +207,7 @@ class AESDecryptor {
     let s0, s1, s2, s3;
     let inputWords0, inputWords1, inputWords2, inputWords3;
 
-    var ksRow, i;
+    let ksRow, i;
     let swapWord = this.networkToHostOrderSwap;
 
     while (offset < inputInt32.length) {
@@ -262,7 +263,7 @@ class AESDecryptor {
     return removePKCS7Padding ? removePadding(outputInt32.buffer) : outputInt32.buffer;
   }
 
-  destroy() {
+  destroy () {
     this.key = undefined;
     this.keySize = undefined;
     this.ksRows = undefined;

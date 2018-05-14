@@ -1,4 +1,8 @@
-export default {
+/**
+ * @readonly
+ * @enum {string}
+ */
+const HlsEvents = {
   // fired before MediaSource is attaching to media element - data: { media }
   MEDIA_ATTACHING: 'hlsMediaAttaching',
   // fired when MediaSource has been succesfully attached to media element - data: { }
@@ -29,8 +33,6 @@ export default {
   MANIFEST_LOADED: 'hlsManifestLoaded',
   // fired after manifest has been parsed - data: { levels : [available quality levels], firstLevel : index of first quality level appearing in Manifest}
   MANIFEST_PARSED: 'hlsManifestParsed',
-  // fired when a level switch is requested - data: { level : id of new level } // deprecated in favor LEVEL_SWITCHING
-  LEVEL_SWITCH: 'hlsLevelSwitch',
   // fired when a level switch is requested - data: { level : id of new level }
   LEVEL_SWITCHING: 'hlsLevelSwitching',
   // fired when a level switch is effective - data: { level : id of new level }
@@ -45,8 +47,6 @@ export default {
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
-  // fired when an audio track switch occurs - data: { id : audio track id } // deprecated in favor AUDIO_TRACK_SWITCHING
-  AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',
   // fired when an audio track switching is requested - data: { id : audio track id }
   AUDIO_TRACK_SWITCHING: 'hlsAudioTrackSwitching',
   // fired when an audio track switch actually occurs - data: { id : audio track id }
@@ -93,7 +93,7 @@ export default {
   FRAG_CHANGED: 'hlsFragChanged',
   // Identifier for a FPS drop event - data: { curentDropped, currentDecoded, totalDroppedFrames }
   FPS_DROP: 'hlsFpsDrop',
-  //triggered when FPS drop triggers auto level capping - data: { level, droppedlevel }
+  // triggered when FPS drop triggers auto level capping - data: { level, droppedlevel }
   FPS_DROP_LEVEL_CAPPING: 'hlsFpsDropLevelCapping',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data }
   ERROR: 'hlsError',
@@ -106,3 +106,4 @@ export default {
   // fired upon stream controller state transitions - data: { previousState, nextState }
   STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
 };
+export default HlsEvents;

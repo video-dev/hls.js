@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/video-dev/hls.js.svg?branch=master)](https://travis-ci.org/video-dev/hls.js)
-[![npm][npm-image]][npm-url]
+[![npm](https://img.shields.io/npm/v/hls.js.svg?style=flat)](https://npmjs.org/package/hls.js)
+[![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
 [![Greenkeeper badge](https://badges.greenkeeper.io/video-dev/hls.js.svg)](https://greenkeeper.io/)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 
@@ -25,6 +26,12 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 [ECMAScript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
 [Babel]: https://babeljs.io
 
+## API docs and usage guide
+
+* API and code documention: [http://video-dev.github.io/hls.js/docs/html](http://video-dev.github.io/hls.js/docs/html)
+
+* Find a more detailed library usage guide, use-cases and example [here](/docs/API.md)
+
 ## Demo
 
 [http://video-dev.github.io/hls.js/demo](http://video-dev.github.io/hls.js/demo)
@@ -33,10 +40,12 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<!-- Or if you want a more recent canary version -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
+  var video = document.getElementById('video');
   if(Hls.isSupported()) {
-    var video = document.getElementById('video');
     var hls = new Hls();
     hls.loadSource('https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8');
     hls.attachMedia(video);
@@ -47,9 +56,11 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
  // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
  // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element throught the `src` property.
  // This is using the built-in support of the plain video element, without using hls.js.
+ // Note: it would be more normal to wait on the 'canplay' event below however on Safari (where you are most likely to find built-in HLS support) the video.src URL must be on the user-driven
+ // white-list before a 'canplay' event will be emitted; the last video event that can be reliably listened-for when the URL is not on the white-list is 'loadedmetadata'.
   else if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8';
-    video.addEventListener('canplay',function() {
+    video.addEventListener('loadedmetadata',function() {
       video.play();
     });
   }
@@ -68,11 +79,12 @@ HTMLVideoElement control and events could be used seamlessly.
 |[<img src="http://i.cdn.turner.com/adultswim/big/img/global/adultswim.jpg" width="120">](http://www.adultswim.com/videos/streams)|[<img src="https://www.akamai.com/fr/fr/multimedia/images/logo/akamai-logo.png" width="120">](https://www.akamai.com)|[<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Canal%2B.svg/2000px-Canal%2B.svg.png" width="120">](https://www.canalplus.fr)|[<img src="https://avatars2.githubusercontent.com/u/115313" width="120">](http://www.dailymotion.com)|
 |---|---|---|---|
 |[<img src="https://cloud.githubusercontent.com/assets/13046636/23291526/938b9bb6-fa9c-11e6-8d6a-cd50a8f5903f.png" width="120">](https://freshlive.tv)|[<img src="https://flowplayer.org/media/img/logo-blue.png" width="120">](http://www.flowplayer.org)|[<img src="https://avatars1.githubusercontent.com/u/12554082?s=240" width="120">](http://www.foxsports.com.au)|[<img src="https://cloud.githubusercontent.com/assets/244265/12556435/dfaceb48-c353-11e5-971b-2c4429725469.png" width="120">](http://www.globo.com)|
-|[<img src="https://cloud.githubusercontent.com/assets/13573755/20111430/80a6bebc-a5e8-11e6-8dc1-619b1e936f6d.png" width="120">](https://www.gl-systemhaus.de/)|[<img src="https://cloud.githubusercontent.com/assets/6525783/20801836/700490de-b7ea-11e6-82bd-e249f91c7bae.jpg" width="120">](http://nettrek.de/)|[<img src="https://cloud.githubusercontent.com/assets/244265/12556385/999aa884-c353-11e5-9102-79df54384498.png" width="120">](https://www.nytimes.com/)|[<img src="https://cloud.githubusercontent.com/assets/1798553/20356424/ba158574-ac24-11e6-95e1-1ae591b11a0a.png" width="120">](https://www.peer5.com/)|
-|[<img src="https://cloud.githubusercontent.com/assets/4909096/20925062/e26e6fc8-bbb4-11e6-99a5-d4762274a342.png" width="120">](http://qbrick.com/)|[<img src="https://www.radiantmediaplayer.com/images/radiantmediaplayer-new-logo-640.jpg" width="120">](https://www.radiantmediaplayer.com/)|[<img src="https://camo.githubusercontent.com/eacade2264a6325191b6cb9bf7a8c0d05a5b628d/68747470733a2f2f7777772e7274732e63682f68756d6d696e67626972642f7265732f696d616765732f7274732f6c6f676f2d7274732d726f7567652e737667" width="120">](http://www.rts.ch/)|[<img src="https://cloud.githubusercontent.com/assets/12702747/19316434/0a3601de-9067-11e6-85e2-936b1cb099a0.png" width="120">](https://www.snapstream.com/)|
-|[<img src="https://www.streamamg.com/wp-content/themes/barebones/_assets/images/streamamg-logo.png" width="120">](https://www.streamamg.com/)|[<img src="https://streamsharkio.sa.metacdn.com/wp-content/uploads/2015/10/streamshark-dark.svg" width="120">](https://streamshark.io/)|[<img src="https://camo.githubusercontent.com/9580f10e9bfa8aa7fba52c5cb447bee0757e33da/68747470733a2f2f7777772e7461626c6f74762e636f6d2f7374617469632f696d616765732f7461626c6f5f6c6f676f2e706e67" width="120">](http://my.tablotv.com/)|[<img src="https://user-images.githubusercontent.com/2803310/34083705-349c8fd0-e375-11e7-92a6-5c38509f4936.png" width="120">](https://www.streamroot.io/)|
-|[<img src="http://vignette1.wikia.nocookie.net/tedtalks/images/c/c0/TED_logo.png/revision/20150915192527" width="120">](https://www.ted.com/)|[<img src="https://www.seeklogo.net/wp-content/uploads/2014/12/twitter-logo-vector-download.jpg" width="120">](https://twitter.com/)|[<img src="https://cloud.githubusercontent.com/assets/8201317/20566816/bc33f51c-b196-11e6-9bd3-afb71a06460b.png" width="120">](http://vwflow.com)|[<img src="http://media.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)|
-|[<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)|[<img src="https://s3.amazonaws.com/uploads.hipchat.com/87223/4876411/7Rybnl26ReFzlt3/jw-logo-red.png" width="120">](https://www.jwplayer.com)|[<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)|[<img src="http://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)|
+|[<img src="https://images.gunosy.com/logo/gunosy_icon_company_logo.png" width="120">](https://gunosy.com)|[<img src="https://user-images.githubusercontent.com/1480052/35802840-f8e85b8a-0a71-11e8-8eb2-eee323e3f159.png" width="120">](https://www.gl-systemhaus.de/)|[<img src="https://cloud.githubusercontent.com/assets/6525783/20801836/700490de-b7ea-11e6-82bd-e249f91c7bae.jpg" width="120">](http://nettrek.de/)|[<img src="https://cloud.githubusercontent.com/assets/244265/12556385/999aa884-c353-11e5-9102-79df54384498.png" width="120">](https://www.nytimes.com/)|
+|[<img src="https://cloud.githubusercontent.com/assets/1798553/20356424/ba158574-ac24-11e6-95e1-1ae591b11a0a.png" width="120">](https://www.peer5.com/)|[<img src="https://cloud.githubusercontent.com/assets/4909096/20925062/e26e6fc8-bbb4-11e6-99a5-d4762274a342.png" width="120">](http://qbrick.com/)|[<img src="https://www.radiantmediaplayer.com/images/radiantmediaplayer-new-logo-640.jpg" width="120">](https://www.radiantmediaplayer.com/)|[<img src="https://camo.githubusercontent.com/eacade2264a6325191b6cb9bf7a8c0d05a5b628d/68747470733a2f2f7777772e7274732e63682f68756d6d696e67626972642f7265732f696d616765732f7274732f6c6f676f2d7274732d726f7567652e737667" width="120">](http://www.rts.ch/)|
+|[<img src="https://cloud.githubusercontent.com/assets/12702747/19316434/0a3601de-9067-11e6-85e2-936b1cb099a0.png" width="120">](https://www.snapstream.com/)|[<img src="https://www.streamamg.com/wp-content/themes/barebones/_assets/images/streamamg-logo.png" width="120">](https://www.streamamg.com/)|[<img src="https://streamsharkio.sa.metacdn.com/wp-content/uploads/2015/10/streamshark-dark.svg" width="120">](https://streamshark.io/)|[<img src="https://camo.githubusercontent.com/9580f10e9bfa8aa7fba52c5cb447bee0757e33da/68747470733a2f2f7777772e7461626c6f74762e636f6d2f7374617469632f696d616765732f7461626c6f5f6c6f676f2e706e67" width="120">](http://my.tablotv.com/)|
+|[<img src="https://user-images.githubusercontent.com/2803310/34083705-349c8fd0-e375-11e7-92a6-5c38509f4936.png" width="120">](https://www.streamroot.io/)|[<img src="http://vignette1.wikia.nocookie.net/tedtalks/images/c/c0/TED_logo.png/revision/20150915192527" width="120">](https://www.ted.com/)|[<img src="https://www.seeklogo.net/wp-content/uploads/2014/12/twitter-logo-vector-download.jpg" width="120">](https://twitter.com/)|[<img src="https://cloud.githubusercontent.com/assets/8201317/20566816/bc33f51c-b196-11e6-9bd3-afb71a06460b.png" width="120">](http://vwflow.com)|
+|[<img src="http://media.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)|[<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)|[<img src="https://s3.amazonaws.com/uploads.hipchat.com/87223/4876411/7Rybnl26ReFzlt3/jw-logo-red.png" width="120">](https://www.jwplayer.com)|[<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)|
+|[<img src="http://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)|[<img src="https://static3.1tv.ru/assets/web/logo-8ff7c63246d8df0397233927db52edbb.svg" width="120" height="120">](https://www.1tv.ru/) | | |
 
 
 
@@ -114,6 +126,10 @@ If you want to bundle the application yourself, use node
 ```
 npm install hls.js
 ```
+or for the version from master (canary)
+```
+npm install hls.js@canary
+```
 
 **NOTE:** `hls.light.*.js` dist files do not include subtitling and alternate-audio features.
 
@@ -151,7 +167,7 @@ As of today, it is supported on:
  * Vivaldi for Desktop
  * Safari for Mac 8+ (beta)
 
-Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example below to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
+Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example above (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
 
 When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
 
@@ -215,11 +231,6 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `#EXT-X-PROGRAM-DATE-TIME` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.2.6)
   - `EXT-X-START:TIME-OFFSET=x` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.5.2)
 
-
-## Documentation: API and Configuration
-
-hls.js can be configured and controlled easily, click [here](doc/API.md) for details.
-
 ## License
 
   hls.js is released under [Apache 2.0 License](LICENSE)
@@ -245,11 +256,8 @@ npm run lint
 
 ## Design
 
-Click [here](doc/design.md) for details.
+Click [here](/docs/design.md) for details.
 
 ### Tested With
 
 [<img src="https://cloud.githubusercontent.com/assets/7864462/12837037/452a17c6-cb73-11e5-9f39-fc96893bc9bf.png" alt="Browser Stack Logo" width="300">](https://www.browserstack.com/)
-
-[npm-image]: https://img.shields.io/npm/v/hls.js.svg?style=flat
-[npm-url]: https://npmjs.org/package/hls.js
