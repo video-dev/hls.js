@@ -9,6 +9,7 @@ const browserConfig = { version: 'latest' };
 const onTravis = !!process.env.TRAVIS;
 
 let browserDescription;
+
 let stream;
 
 // Setup browser config data from env vars
@@ -214,72 +215,72 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
     };
   };
 
-  // const testSeekOnVOD = function (url, config) {
-  //   return function () {
-  //     return this.browser.executeAsyncScript(function (url, config) {
-  //       let callback = arguments[arguments.length - 1];
-  //       window.startStream(url, config, callback);
-  //       const video = window.video;
-  //       video.onloadeddata = function () {
-  //         window.setTimeout(function () {
-  //           video.currentTime = video.duration - 5;
-  //         }, 5000);
-  //       };
-  //       video.onended = function () {
-  //         callback({ code: 'ended', logs: window.logString });
-  //       };
-  //     }, url, config).then(function (result) {
-  //       assert.strictEqual(result.code, 'ended');
-  //     });
-  //   };
-  // };
+  const testSeekOnVOD = function (url, config) {
+    return function () {
+      return this.browser.executeAsyncScript(function (url, config) {
+        let callback = arguments[arguments.length - 1];
+        window.startStream(url, config, callback);
+        const video = window.video;
+        video.onloadeddata = function () {
+          window.setTimeout(function () {
+            video.currentTime = video.duration - 5;
+          }, 5000);
+        };
+        video.onended = function () {
+          callback({ code: 'ended', logs: window.logString });
+        };
+      }, url, config).then(function (result) {
+        assert.strictEqual(result.code, 'ended');
+      });
+    };
+  };
 
-  // const testSeekEndVOD = function (url, config) {
-  //   return function () {
-  //     return this.browser.executeAsyncScript(function (url, config) {
-  //       let callback = arguments[arguments.length - 1];
-  //       window.startStream(url, config, callback);
-  //       const video = window.video;
-  //       video.onloadeddata = function () {
-  //         window.setTimeout(function () {
-  //           video.currentTime = video.duration;
-  //         }, 5000);
-  //       };
-  //       video.onended = function () {
-  //         callback({ code: 'ended', logs: window.logString });
-  //       };
-  //     }, url, config).then(function (result) {
-  //       assert.strictEqual(result.code, 'ended');
-  //     });
-  //   };
-  // };
+  const testSeekEndVOD = function (url, config) {
+    return function () {
+      return this.browser.executeAsyncScript(function (url, config) {
+        let callback = arguments[arguments.length - 1];
+        window.startStream(url, config, callback);
+        const video = window.video;
+        video.onloadeddata = function () {
+          window.setTimeout(function () {
+            video.currentTime = video.duration;
+          }, 5000);
+        };
+        video.onended = function () {
+          callback({ code: 'ended', logs: window.logString });
+        };
+      }, url, config).then(function (result) {
+        assert.strictEqual(result.code, 'ended');
+      });
+    };
+  };
 
-  // const testIsPlayingVOD = function (url, config) {
-  //   return function () {
-  //     return this.browser.executeAsyncScript(function (url, config) {
-  //       let callback = arguments[arguments.length - 1];
-  //       window.startStream(url, config, callback);
-  //       const video = window.video;
-  //       video.onloadeddata = function () {
-  //         let expectedPlaying = !(video.paused || // not playing when video is paused
-  //           video.ended || // not playing when video is ended
-  //           video.buffered.length === 0); // not playing if nothing buffered
-  //         let currentTime = video.currentTime;
-  //         if (expectedPlaying) {
-  //           window.setTimeout(function () {
-  //             console.log('video expected playing. [last currentTime/new currentTime]=[' + currentTime + '/' + video.currentTime + ']');
-  //             callback({ playing: currentTime !== video.currentTime });
-  //           }, 5000);
-  //         } else {
-  //           console.log('video not playing. [paused/ended/buffered.length]=[' + video.paused + '/' + video.ended + '/' + video.buffered.length + ']');
-  //           callback({ playing: false });
-  //         }
-  //       };
-  //     }, url, config).then(function (result) {
-  //       assert.strictEqual(result.playing, true);
-  //     });
-  //   };
-  // };
+  const testIsPlayingVOD = function (url, config) {
+    return function () {
+      return this.browser.executeAsyncScript(function (url, config) {
+        let callback = arguments[arguments.length - 1];
+        window.startStream(url, config, callback);
+        const video = window.video;
+        video.onloadeddata = function () {
+          let expectedPlaying = !(video.paused || // not playing when video is paused
+            video.ended || // not playing when video is ended
+            video.buffered.length === 0); // not playing if nothing buffered
+          let currentTime = video.currentTime;
+          if (expectedPlaying) {
+            window.setTimeout(function () {
+              console.log('video expected playing. [last currentTime/new currentTime]=[' + currentTime + '/' + video.currentTime + ']');
+              callback({ playing: currentTime !== video.currentTime });
+            }, 5000);
+          } else {
+            console.log('video not playing. [paused/ended/buffered.length]=[' + video.paused + '/' + video.ended + '/' + video.buffered.length + ']');
+            callback({ playing: false });
+          }
+        };
+      }, url, config).then(function (result) {
+        assert.strictEqual(result.playing, true);
+      });
+    };
+  };
 
   for (let name in streams) {
     stream = streams[name];
@@ -294,8 +295,8 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
       if (stream.live) {
         it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url, config));
       } else {
-        // it('should play ' + stream.description, testIsPlayingVOD(url, config));
-        // it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url, config));
+        it('should play ' + stream.description, testIsPlayingVOD(url, config));
+        it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url, config));
         // it('should seek on end and receive video ended event for ' + stream.description, testSeekEndVOD(url));
       }
     }
