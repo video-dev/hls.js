@@ -26,12 +26,12 @@ class SubtitleTrackController extends EventHandler {
       Event.SUBTITLE_TRACK_LOADED);
     this.tracks = [];
     this.trackId = -1;
-    this.media = undefined;
+    this.media = null;
 
     /**
      * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
      */
-    this.subtitleDisplay = false;
+    this.subtitleDisplay = true;
   }
 
   _onTextTracksChanged () {
@@ -67,7 +67,7 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    if (this.queuedDefaultTrack !== undefined) {
+    if (this.queuedDefaultTrack) {
       this.subtitleTrack = this.queuedDefaultTrack;
       delete this.queuedDefaultTrack;
     }
@@ -95,7 +95,7 @@ class SubtitleTrackController extends EventHandler {
       this.media.textTracks.removeEventListener('change', this.trackChangeListener);
     }
 
-    this.media = undefined;
+    this.media = null;
   }
 
   // Reset subtitle tracks on manifest loading
@@ -138,7 +138,7 @@ class SubtitleTrackController extends EventHandler {
 
     const details = subtitleTrack.details;
     // check if we need to load playlist for this subtitle Track
-    if (details === undefined || details.live === true) {
+    if (!details || details.live === true) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${trackId}`);
       this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
@@ -159,8 +159,7 @@ class SubtitleTrackController extends EventHandler {
       }
       if (!data.details.live && this.timer) {
         // playlist is not live and timer is armed : stopping it
-        clearInterval(this.timer);
-        this.timer = null;
+        this._stopTimer();
       }
     }
   }
@@ -178,48 +177,75 @@ class SubtitleTrackController extends EventHandler {
   /** select a subtitle track, based on its index in subtitle track lists**/
   set subtitleTrack (subtitleTrackId) {
     if (this.trackId !== subtitleTrackId) { // || this.tracks[subtitleTrackId].details === undefined) {
+      this._toggleTrackModes(subtitleTrackId);
       this.setSubtitleTrackInternal(subtitleTrackId);
     }
   }
 
+  /**
+   * This method is responsible for validating the subtitle index and periodically reloading if live.
+   * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
+   * @param newId - The id of the subtitle track to activate.
+   */
   setSubtitleTrackInternal (newId) {
-    // check if level idx is valid
-    if (newId < -1 || newId >= this.tracks.length) {
+    const { hls, tracks } = this;
+    if (typeof newId !== 'number' || newId < -1 || newId >= tracks.length) {
       return;
     }
 
-    // stopping live reloading timer if any
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-
-    let textTracks = filterSubtitleTracks(this.media.textTracks);
-
-    // hide currently enabled subtitle track
-    if (this.trackId !== -1) {
-      textTracks[this.trackId].mode = 'disabled';
-    }
-
+    this._stopTimer();
     this.trackId = newId;
     logger.log(`switching to subtitle track ${newId}`);
-    this.hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
-
+    hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
     if (newId === -1) {
       return;
     }
 
-    const subtitleTrack = this.tracks[newId];
-    if (newId < textTracks.length) {
-      textTracks[newId].mode = this.subtitleDisplay ? 'showing' : 'hidden';
-    }
-
     // check if we need to load playlist for this subtitle Track
-    let details = subtitleTrack.details;
-    if (details === undefined || details.live === true) {
+    const subtitleTrack = tracks[newId];
+    const details = subtitleTrack.details;
+    if (!details || details.live) {
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`(re)loading playlist for subtitle track ${newId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
+      hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
+    }
+  }
+
+  _stopTimer () {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+
+  /**
+   * Disables the old subtitleTrack and sets current mode on the next subtitleTrack.
+   * This operates on the DOM textTracks.
+   * A value of -1 will disable all subtitle tracks.
+   * @param newId - The id of the next track to enable
+   * @private
+   */
+  _toggleTrackModes (newId) {
+    const { media, subtitleDisplay, trackId } = this;
+    if (!media) {
+      return;
+    }
+
+    const textTracks = filterSubtitleTracks(media.textTracks);
+    if (newId === -1) {
+      [].slice.call(textTracks).forEach(track => {
+        track.mode = 'disabled';
+      });
+    } else {
+      const oldTrack = textTracks[trackId];
+      if (oldTrack) {
+        oldTrack.mode = 'disabled';
+      }
+    }
+
+    const nextTrack = textTracks[newId];
+    if (nextTrack) {
+      nextTrack.mode = subtitleDisplay ? 'showing' : 'hidden';
     }
   }
 }
