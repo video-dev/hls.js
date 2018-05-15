@@ -470,16 +470,11 @@ class StreamController extends TaskLoop {
     let foundFrag;
 
     if (bufferEnd < end) {
-      if (levelDetails.programDateTime) {
-        // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        // compute PDT of bufferEnd: PDT(bufferEnd) = 1000*bufferEnd + PDT(start) = 1000*bufferEnd + PDT(level) - level sliding
-        foundFrag = this._findFragmentByPDT(fragments, bufferEnd * 1000 + Date.parse(levelDetails.programDateTime) - start * 1000);
-      }
-
-      // If fragment hadn't been found by PTS, try to find it by SN, it's better than getting middle fragment
-      if (!foundFrag) {
-        // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+      if (!levelDetails.programDateTime) { // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
         foundFrag = this._findFragmentBySN(fragPrevious, fragments, bufferEnd, end);
+      } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
+        // compute PDT of bufferEnd: PDT(bufferEnd) = 1000*bufferEnd + PDT(start) = 1000*bufferEnd + PDT(level) - level sliding
+        foundFrag = this._findFragmentByPDT(fragments, (bufferEnd * 1000) + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0) - 1000 * start);
       }
     } else {
       // reach end of playlist
@@ -544,7 +539,7 @@ class StreamController extends TaskLoop {
     let fragState = this.fragmentTracker.getState(frag);
 
     this.fragCurrent = frag;
-
+    this.startFragRequested = true;
     // Don't update nextLoadPosition for fragments which are not buffered
     if (!isNaN(frag.sn) && !frag.bitrateTest) {
       this.nextLoadPosition = frag.start + frag.duration;
@@ -555,7 +550,6 @@ class StreamController extends TaskLoop {
       frag.autoLevel = this.hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
 
-      this.startFragRequested = true;
       this.hls.trigger(Event.FRAG_LOADING, { frag });
       // lazy demuxer init, as this could take some time ... do it during frag loading
       if (!this.demuxer) {
@@ -1012,14 +1006,6 @@ class StreamController extends TaskLoop {
       let stats = data.stats,
         currentLevel = this.levels[fragCurrent.level],
         details = currentLevel.details;
-
-      if (!details) {
-        // No details means that fragment loaded from redundant level
-        logger.log(`Loaded fragment ${fragCurrent.sn} from redundant level ${fragCurrent.level}, switch state to IDLE`);
-        this.state = State.IDLE;
-        return;
-      }
-
       logger.log(`Loaded  ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}`);
       // reset frag bitrate test in any case after frag loaded event
       this.bitrateTest = false;
