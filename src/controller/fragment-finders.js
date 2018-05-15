@@ -21,7 +21,7 @@ export function calculateNextPDT (start = 0, bufferEnd = 0, levelDetails) {
 
 /**
  * Finds the first fragment whose endPDT value exceeds the given PDT.
- * @param {Array} fragments - The array of candidate fragments
+ * @param {Array<Fragment>} fragments - The array of candidate fragments
  * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
  * @returns {*|null} fragment - The best matching fragment
  */
@@ -57,7 +57,7 @@ export function findFragmentByPDT (fragments, PDTValue = null) {
  * This method compensates for small buffer gaps by applying a tolerance to the start of any candidate fragment, thus
  * breaking any traps which would cause the same fragment to be continuously selected within a small range.
  * @param {*} fragPrevious - The last frag successfully appended
- * @param {Array} fragments - The array of candidate fragments
+ * @param {Array<Fragment>} fragments - The array of candidate fragments
  * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
  * @param {number} [end = 0] - The computed end time of the stream
  * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start can be within in order to be considered contiguous
