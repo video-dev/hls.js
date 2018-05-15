@@ -190,7 +190,7 @@ class SubtitleStreamController extends TaskLoop {
 
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
-    if (this.currentTrackId === -1) {
+    if (!this.tracks || this.currentTrackId === -1) {
       this.clearInterval();
       return;
     }
@@ -198,7 +198,7 @@ class SubtitleStreamController extends TaskLoop {
     // Check if track has the necessary details to load fragments
     const currentTrack = this.tracks[this.currentTrackId];
     let details = currentTrack.details;
-    if (details !== undefined) {
+    if (currentTrack && currentTrack.details) {
       this.setInterval(500);
     }
   }
