@@ -31,15 +31,17 @@ class FetchLoader {
 
     const headersObj = {};
 
-    if (context.rangeEnd)
-      headersObj['Range'] = 'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1); /* jshint ignore:line */
+    if (context.rangeEnd) {
+      headersObj['Range'] = 'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1);
+    } /* jshint ignore:line */
 
     initParams.headers = new Headers(headersObj);
 
-    if (this.fetchSetup)
+    if (this.fetchSetup) {
       request = this.fetchSetup(context, initParams);
-    else
+    } else {
       request = new Request(context.url, initParams);
+    }
 
     let fetchPromise = fetch(request, initParams);
 
@@ -48,10 +50,11 @@ class FetchLoader {
       if (response.ok) {
         stats.tfirst = Math.max(stats.trequest, performance.now());
         targetURL = response.url;
-        if (context.responseType === 'arraybuffer')
+        if (context.responseType === 'arraybuffer') {
           return response.arrayBuffer();
-        else
+        } else {
           return response.text();
+        }
       } else {
         callbacks.onError({ text: 'fetch, bad network response' }, context);
       }
@@ -63,10 +66,11 @@ class FetchLoader {
       if (responseData) {
         stats.tload = Math.max(stats.tfirst, performance.now());
         let len;
-        if (typeof responseData === 'string')
+        if (typeof responseData === 'string') {
           len = responseData.length;
-        else
+        } else {
           len = responseData.byteLength;
+        }
 
         stats.loaded = stats.total = len;
         let response = { url: targetURL, data: responseData };

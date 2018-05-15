@@ -6,7 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { getMediaSource } from '../helper/mediasource-helper';
+import { getMediaSource } from '../utils/mediasource-helper';
 
 const MediaSource = getMediaSource();
 
@@ -83,7 +83,7 @@ class BufferController extends EventHandler {
 
   onManifestParsed (data) {
     let audioExpected = data.audio,
-      videoExpected = data.video || (data.levels.length && data.audio),
+      videoExpected = data.video || (data.levels.length && data.altAudio),
       sourceBufferNb = 0;
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
@@ -207,11 +207,13 @@ class BufferController extends EventHandler {
       delete this.audioTimestampOffset;
     }
 
-    if (this._needsFlush)
+    if (this._needsFlush) {
       this.doFlush();
+    }
 
-    if (this._needsEos)
+    if (this._needsEos) {
       this.checkEos();
+    }
 
     this.appending = false;
     let parent = this.parent;
@@ -221,13 +223,15 @@ class BufferController extends EventHandler {
     // this.sourceBuffer is better to use than media.buffered as it is closer to the PTS data from the fragments
     let timeRanges = {};
     const sourceBuffer = this.sourceBuffer;
-    for (let streamType in sourceBuffer)
+    for (let streamType in sourceBuffer) {
       timeRanges[streamType] = sourceBuffer[streamType].buffered;
+    }
 
     this.hls.trigger(Event.BUFFER_APPENDED, { parent, pending, timeRanges });
     // don't append in flushing mode
-    if (!this._needsFlush)
+    if (!this._needsFlush) {
       this.doAppending();
+    }
 
     this.updateMediaElementDuration();
   }
@@ -298,10 +302,11 @@ class BufferController extends EventHandler {
 
   onBufferAppending (data) {
     if (!this._needsFlush) {
-      if (!this.segments)
+      if (!this.segments) {
         this.segments = [ data ];
-      else
+      } else {
         this.segments.push(data);
+      }
 
       this.doAppending();
     }
@@ -339,8 +344,9 @@ class BufferController extends EventHandler {
     }
     for (let type in sb) {
       let sbobj = sb[type];
-      if (!sbobj.ended)
+      if (!sbobj.ended) {
         return;
+      }
 
       if (sbobj.updating) {
         this._needsEos = true;
@@ -386,8 +392,9 @@ class BufferController extends EventHandler {
       !this.mediaSource ||
       !this.sourceBuffer ||
       this.media.readyState === 0 ||
-      this.mediaSource.readyState !== 'open')
+      this.mediaSource.readyState !== 'open') {
       return;
+    }
 
     for (let type in this.sourceBuffer) {
       if (this.sourceBuffer[type].updating === true) {
@@ -398,8 +405,9 @@ class BufferController extends EventHandler {
 
     duration = this.media.duration;
     // initialise to the value that the media source is reporting
-    if (this._msDuration === null)
+    if (this._msDuration === null) {
       this._msDuration = this.mediaSource.duration;
+    }
 
     if (this._live === true && config.liveDurationInfinity === true) {
       // Override duration to Infinity
@@ -439,8 +447,9 @@ class BufferController extends EventHandler {
       let appended = 0;
       let sourceBuffer = this.sourceBuffer;
       try {
-        for (let type in sourceBuffer)
+        for (let type in sourceBuffer) {
           appended += sourceBuffer[type].buffered.length;
+        }
       } catch (error) {
         // error could be thrown while accessing buffered, in case sourcebuffer has already been removed from MediaSource
         // this is harmess at this stage, catch this to avoid reporting an internal exception
@@ -492,10 +501,11 @@ class BufferController extends EventHandler {
           segments.unshift(segment);
           let event = { type: ErrorTypes.MEDIA_ERROR, parent: segment.parent };
           if (err.code !== 22) {
-            if (this.appendError)
+            if (this.appendError) {
               this.appendError++;
-            else
+            } else {
               this.appendError = 1;
+            }
 
             event.details = ErrorDetails.BUFFER_APPEND_ERROR;
             /* with UHD content, we could get loop of quota exceeded error until
@@ -537,8 +547,9 @@ class BufferController extends EventHandler {
         for (let type in sourceBuffer) {
           // check if sourcebuffer type is defined (typeIn): if yes, let's only flush this one
           // if no, let's flush all sourcebuffers
-          if (typeIn && type !== typeIn)
+          if (typeIn && type !== typeIn) {
             continue;
+          }
 
           sb = sourceBuffer[type];
           // we are going to flush buffer, mark source buffer as 'not ended'

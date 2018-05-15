@@ -150,8 +150,8 @@ Let's
 
   <video id="video"></video>
   <script>
+    var video = document.getElementById('video');
     if (Hls.isSupported()) {
-      var video = document.getElementById('video');
       var hls = new Hls();
       // bind them together
       hls.attachMedia(video);
@@ -1087,11 +1087,11 @@ get : array of subtitle tracks exposed in manifest
 
 ### `hls.subtitleTrack`
 
-get/set : subtitle track id (returned by). Returns -1 if no track is visible. Set to -1 to hide all subtitle tracks.
+get/set : subtitle track id (returned by). Returns -1 if no track is visible. Set to -1 to disable all subtitle tracks.
 
 ### `hls.subtitleDisplay`
 
-(default: `false`)
+(default: `true`)
 
 get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`.
 

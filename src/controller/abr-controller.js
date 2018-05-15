@@ -6,7 +6,7 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
-import BufferHelper from '../helper/buffer-helper';
+import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
@@ -33,8 +33,10 @@ class AbrController extends EventHandler {
   onFragLoading (data) {
     let frag = data.frag;
     if (frag.type === 'main') {
-      if (!this.timer)
+      if (!this.timer) {
+        this.fragCurrent = frag;
         this.timer = setInterval(this.onCheck, 100);
+      }
 
       // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
       // so we need to wait for stream manifest / playlist type to instantiate it.
@@ -54,7 +56,6 @@ class AbrController extends EventHandler {
         }
         this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
-      this.fragCurrent = frag;
     }
   }
 
@@ -64,7 +65,11 @@ class AbrController extends EventHandler {
       we compute expected time of arrival of the complete fragment.
       we compare it to expected time of buffer starvation
     */
-    let hls = this.hls, v = hls.media, frag = this.fragCurrent, loader = frag.loader, minAutoLevel = hls.minAutoLevel;
+    const hls = this.hls;
+    const v = hls.media;
+    const frag = this.fragCurrent;
+    const minAutoLevel = hls.minAutoLevel;
+    const loader = frag.loader;
 
     // if loader has been destroyed or loading has been aborted, stop timer and return
     if (!loader || (loader.stats && loader.stats.aborted)) {
@@ -170,10 +175,11 @@ class AbrController extends EventHandler {
       this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
       stats.bwEstimate = this._bwEstimator.getEstimate();
       // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
-      if (frag.bitrateTest)
+      if (frag.bitrateTest) {
         this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
-      else
+      } else {
         this.bitrateTestDelay = 0;
+      }
     }
   }
 
@@ -199,14 +205,16 @@ class AbrController extends EventHandler {
     const forcedAutoLevel = this._nextAutoLevel;
     const bwEstimator = this._bwEstimator;
     // in case next auto level has been forced, and bw not available or not reliable, return forced value
-    if (forcedAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate()))
+    if (forcedAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate())) {
       return forcedAutoLevel;
+    }
 
     // compute next level using ABR logic
     let nextABRAutoLevel = this._nextABRAutoLevel;
     // if forced auto level has been defined, use it to cap ABR computed quality level
-    if (forcedAutoLevel !== -1)
+    if (forcedAutoLevel !== -1) {
       nextABRAutoLevel = Math.min(forcedAutoLevel, nextABRAutoLevel);
+    }
 
     return nextABRAutoLevel;
   }
@@ -268,10 +276,11 @@ class AbrController extends EventHandler {
       // consider only 80% of the available bandwidth, but if we are switching up,
       // be even more conservative (70%) to avoid overestimating and immediately
       // switching back.
-      if (i <= currentLevel)
+      if (i <= currentLevel) {
         adjustedbw = bwFactor * currentBw;
-      else
+      } else {
         adjustedbw = bwUpFactor * currentBw;
+      }
 
       const bitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate,
         fetchDuration = bitrate * avgDuration / adjustedbw;

@@ -1,6 +1,11 @@
 /**
- * Level Helper class, providing methods dealing with playlist sliding and drift
-*/
+ * @module LevelHelper
+ *
+ * Providing methods dealing with playlist sliding and drift
+ *
+ * TODO: Create an actual `Level` class/model that deals with all this logic in an object-oriented-manner.
+ *
+ * */
 
 import { logger } from '../utils/logger';
 
@@ -12,19 +17,22 @@ export function updatePTS (fragments, fromIdx, toIdx) {
     // it helps to fix drifts between playlist reported duration and fragment real duration
     if (toIdx > fromIdx) {
       fragFrom.duration = fragToPTS - fragFrom.start;
-      if (fragFrom.duration < 0)
+      if (fragFrom.duration < 0) {
         logger.warn(`negative duration computed for frag ${fragFrom.sn},level ${fragFrom.level}, there should be some duration drift between playlist and fragment!`);
+      }
     } else {
       fragTo.duration = fragFrom.start - fragToPTS;
-      if (fragTo.duration < 0)
+      if (fragTo.duration < 0) {
         logger.warn(`negative duration computed for frag ${fragTo.sn},level ${fragTo.level}, there should be some duration drift between playlist and fragment!`);
+      }
     }
   } else {
     // we dont know startPTS[toIdx]
-    if (toIdx > fromIdx)
+    if (toIdx > fromIdx) {
       fragTo.start = fragFrom.start + fragFrom.duration;
-    else
+    } else {
       fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
+    }
   }
 }
 
@@ -34,10 +42,11 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   if (!isNaN(frag.startPTS)) {
     // delta PTS between audio and video
     let deltaPTS = Math.abs(frag.startPTS - startPTS);
-    if (isNaN(frag.deltaPTS))
+    if (isNaN(frag.deltaPTS)) {
       frag.deltaPTS = deltaPTS;
-    else
+    } else {
       frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
+    }
 
     maxStartPTS = Math.max(startPTS, frag.startPTS);
     startPTS = Math.min(startPTS, frag.startPTS);
@@ -56,8 +65,9 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
 
   const sn = frag.sn;
   // exit if sn out of range
-  if (!details || sn < details.startSN || sn > details.endSN)
+  if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
+  }
 
   let fragIdx, fragments, i;
   fragIdx = sn - details.startSN;
@@ -69,12 +79,14 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   // resulting in invalid sliding computation
   fragments[fragIdx] = frag;
   // adjust fragment PTS/duration from seqnum-1 to frag 0
-  for (i = fragIdx; i > 0; i--)
+  for (i = fragIdx; i > 0; i--) {
     updatePTS(fragments, i, i - 1);
+  }
 
   // adjust fragment PTS/duration from seqnum to last frag
-  for (i = fragIdx; i < fragments.length - 1; i++)
+  for (i = fragIdx; i < fragments.length - 1; i++) {
     updatePTS(fragments, i, i + 1);
+  }
 
   details.PTSKnown = true;
   // logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
@@ -92,8 +104,9 @@ export function mergeDetails (oldDetails, newDetails) {
     PTSFrag;
 
   // potentially retrieve cached initsegment
-  if (newDetails.initSegment && oldDetails.initSegment)
+  if (newDetails.initSegment && oldDetails.initSegment) {
     newDetails.initSegment = oldDetails.initSegment;
+  }
 
   // check if old/new playlists have fragments in common
   if (end < start) {
@@ -119,8 +132,9 @@ export function mergeDetails (oldDetails, newDetails) {
 
   if (ccOffset) {
     logger.log('discontinuity sliding from playlist, take drift into account');
-    for (i = 0; i < newfragments.length; i++)
+    for (i = 0; i < newfragments.length; i++) {
       newfragments[i].cc += ccOffset;
+    }
   }
 
   // if at least one fragment contains PTS info, recompute PTS information for all fragments
@@ -133,8 +147,9 @@ export function mergeDetails (oldDetails, newDetails) {
     if (delta >= 0 && delta < oldfragments.length) {
       // adjust start by sliding offset
       let sliding = oldfragments[delta].start;
-      for (i = 0; i < newfragments.length; i++)
+      for (i = 0; i < newfragments.length; i++) {
         newfragments[i].start += sliding;
+      }
     }
   }
   // if we are here, it means we have fragments overlapping between
