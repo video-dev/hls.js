@@ -8,10 +8,13 @@ import { ErrorTypes, ErrorDetails } from '../errors';
  */
 class AudioTrackController extends TaskLoop {
   constructor (hls) {
-    super(hls, Event.MANIFEST_LOADING,
+    super(hls,
+      Event.MANIFEST_LOADING,
       Event.MANIFEST_PARSED,
       Event.AUDIO_TRACK_LOADED,
-      Event.ERROR);
+      Event.LEVEL_LOADED,
+      Event.ERROR
+    );
 
     /**
      * @member {AudioTrack[]}
@@ -92,6 +95,10 @@ class AudioTrackController extends TaskLoop {
         this.clearInterval();
       }
     }
+  }
+
+  onLevelLoaded (data) {
+    console.log('level loaded:', data);
   }
 
   /**
@@ -199,13 +206,19 @@ class AudioTrackController extends TaskLoop {
 
     // Let's try to fall back on a functional audio-track with the same group ID
     const previousId = this.trackId;
-    const { groupId } = this.tracks[previousId];
+    const { groupId, name, language } = this.tracks[previousId];
 
     logger.warn('Loading failed on audio track id:', previousId, 'group id:', groupId);
 
+    console.log(this.hls.currentLevel.details);
+
     // Find a non-blacklisted track ID with the same group ID
     let newId = this.trackId;
-    while (this.trackIdBlacklist[newId] && this.tracks[newId].groupId === groupId) {
+    while (this.trackIdBlacklist[newId] &&
+      this.tracks[newId].groupId !== groupId &&
+      this.tracks[newId].language === language &&
+      this.tracks[newId].name === name
+    ) {
       newId++;
       if (newId >= this.tracks.length) {
         newId = 0;

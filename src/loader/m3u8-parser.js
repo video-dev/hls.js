@@ -85,10 +85,10 @@ export default class M3U8Parser {
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
 
-      let attrs = level.attrs = new AttrList(result[1]);
+      const attrs = level.attrs = new AttrList(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
-      let resolution = attrs.decimalResolution('RESOLUTION');
+      const resolution = attrs.decimalResolution('RESOLUTION');
       if (resolution) {
         level.width = resolution.width;
         level.height = resolution.height;
