@@ -36,6 +36,8 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 	fi
 elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
   # update the version
+  # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
+  git fetch --unshallow
   node ./scripts/set-canary-version.js
   if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
     npm run lint
