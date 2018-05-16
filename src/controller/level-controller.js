@@ -7,6 +7,7 @@ import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
+import { addGroupId } from './level-helper';
 
 export default class LevelController extends EventHandler {
   constructor (hls) {
@@ -60,6 +61,8 @@ export default class LevelController extends EventHandler {
   }
 
   onManifestLoaded (data) {
+    console.log('onManifestLoaded:', data);
+
     let levels = [];
     let bitrateStart;
     let levelSet = {};
@@ -83,9 +86,9 @@ export default class LevelController extends EventHandler {
         level.audioCodec = undefined;
       }
 
-      levelFromSet = levelSet[level.bitrate];
+      levelFromSet = levelSet[level.bitrate]; // FIXME: we would also have to match the resolution here
 
-      if (levelFromSet === undefined) {
+      if (!levelFromSet) {
         level.url = [level.url];
         level.urlId = 0;
         levelSet[level.bitrate] = level;
@@ -93,6 +96,16 @@ export default class LevelController extends EventHandler {
       } else {
         levelFromSet.url.push(level.url);
       }
+
+      if (level.attrs && level.attrs.AUDIO) {
+        addGroupId(levelFromSet || level, 'audio', level.attrs.AUDIO);
+      }
+
+      if (level.attrs && level.attrs.SUBTITLES) {
+        addGroupId(levelFromSet || level, 'text', level.attrs.SUBTITLES);
+      }
+
+      console.log(levelFromSet);
     });
 
     // remove audio-only level if we also have levels with audio+video codecs signalled
@@ -324,7 +337,10 @@ export default class LevelController extends EventHandler {
         level.urlId = (level.urlId + 1) % redundantLevels;
         level.details = undefined;
 
-        logger.warn(`level controller, ${errorDetails} for level ${levelIndex}: switching to redundant stream id ${level.urlId}`);
+        logger.warn(`level controller, ${errorDetails} for level ${levelIndex}: switching to redundant URL-id ${level.urlId}`);
+
+        console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
+        console.log('New video quality level audio group id:', level.attrs.AUDIO);
       } else {
         // Search for available level
         if (this.manualLevelIndex === -1) {
@@ -398,11 +414,14 @@ export default class LevelController extends EventHandler {
       if (typeof levelObject === 'object' &&
         levelObject.url.length > 0) {
         const level = this.currentLevelIndex;
-        const urlIndex = levelObject.urlId;
-        const url = levelObject.url[urlIndex];
-        const id = urlIndex;
+        const id = levelObject.urlId;
+        const url = levelObject.url[id];
 
-        logger.log(`Attempt loading level id ${level} with URL index ${id}`);
+        logger.log(`Attempt loading level index ${level} with URL-id ${id}`);
+
+        console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
+
+        console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
 
         this.hls.trigger(Event.LEVEL_LOADING, { url, level, id });
       }
