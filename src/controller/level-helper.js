@@ -9,6 +9,23 @@
 
 import { logger } from '../utils/logger';
 
+export function addGroupId (level, type, id) {
+  switch (type) {
+  case 'audio':
+    if (!level.audioGroupIds) {
+      level.audioGroupIds = [];
+    }
+    level.audioGroupIds.push(id);
+    break;
+  case 'text':
+    if (!level.textGroupIds) {
+      level.textGroupIds = [];
+    }
+    level.textGroupIds.push(id);
+    break;
+  }
+}
+
 export function updatePTS (fragments, fromIdx, toIdx) {
   let fragFrom = fragments[fromIdx], fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
   // if we know startPTS[toIdx]
