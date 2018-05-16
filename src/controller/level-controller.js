@@ -339,8 +339,8 @@ export default class LevelController extends EventHandler {
 
         logger.warn(`level controller, ${errorDetails} for level ${levelIndex}: switching to redundant URL-id ${level.urlId}`);
 
-        console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
-        console.log('New video quality level audio group id:', level.attrs.AUDIO);
+        // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
+        // console.log('New video quality level audio group id:', level.attrs.AUDIO);
       } else {
         // Search for available level
         if (this.manualLevelIndex === -1) {
@@ -419,9 +419,9 @@ export default class LevelController extends EventHandler {
 
         logger.log(`Attempt loading level index ${level} with URL-id ${id}`);
 
-        console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
+        // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
 
-        console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
+        // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
 
         this.hls.trigger(Event.LEVEL_LOADING, { url, level, id });
       }
