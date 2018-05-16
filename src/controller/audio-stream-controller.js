@@ -32,6 +32,8 @@ const State = {
   WAITING_INIT_PTS: 'WAITING_INIT_PTS'
 };
 
+const TICK_INTERVAL = 100; // how often to tick in ms
+
 class AudioStreamController extends TaskLoop {
   constructor (hls, fragmentTracker) {
     super(hls,
@@ -91,7 +93,7 @@ class AudioStreamController extends TaskLoop {
     if (this.tracks) {
       let lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
-      this.setInterval(100);
+      this.setInterval(TICK_INTERVAL);
       this.fragLoadError = 0;
       if (lastCurrentTime > 0 && startPosition === -1) {
         logger.log(`audio:override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
@@ -472,7 +474,7 @@ class AudioStreamController extends TaskLoop {
       }
     } else {
       // switching to audio track, start timer if not already started
-      this.setInterval(100);
+      this.setInterval(TICK_INTERVAL);
     }
 
     // should we switch tracks ?

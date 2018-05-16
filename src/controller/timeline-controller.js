@@ -235,7 +235,7 @@ class TimelineController extends EventHandler {
     else if (frag.type === 'subtitle') {
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
-        if (this.initPTS[frag.cc] === undefined) {
+        if (!this.initPTS[frag.cc]) {
           this.unparsedVttFrags.push(data);
           if (this.initPTS.length) {
             // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
@@ -305,7 +305,7 @@ class TimelineController extends EventHandler {
       frag = data.frag;
 
     if (frag.type === 'subtitle') {
-      if (this.initPTS[frag.cc] === undefined) {
+      if (!this.initPTS[frag.cc]) {
         this.unparsedVttFrags.push(data);
         return;
       }

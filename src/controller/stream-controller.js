@@ -31,6 +31,8 @@ export const State = {
   ERROR: 'ERROR'
 };
 
+const TICK_INTERVAL = 100; // how often to tick in ms
+
 class StreamController extends TaskLoop {
   constructor (hls, fragmentTracker) {
     super(hls,
@@ -72,7 +74,7 @@ class StreamController extends TaskLoop {
     if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
-      this.setInterval(100);
+      this.setInterval(TICK_INTERVAL);
       this.level = -1;
       this.fragLoadError = 0;
       if (!this.startFragRequested) {
