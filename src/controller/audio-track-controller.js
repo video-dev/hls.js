@@ -17,11 +17,13 @@ class AudioTrackController extends TaskLoop {
     );
 
     /**
+     * All tracks available
      * @member {AudioTrack[]}
      */
     this.tracks = [];
 
     /**
+     * Currently selected index in `tracks`
      * @member {number} trackId
      */
     this.trackId = -1;
@@ -31,10 +33,18 @@ class AudioTrackController extends TaskLoop {
      * @member {number[]}
      */
     this.trackIdBlacklist = Object.create(null);
+
+    /**
+     * The currently running group ID for audio
+     * (we grab this on manifest-parsed and new level-loaded)
+     * @member {string}
+     */
+    this.audioGroupId = null;
   }
 
   /**
-   *
+   * Handle network errors loading audio track manifests
+   * and also pausing on any netwok errors.
    * @param {ErrorEventData} data
    */
   onError (data) {
@@ -52,31 +62,23 @@ class AudioTrackController extends TaskLoop {
     }
   }
 
+  /**
+   * Reset audio tracks on new manifest loading
+   */
   onManifestLoading () {
-    // reset audio tracks on manifest loading
     this.tracks = [];
     this.trackId = -1;
+
+    this._selectInitialAudioTrack();
   }
 
+  /**
+   * Store tracks data from manifest parsed data
+   * @param {*} data
+   */
   onManifestParsed (data) {
-    let tracks = data.audioTracks || [];
-    let defaultFound = false;
-    this.tracks = tracks;
+    const tracks = this.tracks = data.audioTracks || [];
     this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
-    // loop through available audio tracks and autoselect default if needed
-    let id = 0;
-    tracks.forEach(track => {
-      if (track.default && !defaultFound) {
-        this.audioTrack = id;
-        defaultFound = true;
-        return;
-      }
-      id++;
-    });
-    if (defaultFound === false && tracks.length) {
-      logger.log('no default audio track defined, use first audio track as default');
-      this.audioTrack = 0;
-    }
   }
 
   onAudioTrackLoaded (data) {
@@ -99,6 +101,23 @@ class AudioTrackController extends TaskLoop {
 
   onLevelLoaded (data) {
     console.log('level loaded:', data);
+
+    // FIXME: crashes because currentLevel is undefined
+    // const levelInfo = this.hls.levels[this.hls.currentLevel];
+
+    const levelInfo = this.hls.levels[data.level];
+
+    console.log('New video quality level audio group id:', levelInfo);
+
+    if (levelInfo.audioGroupIds) {
+      const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
+      console.log('Audio group ID running:', audioGroupId);
+
+      if (this.audioGroupId !== audioGroupId) {
+        this.audioGroupId = audioGroupId;
+        this._selectInitialAudioTrack();
+      }
+    }
   }
 
   /**
@@ -150,6 +169,42 @@ class AudioTrackController extends TaskLoop {
    */
   doTick () {
     this._updateTrack(this.trackId);
+  }
+
+  /**
+   * Select initial track
+   * @private
+   */
+  _selectInitialAudioTrack () {
+    const tracks = this.tracks;
+
+    if (!tracks.length) {
+      return;
+    }
+
+    let defaultFound = false;
+    let trackFound = false;
+
+    // loop through available audio tracks and autoselect default if needed
+    tracks.forEach((track, id) => {
+      if (defaultFound) {
+        return;
+      }
+      defaultFound = track.default;
+      if (track.groupId === this.audioGroupId) {
+        this.audioTrack = id;
+        trackFound = true;
+      }
+    });
+
+    if (!trackFound) {
+      logger.error(`No track found for running audio group-ID: ${this.audioGroupId}`);
+    }
+
+    if (!defaultFound) {
+      logger.log('no default audio track defined, use first audio track as default');
+      this.audioTrack = 0;
+    }
   }
 
   /**
@@ -210,7 +265,7 @@ class AudioTrackController extends TaskLoop {
 
     logger.warn('Loading failed on audio track id:', previousId, 'group id:', groupId);
 
-    console.log(this.hls.currentLevel.details);
+    console.log(this.hls.levels[this.hls.currentLevel].attrs.AUDIO);
 
     // Find a non-blacklisted track ID with the same group ID
     let newId = this.trackId;
