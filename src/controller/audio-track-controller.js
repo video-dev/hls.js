@@ -69,7 +69,7 @@ class AudioTrackController extends TaskLoop {
     this.tracks = [];
     this.trackId = -1;
 
-    this._selectInitialAudioTrack();
+    // this._selectInitialAudioTrack();
   }
 
   /**
@@ -111,9 +111,10 @@ class AudioTrackController extends TaskLoop {
 
     if (levelInfo.audioGroupIds) {
       const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
-      console.log('Audio group ID running:', audioGroupId);
 
       if (this.audioGroupId !== audioGroupId) {
+        console.log('New audio group ID running:', audioGroupId);
+
         this.audioGroupId = audioGroupId;
         this._selectInitialAudioTrack();
       }
@@ -148,10 +149,6 @@ class AudioTrackController extends TaskLoop {
     }
 
     const audioTrack = this.tracks[newId];
-    if (typeof audioTrack !== 'object') {
-      logger.error('Inconsistent audio-track list!');
-      return;
-    }
 
     logger.log(`Now switching to audio-track index ${newId}`);
 
@@ -176,33 +173,52 @@ class AudioTrackController extends TaskLoop {
    * @private
    */
   _selectInitialAudioTrack () {
-    const tracks = this.tracks;
+    const currentAudioTrack = this.tracks[this.trackId];
+
+    let name = null;
+    if (currentAudioTrack) {
+      name = currentAudioTrack.name;
+    }
+
+    let tracks = this.tracks;
 
     if (!tracks.length) {
       return;
     }
 
-    let defaultFound = false;
-    let trackFound = false;
+    // Pre-select default tracks if there are any
+    const defaultTracks = tracks.filter((track) => track.default);
+    if (defaultTracks.length) {
+      tracks = defaultTracks;
+    } else {
+      logger.warn('No default audio tracks defined');
+    }
 
-    // loop through available audio tracks and autoselect default if needed
-    tracks.forEach((track, id) => {
-      if (defaultFound) {
-        return;
-      }
-      defaultFound = track.default;
-      if (track.groupId === this.audioGroupId) {
-        this.audioTrack = id;
-        trackFound = true;
-      }
-    });
+    let trackFound = false;
+    const traverseTracks = () => {
+      // Select track with right group ID
+
+      tracks.forEach((track) => {
+        if (trackFound) {
+          return;
+        }
+        if (track.groupId === this.audioGroupId &&
+          (!name || name === track.name)) { // If there was a previous track try to stay with the same `NAME`
+          // (should be unique across tracks, but consistent through redundant tracks)
+          this.audioTrack = track.id;
+          trackFound = true;
+        }
+      });
+    };
+
+    traverseTracks();
+    if (!trackFound) {
+      name = null;
+      traverseTracks();
+    }
 
     if (!trackFound) {
       logger.error(`No track found for running audio group-ID: ${this.audioGroupId}`);
-    }
-
-    if (!defaultFound) {
-      logger.log('no default audio track defined, use first audio track as default');
       this.audioTrack = 0;
     }
   }
@@ -265,24 +281,23 @@ class AudioTrackController extends TaskLoop {
 
     logger.warn('Loading failed on audio track id:', previousId, 'group id:', groupId);
 
-    console.log(this.hls.levels[this.hls.currentLevel].attrs.AUDIO);
-
-    // Find a non-blacklisted track ID with the same group ID
-    let newId = this.trackId;
-    while (this.trackIdBlacklist[newId] &&
-      this.tracks[newId].groupId !== groupId &&
-      this.tracks[newId].language === language &&
-      this.tracks[newId].name === name
-    ) {
-      newId++;
-      if (newId >= this.tracks.length) {
-        newId = 0;
+    // Find a non-blacklisted track ID with the same NAME/LANGUAGE
+    let newId = previousId;
+    for (let i = 0; i < this.tracks.length; i++) {
+      if (this.trackIdBlacklist[i]) {
+        continue;
       }
-
-      if (newId === previousId) {
-        logger.warn('No fallback audio-track found for group id:', groupId);
-        return;
+      const newTrack = this.tracks[i];
+      if (newTrack.name === name &&
+       newTrack.language === language) {
+        newId = i;
+        break;
       }
+    }
+
+    if (newId === previousId) {
+      logger.warn('No fallback audio-track found for group id:', groupId);
+      return;
     }
 
     logger.log('Attempting audio-track fallback id:', newId, 'group id:', groupId);
