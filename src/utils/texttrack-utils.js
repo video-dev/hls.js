@@ -12,6 +12,19 @@ export function sendAddTrackEvent (track, videoEl) {
   videoEl.dispatchEvent(event);
 }
 
+export function sendRemoveTrackEvent (track, videoEl) {
+  // let event = null;
+  // try {
+  //   event = new window.Event('removetrack');
+  // } catch (err) {
+  //   // for IE11
+  //   event = document.createEvent('Event');
+  //   event.initEvent('removetrack', false, false);
+  // }
+  // event.track = track;
+  // videoEl.dispatchEvent(event);
+}
+
 export function clearCurrentCues (track) {
   if (track && track.cues) {
     while (track.cues.length > 0) {
