@@ -142,8 +142,9 @@ class MP4 {
     MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, dref));
   }
 
-  static box (type, ...payload) {
+  static box (type) {
     let
+      payload = Array.prototype.slice.call(arguments, 1),
       size = 8,
       i = payload.length,
       len = i,
