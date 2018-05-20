@@ -6,6 +6,8 @@
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
+const copyAsArray = typeof Array.from === 'function' ? Array.from : Array.prototype.slice.call;
+
 class MP4 {
   static init () {
     MP4.types = {
@@ -334,13 +336,7 @@ class MP4 {
       len = data.byteLength;
       sps.push((len >>> 8) & 0xFF);
       sps.push((len & 0xFF));
-
-      // SPS
-      if (typeof Array.from === 'function') {
-        sps = sps.concat(Array.from(data));
-      } else {
-        sps = sps.concat(Array.prototype.slice.call(data));
-      }
+      sps = sps.concat(copyAsArray(data)); // SPS
     }
 
     // assemble the PPSs
@@ -349,12 +345,7 @@ class MP4 {
       len = data.byteLength;
       pps.push((len >>> 8) & 0xFF);
       pps.push((len & 0xFF));
-
-      if (typeof Array.from === 'function') {
-        pps = pps.concat(Array.from(data));
-      } else {
-        pps = pps.concat(Array.prototype.slice.call(data));
-      }
+      pps = pps.concat(copyAsArray(data));
     }
 
     let avcc = MP4.box(MP4.types.avcC, new Uint8Array([
