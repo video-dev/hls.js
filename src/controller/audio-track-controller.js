@@ -12,6 +12,7 @@ class AudioTrackController extends TaskLoop {
       Event.MANIFEST_LOADING,
       Event.MANIFEST_PARSED,
       Event.AUDIO_TRACK_LOADED,
+      Event.AUDIO_TRACK_SWITCHED,
       Event.LEVEL_LOADED,
       Event.ERROR
     );
@@ -50,6 +51,10 @@ class AudioTrackController extends TaskLoop {
   onError (data) {
     if (data.fatal && data.type === ErrorTypes.NETWORK_ERROR) {
       this.clearInterval();
+    }
+
+    if (data.type !== ErrorTypes.NETWORK_ERROR) {
+      return;
     }
 
     switch (data.details) {
@@ -99,6 +104,23 @@ class AudioTrackController extends TaskLoop {
     }
   }
 
+  onAudioTrackSwitched (data) {
+    const audioGroupId = this.hls.audioTracks[data.id].groupId;
+
+    console.log('audio track switched:', audioGroupId);
+
+    if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
+      console.log('New audio group ID running:', audioGroupId);
+      this.audioGroupId = audioGroupId;
+
+      this._selectInitialAudioTrack();
+    }
+  }
+
+  /**
+   *
+   * @param {*} data
+   */
   onLevelLoaded (data) {
     console.log('level loaded:', data);
 
@@ -107,10 +129,10 @@ class AudioTrackController extends TaskLoop {
 
     const levelInfo = this.hls.levels[data.level];
 
-    console.log('New video quality level audio group id:', levelInfo);
-
     if (levelInfo.audioGroupIds) {
       const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
+
+      console.log('New video quality level audio group id:', audioGroupId);
 
       if (this.audioGroupId !== audioGroupId) {
         console.log('New audio group ID running:', audioGroupId);
@@ -202,7 +224,8 @@ class AudioTrackController extends TaskLoop {
         if (trackFound) {
           return;
         }
-        if (track.groupId === this.audioGroupId &&
+        if (
+          (!this.audioGroupId || track.groupId === this.audioGroupId) &&
           (!name || name === track.name)) { // If there was a previous track try to stay with the same `NAME`
           // (should be unique across tracks, but consistent through redundant tracks)
           this.audioTrack = track.id;
@@ -219,11 +242,19 @@ class AudioTrackController extends TaskLoop {
 
     if (!trackFound) {
       logger.error(`No track found for running audio group-ID: ${this.audioGroupId}`);
-      this.audioTrack = 0;
+
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
+        fatal: true
+      });
+
+      // this.audioTrack = 0;
     }
   }
 
   /**
+   * @private
    * @param {AudioTrack} audioTrack
    * @returns {boolean}
    */
@@ -277,9 +308,9 @@ class AudioTrackController extends TaskLoop {
 
     // Let's try to fall back on a functional audio-track with the same group ID
     const previousId = this.trackId;
-    const { groupId, name, language } = this.tracks[previousId];
+    const { name, language, groupId } = this.tracks[previousId];
 
-    logger.warn('Loading failed on audio track id:', previousId, 'group id:', groupId);
+    logger.warn(`Loading failed on audio track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${language}"`);
 
     // Find a non-blacklisted track ID with the same NAME/LANGUAGE
     let newId = previousId;
@@ -296,11 +327,11 @@ class AudioTrackController extends TaskLoop {
     }
 
     if (newId === previousId) {
-      logger.warn('No fallback audio-track found for group id:', groupId);
+      logger.warn(`No fallback audio-track found for name/language: "${name}" / "${language}"`);
       return;
     }
 
-    logger.log('Attempting audio-track fallback id:', newId, 'group id:', groupId);
+    logger.log('Attempting audio-track fallback id:', newId, 'group-id:', this.tracks[newId].groupId);
 
     this.audioTrack = newId;
   }
