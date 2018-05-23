@@ -1,10 +1,10 @@
 {
   "presets": [
-    ["es2015", { "loose": true, "modules" : false}]
+    ["env", { "loose": true, "modules" : false}]
   ],
   "env": {
     "test": {
-      "presets": ["es2015"]
+      "presets": ["env"]
     }
   },
   "plugins": [
