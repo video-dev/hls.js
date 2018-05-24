@@ -45,7 +45,7 @@ class TimelineController extends EventHandler {
   }
 
   addCues (trackName, startTime, endTime, screen) {
-    // skip cues which overlap more than 50% with previously parsed time ranges
+    // skip cues which overlap with previously parsed time ranges
     const ranges = this.cueRanges;
     let merged = false;
     for (let i = ranges.length; i--;) {
@@ -349,11 +349,7 @@ class TimelineController extends EventHandler {
         let fieldParser = this.embeddedCea608FieldParsers[fieldNr];
         for (let i = 0; i < data.samples.length; i++) {
           let ccdatas = this.extractCea608Data(data.samples[i].bytes);
-          if (fieldNr === 1 && ccdatas[fieldNr].length) {
-            fieldParser.addData(data.samples[i].pts, ccdatas[fieldNr], true);
-          } else {
-            fieldParser.addData(data.samples[i].pts, ccdatas[fieldNr]);
-          }
+          fieldParser.addData(data.samples[i].pts, ccdatas[fieldNr]);
         }
       }
     }
