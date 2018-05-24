@@ -822,7 +822,7 @@ parameter should be a boolean
 
 (default: `English`)
 
-Label for the text track generated for CEA-708 captions track 1. This is how it will appear in the browser's native menu for subtitles and captions.
+Label for the text track generated for CEA-708 captions track 1. This is how it will appear in the browser's native menu for subtitles and captions. Will only apply if there are no closed captions defined in the manifest.
 
 parameter should be a string
 
@@ -830,7 +830,7 @@ parameter should be a string
 
 (default: `en`)
 
-RFC 3066 language code for the text track generated for CEA-708 captions track 1.
+RFC 3066 language code for the text track generated for CEA-708 captions track 1. Will only apply if there are no closed captions defined in the manifest.
 
 parameter should be a string
 
@@ -838,7 +838,7 @@ parameter should be a string
 
 (default: `Spanish`)
 
-Label for the text track generated for CEA-708 captions track 2. This is how it will appear in the browser's native menu for subtitles and captions.
+Label for the text track generated for CEA-708 captions track 2. This is how it will appear in the browser's native menu for subtitles and captions. Will only apply if there are no closed captions defined in the manifest.
 
 parameter should be a string
 
@@ -846,7 +846,7 @@ parameter should be a string
 
 (default: `es`)
 
-RFC 3066 language code for the text track generated for CEA-708 captions track 2.
+RFC 3066 language code for the text track generated for CEA-708 captions track 2. Will only apply if there are no closed captions defined in the manifest.
 
 parameter should be a string
 
