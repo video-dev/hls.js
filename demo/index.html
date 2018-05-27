@@ -300,7 +300,7 @@
         }
 
         // load compiled lib dist, or latest canary from jsdelivr (?canary=true)
-        var src = window.location.search.indexOf('canary=true') >= 0
+        var src = window.location.search.substring(1).split('&').indexOf('canary=true') >= 0
           ? 'https://cdn.jsdelivr.net/npm/hls.js@canary'
           : '../dist/hls.js';
 
