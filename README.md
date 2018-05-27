@@ -34,7 +34,11 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 ## Demo
 
-[http://video-dev.github.io/hls.js/demo](http://video-dev.github.io/hls.js/demo)
+### Latest Release
+[https://video-dev.github.io/hls.js/demo](https://video-dev.github.io/hls.js/demo)
+
+### Canary
+[https://video-dev.github.io/hls.js/demo?canary=true](https://video-dev.github.io/hls.js/demo?canary=true)
 
 ## Getting Started
 
