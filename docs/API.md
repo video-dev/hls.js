@@ -560,7 +560,7 @@ When set, use this level as the default hls.startLevel. Keep in mind that the st
 
 ### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 
-(default: 60000ms for fragment / 10000ms for level and manifest)
+(default: 20000ms for fragment / 10000ms for level and manifest)
 
 URL Loader timeout.
 A timeout callback will be triggered if loading duration exceeds this timeout.
