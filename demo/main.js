@@ -1020,7 +1020,7 @@ function updateLevelInfo() {
       html1 += button_disabled;
     }
 
-    let levelName = i; 
+    let levelName = i;
     let label = level2label(i);
     if(label) {
       levelName += ' (' + level2label(i) + 'p)';
@@ -1119,7 +1119,7 @@ function level2label(index) {
 }
 
 function getDemoConfigPropOrDefault(propName, defaultVal) {
-  return typeof demoConfig[propName] !== 'undefined' ? demoConfig[propName] : defaultVal; 
+  return typeof demoConfig[propName] !== 'undefined' ? demoConfig[propName] : defaultVal;
 }
 
 function getURLParam(sParam, defaultValue) {
@@ -1152,8 +1152,12 @@ function onDemoConfigChanged() {
 
   const serializedDemoConfig = btoa(JSON.stringify(demoConfig))
 
-  const baseURL = document.URL.split('?')[0]
-  const permalinkURL = baseURL + `?src=${encodeURIComponent(url)}&demoConfig=${serializedDemoConfig}`
+  const [baseURL, params] = document.URL.split('?')
+  let permalinkURL = baseURL + `?src=${encodeURIComponent(url)}&demoConfig=${serializedDemoConfig}`
+
+  if (/canary/.test(params)) {
+    permalinkURL += '&canary=true';
+  }
 
   $('#StreamPermalink').html('<a href="' + permalinkURL + '">' + permalinkURL + '</a>');
 }
