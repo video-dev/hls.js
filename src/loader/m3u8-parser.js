@@ -27,6 +27,17 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
 
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
+const MP4_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/;
+
+function checkMP4Suffix(str) {
+  let re = new RegExp(MP4_SUFFIX);
+  if (re.test(str.toLowerCase())) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 export default class M3U8Parser {
   static findGroup (groups, mediaGroupId) {
     if (!groups) {
@@ -314,7 +325,7 @@ export default class M3U8Parser {
       // this is a bit lurky but HLS really has no other way to tell us
       // if the fragments are TS or MP4, except if we download them :/
       // but this is to be able to handle SIDX.
-      if (level.fragments.every((frag) => M3U8Parser.checkMP4Suffix(frag.relurl))) {
+      if (level.fragments.every((frag) => checkMP4Suffix(frag.relurl))) {
         logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
         frag = new Fragment();
@@ -330,15 +341,5 @@ export default class M3U8Parser {
     }
 
     return level;
-  }
-
-  static checkMP4Suffix(str) {
-    let strRegex = '(.mp4|.m4s|.m4v|.m4a)$';
-    let re = new RegExp(strRegex);
-    if (re.test(str.toLowerCase())) {
-      return true;
-    } else {
-      return false;
-    }
   }
 }
