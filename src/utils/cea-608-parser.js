@@ -806,7 +806,7 @@ class Cea608Channel {
           if (this.outputFilter.newCue) {
             this.outputFilter.newCue(this.cueStartTime, t, this.lastOutputScreen);
             if (dispatch === true && this.outputFilter.dispatchCue) {
-              this.outputFilter.dispatchCue();
+              this.outputFilter.dispatchCue(this.cueStartTime);
             }
           }
           this.cueStartTime = this.displayedMemory.isEmpty() ? null : t;

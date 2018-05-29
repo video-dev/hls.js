@@ -13,16 +13,9 @@ export function sendAddTrackEvent (track, videoEl) {
 }
 
 export function sendRemoveTrackEvent (track, videoEl) {
-  // let event = null;
-  // try {
-  //   event = new window.Event('removetrack');
-  // } catch (err) {
-  //   // for IE11
-  //   event = document.createEvent('Event');
-  //   event.initEvent('removetrack', false, false);
-  // }
-  // event.track = track;
-  // videoEl.dispatchEvent(event);
+  // As of 05/2018 there is no working browser removetrack event
+  // Disabling the track doesn't remove it but does signify it isn't in use
+  track.mode = 'disabled';
 }
 
 export function clearCurrentCues (track) {
