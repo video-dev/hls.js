@@ -349,7 +349,8 @@ class StreamController extends TaskLoop {
     //
     // don't return null in case media not loaded yet (readystate === 0)
     if (levelDetails.PTSKnown && bufferEnd > end && media && media.readyState) {
-      return null;
+      //return null;
+      media.currentTime = this.nextLoadPosition;
     }
 
     if (this.startFragRequested && !levelDetails.PTSKnown) {

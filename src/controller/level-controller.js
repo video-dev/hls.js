@@ -48,7 +48,7 @@ export default class LevelController extends EventHandler {
         //shai kimchi : this caused a bug with live playback. the playback would either get stuck or jump over .ts fragments see bug #1719 - https://github.com/video-dev/hls.js/issues/1719
         //console.log('startLoad')
 
-        if (levelDetails && levelDetails.live) {
+        if (levelDetails && levelDetails.live && this.hls.media) {
           
           var currentTime = this.hls.media.currentTime;
           var mediaDuration = this.hls.media.duration;
