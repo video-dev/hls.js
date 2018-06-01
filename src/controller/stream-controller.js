@@ -311,10 +311,10 @@ class StreamController extends TaskLoop {
       if (frag.encrypted) {
         logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
-      } else {
-        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
-        this._loadFragment(frag);
       }
+
+      logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
+      this._loadFragment(frag);
     }
   }
 
@@ -890,8 +890,8 @@ class StreamController extends TaskLoop {
     this.hls.trigger(Event.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
     if (this.startFragRequested === false) {
-    // compute start position if set to -1. use it straight away if value is defined
-      if (this.startPosition === -1 || this.lastCurrentTime === -1) {
+      // compute start position if set to -1. use it straight away if value is defined
+      if (this.startPosition === -1 || this.lastCurrentTime === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
         if (!isNaN(startTimeOffset)) {
@@ -934,10 +934,10 @@ class StreamController extends TaskLoop {
     let fragCurrent = this.fragCurrent,
       fragLoaded = data.frag;
     if (this.state === State.FRAG_LOADING &&
-        fragCurrent &&
-        fragLoaded.type === 'main' &&
-        fragLoaded.level === fragCurrent.level &&
-        fragLoaded.sn === fragCurrent.sn) {
+      fragCurrent &&
+      fragLoaded.type === 'main' &&
+      fragLoaded.level === fragCurrent.level &&
+      fragLoaded.sn === fragCurrent.sn) {
       let stats = data.stats,
         currentLevel = this.levels[fragCurrent.level],
         details = currentLevel.details;
@@ -1005,10 +1005,10 @@ class StreamController extends TaskLoop {
     const fragNew = data.frag;
 
     if (fragCurrent &&
-        data.id === 'main' &&
-        fragNew.sn === fragCurrent.sn &&
-        fragNew.level === fragCurrent.level &&
-        this.state === State.PARSING) {
+      data.id === 'main' &&
+      fragNew.sn === fragCurrent.sn &&
+      fragNew.level === fragCurrent.level &&
+      this.state === State.PARSING) {
       let tracks = data.tracks, trackName, track;
 
       // if audio track is expected to come from audio stream controller, discard any coming from main
@@ -1076,11 +1076,11 @@ class StreamController extends TaskLoop {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
     if (fragCurrent &&
-        data.id === 'main' &&
-        fragNew.sn === fragCurrent.sn &&
-        fragNew.level === fragCurrent.level &&
-        !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
-        this.state === State.PARSING) {
+      data.id === 'main' &&
+      fragNew.sn === fragCurrent.sn &&
+      fragNew.level === fragCurrent.level &&
+      !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
+      this.state === State.PARSING) {
       let level = this.levels[this.level],
         frag = fragCurrent;
       if (isNaN(data.endPTS)) {
@@ -1151,10 +1151,10 @@ class StreamController extends TaskLoop {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
     if (fragCurrent &&
-        data.id === 'main' &&
-        fragNew.sn === fragCurrent.sn &&
-        fragNew.level === fragCurrent.level &&
-        this.state === State.PARSING) {
+      data.id === 'main' &&
+      fragNew.sn === fragCurrent.sn &&
+      fragNew.level === fragCurrent.level &&
+      this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
@@ -1265,7 +1265,7 @@ class StreamController extends TaskLoop {
   }
 
   onError (data) {
-    let frag = data.frag || this.fragCurrent;
+    let frag = data.frag || this.fragCurrent;
     // don't handle frag error not related to main fragment
     if (frag && frag.type !== 'main') {
       return;
@@ -1320,7 +1320,7 @@ class StreamController extends TaskLoop {
       break;
     case ErrorDetails.BUFFER_FULL_ERROR:
       // if in appending state
-      if (data.parent === 'main' && (this.state === State.PARSING || this.state === State.PARSED)) {
+      if (data.parent === 'main' && (this.state === State.PARSING || this.state === State.PARSED)) {
         // reduce max buf len if current position is buffered
         if (mediaBuffered) {
           this._reduceMaxBufferLength(this.config.maxBufferLength);
