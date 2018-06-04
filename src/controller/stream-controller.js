@@ -61,11 +61,13 @@ class StreamController extends TaskLoop {
 
   onHandlerDestroying () {
     this.stopLoad();
+    super.onHandlerDestroying();
   }
 
   onHandlerDestroyed () {
     this.state = State.STOPPED;
     this.fragmentTracker = null;
+    super.onHandlerDestroyed();
   }
 
   startLoad (startPosition) {

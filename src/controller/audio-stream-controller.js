@@ -62,11 +62,13 @@ class AudioStreamController extends TaskLoop {
 
   onHandlerDestroying () {
     this.stopLoad();
+    super.onHandlerDestroying();
   }
 
   onHandlerDestroyed () {
     this.state = State.STOPPED;
     this.fragmentTracker = null;
+    super.onHandlerDestroyed();
   }
 
   // Signal that video PTS was found
