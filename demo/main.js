@@ -215,7 +215,6 @@ function loadSelectedStream() {
 
   if (selectedTestStream && selectedTestStream.config) {
     Object.assign(hlsConfig, selectedTestStream.config)
-    console.log('Using Hls.js config:', hlsConfig);
   }
 
   if (hlsConfig.widevineLicenseUrl) {
@@ -229,6 +228,7 @@ function loadSelectedStream() {
   }
 
   onDemoConfigChanged();
+  console.log('Using Hls.js config:', hlsConfig);
 
   window.hls = hls = new Hls(hlsConfig);
 
@@ -551,7 +551,7 @@ function loadSelectedStream() {
   });
 
   hls.on(Hls.Events.ERROR, function(event, data) {
-    console.warn(data);
+    console.warn('Error event:', data);
     switch(data.details) {
       case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
         try {
@@ -615,7 +615,7 @@ function loadSelectedStream() {
         break;
     }
     if(data.fatal) {
-      console.log('Fatal error :' + data.details);
+      console.error('Fatal error :' + data.details);
       switch(data.type) {
         case Hls.ErrorTypes.MEDIA_ERROR:
           handleMediaError();
@@ -932,7 +932,7 @@ function hideCanvas()  {
 function getMetrics() {
   let json = JSON.stringify(events);
   let jsonpacked = jsonpack.pack(json);
-  console.log('packing JSON from ' + json.length + ' to ' + jsonpacked.length + ' bytes');
+  // console.log('packing JSON from ' + json.length + ' to ' + jsonpacked.length + ' bytes');
   return btoa(jsonpacked);
 }
 
@@ -943,7 +943,7 @@ function copyMetricsToClipBoard() {
 function goToMetrics() {
   let url = document.URL;
   url = url.substr(0, url.lastIndexOf('/')+1) + 'metrics.html';
-  console.log(url);
+  // console.log(url);
   window.open(url, '_blank');
 }
 
@@ -951,7 +951,7 @@ function goToMetricsPermaLink() {
   let url = document.URL;
   let b64 = getMetrics();
   url = url.substr(0, url.lastIndexOf('/')+1) + 'metrics.html#data=' + b64;
-  console.log(url);
+  // console.log(url);
   window.open(url, '_blank');
 }
 
@@ -1022,7 +1022,7 @@ function updateLevelInfo() {
       html1 += button_disabled;
     }
 
-    let levelName = i; 
+    let levelName = i;
     let label = level2label(i);
     if(label) {
       levelName += ' (' + level2label(i) + 'p)';
@@ -1121,7 +1121,7 @@ function level2label(index) {
 }
 
 function getDemoConfigPropOrDefault(propName, defaultVal) {
-  return typeof demoConfig[propName] !== 'undefined' ? demoConfig[propName] : defaultVal; 
+  return typeof demoConfig[propName] !== 'undefined' ? demoConfig[propName] : defaultVal;
 }
 
 function getURLParam(sParam, defaultValue) {
@@ -1149,8 +1149,6 @@ function onDemoConfigChanged() {
     defaultAudioCodec,
     widevineLicenseUrl: escape(widevineLicenseUrl)
   }
-
-  console.log(demoConfig)
 
   const serializedDemoConfig = btoa(JSON.stringify(demoConfig))
 
