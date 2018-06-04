@@ -723,8 +723,6 @@ if (!filename) {
 
 var resolvedPath = path.resolve(filename);
 
-console.log('loading file:', resolvedPath)
-
 fs.readFile(resolvedPath, (err, data) => {
   if (err) {
     console.error(err);
