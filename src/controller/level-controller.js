@@ -63,8 +63,6 @@ export default class LevelController extends EventHandler {
   }
 
   onManifestLoaded (data) {
-    console.log('onManifestLoaded:', data);
-
     let levels = [];
     let bitrateStart;
     let levelSet = {};
@@ -106,8 +104,6 @@ export default class LevelController extends EventHandler {
       if (level.attrs && level.attrs.SUBTITLES) {
         addGroupId(levelFromSet || level, 'text', level.attrs.SUBTITLES);
       }
-
-      console.log(levelFromSet);
     });
 
     // remove audio-only level if we also have levels with audio+video codecs signalled
@@ -303,8 +299,6 @@ export default class LevelController extends EventHandler {
    */
   // FIXME Find a better abstraction where fragment/level retry management is well decoupled
   recoverLevel (errorEvent, levelIndex, levelError, fragmentError) {
-    console.log('recoverLevel');
-
     let { config } = this.hls;
     let { details: errorDetails } = errorEvent;
     let level = this._levels[levelIndex];
@@ -414,18 +408,12 @@ export default class LevelController extends EventHandler {
   }
 
   onAudioTrackSwitched (data) {
-    console.log('audio track switched:', data);
-
     const audioGroupId = this.hls.audioTracks[data.id].groupId;
-
-    console.log('audio group id:', audioGroupId);
 
     const currentLevel = this.hls.levels[this.currentLevelIndex];
     if (!currentLevel) {
       return;
     }
-
-    console.log('current-level URL index:', currentLevel.urlId, currentLevel.audioGroupIds);
 
     if (currentLevel.audioGroupIds) {
       const urlId = currentLevel.audioGroupIds.findIndex((groupId) => groupId === audioGroupId);

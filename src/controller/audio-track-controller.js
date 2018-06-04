@@ -107,10 +107,7 @@ class AudioTrackController extends TaskLoop {
   onAudioTrackSwitched (data) {
     const audioGroupId = this.hls.audioTracks[data.id].groupId;
 
-    console.log('audio track switched:', audioGroupId);
-
     if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
-      console.log('New audio group ID running:', audioGroupId);
       this.audioGroupId = audioGroupId;
 
       this._selectInitialAudioTrack();
@@ -122,8 +119,6 @@ class AudioTrackController extends TaskLoop {
    * @param {*} data
    */
   onLevelLoaded (data) {
-    console.log('level loaded:', data);
-
     // FIXME: crashes because currentLevel is undefined
     // const levelInfo = this.hls.levels[this.hls.currentLevel];
 
@@ -132,11 +127,7 @@ class AudioTrackController extends TaskLoop {
     if (levelInfo.audioGroupIds) {
       const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
 
-      console.log('New video quality level audio group id:', audioGroupId);
-
       if (this.audioGroupId !== audioGroupId) {
-        console.log('New audio group ID running:', audioGroupId);
-
         this.audioGroupId = audioGroupId;
         this._selectInitialAudioTrack();
       }
