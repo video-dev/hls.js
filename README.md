@@ -105,6 +105,7 @@ hls.js is (being) integrated in the following players:
  - [Videojs](http://videojs.com) through [Videojs-hlsjs](https://github.com/benjipott/videojs-hlsjs)
  - [Videojs](http://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
  - [Videojs](http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
+ - [Fluid Player](https://www.fluidplayer.com)
 
 
 ## Chrome/Firefox integration
