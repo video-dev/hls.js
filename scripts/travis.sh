@@ -49,6 +49,8 @@ elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
     echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
     npm publish --tag canary
     echo "Published canary."
+    curl https://purge.jsdelivr.net/npm/hls.js@canary
+    echo "Cleared jsdelivr cache."
   else
     echo "Canary already published."
   fi
