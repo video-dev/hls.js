@@ -35,9 +35,12 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
+
+import { logger } from './logger';
+
 /**
-     *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
-     */
+ *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
+ */
 
 let specialCea608CharsCodes = {
   0x2a: 0xe1, // lowercase a, acute accent
@@ -161,23 +164,11 @@ let rowsHighCh2 = { 0x19: 2, 0x1A: 4, 0x1D: 6, 0x1E: 8, 0x1F: 10, 0x1B: 13, 0x1C
 
 let backgroundColors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'black', 'transparent'];
 
-/**
- * Simple logger class to be able to write with time-stamps and filter on level.
- */
-let logger = {
-  verboseFilter: { 'DATA': 3, 'DEBUG': 3, 'INFO': 2, 'WARNING': 2, 'TEXT': 1, 'ERROR': 0 },
-  time: null,
-  verboseLevel: 0, // Only write errors
-  setTime: function (newTime) {
-    this.time = newTime;
-  },
-  log: function (severity, msg) {
-    let minLevel = this.verboseFilter[severity];
-    if (this.verboseLevel >= minLevel) {
-      console.log(this.time + ' [' + severity + '] ' + msg);
-    }
-  }
-};
+let ENABLE_LOGS = false; // true;
+let log = () => {};
+let warn = () => {};
+
+let currentTime = null;
 
 let numArrayToHexArray = function (numArray) {
   let hexArray = [];
@@ -332,10 +323,10 @@ class Row {
     }
 
     if (this.pos < 0) {
-      logger.log('ERROR', 'Negative cursor position ' + this.pos);
+      logger.error('CEA608 parsing error: Negative cursor position ' + this.pos);
       this.pos = 0;
     } else if (this.pos > NR_COLS) {
-      logger.log('ERROR', 'Too large cursor position ' + this.pos);
+      logger.error('CEA608 parsing error: Too large cursor position ' + this.pos);
       this.pos = NR_COLS;
     }
   }
@@ -367,7 +358,7 @@ class Row {
     }
     let char = getCharForByte(byte);
     if (this.pos >= NR_COLS) {
-      logger.log('ERROR', 'Cannot insert ' + byte.toString(16) +
+      logger.error('CEA608 parsing error: Cannot insert ' + byte.toString(16) +
                         ' (' + char + ') at position ' + this.pos + '. Skipping it!');
       return;
     }
@@ -498,13 +489,13 @@ class CaptionScreen {
   }
 
   setCursor (absPos) {
-    logger.log('INFO', 'setCursor: ' + absPos);
+    log('CEA Parser: setCursor: ' + absPos);
     let row = this.rows[this.currRow];
     row.setCursor(absPos);
   }
 
   setPAC (pacData) {
-    logger.log('INFO', 'pacData = ' + JSON.stringify(pacData));
+    log('CEA Parser: pacData = ' + JSON.stringify(pacData));
     let newRow = pacData.row - 1;
     if (this.nrRollUpRows && newRow < this.nrRollUpRows - 1) {
       newRow = this.nrRollUpRows - 1;
@@ -525,7 +516,7 @@ class CaptionScreen {
       const lastOutputScreen = this.lastOutputScreen;
       if (lastOutputScreen) {
         let prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
-        if (prevLineTime && prevLineTime < logger.time) {
+        if (prevLineTime && prevLineTime < currentTime) {
           for (let i = 0; i < this.nrRollUpRows; i++) {
             this.rows[newRow - this.nrRollUpRows + i + 1].copy(lastOutputScreen.rows[topRowIndex + i]);
           }
@@ -549,7 +540,7 @@ class CaptionScreen {
      * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
      */
   setBkgData (bkgData) {
-    logger.log('INFO', 'bkgData = ' + JSON.stringify(bkgData));
+    log('CEA Parser: bkgData = ' + JSON.stringify(bkgData));
     this.backSpace();
     this.setPen(bkgData);
     this.insertChar(0x20); // Space
@@ -561,16 +552,16 @@ class CaptionScreen {
 
   rollUp () {
     if (this.nrRollUpRows === null) {
-      logger.log('DEBUG', 'roll_up but nrRollUpRows not set yet');
+      log('CEA Parser: roll_up but nrRollUpRows not set yet');
       return; // Not properly setup
     }
-    logger.log('TEXT', this.getDisplayText());
+    log('CEA Parser: ' + this.getDisplayText());
     let topRowIndex = this.currRow + 1 - this.nrRollUpRows;
     let topRow = this.rows.splice(topRowIndex, 1)[0];
     topRow.clear();
     this.rows.splice(this.currRow, 0, topRow);
-    logger.log('INFO', 'Rolling up');
-    // logger.log('TEXT', this.get_display_text())
+    log('CEA Parser: Rolling up');
+    // log(this.get_display_text())
   }
 
   /**
@@ -658,7 +649,7 @@ class Cea608Channel {
     }
 
     this.mode = newMode;
-    logger.log('INFO', 'MODE=' + newMode);
+    log('CEA Parser: MODE=' + newMode);
     if (this.mode === 'MODE_POP-ON') {
       this.writeScreen = this.nonDisplayedMemory;
     } else {
@@ -678,20 +669,20 @@ class Cea608Channel {
     }
 
     let screen = this.writeScreen === this.displayedMemory ? 'DISP' : 'NON_DISP';
-    logger.log('INFO', screen + ': ' + this.writeScreen.getDisplayText(true));
+    log('CEA Parser: ' + screen + ': ' + this.writeScreen.getDisplayText(true));
     if (this.mode === 'MODE_PAINT-ON' || this.mode === 'MODE_ROLL-UP') {
-      logger.log('TEXT', 'DISPLAYED: ' + this.displayedMemory.getDisplayText(true));
+      log('CEA Parser: DISPLAYED: ' + this.displayedMemory.getDisplayText(true));
       this.outputDataUpdate();
     }
   }
 
   ccRCL () { // Resume Caption Loading (switch mode to Pop On)
-    logger.log('INFO', 'RCL - Resume Caption Loading');
+    log('CEA Parser: RCL - Resume Caption Loading');
     this.setMode('MODE_POP-ON');
   }
 
   ccBS () { // BackSpace
-    logger.log('INFO', 'BS - BackSpace');
+    log('CEA Parser: BS - BackSpace');
     if (this.mode === 'MODE_TEXT') {
       return;
     }
@@ -711,69 +702,69 @@ class Cea608Channel {
   }
 
   ccDER () { // Delete to End of Row
-    logger.log('INFO', 'DER- Delete to End of Row');
+    log('CEA Parser: DER- Delete to End of Row');
     this.writeScreen.clearToEndOfRow();
     this.outputDataUpdate();
   }
 
   ccRU (nrRows) { // Roll-Up Captions-2,3,or 4 Rows
-    logger.log('INFO', 'RU(' + nrRows + ') - Roll Up');
+    log('CEA Parser: RU(' + nrRows + ') - Roll Up');
     this.writeScreen = this.displayedMemory;
     this.setMode('MODE_ROLL-UP');
     this.writeScreen.setRollUpRows(nrRows);
   }
 
   ccFON () { // Flash On
-    logger.log('INFO', 'FON - Flash On');
+    log('CEA Parser: FON - Flash On');
     this.writeScreen.setPen({ flash: true });
   }
 
   ccRDC () { // Resume Direct Captioning (switch mode to PaintOn)
-    logger.log('INFO', 'RDC - Resume Direct Captioning');
+    log('CEA Parser: RDC - Resume Direct Captioning');
     this.setMode('MODE_PAINT-ON');
   }
 
   ccTR () { // Text Restart in text mode (not supported, however)
-    logger.log('INFO', 'TR');
+    log('CEA Parser: TR');
     this.setMode('MODE_TEXT');
   }
 
   ccRTD () { // Resume Text Display in Text mode (not supported, however)
-    logger.log('INFO', 'RTD');
+    log('CEA Parser: RTD');
     this.setMode('MODE_TEXT');
   }
 
   ccEDM () { // Erase Displayed Memory
-    logger.log('INFO', 'EDM - Erase Displayed Memory');
+    log('CEA Parser: EDM - Erase Displayed Memory');
     this.displayedMemory.reset();
     this.outputDataUpdate(true);
   }
 
   ccCR () { // Carriage Return
-    logger.log('CR - Carriage Return');
+    log('CEA Parser: CR - Carriage Return');
     this.writeScreen.rollUp();
     this.outputDataUpdate(true);
   }
 
   ccENM () { // Erase Non-Displayed Memory
-    logger.log('INFO', 'ENM - Erase Non-displayed Memory');
+    log('CEA Parser: ENM - Erase Non-displayed Memory');
     this.nonDisplayedMemory.reset();
   }
 
   ccEOC () { // End of Caption (Flip Memories)
-    logger.log('INFO', 'EOC - End Of Caption');
+    log('CEA Parser: EOC - End Of Caption');
     if (this.mode === 'MODE_POP-ON') {
       let tmp = this.displayedMemory;
       this.displayedMemory = this.nonDisplayedMemory;
       this.nonDisplayedMemory = tmp;
       this.writeScreen = this.nonDisplayedMemory;
-      logger.log('TEXT', 'DISP: ' + this.displayedMemory.getDisplayText());
+      log('CEA Parser: DISP: ' + this.displayedMemory.getDisplayText());
     }
     this.outputDataUpdate(true);
   }
 
   ccTO (nrCols) { // Tab Offset 1,2, or 3 columns
-    logger.log('INFO', 'TO(' + nrCols + ') - Tab Offset');
+    log('CEA Parser: TO(' + nrCols + ') - Tab Offset');
     this.writeScreen.moveCursor(nrCols);
   }
 
@@ -788,12 +779,12 @@ class Cea608Channel {
     } else {
       styles.foreground = 'white';
     }
-    logger.log('INFO', 'MIDROW: ' + JSON.stringify(styles));
+    log('CEA Parser: MIDROW: ' + JSON.stringify(styles));
     this.writeScreen.setPen(styles);
   }
 
   outputDataUpdate (dispatch = false) {
-    let t = logger.time;
+    let t = currentTime;
     if (t === null) {
       return;
     }
@@ -841,6 +832,10 @@ class Cea608Parser {
     this.startTime = null;
     this.lastTime = null;
     this.dataCounters = { 'padding': 0, 'char': 0, 'cmd': 0, 'other': 0 };
+    if (ENABLE_LOGS) {
+      log = logger.log;
+      warn = logger.warn;
+    }
   }
 
   getHandler (index) {
@@ -859,7 +854,7 @@ class Cea608Parser {
       charsFound = false;
 
     this.lastTime = t;
-    logger.setTime(t);
+    currentTime = t;
 
     for (let i = 0; i < byteList.length; i += 2) {
       a = byteList[i] & 0x7f;
@@ -867,14 +862,14 @@ class Cea608Parser {
       if (a >= 0x10 && a <= 0x1f && a === this.lastCmdA && b === this.lastCmdB) {
         this.lastCmdA = null;
         this.lastCmdB = null;
-        logger.log('DEBUG', 'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
+        log('CEA Parser: Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
         continue; // Repeated commands are dropped (once)
       }
       if (a === 0 && b === 0) {
         this.dataCounters.padding += 2;
         continue;
       } else {
-        logger.log('DATA', '[' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
+        log('CEA Parser: [' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
       }
       cmdFound = this.parseCmd(a, b);
       if (!cmdFound) {
@@ -896,7 +891,7 @@ class Cea608Parser {
             let channel = this.channels[this.currChNr - 1];
             channel.insertChars(charsFound);
           } else {
-            logger.log('WARNING', 'No channel found yet. TEXT-MODE?');
+            warn('No channel found yet. TEXT-MODE?');
           }
         }
       }
@@ -906,7 +901,7 @@ class Cea608Parser {
         this.dataCounters.char += 2;
       } else {
         this.dataCounters.other += 2;
-        logger.log('WARNING', 'Couldn\'t parse cleaned data ' + numArrayToHexArray([a, b]) +
+        warn('WARNING', 'Couldn\'t parse cleaned data ' + numArrayToHexArray([a, b]) +
                             ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
       }
     }
@@ -990,14 +985,14 @@ class Cea608Parser {
       }
 
       if (chNr !== this.currChNr) {
-        logger.log('ERROR', 'Mismatch channel in midrow parsing');
+        logger.error('CEA608 parsing error: Mismatch channel in midrow parsing');
         return false;
       }
       let channel = this.channels[chNr - 1];
       // cea608 spec says midrow codes should inject a space
       channel.insertChars([0x20]);
       channel.ccMIDROW(b);
-      logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
+      log('CEA Parser: MIDROW (' + numArrayToHexArray([a, b]) + ')');
       this.lastCmdA = a;
       this.lastCmdB = b;
       return true;
@@ -1087,7 +1082,7 @@ class Cea608Parser {
         oneCode = b + 0x90;
       }
 
-      logger.log('INFO', 'Special char \'' + getCharForByte(oneCode) + '\' in channel ' + channelNr);
+      log('CEA Parser: Special char \'' + getCharForByte(oneCode) + '\' in channel ' + channelNr);
       charCodes = [oneCode];
       this.lastCmdA = a;
       this.lastCmdB = b;
@@ -1098,7 +1093,7 @@ class Cea608Parser {
     }
     if (charCodes) {
       let hexCodes = numArrayToHexArray(charCodes);
-      logger.log('DEBUG', 'Char codes =  ' + hexCodes.join(','));
+      log('CEA Parser: Char codes =  ' + hexCodes.join(','));
     }
     return charCodes;
   }
