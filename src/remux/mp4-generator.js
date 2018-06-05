@@ -3,7 +3,7 @@
 */
 
 // import Hex from '../utils/hex';
-import makeArrayFromArrayLike from '../utils/make-array-from-array-like';
+import { makeArrayFromArrayLike } from '../utils/make-array-from-array-like';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
