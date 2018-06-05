@@ -2,7 +2,6 @@
  *  ADTS parser helper
  */
 import { logger } from '../utils/logger';
-import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 import Event from '../events';
