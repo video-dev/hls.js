@@ -1,3 +1,5 @@
+import { getSelfScope } from './get-self-scope';
+
 function noop () {}
 
 const fakeLogger = {
@@ -26,7 +28,7 @@ function formatMsg (type, msg) {
 }
 
 /* eslint-disable-next-line no-undef */
-const window = self;
+const window = getSelfScope();
 
 function consolePrintFn (type) {
   const func = window.console[type];
