@@ -11,8 +11,6 @@ const fakeLogger = {
 
 let exportedLogger = fakeLogger;
 
-/* globals self: false */
-
 // let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
 //   const now = Date.now();
@@ -27,15 +25,18 @@ function formatMsg (type, msg) {
   return msg;
 }
 
+/* eslint-disable-next-line no-undef */
+const window = self;
+
 function consolePrintFn (type) {
-  const func = self.console[type];
+  const func = window.console[type];
   if (func) {
     return function (...args) {
       if (args[0]) {
         args[0] = formatMsg(type, args[0]);
       }
 
-      func.apply(self.console, args);
+      func.apply(window.console, args);
     };
   }
   return noop;

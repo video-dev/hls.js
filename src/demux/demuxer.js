@@ -7,6 +7,10 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
 
+// see https://stackoverflow.com/a/11237259/589493
+/* eslint-disable-next-line no-undef */
+const window = self; // safeguard for code that might run both on worker and main thread
+
 const MediaSource = getMediaSource();
 
 class Demuxer {

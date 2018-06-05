@@ -7,9 +7,11 @@ import { logger } from '../utils/logger';
 
 import Event from '../events';
 
-const { performance, crypto } = window;
+// see https://stackoverflow.com/a/11237259/589493
+/* eslint-disable-next-line no-undef */
+const window = self; // safeguard for code that might run both on worker and main thread
 
-/* globals self: false */
+const { performance, crypto } = window;
 
 class Decrypter {
   constructor (observer, config, { removePKCS7Padding = true } = {}) {
@@ -20,7 +22,7 @@ class Decrypter {
     // built in decryptor expects PKCS7 padding
     if (removePKCS7Padding) {
       try {
-        const browserCrypto = crypto || self.crypto;
+        const browserCrypto = crypto || window.crypto;
         this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
       } catch (e) {}
     }
