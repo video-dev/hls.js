@@ -139,8 +139,8 @@ class TimelineController extends EventHandler {
     Object.keys(captionsTracks).forEach(trackName => {
       clearCurrentCues(captionsTracks[trackName]);
       sendRemoveTrackEvent(captionsTracks[trackName], this.media);
-      delete captionsTracks[trackName];
-      delete captionsProperties[trackName];
+      captionsTracks[trackName] = null;
+      captionsProperties[trackName] = null;
     });
   }
 
