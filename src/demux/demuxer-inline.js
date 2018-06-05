@@ -12,6 +12,8 @@ import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
+const { performance } = window;
+
 class DemuxerInline {
   constructor (observer, typeSupported, config, vendor) {
     this.observer = observer;

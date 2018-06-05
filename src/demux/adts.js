@@ -5,6 +5,8 @@ import { logger } from '../utils/logger';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
+import Event from '../events';
+
 export function getAudioConfig (observer, data, offset, audioCodec) {
   let adtsObjectType, // :int
     adtsSampleingIndex, // :int

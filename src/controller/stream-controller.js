@@ -17,6 +17,8 @@ import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
 import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest } from './fragment-finders';
 
+const { performance } = window;
+
 export const State = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',

@@ -5,6 +5,10 @@ import AESDecryptor from './aes-decryptor';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 
+import Event from '../events';
+
+const { performance, crypto } = window;
+
 /* globals self: false */
 
 class Decrypter {

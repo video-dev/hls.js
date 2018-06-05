@@ -8,6 +8,8 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 
+const { performance } = window;
+
 export default class LevelController extends EventHandler {
   constructor (hls) {
     super(hls,
