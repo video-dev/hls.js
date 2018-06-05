@@ -80,14 +80,21 @@ export function alignDiscontinuities (lastFrag, lastLevel, details) {
     }
   }
   // try to align using programDateTime attribute (if available)
-  if (details.PTSKnown === false && lastLevel && lastLevel.details && lastLevel.details.fragments && lastLevel.details.fragments.length) {
+  if (details.PTSKnown === false &&
+    lastLevel &&
+    lastLevel.details &&
+    lastLevel.details.fragments &&
+    lastLevel.details.fragments.length &&
+    details.fragments &&
+    details.fragments.length
+  ) {
     // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
     // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
     // then we can deduce that playlist B sliding is 1000+8 = 1008s
     let lastPDT = lastLevel.details.programDateTime;
     let newPDT = details.programDateTime;
     // date diff is in ms. frag.start is in seconds
-    let sliding = (newPDT - lastPDT) / 1000 + lastLevel.details.fragments[0].start;
+    let sliding = (newPDT - lastPDT) / 1000 + (lastLevel.details.fragments[0].start - details.fragments[0].start);
     if (!isNaN(sliding)) {
       logger.log(`adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(3)}`);
       adjustPts(sliding, details);
