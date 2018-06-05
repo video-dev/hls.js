@@ -364,6 +364,9 @@ export default class LevelController extends EventHandler {
         this.levelRetryCount = 0;
       }
       let newDetails = data.details;
+
+      this.cleanTimer();
+
       // if current playlist is a live playlist, arm a timer to reload it
       if (newDetails.live) {
         const targetdurationMs = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration);
@@ -382,8 +385,6 @@ export default class LevelController extends EventHandler {
         reloadInterval = Math.max(targetdurationMs / 2, Math.round(reloadInterval));
         logger.log(`live playlist, reload in ${Math.round(reloadInterval)} ms`);
         this.timer = setTimeout(() => this.loadLevel(), reloadInterval);
-      } else {
-        this.cleanTimer();
       }
     }
   }
