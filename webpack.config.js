@@ -14,19 +14,6 @@ const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
 const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
 const runAnalyzer = !!env.ANALYZE;
 
-const uglifyJsOptions = {
-  screwIE8: true,
-  stats: true,
-  compress: {
-    warnings: false
-  },
-  mangle: {
-    toplevel: true,
-    eval: true
-  },
-  sourceMap: true
-};
-
 const baseConfig = {
   entry: './src/hls.js',
   module: {
@@ -46,6 +33,7 @@ const baseConfig = {
 
 const demoConfig = clone(baseConfig, {
   name: 'demo',
+  mode: 'development',
   entry: './demo/main',
   output: {
     filename: 'hls-demo.js',
@@ -55,7 +43,8 @@ const demoConfig = clone(baseConfig, {
     publicPath: '/dist/',
     library: 'HlsDemo',
     libraryTarget: 'umd',
-    libraryExport: 'default'
+    libraryExport: 'default',
+    globalObject: 'this'
   },
   plugins: [],
   devtool: 'source-map'
@@ -81,7 +70,6 @@ function getPluginsForConfig(type, minify = false) {
   if (minify) {
     // minification plugins.
     return plugins.concat([
-      new webpack.optimize.UglifyJsPlugin(uglifyJsOptions),
       new webpack.LoaderOptionsPlugin({
         minimize: true,
         debug: false
@@ -143,6 +131,7 @@ function getAliasesForLightDist() {
 const multiConfig = [
   {
     name: 'debug',
+    mode: 'development',
     output: {
       filename: 'hls.js',
       chunkFilename: '[name].js',
@@ -151,13 +140,15 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     plugins: getPluginsForConfig('main'),
     devtool: 'source-map',
   },
   {
     name: 'dist',
+    mode: 'production',
     output: {
       filename: 'hls.min.js',
       chunkFilename: '[name].js',
@@ -165,13 +156,15 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     plugins: getPluginsForConfig('main', true),
     devtool: 'source-map'
   },
   {
     name: 'light',
+    mode: 'development',
     output: {
       filename: 'hls.light.js',
       chunkFilename: '[name].js',
@@ -180,7 +173,8 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     resolve: {
       alias: getAliasesForLightDist()
@@ -190,6 +184,7 @@ const multiConfig = [
   },
   {
     name: 'light-dist',
+    mode: 'production',
     output: {
       filename: 'hls.light.min.js',
       chunkFilename: '[name].js',
@@ -197,7 +192,8 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     resolve: {
       alias: getAliasesForLightDist()
