@@ -367,8 +367,21 @@ export default class Hls {
    */
   set nextLevel (newLevel) {
     logger.log(`set nextLevel:${newLevel}`);
-    this.levelController.manualLevel = newLevel;
-    this.streamController.nextLevelSwitch();
+    // Check newLevel before set manual level.
+    let levels = this.levelController.levels;
+    if (newLevel < -1 || newLevel >= levels.length) {
+      // invalid level id given, trigger error
+      hls.trigger(Event.ERROR, {
+        type: ErrorTypes.OTHER_ERROR,
+        details: ErrorDetails.LEVEL_SWITCH_ERROR,
+        level: newLevel,
+        fatal: false,
+        reason: 'invalid level idx'
+      });
+    } else {
+      this.levelController.manualLevel = newLevel;
+      this.streamController.nextLevelSwitch();
+    }
   }
 
   /**
