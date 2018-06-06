@@ -87,15 +87,16 @@
     "karma-should": "^1.0.0",
     "karma-sinon": "^1.0.5",
     "karma-sourcemap-loader": "^0.3.7",
-    "karma-webpack": "^2.0.4",
+    "karma-webpack": "^4.0.0-beta.0",
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
     "selenium-webdriver": "^3.1.0",
     "should": "^13.1.3",
     "sinon": "^4.1.3",
-    "webpack": "^3.5.5",
+    "webpack": "^4.11.1",
     "webpack-bundle-analyzer": "^2.9.1",
-    "webpack-dev-server": "^2.7.1",
+    "webpack-cli": "^3.0.2",
+    "webpack-dev-server": "^3.1.4",
     "webworkify-webpack": "^2.0.0"
   }
 }
