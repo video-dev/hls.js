@@ -19,7 +19,8 @@ import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig } from './config';
 
 import HlsEvents from './events';
-import EventEmitter from 'events';
+
+import { EventQueue, EventScheduler } from './event-queue';
 
 // polyfill for IE11
 require('string.prototype.endswith');
@@ -112,15 +113,27 @@ export default class Hls {
     enableLogs(config.debug);
     this.config = config;
     this._autoLevelCapping = -1;
+
+    // scheduler
+
+    this.scheduler = new EventScheduler();
+
+    this.scheduler.start();
+
+    const eventQueue = this.scheduler.getEventQueue();
+
     // observer setup
-    let observer = this.observer = new EventEmitter();
+    const observer = this.observer = this.scheduler.getEventEmitter();
+
     observer.trigger = function trigger (event, ...data) {
-      observer.emit(event, event, ...data);
+      // observer.emit(event, event, ...data);
+      eventQueue.emit(event, ...data);
     };
 
     observer.off = function off (event, ...data) {
       observer.removeListener(event, ...data);
     };
+
     this.on = observer.on.bind(observer);
     this.off = observer.off.bind(observer);
     this.trigger = observer.trigger.bind(observer);
