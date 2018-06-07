@@ -20,7 +20,8 @@ import { hlsDefaultConfig } from './config';
 
 import HlsEvents from './events';
 
-import { EventQueue, EventScheduler } from './event-queue';
+import { EventQueue } from './event-queue';
+import { EventScheduler } from './event-scheduler';
 
 // polyfill for IE11
 require('string.prototype.endswith');
