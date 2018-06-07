@@ -147,6 +147,8 @@ function setupGlobals() {
   window.goToMetricsPermaLink = goToMetricsPermaLink;
   window.toggleTab = toggleTab;
   window.onDemoConfigChanged = onDemoConfigChanged;
+
+  window.toggleSchedulerRunning = toggleSchedulerRunning;
 }
 
 function trimArray( target, limit ) {
@@ -1020,7 +1022,7 @@ function updateLevelInfo() {
       html1 += button_disabled;
     }
 
-    let levelName = i; 
+    let levelName = i;
     let label = level2label(i);
     if(label) {
       levelName += ' (' + level2label(i) + 'p)';
@@ -1119,7 +1121,7 @@ function level2label(index) {
 }
 
 function getDemoConfigPropOrDefault(propName, defaultVal) {
-  return typeof demoConfig[propName] !== 'undefined' ? demoConfig[propName] : defaultVal; 
+  return typeof demoConfig[propName] !== 'undefined' ? demoConfig[propName] : defaultVal;
 }
 
 function getURLParam(sParam, defaultValue) {
@@ -1213,4 +1215,12 @@ function logStatus(message) {
 
 function logError(message) {
   appendLog('errorOut', message)
+}
+
+function toggleSchedulerRunning() {
+  hls.scheduler.isRunning() ? hls.scheduler.stop() : hls.scheduler.start();
+
+  document.getElementById('toggleSchedulerButton').style['background-color']
+    = hls.scheduler.isRunning() ? 'red' : 'green';
+
 }
