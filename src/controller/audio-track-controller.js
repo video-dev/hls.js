@@ -310,8 +310,7 @@ class AudioTrackController extends TaskLoop {
         continue;
       }
       const newTrack = this.tracks[i];
-      if (newTrack.name === name &&
-       newTrack.language === language) {
+      if (newTrack.name === name) {
         newId = i;
         break;
       }
