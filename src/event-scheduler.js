@@ -56,6 +56,7 @@ export class EventScheduler {
         console.log('dispatching:', eventQueueItem);
         this.eventEmitter.emit(eventQueueItem.event, eventQueueItem.event, eventQueueItem.data);
       } catch (err) {
+        console.error(err);
         this.stop();
       }
 
@@ -65,9 +66,6 @@ export class EventScheduler {
     return false;
   }
 
-  /**
-   * Returns true when last call to runOne returned true
-   */
   runAll () {
     const startTimeMs = performance.now();
     let res;
