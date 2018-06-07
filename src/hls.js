@@ -608,7 +608,7 @@ export default class Hls {
   }
 
   /**
-   * @type {booelan}
+   * @type {boolean}
    */
   get subtitleDisplay () {
     const subtitleTrackController = this.subtitleTrackController;
