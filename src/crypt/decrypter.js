@@ -11,7 +11,7 @@ import { getSelfScope } from '../utils/get-self-scope';
 
 // see https://stackoverflow.com/a/11237259/589493
 /* eslint-disable-next-line no-undef */
-const window = getSelfScope();  // safeguard for code that might run both on worker and main thread
+const window = getSelfScope(); // safeguard for code that might run both on worker and main thread
 
 const { performance, crypto } = window;
 
