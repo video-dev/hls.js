@@ -4,7 +4,25 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 /**
- * Audio-track controller
+ * @class AudioTrackController
+ * @implements {EventHandler}
+ *
+ * Handles main manifest and audio-track metadata loaded,
+ * owns and exposes the selectable audio-tracks data-models.
+ *
+ * Exposes internal interface to select available audio-tracks.
+ *
+ * Handles errors on loading audio-track playlists. Manages fallback mechanism
+ * with redundants tracks (group-IDs).
+ *
+ * Handles level-loading and group-ID switches for video (fallback on video levels),
+ * and eventually adapts the audio-track group-ID to match.
+ *
+ * @fires AUDIO_TRACK_LOADING
+ * @fires AUDIO_TRACK_SWITCHING
+ * @fires AUDIO_TRACKS_UPDATED
+ * @fires ERROR
+ *
  */
 class AudioTrackController extends TaskLoop {
   constructor (hls) {
@@ -18,24 +36,28 @@ class AudioTrackController extends TaskLoop {
     );
 
     /**
-     * All tracks available
-     * @member {AudioTrack[]}
-     */
-    this.tracks = [];
-
-    /**
+     * @private
      * Currently selected index in `tracks`
      * @member {number} trackId
      */
     this.trackId = -1;
 
     /**
+     * @public
+     * All tracks available
+     * @member {AudioTrack[]}
+     */
+    this.tracks = [];
+
+    /**
+     * @public
      * List of blacklisted audio track IDs (that have caused failure)
      * @member {number[]}
      */
     this.trackIdBlacklist = Object.create(null);
 
     /**
+     * @public
      * The currently running group ID for audio
      * (we grab this on manifest-parsed and new level-loaded)
      * @member {string}
@@ -44,41 +66,18 @@ class AudioTrackController extends TaskLoop {
   }
 
   /**
-   * Handle network errors loading audio track manifests
-   * and also pausing on any netwok errors.
-   * @param {ErrorEventData} data
-   */
-  onError (data) {
-    if (data.fatal && data.type === ErrorTypes.NETWORK_ERROR) {
-      this.clearInterval();
-    }
-
-    if (data.type !== ErrorTypes.NETWORK_ERROR) {
-      return;
-    }
-
-    switch (data.details) {
-    case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
-      logger.warn('Network failure on audio-track id:', data.context.id);
-      this._handleLoadError();
-      break;
-    default:
-      break;
-    }
-  }
-
-  /**
-   * Reset audio tracks on new manifest loading
+   * Reset audio tracks on new manifest loading.
    */
   onManifestLoading () {
     this.tracks = [];
     this.trackId = -1;
-
-    // this._selectInitialAudioTrack();
   }
 
   /**
-   * Store tracks data from manifest parsed data
+   * Store tracks data from manifest parsed data.
+   *
+   * Trigger AUDIO_TRACKS_UPDATED event.
+   *
    * @param {*} data
    */
   onManifestParsed (data) {
@@ -86,35 +85,59 @@ class AudioTrackController extends TaskLoop {
     this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
   }
 
+  /**
+   * Store track details of loaded track in our data-model.
+   *
+   * Set-up metadata update interval task for live-mode streams.
+   *
+   * @param {} data
+   */
   onAudioTrackLoaded (data) {
-    if (data.id < this.tracks.length) {
-      logger.log(`audioTrack ${data.id} loaded`);
-      this.tracks[data.id].details = data.details;
-      // check if current playlist is a live playlist
-      if (data.details.live && !this.hasInterval()) {
-        // if live playlist we will have to reload it periodically
-        // set reload period to playlist target duration
-        const updatePeriodMs = data.details.targetduration * 1000;
-        this.setInterval(updatePeriodMs);
-      }
-      if (!data.details.live && this.hasInterval()) {
-        // playlist is not live and timer is armed : stopping it
-        this.clearInterval();
-      }
+    if (data.id >= this.tracks.length) {
+      logger.warn('Invalid audio track id:', data.id);
+      return;
     }
-  }
 
-  onAudioTrackSwitched (data) {
-    const audioGroupId = this.hls.audioTracks[data.id].groupId;
+    logger.log(`audioTrack ${data.id} loaded`);
 
-    if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
-      this.audioGroupId = audioGroupId;
+    this.tracks[data.id].details = data.details;
 
-      this._selectInitialAudioTrack();
+    // check if current playlist is a live playlist
+    // and if we have already our reload interval setup
+    if (data.details.live && !this.hasInterval()) {
+      // if live playlist we will have to reload it periodically
+      // set reload period to playlist target duration
+      const updatePeriodMs = data.details.targetduration * 1000;
+      this.setInterval(updatePeriodMs);
+    }
+
+    if (!data.details.live && this.hasInterval()) {
+      // playlist is not live and timer is scheduled: cancel it
+      this.clearInterval();
     }
   }
 
   /**
+   * Update the internal group ID to any audio-track we may have set manually
+   * or because of a failure-handling fallback.
+   *
+   * Quality-levels should update to that group ID in this case.
+   *
+   * @param {*} data
+   */
+  onAudioTrackSwitched (data) {
+    const audioGroupId = this.tracks[data.id].groupId;
+    if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
+      this.audioGroupId = audioGroupId;
+    }
+  }
+
+  /**
+   * When a level gets loaded, if it has redundant audioGroupIds (in the same ordinality as it's redundant URLs)
+   * we are setting our audio-group ID internally to the one set, if it is different from the group ID currently set.
+   *
+   * If group-ID got update, we re-select the appropriate audio-track with this group-ID matching the currently
+   * selected one (based on NAME property).
    *
    * @param {*} data
    */
@@ -124,30 +147,60 @@ class AudioTrackController extends TaskLoop {
 
     const levelInfo = this.hls.levels[data.level];
 
-    if (levelInfo.audioGroupIds) {
-      const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
+    if (!levelInfo.audioGroupIds) {
+      return;
+    }
 
-      if (this.audioGroupId !== audioGroupId) {
-        this.audioGroupId = audioGroupId;
-        this._selectInitialAudioTrack();
-      }
+    const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
+    if (this.audioGroupId !== audioGroupId) {
+      this.audioGroupId = audioGroupId;
+      this._selectInitialAudioTrack();
     }
   }
 
   /**
-   * @type {AudioTrack[]} Audio-track list
+   * Handle network errors loading audio track manifests
+   * and also pausing on any netwok errors.
+   *
+   * @param {ErrorEventData} data
+   */
+  onError (data) {
+    // Only handle network errors
+    if (data.type !== ErrorTypes.NETWORK_ERROR) {
+      return;
+    }
+
+    // If fatal network error, cancel update task
+    if (data.fatal) {
+      this.clearInterval();
+    }
+
+    // If not an audio-track loading error don't handle further
+    if (data.details !== ErrorDetails.AUDIO_TRACK_LOAD_ERROR) {
+      return;
+    }
+
+    logger.warn('Network failure on audio-track id:', data.context.id);
+    this._handleLoadError();
+  }
+
+  /**
+   * @type {AudioTrack[]} Audio-track list we own
    */
   get audioTracks () {
     return this.tracks;
   }
 
   /**
-   * @type {number} Index in audio-tracks list
+   * @type {number} Index into audio-tracks list of currently selected track.
    */
   get audioTrack () {
     return this.trackId;
   }
 
+  /**
+   * Select current track by index
+   */
   set audioTrack (newId) {
     // noop on same audio track id as already set
     if (this.trackId === newId && this.tracks[this.trackId].details) {
@@ -186,17 +239,16 @@ class AudioTrackController extends TaskLoop {
    * @private
    */
   _selectInitialAudioTrack () {
+    let tracks = this.tracks;
+    if (!tracks.length) {
+      return;
+    }
+
     const currentAudioTrack = this.tracks[this.trackId];
 
     let name = null;
     if (currentAudioTrack) {
       name = currentAudioTrack.name;
-    }
-
-    let tracks = this.tracks;
-
-    if (!tracks.length) {
-      return;
     }
 
     // Pre-select default tracks if there are any
@@ -208,17 +260,19 @@ class AudioTrackController extends TaskLoop {
     }
 
     let trackFound = false;
+
     const traverseTracks = () => {
       // Select track with right group ID
-
       tracks.forEach((track) => {
         if (trackFound) {
           return;
         }
-        if (
-          (!this.audioGroupId || track.groupId === this.audioGroupId) &&
-          (!name || name === track.name)) { // If there was a previous track try to stay with the same `NAME`
-          // (should be unique across tracks, but consistent through redundant tracks)
+        // We need to match the (pre-)selected group ID
+        // and the NAME of the current track.
+        if ((!this.audioGroupId || track.groupId === this.audioGroupId) &&
+          (!name || name === track.name)) {
+          // If there was a previous track try to stay with the same `NAME`.
+          // It should be unique across tracks of same group, and consistent through redundant track groups.
           this.audioTrack = track.id;
           trackFound = true;
         }
@@ -226,6 +280,7 @@ class AudioTrackController extends TaskLoop {
     };
 
     traverseTracks();
+
     if (!trackFound) {
       name = null;
       traverseTracks();
@@ -239,8 +294,6 @@ class AudioTrackController extends TaskLoop {
         details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true
       });
-
-      // this.audioTrack = 0;
     }
   }
 
@@ -303,7 +356,8 @@ class AudioTrackController extends TaskLoop {
 
     logger.warn(`Loading failed on audio track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${language}"`);
 
-    // Find a non-blacklisted track ID with the same NAME/LANGUAGE
+    // Find a non-blacklisted track ID with the same NAME
+    // At least a track that is not blacklisted, thus on another group-ID.
     let newId = previousId;
     for (let i = 0; i < this.tracks.length; i++) {
       if (this.trackIdBlacklist[i]) {
