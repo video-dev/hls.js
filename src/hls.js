@@ -378,10 +378,11 @@ export default class Hls {
         fatal: false,
         reason: 'invalid level idx'
       });
-    } else {
-      this.levelController.manualLevel = newLevel;
-      this.streamController.nextLevelSwitch();
+      return;
     }
+
+    this.levelController.manualLevel = newLevel;
+    this.streamController.nextLevelSwitch();
   }
 
   /**
