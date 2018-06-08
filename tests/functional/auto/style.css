@@ -2,17 +2,24 @@ body {
   background-color: #cccccc;
 }
 
-#log {
+#video {
   position: fixed;
   top: 0;
-  bottom: 0;
   left: 0;
-  right: 0;
+  width: 100%;
+  height: 50%;
+}
+
+#log {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 50%;
   margin: 0;
-  color: #ff0000;
-  overflow: hidden;
+  color: green;
+  overflow-y: auto;
   font-size: 20px;
-  z-index: 999;
 }
 
 #log .inner {
