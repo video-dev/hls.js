@@ -1,9 +1,11 @@
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
+const glob = require("glob");
 
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+// Caution: shallow clone
 const clone = (...args) => Object.assign({}, ...args);
 
 /* Allow to customise builds through env-vars */
@@ -61,6 +63,21 @@ const demoConfig = clone(baseConfig, {
   devtool: 'source-map'
 });
 
+const unitTestsConfig = clone(baseConfig, {
+  name: 'tests',
+  entry: glob.sync("./tests/unit/**/*.js"),
+  output: {
+    filename: 'hls-unit-tests.js',
+    publicPath: '/dist/',
+    path: path.resolve(__dirname, 'dist'),
+    library: 'HlsUnitTests',
+    libraryTarget: 'umd',
+    libraryExport: 'default'
+  },
+  devtool: 'inline-source-map',
+  plugins: getPluginsForConfig('main')
+});
+
 
 function getPluginsForConfig(type, minify = false) {
   // common plugins.
@@ -68,7 +85,7 @@ function getPluginsForConfig(type, minify = false) {
   const defineConstants = getConstantsForConfig(type);
 
   console.log(
-    `Building <${ minify ? 'minified' : 'non-minified / debug' }> distro-type "${type}" with compile-time defined constants:`,
+    `Making webpack-plugins for config: <${ minify ? 'minified' : 'non-minified / debug' }> distro-type "${type}" with compile-time defined constants:`,
     JSON.stringify(defineConstants, null, 4),
     '\n'
   );
@@ -208,22 +225,32 @@ const multiConfig = [
 ].map(config => clone(baseConfig, config));
 
 multiConfig.push(demoConfig);
+multiConfig.push(unitTestsConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
+  let resultConfigs = null;
+
   if (!envArgs) {
     // If no arguments are specified, return every configuration
-    return multiConfig;
+    resultConfigs = multiConfig;
+  } else {
+    // Find the first enabled config within the arguments array
+    const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
+    // Filter out config with name
+    const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
+    if (!enabledConfig) {
+      console.error(`Couldn't find a valid config with the name "${enabledConfigName}".
+        Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
+      return;
+    }
+
+    resultConfigs = [enabledConfig, demoConfig, unitTestsConfig];
+
   }
 
-  // Find the first enabled config within the arguments array
-  const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
-  // Filter out config with name
-  const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
-  if (!enabledConfig) {
-    console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
-    return;
-  }
+  console.log(`Building configs: ${resultConfigs.map(config => config.name).join(', ')}.\n`);
 
-  return [enabledConfig, demoConfig];
+  return resultConfigs;
+
 };
