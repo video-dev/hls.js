@@ -137,6 +137,7 @@ export default class Hls {
 
     this.on = observer.on.bind(observer);
     this.off = observer.off.bind(observer);
+    this.once = observer.once.bind(observer);
     this.trigger = observer.trigger.bind(observer);
 
     // core controllers and network loaders
@@ -622,7 +623,7 @@ export default class Hls {
   }
 
   /**
-   * @type {booelan}
+   * @type {boolean}
    */
   get subtitleDisplay () {
     const subtitleTrackController = this.subtitleTrackController;

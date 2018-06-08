@@ -18,6 +18,8 @@ import { logger } from '../utils/logger';
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
 
+const { performance } = window;
+
 /**
  * `type` property values for this loaders' context object
  * @enum

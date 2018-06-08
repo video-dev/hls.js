@@ -36,7 +36,7 @@ class CapLevelController extends EventHandler {
   }
 
   onMediaAttaching (data) {
-    this.media = data.media instanceof HTMLVideoElement ? data.media : null;
+    this.media = data.media instanceof window.HTMLVideoElement ? data.media : null;
   }
 
   onManifestParsed (data) {

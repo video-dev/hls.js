@@ -108,4 +108,5 @@ const HlsEvents = {
 
   TICK: 'hlsTick'
 };
+
 export default HlsEvents;

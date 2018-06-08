@@ -6,6 +6,11 @@ import DemuxerInline from '../demux/demuxer-inline';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
+import { getSelfScope } from '../utils/get-self-scope';
+
+// see https://stackoverflow.com/a/11237259/589493
+/* eslint-disable-next-line no-undef */
+const window = getSelfScope(); // safeguard for code that might run both on worker and main thread
 
 const MediaSource = getMediaSource();
 
@@ -64,7 +69,7 @@ class Demuxer {
         logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
         if (w) {
           // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-          URL.revokeObjectURL(w.objectURL);
+          window.URL.revokeObjectURL(w.objectURL);
         }
         this.demuxer = new DemuxerInline(observer, typeSupported, config, vendor);
         this.w = undefined;
@@ -129,7 +134,7 @@ class Demuxer {
     switch (data.event) {
     case 'init':
       // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-      URL.revokeObjectURL(this.w.objectURL);
+      window.URL.revokeObjectURL(this.w.objectURL);
       break;
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
     case Event.FRAG_PARSING_DATA:
