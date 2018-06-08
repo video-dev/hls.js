@@ -1,0 +1,23 @@
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <title>Hls.js tests</title>
+    <!-- FIXME: this should work but webpack serves it as text mimetype -->
+    <!--<link href="../node_modules/mocha/mocha.css" rel="stylesheet" />-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mocha@5.0.4/mocha.css">
+  </head>
+  <body>
+
+    <div id="mocha"></div>
+    <script src="/node_modules/should/should.js" ></script>
+    <script src="/node_modules/mocha/mocha.js" ></script>
+    <!--<script src="https://cdn.jsdelivr.net/npm/mocha@5.2.0/mocha.js"></script>-->
+    <script>mocha.setup('bdd')</script>
+    <script src="/dist/hls-unit-tests.js"></script>
+    <script>
+      mocha.run();
+    </script>
+
+  </body>
+</html>
