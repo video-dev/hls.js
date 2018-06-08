@@ -5,7 +5,15 @@ import AESDecryptor from './aes-decryptor';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 
-/* globals self: false */
+import Event from '../events';
+
+import { getSelfScope } from '../utils/get-self-scope';
+
+// see https://stackoverflow.com/a/11237259/589493
+/* eslint-disable-next-line no-undef */
+const window = getSelfScope(); // safeguard for code that might run both on worker and main thread
+
+const { performance, crypto } = window;
 
 class Decrypter {
   constructor (observer, config, { removePKCS7Padding = true } = {}) {
@@ -16,7 +24,7 @@ class Decrypter {
     // built in decryptor expects PKCS7 padding
     if (removePKCS7Padding) {
       try {
-        const browserCrypto = crypto || self.crypto;
+        const browserCrypto = crypto || window.crypto;
         this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
       } catch (e) {}
     }

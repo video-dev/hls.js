@@ -1,5 +1,8 @@
-/*  inline demuxer.
- *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
+/**
+ *
+ * inline demuxer: probe fragments and instantiate
+ * appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
+ *
  */
 
 import Event from '../events';
@@ -11,6 +14,14 @@ import TSDemuxer from '../demux/tsdemuxer';
 import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
+
+import { getSelfScope } from '../utils/get-self-scope';
+
+// see https://stackoverflow.com/a/11237259/589493
+/* eslint-disable-next-line no-undef */
+const window = getSelfScope(); // safeguard for code that might run both on worker and main thread
+
+const { performance } = window;
 
 class DemuxerInline {
   constructor (observer, typeSupported, config, vendor) {

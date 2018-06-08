@@ -5,6 +5,8 @@
  * but still it is not bullet proof as it fails to avoid data waste....
 */
 
+const { Request, Headers, fetch, performance } = window;
+
 class FetchLoader {
   constructor (config) {
     this.fetchSetup = config.fetchSetup;

@@ -1,19 +1,11 @@
 module.exports = {
   'env': {
-    'browser': true,
     'commonjs': true,
     'es6': true
   },
   'globals': {
     // Allowed globals
     'console': true,
-    // "MediaSource": true,
-    'performance': true,
-    'crypto': true,
-    'fetch': true,
-    'Request': true,
-    'Headers': true,
-    'escape': true,
 
     // Compile-time defines
     '__VERSION__': true,
