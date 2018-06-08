@@ -15,18 +15,16 @@ const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
 const runAnalyzer = !!env.ANALYZE;
 
 const baseConfig = {
+  mode: 'development',
   entry: './src/hls.js',
+  resolve: {
+    // Add `.ts` and `.tsx` as a resolvable extension.
+    extensions: [".ts", ".tsx", ".js"]
+  },
   module: {
     rules: [
-      {
-        test: /\.js$/,
-        exclude: [
-          path.resolve(__dirname, 'node_modules')
-        ],
-        use: {
-          loader: 'babel-loader'
-        }
-      }
+      // all files with a `.ts` or `.tsx` extension will be handled by `ts-loader`
+      { test: /\.tsx?$/, loader: "ts-loader" }
     ]
   }
 };
@@ -46,36 +44,22 @@ const demoConfig = clone(baseConfig, {
     libraryExport: 'default',
     globalObject: 'this'
   },
+  optimization: {
+    minimize: false
+  },
   plugins: [],
   devtool: 'source-map'
 });
-
 
 function getPluginsForConfig(type, minify = false) {
   // common plugins.
 
   const defineConstants = getConstantsForConfig(type);
 
-  console.log(
-    `Building <${ minify ? 'minified' : 'non-minified / debug' }> distro-type "${type}" with compile-time defined constants:`,
-    JSON.stringify(defineConstants, null, 4),
-    '\n'
-  );
-
   const plugins = [
     new webpack.optimize.OccurrenceOrderPlugin(),
     new webpack.DefinePlugin(defineConstants)
   ];
-
-  if (minify) {
-    // minification plugins.
-    return plugins.concat([
-      new webpack.LoaderOptionsPlugin({
-        minimize: true,
-        debug: false
-      })
-    ]);
-  }
 
   if (runAnalyzer && !minify) {
     plugins.push(new BundleAnalyzerPlugin({
@@ -160,6 +144,9 @@ const multiConfig = [
       globalObject: 'this'
     },
     plugins: getPluginsForConfig('main', true),
+    optimization: {
+      minimize: true
+    },
     devtool: 'source-map'
   },
   {
@@ -199,6 +186,9 @@ const multiConfig = [
       alias: getAliasesForLightDist()
     },
     plugins: getPluginsForConfig('light', true),
+    optimization: {
+      minimize: true
+    },
     devtool: 'source-map'
   }
 ].map(config => clone(baseConfig, config));
@@ -207,19 +197,30 @@ multiConfig.push(demoConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
+
+  let configs;
+
   if (!envArgs) {
     // If no arguments are specified, return every configuration
-    return multiConfig;
+    configs = multiConfig;
+  } else {
+    // Find the first enabled config within the arguments array
+    const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
+
+    // Filter out config with name
+    const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
+
+    if (!enabledConfig) {
+      console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
+      return;
+    }
+
+    configs = [enabledConfig, demoConfig];
   }
 
-  // Find the first enabled config within the arguments array
-  const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
-  // Filter out config with name
-  const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
-  if (!enabledConfig) {
-    console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
-    return;
-  }
+  console.log(
+    `Building Hls.js with webpack config:\n\n${JSON.stringify(configs, null, 4)}\n`
+  );
 
-  return [enabledConfig, demoConfig];
+  return configs;
 };

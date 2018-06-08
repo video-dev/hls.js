@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    //"inlineSourceMap": true,
+    "sourceMap": true,
+    "allowJs": true,
+    //"noImplicitAny": true,
+    //"declaration": true, // see https://github.com/Microsoft/TypeScript/issues/7546
+    "module": "commonjs",
+    "target": "ES5"
+    // this enables stricter inference for data properties on `this`
+    // "strict": true // Recommended by Vue.js,
+    // "noImplicitAny": true,
+    // "noImplicitReturns": true,
+    // "noImplicitThis": true
+
+  },
+  "include": [
+    "demo/**/*",
+    "src/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.*"
+  ]
+}
