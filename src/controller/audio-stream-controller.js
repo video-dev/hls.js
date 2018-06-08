@@ -15,6 +15,8 @@ import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import Fragment from '../loader/fragment';
 
+const { performance } = window;
+
 const State = {
   STOPPED: 'STOPPED',
   STARTING: 'STARTING',

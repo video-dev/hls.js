@@ -11,6 +11,8 @@ import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 
+const { performance } = window;
+
 class AbrController extends EventHandler {
   constructor (hls) {
     super(hls, Event.FRAG_LOADING,

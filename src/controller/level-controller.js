@@ -9,6 +9,8 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId } from './level-helper';
 
+const { performance } = window;
+
 export default class LevelController extends EventHandler {
   constructor (hls) {
     super(hls,

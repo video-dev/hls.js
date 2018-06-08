@@ -142,7 +142,7 @@ class StreamController extends TaskLoop {
 
       break;
     case State.FRAG_LOADING_WAITING_RETRY:
-      var now = performance.now();
+      var now = window.performance.now();
       var retryDate = this.retryDate;
       // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
       if (!retryDate || (now >= retryDate) || (this.media && this.media.seeking)) {
@@ -953,12 +953,12 @@ class StreamController extends TaskLoop {
         // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
         this.state = State.IDLE;
         this.startFragRequested = false;
-        stats.tparsed = stats.tbuffered = performance.now();
+        stats.tparsed = stats.tbuffered = window.performance.now();
         this.hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
         this.tick();
       } else if (fragLoaded.sn === 'initSegment') {
         this.state = State.IDLE;
-        stats.tparsed = stats.tbuffered = performance.now();
+        stats.tparsed = stats.tbuffered = window.performance.now();
         details.initSegment.data = data.payload;
         this.hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
         this.tick();
@@ -1157,7 +1157,7 @@ class StreamController extends TaskLoop {
         fragNew.sn === fragCurrent.sn &&
         fragNew.level === fragCurrent.level &&
         this.state === State.PARSING) {
-      this.stats.tparsed = performance.now();
+      this.stats.tparsed = window.performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
     }
@@ -1256,7 +1256,7 @@ class StreamController extends TaskLoop {
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
         this.fragPrevious = frag;
         const stats = this.stats;
-        stats.tbuffered = performance.now();
+        stats.tbuffered = window.performance.now();
         // we should get rid of this.fragLastKbps
         this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
@@ -1287,7 +1287,7 @@ class StreamController extends TaskLoop {
           // exponential backoff capped to config.fragLoadingMaxRetryTimeout
           let delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
           logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
-          this.retryDate = performance.now() + delay;
+          this.retryDate = window.performance.now() + delay;
           // retry loading state
           // if loadedmetadata is not set, it means that we are emergency switch down on first frag
           // in that case, reset startFragRequested flag
@@ -1379,7 +1379,7 @@ class StreamController extends TaskLoop {
       const expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused and sufficiently buffered
         media.ended || // not playing when media is ended
         media.buffered.length === 0); // not playing if nothing buffered
-      const tnow = performance.now();
+      const tnow = window.performance.now();
 
       if (currentTime !== this.lastCurrentTime) {
         // The playhead is now moving, but was previously stalled
