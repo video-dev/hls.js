@@ -35,7 +35,6 @@ elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
   if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
     npm run lint
     npm run build
-    testNodeRequire
     npm run test:unit
     # write the token to config
     # see https://docs.npmjs.com/private-modules/ci-server-config
