@@ -38,6 +38,7 @@ module.exports = function(config) {
 
 		webpack: {
 			devtool: 'inline-source-map',
+			mode: 'development',
 			module: {
 				rules: [
 					// instrument only testing sources with Istanbul
