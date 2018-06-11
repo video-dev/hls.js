@@ -471,7 +471,6 @@ class MP4Remuxer {
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
       sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, timeOffset * inputTimeScale);
-      lastSample = sample;
     });
 
     // filter out sample with negative PTS that are not playable anyway
