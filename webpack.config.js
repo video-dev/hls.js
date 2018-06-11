@@ -219,7 +219,7 @@ module.exports = (envArgs) => {
   }
 
   console.log(
-    `Building Hls.js with webpack config:\n\n${JSON.stringify(configs, null, 4)}\n`
+    `Building configs: ${configs.map(config => config.name).join(', ')}.\n`
   );
 
   return configs;
