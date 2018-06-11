@@ -51,6 +51,49 @@ class SubtitleStreamController extends TaskLoop {
     });
   }
 
+  handleFragments ({ frags, trackId }) {
+    const { config } = this.hls;
+    const media = this.media;
+    const processedFragSNs = this.vttFragSNsProcessed[trackId];
+    const fragQueue = this.vttFragQueues[trackId];
+    const currentFragSN = this.currentlyProcessing ? this.currentlyProcessing.sn : -1;
+    const { start: bufferStart, len } = BufferHelper.bufferInfo(media, this.media.currentTime, config.maxBufferHole);
+
+    // for low buffer conditions :
+    // ensure that the buffer range we're mapping the subtitles over is >= than maxConfigBuffer
+    const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
+    const minBufferEnd = bufferStart + Math.max(maxConfigBuffer, len);
+
+    const alreadyProcessed = frag => processedFragSNs.indexOf(frag.sn) > -1;
+    const alreadyInQueue = frag => fragQueue.some(fragInQueue => fragInQueue.sn === frag.sn);
+
+    // function to check if bufferStart < frag.start < minBufferEnd to enable progressive subtitle download.
+    // + handle the case for fragments starting before the current buffer start time but long enough to cover
+    // the buffered region, ie: case where there is only one fragment for the whole video
+    const inBufferRange = frag =>
+      (frag.start < minBufferEnd && frag.start >= bufferStart - 1) ||
+      (frag.start <= bufferStart && frag.start + frag.duration >= bufferStart);
+
+    // Filter out fragments out of buffer range to enable progressive download
+    // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
+    frags
+      .filter(frag =>
+        inBufferRange(frag) && !(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag)))
+      .forEach(frag => {
+        // Load key if subtitles are encrypted
+        if (frag.encrypted) {
+          logger.log(`Loading key for ${frag.sn}`);
+          this.state = State.KEY_LOADING;
+          this.hls.trigger(Event.KEY_LOADING, { frag: frag });
+        } else {
+          // Frags don't know their subtitle track ID, so let's just add that...
+          frag.trackId = trackId;
+          fragQueue.push(frag);
+          this.nextFrag();
+        }
+      });
+  }
+
   // If no frag is being processed and queue isn't empty, initiate processing of next frag in line.
   nextFrag () {
     if (this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
@@ -107,46 +150,10 @@ class SubtitleStreamController extends TaskLoop {
       // exit if track details don't exist or if there is no active textTrack
       if (trackId === -1 || !trackDetails) break;
 
-      const { config } = this.hls;
-      const media = this.media;
-      const processedFragSNs = this.vttFragSNsProcessed[trackId];
-      const fragQueue = this.vttFragQueues[trackId];
-      const currentFragSN = this.currentlyProcessing ? this.currentlyProcessing.sn : -1;
-      const { start: bufferStart, len } = BufferHelper.bufferInfo(media, this.media.currentTime, config.maxBufferHole);
-
-      // for low buffer conditions :
-      // ensure that the buffer range we're mapping the subtitles over is >= than maxConfigBuffer
-      const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
-      const minBufferEnd = bufferStart + Math.max(maxConfigBuffer, len);
-
-      const alreadyProcessed = frag => processedFragSNs.indexOf(frag.sn) > -1;
-      const alreadyInQueue = frag => fragQueue.some(fragInQueue => fragInQueue.sn === frag.sn);
-
-      // function to check if bufferStart < frag.start < minBufferEnd to enable progressive subtitle download.
-      // + handle the case for fragments starting before the current buffer start time but long enough to cover
-      // the buffered region, ie: case where there is only one fragment for the whole video
-      const inBufferRange = frag =>
-        (frag.start < minBufferEnd && frag.start >= bufferStart - 1) ||
-        (frag.start <= bufferStart && frag.start + frag.duration >= bufferStart);
-
-      // Filter out fragments out of buffer range to enable progressive download
-      // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
-      trackDetails.fragments
-        .filter(frag =>
-          inBufferRange(frag) && !(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag)))
-        .forEach(frag => {
-          // Load key if subtitles are encrypted
-          if (frag.encrypted) {
-            logger.log(`Loading key for ${frag.sn}`);
-            this.state = State.KEY_LOADING;
-            this.hls.trigger(Event.KEY_LOADING, { frag: frag });
-          } else {
-            // Frags don't know their subtitle track ID, so let's just add that...
-            frag.trackId = trackId;
-            fragQueue.push(frag);
-            this.nextFrag();
-          }
-        });
+      this.handleFragments({
+        frags: trackDetails.fragments,
+        trackId
+      });
     }
     }
   }
