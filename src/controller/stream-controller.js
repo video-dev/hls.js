@@ -230,7 +230,7 @@ class StreamController extends TaskLoop {
     // if level info not retrieved yet, switch state and wait for level retrieval
     // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
     // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
-    if (levelDetails === undefined || levelDetails.live === true && this.levelLastLoaded !== level) {
+    if (!levelDetails || (levelDetails.live && this.levelLastLoaded !== level)) {
       this.state = State.WAITING_LEVEL;
       return;
     }
@@ -940,9 +940,9 @@ class StreamController extends TaskLoop {
         fragLoaded.type === 'main' &&
         fragLoaded.level === fragCurrent.level &&
         fragLoaded.sn === fragCurrent.sn) {
-      let stats = data.stats,
-        currentLevel = this.levels[fragCurrent.level],
-        details = currentLevel.details;
+      const stats = data.stats;
+      const currentLevel = this.levels[fragCurrent.level];
+      const details = currentLevel.details;
       logger.log(`Loaded  ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}`);
       // reset frag bitrate test in any case after frag loaded event
       this.bitrateTest = false;
