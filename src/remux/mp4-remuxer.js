@@ -469,7 +469,6 @@ class MP4Remuxer {
     );
 
     // compute normalized PTS
-    let lastSample;
     inputSamples.forEach(function (sample) {
       sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, timeOffset * inputTimeScale);
       lastSample = sample;
@@ -478,16 +477,13 @@ class MP4Remuxer {
     // filter out sample with negative PTS that are not playable anyway
     // if we don't remove these negative samples, they will shift all audio samples forward.
     // leading to audio overlap between current / next fragment
-    inputSamples = inputSamples.filter(function (sample) {
-      return sample.pts >= 0;
-    });
+    // inputSamples = inputSamples.filter(function (sample) {
+    //   return sample.pts >= 0;
+    // });
 
     // in case all samples have negative PTS, and have been filtered out, return now
     if (inputSamples.length === 0) {
-      if(!lastSample) {
-        return;
-      }
-      inputSamples = [lastSample];
+      return;
     }
 
     if (!contiguous) {
