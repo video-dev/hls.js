@@ -42,7 +42,7 @@ const demoConfig = clone(baseConfig, {
     library: 'HlsDemo',
     libraryTarget: 'umd',
     libraryExport: 'default',
-    globalObject: 'this'
+    globalObject: 'this'  // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
   },
   optimization: {
     minimize: false
