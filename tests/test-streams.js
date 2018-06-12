@@ -153,5 +153,11 @@ module.exports = {
     'description': 'Multiple non-alternate audio levels',
     'live': false,
     'abr': false
+  },
+  largeStartGap: {
+    url: 'https://s3.amazonaws.com/bob.jwplayer.com/%7Ealex/123633/new_master.m3u8',
+    description: '10 second start gap',
+    live: false,
+    abr: false
   }
 };
