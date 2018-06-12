@@ -3,8 +3,8 @@
     "sourceMap": true,
     "allowJs": true,
     "module": "commonjs",
-    "target": "ES5"
-
+    "target": "ES5",
+    "strict": true
   },
   "include": [
     "demo/**/*",
