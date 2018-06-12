@@ -57,6 +57,7 @@ class StreamController extends TaskLoop {
     this.audioCodecSwap = false;
     this._state = State.STOPPED;
     this.stallReported = false;
+    this.seekComplete = false;
   }
 
   onHandlerDestroying () {
@@ -808,6 +809,7 @@ class StreamController extends TaskLoop {
       logger.log(`media seeked to ${currentTime.toFixed(3)}`);
     }
 
+    this.seekComplete = true;
     // tick to speed up FRAGMENT_PLAYING triggering
     this.tick();
   }
@@ -1376,9 +1378,19 @@ class StreamController extends TaskLoop {
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
     } else {
-      const expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused and sufficiently buffered
-        media.ended || // not playing when media is ended
-        media.buffered.length === 0); // not playing if nothing buffered
+      // If the playhead seeks into an unbuffered range, seeking will be true but the seeked event will not have fired
+      let stuckSeeking = false;
+      if (media.seeking) {
+        if (this.seekComplete) {
+          stuckSeeking = true;
+        } else {
+          this.seekComplete = false;
+        }
+      }
+      // If playback beings in an unbuffered region (i.e. when a gap exists at t=0), readyState will be 1 but paused will still be true
+      // Browsers can tolerate small gaps at startup but larger ones (typically 1s+) will cause stalls
+      const stuckPaused = media.paused && media.readyState < 2;
+      const expectedPlaying = !(media.paused || media.ended || media.buffered.length === 0) || stuckSeeking || stuckPaused;
       const tnow = window.performance.now();
 
       if (currentTime !== this.lastCurrentTime) {
