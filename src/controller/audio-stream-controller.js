@@ -326,21 +326,14 @@ class AudioStreamController extends TaskLoop {
           // logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
           if (frag.encrypted) {
             logger.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
-            this.state = State.KEY_LOADING;
-            hls.trigger(Event.KEY_LOADING, { frag: frag });
+            this._loadKey(frag);
           } else {
             logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
             // only load if fragment is not loaded or if in audio switch
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
-            if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-              this.fragCurrent = frag;
-              this.startFragRequested = true;
-              if (!isNaN(frag.sn)) {
-                this.nextLoadPosition = frag.start + frag.duration;
-              }
 
-              hls.trigger(Event.FRAG_LOADING, { frag });
-              this.state = State.FRAG_LOADING;
+            if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
+              this._loadFragment(frag);
             }
           }
         }
@@ -401,6 +394,22 @@ class AudioStreamController extends TaskLoop {
     default:
       break;
     }
+  }
+
+  _loadKey (frag) {
+    this.state = State.KEY_LOADING;
+    this.hls.trigger(Event.KEY_LOADING, { frag: frag });
+  }
+
+  _loadFragment (frag) {
+    this.fragCurrent = frag;
+    this.startFragRequested = true;
+    if (!isNaN(frag.sn)) {
+      this.nextLoadPosition = frag.start + frag.duration;
+    }
+
+    this.hls.trigger(Event.FRAG_LOADING, { frag });
+    this.state = State.FRAG_LOADING;
   }
 
   onMediaAttached (data) {
@@ -517,7 +526,7 @@ class AudioStreamController extends TaskLoop {
 
     // compute start position
     if (!this.startFragRequested) {
-    // compute start position if set to -1. use it straight away if value is defined
+      // compute start position if set to -1. use it straight away if value is defined
       if (this.startPosition === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
@@ -550,10 +559,10 @@ class AudioStreamController extends TaskLoop {
     let fragCurrent = this.fragCurrent,
       fragLoaded = data.frag;
     if (this.state === State.FRAG_LOADING &&
-        fragCurrent &&
-        fragLoaded.type === 'audio' &&
-        fragLoaded.level === fragCurrent.level &&
-        fragLoaded.sn === fragCurrent.sn) {
+      fragCurrent &&
+      fragLoaded.type === 'audio' &&
+      fragLoaded.level === fragCurrent.level &&
+      fragLoaded.sn === fragCurrent.sn) {
       let track = this.tracks[this.trackId],
         details = track.details,
         duration = details.totalduration,
@@ -601,10 +610,10 @@ class AudioStreamController extends TaskLoop {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
     if (fragCurrent &&
-        data.id === 'audio' &&
-        fragNew.sn === fragCurrent.sn &&
-        fragNew.level === fragCurrent.level &&
-        this.state === State.PARSING) {
+      data.id === 'audio' &&
+      fragNew.sn === fragCurrent.sn &&
+      fragNew.level === fragCurrent.level &&
+      this.state === State.PARSING) {
       let tracks = data.tracks, track;
 
       // delete any video track found on audio demuxer
@@ -641,11 +650,11 @@ class AudioStreamController extends TaskLoop {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
     if (fragCurrent &&
-        data.id === 'audio' &&
-        data.type === 'audio' &&
-        fragNew.sn === fragCurrent.sn &&
-        fragNew.level === fragCurrent.level &&
-        this.state === State.PARSING) {
+      data.id === 'audio' &&
+      data.type === 'audio' &&
+      fragNew.sn === fragCurrent.sn &&
+      fragNew.level === fragCurrent.level &&
+      this.state === State.PARSING) {
       let trackId = this.trackId,
         track = this.tracks[trackId],
         hls = this.hls;
@@ -719,10 +728,10 @@ class AudioStreamController extends TaskLoop {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
     if (fragCurrent &&
-        data.id === 'audio' &&
-        fragNew.sn === fragCurrent.sn &&
-        fragNew.level === fragCurrent.level &&
-        this.state === State.PARSING) {
+      data.id === 'audio' &&
+      fragNew.sn === fragCurrent.sn &&
+      fragNew.level === fragCurrent.level &&
+      this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
@@ -825,7 +834,7 @@ class AudioStreamController extends TaskLoop {
       break;
     case ErrorDetails.BUFFER_FULL_ERROR:
       // if in appending state
-      if (data.parent === 'audio' && (this.state === State.PARSING || this.state === State.PARSED)) {
+      if (data.parent === 'audio' && (this.state === State.PARSING || this.state === State.PARSED)) {
         const media = this.mediaBuffer,
           currentTime = this.media.currentTime,
           mediaBuffered = media && BufferHelper.isBuffered(media, currentTime) && BufferHelper.isBuffered(media, currentTime + 0.5);

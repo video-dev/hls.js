@@ -127,8 +127,7 @@ class SubtitleStreamController extends TaskLoop {
           // Load key if subtitles are encrypted
           if (frag.encrypted) {
             logger.log(`Loading key for ${frag.sn}`);
-            this.state = State.KEY_LOADING;
-            this.hls.trigger(Event.KEY_LOADING, { frag: frag });
+            this._loadKey(frag);
           } else {
             // Frags don't know their subtitle track ID, so let's just add that...
             frag.trackId = trackId;
@@ -138,6 +137,11 @@ class SubtitleStreamController extends TaskLoop {
         }
       });
     }
+  }
+
+  _loadKey (frag) {
+    this.state = State.KEY_LOADING;
+    this.hls.trigger(Event.KEY_LOADING, { frag });
   }
 
   // Got all new subtitle tracks.
@@ -183,9 +187,9 @@ class SubtitleStreamController extends TaskLoop {
     let fragLoaded = data.frag,
       hls = this.hls;
     if (this.state === State.FRAG_LOADING &&
-        fragCurrent &&
-        data.frag.type === 'subtitle' &&
-        fragCurrent.sn === data.frag.sn) {
+      fragCurrent &&
+      data.frag.type === 'subtitle' &&
+      fragCurrent.sn === data.frag.sn) {
       // check to see if the payload needs to be decrypted
       if ((data.payload.byteLength > 0) && (decryptData != null) && (decryptData.key != null) && (decryptData.method === 'AES-128')) {
         let startTime;
