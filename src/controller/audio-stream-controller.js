@@ -327,14 +327,14 @@ class AudioStreamController extends TaskLoop {
           if (frag.encrypted) {
             logger.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
             this._loadKey(frag);
-          } else {
-            logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
-            // only load if fragment is not loaded or if in audio switch
-            // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+          }
 
-            if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-              this._loadFragment(frag);
-            }
+          logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+          // only load if fragment is not loaded or if in audio switch
+          // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+
+          if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
+            this._loadFragment(frag);
           }
         }
       }
