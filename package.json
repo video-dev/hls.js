@@ -55,6 +55,7 @@
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/setup.js --timeout 40000"
   },
   "dependencies": {
+    "events": "^3.0.0",
     "string.prototype.endswith": "^0.2.0",
     "url-toolkit": "^2.1.2"
   },
