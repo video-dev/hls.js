@@ -3,7 +3,6 @@
 */
 
 // import Hex from '../utils/hex';
-import { makeArrayFromArrayLike } from '../utils/make-array-from-array-like';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
@@ -335,7 +334,13 @@ class MP4 {
       len = data.byteLength;
       sps.push((len >>> 8) & 0xFF);
       sps.push((len & 0xFF));
-      sps = sps.concat(makeArrayFromArrayLike(data)); // SPS
+
+      // SPS
+      if (typeof Array.from === 'function') {
+        sps = sps.concat(Array.from(data));
+      } else {
+        sps = sps.concat(Array.prototype.slice.call(data));
+      }
     }
 
     // assemble the PPSs
@@ -344,7 +349,12 @@ class MP4 {
       len = data.byteLength;
       pps.push((len >>> 8) & 0xFF);
       pps.push((len & 0xFF));
-      pps = pps.concat(makeArrayFromArrayLike(data));
+
+      if (typeof Array.from === 'function') {
+        pps = pps.concat(Array.from(data));
+      } else {
+        pps = pps.concat(Array.prototype.slice.call(data));
+      }
     }
 
     let avcc = MP4.box(MP4.types.avcC, new Uint8Array([
