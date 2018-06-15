@@ -27,6 +27,7 @@ const uglifyJsOptions = {
   sourceMap: true
 };
 
+const getSelfScopePath = path.resolve(__dirname, 'src', 'utils', 'get-self-scope');
 const baseConfig = {
   entry: './src/hls.js',
   module: {
@@ -39,6 +40,13 @@ const baseConfig = {
         use: {
           loader: 'babel-loader'
         }
+      },
+      {
+        include: [ path.resolve(__dirname, 'src') ],
+        exclude: [ getSelfScopePath ],
+        test: /\.js$/,
+        // replace `window` with `self` if we are in a worker
+        use: `imports-loader?window=>require('${getSelfScopePath}')`
       }
     ]
   }
