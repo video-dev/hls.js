@@ -23,7 +23,9 @@ class Decrypter {
     if (removePKCS7Padding) {
       try {
         const browserCrypto = global.crypto;
-        this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
+        if (browserCrypto) {
+          this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
+        }
       } catch (e) {}
     }
     this.disableWebCrypto = !this.subtle;
