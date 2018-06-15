@@ -24,6 +24,23 @@ import EventEmitter from 'events';
 // polyfill for IE11
 require('string.prototype.endswith');
 
+function isLevelValid(newLevel) {
+  let levels = this.levelController.levels;
+  if (newLevel < -1 || newLevel >= levels.length) {
+    // invalid level id given, trigger error
+    this.trigger(HlsEvents.ERROR, {
+      type: ErrorTypes.OTHER_ERROR,
+      details: ErrorDetails.LEVEL_SWITCH_ERROR,
+      level: newLevel,
+      fatal: false,
+      reason: 'invalid level idx'
+    });
+    return false;
+  }
+
+  return true;
+}
+
 /**
  * @module Hls
  * @class
@@ -347,6 +364,10 @@ export default class Hls {
    */
   set currentLevel (newLevel) {
     logger.log(`set currentLevel:${newLevel}`);
+    // Check newLevel before set manual level.
+    if (!isLevelValid.call(this, newLevel)) {
+      return;
+    }
     this.loadLevel = newLevel;
     this.streamController.immediateLevelSwitch();
   }
@@ -368,19 +389,9 @@ export default class Hls {
   set nextLevel (newLevel) {
     logger.log(`set nextLevel:${newLevel}`);
     // Check newLevel before set manual level.
-    let levels = this.levelController.levels;
-    if (newLevel < -1 || newLevel >= levels.length) {
-      // invalid level id given, trigger error
-      hls.trigger(Event.ERROR, {
-        type: ErrorTypes.OTHER_ERROR,
-        details: ErrorDetails.LEVEL_SWITCH_ERROR,
-        level: newLevel,
-        fatal: false,
-        reason: 'invalid level idx'
-      });
+    if (!isLevelValid.call(this, newLevel)) {
       return;
     }
-
     this.levelController.manualLevel = newLevel;
     this.streamController.nextLevelSwitch();
   }
@@ -401,6 +412,10 @@ export default class Hls {
    */
   set loadLevel (newLevel) {
     logger.log(`set loadLevel:${newLevel}`);
+    // Check newLevel before set manual level.
+    if (!isLevelValid.call(this, newLevel)) {
+      return;
+    }
     this.levelController.manualLevel = newLevel;
   }
 
@@ -418,6 +433,10 @@ export default class Hls {
    * @type {number} level
    */
   set nextLoadLevel (level) {
+    // Check newLevel before set manual level.
+    if (!isLevelValid.call(this, newLevel)) {
+      return;
+    }
     this.levelController.nextLoadLevel = level;
   }
 
@@ -482,6 +501,10 @@ export default class Hls {
    */
   set autoLevelCapping (newLevel) {
     logger.log(`set autoLevelCapping:${newLevel}`);
+    // Check newLevel before set manual level.
+    if (!isLevelValid.call(this, newLevel)) {
+      return;
+    }
     this._autoLevelCapping = newLevel;
   }
 
@@ -553,6 +576,10 @@ export default class Hls {
    * @type {number}
    */
   set nextAutoLevel (nextLevel) {
+    // Check newLevel before set manual level.
+    if (!isLevelValid.call(this, newLevel)) {
+      return;
+    }
     const hls = this;
     hls.abrController.nextAutoLevel = Math.max(hls.minAutoLevel, nextLevel);
   }
