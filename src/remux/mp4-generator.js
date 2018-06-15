@@ -336,11 +336,7 @@ class MP4 {
       sps.push((len & 0xFF));
 
       // SPS
-      if (typeof Array.from === 'function') {
-        sps = sps.concat(Array.from(data));
-      } else {
-        sps = sps.concat(Array.prototype.slice.call(data));
-      }
+      sps = sps.concat(Array.prototype.slice.call(data));
     }
 
     // assemble the PPSs
@@ -350,11 +346,7 @@ class MP4 {
       pps.push((len >>> 8) & 0xFF);
       pps.push((len & 0xFF));
 
-      if (typeof Array.from === 'function') {
-        pps = pps.concat(Array.from(data));
-      } else {
-        pps = pps.concat(Array.prototype.slice.call(data));
-      }
+      pps = pps.concat(Array.prototype.slice.call(data));
     }
 
     let avcc = MP4.box(MP4.types.avcC, new Uint8Array([

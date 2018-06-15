@@ -84,6 +84,6 @@ module.exports = {
     'no-self-assign': 1,
     'new-cap': 1,
     'no-undefined': 1,
-    'no-global-assign': 1
+    'no-global-assign': 2
   }
 };
