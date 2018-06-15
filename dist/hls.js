@@ -7,7 +7,7 @@
 		exports["Hls"] = factory();
 	else
 		root["Hls"] = factory();
-})(typeof self !== 'undefined' ? self : this, function() {
+})(this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -70,7 +70,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "/dist/";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 15);
+/******/ 	return __webpack_require__(__webpack_require__.s = 10);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -112,10 +112,11 @@ function formatMsg(type, msg) {
   return msg;
 }
 
-var global = Object(__WEBPACK_IMPORTED_MODULE_0__get_self_scope__["a" /* getSelfScope */])();
+/* eslint-disable-next-line no-undef */
+var window = Object(__WEBPACK_IMPORTED_MODULE_0__get_self_scope__["a" /* getSelfScope */])();
 
 function consolePrintFn(type) {
-  var func = global.console[type];
+  var func = window.console[type];
   if (func) {
     return function () {
       for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -126,7 +127,7 @@ function consolePrintFn(type) {
         args[0] = formatMsg(type, args[0]);
       }
 
-      func.apply(global.console, args);
+      func.apply(window.console, args);
     };
   }
   return noop;
@@ -408,14 +409,14 @@ function getSelfScope() {
         if (!opts.alwaysNormalize) {
           return baseURL;
         }
-        var basePartsForNormalise = URLToolkit.parseURL(baseURL);
-        if (!basePartsForNormalise) {
+        var basePartsForNormalise = this.parseURL(baseURL);
+        if (!baseParts) {
           throw new Error('Error trying to parse base URL.');
         }
         basePartsForNormalise.path = URLToolkit.normalizePath(basePartsForNormalise.path);
         return URLToolkit.buildURLFromParts(basePartsForNormalise);
       }
-      var relativeParts = URLToolkit.parseURL(relativeURL);
+      var relativeParts = this.parseURL(relativeURL);
       if (!relativeParts) {
         throw new Error('Error trying to parse relative URL.');
       }
@@ -428,7 +429,7 @@ function getSelfScope() {
         relativeParts.path = URLToolkit.normalizePath(relativeParts.path);
         return URLToolkit.buildURLFromParts(relativeParts);
       }
-      var baseParts = URLToolkit.parseURL(baseURL);
+      var baseParts = this.parseURL(baseURL);
       if (!baseParts) {
         throw new Error('Error trying to parse base URL.');
       }
@@ -1589,7 +1590,11 @@ function decrypter__classCallCheck(instance, Constructor) { if (!(instance insta
 
 
 // see https://stackoverflow.com/a/11237259/589493
-var global = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
+/* eslint-disable-next-line no-undef */
+var decrypter_window = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
+
+var performance = decrypter_window.performance,
+    decrypter_crypto = decrypter_window.crypto;
 
 var decrypter_Decrypter = function () {
   function Decrypter(observer, config) {
@@ -1606,10 +1611,8 @@ var decrypter_Decrypter = function () {
     // built in decryptor expects PKCS7 padding
     if (removePKCS7Padding) {
       try {
-        var browserCrypto = global.crypto;
-        if (browserCrypto) {
-          this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
-        }
+        var browserCrypto = decrypter_crypto || decrypter_window.crypto;
+        this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
       } catch (e) {}
     }
     this.disableWebCrypto = !this.subtle;
@@ -2114,379 +2117,7 @@ var MP4Demuxer = function () {
 /* harmony default export */ __webpack_exports__["a"] = (MP4Demuxer);
 
 /***/ }),
-/* 9 */,
-/* 10 */,
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-function webpackBootstrapFunc (modules) {
-/******/  // The module cache
-/******/  var installedModules = {};
-
-/******/  // The require function
-/******/  function __webpack_require__(moduleId) {
-
-/******/    // Check if module is in cache
-/******/    if(installedModules[moduleId])
-/******/      return installedModules[moduleId].exports;
-
-/******/    // Create a new module (and put it into the cache)
-/******/    var module = installedModules[moduleId] = {
-/******/      i: moduleId,
-/******/      l: false,
-/******/      exports: {}
-/******/    };
-
-/******/    // Execute the module function
-/******/    modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-
-/******/    // Flag the module as loaded
-/******/    module.l = true;
-
-/******/    // Return the exports of the module
-/******/    return module.exports;
-/******/  }
-
-/******/  // expose the modules object (__webpack_modules__)
-/******/  __webpack_require__.m = modules;
-
-/******/  // expose the module cache
-/******/  __webpack_require__.c = installedModules;
-
-/******/  // identity function for calling harmony imports with the correct context
-/******/  __webpack_require__.i = function(value) { return value; };
-
-/******/  // define getter function for harmony exports
-/******/  __webpack_require__.d = function(exports, name, getter) {
-/******/    if(!__webpack_require__.o(exports, name)) {
-/******/      Object.defineProperty(exports, name, {
-/******/        configurable: false,
-/******/        enumerable: true,
-/******/        get: getter
-/******/      });
-/******/    }
-/******/  };
-
-/******/  // define __esModule on exports
-/******/  __webpack_require__.r = function(exports) {
-/******/    Object.defineProperty(exports, '__esModule', { value: true });
-/******/  };
-
-/******/  // getDefaultExport function for compatibility with non-harmony modules
-/******/  __webpack_require__.n = function(module) {
-/******/    var getter = module && module.__esModule ?
-/******/      function getDefault() { return module['default']; } :
-/******/      function getModuleExports() { return module; };
-/******/    __webpack_require__.d(getter, 'a', getter);
-/******/    return getter;
-/******/  };
-
-/******/  // Object.prototype.hasOwnProperty.call
-/******/  __webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
-
-/******/  // __webpack_public_path__
-/******/  __webpack_require__.p = "/";
-
-/******/  // on error function for async loading
-/******/  __webpack_require__.oe = function(err) { console.error(err); throw err; };
-
-  var f = __webpack_require__(__webpack_require__.s = ENTRY_MODULE)
-  return f.default || f // try to call default if defined to also support babel esmodule exports
-}
-
-var moduleNameReqExp = '[\\.|\\-|\\+|\\w|\/|@]+'
-var dependencyRegExp = '\\((\/\\*.*?\\*\/)?\s?.*?(' + moduleNameReqExp + ').*?\\)' // additional chars when output.pathinfo is true
-
-// http://stackoverflow.com/a/2593661/130442
-function quoteRegExp (str) {
-  return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&')
-}
-
-function isNumeric(n) {
-  return !isNaN(1 * n); // 1 * n converts integers, integers as string ("123"), 1e3 and "1e3" to integers and strings to NaN
-}
-
-function getModuleDependencies (sources, module, queueName) {
-  var retval = {}
-  retval[queueName] = []
-
-  var fnString = module.toString()
-  var wrapperSignature = fnString.match(/^function\s?\(\w+,\s*\w+,\s*(\w+)\)/)
-  if (!wrapperSignature) return retval
-  var webpackRequireName = wrapperSignature[1]
-
-  // main bundle deps
-  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + dependencyRegExp, 'g')
-  var match
-  while ((match = re.exec(fnString))) {
-    if (match[3] === 'dll-reference') continue
-    retval[queueName].push(match[3])
-  }
-
-  // dll deps
-  re = new RegExp('\\(' + quoteRegExp(webpackRequireName) + '\\("(dll-reference\\s(' + moduleNameReqExp + '))"\\)\\)' + dependencyRegExp, 'g')
-  while ((match = re.exec(fnString))) {
-    if (!sources[match[2]]) {
-      retval[queueName].push(match[1])
-      sources[match[2]] = __webpack_require__(match[1]).m
-    }
-    retval[match[2]] = retval[match[2]] || []
-    retval[match[2]].push(match[4])
-  }
-
-  // convert 1e3 back to 1000 - this can be important after uglify-js converted 1000 to 1e3
-  var keys = Object.keys(retval);
-  for (var i = 0; i < keys.length; i++) {
-    for (var j = 0; j < retval[keys[i]].length; j++) {
-      if (isNumeric(retval[keys[i]][j])) {
-        retval[keys[i]][j] = 1 * retval[keys[i]][j];
-      }
-    }
-  }
-
-  return retval
-}
-
-function hasValuesInQueues (queues) {
-  var keys = Object.keys(queues)
-  return keys.reduce(function (hasValues, key) {
-    return hasValues || queues[key].length > 0
-  }, false)
-}
-
-function getRequiredModules (sources, moduleId) {
-  var modulesQueue = {
-    main: [moduleId]
-  }
-  var requiredModules = {
-    main: []
-  }
-  var seenModules = {
-    main: {}
-  }
-
-  while (hasValuesInQueues(modulesQueue)) {
-    var queues = Object.keys(modulesQueue)
-    for (var i = 0; i < queues.length; i++) {
-      var queueName = queues[i]
-      var queue = modulesQueue[queueName]
-      var moduleToCheck = queue.pop()
-      seenModules[queueName] = seenModules[queueName] || {}
-      if (seenModules[queueName][moduleToCheck] || !sources[queueName][moduleToCheck]) continue
-      seenModules[queueName][moduleToCheck] = true
-      requiredModules[queueName] = requiredModules[queueName] || []
-      requiredModules[queueName].push(moduleToCheck)
-      var newModules = getModuleDependencies(sources, sources[queueName][moduleToCheck], queueName)
-      var newModulesKeys = Object.keys(newModules)
-      for (var j = 0; j < newModulesKeys.length; j++) {
-        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]] || []
-        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]].concat(newModules[newModulesKeys[j]])
-      }
-    }
-  }
-
-  return requiredModules
-}
-
-module.exports = function (moduleId, options) {
-  options = options || {}
-  var sources = {
-    main: __webpack_require__.m
-  }
-
-  var requiredModules = options.all ? { main: Object.keys(sources.main) } : getRequiredModules(sources, moduleId)
-
-  var src = ''
-
-  Object.keys(requiredModules).filter(function (m) { return m !== 'main' }).forEach(function (module) {
-    var entryModule = 0
-    while (requiredModules[module][entryModule]) {
-      entryModule++
-    }
-    requiredModules[module].push(entryModule)
-    sources[module][entryModule] = '(function(module, exports, __webpack_require__) { module.exports = __webpack_require__; })'
-    src = src + 'var ' + module + ' = (' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(entryModule)) + ')({' + requiredModules[module].map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[module][id].toString() }).join(',') + '});\n'
-  })
-
-  src = src + 'new ((' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.main.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources.main[id].toString() }).join(',') + '}))(self);'
-
-  var blob = new window.Blob([src], { type: 'text/javascript' })
-  if (options.bare) { return blob }
-
-  var URL = window.URL || window.webkitURL || window.mozURL || window.msURL
-
-  var workerUrl = URL.createObjectURL(blob)
-  var worker = new window.Worker(workerUrl)
-  worker.objectURL = workerUrl
-
-  return worker
-}
-
-
-/***/ }),
-/* 12 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__ = __webpack_require__(14);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__events__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils_logger__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_events__);
-/* demuxer web worker.
- *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
- *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
- */
-
-
-
-
-
-
-var DemuxerWorker = function DemuxerWorker(self) {
-  // observer setup
-  var observer = new __WEBPACK_IMPORTED_MODULE_3_events___default.a();
-  observer.trigger = function trigger(event) {
-    for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      data[_key - 1] = arguments[_key];
-    }
-
-    observer.emit.apply(observer, [event, event].concat(data));
-  };
-
-  observer.off = function off(event) {
-    for (var _len2 = arguments.length, data = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-      data[_key2 - 1] = arguments[_key2];
-    }
-
-    observer.removeListener.apply(observer, [event].concat(data));
-  };
-
-  var forwardMessage = function forwardMessage(ev, data) {
-    self.postMessage({ event: ev, data: data });
-  };
-
-  self.addEventListener('message', function (ev) {
-    var data = ev.data;
-    // console.log('demuxer cmd:' + data.cmd);
-    switch (data.cmd) {
-      case 'init':
-        var config = JSON.parse(data.config);
-        self.demuxer = new __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__["a" /* default */](observer, data.typeSupported, config, data.vendor);
-        try {
-          Object(__WEBPACK_IMPORTED_MODULE_2__utils_logger__["a" /* enableLogs */])(config.debug === true);
-        } catch (err) {
-          console.warn('demuxerWorker: unable to enable logs');
-        }
-        // signal end of worker init
-        forwardMessage('init', null);
-        break;
-      case 'demux':
-        self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.discontinuity, data.trackSwitch, data.contiguous, data.duration, data.accurateTimeOffset, data.defaultInitPTS);
-        break;
-      default:
-        break;
-    }
-  });
-
-  // forward events to main thread
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_DECRYPTED, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_INIT_SEGMENT, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSED, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].ERROR, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_METADATA, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_USERDATA, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].INIT_PTS_FOUND, forwardMessage);
-
-  // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_DATA, function (ev, data) {
-    var transferable = [];
-    var message = { event: ev, data: data };
-    if (data.data1) {
-      message.data1 = data.data1.buffer;
-      transferable.push(data.data1.buffer);
-      delete data.data1;
-    }
-    if (data.data2) {
-      message.data2 = data.data2.buffer;
-      transferable.push(data.data2.buffer);
-      delete data.data2;
-    }
-    self.postMessage(message, transferable);
-  });
-};
-
-/* harmony default export */ __webpack_exports__["default"] = (DemuxerWorker);
-
-/***/ }),
-/* 13 */
-/***/ (function(module, exports) {
-
-/*! http://mths.be/endswith v0.2.0 by @mathias */
-if (!String.prototype.endsWith) {
-	(function() {
-		'use strict'; // needed to support `apply`/`call` with `undefined`/`null`
-		var defineProperty = (function() {
-			// IE 8 only supports `Object.defineProperty` on DOM elements
-			try {
-				var object = {};
-				var $defineProperty = Object.defineProperty;
-				var result = $defineProperty(object, object, object) && $defineProperty;
-			} catch(error) {}
-			return result;
-		}());
-		var toString = {}.toString;
-		var endsWith = function(search) {
-			if (this == null) {
-				throw TypeError();
-			}
-			var string = String(this);
-			if (search && toString.call(search) == '[object RegExp]') {
-				throw TypeError();
-			}
-			var stringLength = string.length;
-			var searchString = String(search);
-			var searchLength = searchString.length;
-			var pos = stringLength;
-			if (arguments.length > 1) {
-				var position = arguments[1];
-				if (position !== undefined) {
-					// `ToInteger`
-					pos = position ? Number(position) : 0;
-					if (pos != pos) { // better `isNaN`
-						pos = 0;
-					}
-				}
-			}
-			var end = Math.min(Math.max(pos, 0), stringLength);
-			var start = end - searchLength;
-			if (start < 0) {
-				return false;
-			}
-			var index = -1;
-			while (++index < searchLength) {
-				if (string.charCodeAt(start + index) != searchString.charCodeAt(index)) {
-					return false;
-				}
-			}
-			return true;
-		};
-		if (defineProperty) {
-			defineProperty(String.prototype, 'endsWith', {
-				'value': endsWith,
-				'configurable': true,
-				'writable': true
-			});
-		} else {
-			String.prototype.endsWith = endsWith;
-		}
-	}());
-}
-
-
-/***/ }),
-/* 14 */
+/* 9 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4699,6 +4330,8 @@ var AAC = function () {
 }();
 
 /* harmony default export */ var aac_helper = (AAC);
+// CONCATENATED MODULE: ./src/utils/make-array-from-array-like.js
+var makeArrayFromArrayLike = typeof Array.from === 'function' ? Array.from : Array.prototype.slice.call;
 // CONCATENATED MODULE: ./src/remux/mp4-generator.js
 function mp4_generator__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -4706,9 +4339,12 @@ function mp4_generator__classCallCheck(instance, Constructor) { if (!(instance i
  * Generate MP4 Box
 */
 
+// import Hex from '../utils/hex';
+
+
 var UINT32_MAX = Math.pow(2, 32) - 1;
 
-var MP4 = function () {
+var mp4_generator_MP4 = function () {
   function MP4() {
     mp4_generator__classCallCheck(this, MP4);
   }
@@ -4977,9 +4613,7 @@ var MP4 = function () {
       len = data.byteLength;
       sps.push(len >>> 8 & 0xFF);
       sps.push(len & 0xFF);
-
-      // SPS
-      sps = sps.concat(Array.prototype.slice.call(data));
+      sps = sps.concat(makeArrayFromArrayLike(data)); // SPS
     }
 
     // assemble the PPSs
@@ -4988,8 +4622,7 @@ var MP4 = function () {
       len = data.byteLength;
       pps.push(len >>> 8 & 0xFF);
       pps.push(len & 0xFF);
-
-      pps = pps.concat(Array.prototype.slice.call(data));
+      pps = pps.concat(makeArrayFromArrayLike(data));
     }
 
     var avcc = MP4.box(MP4.types.avcC, new Uint8Array([0x01, // version
@@ -5205,7 +4838,7 @@ var MP4 = function () {
   return MP4;
 }();
 
-/* harmony default export */ var mp4_generator = (MP4);
+/* harmony default export */ var mp4_generator = (mp4_generator_MP4);
 // CONCATENATED MODULE: ./src/remux/mp4-remuxer.js
 function mp4_remuxer__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -5350,7 +4983,7 @@ var mp4_remuxer_MP4Remuxer = function () {
       tracks.audio = {
         container: container,
         codec: audioTrack.codec,
-        initSegment: !audioTrack.isAAC && typeSupported.mpeg ? new Uint8Array() : mp4_remuxer.initSegment([audioTrack]),
+        initSegment: !audioTrack.isAAC && typeSupported.mpeg ? new Uint8Array() : mp4_generator.initSegment([audioTrack]),
         metadata: {
           channelCount: audioTrack.channelCount
         }
@@ -5369,7 +5002,7 @@ var mp4_remuxer_MP4Remuxer = function () {
       tracks.video = {
         container: 'video/mp4',
         codec: videoTrack.codec,
-        initSegment: mp4_remuxer.initSegment([videoTrack]),
+        initSegment: mp4_generator.initSegment([videoTrack]),
         metadata: {
           width: videoTrack.width,
           height: videoTrack.height
@@ -5551,7 +5184,7 @@ var mp4_remuxer_MP4Remuxer = function () {
     }
     var view = new DataView(mdat.buffer);
     view.setUint32(0, mdatSize);
-    mdat.set(mp4_remuxer.types.mdat, 4);
+    mdat.set(mp4_generator.types.mdat, 4);
 
     for (var _i2 = 0; _i2 < nbSamples; _i2++) {
       var avcSample = inputSamples[_i2],
@@ -5637,7 +5270,7 @@ var mp4_remuxer_MP4Remuxer = function () {
       flags.isNonSync = 0;
     }
     track.samples = outputSamples;
-    moof = mp4_remuxer.moof(track.sequenceNumber++, firstDTS, track);
+    moof = mp4_generator.moof(track.sequenceNumber++, firstDTS, track);
     track.samples = [];
 
     var data = {
@@ -5830,7 +5463,7 @@ var mp4_remuxer_MP4Remuxer = function () {
           if (!rawMPEG) {
             var view = new DataView(mdat.buffer);
             view.setUint32(0, mdatSize);
-            mdat.set(mp4_remuxer.types.mdat, 4);
+            mdat.set(mp4_generator.types.mdat, 4);
           }
         } else {
           // no audio samples
@@ -5894,7 +5527,7 @@ var mp4_remuxer_MP4Remuxer = function () {
       if (rawMPEG) {
         moof = new Uint8Array();
       } else {
-        moof = mp4_remuxer.moof(track.sequenceNumber++, firstPTS / scaleFactor, track);
+        moof = mp4_generator.moof(track.sequenceNumber++, firstPTS / scaleFactor, track);
       }
 
       track.samples = [];
@@ -6109,8 +5742,10 @@ function demuxer_inline__classCallCheck(instance, Constructor) { if (!(instance 
 
 
 // see https://stackoverflow.com/a/11237259/589493
-var global = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
-var performance = global;
+/* eslint-disable-next-line no-undef */
+var demuxer_inline_window = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
+
+var performance = demuxer_inline_window.performance;
 
 var demuxer_inline_DemuxerInline = function () {
   function DemuxerInline(observer, typeSupported, config, vendor) {
@@ -6212,13 +5847,13 @@ var demuxer_inline_DemuxerInline = function () {
 /* harmony default export */ var demuxer_inline = __webpack_exports__["a"] = (demuxer_inline_DemuxerInline);
 
 /***/ }),
-/* 15 */
+/* 10 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-var cea_608_parser_namespaceObject = {};
-__webpack_require__.d(cea_608_parser_namespaceObject, "default", function() { return cea_608_parser; });
+var cues_namespaceObject = {};
+__webpack_require__.d(cues_namespaceObject, "newCue", function() { return newCue; });
 
 // EXTERNAL MODULE: ./node_modules/url-toolkit/src/url-toolkit.js
 var url_toolkit = __webpack_require__(4);
@@ -8381,8 +8016,8 @@ var events_default = /*#__PURE__*/__webpack_require__.n(events_events);
 var webworkify_webpack = __webpack_require__(11);
 var webworkify_webpack_default = /*#__PURE__*/__webpack_require__.n(webworkify_webpack);
 
-// EXTERNAL MODULE: ./src/demux/demuxer-inline.js + 11 modules
-var demuxer_inline = __webpack_require__(14);
+// EXTERNAL MODULE: ./src/demux/demuxer-inline.js + 12 modules
+var demuxer_inline = __webpack_require__(9);
 
 // CONCATENATED MODULE: ./src/utils/mediasource-helper.js
 /**
@@ -8411,7 +8046,9 @@ function demuxer__classCallCheck(instance, Constructor) { if (!(instance instanc
 
 
 // see https://stackoverflow.com/a/11237259/589493
-var global = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
+/* eslint-disable-next-line no-undef */
+var demuxer_window = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
+
 var MediaSource = getMediaSource();
 
 var demuxer_Demuxer = function () {
@@ -8479,7 +8116,7 @@ var demuxer_Demuxer = function () {
         logger["b" /* logger */].error('error while initializing DemuxerWorker, fallback on DemuxerInline');
         if (w) {
           // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-          global.URL.revokeObjectURL(w.objectURL);
+          demuxer_window.URL.revokeObjectURL(w.objectURL);
         }
         this.demuxer = new demuxer_inline["a" /* default */](observer, typeSupported, config, vendor);
         this.w = undefined;
@@ -8544,7 +8181,7 @@ var demuxer_Demuxer = function () {
     switch (data.event) {
       case 'init':
         // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-        global.URL.revokeObjectURL(this.w.objectURL);
+        demuxer_window.URL.revokeObjectURL(this.w.objectURL);
         break;
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
       case events["a" /* default */].FRAG_PARSING_DATA:
@@ -11377,7 +11014,7 @@ var id3_track_controller_ID3TrackController = function (_EventHandler) {
   };
 
   ID3TrackController.prototype.onMediaDetaching = function onMediaDetaching() {
-    /* Cannot get final name for export "clearCurrentCues" in "./src/controller/id3-track-controller.js" (known exports: default, known reexports: ) */ undefined(this.id3Track);
+    clearCurrentCues(this.id3Track);
     this.id3Track = undefined;
     this.media = undefined;
   };
@@ -11388,7 +11025,7 @@ var id3_track_controller_ID3TrackController = function (_EventHandler) {
       if (textTrack.kind === 'metadata' && textTrack.label === 'id3') {
         // send 'addtrack' when reusing the textTrack for metadata,
         // same as what we do for captions
-        /* Cannot get final name for export "sendAddTrackEvent" in "./src/controller/id3-track-controller.js" (known exports: default, known reexports: ) */ undefined(textTrack, this.media);
+        sendAddTrackEvent(textTrack, this.media);
 
         return textTrack;
       }
@@ -11412,7 +11049,7 @@ var id3_track_controller_ID3TrackController = function (_EventHandler) {
     var Cue = window.WebKitDataCue || window.VTTCue || window.TextTrackCue;
 
     for (var i = 0; i < samples.length; i++) {
-      var frames = /* Cannot get final name for export "default" in "./src/utils/texttrack-utils.js" (known exports: sendAddTrackEvent clearCurrentCues, known reexports: ) */ undefined.getID3Frames(samples[i].data);
+      var frames = id3["a" /* default */].getID3Frames(samples[i].data);
       if (frames) {
         var startTime = samples[i].pts;
         var endTime = i < samples.length - 1 ? samples[i + 1].pts : fragment.endPTS;
@@ -11425,7 +11062,7 @@ var id3_track_controller_ID3TrackController = function (_EventHandler) {
         for (var j = 0; j < frames.length; j++) {
           var frame = frames[j];
           // Safari doesn't put the timestamp frame in the TextTrack
-          if (!/* Cannot get final name for export "default" in "./src/utils/texttrack-utils.js" (known exports: sendAddTrackEvent clearCurrentCues, known reexports: ) */ undefined.isTimeStampFrame(frame)) {
+          if (!id3["a" /* default */].isTimeStampFrame(frame)) {
             var cue = new Cue(startTime, endTime, '');
             cue.value = frame;
             this.id3Track.addCue(cue);
@@ -11516,8 +11153,8 @@ var ewma_bandwidth_estimator_EwmaBandWidthEstimator = function () {
     this.defaultEstimate_ = defaultEstimate;
     this.minWeight_ = 0.001;
     this.minDelayMs_ = 50;
-    this.slow_ = new ewma_bandwidth_estimator(slow);
-    this.fast_ = new ewma_bandwidth_estimator(fast);
+    this.slow_ = new ewma(slow);
+    this.fast_ = new ewma(fast);
   }
 
   EwmaBandWidthEstimator.prototype.sample = function sample(durationMs, numBytes) {
@@ -11626,7 +11263,7 @@ var abr_controller_AbrController = function (_EventHandler) {
           ewmaFast = config.abrEwmaFastVoD;
           ewmaSlow = config.abrEwmaSlowVoD;
         }
-        this._bwEstimator = new abr_controller(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
+        this._bwEstimator = new ewma_bandwidth_estimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
     }
   };
@@ -14786,7 +14423,7 @@ function parseOptions(input, callback, keyValueDelim, groupDelim) {
   }
 }
 
-var defaults = new vttparser(0, 0, 0);
+var defaults = new vttcue(0, 0, 0);
 // 'middle' was changed to 'center' in the spec: https://github.com/w3c/webvtt/pull/244
 //  Safari doesn't yet support this change, but FF and Chrome do.
 var center = defaults.align === 'middle' ? 'middle' : 'center';
@@ -15011,7 +14648,7 @@ VTTParser.prototype = {
               continue;
             }
 
-            self.cue = new vttparser(0, 0, '');
+            self.cue = new vttcue(0, 0, '');
             self.state = 'CUE';
             // 30-39 - Check if self line contains an optional identifier or timing data.
             if (line.indexOf('-->') === -1) {
@@ -15141,7 +14778,7 @@ function newCue(track, startTime, endTime, captionScreen) {
         endTime += 0.0001;
       }
 
-      cue = new VTTCue(startTime, endTime, /* Cannot get final name for export "fixLineBreaks" in "./src/utils/cues.js" (known exports: newCue, known reexports: ) */ undefined(text.trim()));
+      cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
 
       if (indent >= 16) {
         indent--;
@@ -16516,7 +16153,7 @@ var WebVTTParser = {
     // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
     var re = /\r\n|\n\r|\n|\r/g;
     // Uint8Array.prototype.reduce is not implemented in IE11
-    var vttLines = /* Cannot get final name for export "utf8ArrayToStr" in "./src/utils/texttrack-utils.js" (known exports: sendAddTrackEvent clearCurrentCues, known reexports: ) */ undefined(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
+    var vttLines = Object(id3["b" /* utf8ArrayToStr */])(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
 
     var cueTime = '00:00.000';
     var mpegTs = 0;
@@ -16528,7 +16165,7 @@ var WebVTTParser = {
     // let VTTCue = VTTCue || window.TextTrackCue;
 
     // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
-    var parser = new /* Cannot get final name for export "default" in "./src/utils/cues.js" (known exports: newCue, known reexports: ) */ undefined();
+    var parser = new vttparser();
 
     parser.oncue = function (cue) {
       // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
@@ -16681,10 +16318,10 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     };
 
     if (_this.config.enableCEA708Captions) {
-      var channel1 = new webvtt_parser(_this, 'textTrack1');
-      var channel2 = new webvtt_parser(_this, 'textTrack2');
+      var channel1 = new output_filter(_this, 'textTrack1');
+      var channel2 = new output_filter(_this, 'textTrack2');
 
-      _this.cea608Parser = new output_filter(0, channel1, channel2);
+      _this.cea608Parser = new cea_608_parser(0, channel1, channel2);
     }
     return _this;
   }
@@ -16764,8 +16401,8 @@ var timeline_controller_TimelineController = function (_EventHandler) {
         }
       } else {
         captionsTracks[trackName] = existingTrack;
-        /* Cannot get final name for export "clearCurrentCues" in "./src/controller/id3-track-controller.js" (known exports: default, known reexports: ) */ undefined(captionsTracks[trackName]);
-        /* Cannot get final name for export "sendAddTrackEvent" in "./src/controller/id3-track-controller.js" (known exports: default, known reexports: ) */ undefined(captionsTracks[trackName], this.media);
+        clearCurrentCues(captionsTracks[trackName]);
+        sendAddTrackEvent(captionsTracks[trackName], this.media);
       }
     }
   };
@@ -16790,7 +16427,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     var captionsTracks = this.captionsTracks;
 
     Object.keys(captionsTracks).forEach(function (trackName) {
-      /* Cannot get final name for export "clearCurrentCues" in "./src/controller/id3-track-controller.js" (known exports: default, known reexports: ) */ undefined(captionsTracks[trackName]);
+      clearCurrentCues(captionsTracks[trackName]);
       delete captionsTracks[trackName];
     });
   };
@@ -16809,7 +16446,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
       var textTracks = media.textTracks;
       if (textTracks) {
         for (var i = 0; i < textTracks.length; i++) {
-          /* Cannot get final name for export "clearCurrentCues" in "./src/controller/id3-track-controller.js" (known exports: default, known reexports: ) */ undefined(textTracks[i]);
+          clearCurrentCues(textTracks[i]);
         }
       }
     }
@@ -16900,7 +16537,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
         hls = this.hls;
 
     // Parse the WebVTT file contents.
-    timeline_controller.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+    webvtt_parser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
       var currentTrack = textTracks[frag.trackId];
       // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
       // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
@@ -17332,7 +16969,7 @@ var subtitle_stream_controller_SubtitleStreamController = function (_TaskLoop) {
     _this.currentlyProcessing = null;
     _this.state = subtitle_stream_controller_State.STOPPED;
     _this.currentTrackId = -1;
-    _this.decrypter = new subtitle_stream_controller(hls.observer, hls.config);
+    _this.decrypter = new decrypter["a" /* default */](hls.observer, hls.config);
     return _this;
   }
 
@@ -18134,17 +17771,17 @@ var hlsDefaultConfig = {
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
   appendErrorMaxRetry: 3, // used by buffer-controller
-  loader: audio_track_controller,
+  loader: xhr_loader,
   // loader: FetchLoader,
   fLoader: undefined, // used by fragment-loader
   pLoader: undefined, // used by playlist-loader
   xhrSetup: undefined, // used by xhr-loader
   licenseXhrSetup: undefined, // used by eme-controller
   // fetchSetup: undefined,
-  abrController: buffer_controller,
-  bufferController: cap_level_controller,
-  capLevelController: fps_controller,
-  fpsController: xhr_loader,
+  abrController: abr_controller,
+  bufferController: buffer_controller,
+  capLevelController: cap_level_controller,
+  fpsController: fps_controller,
   stretchShortVideoTrack: false, // used by mp4-remuxer
   maxAudioFramesDrift: 1, // used by mp4-remuxer
   forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
@@ -18161,14 +17798,14 @@ var hlsDefaultConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
-  requestMediaKeySystemAccessFunc: /* Cannot get final name for export "requestMediaKeySystemAccess" in "./src/config.js" (known exports: hlsDefaultConfig, known reexports: ) */ undefined // used by eme-controller
+  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess // used by eme-controller
 };
 
 if (true) {
-  hlsDefaultConfig.subtitleStreamController = eme_controller;
-  hlsDefaultConfig.subtitleTrackController = decrypter["a" /* default */];
-  hlsDefaultConfig.timelineController = subtitle_track_controller;
-  hlsDefaultConfig.cueHandler = cea_608_parser_namespaceObject; // used by timeline-controller
+  hlsDefaultConfig.subtitleStreamController = subtitle_stream_controller;
+  hlsDefaultConfig.subtitleTrackController = subtitle_track_controller;
+  hlsDefaultConfig.timelineController = timeline_controller;
+  hlsDefaultConfig.cueHandler = cues_namespaceObject; // used by timeline-controller
   hlsDefaultConfig.enableCEA708Captions = true; // used by timeline-controller
   hlsDefaultConfig.enableWebVTT = true; // used by timeline-controller
   hlsDefaultConfig.captionsTextTrack1Label = 'English'; // used by timeline-controller
@@ -18178,12 +17815,12 @@ if (true) {
 }
 
 if (true) {
-  hlsDefaultConfig.audioStreamController = vttcue;
-  hlsDefaultConfig.audioTrackController = audio_stream_controller;
+  hlsDefaultConfig.audioStreamController = audio_stream_controller;
+  hlsDefaultConfig.audioTrackController = audio_track_controller;
 }
 
 if (true) {
-  hlsDefaultConfig.emeController = /* Cannot get final name for export "default" in "./src/utils/mediakeys-helper.js" (known exports: requestMediaKeySystemAccess, known reexports: ) */ undefined;
+  hlsDefaultConfig.emeController = eme_controller;
 }
 // CONCATENATED MODULE: ./src/hls.js
 var hls__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -18225,7 +17862,7 @@ var hls_Hls = function () {
    * @type {boolean}
    */
   Hls.isSupported = function isSupported() {
-    return /* Cannot get final name for export "isSupported" in "./src/utils/ewma.js" (known exports: default, known reexports: ) */ undefined();
+    return is_supported_isSupported();
   };
 
   /**
@@ -18276,7 +17913,7 @@ var hls_Hls = function () {
     key: 'DefaultConfig',
     get: function get() {
       if (!Hls.defaultConfig) {
-        return /* Cannot get final name for export "hlsDefaultConfig" in "./src/hls.js" (known exports: default, known reexports: ) */ undefined;
+        return hlsDefaultConfig;
       }
 
       return Hls.defaultConfig;
@@ -18363,14 +18000,14 @@ var hls_Hls = function () {
     var playListLoader = new playlist_loader(this);
     var fragmentLoader = new fragment_loader(this);
     var keyLoader = new key_loader(this);
-    var id3TrackController = new /* Cannot get final name for export "default" in "./src/is-supported.js" (known exports: isSupported, known reexports: ) */ undefined(this);
+    var id3TrackController = new id3_track_controller(this);
 
     // network controllers
 
     /**
      * @member {LevelController} levelController
      */
-    var levelController = this.levelController = new id3["a" /* default */](this);
+    var levelController = this.levelController = new level_controller(this);
 
     // FIXME: FragmentTracker must be defined before StreamController because the order of event handling is important
     var fragmentTracker = new fragment_tracker_FragmentTracker(this);
@@ -18378,7 +18015,7 @@ var hls_Hls = function () {
     /**
      * @member {StreamController} streamController
      */
-    var streamController = this.streamController = new level_controller(this, fragmentTracker);
+    var streamController = this.streamController = new stream_controller(this, fragmentTracker);
 
     var networkControllers = [levelController, streamController];
 
@@ -18936,6 +18573,357 @@ var hls_Hls = function () {
 }();
 
 /* harmony default export */ var src_hls = __webpack_exports__["default"] = (hls_Hls);
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+function webpackBootstrapFunc (modules) {
+/******/  // The module cache
+/******/  var installedModules = {};
+
+/******/  // The require function
+/******/  function __webpack_require__(moduleId) {
+
+/******/    // Check if module is in cache
+/******/    if(installedModules[moduleId])
+/******/      return installedModules[moduleId].exports;
+
+/******/    // Create a new module (and put it into the cache)
+/******/    var module = installedModules[moduleId] = {
+/******/      i: moduleId,
+/******/      l: false,
+/******/      exports: {}
+/******/    };
+
+/******/    // Execute the module function
+/******/    modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+
+/******/    // Flag the module as loaded
+/******/    module.l = true;
+
+/******/    // Return the exports of the module
+/******/    return module.exports;
+/******/  }
+
+/******/  // expose the modules object (__webpack_modules__)
+/******/  __webpack_require__.m = modules;
+
+/******/  // expose the module cache
+/******/  __webpack_require__.c = installedModules;
+
+/******/  // identity function for calling harmony imports with the correct context
+/******/  __webpack_require__.i = function(value) { return value; };
+
+/******/  // define getter function for harmony exports
+/******/  __webpack_require__.d = function(exports, name, getter) {
+/******/    if(!__webpack_require__.o(exports, name)) {
+/******/      Object.defineProperty(exports, name, {
+/******/        configurable: false,
+/******/        enumerable: true,
+/******/        get: getter
+/******/      });
+/******/    }
+/******/  };
+
+/******/  // getDefaultExport function for compatibility with non-harmony modules
+/******/  __webpack_require__.n = function(module) {
+/******/    var getter = module && module.__esModule ?
+/******/      function getDefault() { return module['default']; } :
+/******/      function getModuleExports() { return module; };
+/******/    __webpack_require__.d(getter, 'a', getter);
+/******/    return getter;
+/******/  };
+
+/******/  // Object.prototype.hasOwnProperty.call
+/******/  __webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
+
+/******/  // __webpack_public_path__
+/******/  __webpack_require__.p = "/";
+
+/******/  // on error function for async loading
+/******/  __webpack_require__.oe = function(err) { console.error(err); throw err; };
+
+  var f = __webpack_require__(__webpack_require__.s = ENTRY_MODULE)
+  return f.default || f // try to call default if defined to also support babel esmodule exports
+}
+
+var moduleNameReqExp = '[\\.|\\-|\\+|\\w|\/|@]+'
+var dependencyRegExp = '\\((\/\\*.*?\\*\/)?\s?.*?(' + moduleNameReqExp + ').*?\\)' // additional chars when output.pathinfo is true
+
+// http://stackoverflow.com/a/2593661/130442
+function quoteRegExp (str) {
+  return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&')
+}
+
+function getModuleDependencies (sources, module, queueName) {
+  var retval = {}
+  retval[queueName] = []
+
+  var fnString = module.toString()
+  var wrapperSignature = fnString.match(/^function\s?\(\w+,\s*\w+,\s*(\w+)\)/)
+  if (!wrapperSignature) return retval
+  var webpackRequireName = wrapperSignature[1]
+
+  // main bundle deps
+  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + dependencyRegExp, 'g')
+  var match
+  while ((match = re.exec(fnString))) {
+    if (match[3] === 'dll-reference') continue
+    retval[queueName].push(match[3])
+  }
+
+  // dll deps
+  re = new RegExp('\\(' + quoteRegExp(webpackRequireName) + '\\("(dll-reference\\s(' + moduleNameReqExp + '))"\\)\\)' + dependencyRegExp, 'g')
+  while ((match = re.exec(fnString))) {
+    if (!sources[match[2]]) {
+      retval[queueName].push(match[1])
+      sources[match[2]] = __webpack_require__(match[1]).m
+    }
+    retval[match[2]] = retval[match[2]] || []
+    retval[match[2]].push(match[4])
+  }
+
+  return retval
+}
+
+function hasValuesInQueues (queues) {
+  var keys = Object.keys(queues)
+  return keys.reduce(function (hasValues, key) {
+    return hasValues || queues[key].length > 0
+  }, false)
+}
+
+function getRequiredModules (sources, moduleId) {
+  var modulesQueue = {
+    main: [moduleId]
+  }
+  var requiredModules = {
+    main: []
+  }
+  var seenModules = {
+    main: {}
+  }
+
+  while (hasValuesInQueues(modulesQueue)) {
+    var queues = Object.keys(modulesQueue)
+    for (var i = 0; i < queues.length; i++) {
+      var queueName = queues[i]
+      var queue = modulesQueue[queueName]
+      var moduleToCheck = queue.pop()
+      seenModules[queueName] = seenModules[queueName] || {}
+      if (seenModules[queueName][moduleToCheck] || !sources[queueName][moduleToCheck]) continue
+      seenModules[queueName][moduleToCheck] = true
+      requiredModules[queueName] = requiredModules[queueName] || []
+      requiredModules[queueName].push(moduleToCheck)
+      var newModules = getModuleDependencies(sources, sources[queueName][moduleToCheck], queueName)
+      var newModulesKeys = Object.keys(newModules)
+      for (var j = 0; j < newModulesKeys.length; j++) {
+        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]] || []
+        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]].concat(newModules[newModulesKeys[j]])
+      }
+    }
+  }
+
+  return requiredModules
+}
+
+module.exports = function (moduleId, options) {
+  options = options || {}
+  var sources = {
+    main: __webpack_require__.m
+  }
+
+  var requiredModules = options.all ? { main: Object.keys(sources) } : getRequiredModules(sources, moduleId)
+
+  var src = ''
+
+  Object.keys(requiredModules).filter(function (m) { return m !== 'main' }).forEach(function (module) {
+    var entryModule = 0
+    while (requiredModules[module][entryModule]) {
+      entryModule++
+    }
+    requiredModules[module].push(entryModule)
+    sources[module][entryModule] = '(function(module, exports, __webpack_require__) { module.exports = __webpack_require__; })'
+    src = src + 'var ' + module + ' = (' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(entryModule)) + ')({' + requiredModules[module].map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[module][id].toString() }).join(',') + '});\n'
+  })
+
+  src = src + '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.main.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources.main[id].toString() }).join(',') + '})(self);'
+
+  var blob = new window.Blob([src], { type: 'text/javascript' })
+  if (options.bare) { return blob }
+
+  var URL = window.URL || window.webkitURL || window.mozURL || window.msURL
+
+  var workerUrl = URL.createObjectURL(blob)
+  var worker = new window.Worker(workerUrl)
+  worker.objectURL = workerUrl
+
+  return worker
+}
+
+
+/***/ }),
+/* 12 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__events__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils_logger__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_events__);
+/* demuxer web worker.
+ *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
+ *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+ */
+
+
+
+
+
+
+var DemuxerWorker = function DemuxerWorker(self) {
+  // observer setup
+  var observer = new __WEBPACK_IMPORTED_MODULE_3_events___default.a();
+  observer.trigger = function trigger(event) {
+    for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      data[_key - 1] = arguments[_key];
+    }
+
+    observer.emit.apply(observer, [event, event].concat(data));
+  };
+
+  observer.off = function off(event) {
+    for (var _len2 = arguments.length, data = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+      data[_key2 - 1] = arguments[_key2];
+    }
+
+    observer.removeListener.apply(observer, [event].concat(data));
+  };
+
+  var forwardMessage = function forwardMessage(ev, data) {
+    self.postMessage({ event: ev, data: data });
+  };
+
+  self.addEventListener('message', function (ev) {
+    var data = ev.data;
+    // console.log('demuxer cmd:' + data.cmd);
+    switch (data.cmd) {
+      case 'init':
+        var config = JSON.parse(data.config);
+        self.demuxer = new __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__["a" /* default */](observer, data.typeSupported, config, data.vendor);
+        try {
+          Object(__WEBPACK_IMPORTED_MODULE_2__utils_logger__["a" /* enableLogs */])(config.debug === true);
+        } catch (err) {
+          console.warn('demuxerWorker: unable to enable logs');
+        }
+        // signal end of worker init
+        forwardMessage('init', null);
+        break;
+      case 'demux':
+        self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.discontinuity, data.trackSwitch, data.contiguous, data.duration, data.accurateTimeOffset, data.defaultInitPTS);
+        break;
+      default:
+        break;
+    }
+  });
+
+  // forward events to main thread
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_DECRYPTED, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_INIT_SEGMENT, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSED, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].ERROR, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_METADATA, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_USERDATA, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].INIT_PTS_FOUND, forwardMessage);
+
+  // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_DATA, function (ev, data) {
+    var transferable = [];
+    var message = { event: ev, data: data };
+    if (data.data1) {
+      message.data1 = data.data1.buffer;
+      transferable.push(data.data1.buffer);
+      delete data.data1;
+    }
+    if (data.data2) {
+      message.data2 = data.data2.buffer;
+      transferable.push(data.data2.buffer);
+      delete data.data2;
+    }
+    self.postMessage(message, transferable);
+  });
+};
+
+/* harmony default export */ __webpack_exports__["default"] = (DemuxerWorker);
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports) {
+
+/*! http://mths.be/endswith v0.2.0 by @mathias */
+if (!String.prototype.endsWith) {
+	(function() {
+		'use strict'; // needed to support `apply`/`call` with `undefined`/`null`
+		var defineProperty = (function() {
+			// IE 8 only supports `Object.defineProperty` on DOM elements
+			try {
+				var object = {};
+				var $defineProperty = Object.defineProperty;
+				var result = $defineProperty(object, object, object) && $defineProperty;
+			} catch(error) {}
+			return result;
+		}());
+		var toString = {}.toString;
+		var endsWith = function(search) {
+			if (this == null) {
+				throw TypeError();
+			}
+			var string = String(this);
+			if (search && toString.call(search) == '[object RegExp]') {
+				throw TypeError();
+			}
+			var stringLength = string.length;
+			var searchString = String(search);
+			var searchLength = searchString.length;
+			var pos = stringLength;
+			if (arguments.length > 1) {
+				var position = arguments[1];
+				if (position !== undefined) {
+					// `ToInteger`
+					pos = position ? Number(position) : 0;
+					if (pos != pos) { // better `isNaN`
+						pos = 0;
+					}
+				}
+			}
+			var end = Math.min(Math.max(pos, 0), stringLength);
+			var start = end - searchLength;
+			if (start < 0) {
+				return false;
+			}
+			var index = -1;
+			while (++index < searchLength) {
+				if (string.charCodeAt(start + index) != searchString.charCodeAt(index)) {
+					return false;
+				}
+			}
+			return true;
+		};
+		if (defineProperty) {
+			defineProperty(String.prototype, 'endsWith', {
+				'value': endsWith,
+				'configurable': true,
+				'writable': true
+			});
+		} else {
+			String.prototype.endsWith = endsWith;
+		}
+	}());
+}
+
 
 /***/ })
 /******/ ])["default"];
