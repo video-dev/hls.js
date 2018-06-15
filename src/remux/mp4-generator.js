@@ -2,8 +2,6 @@
  * Generate MP4 Box
 */
 
-// import Hex from '../utils/hex';
-
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
 class MP4 {
