@@ -112,11 +112,10 @@ function formatMsg(type, msg) {
   return msg;
 }
 
-/* eslint-disable-next-line no-undef */
-var window = Object(__WEBPACK_IMPORTED_MODULE_0__get_self_scope__["a" /* getSelfScope */])();
+var global = Object(__WEBPACK_IMPORTED_MODULE_0__get_self_scope__["a" /* getSelfScope */])();
 
 function consolePrintFn(type) {
-  var func = window.console[type];
+  var func = global.console[type];
   if (func) {
     return function () {
       for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -127,7 +126,7 @@ function consolePrintFn(type) {
         args[0] = formatMsg(type, args[0]);
       }
 
-      func.apply(window.console, args);
+      func.apply(global.console, args);
     };
   }
   return noop;
@@ -2027,11 +2026,7 @@ function decrypter__classCallCheck(instance, Constructor) { if (!(instance insta
 
 
 // see https://stackoverflow.com/a/11237259/589493
-/* eslint-disable-next-line no-undef */
-var decrypter_window = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
-
-var performance = decrypter_window.performance,
-    decrypter_crypto = decrypter_window.crypto;
+var global = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
 
 var decrypter_Decrypter = function () {
   function Decrypter(observer, config) {
@@ -2048,8 +2043,10 @@ var decrypter_Decrypter = function () {
     // built in decryptor expects PKCS7 padding
     if (removePKCS7Padding) {
       try {
-        var browserCrypto = decrypter_crypto || decrypter_window.crypto;
-        this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
+        var browserCrypto = global.crypto;
+        if (browserCrypto) {
+          this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
+        }
       } catch (e) {}
     }
     this.disableWebCrypto = !this.subtle;
@@ -4316,8 +4313,6 @@ var AAC = function () {
 }();
 
 /* harmony default export */ var aac_helper = (AAC);
-// CONCATENATED MODULE: ./src/utils/make-array-from-array-like.js
-var makeArrayFromArrayLike = typeof Array.from === 'function' ? Array.from : Array.prototype.slice.call;
 // CONCATENATED MODULE: ./src/remux/mp4-generator.js
 function mp4_generator__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -4325,12 +4320,9 @@ function mp4_generator__classCallCheck(instance, Constructor) { if (!(instance i
  * Generate MP4 Box
 */
 
-// import Hex from '../utils/hex';
-
-
 var UINT32_MAX = Math.pow(2, 32) - 1;
 
-var mp4_generator_MP4 = function () {
+var MP4 = function () {
   function MP4() {
     mp4_generator__classCallCheck(this, MP4);
   }
@@ -4599,7 +4591,9 @@ var mp4_generator_MP4 = function () {
       len = data.byteLength;
       sps.push(len >>> 8 & 0xFF);
       sps.push(len & 0xFF);
-      sps = sps.concat(makeArrayFromArrayLike(data)); // SPS
+
+      // SPS
+      sps = sps.concat(Array.prototype.slice.call(data));
     }
 
     // assemble the PPSs
@@ -4608,7 +4602,8 @@ var mp4_generator_MP4 = function () {
       len = data.byteLength;
       pps.push(len >>> 8 & 0xFF);
       pps.push(len & 0xFF);
-      pps = pps.concat(makeArrayFromArrayLike(data));
+
+      pps = pps.concat(Array.prototype.slice.call(data));
     }
 
     var avcc = MP4.box(MP4.types.avcC, new Uint8Array([0x01, // version
@@ -4824,7 +4819,7 @@ var mp4_generator_MP4 = function () {
   return MP4;
 }();
 
-/* harmony default export */ var mp4_generator = (mp4_generator_MP4);
+/* harmony default export */ var mp4_generator = (MP4);
 // CONCATENATED MODULE: ./src/remux/mp4-remuxer.js
 function mp4_remuxer__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -5728,10 +5723,8 @@ function demuxer_inline__classCallCheck(instance, Constructor) { if (!(instance 
 
 
 // see https://stackoverflow.com/a/11237259/589493
-/* eslint-disable-next-line no-undef */
-var demuxer_inline_window = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
-
-var demuxer_inline_performance = demuxer_inline_window.performance;
+var demuxer_inline_global = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
+var performance = demuxer_inline_global;
 
 var demuxer_inline_DemuxerInline = function () {
   function DemuxerInline(observer, typeSupported, config, vendor) {
@@ -5761,14 +5754,14 @@ var demuxer_inline_DemuxerInline = function () {
       // performance.now() not available on WebWorker, at least on Safari Desktop
       var startTime = void 0;
       try {
-        startTime = demuxer_inline_performance.now();
+        startTime = performance.now();
       } catch (error) {
         startTime = Date.now();
       }
       decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
         var endTime = void 0;
         try {
-          endTime = demuxer_inline_performance.now();
+          endTime = performance.now();
         } catch (error) {
           endTime = Date.now();
         }
@@ -8000,7 +7993,7 @@ var events_default = /*#__PURE__*/__webpack_require__.n(events_events);
 var webworkify_webpack = __webpack_require__(11);
 var webworkify_webpack_default = /*#__PURE__*/__webpack_require__.n(webworkify_webpack);
 
-// EXTERNAL MODULE: ./src/demux/demuxer-inline.js + 16 modules
+// EXTERNAL MODULE: ./src/demux/demuxer-inline.js + 15 modules
 var demuxer_inline = __webpack_require__(9);
 
 // CONCATENATED MODULE: ./src/utils/mediasource-helper.js
@@ -8030,9 +8023,7 @@ function demuxer__classCallCheck(instance, Constructor) { if (!(instance instanc
 
 
 // see https://stackoverflow.com/a/11237259/589493
-/* eslint-disable-next-line no-undef */
-var demuxer_window = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
-
+var global = Object(get_self_scope["a" /* getSelfScope */])(); // safeguard for code that might run both on worker and main thread
 var MediaSource = getMediaSource();
 
 var demuxer_Demuxer = function () {
@@ -8100,7 +8091,7 @@ var demuxer_Demuxer = function () {
         logger["b" /* logger */].error('error while initializing DemuxerWorker, fallback on DemuxerInline');
         if (w) {
           // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-          demuxer_window.URL.revokeObjectURL(w.objectURL);
+          global.URL.revokeObjectURL(w.objectURL);
         }
         this.demuxer = new demuxer_inline["a" /* default */](observer, typeSupported, config, vendor);
         this.w = undefined;
@@ -8165,7 +8156,7 @@ var demuxer_Demuxer = function () {
     switch (data.event) {
       case 'init':
         // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-        demuxer_window.URL.revokeObjectURL(this.w.objectURL);
+        global.URL.revokeObjectURL(this.w.objectURL);
         break;
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
       case events["a" /* default */].FRAG_PARSING_DATA:
