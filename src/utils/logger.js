@@ -27,18 +27,17 @@ function formatMsg (type, msg) {
   return msg;
 }
 
-/* eslint-disable-next-line no-undef */
-const window = getSelfScope();
+const global = getSelfScope();
 
 function consolePrintFn (type) {
-  const func = window.console[type];
+  const func = global.console[type];
   if (func) {
     return function (...args) {
       if (args[0]) {
         args[0] = formatMsg(type, args[0]);
       }
 
-      func.apply(window.console, args);
+      func.apply(global.console, args);
     };
   }
   return noop;
