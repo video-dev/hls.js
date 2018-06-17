@@ -52,5 +52,5 @@ function getCommitNum() {
 }
 
 function getLatestVersionTag() {
-  return parseInt(require('child_process').execSync('git describe origin/master --match="v*"').toString(), 10);
+  return require('child_process').execSync('git describe origin/master --match="v*"').toString();
 }
