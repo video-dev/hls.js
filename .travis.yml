@@ -50,6 +50,16 @@ jobs:
     #  env:   TRAVIS_MODE=funcTests UA=firefox     OS="OS X 10.11"
     - stage: optional
       env:   TRAVIS_MODE=funcTests UA=safari              OS="OS X 10.11" UA_VERSION="9.0"
+deploy:
+  provider: releases
+  api_key: "TODO: GITHUB OAUTH TOKEN"
+  env: TRAVIS_MODE=release
+  file_glob: true
+  file: dist/*
+  draft: true
+  skip_cleanup: true
+  on:
+    tags: true
 addons:
   sauce_connect: true
   jwt:
