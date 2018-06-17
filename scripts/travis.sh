@@ -40,12 +40,12 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ];
     # see https://docs.npmjs.com/private-modules/ci-server-config
     echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
     if [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
-      npm publish --tag canary
+      # npm publish --tag canary
       echo "Published canary."
       curl https://purge.jsdelivr.net/npm/hls.js@canary
       echo "Cleared jsdelivr cache."
     elif [ "${TRAVIS_MODE}" = "release" ]; then
-      npm publish
+      # npm publish
       echo "Published."
     fi
   else
