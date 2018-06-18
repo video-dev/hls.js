@@ -10,6 +10,8 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
 
+const { XMLHttpRequest } = window;
+
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
 /**

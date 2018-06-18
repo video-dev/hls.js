@@ -69,7 +69,7 @@ function isCodecType (codec, type) {
 }
 
 function isCodecSupportedInMp4 (codec, type) {
-  return MediaSource.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`);
+  return window.MediaSource.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`);
 }
 
 export { isCodecType, isCodecSupportedInMp4 };

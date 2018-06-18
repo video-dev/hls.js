@@ -2,8 +2,6 @@
  * Generate MP4 Box
 */
 
-// import Hex from '../utils/hex';
-
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
 class MP4 {
@@ -334,7 +332,9 @@ class MP4 {
       len = data.byteLength;
       sps.push((len >>> 8) & 0xFF);
       sps.push((len & 0xFF));
-      sps = sps.concat(Array.prototype.slice.call(data)); // SPS
+
+      // SPS
+      sps = sps.concat(Array.prototype.slice.call(data));
     }
 
     // assemble the PPSs
@@ -343,6 +343,7 @@ class MP4 {
       len = data.byteLength;
       pps.push((len >>> 8) & 0xFF);
       pps.push((len & 0xFF));
+
       pps = pps.concat(Array.prototype.slice.call(data));
     }
 
