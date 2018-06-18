@@ -17868,7 +17868,7 @@ var hls_Hls = function () {
      * @type {string}
      */
     get: function get() {
-      return "0.10.0";
+      return "0.10.1";
     }
   }, {
     key: 'Events',
