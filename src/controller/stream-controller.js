@@ -1532,12 +1532,12 @@ class StreamController extends TaskLoop {
       const targetTime = currentTime + nudgeRetry * config.nudgeOffset;
       logger.log(`adjust currentTime from ${currentTime} to ${targetTime}`);
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
-      media.currentTime = targetTime;
       hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
         fatal: false
       });
+      media.currentTime = targetTime;
     } else {
       logger.error(`still stuck in high buffer @${currentTime} after ${config.nudgeMaxRetry}, raise fatal error`);
       hls.trigger(Event.ERROR, {
