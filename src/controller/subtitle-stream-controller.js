@@ -7,6 +7,8 @@ import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import TaskLoop from '../task-loop';
 
+const { performance } = window;
+
 const State = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',
