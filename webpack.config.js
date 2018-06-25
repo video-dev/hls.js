@@ -14,38 +14,24 @@ const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
 const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
 const runAnalyzer = !!env.ANALYZE;
 
-const uglifyJsOptions = {
-  screwIE8: true,
-  stats: true,
-  compress: {
-    warnings: false
-  },
-  mangle: {
-    toplevel: true,
-    eval: true
-  },
-  sourceMap: true
-};
-
 const baseConfig = {
+  mode: 'development',
   entry: './src/hls.js',
+  resolve: {
+    // Add `.ts` as a resolvable extension.
+    extensions: [".ts", ".js"]
+  },
   module: {
     rules: [
-      {
-        test: /\.js$/,
-        exclude: [
-          path.resolve(__dirname, 'node_modules')
-        ],
-        use: {
-          loader: 'babel-loader'
-        }
-      }
+      // all files with a `.ts` extension will be handled by `ts-loader`
+      { test: /\.ts?$/, loader: "ts-loader" }
     ]
   }
 };
 
 const demoConfig = clone(baseConfig, {
   name: 'demo',
+  mode: 'development',
   entry: './demo/main',
   output: {
     filename: 'hls-demo.js',
@@ -55,39 +41,25 @@ const demoConfig = clone(baseConfig, {
     publicPath: '/dist/',
     library: 'HlsDemo',
     libraryTarget: 'umd',
-    libraryExport: 'default'
+    libraryExport: 'default',
+    globalObject: 'this'  // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
+  },
+  optimization: {
+    minimize: false
   },
   plugins: [],
   devtool: 'source-map'
 });
-
 
 function getPluginsForConfig(type, minify = false) {
   // common plugins.
 
   const defineConstants = getConstantsForConfig(type);
 
-  console.log(
-    `Building <${ minify ? 'minified' : 'non-minified / debug' }> distro-type "${type}" with compile-time defined constants:`,
-    JSON.stringify(defineConstants, null, 4),
-    '\n'
-  );
-
   const plugins = [
     new webpack.optimize.OccurrenceOrderPlugin(),
     new webpack.DefinePlugin(defineConstants)
   ];
-
-  if (minify) {
-    // minification plugins.
-    return plugins.concat([
-      new webpack.optimize.UglifyJsPlugin(uglifyJsOptions),
-      new webpack.LoaderOptionsPlugin({
-        minimize: true,
-        debug: false
-      })
-    ]);
-  }
 
   if (runAnalyzer && !minify) {
     plugins.push(new BundleAnalyzerPlugin({
@@ -143,6 +115,7 @@ function getAliasesForLightDist() {
 const multiConfig = [
   {
     name: 'debug',
+    mode: 'development',
     output: {
       filename: 'hls.js',
       chunkFilename: '[name].js',
@@ -151,13 +124,15 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     plugins: getPluginsForConfig('main'),
     devtool: 'source-map',
   },
   {
     name: 'dist',
+    mode: 'production',
     output: {
       filename: 'hls.min.js',
       chunkFilename: '[name].js',
@@ -165,13 +140,18 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     plugins: getPluginsForConfig('main', true),
+    optimization: {
+      minimize: true
+    },
     devtool: 'source-map'
   },
   {
     name: 'light',
+    mode: 'development',
     output: {
       filename: 'hls.light.js',
       chunkFilename: '[name].js',
@@ -180,7 +160,8 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     resolve: {
       alias: getAliasesForLightDist()
@@ -190,6 +171,7 @@ const multiConfig = [
   },
   {
     name: 'light-dist',
+    mode: 'production',
     output: {
       filename: 'hls.light.min.js',
       chunkFilename: '[name].js',
@@ -197,12 +179,16 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     resolve: {
       alias: getAliasesForLightDist()
     },
     plugins: getPluginsForConfig('light', true),
+    optimization: {
+      minimize: true
+    },
     devtool: 'source-map'
   }
 ].map(config => clone(baseConfig, config));
@@ -211,19 +197,30 @@ multiConfig.push(demoConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
+
+  let configs;
+
   if (!envArgs) {
     // If no arguments are specified, return every configuration
-    return multiConfig;
+    configs = multiConfig;
+  } else {
+    // Find the first enabled config within the arguments array
+    const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
+
+    // Filter out config with name
+    const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
+
+    if (!enabledConfig) {
+      console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
+      return;
+    }
+
+    configs = [enabledConfig, demoConfig];
   }
 
-  // Find the first enabled config within the arguments array
-  const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
-  // Filter out config with name
-  const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
-  if (!enabledConfig) {
-    console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
-    return;
-  }
+  console.log(
+    `Building configs: ${configs.map(config => config.name).join(', ')}.\n`
+  );
 
-  return [enabledConfig, demoConfig];
+  return configs;
 };

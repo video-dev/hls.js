@@ -40,6 +40,7 @@ module.exports = function(config) {
 
 		webpack: {
 			devtool: 'eval',
+			mode: 'development',
 			module: {
 				rules: [
 					// instrument only testing sources with Istanbul
