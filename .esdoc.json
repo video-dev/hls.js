@@ -1,5 +1,8 @@
 {
   "source": "./src",
   "destination": "./docs/html",
-  "plugins": [{"name": "esdoc-standard-plugin"}]
+  "plugins": [
+    {"name": "esdoc-standard-plugin"},
+    {"name": "esdoc-typescript-plugin", "option": {"enable": true}}
+  ]
 }
