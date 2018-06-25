@@ -40,6 +40,7 @@
     "lint": "./scripts/lint.sh",
     "lint:fix": "./scripts/lint.sh --fix",
     "lint:quiet": "./scripts/lint.sh --quiet",
+    "precommit": "./scripts/precommit.sh",
     "pretest": "npm run lint",
     "release:pre": "mversion prerelease && npm run build:release",
     "release:patch": "mversion p && npm run build:release",
