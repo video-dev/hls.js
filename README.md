@@ -19,6 +19,10 @@ hls.js does not need any player, it works directly on top of a standard HTML```<
 
 hls.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using the [TypeScript compiler].
 
+Modules written in TS and plain JS/ES6 can be interdepent and imported/required by each others.
+
+To build our distro bundle and serve our development environment we use [Webpack].
+
 [HTML5 video]: http://www.html5rocks.com/en/tutorials/video/basics/
 [MediaSource Extensions]: http://w3c.github.io/media-source/
 [HTTP Live Streaming]: http://en.wikipedia.org/wiki/HTTP_Live_Streaming
@@ -26,6 +30,7 @@ hls.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 [ECMAScript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
 [TypeScript]: https://www.typescriptlang.org/
 [TypeScript compiler]: https://www.typescriptlang.org/docs/handbook/compiler-options.html
+[Webpack]: https://webpack.js.org/
 
 ## API docs and usage guide
 
