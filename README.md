@@ -17,14 +17,15 @@ hls.js also supports HLS + fmp4, as announced during [WWDC2016](https://develope
 
 hls.js does not need any player, it works directly on top of a standard HTML```<video>```element.
 
-hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
+hls.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using the [TypeScript compiler].
 
 [HTML5 video]: http://www.html5rocks.com/en/tutorials/video/basics/
 [MediaSource Extensions]: http://w3c.github.io/media-source/
 [HTTP Live Streaming]: http://en.wikipedia.org/wiki/HTTP_Live_Streaming
 [Web Worker]: http://caniuse.com/#search=worker
 [ECMAScript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
-[Babel]: https://babeljs.io
+[TypeScript]: https://www.typescriptlang.org/
+[TypeScript compiler]: https://www.typescriptlang.org/docs/handbook/compiler-options.html
 
 ## API docs and usage guide
 
