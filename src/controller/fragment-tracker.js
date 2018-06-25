@@ -151,7 +151,7 @@ export class FragmentTracker extends EventHandler {
   }
 
   getFragmentKey (fragment) {
-    return `${fragment.type}_${fragment.level}_${fragment.sn}`;
+    return `${fragment.type}_${fragment.level}_${fragment.urlId}_${fragment.sn}`;
   }
 
   /**
