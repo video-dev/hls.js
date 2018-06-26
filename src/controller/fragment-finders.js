@@ -23,9 +23,10 @@ export function calculateNextPDT (start = 0, bufferEnd = 0, levelDetails) {
  * Finds the first fragment whose endPDT value exceeds the given PDT.
  * @param {Array} fragments - The array of candidate fragments
  * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
+ * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*|null} fragment - The best matching fragment
  */
-export function findFragmentByPDT (fragments, PDTValue = null) {
+export function findFragmentByPDT (fragments, PDTValue = null, maxFragLookUpTolerance = 0) {
   if (!fragments || !fragments.length || PDTValue === null) {
     return null;
   }
@@ -43,13 +44,7 @@ export function findFragmentByPDT (fragments, PDTValue = null) {
     return null;
   }
 
-  for (let seg = 0; seg < fragments.length; ++seg) {
-    let frag = fragments[seg];
-    if (PDTValue < frag.endPdt) {
-      return frag;
-    }
-  }
-  return null;
+  return BinarySearch.search(fragments, pdtWithinToleranceTest.bind(null, PDTValue, maxFragLookUpTolerance));
 }
 
 /**
@@ -59,26 +54,16 @@ export function findFragmentByPDT (fragments, PDTValue = null) {
  * @param {*} fragPrevious - The last frag successfully appended
  * @param {Array} fragments - The array of candidate fragments
  * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {number} [end = 0] - The computed end time of the stream
- * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start can be within in order to be considered contiguous
+ * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*} foundFrag - The best matching fragment
  */
-export function findFragmentBySN (fragPrevious, fragments, bufferEnd = 0, end = 0, maxFragLookUpTolerance = 0) {
-  let foundFrag;
+export function findFragmentBySN (fragPrevious, fragments, bufferEnd = 0, maxFragLookUpTolerance = 0) {
   const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : null;
-  if (bufferEnd < end) {
-    if (bufferEnd > end - maxFragLookUpTolerance) {
-      maxFragLookUpTolerance = 0;
-    }
-
-    // Prefer the next fragment if it's within tolerance
-    if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
-      foundFrag = fragNext;
-    } else {
-      foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
-    }
+  // Prefer the next fragment if it's within tolerance
+  if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
+    return fragNext;
   }
-  return foundFrag;
+  return BinarySearch.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
 }
 
 /**
@@ -108,6 +93,26 @@ export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpToleran
     return 1;
   } else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start) {
     // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
+    return -1;
+  }
+
+  return 0;
+}
+
+/**
+ * The test function used by the findFragmentByPdt's BinarySearch to look for the best match to the current buffer conditions.
+ * This function tests the candidate's program date time values, as represented in Unix time
+ * @param {*} candidate - The fragment to test
+ * @param {number} [pdtBufferEnd = 0] - The Unix time representing the end of the current buffered range
+ * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
+ * @returns {number} - 0 if it matches, 1 if too low, -1 if too high
+ */
+export function pdtWithinToleranceTest (pdtBufferEnd, maxFragLookUpTolerance, candidate) {
+  let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
+
+  if (candidate.endPdt - candidateLookupTolerance <= pdtBufferEnd) {
+    return 1;
+  } else if (candidate.pdt && candidate.pdt - candidateLookupTolerance > pdtBufferEnd) {
     return -1;
   }
 

@@ -185,6 +185,11 @@ export default class M3U8Parser {
             frag.endPdt = frag.pdt + (frag.duration * 1000);
           }
 
+          if (isNaN(frag.pdt)) {
+            frag.pdt = null;
+            frag.endPdt = null;
+          }
+
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
@@ -202,8 +207,12 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (level.programDateTime === undefined)
-          level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
+        if (level.programDateTime === undefined) {
+          const pdt = new Date(Date.parse(result[5]) - 1000 * totalduration);
+          if (!isNaN(pdt)) {
+            level.programDateTime = pdt;
+          }
+        }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {

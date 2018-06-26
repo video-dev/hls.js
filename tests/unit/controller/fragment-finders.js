@@ -1,6 +1,6 @@
 import assert from 'assert';
 import sinon from 'sinon';
-import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest } from '../../../src/controller/fragment-finders';
+import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest, pdtWithinToleranceTest } from '../../../src/controller/fragment-finders';
 import { mockFragments } from '../../mocks/data';
 import BinarySearch from '../../../src/utils/binary-search';
 
@@ -20,7 +20,6 @@ describe('Fragment finders', function () {
     cc: 0
   };
   const bufferEnd = fragPrevious.start + fragPrevious.duration;
-  const end = mockFragments[mockFragments.length - 1].start + mockFragments[mockFragments.length - 1].duration;
 
   describe('findFragmentBySN', function () {
     let tolerance = 0.25;
@@ -30,21 +29,21 @@ describe('Fragment finders', function () {
     });
 
     it('finds a fragment with SN sequential to the previous fragment', function () {
-      const foundFragment = findFragmentBySN(fragPrevious, mockFragments, bufferEnd, end, tolerance);
+      const foundFragment = findFragmentBySN(fragPrevious, mockFragments, bufferEnd, tolerance);
       const resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
       assert(binarySearchSpy.notCalled);
     });
 
     it('chooses the fragment with the next SN if its contiguous with the end of the buffer', function () {
-      const actual = findFragmentBySN(mockFragments[0], mockFragments, mockFragments[0].duration, end, tolerance);
+      const actual = findFragmentBySN(mockFragments[0], mockFragments, mockFragments[0].duration, tolerance);
       assert.strictEqual(mockFragments[1], actual, `expected sn ${mockFragments[1].sn}, but got sn ${actual ? actual.sn : null}`);
       assert(binarySearchSpy.notCalled);
     });
 
     it('uses BinarySearch to find a fragment if the subsequent one is not within tolerance', function () {
       const fragments = [mockFragments[0], mockFragments[(mockFragments.length - 1)]];
-      findFragmentBySN(fragments[0], fragments, bufferEnd, end, tolerance);
+      findFragmentBySN(fragments[0], fragments, bufferEnd, tolerance);
       assert(binarySearchSpy.calledOnce);
     });
   });
@@ -93,7 +92,7 @@ describe('Fragment finders', function () {
         duration: 0.1,
         deltaPTS: 0.1
       };
-      const actual = fragmentWithinToleranceTest(frag, 0, 1);
+      const actual = fragmentWithinToleranceTest(0, tolerance, frag);
       assert.strictEqual(0, actual);
     });
   });
@@ -151,6 +150,10 @@ describe('Fragment finders', function () {
     it('returns null when passed an empty frag array', function () {
       assert.strictEqual(findFragmentByPDT([], 9001), null);
     });
+
+    it('accounts for tolerances', function () {
+
+    });
   });
 
   describe('calculateNextPDT', function () {
@@ -172,6 +175,71 @@ describe('Fragment finders', function () {
     it('returns 0 if the parsed PDT would be NaN', function () {
       levelDetails.programDateTime = 'foo';
       const actual = calculateNextPDT(5, 10, levelDetails);
+      assert.strictEqual(0, actual);
+    });
+  });
+
+  describe('pdtWithinToleranceTest', function () {
+    let tolerance = 0.25;
+    let pdtBufferEnd = 1505502678523; // Fri Sep 15 2017 15:11:18 GMT-0400 (Eastern Daylight Time)
+    it('returns 0 if the fragment range is equal to the end of the buffer', function () {
+      const frag = {
+        pdt: pdtBufferEnd,
+        endPdt: pdtBufferEnd + 5000 - (tolerance * 1000),
+        duration: 5
+      };
+      const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
+      assert.strictEqual(0, actual);
+    });
+
+    it('returns 1 if the fragment range is less than the end of the buffer', function () {
+      const frag = {
+        pdt: pdtBufferEnd - 10000,
+        endPdt: pdtBufferEnd - 5000,
+        duration: 5
+      };
+      const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
+      assert.strictEqual(1, actual);
+    });
+
+    it('returns -1 if the fragment range is greater than the end of the buffer', function () {
+      const frag = {
+        pdt: pdtBufferEnd + 5000,
+        endPdt: pdtBufferEnd + 10000,
+        duration: 5
+      };
+      const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
+      assert.strictEqual(-1, actual);
+    });
+
+    it('does not skip very small fragments', function () {
+      const frag = {
+        pdt: pdtBufferEnd + 200,
+        endPdt: pdtBufferEnd + 300,
+        duration: 0.1,
+        deltaPTS: 0.1
+      };
+      const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
+      assert.strictEqual(0, actual);
+    });
+
+    it('accounts for tolerance when checking the endPdt of the fragment', function () {
+      const frag = {
+        pdt: pdtBufferEnd,
+        endPdt: pdtBufferEnd + (tolerance * 1000),
+        duration: 5
+      };
+      const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
+      assert.strictEqual(1, actual);
+    });
+
+    it('accounts for tolerance when checking the pdt of the fragment', function () {
+      const frag = {
+        pdt: pdtBufferEnd + 1,
+        endPdt: pdtBufferEnd + 5000,
+        duration: 5
+      };
+      const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
       assert.strictEqual(0, actual);
     });
   });
