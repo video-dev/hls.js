@@ -4,6 +4,10 @@
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
+import Event from '../events';
+
+import { getSelfScope } from '../utils/get-self-scope';
+
 export function getAudioConfig (observer, data, offset, audioCodec) {
   let adtsObjectType, // :int
     adtsSampleingIndex, // :int

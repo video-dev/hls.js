@@ -287,7 +287,7 @@ VTTParser.prototype = {
         switch (k) {
         case 'Region':
           // 3.3 WebVTT region metadata header syntax
-          console.log('parse region', v);
+          // console.log('parse region', v);
           // parseRegion(v);
           break;
         }
