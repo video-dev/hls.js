@@ -30,7 +30,14 @@ function setupConsoleLogRedirection () {
     }
 
     window.console[methodName] = function () {
-      append(methodName, Array.prototype.slice.call(arguments).map(JSON.stringify).join(' '));
+      append(methodName, Array.prototype.slice.call(arguments).map(function (arg) {
+        try {
+          return JSON.stringify(arg);
+        } catch (err) {
+          return 'Unserializable (reason: ' + err.message + ')';
+        }
+      }).join(' '));
+
       return original.apply(this, arguments);
     };
   });
