@@ -722,7 +722,7 @@ class StreamController extends TaskLoop {
       this.hls.startLoad(config.startPosition);
     }
 
-    this.gapController = new GapController(config, this.fragmentTracker, media);
+    this.gapController = new GapController(config, media, this.fragmentTracker, this.hls);
   }
 
   onMediaDetaching () {

@@ -22,7 +22,7 @@ export default class GapController {
    * @param buffered
    */
   poll (lastCurrentTime, buffered) {
-    const { config, fragmentTracker, media } = this;
+    const { config, media } = this;
     const currentTime = media.currentTime;
     const tnow = window.performance.now();
 
@@ -41,7 +41,7 @@ export default class GapController {
       return;
     }
 
-    if (media.seeking && fragmentTracker.isTimeBuffered(currentTime, currentTime + config.maxBufferHole, buffered)) {
+    if (media.seeking && BufferHelper.isBuffered(media, currentTime)) {
       return;
     }
 
@@ -67,10 +67,10 @@ export default class GapController {
    * @private
    */
   _tryFixBufferStall (bufferInfo, stalledDuration) {
-    const { config, media } = this;
+    const { config, fragmentTracker, media } = this;
     const currentTime = media.currentTime;
 
-    const partial = this.fragmentTracker.getPartialFragment(currentTime);
+    const partial = fragmentTracker.getPartialFragment(currentTime);
     if (partial) {
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
