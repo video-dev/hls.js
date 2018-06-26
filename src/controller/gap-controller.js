@@ -12,6 +12,7 @@ export default class GapController {
     this.media = media;
     this.fragmentTracker = fragmentTracker;
     this.hls = hls;
+    this.stallReported = false;
   }
 
   /**
@@ -23,7 +24,6 @@ export default class GapController {
   poll (lastCurrentTime, buffered) {
     const { config, fragmentTracker, media } = this;
     const currentTime = media.currentTime;
-
     const tnow = window.performance.now();
 
     if (currentTime !== lastCurrentTime) {
@@ -32,6 +32,8 @@ export default class GapController {
         logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(tnow - this.stalled)}ms`);
         this.stallReported = false;
       }
+      this.stalled = null;
+      this.nudgeRetry = 0;
       return;
     }
 
@@ -43,8 +45,6 @@ export default class GapController {
       return;
     }
 
-    this.stalled = null;
-    this.nudgeRetry = 0;
     // The playhead isn't moving but it should be
     // Allow some slack time to for small stalls to resolve themselves
     const stalledDuration = tnow - this.stalled;
