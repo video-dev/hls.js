@@ -1,6 +1,5 @@
 /**
  *  AAC helper
- * 
  */
 
 class AAC {

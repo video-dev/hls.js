@@ -32,28 +32,25 @@ export default class LevelController extends EventHandler {
       this.timer = null;
     }
   }
-
   
-  startLoad() {
+  startLoad () {
     let levels = this._levels;
-
     this.canload = true;
     this.levelRetryCount = 0;
     let timePassed = (performance.now() - this.stoppedLoadingAtTime) / 1000;
+
     // clean up live level details to force reload them, and reset load errors
     if (levels) {
       levels.forEach(level => {
         level.loadError = 0;
         const levelDetails = level.details;
-        //this caused a bug with live playback. the playback would either get stuck or jump over .ts fragments see bug #1719 - https://github.com/video-dev/hls.js/issues/1719       
 
-        if (levelDetails && levelDetails.live && this.hls.media) {
-          
+        // this caused a bug with live playback. the playback would either get stuck or jump over .ts fragments see bug #1719 - https://github.com/video-dev/hls.js/issues/1719       
+        if (levelDetails && levelDetails.live && this.hls.media) {          
           let currentTime = this.hls.media.currentTime;
           let mediaDuration = this.hls.media.duration;
           let dvrDuration = levelDetails.totalduration
-          let durationDelta = mediaDuration - dvrDuration;
-          
+          let durationDelta = mediaDuration - dvrDuration;          
           if (timePassed > currentTime - durationDelta) {            
             level.details = undefined;
           }
@@ -61,17 +58,17 @@ export default class LevelController extends EventHandler {
         this.stoppedLoadingAtTime = null;
       });
     }
+    
     // speed up live playlist refresh if timer exists
     if (this.timer !== null) {
       this.loadLevel();
     }
   }
 
-  stopLoad() {
+  stopLoad () {
     this.canload = false;
     this.stoppedLoadingAtTime = performance.now();
   }
-
 
   onManifestLoaded (data) {
     let levels = [];
