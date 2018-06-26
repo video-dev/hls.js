@@ -182,7 +182,7 @@ export default class LevelController extends EventHandler {
       // stopping live reloading timer if any
       this.cleanTimer();
       if (this.currentLevelIndex !== newLevel) {
-        logger.log(`switching to level ${newLevel} `);
+        logger.log(`switching to level ${newLevel}`);
         this.currentLevelIndex = newLevel;
         let levelProperties = levels[newLevel];
         levelProperties.level = newLevel;
