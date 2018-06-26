@@ -404,7 +404,7 @@ class StreamController extends TaskLoop {
       const fragBySN = () => findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
       if (!levelDetails.programDateTime) {
         // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-        frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, end, config.maxFragLookUpTolerance);
+        frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, config.maxFragLookUpTolerance);
       } else {
         // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
         frag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, levelDetails), lookupTolerance);
