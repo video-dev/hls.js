@@ -273,8 +273,13 @@ class AbrController extends EventHandler {
 
   _findBestLevel (currentLevel, currentFragDuration, currentBw, minAutoLevel, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
-      let levelInfo = levels[i],
-        levelDetails = levelInfo.details,
+      let levelInfo = levels[i];
+
+      if (!levelInfo) {
+        continue;
+      }
+
+      let levelDetails = levelInfo.details,
         avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration,
         live = levelDetails ? levelDetails.live : false,
         adjustedbw;
