@@ -1,5 +1,5 @@
 # Performing A Release
-Relases are performed automatically with travis.
+Releases are performed automatically with travis.
 
 1. `git tag v0.0.0`
 2. `git push --tag`
