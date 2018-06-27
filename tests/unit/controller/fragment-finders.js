@@ -182,34 +182,34 @@ describe('Fragment finders', function () {
   describe('pdtWithinToleranceTest', function () {
     let tolerance = 0.25;
     let pdtBufferEnd = 1505502678523; // Fri Sep 15 2017 15:11:18 GMT-0400 (Eastern Daylight Time)
-    it('returns 0 if the fragment range is equal to the end of the buffer', function () {
+    it('returns true if the fragment range is equal to the end of the buffer', function () {
       const frag = {
         pdt: pdtBufferEnd,
         endPdt: pdtBufferEnd + 5000 - (tolerance * 1000),
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      assert.strictEqual(0, actual);
+      assert.strictEqual(true, actual);
     });
 
-    it('returns 1 if the fragment range is less than the end of the buffer', function () {
+    it('returns false if the fragment range is less than the end of the buffer', function () {
       const frag = {
         pdt: pdtBufferEnd - 10000,
         endPdt: pdtBufferEnd - 5000,
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      assert.strictEqual(1, actual);
+      assert.strictEqual(false, actual);
     });
 
-    it('returns -1 if the fragment range is greater than the end of the buffer', function () {
+    it('returns false if the fragment range is greater than the end of the buffer', function () {
       const frag = {
         pdt: pdtBufferEnd + 5000,
         endPdt: pdtBufferEnd + 10000,
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      assert.strictEqual(-1, actual);
+      assert.strictEqual(false, actual);
     });
 
     it('does not skip very small fragments', function () {
@@ -220,7 +220,7 @@ describe('Fragment finders', function () {
         deltaPTS: 0.1
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      assert.strictEqual(0, actual);
+      assert.strictEqual(true, actual);
     });
 
     it('accounts for tolerance when checking the endPdt of the fragment', function () {
@@ -230,7 +230,7 @@ describe('Fragment finders', function () {
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      assert.strictEqual(1, actual);
+      assert.strictEqual(false, actual);
     });
 
     it('accounts for tolerance when checking the pdt of the fragment', function () {
@@ -240,7 +240,7 @@ describe('Fragment finders', function () {
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      assert.strictEqual(0, actual);
+      assert.strictEqual(true, actual);
     });
   });
 });
