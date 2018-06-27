@@ -10,7 +10,7 @@ try {
   if (TRAVIS_MODE === 'release') {
     // write the version field in the package json to the version in the git tag
     const tag = process.env.TRAVIS_TAG;
-    if (!tag.test(VALID_VERSION_REGEX)) {
+    if (!VALID_VERSION_REGEX.test(tag)) {
       throw new Error('Unsuported tag for release: ' + tag);
     }
     // remove v
@@ -18,8 +18,8 @@ try {
   } else if (TRAVIS_MODE === 'releaseCanary') {
     // bump patch in version from latest git tag
     let currentVersion = getLatestVersionTag();
-    if (!currentVersion.test(VALID_VERSION_REGEX)) {
-      throw new Error('Latest version tag invalid: ' + tag);
+    if (!VALID_VERSION_REGEX.test(currentVersion)) {
+      throw new Error('Latest version tag invalid: ' + currentVersion);
     }
     // remove v
     currentVersion = currentVersion.substring(1);
@@ -46,11 +46,10 @@ try {
 }
 process.exit(0);
 
-
 function getCommitNum() {
   return parseInt(require('child_process').execSync('git rev-list --count HEAD').toString(), 10);
 }
 
 function getLatestVersionTag() {
-  return require('child_process').execSync('git describe origin/master --match="v*"').toString();
+  return require('child_process').execSync('git describe --abbrev=0 --match="v*"').toString().trim();
 }
