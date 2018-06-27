@@ -114,12 +114,5 @@ export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpToleran
  */
 export function pdtWithinToleranceTest (pdtBufferEnd, maxFragLookUpTolerance, candidate) {
   let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
-
-  if (candidate.endPdt - candidateLookupTolerance <= pdtBufferEnd) {
-    return false;
-  } else if (candidate.pdt && candidate.pdt - candidateLookupTolerance > pdtBufferEnd) {
-    return false;
-  }
-
-  return true;
+  return candidate.endPdt - candidateLookupTolerance > pdtBufferEnd;
 }
