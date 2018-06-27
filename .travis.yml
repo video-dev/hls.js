@@ -20,7 +20,7 @@ jobs:
   # stage: optional is allowed to be failure
   fast_finish: true
   allow_failures:
-    - stage: optional
+    - stage: testFuncOptional
   include:
     # https://docs.travis-ci.com/user/build-stages/deploy-github-releases/
     - stage: release
@@ -54,7 +54,7 @@ jobs:
       env:   TRAVIS_MODE=funcTests UA=chrome              OS="Windows 7"
     - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA=firefox             OS="Windows 7"
-    # - stage: optional
+    # - stage: testFuncOptional
     #  env:   TRAVIS_MODE=funcTests UA=MicrosoftEdge       OS="Windows 10"
     - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA="internet explorer" OS="Windows 8.1"  UA_VERSION="11.0"
