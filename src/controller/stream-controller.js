@@ -15,7 +15,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
-import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest } from './fragment-finders';
+import { calculateNextPDT, findFragmentByPDT, findFragmentBySN } from './fragment-finders';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -401,16 +401,15 @@ class StreamController extends TaskLoop {
     if (bufferEnd < end) {
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       const lookupTolerance = (bufferEnd > end - config.maxFragLookUpTolerance) ? 0 : config.maxFragLookUpTolerance;
-      const fragBySN = () => findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
       if (!levelDetails.programDateTime) {
         // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-        frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, config.maxFragLookUpTolerance);
+        frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
       } else {
         // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
         frag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, levelDetails), lookupTolerance);
         if (!frag) {
           logger.warn('Frag found by PDT search did not fit within tolerance; falling back to finding by SN');
-          frag = fragBySN();
+          frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
         }
       }
     } else {
