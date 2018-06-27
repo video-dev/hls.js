@@ -44,7 +44,12 @@ export function findFragmentByPDT (fragments, PDTValue = null, maxFragLookUpTole
     return null;
   }
 
-  return BinarySearch.search(fragments, pdtWithinToleranceTest.bind(null, PDTValue, maxFragLookUpTolerance));
+  for (let seg = 0; seg < fragments.length; ++seg) {
+    let frag = fragments[seg];
+    if (pdtWithinToleranceTest(PDTValue, maxFragLookUpTolerance, frag)) {
+      return frag;
+    }
+  }
 }
 
 /**
@@ -105,16 +110,16 @@ export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpToleran
  * @param {*} candidate - The fragment to test
  * @param {number} [pdtBufferEnd = 0] - The Unix time representing the end of the current buffered range
  * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
- * @returns {number} - 0 if it matches, 1 if too low, -1 if too high
+ * @returns {boolean} True if contiguous, false otherwise
  */
 export function pdtWithinToleranceTest (pdtBufferEnd, maxFragLookUpTolerance, candidate) {
   let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
 
   if (candidate.endPdt - candidateLookupTolerance <= pdtBufferEnd) {
-    return 1;
+    return false;
   } else if (candidate.pdt && candidate.pdt - candidateLookupTolerance > pdtBufferEnd) {
-    return -1;
+    return false;
   }
 
-  return 0;
+  return true;
 }
