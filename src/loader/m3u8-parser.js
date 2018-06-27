@@ -208,7 +208,7 @@ export default class M3U8Parser {
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
         if (level.programDateTime === undefined) {
-          const pdt = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
+          const pdt = new Date(Date.parse(result[5]) - 1000 * totalduration);
           if (!isNaN(pdt)) {
             level.programDateTime = pdt;
           }
