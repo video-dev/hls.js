@@ -267,6 +267,9 @@ class AudioStreamController extends TaskLoop {
             this.media.currentTime = nextBuffered + 0.05;
             return;
           }
+        } else if (this.resyncWithVideoCC && this.videoTrackCC !== null) {
+          this.resyncWithVideoCC = false;
+          frag = findFragWithCC(fragments, this.videoTrackCC);
         } else {
           let foundFrag;
           let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
@@ -383,6 +386,12 @@ class AudioStreamController extends TaskLoop {
           track = this.tracks[this.trackId];
           if (track.details && track.details.live) {
             logger.warn(`Waiting fragment CC (${waitingFragCC}) does not match video track CC (${videoTrackCC})`);
+            this.waitingFragment = null;
+            this.state = State.IDLE;
+          } else if (videoTrackCC > waitingFragCC) {
+            logger.warn(`Waiting fragment CC (${waitingFragCC}) is lower than video track CC (${videoTrackCC}), resyncing based on video CC`);
+            this.fragmentTracker.removeFragment(this.waitingFragment.frag);
+            this.resyncWithVideoCC = true;
             this.waitingFragment = null;
             this.state = State.IDLE;
           }
