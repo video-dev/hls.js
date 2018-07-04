@@ -693,7 +693,7 @@ Rollover38803/20160525T064049-01-69844069.ts
     let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
     assert.strictEqual(result.programDateTime, undefined);
   });
-  
+
   it('tests : at end of tag name is used to divide custom tags', () => {
     let level = `#EXTM3U
 #EXT-X-VERSION:2
