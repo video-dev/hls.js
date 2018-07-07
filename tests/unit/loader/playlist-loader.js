@@ -693,4 +693,28 @@ Rollover38803/20160525T064049-01-69844069.ts
     let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
     assert.strictEqual(result.programDateTime, undefined);
   });
+
+  it('tests : at end of tag name is used to divide custom tags', () => {
+    let level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:9.40,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719926.ts
+#EXTINF:9.56,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719927.ts
+#EXT-X-CUSTOM-DATE:2016-05-27T16:34:44Z
+#EXT-X-CUSTOM-JSON:{"key":"value"}
+#EXT-X-CUSTOM-URI:http://dummy.url.com/hls/moreinfo.json
+#EXTINF:10, no desc
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
+    `;
+    let result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    assert.strictEqual(result.fragments[2].tagList[0][0], 'EXT-X-CUSTOM-DATE');
+    assert.strictEqual(result.fragments[2].tagList[0][1], '2016-05-27T16:34:44Z');
+    assert.strictEqual(result.fragments[2].tagList[1][0], 'EXT-X-CUSTOM-JSON');
+    assert.strictEqual(result.fragments[2].tagList[1][1], '{"key":"value"}');
+    assert.strictEqual(result.fragments[2].tagList[2][0], 'EXT-X-CUSTOM-URI');
+    assert.strictEqual(result.fragments[2].tagList[2][1], 'http://dummy.url.com/hls/moreinfo.json');
+  });
 });
