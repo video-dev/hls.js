@@ -299,7 +299,6 @@ function loadSelectedStream() {
 
   if (selectedTestStream && selectedTestStream.config) {
     _extends(hlsConfig, selectedTestStream.config);
-    console.log('Using Hls.js config:', hlsConfig);
   }
 
   if (hlsConfig.widevineLicenseUrl) {
@@ -313,6 +312,7 @@ function loadSelectedStream() {
   }
 
   onDemoConfigChanged();
+  console.log('Using Hls.js config:', hlsConfig);
 
   window.hls = hls = new Hls(hlsConfig);
 
@@ -450,7 +450,9 @@ function loadSelectedStream() {
 
     stats.levelParsed++;
     stats.levelParsingUs = Math.round(1000 * this.sumLevelParsingMs / stats.levelParsed);
-    console.log('parsing level duration :' + stats.levelParsingUs + 'us,count:' + stats.levelParsed);
+
+    //console.log('parsing level duration :' + stats.levelParsingUs + 'us,count:' + stats.levelParsed);
+
     events.load.push(event);
     trimEventHistory();
     refreshCanvas();
@@ -636,7 +638,7 @@ function loadSelectedStream() {
   });
 
   hls.on(Hls.Events.ERROR, function (event, data) {
-    console.warn(data);
+    console.warn('Error event:', data);
     switch (data.details) {
       case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
         try {
@@ -700,7 +702,7 @@ function loadSelectedStream() {
         break;
     }
     if (data.fatal) {
-      console.log('Fatal error :' + data.details);
+      console.error('Fatal error :' + data.details);
       switch (data.type) {
         case Hls.ErrorTypes.MEDIA_ERROR:
           handleMediaError();
@@ -1014,7 +1016,7 @@ function hideCanvas() {
 function getMetrics() {
   var json = JSON.stringify(events);
   var jsonpacked = jsonpack.pack(json);
-  console.log('packing JSON from ' + json.length + ' to ' + jsonpacked.length + ' bytes');
+  // console.log('packing JSON from ' + json.length + ' to ' + jsonpacked.length + ' bytes');
   return btoa(jsonpacked);
 }
 
@@ -1025,7 +1027,7 @@ function copyMetricsToClipBoard() {
 function goToMetrics() {
   var url = document.URL;
   url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html';
-  console.log(url);
+  // console.log(url);
   window.open(url, '_blank');
 }
 
@@ -1033,7 +1035,7 @@ function goToMetricsPermaLink() {
   var url = document.URL;
   var b64 = getMetrics();
   url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html#data=' + b64;
-  console.log(url);
+  // console.log(url);
   window.open(url, '_blank');
 }
 
@@ -1233,8 +1235,6 @@ function onDemoConfigChanged() {
     widevineLicenseUrl: escape(widevineLicenseUrl)
   };
 
-  console.log(demoConfig);
-
   var serializedDemoConfig = btoa(JSON.stringify(demoConfig));
 
   var baseURL = document.URL.split('?')[0];
@@ -1417,7 +1417,7 @@ module.exports = {
     'blacklist_ua': ['internet explorer']
   },
   issue666: {
-    'url': 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    'url': 'https://video-dev.github.io/streams/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
     'description': 'hls.js/issues/666',
     'live': false,
     'abr': false,
@@ -1442,12 +1442,14 @@ module.exports = {
     'live': false,
     'abr': true
   },
+  /*
   bbbAES: {
-    'url': 'http://streambox.fr/playlists/sample_aes/index.m3u8',
+    'url': 'https://video-dev.github.io/streams/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
   },
+  */
   mp3Audio: {
     'url': 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
     'description': 'MP3 VOD demo',
@@ -1482,7 +1484,12 @@ module.exports = {
     'live': false,
     'abr': false
   },
-  uspHLSAteam: createTestStream('http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199', 'A-Team movie trailer - HLS by Unified Streaming Platform'),
+  /*
+  uspHLSAteam: createTestStream(
+    'http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199',
+    'A-Team movie trailer - HLS by Unified Streaming Platform'
+  ),
+  */
   angelOneShakaWidevine: createTestStreamWithConfig({
     url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8',
     description: 'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
@@ -1496,6 +1503,22 @@ module.exports = {
     'description': 'Multiple non-alternate audio levels',
     'live': false,
     'abr': false
+  },
+  pdtDuplicate: {
+    url: 'https://playertest.longtailvideo.com/adaptive/artbeats/manifest.m3u8',
+    description: 'Stream with duplicate sequential PDT values'
+  },
+  pdtLargeGap: {
+    url: 'https://playertest.longtailvideo.com/adaptive/boxee/playlist.m3u8',
+    description: 'PDTs with large gaps following discontinuities'
+  },
+  pdtBadValues: {
+    url: 'https://playertest.longtailvideo.com/adaptive/progdatime/playlist2.m3u8',
+    description: 'PDTs with bad values'
+  },
+  pdtOneValue: {
+    url: 'https://playertest.longtailvideo.com/adaptive/aviion/manifest.m3u8',
+    description: 'One PDT, no discontinuities'
   }
 };
 

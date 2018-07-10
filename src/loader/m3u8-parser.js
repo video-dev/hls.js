@@ -25,7 +25,7 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /|#.*/.source // All other non-segment oriented tags will match with all groups empty
 ].join(''), 'g');
 
-const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)([^:]*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
@@ -87,10 +87,10 @@ export default class M3U8Parser {
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
 
-      let attrs = level.attrs = new AttrList(result[1]);
+      const attrs = level.attrs = new AttrList(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
-      let resolution = attrs.decimalResolution('RESOLUTION');
+      const resolution = attrs.decimalResolution('RESOLUTION');
       if (resolution) {
         level.width = resolution.width;
         level.height = resolution.height;

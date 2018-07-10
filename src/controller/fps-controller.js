@@ -6,6 +6,8 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 
+const { performance } = window;
+
 class FPSController extends EventHandler {
   constructor (hls) {
     super(hls, Event.MEDIA_ATTACHING);
@@ -22,7 +24,7 @@ class FPSController extends EventHandler {
   onMediaAttaching (data) {
     const config = this.hls.config;
     if (config.capLevelOnFPSDrop) {
-      const video = this.video = data.media instanceof HTMLVideoElement ? data.media : null;
+      const video = this.video = data.media instanceof window.HTMLVideoElement ? data.media : null;
       if (typeof video.getVideoPlaybackQuality === 'function') {
         this.isVideoPlaybackQualityAvailable = true;
       }
