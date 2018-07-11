@@ -8,7 +8,6 @@ import Decrypter from '../crypt/decrypter';
 import TaskLoop from '../task-loop';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentBySN } from './fragment-finders';
-import BinarySearch from '../utils/binary-search';
 import { FragmentState } from './fragment-tracker';
 
 const State = {
@@ -172,7 +171,6 @@ class SubtitleStreamController extends TaskLoop {
 
     // Check if track has the necessary details to load fragments
     const currentTrack = this.tracks[this.currentTrackId];
-    let details = currentTrack.details;
     if (currentTrack && currentTrack.details) {
       this.setInterval(TICK_INTERVAL);
     }
