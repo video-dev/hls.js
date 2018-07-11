@@ -217,6 +217,22 @@ describe('checkBuffer', function () {
       assert(fixStallStub.notCalled);
     });
 
+    it('should reset stall flags when no longer stalling and paused', function () {
+      streamController.loadedmetadata = true;
+      streamController.stallReported = true;
+      streamController.nudgeRetry = 1;
+      streamController.stalled = 4200;
+      mockMedia.paused = true;
+      mockMedia.readyState = 4;
+      const fixStallStub = sandbox.stub(streamController, '_tryFixBufferStall');
+      streamController._checkBuffer();
+
+      assert.strictEqual(streamController.stalled, null);
+      assert.strictEqual(streamController.nudgeRetry, 0);
+      assert.strictEqual(streamController.stallReported, false);
+      assert(fixStallStub.notCalled);
+    });
+
     it('should trigger reportStall when stalling for 1 second or longer', function () {
       setExpectedPlaying();
       const clock = sandbox.useFakeTimers(0);

@@ -1376,12 +1376,13 @@ class StreamController extends TaskLoop {
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
     } else {
-      const expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused and sufficiently buffered
+      const purposefullyPaused = media.paused && media.readyState > 1;
+      const expectedPlaying = !(purposefullyPaused || // not playing when media is paused and sufficiently buffered
         media.ended || // not playing when media is ended
         media.buffered.length === 0); // not playing if nothing buffered
       const tnow = window.performance.now();
 
-      if (currentTime !== this.lastCurrentTime) {
+      if (currentTime !== this.lastCurrentTime || purposefullyPaused) {
         // The playhead is now moving, but was previously stalled
         if (this.stallReported) {
           logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(tnow - this.stalled)}ms`);
