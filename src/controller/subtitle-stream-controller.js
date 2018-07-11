@@ -8,6 +8,8 @@ import Decrypter from '../crypt/decrypter';
 import TaskLoop from '../task-loop';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentBySN } from './fragment-finders';
+import BinarySearch from '../utils/binary-search';
+import { FragmentState } from './fragment-tracker';
 
 const State = {
   STOPPED: 'STOPPED',
@@ -19,7 +21,7 @@ const State = {
 const TICK_INTERVAL = 500; // how often to tick in ms
 
 class SubtitleStreamController extends TaskLoop {
-  constructor (hls) {
+  constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
@@ -31,6 +33,7 @@ class SubtitleStreamController extends TaskLoop {
       Event.SUBTITLE_TRACK_LOADED,
       Event.SUBTITLE_FRAG_PROCESSED);
 
+    this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.state = State.STOPPED;
     this.tracksBuffered = [];
@@ -39,7 +42,9 @@ class SubtitleStreamController extends TaskLoop {
   }
 
   onHandlerDestroyed () {
+    this.fragmentTracker = null;
     this.state = State.STOPPED;
+    super.onHandlerDestroyed();
   }
 
   getBuffered () {
@@ -137,7 +142,8 @@ class SubtitleStreamController extends TaskLoop {
           logger.log(`Loading key for ${foundFrag.sn}`);
           this.state = State.KEY_LOADING;
           this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });
-        } else if (foundFrag) {
+        } else if (foundFrag && this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
+          // only load if fragment is not loaded
           foundFrag.trackId = trackId; // Frags don't know their subtitle track ID, so let's just add that...
           this.fragCurrent = foundFrag;
           this.state = State.FRAG_LOADING;
