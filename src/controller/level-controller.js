@@ -115,7 +115,7 @@ export default class LevelController extends EventHandler {
 
     // only keep levels with supported audio/video codecs
     levels = levels.filter(({ audioCodec, videoCodec }) => {
-      return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
+      return (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) && (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'));
     });
 
     if (data.audioTracks) {
