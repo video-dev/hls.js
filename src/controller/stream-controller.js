@@ -15,7 +15,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
-import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest } from './fragment-finders';
+import { calculateNextPDT, findFragmentByPDT, findFragmentBySN } from './fragment-finders';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -396,29 +396,27 @@ class StreamController extends TaskLoop {
 
   _findFragment (start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
     const config = this.hls.config;
-    const fragBySN = () => findFragmentBySN(fragPrevious, fragments, bufferEnd, end, config.maxFragLookUpTolerance);
     let frag;
-    let foundFrag;
 
     if (bufferEnd < end) {
-      if (!levelDetails.programDateTime) { // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = findFragmentBySN(fragPrevious, fragments, bufferEnd, end, config.maxFragLookUpTolerance);
+      // Remove the tolerance if it would put the bufferEnd past the actual end of stream
+      const lookupTolerance = (bufferEnd > end - config.maxFragLookUpTolerance) ? 0 : config.maxFragLookUpTolerance;
+      if (!levelDetails.programDateTime) {
+        // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+        frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
       } else {
         // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, levelDetails));
-        if (!foundFrag || fragmentWithinToleranceTest(bufferEnd, config.maxFragLookUpTolerance, foundFrag)) {
-          // Fall back to SN order if finding by PDT returns a frag which won't fit within the stream
-          // fragmentWithToleranceTest returns 0 if the frag is within tolerance; 1 or -1 otherwise
+        frag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, levelDetails), lookupTolerance);
+        if (!frag) {
           logger.warn('Frag found by PDT search did not fit within tolerance; falling back to finding by SN');
-          foundFrag = fragBySN();
+          frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
         }
       }
     } else {
       // reach end of playlist
-      foundFrag = fragments[fragLen - 1];
+      frag = fragments[fragLen - 1];
     }
-    if (foundFrag) {
-      frag = foundFrag;
+    if (frag) {
       const curSNIdx = frag.sn - levelDetails.startSN;
       const sameLevel = fragPrevious && frag.level === fragPrevious.level;
       const prevFrag = fragments[curSNIdx - 1];
