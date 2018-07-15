@@ -383,6 +383,7 @@ class AudioStreamController extends TaskLoop {
           track = this.tracks[this.trackId];
           if (track.details && track.details.live) {
             logger.warn(`Waiting fragment CC (${waitingFragCC}) does not match video track CC (${videoTrackCC})`);
+            this.fragmentTracker.removeFragment(this.waitingFragment.frag);
             this.waitingFragment = null;
             this.state = State.IDLE;
           }
