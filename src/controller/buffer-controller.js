@@ -409,7 +409,7 @@ class BufferController extends EventHandler {
       (duration === Infinity || isNaN(duration))) {
       // levelDuration was the last value we set.
       // not using mediaSource.duration as the browser may tweak this value
-      // only update Media Source duration if its value increase, this is to avoid
+      // only `update Media Source duration if its value increase, this is to avoid
       // flushing already buffered portion when switching between quality level
       logger.log(`Updating Media Source duration to ${this._levelDuration.toFixed(3)}`);
       this._msDuration = this.mediaSource.duration = this._levelDuration;

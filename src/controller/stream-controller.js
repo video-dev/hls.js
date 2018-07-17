@@ -13,9 +13,9 @@ import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import { alignDiscontinuities } from '../utils/discontinuities';
+import { alignStream } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
-import { calculateNextPDT, findFragmentByPDT, findFragmentBySN } from './fragment-finders';
+import { findFragmentByPDT, findFragmentBySN } from './fragment-finders';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -51,7 +51,9 @@ class StreamController extends TaskLoop {
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED,
-      Event.LEVELS_UPDATED
+      Event.LEVELS_UPDATED,
+      Event.LEVEL_SWITCHING,
+      Event.LEVEL_SWITCHED
     );
 
     this.fragmentTracker = fragmentTracker;
@@ -59,6 +61,7 @@ class StreamController extends TaskLoop {
     this.audioCodecSwap = false;
     this._state = State.STOPPED;
     this.stallReported = false;
+    this.lastPdt = 0;
   }
 
   onHandlerDestroying () {
@@ -297,11 +300,13 @@ class StreamController extends TaskLoop {
     if (!frag)
       frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
 
-    if (frag)
-      this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
+    if (frag) {
+        this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
+    }
   }
 
   _ensureFragmentAtLivePoint (levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen) {
+  fragments.forEach(f => console.log(f.start));
     const config = this.hls.config, media = this.media;
 
     let frag;
@@ -339,7 +344,7 @@ class StreamController extends TaskLoop {
          even if SN are not synchronized between playlists, loading this frag will help us
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
-        if (!levelDetails.programDateTime) { // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+        if (!levelDetails.hasProgramDateTime) { // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
           const targetSN = fragPrevious.sn + 1;
           if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
             const fragNext = fragments[targetSN - levelDetails.startSN];
@@ -358,7 +363,7 @@ class StreamController extends TaskLoop {
               logger.log(`live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
           }
         } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-          frag = findFragmentByPDT(fragments, fragPrevious.endPdt + 1);
+          frag = findFragmentByPDT(fragments, fragPrevious.pdt, config.maxFragLookUpTolerance);
         }
       }
       if (!frag) {
@@ -369,6 +374,7 @@ class StreamController extends TaskLoop {
         logger.log(`live playlist, switching playlist, unknown, load middle frag : ${frag.sn}`);
       }
     }
+
     return frag;
   }
 
@@ -377,19 +383,10 @@ class StreamController extends TaskLoop {
     let frag;
 
     if (bufferEnd < end) {
-      // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       const lookupTolerance = (bufferEnd > end - config.maxFragLookUpTolerance) ? 0 : config.maxFragLookUpTolerance;
-      if (!levelDetails.programDateTime) {
-        // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-        frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
-      } else {
-        // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        frag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, levelDetails), lookupTolerance);
-        if (!frag) {
-          logger.warn('Frag found by PDT search did not fit within tolerance; falling back to finding by SN');
-          frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
-        }
-      }
+      // Remove the tolerance if it would put the bufferEnd past the actual end of stream
+      // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+      frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
     } else {
       // reach end of playlist
       frag = fragments[fragLen - 1];
@@ -834,12 +831,12 @@ class StreamController extends TaskLoop {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
         } else {
           logger.log('live playlist - outdated PTS, unknown sliding');
-          alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
+          alignStream(this.fragPrevious, lastLevel, newDetails);
         }
       } else {
         logger.log('live playlist - first load, unknown sliding');
         newDetails.PTSKnown = false;
-        alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
+        alignStream(this.fragPrevious, lastLevel, newDetails);
       }
     } else {
       newDetails.PTSKnown = false;
@@ -851,7 +848,7 @@ class StreamController extends TaskLoop {
 
     if (this.startFragRequested === false) {
     // compute start position if set to -1. use it straight away if value is defined
-      if (this.startPosition === -1 || this.lastCurrentTime === -1) {
+      if (this.startPosition === -1 || this.lastCurrentTime === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
         if (!isNaN(startTimeOffset)) {
@@ -928,9 +925,6 @@ class StreamController extends TaskLoop {
           audioCodec = this.config.defaultAudioCodec || currentLevel.audioCodec;
         if (this.audioCodecSwap) {
           logger.log('swapping playlist audio codec');
-          if (audioCodec === undefined)
-            audioCodec = this.lastAudioCodec;
-
           if (audioCodec) {
             if (audioCodec.indexOf('mp4a.40.5') !== -1)
               audioCodec = 'mp4a.40.2';
@@ -1380,6 +1374,14 @@ class StreamController extends TaskLoop {
 
   onLevelsUpdated (data) {
     this.levels = data.levels;
+  }
+
+  onLevelSwitching() {
+    this.switching = true;
+  }
+
+  onLevelSwitched() {
+    this.switched = false;
   }
 
   swapAudioCodec () {

@@ -9,6 +9,7 @@ export default class Fragment {
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
+    this.pdt = null;
 
     // Holds the types of data this fragment supports
     this._elementaryStreams = {
@@ -85,6 +86,13 @@ export default class Fragment {
       this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
 
     return this._decryptdata;
+  }
+  
+  get endPdt() {
+    if (!this.pdt) {
+      return 0;
+    }
+    return this.pdt + (this.duration * 1000);
   }
 
   /**

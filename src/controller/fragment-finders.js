@@ -1,25 +1,6 @@
 import BinarySearch from '../utils/binary-search';
 
 /**
- * Calculates the PDT of the next load position.
- * bufferEnd in this function is usually the position of the playhead.
- * @param {number} [start = 0] - The PTS of the first fragment within the level
- * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {*} levelDetails - An object containing the parsed and computed properties of the currently playing level
- * @returns {number} nextPdt - The computed PDT
- */
-export function calculateNextPDT (start = 0, bufferEnd = 0, levelDetails) {
-  let pdt = 0;
-  if (levelDetails.programDateTime) {
-    const parsedDateInt = Date.parse(levelDetails.programDateTime);
-    if (!isNaN(parsedDateInt)) {
-      pdt = (bufferEnd * 1000) + parsedDateInt - (1000 * start);
-    }
-  }
-  return pdt;
-}
-
-/**
  * Finds the first fragment whose endPDT value exceeds the given PDT.
  * @param {Array} fragments - The array of candidate fragments
  * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
@@ -32,22 +13,18 @@ export function findFragmentByPDT (fragments, PDTValue = null, maxFragLookUpTole
   }
 
   // if less than start
-  let firstSegment = fragments[0];
-
-  if (PDTValue < firstSegment.pdt) {
+  if (PDTValue < fragments[0].pdt) {
     return null;
   }
 
-  let lastSegment = fragments[fragments.length - 1];
-
-  if (PDTValue >= lastSegment.endPdt) {
+  if (PDTValue >= fragments[fragments.length - 1].endPdt) {
     return null;
   }
 
   for (let seg = 0; seg < fragments.length; ++seg) {
     let frag = fragments[seg];
     if (pdtWithinToleranceTest(PDTValue, maxFragLookUpTolerance, frag)) {
-      return frag;
+      return fragments[seg + 1];
     }
   }
 }
