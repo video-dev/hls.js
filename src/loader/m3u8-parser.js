@@ -141,13 +141,15 @@ export default class M3U8Parser {
   static parseLevelPlaylist (string, baseurl, id, type) {
     let currentSN = 0,
       totalduration = 0,
-      level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
+      level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0, continuities: [] },
       levelkey = new LevelKey(),
       cc = 0,
       prevFrag = null,
       frag = new Fragment(),
       result,
       i;
+
+    let firstPdtIndex = null;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
@@ -172,23 +174,7 @@ export default class M3U8Parser {
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
 
-          if (level.programDateTime) {
-            if (prevFrag) {
-              if (frag.rawProgramDateTime) { // PDT discontinuity found
-                frag.pdt = Date.parse(frag.rawProgramDateTime);
-              } else { // Contiguous fragment
-                frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
-              }
-            } else { // First fragment
-              frag.pdt = Date.parse(level.programDateTime);
-            }
-            frag.endPdt = frag.pdt + (frag.duration * 1000);
-          }
-
-          if (isNaN(frag.pdt)) {
-            frag.pdt = null;
-            frag.endPdt = null;
-          }
+          assignProgramDateTime(frag, prevFrag);
 
           level.fragments.push(frag);
           prevFrag = frag;
@@ -207,12 +193,10 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (level.programDateTime === undefined) {
-          const pdt = new Date(Date.parse(result[5]) - 1000 * totalduration);
-          if (!isNaN(pdt)) {
-            level.programDateTime = pdt;
-          }
+        if (!firstPdtIndex) {
+          firstPdtIndex = level.fragments.length;
         }
+        level.hasProgramDateTime = true;
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -331,10 +315,44 @@ export default class M3U8Parser {
       }
     }
 
+    /**
+     * Backfill any missing PDT values
+       "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
+       one or more Media Segment URIs, the client SHOULD extrapolate
+       backward from that tag (using EXTINF durations and/or media
+       timestamps) to associate dates with those segments."
+     * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
+     * computed.
+     */
+    if (firstPdtIndex) {
+      backfillProgramDateTimes(level.fragments, firstPdtIndex);
+    }
+
     return level;
   }
 }
 
 function endsWith (str, search) {
   return str.substring(str.length - search.length, str.length) === search;
+}
+
+function backfillProgramDateTimes (fragments, startIndex) {
+  let fragPrev = fragments[startIndex];
+  for (let i = startIndex - 1; i >= 0; i--) {
+    const frag = fragments[i];
+    frag.pdt = fragPrev.pdt - (frag.duration * 1000);
+    fragPrev = frag;
+  }
+}
+
+function assignProgramDateTime (frag, prevFrag) {
+  if (frag.rawProgramDateTime) {
+    frag.pdt = Date.parse(frag.rawProgramDateTime);
+  } else if (prevFrag && prevFrag.pdt) {
+    frag.pdt = prevFrag.endPdt;
+  }
+
+  if (isNaN(frag.pdt)) {
+    frag.pdt = null;
+  }
 }

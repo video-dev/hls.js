@@ -103,7 +103,7 @@ export class FragmentTracker extends EventHandler {
       fragmentEntity.buffered = true;
 
       Object.keys(this.timeRanges).forEach(elementaryStream => {
-        if (fragment.hasElementaryStream(elementaryStream) === true) {
+        if (fragment.hasElementaryStream(elementaryStream)) {
           let timeRange = this.timeRanges[elementaryStream];
           // Check for malformed fragments
           // Gaps need to be calculated for each elementaryStream
