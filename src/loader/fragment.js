@@ -87,11 +87,11 @@ export default class Fragment {
 
     return this._decryptdata;
   }
-  
-  get endPdt() {
-    if (!this.pdt) {
+
+  get endPdt () {
+    if (!this.pdt)
       return 0;
-    }
+
     return this.pdt + (this.duration * 1000);
   }
 

@@ -1,6 +1,6 @@
 import assert from 'assert';
 import sinon from 'sinon';
-import { calculateNextPDT, findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest, pdtWithinToleranceTest } from '../../../src/controller/fragment-finders';
+import { findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest, pdtWithinToleranceTest } from '../../../src/controller/fragment-finders';
 import { mockFragments } from '../../mocks/data';
 import BinarySearch from '../../../src/utils/binary-search';
 
@@ -151,29 +151,6 @@ describe('Fragment finders', function () {
 
     it('returns null when passed an empty frag array', function () {
       assert.strictEqual(findFragmentByPDT([], 9001), null);
-    });
-  });
-
-  describe('calculateNextPDT', function () {
-    const levelDetails = {
-      programDateTime: '2012-12-06T19:10:03+00:00'
-    };
-
-    it('calculates based on levelDetails', function () {
-      const expected = 1354821003000 + (10 * 1000) - (1000 * 5);
-      const actual = calculateNextPDT(5, 10, levelDetails);
-      assert.strictEqual(expected, actual);
-    });
-
-    it('returns 0 if levelDetails does not have programDateTime', function () {
-      const actual = calculateNextPDT(5, 10, {});
-      assert.strictEqual(0, actual);
-    });
-
-    it('returns 0 if the parsed PDT would be NaN', function () {
-      levelDetails.programDateTime = 'foo';
-      const actual = calculateNextPDT(5, 10, levelDetails);
-      assert.strictEqual(0, actual);
     });
   });
 

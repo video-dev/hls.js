@@ -300,13 +300,11 @@ class StreamController extends TaskLoop {
     if (!frag)
       frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
 
-    if (frag) {
-        this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
-    }
+    if (frag)
+      this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
   }
 
   _ensureFragmentAtLivePoint (levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen) {
-  fragments.forEach(f => console.log(f.start));
     const config = this.hls.config, media = this.media;
 
     let frag;
@@ -363,7 +361,8 @@ class StreamController extends TaskLoop {
               logger.log(`live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
           }
         } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-          frag = findFragmentByPDT(fragments, fragPrevious.pdt, config.maxFragLookUpTolerance);
+          logger.log(`live playlist, switching playlist, load frag with same PDT: ${fragPrevious.pdt}`);
+          frag = findFragmentByPDT(fragments, fragPrevious.endPdt, config.maxFragLookUpTolerance);
         }
       }
       if (!frag) {
@@ -1376,11 +1375,11 @@ class StreamController extends TaskLoop {
     this.levels = data.levels;
   }
 
-  onLevelSwitching() {
+  onLevelSwitching () {
     this.switching = true;
   }
 
-  onLevelSwitched() {
+  onLevelSwitched () {
     this.switched = false;
   }
 

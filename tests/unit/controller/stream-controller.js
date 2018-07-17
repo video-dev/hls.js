@@ -76,8 +76,7 @@ describe('StreamController tests', function () {
     });
   });
 
-  describe('PDT vs SN tests for discontinuities with PDT', function () {
-    let PDT = 'Fri Sep 15 2017 12:11:01:523 GMT-0700 (Pacific Daylight Time)';
+  describe('SN Searching', function () {
     let fragPrevious = {
       pdt: 1505502671523,
       endPdt: 1505502676523,
@@ -98,7 +97,7 @@ describe('StreamController tests', function () {
     let end = mockFragments[mockFragments.length - 1].start + mockFragments[mockFragments.length - 1].duration;
 
     it('SN search choosing wrong fragment (3 instead of 2) after level loaded', function () {
-      levelDetails.programDateTime = null;
+      levelDetails.hasProgramDateTime = null;
 
       let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
@@ -106,53 +105,37 @@ describe('StreamController tests', function () {
     });
 
     it('SN search choosing the right segment if fragPrevious is not available', function () {
-      levelDetails.programDateTime = null;
+      levelDetails.hasProgramDateTime = null;
 
       let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 2, found sn segment ' + resultSN);
     });
 
-    it('PDT search choosing fragment after level loaded', function () {
-      levelDetails.programDateTime = PDT;// If programDateTime contains a date then PDT is used
-
-      let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
-      let resultSN = foundFragment ? foundFragment.sn : -1;
-      assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
-    });
-
-    it('PDT search choosing fragment after starting/seeking to a new position (bufferEnd used)', function () {
-      levelDetails.programDateTime = PDT;// If programDateTime contains a date then PDT is used
-      let mediaSeekingTime = 17.00;
-      let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, mediaSeekingTime, end, levelDetails);
-      let resultSN = foundFragment ? foundFragment.sn : -1;
-      // Fragment 2 starts at 15:11:16 and ends at 15:11:21, which is the best candidate for buffering at the seeked-to PDT of 15:11:18
-      assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
-    });
-
-    it('PDT serch hitting empty discontinuity', function () {
-      levelDetails.programDateTime = PDT;// If programDateTime contains a date then PDT is used
-      let discontinuityPDTHit = 6.00;
-
-      let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, discontinuityPDTHit, end, levelDetails);
-      let resultSN = foundFragment ? foundFragment.sn : -1;
-      assert.equal(foundFragment, mockFragments[1], 'Expected sn 1, found sn segment ' + resultSN);
-    });
-
-    it('finds the next fragment by SN if finding by PDT returns a frag out of tolerance', function () {
-      levelDetails.programDateTime = PDT;
-      const fragments = [mockFragments[0], mockFragments[0], mockFragments[1]];
-      const bufferEnd = fragments[1].start + fragments[1].duration;
-      const end = fragments[2].start + fragments[2].duration;
-
-      const expected = fragments[2];
-      const actual = streamController._findFragment(0, fragments[1], fragments.length, fragments, bufferEnd, end, levelDetails);
-      assert.strictEqual(expected, actual);
-    });
-
     it('returns the last fragment if the stream is fully buffered', function () {
       const actual = streamController._findFragment(0, null, mockFragments.length, mockFragments, end, end, levelDetails);
       assert.strictEqual(actual, mockFragments[mockFragments.length - 1]);
+    });
+
+    describe.skip('PDT Searching during a live stream', function () {
+      it('PDT search choosing fragment after level loaded', function () {
+        levelDetails.hasProgramDateTime = true;
+        levelDetails.PTSKnown = false;
+        levelDetails.live = true;
+
+        let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, bufferEnd, 0, end, fragPrevious, mockFragments, mockFragments.length);
+        let resultSN = foundFragment ? foundFragment.sn : -1;
+        assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
+      });
+
+      it('PDT serch hitting empty discontinuity', function () {
+        levelDetails.hasProgramDateTime = true;
+        let discontinuityPDTHit = 6.00;
+
+        let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, discontinuityPDTHit, 0, end, fragPrevious, mockFragments, mockFragments.length);
+        let resultSN = foundFragment ? foundFragment.sn : -1;
+        assert.equal(foundFragment, mockFragments[1], 'Expected sn 1, found sn segment ' + resultSN);
+      });
     });
   });
 });

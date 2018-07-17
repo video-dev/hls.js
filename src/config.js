@@ -28,7 +28,7 @@ export var hlsDefaultConfig = {
   capLevelOnFPSDrop: false, // used by fps-controller
   capLevelToPlayerSize: false, // used by cap-level-controller
   initialLiveManifestSize: 1, // used by stream-controller
-  maxBufferLength: 1, // used by stream-controller
+  maxBufferLength: 30, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.5, // used by stream-controller
 
@@ -42,7 +42,7 @@ export var hlsDefaultConfig = {
   liveSyncDuration: undefined, // used by stream-controller
   liveMaxLatencyDuration: undefined, // used by stream-controller
   liveDurationInfinity: false, // used by buffer-controller
-  maxMaxBufferLength: 1, // used by stream-controller
+  maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
   enableSoftwareAES: true, // used by decrypter
   manifestLoadingTimeOut: 10000, // used by playlist-loader

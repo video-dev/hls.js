@@ -61,7 +61,6 @@ export function adjustPts (sliding, details) {
       let start = frag.start + sliding;
       frag.start = frag.startPTS = start;
       frag.endPTS = start + frag.duration;
-      frag.pdt = frag.pdt + (sliding * 1000);
     }
   });
   details.PTSKnown = true;
@@ -78,10 +77,9 @@ export function adjustPts (sliding, details) {
  * @param details
  */
 export function alignStream (lastFrag, lastLevel, details) {
-  if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
-    alignDiscontinuities(lastLevel, details);
-  } else if (details.PTSKnown && lastLevel && lastLevel.details && lastLevel.details.fragments.length) {
-    alignPDT(details, lastLevel);
+  alignDiscontinuities(lastFrag, details, lastLevel);
+  if (!details.PTSKnown && lastLevel) {
+    alignPDT(details, lastLevel.details);
   }
 }
 
@@ -91,29 +89,36 @@ export function alignStream (lastFrag, lastLevel, details) {
  * @param lastLevel - The details of the last loaded level
  * @param details - The details of the new level
  */
-export function alignDiscontinuities (details, lastLevel) {
-  const referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
-  if (referenceFrag) {
-    logger.log('Adjusting PTS using last level due to CC increase within current level');
-    adjustPts(referenceFrag.start, details);
+export function alignDiscontinuities (lastFrag, details, lastLevel) {
+  if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
+    const referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
+    if (referenceFrag) {
+      logger.log('Adjusting PTS using last level due to CC increase within current level');
+      adjustPts(referenceFrag.start, details);
+    }
   }
 }
 
 /**
  * Computes the PTS of a new level's fragments using the difference in Program Date Time from the last level.
  * @param details - The details of the new level
- * @param lastLevel - The details of the last loaded level
+ * @param lastDetails - The details of the last loaded level
  */
-export function alignPDT (details, lastLevel) {
-  // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
-  // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
-  // then we can deduce that playlist B sliding is 1000+8 = 1008s
-  let lastPDT = lastLevel.details.fragments[0].programDateTime;
-  let newPDT = details.fragments[0].programDateTime;
-  // date diff is in ms. frag.start is in seconds
-  let sliding = (newPDT - lastPDT) / 1000 + lastLevel.details.fragments[0].start;
-  if (!isNaN(sliding)) {
-    logger.log(`adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(3)}`);
-    adjustPts(sliding, details);
+export function alignPDT (details, lastDetails) {
+  if (lastDetails && lastDetails.fragments.length) {
+    if (!details.hasProgramDateTime || !lastDetails.hasProgramDateTime) {
+      return;
+    }
+    // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
+    // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
+    // then we can deduce that playlist B sliding is 1000+8 = 1008s
+    let lastPDT = lastDetails.fragments[0].pdt;
+    let newPDT = details.fragments[0].pdt;
+    // date diff is in ms. frag.start is in seconds
+    let sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
+    if (!isNaN(sliding)) {
+      logger.log(`adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(3)}`);
+      adjustPts(sliding, details);
+    }
   }
 }
