@@ -173,7 +173,6 @@ export default class M3U8Parser {
           frag.baseurl = baseurl;
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
-
           assignProgramDateTime(frag, prevFrag);
 
           level.fragments.push(frag);
@@ -193,9 +192,9 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (!firstPdtIndex) {
+        if (!firstPdtIndex)
           firstPdtIndex = level.fragments.length;
-        }
+
         level.hasProgramDateTime = true;
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
@@ -274,8 +273,8 @@ export default class M3U8Parser {
           frag.type = type;
           frag.sn = 'initSegment';
           level.initSegment = frag;
-          prevFrag = frag;
           frag = new Fragment();
+          frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
           break;
         default:
           logger.warn(`line parsed but not handled: ${result}`);
@@ -325,9 +324,8 @@ export default class M3U8Parser {
      * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
      * computed.
      */
-    if (firstPdtIndex) {
+    if (firstPdtIndex)
       backfillProgramDateTimes(level.fragments, firstPdtIndex);
-    }
 
     return level;
   }
