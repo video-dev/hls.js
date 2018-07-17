@@ -359,7 +359,7 @@ class StreamController extends TaskLoop {
           }
         } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
           logger.log(`live playlist, switching playlist, load frag with same PDT: ${fragPrevious.pdt}`);
-          frag = findFragmentByPDT(fragments, fragPrevious.pdt, config.maxFragLookUpTolerance);
+          frag = findFragmentByPDT(fragments, fragPrevious.endPdt, config.maxFragLookUpTolerance);
         }
       }
       if (!frag) {
@@ -407,9 +407,6 @@ class StreamController extends TaskLoop {
             } else {
               frag = nextFrag;
               logger.log(`SN just loaded, load next one: ${frag.sn}`, frag);
-              if (frag.start > bufferEnd) {
-                debugger;
-              }
             }
           } else {
             frag = null;

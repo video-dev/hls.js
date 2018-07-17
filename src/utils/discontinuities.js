@@ -79,6 +79,9 @@ export function adjustPts (sliding, details) {
 export function alignStream (lastFrag, lastLevel, details) {
   alignDiscontinuities(lastFrag, details, lastLevel);
   if (!details.PTSKnown && lastLevel) {
+    // If the PTS wasn't figured out via discontinuity sequence that means there was no CC increase within the level.
+    // Aligning via Program Date Time should therefore be reliable, since PDT should be the same within the same
+    // discontinuity sequence.
     alignPDT(details, lastLevel.details);
   }
 }
