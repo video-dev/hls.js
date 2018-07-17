@@ -59,7 +59,6 @@ class StreamController extends TaskLoop {
     this.audioCodecSwap = false;
     this._state = State.STOPPED;
     this.stallReported = false;
-    this.lastPdt = 0;
   }
 
   onHandlerDestroying () {
@@ -360,7 +359,7 @@ class StreamController extends TaskLoop {
           }
         } else { // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
           logger.log(`live playlist, switching playlist, load frag with same PDT: ${fragPrevious.pdt}`);
-          frag = findFragmentByPDT(fragments, fragPrevious.endPdt, config.maxFragLookUpTolerance);
+          frag = findFragmentByPDT(fragments, fragPrevious.pdt, config.maxFragLookUpTolerance);
         }
       }
       if (!frag) {
@@ -407,7 +406,10 @@ class StreamController extends TaskLoop {
               logger.warn('SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this');
             } else {
               frag = nextFrag;
-              logger.log(`SN just loaded, load next one: ${frag.sn}`);
+              logger.log(`SN just loaded, load next one: ${frag.sn}`, frag);
+              if (frag.start > bufferEnd) {
+                debugger;
+              }
             }
           } else {
             frag = null;
