@@ -274,6 +274,7 @@ export default class M3U8Parser {
           frag.type = type;
           frag.sn = 'initSegment';
           level.initSegment = frag;
+          prevFrag = frag;
           frag = new Fragment();
           break;
         default:
