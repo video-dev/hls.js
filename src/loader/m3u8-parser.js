@@ -141,7 +141,7 @@ export default class M3U8Parser {
   static parseLevelPlaylist (string, baseurl, id, type) {
     let currentSN = 0,
       totalduration = 0,
-      level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0, continuities: [] },
+      level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
       levelkey = new LevelKey(),
       cc = 0,
       prevFrag = null,
