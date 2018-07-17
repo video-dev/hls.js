@@ -51,9 +51,7 @@ class StreamController extends TaskLoop {
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED,
-      Event.LEVELS_UPDATED,
-      Event.LEVEL_SWITCHING,
-      Event.LEVEL_SWITCHED
+      Event.LEVELS_UPDATED
     );
 
     this.fragmentTracker = fragmentTracker;
@@ -1373,14 +1371,6 @@ class StreamController extends TaskLoop {
 
   onLevelsUpdated (data) {
     this.levels = data.levels;
-  }
-
-  onLevelSwitching () {
-    this.switching = true;
-  }
-
-  onLevelSwitched () {
-    this.switched = false;
   }
 
   swapAudioCodec () {
