@@ -1,0 +1,102 @@
+{
+  "name": "hls.js",
+  "version": "0.10.1",
+  "license": "Apache-2.0",
+  "description": "JavaScript HLS client using MediaSourceExtension",
+  "homepage": "https://github.com/video-dev/hls.js",
+  "authors": "Guillaume du Pontavice <g.du.pontavice@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/video-dev/hls.js"
+  },
+  "bugs": {
+    "url": "https://github.com/video-dev/hls.js/issues"
+  },
+  "main": "./dist/hls.js",
+  "nyc": {
+    "reporter": [
+      "lcov"
+    ],
+    "exclude": [
+      "tests"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "webpack --progress",
+    "build:watch": "webpack --progress --watch",
+    "build:analyze": "ANALYZE=true webpack --progress",
+    "build:release": "npm run build && npm run test && git add dist/* && git commit -m 'Update dist' && npm run docs:release",
+    "commit:release": "npm run build:release && git add dist/* && git commit -m 'update dist'",
+    "dev": "webpack-dev-server --progress --env.debug --port 8000",
+    "docs": "npm run docs:generate",
+    "docs:generate": "esdoc",
+    "docs:clean": "rm -Rf html/docs",
+    "docs:update": "git add docs/html && git commit docs/html -m 'Update docs'",
+    "docs:release": "npm run docs:clean && npm run docs:generate && npm run docs:update",
+    "lint": "npm run lint:src && npm run lint:tests",
+    "lint:fix": "eslint src/ tests/ --fix",
+    "lint:quiet": "eslint src/ tests/ --quiet",
+    "lint:src": "eslint src/",
+    "lint:tests": "eslint tests/",
+    "lint:demo": "eslint demo/",
+    "precommit": "./scripts/precommit",
+    "pretest": "npm run lint",
+    "release:pre": "mversion prerelease && npm run build:release",
+    "release:patch": "mversion p && npm run build:release",
+    "release:minor": "mversion mi && npm run build:release",
+    "release:major": "mversion ma && npm run build:release",
+    "start": "npm run dev",
+    "test": "npm run test:unit && npm run test:func",
+    "test:unit": "karma start karma.conf.js",
+    "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
+    "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/setup.js --timeout 40000"
+  },
+  "dependencies": {
+    "string.prototype.endswith": "^0.2.0",
+    "url-toolkit": "^2.1.2"
+  },
+  "devDependencies": {
+    "arraybuffer-equal": "^1.0.4",
+    "babel-core": "^6.25.0",
+    "babel-loader": "^7.1.1",
+    "babel-plugin-transform-object-assign": "^6.22.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-register": "^6.24.0",
+    "chromedriver": "^2.38.3",
+    "cross-env": "^5.0.2",
+    "deep-strict-equal": "^0.2.0",
+    "esdoc": "^1.1.0",
+    "esdoc-standard-plugin": "^1.0.0",
+    "eslint": "^4.13.1",
+    "eslint-config-standard": "^11.0.0",
+    "eslint-plugin-import": "^2.9.0",
+    "eslint-plugin-node": "^6.0.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "http-server": "^0.11.0",
+    "husky": "^0.14.3",
+    "istanbul-instrumenter-loader": "^3.0.1",
+    "jshint": "^2.9.4",
+    "karma": "^2.0.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-coverage-istanbul-reporter": "^1.3.0",
+    "karma-mocha": "^1.3.0",
+    "karma-mocha-reporter": "^2.2.3",
+    "karma-should": "^1.0.0",
+    "karma-sinon": "^1.0.5",
+    "karma-sourcemap-loader": "^0.3.7",
+    "karma-webpack": "^2.0.4",
+    "mocha": "^3.0.2",
+    "mversion": "^1.10.1",
+    "selenium-webdriver": "^3.1.0",
+    "should": "^13.1.3",
+    "sinon": "^4.1.3",
+    "webpack": "^3.5.5",
+    "webpack-bundle-analyzer": "^2.9.1",
+    "webpack-dev-server": "^2.7.1",
+    "webworkify-webpack": "^2.0.0"
+  }
+}

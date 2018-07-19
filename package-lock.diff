@@ -1,0 +1,40 @@
+diff --git a/package-lock.json b/package-lock.json
+index 6ce8a099..bb47af9a 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1194,7 +1194,7 @@
+     },
+     "buffer": {
+       "version": "4.9.1",
+-      "resolved": "https://registry.npmjs.org/buffer/-/buffer-4.9.1.tgz",
++      "resolved": "http://registry.npmjs.org/buffer/-/buffer-4.9.1.tgz",
+       "integrity": "sha1-bRu2AbB6TvztlwlBMgkwJ8lbwpg=",
+       "dev": true,
+       "requires": {
+@@ -5914,7 +5914,7 @@
+     },
+     "ip": {
+       "version": "1.1.5",
+-      "resolved": "https://registry.npmjs.org/ip/-/ip-1.1.5.tgz",
++      "resolved": "http://registry.npmjs.org/ip/-/ip-1.1.5.tgz",
+       "integrity": "sha1-vd7XARQpCCjAoDnnLvJfWq7ENUo=",
+       "dev": true
+     },
+@@ -10729,7 +10729,7 @@
+     },
+     "through2": {
+       "version": "1.1.1",
+-      "resolved": "https://registry.npmjs.org/through2/-/through2-1.1.1.tgz",
++      "resolved": "http://registry.npmjs.org/through2/-/through2-1.1.1.tgz",
+       "integrity": "sha1-CEfLxESfNAVXTb3M2buEG4OsNUU=",
+       "dev": true,
+       "requires": {
+@@ -11257,7 +11257,7 @@
+     },
+     "tty-browserify": {
+       "version": "0.0.0",
+-      "resolved": "https://registry.npmjs.org/tty-browserify/-/tty-browserify-0.0.0.tgz",
++      "resolved": "http://registry.npmjs.org/tty-browserify/-/tty-browserify-0.0.0.tgz",
+       "integrity": "sha1-oVe6QC2iTpv5V/mqadUk7tQpAaY=",
+       "dev": true
+     },

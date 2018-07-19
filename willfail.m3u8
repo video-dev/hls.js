@@ -1,0 +1,29 @@
+#EXTM3U
+
+
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="A1.1+A2.1+A3.1-3758405413",NAME="TV Ton",LANGUAGE="deu",DEFAULT=YES,URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660/zdf_ahw/7/7.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="A1.1+A2.1+A3.1-3758405413",NAME="Originalton",LANGUAGE="deu",URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660/zdf_ahw/8/8.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="A1.1+A2.1+A3.1-3758405413",NAME="Audio-Deskription",LANGUAGE="deu",URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660/zdf_ahw/9/9.m3u8"
+
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="A1.1+A2.1+A3.1-482772623",NAME="TV Ton",LANGUAGE="deu",DEFAULT=YES,URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660-b/zdf_ahw/7/7f.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="A1.1+A2.1+A3.1-482772623",NAME="Originalton",LANGUAGE="deu",URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660-b/zdf_ahw/8/8f.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="A1.1+A2.1+A3.1-482772623",NAME="Audio-Deskription",LANGUAGE="deu",URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660-b/zdf_ahw/9/9f.m3u8"
+
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="T1+T2-3758405413",NAME="Untertitel deutsch",CODECS="wvtt",LANGUAGE="deu",DEFAULT=YES,AUTOSELECT=YES,URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660/zdf_ahw/10/10f.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="T1+T2-3758405413",NAME="Untertitel russisch",CODECS="wvtt",LANGUAGE="rus",AUTOSELECT=YES,URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660/zdf_ahw/11/11f.m3u8"
+
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="T1+T2-482772623",NAME="Untertitel deutsch",CODECS="wvtt",LANGUAGE="deu",DEFAULT=YES,AUTOSELECT=YES,URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660-b/zdf_ahw/10/10.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="T1+T2-482772623",NAME="Untertitel russisch",CODECS="wvtt",LANGUAGE="rus",AUTOSELECT=YES,URI="https://zdfhlstest2-i.akamaihd.net/hls/live/226660-b/zdf_ahw/11/11.m3u8"
+
+#EXT-X-STREAM-INF:CODECS="avc1.4d401f,mp4a.40.2",BANDWIDTH=393248,AVERAGE-BANDWIDTH=353288,AUDIO="A1.1+A2.1+A3.1-3758405413",SUBTITLES="T1+T2-3758405413"
+https://zdfhlstest2-i.akamaihd.net/hls/live/226660/zdf_ahw/1/1f.m3u8
+#EXT-X-STREAM-INF:CODECS="avc1.4d401f,mp4a.40.2",BANDWIDTH=393248,AVERAGE-BANDWIDTH=353288,AUDIO="A1.1+A2.1+A3.1-482772623",SUBTITLES="T1+T2-482772623"
+https://zdfhlstest2-i.akamaihd.net/hls/live/226660-b/zdf_ahw/1/1.m3u8
+#EXT-X-STREAM-INF:CODECS="avc1.4d401f,mp4a.40.2",BANDWIDTH=719453,AVERAGE-BANDWIDTH=605453,AUDIO="A1.1+A2.1+A3.1-3758405413",SUBTITLES="T1+T2-3758405413"
+https://zdfhlstest2-i.akamaihd.net/hls/live/226660/zdf_ahw/2/2f.m3u8
+#EXT-X-STREAM-INF:CODECS="avc1.4d401f,mp4a.40.2",BANDWIDTH=719453,AVERAGE-BANDWIDTH=605453,AUDIO="A1.1+A2.1+A3.1-482772623",SUBTITLES="T1+T2-482772623"
+https://zdfhlstest2-i.akamaihd.net/hls/live/226660-b/zdf_ahw/2/2.m3u8
+#EXT-X-STREAM-INF:CODECS="avc1.4d401f,mp4a.40.2",BANDWIDTH=1115975,AVERAGE-BANDWIDTH=911975,AUDIO="A1.1+A2.1+A3.1-3758405413",SUBTITLES="T1+T2-3758405413"
+https://zdfhlstest2-i.akamaihd.net/hls/live/226660/zdf_ahw/3/3f.m3u8
+#EXT-X-STREAM-INF:CODECS="avc1.4d401f,mp4a.40.2",BANDWIDTH=1115975,AVERAGE-BANDWIDTH=911975,AUDIO="A1.1+A2.1+A3.1-482772623",SUBTITLES="T1+T2-482772623"
+https://zdfhlstest2-i.akamaihd.net/hls/live/226660-b/zdf_ahw/3/3.m3u8
