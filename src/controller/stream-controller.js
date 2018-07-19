@@ -15,7 +15,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { alignStream } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
-import { findFragmentByPDT, findFragmentBySN } from './fragment-finders';
+import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -382,7 +382,7 @@ class StreamController extends TaskLoop {
       const lookupTolerance = (bufferEnd > end - config.maxFragLookUpTolerance) ? 0 : config.maxFragLookUpTolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-      frag = findFragmentBySN(fragPrevious, fragments, bufferEnd, lookupTolerance);
+      frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
     } else {
       // reach end of playlist
       frag = fragments[fragLen - 1];

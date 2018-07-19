@@ -1,6 +1,6 @@
 import assert from 'assert';
 import sinon from 'sinon';
-import { findFragmentByPDT, findFragmentBySN, fragmentWithinToleranceTest, pdtWithinToleranceTest } from '../../../src/controller/fragment-finders';
+import { findFragmentByPDT, findFragmentByPTS, fragmentWithinToleranceTest, pdtWithinToleranceTest } from '../../../src/controller/fragment-finders';
 import { mockFragments } from '../../mocks/data';
 import BinarySearch from '../../../src/utils/binary-search';
 
@@ -21,7 +21,7 @@ describe('Fragment finders', function () {
   };
   const bufferEnd = fragPrevious.start + fragPrevious.duration;
 
-  describe('findFragmentBySN', function () {
+  describe('findFragmentByPTS', function () {
     let tolerance = 0.25;
     let binarySearchSpy;
     beforeEach(function () {
@@ -29,21 +29,21 @@ describe('Fragment finders', function () {
     });
 
     it('finds a fragment with SN sequential to the previous fragment', function () {
-      const foundFragment = findFragmentBySN(fragPrevious, mockFragments, bufferEnd, tolerance);
+      const foundFragment = findFragmentByPTS(fragPrevious, mockFragments, bufferEnd, tolerance);
       const resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
       assert(binarySearchSpy.notCalled);
     });
 
     it('chooses the fragment with the next SN if its contiguous with the end of the buffer', function () {
-      const actual = findFragmentBySN(mockFragments[0], mockFragments, mockFragments[0].duration, tolerance);
+      const actual = findFragmentByPTS(mockFragments[0], mockFragments, mockFragments[0].duration, tolerance);
       assert.strictEqual(mockFragments[1], actual, `expected sn ${mockFragments[1].sn}, but got sn ${actual ? actual.sn : null}`);
       assert(binarySearchSpy.notCalled);
     });
 
     it('uses BinarySearch to find a fragment if the subsequent one is not within tolerance', function () {
       const fragments = [mockFragments[0], mockFragments[(mockFragments.length - 1)]];
-      findFragmentBySN(fragments[0], fragments, bufferEnd, tolerance);
+      findFragmentByPTS(fragments[0], fragments, bufferEnd, tolerance);
       assert(binarySearchSpy.calledOnce);
     });
   });
