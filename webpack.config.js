@@ -24,7 +24,8 @@ const baseConfig = {
   module: {
     rules: [
       // all files with a `.ts` extension will be handled by `ts-loader`
-      { test: /\.ts?$/, loader: "ts-loader" }
+      { test: /\.ts?$/, loader: "ts-loader" },
+      { test: /\.js?$/, loader: "ts-loader" }
     ]
   }
 };
