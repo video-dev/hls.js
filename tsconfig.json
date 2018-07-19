@@ -4,7 +4,7 @@
     "allowJs": true,
     "module": "commonjs",
     "target": "ES5",
-    "strict": true
+    "strict": false
   },
   "include": [
     "demo/**/*",
