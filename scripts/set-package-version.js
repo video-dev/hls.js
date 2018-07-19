@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('fs');
-const package = require('../package.json');
+const packageJson = require('../package.json');
 
 const VALID_VERSION_REGEX = /^v\d+\.\d+\.\d+$/;
 
@@ -39,8 +39,8 @@ try {
     throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
   }
 
-  package.version = newVersion;
-  fs.writeFileSync('./package.json', JSON.stringify(package));
+  packageJson.version = newVersion;
+  fs.writeFileSync('./package.json', JSON.stringify(packageJson));
   console.log('Set version: ' + newVersion);
 } catch(e) {
   console.error(e);
