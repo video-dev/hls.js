@@ -39,7 +39,7 @@ export function findFragmentByPDT (fragments, PDTValue = null, maxFragLookUpTole
  * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*} foundFrag - The best matching fragment
  */
-export function findFragmentBySN (fragPrevious, fragments, bufferEnd = 0, maxFragLookUpTolerance = 0) {
+export function findFragmentByPTS (fragPrevious, fragments, bufferEnd = 0, maxFragLookUpTolerance = 0) {
   const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : null;
   // Prefer the next fragment if it's within tolerance
   if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
