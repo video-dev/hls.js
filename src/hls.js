@@ -1,4 +1,4 @@
-import URLToolkit from 'url-toolkit';
+import * as URLToolkit from 'url-toolkit';
 
 import {
   ErrorTypes,
@@ -19,7 +19,8 @@ import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig } from './config';
 
 import HlsEvents from './events';
-import EventEmitter from 'events';
+
+import {EventEmitter} from 'events';
 
 // polyfill for IE11
 require('string.prototype.endswith');
