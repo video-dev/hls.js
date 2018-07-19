@@ -1,3 +1,5 @@
+'use strict';
+
 const package = require('../package.json');
 
 try {
