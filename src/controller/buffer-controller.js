@@ -202,7 +202,7 @@ class BufferController extends EventHandler {
     // update timestampOffset
     if (this.audioTimestampOffset) {
       let audioBuffer = this.sourceBuffer.audio;
-      logger.warn('change mpeg audio timestamp offset from ' + audioBuffer.timestampOffset + ' to ' + this.audioTimestampOffset);
+      logger.warn(`change mpeg audio timestamp offset from ${audioBuffer.timestampOffset} to ${this.audioTimestampOffset}`);
       audioBuffer.timestampOffset = this.audioTimestampOffset;
       delete this.audioTimestampOffset;
     }
@@ -234,6 +234,11 @@ class BufferController extends EventHandler {
     }
 
     this.updateMediaElementDuration();
+
+    // appending goes first
+    if (pending === 0) {
+      this.clearLiveBackBuffer();
+    }
   }
 
   onSBUpdateError (event) {
@@ -368,6 +373,37 @@ class BufferController extends EventHandler {
     // attempt flush immediately
     this.flushBufferCounter = 0;
     this.doFlush();
+  }
+
+  clearLiveBackBuffer() {
+    // clear back buffer for live only
+    if (!this._live) {
+      return;
+    }
+
+    try {
+      let currentTime = this.media.currentTime;
+      let { liveMinBackBufferLength, liveMaxBackBufferLength } = this.hls.config;
+      let sourceBuffer = this.sourceBuffer;
+
+      // max back buffer value is positive and current time already exceeds it
+      if (liveMaxBackBufferLength > 0 && currentTime > liveMaxBackBufferLength) {
+        let bufferTypes = Object.keys(sourceBuffer);
+
+        for (let index = bufferTypes.length - 1; index >= 0; index--) {
+          let bufferType = bufferTypes[index], buffered = sourceBuffer[bufferType].buffered;
+
+          // when back buffer exceeded maximum value
+          if (buffered.length > 0 && (currentTime - buffered.start(0) - liveMinBackBufferLength) > liveMaxBackBufferLength) {
+            // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current 
+            // time will lead to playback freezing)
+            this.removeBufferRange(bufferType, sourceBuffer[bufferType], 0, currentTime - liveMinBackBufferLength);
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn("clearLiveBackBuffer failed", error);
+    }
   }
 
   onLevelUpdated ({ details }) {
@@ -555,32 +591,9 @@ class BufferController extends EventHandler {
           // we are going to flush buffer, mark source buffer as 'not ended'
           sb.ended = false;
           if (!sb.updating) {
-            try {
-              for (i = 0; i < sb.buffered.length; i++) {
-                bufStart = sb.buffered.start(i);
-                bufEnd = sb.buffered.end(i);
-                // workaround firefox not able to properly flush multiple buffered range.
-                if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
-                  flushStart = startOffset;
-                  flushEnd = endOffset;
-                } else {
-                  flushStart = Math.max(bufStart, startOffset);
-                  flushEnd = Math.min(bufEnd, endOffset);
-                }
-                /* sometimes sourcebuffer.remove() does not flush
-                   the exact expected time range.
-                   to avoid rounding issues/infinite loop,
-                   only flush buffer range of length greater than 500ms.
-                */
-                if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
-                  this.flushBufferCounter++;
-                  logger.log(`flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${this.media.currentTime}`);
-                  sb.remove(flushStart, flushEnd);
-                  return false;
-                }
-              }
-            } catch (e) {
-              logger.warn('exception while accessing sourcebuffer, it might have been removed from MediaSource');
+            if (this.removeBufferRange(type, sb, startOffset, endOffset)) {
+              this.flushBufferCounter++;
+              return false;
             }
           } else {
             // logger.log('abort ' + type + ' append in progress');
@@ -597,6 +610,51 @@ class BufferController extends EventHandler {
     }
     // everything flushed !
     return true;
+  }
+
+  /**
+   * Removes first buffered range from provided source buffer that lies within given start and end offsets.
+   * 
+   * @param type Type of the source buffer, logging purposes only.
+   * @param sb Target SourceBuffer instance.
+   * @param startOffset
+   * @param endOffset
+   * 
+   * @returns {boolean} True when source buffer remove requested. 
+   */
+  removeBufferRange(type, sb, startOffset, endOffset) {
+    try {
+      let i, length, bufStart, bufEnd, removeStart, removeEnd;
+
+      for (i = 0, length = sb.buffered.length; i < length; i++) {
+        bufStart = sb.buffered.start(i);
+        bufEnd = sb.buffered.end(i);
+
+        // workaround firefox not able to properly flush multiple buffered range.
+        if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
+          removeStart = startOffset;
+          removeEnd = endOffset;
+        } else {
+          removeStart = Math.max(bufStart, startOffset);
+          removeEnd = Math.min(bufEnd, endOffset);
+        }
+
+        /* sometimes sourcebuffer.remove() does not flush
+          the exact expected time range.
+          to avoid rounding issues/infinite loop,
+          only flush buffer range of length greater than 500ms.
+        */
+        if (Math.min(removeEnd, bufEnd) - removeStart > 0.5) {
+          logger.log(`sb remove ${type} [${removeStart},${removeEnd}], of [${bufStart},${bufEnd}], pos:${this.media.currentTime}`);
+          sb.remove(removeStart, removeEnd);
+          return true;
+        }
+      }
+    } catch (error) {
+      logger.warn("removeBufferRange failed", error);
+    }
+
+    return false;
   }
 }
 
