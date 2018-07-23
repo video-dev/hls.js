@@ -23,6 +23,8 @@ class SubtitleTrackController extends EventHandler {
       Event.MEDIA_DETACHING,
       Event.MANIFEST_LOADING,
       Event.MANIFEST_LOADED,
+      Event.MANIFEST_PARSED,
+      Event.LEVEL_LOADED,
       Event.SUBTITLE_TRACK_LOADED);
     this.tracks = [];
     this.trackId = -1;
@@ -32,6 +34,14 @@ class SubtitleTrackController extends EventHandler {
      * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
      */
     this.subtitleDisplay = true;
+
+    /**
+     * @public
+     * The currently running group ID for text (CC)
+     * (we grab this on manifest-parsed and new level-loaded)
+     * @member {string}
+     */
+    this.subtitleGroupId = null;
   }
 
   _onTextTracksChanged () {
@@ -104,28 +114,63 @@ class SubtitleTrackController extends EventHandler {
     this.trackId = -1;
   }
 
+  onLevelLoaded (data) {
+    const levelInfo = this.hls.levels[data.level];
+
+    console.log(levelInfo);
+
+    if (!levelInfo.subtitleGroupIds) {
+      return;
+    }
+
+    const subtitleGroupId = levelInfo.subtitleGroupIds[levelInfo.urlId];
+    if (this.subtitleGroupId !== subtitleGroupId) {
+      this.subtitleGroupId = subtitleGroupId;
+
+      console.log('set subtitle group id:', subtitleGroupId);
+
+      this._selectInitialSubtitleTrack();
+    }
+  }
+
+  onManifestParsed (data) {
+    console.log('manifest parsed:', data);
+  }
+
   // Fired whenever a new manifest is loaded.
   onManifestLoaded (data) {
     let tracks = data.subtitles || [];
     this.tracks = tracks;
     this.trackId = -1;
     this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, { subtitleTracks: tracks });
+  }
 
+  _selectInitialSubtitleTrack () {
     // loop through available subtitle tracks and autoselect default if needed
     // TODO: improve selection logic to handle forced, etc
-    tracks.forEach(track => {
-      if (track.default) {
-        // setting this.subtitleTrack will trigger internal logic
-        // if media has not been attached yet, it will fail
-        // we keep a reference to the default track id
-        // and we'll set subtitleTrack when onMediaAttached is triggered
-        if (this.media) {
-          this.subtitleTrack = track.id;
-        } else {
-          this.queuedDefaultTrack = track.id;
-        }
-      }
-    });
+
+    let selectedTrack = null;
+
+    const tracks = this.tracks.filter(
+      (track) => this.subtitleGroupId === null || track.groupId === this.subtitleGroupId
+    );
+
+    const defaultTracks = tracks.filter((track) => track.default);
+
+    if (defaultTracks.length) {
+      selectedTrack = defaultTracks[0];
+    } else if (tracks.length) {
+      selectedTrack = tracks[0];
+    } else {
+      logger.warn('No selectable subtitle tracks found');
+      return;
+    }
+
+    if (this.media) {
+      this.subtitleTrack = selectedTrack;
+    } else {
+      this.queuedDefaultTrack = selectedTrack;
+    }
   }
 
   // Trigger subtitle track playlist reload.
