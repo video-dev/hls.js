@@ -8,6 +8,7 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId } from './level-helper';
+import PlaylistLoader from '../loader/playlist-loader';
 
 const { performance } = window;
 let chromeOrFirefox;
@@ -69,12 +70,15 @@ export default class LevelController extends EventHandler {
 
   onManifestLoaded (data) {
     let levels = [];
-    let audioTracks = [];
     let bitrateStart;
     let levelSet = {};
     let levelFromSet = null;
     let videoCodecFound = false;
     let audioCodecFound = false;
+    let audioTracks = [];
+    let subtitleTracks = [];
+    // FIXME: we should centralizes all usages of userAgent in codebase
+    let chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
     // regroup redundant levels together
     data.levels.forEach(level => {
@@ -102,14 +106,12 @@ export default class LevelController extends EventHandler {
         levelFromSet.url.push(level.url);
       }
 
-      if (attributes) {
-        if (attributes.AUDIO) {
-          audioCodecFound = true;
-          addGroupId(levelFromSet || level, 'audio', attributes.AUDIO);
-        }
-        if (attributes.SUBTITLES) {
-          addGroupId(levelFromSet || level, 'text', attributes.SUBTITLES);
-        }
+      if (level.attrs && level.attrs.AUDIO) {
+        addGroupId(levelFromSet || level, PlaylistLoader.LevelType.AUDIO, level.attrs.AUDIO);
+      }
+
+      if (level.attrs && level.attrs.SUBTITLES) {
+        addGroupId(levelFromSet || level, PlaylistLoader.LevelType.SUBTITLE, level.attrs.SUBTITLES);
       }
     });
 
@@ -150,6 +152,7 @@ export default class LevelController extends EventHandler {
       this.hls.trigger(Event.MANIFEST_PARSED, {
         levels,
         audioTracks,
+        subtitleTracks,
         firstLevel: this._firstLevel,
         stats: data.stats,
         audio: audioCodecFound,

@@ -29,9 +29,9 @@ const HlsEvents = {
   BUFFER_FLUSHED: 'hlsBufferFlushed',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING: 'hlsManifestLoading',
-  // fired after manifest has been loaded - data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
+  // fired after manifest has been loaded - data: { levels: QualityLevel[], audioTracks : AudioTrack[], subtitleTracks: TextTrack[], url: manifestURL, stats : { trequest, tfirst, tload, mtime}}
   MANIFEST_LOADED: 'hlsManifestLoaded',
-  // fired after manifest has been parsed - data: { levels : [available quality levels], firstLevel : index of first quality level appearing in Manifest}
+  // fired after manifest has been parsed - data: { levels: QualityLevel[], audioTracks : AudioTrack[], subtitleTracks: TextTrack[], firstLevel : index of first quality level appearing in Manifest}
   MANIFEST_PARSED: 'hlsManifestParsed',
   // fired when a level switch is requested - data: { level : id of new level }
   LEVEL_SWITCHING: 'hlsLevelSwitching',

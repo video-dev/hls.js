@@ -298,7 +298,7 @@ class PlaylistLoader extends EventHandler {
     }));
 
     let audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
-    let subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    let subtitleTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -325,7 +325,8 @@ class PlaylistLoader extends EventHandler {
     hls.trigger(Event.MANIFEST_LOADED, {
       levels,
       audioTracks,
-      subtitles,
+      subtitleTracks,
+      subtitles: subtitleTracks, // FIXME: `subtitles` not documented
       url,
       stats,
       networkDetails
@@ -361,6 +362,7 @@ class PlaylistLoader extends EventHandler {
       hls.trigger(Event.MANIFEST_LOADED, {
         levels: [singleLevel],
         audioTracks: [],
+        subtitleTracks: [],
         url,
         stats,
         networkDetails

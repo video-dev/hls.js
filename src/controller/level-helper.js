@@ -9,19 +9,27 @@
 
 import { logger } from '../utils/logger';
 
+import PlaylistLoader from '../loader/playlist-loader';
+
+/**
+ *
+ * @param {QualityLevel} level
+ * @param {LevelType} type
+ * @param {string} id
+ */
 export function addGroupId (level, type, id) {
   switch (type) {
-  case 'audio':
+  case PlaylistLoader.LevelType.AUDIO:
     if (!level.audioGroupIds) {
       level.audioGroupIds = [];
     }
     level.audioGroupIds.push(id);
     break;
-  case 'text':
-    if (!level.textGroupIds) {
-      level.textGroupIds = [];
+  case PlaylistLoader.LevelType.SUBTITLE:
+    if (!level.subtitleGroupIds) {
+      level.subtitleGroupIds = [];
     }
-    level.textGroupIds.push(id);
+    level.subtitleGroupIds.push(id);
     break;
   }
 }
