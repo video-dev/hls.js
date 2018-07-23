@@ -375,7 +375,7 @@ class BufferController extends EventHandler {
     this.doFlush();
   }
 
-  clearLiveBackBuffer() {
+  clearLiveBackBuffer () {
     // clear back buffer for live only
     if (!this._live) {
       return;
@@ -395,14 +395,14 @@ class BufferController extends EventHandler {
 
           // when back buffer exceeded maximum value
           if (buffered.length > 0 && (currentTime - buffered.start(0) - liveMinBackBufferLength) > liveMaxBackBufferLength) {
-            // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current 
+            // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
             // time will lead to playback freezing)
             this.removeBufferRange(bufferType, sourceBuffer[bufferType], 0, currentTime - liveMinBackBufferLength);
           }
         }
       }
     } catch (error) {
-      logger.warn("clearLiveBackBuffer failed", error);
+      logger.warn('clearLiveBackBuffer failed', error);
     }
   }
 
@@ -575,7 +575,7 @@ class BufferController extends EventHandler {
     as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
   */
   flushBuffer (startOffset, endOffset, typeIn) {
-    let sb, i, bufStart, bufEnd, flushStart, flushEnd, sourceBuffer = this.sourceBuffer;
+    let sb, sourceBuffer = this.sourceBuffer;
     if (Object.keys(sourceBuffer).length) {
       logger.log(`flushBuffer,pos/start/end: ${this.media.currentTime.toFixed(3)}/${startOffset}/${endOffset}`);
       // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
@@ -614,15 +614,15 @@ class BufferController extends EventHandler {
 
   /**
    * Removes first buffered range from provided source buffer that lies within given start and end offsets.
-   * 
+   *
    * @param type Type of the source buffer, logging purposes only.
    * @param sb Target SourceBuffer instance.
    * @param startOffset
    * @param endOffset
-   * 
-   * @returns {boolean} True when source buffer remove requested. 
+   *
+   * @returns {boolean} True when source buffer remove requested.
    */
-  removeBufferRange(type, sb, startOffset, endOffset) {
+  removeBufferRange (type, sb, startOffset, endOffset) {
     try {
       let i, length, bufStart, bufEnd, removeStart, removeEnd;
 
@@ -651,7 +651,7 @@ class BufferController extends EventHandler {
         }
       }
     } catch (error) {
-      logger.warn("removeBufferRange failed", error);
+      logger.warn('removeBufferRange failed', error);
     }
 
     return false;
