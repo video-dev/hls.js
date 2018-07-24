@@ -540,6 +540,18 @@ Override current Media Source duration to `Infinity` for a live broadcast.
 Useful, if you are building a player which relies on native UI capabilities in modern browsers.
 If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
 
+### `liveMinBackBufferLength`
+
+(default: `4`)
+
+Minimum length (seconds) of the back buffer to be kept during the cleanup.
+
+### `liveMaxBackBufferLength`
+
+(default: `undefined`)
+
+Maximum length (seconds) of the back buffer during live streaming, to explicitly free up memory taken by media buffer.
+
 ### `enableWorker`
 
 (default: `true`)
