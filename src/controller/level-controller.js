@@ -145,6 +145,7 @@ export default class LevelController extends EventHandler {
           break;
         }
       }
+      this._sessionData = data.sessionData;
 
       // Audio is only alternate if manifest include a URI along with the audio group tag
       this.hls.trigger(Event.MANIFEST_PARSED, {
@@ -154,7 +155,8 @@ export default class LevelController extends EventHandler {
         stats: data.stats,
         audio: audioCodecFound,
         video: videoCodecFound,
-        altAudio: audioTracks.some(t => !!t.url)
+        altAudio: audioTracks.some(t => !!t.url),
+        sessionData: this._sessionData
       });
     } else {
       this.hls.trigger(Event.ERROR, {
@@ -173,6 +175,10 @@ export default class LevelController extends EventHandler {
 
   get level () {
     return this.currentLevelIndex;
+  }
+
+  get sessionData () {
+    return this._sessionData;
   }
 
   set level (newLevel) {

@@ -16,6 +16,7 @@ import { isCodecType } from '../utils/codecs';
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
+const MASTER_PLAYLIST_SESSION_DATA_REGEX = /#EXT-X-SESSION-DATA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
@@ -142,6 +143,21 @@ export default class M3U8Parser {
       }
     }
     return medias;
+  }
+
+  static parseMasterPlaylistSessionData (string) {
+    let result;
+    let sessionData = {};
+    MASTER_PLAYLIST_SESSION_DATA_REGEX.lastIndex = 0;
+
+    while ((result = MASTER_PLAYLIST_SESSION_DATA_REGEX.exec(string)) != null) {
+      let sessionAttrs = new AttrList(result[1]);
+      if (sessionAttrs['DATA-ID']) {
+        sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
+      }
+    }
+
+    return sessionData;
   }
 
   static parseLevelPlaylist (string, baseurl, id, type, levelUrlId) {
