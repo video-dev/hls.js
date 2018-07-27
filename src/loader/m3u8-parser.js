@@ -141,7 +141,15 @@ export default class M3U8Parser {
   static parseLevelPlaylist (string, baseurl, id, type) {
     let currentSN = 0,
       totalduration = 0,
-      level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
+      level = {
+        type: null,
+        version: null,
+        url: baseurl,
+        fragments: [],
+        live: true,
+        startSN: 0,
+        hasProgramDateTime: false
+      },
       levelkey = new LevelKey(),
       cc = 0,
       prevFrag = null,
@@ -192,10 +200,9 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (!firstPdtIndex)
+        if (firstPdtIndex === null)
           firstPdtIndex = level.fragments.length;
 
-        level.hasProgramDateTime = true;
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -327,6 +334,7 @@ export default class M3U8Parser {
     if (firstPdtIndex)
       backfillProgramDateTimes(level.fragments, firstPdtIndex);
 
+    level.hasProgramDateTime = level.fragments.length && (!isNaN(level.fragments[0].pdt));
     return level;
   }
 }
@@ -345,13 +353,13 @@ function backfillProgramDateTimes (fragments, startIndex) {
 }
 
 function assignProgramDateTime (frag, prevFrag) {
-  if (frag.rawProgramDateTime) {
+  if (frag.rawProgramDateTime)
     frag.pdt = Date.parse(frag.rawProgramDateTime);
-  } else if (prevFrag && prevFrag.pdt) {
+  else if (prevFrag && prevFrag.pdt)
     frag.pdt = prevFrag.endPdt;
-  }
 
   if (isNaN(frag.pdt)) {
-    frag.pdt = null;
+    delete frag.pdt;
+    delete frag.rawProgramDateTime;
   }
 }
