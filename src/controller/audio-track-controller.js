@@ -43,6 +43,13 @@ class AudioTrackController extends TaskLoop {
     this.trackId = -1;
 
     /**
+     * @private
+     * If should select tracks according to default track attribute
+     * @member {boolean} selectDefaultTrack
+     */
+    this.selectDefaultTrack = true;
+
+    /**
      * @public
      * All tracks available
      * @member {AudioTrack[]}
@@ -202,16 +209,28 @@ class AudioTrackController extends TaskLoop {
    * Select current track by index
    */
   set audioTrack (newId) {
+    if (this._setAudioTrack(newId)) {
+      // If audio track is selected from API then don't choose from the manifest default track
+      this.selectDefaultTrack = false;
+    }
+  }
+
+  /**
+   * @private
+   * @param {number} newId
+   * @returns {boolean}
+   */
+  _setAudioTrack (newId) {
     // noop on same audio track id as already set
     if (this.trackId === newId && this.tracks[this.trackId].details) {
       logger.debug('Same id as current audio-track passed, and track details available -> no-op');
-      return;
+      return false;
     }
 
     // check if level idx is valid
     if (newId < 0 || newId >= this.tracks.length) {
       logger.warn('Invalid id passed to audio-track controller');
-      return;
+      return true;
     }
 
     const audioTrack = this.tracks[newId];
@@ -225,6 +244,7 @@ class AudioTrackController extends TaskLoop {
     const { url, type, id } = audioTrack;
     this.hls.trigger(Event.AUDIO_TRACK_SWITCHING, { id, type, url });
     this._loadTrackDetailsIfNeeded(audioTrack);
+    return true;
   }
 
   /**
@@ -252,11 +272,13 @@ class AudioTrackController extends TaskLoop {
     }
 
     // Pre-select default tracks if there are any
-    const defaultTracks = tracks.filter((track) => track.default);
-    if (defaultTracks.length) {
-      tracks = defaultTracks;
-    } else {
-      logger.warn('No default audio tracks defined');
+    if (this.selectDefaultTrack) {
+      const defaultTracks = tracks.filter((track) => track.default);
+      if (defaultTracks.length) {
+        tracks = defaultTracks;
+      } else {
+        logger.warn('No default audio tracks defined');
+      }
     }
 
     let trackFound = false;
@@ -273,7 +295,7 @@ class AudioTrackController extends TaskLoop {
           (!name || name === track.name)) {
           // If there was a previous track try to stay with the same `NAME`.
           // It should be unique across tracks of same group, and consistent through redundant track groups.
-          this.audioTrack = track.id;
+          this._setAudioTrack(track.id);
           trackFound = true;
         }
       });
@@ -377,7 +399,7 @@ class AudioTrackController extends TaskLoop {
 
     logger.log('Attempting audio-track fallback id:', newId, 'group-id:', this.tracks[newId].groupId);
 
-    this.audioTrack = newId;
+    this._setAudioTrack(newId);
   }
 }
 
