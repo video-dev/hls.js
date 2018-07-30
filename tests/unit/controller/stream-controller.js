@@ -15,6 +15,7 @@ describe('StreamController tests', function () {
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
     streamController = new StreamController(hls, fragmentTracker);
+    streamController.startFragRequested = true;
   });
 
   /**
@@ -90,23 +91,22 @@ describe('StreamController tests', function () {
     let fragLen = mockFragments.length;
     let levelDetails = {
       startSN: mockFragments[0].sn,
-      endSN: mockFragments[mockFragments.length - 1].sn,
-      programDateTime: null // If this field is null SN search is used by default, if set is PDT
+      endSN: mockFragments[mockFragments.length - 1].sn
     };
     let bufferEnd = fragPrevious.start + fragPrevious.duration;
     let end = mockFragments[mockFragments.length - 1].start + mockFragments[mockFragments.length - 1].duration;
 
-    it('SN search choosing wrong fragment (3 instead of 2) after level loaded', function () {
-      levelDetails.hasProgramDateTime = null;
+    before(function () {
+      levelDetails.hasProgramDateTime = false;
+    });
 
+    it('SN search choosing wrong fragment (3 instead of 2) after level loaded', function () {
       let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     it('SN search choosing the right segment if fragPrevious is not available', function () {
-      levelDetails.hasProgramDateTime = null;
-
       let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 2, found sn segment ' + resultSN);
@@ -117,9 +117,12 @@ describe('StreamController tests', function () {
       assert.strictEqual(actual, mockFragments[mockFragments.length - 1]);
     });
 
-    describe.skip('PDT Searching during a live stream', function () {
-      it('PDT search choosing fragment after level loaded', function () {
+    describe('PDT Searching during a live stream', function () {
+      before(function () {
         levelDetails.hasProgramDateTime = true;
+      });
+
+      it('PDT search choosing fragment after level loaded', function () {
         levelDetails.PTSKnown = false;
         levelDetails.live = true;
 
@@ -128,13 +131,12 @@ describe('StreamController tests', function () {
         assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
       });
 
-      it('PDT serch hitting empty discontinuity', function () {
-        levelDetails.hasProgramDateTime = true;
+      it('PDT search hitting empty discontinuity', function () {
         let discontinuityPDTHit = 6.00;
 
         let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, discontinuityPDTHit, 0, end, fragPrevious, mockFragments, mockFragments.length);
         let resultSN = foundFragment ? foundFragment.sn : -1;
-        assert.equal(foundFragment, mockFragments[1], 'Expected sn 1, found sn segment ' + resultSN);
+        assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
       });
     });
   });

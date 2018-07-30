@@ -2,6 +2,7 @@
 import URLToolkit from 'url-toolkit';
 
 import Fragment from './fragment';
+import Level from './level';
 import LevelKey from './level-key';
 
 import AttrList from '../utils/attr-list';
@@ -82,7 +83,6 @@ export default class M3U8Parser {
 
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
-
       let attrs = level.attrs = new AttrList(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
@@ -139,23 +139,15 @@ export default class M3U8Parser {
   }
 
   static parseLevelPlaylist (string, baseurl, id, type) {
-    let currentSN = 0,
-      totalduration = 0,
-      level = {
-        type: null,
-        version: null,
-        url: baseurl,
-        fragments: [],
-        live: true,
-        startSN: 0,
-        hasProgramDateTime: false
-      },
-      levelkey = new LevelKey(),
-      cc = 0,
-      prevFrag = null,
-      frag = new Fragment(),
-      result,
-      i;
+    let currentSN = 0;
+    let totalduration = 0;
+    let level = new Level(baseurl);
+    let levelkey = new LevelKey();
+    let cc = 0;
+    let prevFrag = null;
+    let frag = new Fragment();
+    let result;
+    let i;
 
     let firstPdtIndex = null;
 
@@ -202,7 +194,6 @@ export default class M3U8Parser {
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
         if (firstPdtIndex === null)
           firstPdtIndex = level.fragments.length;
-
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -334,7 +325,6 @@ export default class M3U8Parser {
     if (firstPdtIndex)
       backfillProgramDateTimes(level.fragments, firstPdtIndex);
 
-    level.hasProgramDateTime = level.fragments.length && (!isNaN(level.fragments[0].pdt));
     return level;
   }
 }
