@@ -162,7 +162,7 @@ export default class M3U8Parser {
         frag.title = title || null;
         frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
       } else if (result[3]) { // url
-        if (!isNaN(frag.duration)) {
+        if (Number.isFinite(frag.duration)) {
           const sn = currentSN++;
           frag.type = type;
           frag.start = totalduration;
@@ -258,7 +258,7 @@ export default class M3U8Parser {
           let startAttrs = new AttrList(startParams);
           let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
           // TIME-OFFSET can be 0
-          if (!isNaN(startTimeOffset))
+          if (Number.isFinite(startTimeOffset))
             level.startTimeOffset = startTimeOffset;
 
           break;
@@ -348,7 +348,7 @@ function assignProgramDateTime (frag, prevFrag) {
   else if (prevFrag && prevFrag.pdt)
     frag.pdt = prevFrag.endPdt;
 
-  if (isNaN(frag.pdt)) {
+  if (!Number.isFinite(frag.pdt)) {
     delete frag.pdt;
     delete frag.rawProgramDateTime;
   }

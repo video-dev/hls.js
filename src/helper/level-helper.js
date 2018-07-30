@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 export function updatePTS (fragments, fromIdx, toIdx) {
   let fragFrom = fragments[fromIdx], fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
   // if we know startPTS[toIdx]
-  if (!isNaN(fragToPTS)) {
+  if (Number.isFinite(fragToPTS)) {
     // update fragment duration.
     // it helps to fix drifts between playlist reported duration and fragment real duration
     if (toIdx > fromIdx) {
@@ -31,10 +31,10 @@ export function updatePTS (fragments, fromIdx, toIdx) {
 export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, endDTS) {
   // update frag PTS/DTS
   let maxStartPTS = startPTS;
-  if (!isNaN(frag.startPTS)) {
+  if (Number.isFinite(frag.startPTS)) {
     // delta PTS between audio and video
     let deltaPTS = Math.abs(frag.startPTS - startPTS);
-    if (isNaN(frag.deltaPTS))
+    if (!Number.isFinite(frag.deltaPTS))
       frag.deltaPTS = deltaPTS;
     else
       frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
@@ -106,7 +106,7 @@ export function mergeDetails (oldDetails, newDetails) {
       newFrag = newfragments[i];
     if (newFrag && oldFrag) {
       ccOffset = oldFrag.cc - newFrag.cc;
-      if (!isNaN(oldFrag.startPTS)) {
+      if (Number.isFinite(oldFrag.startPTS)) {
         newFrag.start = newFrag.startPTS = oldFrag.startPTS;
         newFrag.endPTS = oldFrag.endPTS;
         newFrag.duration = oldFrag.duration;

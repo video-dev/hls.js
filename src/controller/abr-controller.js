@@ -136,7 +136,7 @@ class AbrController extends EventHandler {
 
   onFragLoaded (data) {
     let frag = data.frag;
-    if (frag.type === 'main' && !isNaN(frag.sn)) {
+    if (frag.type === 'main' && Number.isFinite(frag.sn)) {
       // stop monitoring bw once frag loaded
       this.clearTimer();
       // store level id after successful fragment load
@@ -167,7 +167,7 @@ class AbrController extends EventHandler {
     // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
     // and leading to wrong bw estimation
     // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
-    if (stats.aborted !== true && frag.type === 'main' && !isNaN(frag.sn) && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
+    if (stats.aborted !== true && frag.type === 'main' && Number.isFinite(frag.sn) && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
       // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
       // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
       // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation

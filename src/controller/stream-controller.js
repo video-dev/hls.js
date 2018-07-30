@@ -449,7 +449,7 @@ class StreamController extends TaskLoop {
       this.fragCurrent = frag;
       this.startFragRequested = true;
       // Don't update nextLoadPosition for fragments which are not buffered
-      if (!isNaN(frag.sn) && !frag.bitrateTest)
+      if (Number.isFinite(frag.sn) && !frag.bitrateTest)
         this.nextLoadPosition = frag.start + frag.duration;
 
       // Allow backtracked fragments to load
@@ -712,7 +712,7 @@ class StreamController extends TaskLoop {
 
   onMediaSeeking () {
     let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
-    if (!isNaN(currentTime))
+    if (Number.isFinite(currentTime))
       logger.log(`media seeking to ${currentTime.toFixed(3)}`);
 
     let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
@@ -759,7 +759,7 @@ class StreamController extends TaskLoop {
 
   onMediaSeeked () {
     const media = this.media, currentTime = media ? media.currentTime : undefined;
-    if (!isNaN(currentTime))
+    if (Number.isFinite(currentTime))
       logger.log(`media seeked to ${currentTime.toFixed(3)}`);
 
     // tick to speed up FRAGMENT_PLAYING triggering
@@ -823,7 +823,7 @@ class StreamController extends TaskLoop {
         LevelHelper.mergeDetails(curDetails, newDetails);
         sliding = newDetails.fragments[0].start;
         this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
-        if (newDetails.PTSKnown && !isNaN(sliding)) {
+        if (newDetails.PTSKnown && Number.isFinite(sliding)) {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
         } else {
           logger.log('live playlist - outdated PTS, unknown sliding');
@@ -847,7 +847,7 @@ class StreamController extends TaskLoop {
       if (this.startPosition === -1 || this.lastCurrentTime === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
-        if (!Number.isFinite(startTimeOffset)) {
+        if (Number.isFinite(startTimeOffset)) {
           if (startTimeOffset < 0) {
             logger.log(`negative start time offset ${startTimeOffset}, count from end of last fragment`);
             startTimeOffset = sliding + duration + startTimeOffset;
@@ -1026,7 +1026,7 @@ class StreamController extends TaskLoop {
         this.state === State.PARSING) {
       let level = this.levels[this.level],
         frag = fragCurrent;
-      if (isNaN(data.endPTS)) {
+      if (!Number.isFinite(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }

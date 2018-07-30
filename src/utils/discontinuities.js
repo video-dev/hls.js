@@ -119,7 +119,7 @@ export function alignPDT (details, lastDetails) {
     let newPDT = details.fragments[0].pdt;
     // date diff is in ms. frag.start is in seconds
     let sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
-    if (!isNaN(sliding)) {
+    if (Number.isFinite(sliding)) {
       logger.log(`adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(3)}`);
       adjustPts(sliding, details);
     }
