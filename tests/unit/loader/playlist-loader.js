@@ -770,17 +770,17 @@ frag1.ts
     });
 
     it('ignores bad PDT values', function () {
-        const level = `
+      const level = `
 #EXTINF:10
 #EXT-X-PROGRAM-DATE-TIME:foo
 frag0.ts
 #EXTINF:10
 frag1.ts
     `;
-        const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
-        assert.strictEqual(result.hasProgramDateTime, false);
-        assert.strictEqual(result.fragments[0].rawProgramDateTime, undefined);
-        assert.strictEqual(result.fragments[0].pdt, undefined);
+      const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+      assert.strictEqual(result.hasProgramDateTime, false);
+      assert.strictEqual(result.fragments[0].rawProgramDateTime, undefined);
+      assert.strictEqual(result.fragments[0].pdt, undefined);
     });
   });
 });
