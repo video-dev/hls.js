@@ -18,6 +18,6 @@ export default class Level {
   }
 
   get hasProgramDateTime () {
-    return this.fragments.length && !isNaN(this.fragments[0].pdt);
+    return !!(this.fragments[0] && !isNaN(this.fragments[0].pdt));
   }
 }

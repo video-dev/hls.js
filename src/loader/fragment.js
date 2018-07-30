@@ -81,10 +81,12 @@ export default class Fragment {
   }
 
   get endPdt () {
-    if (!this.pdt)
+    if (isNaN(this.pdt))
       return 0;
 
-    return this.pdt + (this.duration * 1000);
+    let duration = isNaN(this.duration) ? 0 : this.duration;
+
+    return this.pdt + (duration * 1000);
   }
 
   /**
