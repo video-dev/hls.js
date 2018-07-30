@@ -847,7 +847,7 @@ class StreamController extends TaskLoop {
       if (this.startPosition === -1 || this.lastCurrentTime === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
-        if (!isNaN(startTimeOffset)) {
+        if (!Number.isFinite(startTimeOffset)) {
           if (startTimeOffset < 0) {
             logger.log(`negative start time offset ${startTimeOffset}, count from end of last fragment`);
             startTimeOffset = sliding + duration + startTimeOffset;
