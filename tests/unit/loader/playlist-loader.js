@@ -655,7 +655,7 @@ main.mp4`;
     assert.strictEqual(result.initSegment.sn, 'initSegment');
   });
 
-  describe.only('PDT calculations', function () {
+  describe('PDT calculations', function () {
     it('if playlists contains #EXT-X-PROGRAM-DATE-TIME switching will be applied by PDT', () => {
       let level = `#EXTM3U
 #EXT-X-VERSION:2
