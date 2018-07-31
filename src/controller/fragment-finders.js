@@ -1,14 +1,14 @@
 import BinarySearch from '../utils/binary-search';
 
 /**
- * Finds the first fragment whose endPDT value exceeds the given PDT, and then returns the
+ * Returns first fragment whose endPdt value exceeds the given PDT.
  * @param {Array} fragments - The array of candidate fragments
  * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
  * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*|null} fragment - The best matching fragment
  */
-export function findFragmentByPDT (fragments, PDTValue = null, maxFragLookUpTolerance = 0) {
-  if (!fragments || !fragments.length || PDTValue === null) {
+export function findFragmentByPDT (fragments, PDTValue, maxFragLookUpTolerance) {
+  if (!fragments || !fragments.length || !Number.isFinite(PDTValue)) {
     return null;
   }
 
@@ -21,6 +21,7 @@ export function findFragmentByPDT (fragments, PDTValue = null, maxFragLookUpTole
     return null;
   }
 
+  maxFragLookUpTolerance = maxFragLookUpTolerance || 0;
   for (let seg = 0; seg < fragments.length; ++seg) {
     let frag = fragments[seg];
     if (pdtWithinToleranceTest(PDTValue, maxFragLookUpTolerance, frag)) {

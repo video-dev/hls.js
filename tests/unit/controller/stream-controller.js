@@ -100,13 +100,13 @@ describe('StreamController tests', function () {
       levelDetails.hasProgramDateTime = false;
     });
 
-    it('SN search choosing wrong fragment (3 instead of 2) after level loaded', function () {
+    it('PTS search choosing wrong fragment (3 instead of 2) after level loaded', function () {
       let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
-    it('SN search choosing the right segment if fragPrevious is not available', function () {
+    it('PTS search choosing the right segment if fragPrevious is not available', function () {
       let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.equal(foundFragment, mockFragments[3], 'Expected sn 2, found sn segment ' + resultSN);
