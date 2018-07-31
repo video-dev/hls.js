@@ -614,14 +614,14 @@ Rollover38803/20160525T064049-01-69844069.ts
     `;
     let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
     assert.strictEqual(result.fragments.length, 3);
-    assert.strictEqual(result.programDateTime.getTime(), 1464366884000);
+    assert.strictEqual(result.hasProgramDateTime, true);
     assert.strictEqual(result.totalduration, 30);
     assert.strictEqual(result.fragments[0].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844067.ts');
-    assert.strictEqual(result.fragments[0].programDateTime.getTime(), 1464366884000);
+    assert.strictEqual(result.fragments[0].pdt, 1464366884000);
     assert.strictEqual(result.fragments[1].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844068.ts');
-    assert.strictEqual(result.fragments[1].programDateTime.getTime(), 1464366894000);
+    assert.strictEqual(result.fragments[1].pdt, 1464366894000);
     assert.strictEqual(result.fragments[2].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844069.ts');
-    assert.strictEqual(result.fragments[2].programDateTime.getTime(), 1464366904000);
+    assert.strictEqual(result.fragments[2].pdt, 1464366904000);
   });
 
   it('parses #EXTINF without a leading digit', () => {
@@ -655,8 +655,9 @@ main.mp4`;
     assert.strictEqual(result.initSegment.sn, 'initSegment');
   });
 
-  it('if playlists contains #EXT-X-PROGRAM-DATE-TIME switching will be applied by PDT', () => {
-    let level = `#EXTM3U
+  describe('PDT calculations', function () {
+    it('if playlists contains #EXT-X-PROGRAM-DATE-TIME switching will be applied by PDT', () => {
+      let level = `#EXTM3U
 #EXT-X-VERSION:2
 #EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:69844067
@@ -670,25 +671,116 @@ Rollover38803/20160525T064049-01-69844068.ts
 #EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
 Rollover38803/20160525T064049-01-69844069.ts
     `;
-    let hls = { config: { }, on: function () { } };
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
-    assert.ok(result.programDateTime);
-  });
+      let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+      assert.strictEqual(result.hasProgramDateTime, true);
+      assert.strictEqual(result.fragments[0].rawProgramDateTime, '2016-05-27T16:34:44Z');
+      assert.strictEqual(result.fragments[0].pdt, 1464366884000);
+      assert.strictEqual(result.fragments[1].rawProgramDateTime, '2016-05-27T16:34:54Z');
+      assert.strictEqual(result.fragments[1].pdt, 1464366894000);
+      assert.strictEqual(result.fragments[2].rawProgramDateTime, '2016-05-27T16:35:04Z');
+      assert.strictEqual(result.fragments[2].pdt, 1464366904000);
+    });
 
-  it('if playlists does NOT contain #EXT-X-PROGRAM-DATE-TIME switching will be applied by CC count', () => {
-    let level = `#EXTM3U
-#EXT-X-VERSION:2
-#EXT-X-TARGETDURATION:10
-#EXT-X-MEDIA-SEQUENCE:69844067
-#EXTINF:10, no desc
-Rollover38803/20160525T064049-01-69844067.ts
-#EXTINF:10, no desc
-Rollover38803/20160525T064049-01-69844068.ts
-#EXTINF:10, no desc
-Rollover38803/20160525T064049-01-69844069.ts
+    it('backfills PDT values if the first segment does not start with PDT', function () {
+      const level = `
+#EXTINF:10
+frag0.ts
+#EXTINF:10
+frag1.ts
+#EXTINF:10
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+frag2.ts
     `;
-    let hls = { config: { }, on: function () { } };
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
-    assert.strictEqual(result.programDateTime, undefined);
+
+      const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+      assert.strictEqual(result.hasProgramDateTime, true);
+      assert.strictEqual(result.fragments[2].rawProgramDateTime, '2016-05-27T16:35:04Z');
+      assert.strictEqual(result.fragments[1].pdt, 1464366894000);
+      assert.strictEqual(result.fragments[0].pdt, 1464366884000);
+    });
+
+    it('extrapolates PDT forward when subsequent fragments do not have a raw programDateTime', function () {
+      const level = `
+#EXTINF:10
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+frag0.ts
+#EXTINF:10
+frag1.ts
+#EXTINF:10
+frag2.ts
+    `;
+
+      const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+      assert.strictEqual(result.hasProgramDateTime, true);
+      assert.strictEqual(result.fragments[0].rawProgramDateTime, '2016-05-27T16:35:04Z');
+      assert.strictEqual(result.fragments[1].pdt, 1464366914000);
+      assert.strictEqual(result.fragments[2].pdt, 1464366924000);
+    });
+
+    it('recomputes PDT extrapolation whenever a new raw programDateTime is hit', function () {
+      const level = `
+#EXTM3U
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+#EXTINF:10
+frag0.ts
+#EXTINF:10
+frag1.ts
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2017-05-27T16:35:04Z
+#EXTINF:10
+frag2.ts
+#EXTINF:10
+frag3.ts
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2015-05-27T11:42:03Z
+#EXTINF:10
+frag4.ts
+#EXTINF:10
+frag5.ts
+    `;
+
+      const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+      assert.strictEqual(result.hasProgramDateTime, true);
+      assert.strictEqual(result.fragments[0].pdt, 1464366904000);
+      assert.strictEqual(result.fragments[0].rawProgramDateTime, '2016-05-27T16:35:04Z');
+      assert.strictEqual(result.fragments[1].pdt, 1464366914000);
+      assert.strictEqual(result.fragments[2].pdt, 1495902904000);
+      assert.strictEqual(result.fragments[2].rawProgramDateTime, '2017-05-27T16:35:04Z');
+      assert.strictEqual(result.fragments[3].pdt, 1495902914000);
+      assert.strictEqual(result.fragments[4].pdt, 1432726923000);
+      assert.strictEqual(result.fragments[4].rawProgramDateTime, '2015-05-27T11:42:03Z');
+      assert.strictEqual(result.fragments[5].pdt, 1432726933000);
+    });
+
+    it('propagates the raw programDateTime to the fragment following the init segment', function () {
+      const level = `
+#EXTINF:10
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+#EXT-X-MAP
+frag0.ts
+#EXTINF:10
+frag1.ts
+    `;
+      const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+      assert.strictEqual(result.hasProgramDateTime, true);
+      assert.strictEqual(result.sn === 'initSegment', false);
+      assert.strictEqual(result.fragments[0].rawProgramDateTime, '2016-05-27T16:35:04Z');
+      assert.strictEqual(result.fragments[0].pdt, 1464366904000);
+    });
+
+    it('ignores bad PDT values', function () {
+      const level = `
+#EXTINF:10
+#EXT-X-PROGRAM-DATE-TIME:foo
+frag0.ts
+#EXTINF:10
+frag1.ts
+    `;
+      const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+      assert.strictEqual(result.hasProgramDateTime, false);
+      assert.strictEqual(result.fragments[0].rawProgramDateTime, null);
+      assert.strictEqual(result.fragments[0].pdt, null);
+    });
   });
 });

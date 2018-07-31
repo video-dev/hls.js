@@ -9,7 +9,7 @@ const clone = (...args) => Object.assign({}, ...args);
 /* Allow to customise builds through env-vars */
 const env = process.env;
 
-const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES ;
+const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES;
 const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
 const addEMESupport = false;
 const runAnalyzer = !!env.ANALYZE;
@@ -30,18 +30,29 @@ const uglifyJsOptions = {
 const baseConfig = {
   entry: './src/hls.js',
   module: {
+    strictExportPresence: true,
     rules: [
       {
         test: /\.js$/,
         exclude: [
           path.resolve(__dirname, 'node_modules')
         ],
-        use: {
-          loader: 'babel-loader'
+        loader: 'babel-loader',
+        options: {
+          plugins: [
+            {
+              visitor: {
+                CallExpression: function (espath, file) {
+                  if (espath.get('callee').matchesPattern('Number.isFinite'))
+                    espath.node.callee = file.addImport(path.resolve('src/polyfills/number-isFinite'), 'isFiniteNumber');
+                }
+              }
+            }
+          ]
         }
       }
     ]
-  },
+  }
 };
 
 const demoConfig = clone(baseConfig, {
@@ -61,13 +72,13 @@ const demoConfig = clone(baseConfig, {
   devtool: 'source-map'
 });
 
-function getPluginsForConfig(type, minify = false) {
+function getPluginsForConfig (type, minify = false) {
   // common plugins.
 
   const defineConstants = getConstantsForConfig(type);
 
   console.log(
-    `Building <${ minify ? 'minified' : 'non-minified / debug' }> distro-type "${type}" with compile-time defined constants:`,
+    `Building <${minify ? 'minified' : 'non-minified / debug'}> distro-type "${type}" with compile-time defined constants:`,
     JSON.stringify(defineConstants, null, 4),
     '\n'
   );
@@ -95,13 +106,13 @@ function getPluginsForConfig(type, minify = false) {
     }));
   } else {
     // https://github.com/webpack-contrib/webpack-bundle-analyzer/issues/115
-    plugins.push(new webpack.optimize.ModuleConcatenationPlugin())
+    plugins.push(new webpack.optimize.ModuleConcatenationPlugin());
   }
 
   return plugins;
 }
 
-function getConstantsForConfig(type) {
+function getConstantsForConfig (type) {
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
     __VERSION__: JSON.stringify(pkgJson.version),
@@ -111,7 +122,7 @@ function getConstantsForConfig(type) {
   };
 }
 
-function getAliasesForLightDist() {
+function getAliasesForLightDist () {
   let aliases = {};
 
   if (!addEMESupport) {
@@ -153,7 +164,7 @@ const multiConfig = [
       libraryExport: 'default'
     },
     plugins: getPluginsForConfig('main'),
-    devtool: 'source-map',
+    devtool: 'source-map'
   },
   {
     name: 'dist',
