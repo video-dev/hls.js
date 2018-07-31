@@ -349,7 +349,7 @@ function assignProgramDateTime (frag, prevFrag) {
     frag.pdt = prevFrag.endPdt;
 
   if (!Number.isFinite(frag.pdt)) {
-    delete frag.pdt;
-    delete frag.rawProgramDateTime;
+    frag.pdt = null;
+    frag.rawProgramDateTime = null;
   }
 }

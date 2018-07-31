@@ -779,8 +779,8 @@ frag1.ts
     `;
       const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
       assert.strictEqual(result.hasProgramDateTime, false);
-      assert.strictEqual(result.fragments[0].rawProgramDateTime, undefined);
-      assert.strictEqual(result.fragments[0].pdt, undefined);
+      assert.strictEqual(result.fragments[0].rawProgramDateTime, null);
+      assert.strictEqual(result.fragments[0].pdt, null);
     });
   });
 });
