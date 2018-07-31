@@ -20,10 +20,10 @@ describe('Fragment class tests', function () {
       assert.strictEqual(frag.endPdt, 1000);
     });
 
-    it('returns 0 if pdt is NaN', function () {
+    it('returns null if pdt is NaN', function () {
       frag.pdt = 'foo';
       frag.duration = 1;
-      assert.strictEqual(frag.endPdt, 0);
+      assert.strictEqual(frag.endPdt, null);
     });
 
     it('defaults duration to 0 if duration is NaN', function () {
