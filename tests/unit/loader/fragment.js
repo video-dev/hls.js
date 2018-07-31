@@ -1,41 +1,35 @@
+const assert = require('assert');
 import Fragment from '../../../src/loader/fragment';
-import assert from 'assert';
 
-describe('Fragment tests', function () {
-  describe('get keyLoadNeeded', function () {
-    it('returns true if the fragment needs to be decrypted', function () {
-      const frag = new Fragment();
-      frag._decryptdata = {
-        uri: 'foo.bar',
-        key: null
-      };
-
-      assert(frag.encrypted);
+describe('Fragment class tests', function () {
+  let frag;
+  describe('endPdt getter', function () {
+    beforeEach(function () {
+      frag = new Fragment();
     });
 
-    it('returns false if the key uri is null', function () {
-      const frag = new Fragment();
-      frag._decryptdata = {
-        uri: null,
-        key: null
-      };
-
-      assert.strictEqual(frag.encrypted, false);
+    it('computes endPdt when pdt and duration are valid', function () {
+      frag.pdt = 1000;
+      frag.duration = 1;
+      assert.strictEqual(frag.endPdt, 2000);
     });
 
-    it('returns false if the frag has already been decrypted', function () {
-      const frag = new Fragment();
-      frag._decryptdata = {
-        uri: 'foo.bar',
-        key: 'foo'
-      };
-
-      assert.strictEqual(frag.encrypted, false);
+    it('considers 0 a valid pdt', function () {
+      frag.pdt = 0;
+      frag.duration = 1;
+      assert.strictEqual(frag.endPdt, 1000);
     });
 
-    it('returns false if the frag does not need decryption', function () {
-      const frag = new Fragment();
-      assert.strictEqual(frag.encrypted, false);
+    it('returns null if pdt is NaN', function () {
+      frag.pdt = 'foo';
+      frag.duration = 1;
+      assert.strictEqual(frag.endPdt, null);
+    });
+
+    it('defaults duration to 0 if duration is NaN', function () {
+      frag.pdt = 1000;
+      frag.duration = 'foo';
+      assert.strictEqual(frag.endPdt, 1000);
     });
   });
 });
