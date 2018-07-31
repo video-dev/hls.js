@@ -9,6 +9,8 @@ export default class Fragment {
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
+    this.pdt = null;
+    this.rawProgramDateTime = null;
 
     // Holds the types of data this fragment supports
     this._elementaryStreams = {
