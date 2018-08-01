@@ -87,8 +87,9 @@ export default class Fragment {
   }
 
   get endPdt () {
-    if (!Number.isFinite(this.pdt))
+    if (!Number.isFinite(this.pdt)) {
       return null;
+    }
 
     let duration = !Number.isFinite(this.duration) ? 0 : this.duration;
 

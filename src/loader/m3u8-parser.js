@@ -332,8 +332,9 @@ export default class M3U8Parser {
      * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
      * computed.
      */
-    if (firstPdtIndex)
+    if (firstPdtIndex) {
       backfillProgramDateTimes(level.fragments, firstPdtIndex);
+    }
 
     return level;
   }
@@ -353,10 +354,11 @@ function backfillProgramDateTimes (fragments, startIndex) {
 }
 
 function assignProgramDateTime (frag, prevFrag) {
-  if (frag.rawProgramDateTime)
+  if (frag.rawProgramDateTime) {
     frag.pdt = Date.parse(frag.rawProgramDateTime);
-  else if (prevFrag && prevFrag.pdt)
+  } else if (prevFrag && prevFrag.pdt) {
     frag.pdt = prevFrag.endPdt;
+  }
 
   if (!Number.isFinite(frag.pdt)) {
     frag.pdt = null;
