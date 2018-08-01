@@ -263,11 +263,15 @@ class AbrController extends EventHandler {
 
   _findBestLevel (currentLevel, currentFragDuration, currentBw, minAutoLevel, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
-      let levelInfo = levels[i],
-        levelDetails = levelInfo.details,
-        avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration,
-        live = levelDetails ? levelDetails.live : false,
-        adjustedbw;
+      const levelInfo = levels[i];
+      if (!levelInfo) {
+        continue;
+      }
+
+      const levelDetails = levelInfo.details;
+      const avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration;
+      const live = levelDetails ? levelDetails.live : false;
+      let adjustedbw;
       // follow algorithm captured from stagefright :
       // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
       // Pick the highest bandwidth stream below or equal to estimated bandwidth.
