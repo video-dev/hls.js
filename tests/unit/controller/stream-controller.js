@@ -151,7 +151,8 @@ describe('StreamController tests', function () {
       streamController.media = {
         buffered: {
           length: 1
-        }
+        },
+        readyState: 1
       };
     });
     afterEach(function () {
