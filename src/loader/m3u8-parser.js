@@ -340,10 +340,6 @@ export default class M3U8Parser {
   }
 }
 
-function endsWith (str, search) {
-  return str.substring(str.length - search.length, str.length) === search;
-}
-
 function backfillProgramDateTimes (fragments, startIndex) {
   let fragPrev = fragments[startIndex];
   for (let i = startIndex - 1; i >= 0; i--) {
