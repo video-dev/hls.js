@@ -105,7 +105,7 @@ class Demuxer {
     const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
     const trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
     const contiguous = lastFrag && (frag.sn === (lastFrag.sn + 1));
-    if (discontinuity)
+    if (discontinuity) {
       logger.log(`${this.id}:discontinuity detected`);
     }
 
