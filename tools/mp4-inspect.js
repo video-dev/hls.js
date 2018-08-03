@@ -1,8 +1,23 @@
-(function() {
-'use strict';
+#!/usr/bin/env node
 
-var
-  DataView = window.DataView,
+/**
+ * @module {MP4Inspect}
+ *
+ * Tool to parse/inspect parts of MP4 file contents.
+ *
+ * Plain ES5. Compatibility: Node 8 & Browser
+ *
+ * Should work as UMD module and as an exec in Node.
+ *
+ * Usage: mp4-inspect [file-path]
+ *
+ * Print's JSON result in some pretty form.
+ */
+
+// TODO: check Nodejs run time version
+
+var // this is the start of a huge multi-line var decl
+
   /**
    * Returns the string representation of an ASCII encoded four byte buffer.
    * @param buffer {Uint8Array} a four-byte buffer to translate
@@ -178,7 +193,7 @@ var
       }
       // decode UTF-8 to javascript's internal representation
       // see http://ecmanaut.blogspot.com/2006/07/encoding-decoding-utf8-in-javascript.html
-      result.name = window.decodeURIComponent(window.escape(result.name));
+      result.name = decodeURIComponent(escape(result.name));
 
       return result;
     },
@@ -677,12 +692,46 @@ var mp4toJSON = function(data) {
   return result;
 };
 
-
-let MP4Inspect = {
+var MP4Inspect = {
   mp4toJSON: mp4toJSON
 };
 
-export default MP4Inspect;
+module.exports = MP4Inspect;
+
+// bin exec part
+
+if (!global && !process) {
+  // we are not in node runtime
+  return;
+}
+
+var fs = require('fs');
+var path = require('path');
+
+var argsOffset = 0;
+
+// TODO: use minimist https://www.npmjs.com/package/minimist
+if (process.argv[0].match(/node/)) {
+  argsOffset = 1;
+}
+
+var filename = process.argv[argsOffset + 1];
+if (!filename) {
+  console.error('MP4Inspect: No filename passed to inspect.');
+  return;
+}
+
+var resolvedPath = path.resolve(filename);
+
+fs.readFile(resolvedPath, (err, data) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+
+  var result = MP4Inspect.mp4toJSON(new Uint8Array(data));
+
+  console.log('\n' + JSON.stringify(result, null, 4));
+});
 
 
-})();

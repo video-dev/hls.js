@@ -1,8 +1,9 @@
 const requestMediaKeySystemAccess = (function () {
-  if (window.navigator && window.navigator.requestMediaKeySystemAccess)
+  if (typeof window !== 'undefined' && window.navigator && window.navigator.requestMediaKeySystemAccess) {
     return window.navigator.requestMediaKeySystemAccess.bind(window.navigator);
-  else
+  } else {
     return null;
+  }
 })();
 
 export {

@@ -17,20 +17,22 @@ export function findFirstFragWithCC (fragments, cc) {
 
 export function findFragWithCC (fragments, CC) {
   return BinarySearch.search(fragments, (candidate) => {
-    if (candidate.cc < CC)
+    if (candidate.cc < CC) {
       return 1;
-    else if (candidate.cc > CC)
+    } else if (candidate.cc > CC) {
       return -1;
-    else
+    } else {
       return 0;
+    }
   });
 }
 
 export function shouldAlignOnDiscontinuities (lastFrag, lastLevel, details) {
   let shouldAlign = false;
   if (lastLevel && lastLevel.details && details) {
-    if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC))
+    if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC)) {
       shouldAlign = true;
+    }
   }
   return shouldAlign;
 }

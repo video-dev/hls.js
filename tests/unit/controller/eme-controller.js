@@ -1,8 +1,11 @@
 import EMEController from '../../../src/controller/eme-controller';
-import assert from 'assert';
 import HlsMock from '../../mocks/hls.mock';
 import EventEmitter from 'events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
+
+const sinon = require('sinon');
+
+import assert from 'assert';
 
 const MediaMock = function () {
   let media = new EventEmitter();

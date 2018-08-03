@@ -1,10 +1,10 @@
-import Event from '../../../src/events';
-
 const assert = require('assert');
 
 import Hls from '../../../src/hls';
-import { FragmentTracker, FragmentState } from '../../../src/helper/fragment-tracker';
+import Event from '../../../src/events';
+import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
 import PlaylistLoader from '../../../src/loader/playlist-loader';
+
 const LevelType = PlaylistLoader.LevelType;
 
 function createMockBuffer (buffered) {

@@ -4,10 +4,13 @@
 
 import { logger } from '../utils/logger';
 
+const { performance, XMLHttpRequest } = window;
+
 class XhrLoader {
   constructor (config) {
-    if (config && config.xhrSetup)
+    if (config && config.xhrSetup) {
       this.xhrSetup = config.xhrSetup;
+    }
   }
 
   destroy () {
@@ -57,16 +60,18 @@ class XhrLoader {
           xhrSetup(xhr, context.url);
         }
       }
-      if (!xhr.readyState)
+      if (!xhr.readyState) {
         xhr.open('GET', context.url, true);
+      }
     } catch (e) {
       // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
       this.callbacks.onError({ code: xhr.status, text: e.message }, context, xhr);
       return;
     }
 
-    if (context.rangeEnd)
+    if (context.rangeEnd) {
       xhr.setRequestHeader('Range', 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1));
+    }
 
     xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
@@ -85,15 +90,17 @@ class XhrLoader {
       config = this.config;
 
     // don't proceed if xhr has been aborted
-    if (stats.aborted)
+    if (stats.aborted) {
       return;
+    }
 
     // >= HEADERS_RECEIVED
     if (readyState >= 2) {
       // clear xhr timeout and rearm it if readyState less than 4
       window.clearTimeout(this.requestTimeout);
-      if (stats.tfirst === 0)
+      if (stats.tfirst === 0) {
         stats.tfirst = Math.max(performance.now(), stats.trequest);
+      }
 
       if (readyState === 4) {
         let status = xhr.status;
@@ -145,8 +152,9 @@ class XhrLoader {
       stats = this.stats;
 
     stats.loaded = event.loaded;
-    if (event.lengthComputable)
+    if (event.lengthComputable) {
       stats.total = event.total;
+    }
 
     let onProgress = this.callbacks.onProgress;
     if (onProgress) {
