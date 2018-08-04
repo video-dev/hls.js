@@ -191,6 +191,7 @@ class MP4Remuxer {
       outputSamples = [],
       nbSamples = inputSamples.length,
       ptsNormalize = this._PTSNormalize,
+      initPTS = this._initPTS,
       initDTS = this._initDTS;
 
     // for (let i = 0; i < track.samples.length; i++) {
@@ -234,10 +235,10 @@ class MP4Remuxer {
     }
 
     // PTS is coded on 33bits, and can loop from -2^32 to 2^32
-    // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
+    // ptsNormalize will make PTS/DTS value monotonic, we use last known PTS value as reference value
     inputSamples.forEach(function (sample) {
-      sample.pts = ptsNormalize(sample.pts - initDTS, nextAvcDts);
-      sample.dts = ptsNormalize(sample.dts - initDTS, nextAvcDts);
+      sample.pts = ptsNormalize(sample.pts - initPTS, nextAvcDts);
+      sample.dts = ptsNormalize(sample.dts - initPTS, nextAvcDts);
     });
 
     // sort video samples by DTS then PTS then demux id order
@@ -444,6 +445,7 @@ class MP4Remuxer {
       inputSampleDuration = mp4SampleDuration * scaleFactor,
       ptsNormalize = this._PTSNormalize,
       initDTS = this._initDTS,
+      initPTS = this._initPTS,
       rawMPEG = !track.isAAC && this.typeSupported.mpeg;
 
     let offset,
@@ -470,7 +472,7 @@ class MP4Remuxer {
 
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
-      sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, timeOffset * inputTimeScale);
+      sample.pts = sample.dts = ptsNormalize(sample.pts - initPTS, timeOffset * inputTimeScale);
     });
 
     // filter out sample with negative PTS that are not playable anyway
