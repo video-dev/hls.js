@@ -166,7 +166,7 @@ let backgroundColors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'mage
 let logger = {
   verboseFilter: { 'DATA': 3, 'DEBUG': 3, 'INFO': 2, 'WARNING': 2, 'TEXT': 1, 'ERROR': 0 },
   time: null,
-  verboseLevel: 0, // Only write errors
+  verboseLevel: 3, // Only write errors
   setTime: function (newTime) {
     this.time = newTime;
   },
@@ -614,7 +614,6 @@ class Cea608Channel {
     this.writeScreen = this.displayedMemory;
     this.mode = null;
     this.cueStartTime = null;
-    this.lastCueEndTime = null;
   }
 
   getHandler () {
@@ -804,17 +803,16 @@ class Cea608Channel {
 }
 
 class Cea608Parser {
-  constructor (field, out1, out2) {
-    this.field = field || 1;
-    this.outputs = [out1, out2];
-    this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2)];
+  constructor (out1, out2, out3, out4) {
+    this.channels = {
+      1: new Cea608Channel(1, out1),
+      2: new Cea608Channel(2, out2),
+      3: new Cea608Channel(3, out3),
+      4: new Cea608Channel(4, out4)
+    };
     this.currChNr = -1; // Will be 1 or 2
-    this.lastCmdA = null; // First byte of last command
-    this.lastCmdB = null; // Second byte of last command
-    this.bufferedData = [];
-    this.startTime = null;
-    this.lastTime = null;
-    this.dataCounters = { 'padding': 0, 'char': 0, 'cmd': 0, 'other': 0 };
+    this.field = -1;
+    this.cmdHistory = createCmdHistory();
   }
 
   getHandler (index) {
@@ -828,23 +826,23 @@ class Cea608Parser {
   /**
      * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
      */
-  addData (t, byteList) {
+  addData (t, byteList, field) {
     let cmdFound, a, b,
       charsFound = false;
 
-    this.lastTime = t;
+    this.field = field;
     logger.setTime(t);
 
     for (let i = 0; i < byteList.length; i += 2) {
       a = byteList[i] & 0x7f;
       b = byteList[i + 1] & 0x7f;
       if (a === 0 && b === 0) {
-        this.dataCounters.padding += 2;
         continue;
       } else {
         logger.log('DATA', '[' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
       }
       cmdFound = this.parseCmd(a, b);
+
       if (!cmdFound)
         cmdFound = this.parseMidrow(a, b);
 
@@ -858,19 +856,14 @@ class Cea608Parser {
         charsFound = this.parseChars(a, b);
         if (charsFound) {
           if (this.currChNr && this.currChNr >= 0) {
-            let channel = this.channels[this.currChNr - 1];
+            let channel = this.channels[this.field];
             channel.insertChars(charsFound);
           } else {
             logger.log('WARNING', 'No channel found yet. TEXT-MODE?');
           }
         }
       }
-      if (cmdFound) {
-        this.dataCounters.cmd += 2;
-      } else if (charsFound) {
-        this.dataCounters.char += 2;
-      } else {
-        this.dataCounters.other += 2;
+      if (!cmdFound && !charsFound) {
         logger.log('WARNING', 'Couldn\'t parse cleaned data ' + numArrayToHexArray([a, b]) +
                             ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
       }
@@ -882,28 +875,21 @@ class Cea608Parser {
      * @returns {Boolean} Tells if a command was found
      */
   parseCmd (a, b) {
-    let chNr = null;
+    let chNr = getChannelNumber(a);
 
-    let cond1 = (a === 0x14 || a === 0x1C) && (b >= 0x20 && b <= 0x2F);
+    let cond1 = chNr && (b >= 0x20 && b <= 0x2F);
     let cond2 = (a === 0x17 || a === 0x1F) && (b >= 0x21 && b <= 0x23);
     if (!(cond1 || cond2))
       return false;
 
-    if (a === this.lastCmdA && b === this.lastCmdB) {
-      this.lastCmdA = null;
-      this.lastCmdB = null; // Repeated commands are dropped (once)
+    if (this._isCmdRepeated(a, b)) {
+      this._setLastCmd(null, null);
       logger.log('DEBUG', 'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
       return true;
     }
 
-    if (a === 0x14 || a === 0x17)
-      chNr = 1;
-    else
-      chNr = 2; // (a === 0x1C || a=== 0x1f)
-
-    let channel = this.channels[chNr - 1];
-
-    if (a === 0x14 || a === 0x1C) {
+    let channel = this.channels[chNr];
+    if (chNr) {
       if (b === 0x20)
         channel.ccRCL();
       else if (b === 0x21)
@@ -939,8 +925,7 @@ class Cea608Parser {
     } else { // a == 0x17 || a == 0x1F
       channel.ccTO(b - 0x20);
     }
-    this.lastCmdA = a;
-    this.lastCmdB = b;
+    this._setLastCmd(a, b);
     this.currChNr = chNr;
     return true;
   }
@@ -954,15 +939,15 @@ class Cea608Parser {
 
     if (((a === 0x11) || (a === 0x19)) && b >= 0x20 && b <= 0x2f) {
       if (a === 0x11)
-        chNr = 1;
+        chNr = this.field;
       else
-        chNr = 2;
+        chNr = this.field + 1;
 
       if (chNr !== this.currChNr) {
         logger.log('ERROR', 'Mismatch channel in midrow parsing');
         return false;
       }
-      let channel = this.channels[chNr - 1];
+      let channel = this.channels[chNr];
       channel.ccMIDROW(b);
       logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
       return true;
@@ -982,24 +967,29 @@ class Cea608Parser {
     if (!(case1 || case2))
       return false;
 
-    if (a === this.lastCmdA && b === this.lastCmdB) {
-      this.lastCmdA = null;
-      this.lastCmdB = null;
+    if (this._isCmdRepeated(a, b)) {
+      this._setLastCmd(null, null);
       return true; // Repeated commands are dropped (once)
     }
 
-    chNr = (a <= 0x17) ? 1 : 2;
+    let dataChannel;
+    if (a <= 0x17) {
+      dataChannel = 1;
+      chNr = this.field;
+    } else {
+      dataChannel = 2;
+      chNr = this.field + 1;
+    }
 
     if (b >= 0x40 && b <= 0x5F) {
-      row = (chNr === 1) ? rowsLowCh1[a] : rowsLowCh2[a];
+      row = (dataChannel === 1) ? rowsLowCh1[a] : rowsLowCh2[a];
     } else { // 0x60 <= b <= 0x7F
-      row = (chNr === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
+      row = (dataChannel === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
     }
     let pacData = this.interpretPAC(row, b);
-    let channel = this.channels[chNr - 1];
+    let channel = this.channels[chNr];
     channel.setPAC(pacData);
-    this.lastCmdA = a;
-    this.lastCmdB = b;
+    this._setLastCmd(a, b);
     this.currChNr = chNr;
     return true;
   }
@@ -1063,8 +1053,7 @@ class Cea608Parser {
     if (charCodes) {
       let hexCodes = numArrayToHexArray(charCodes);
       logger.log('DEBUG', 'Char codes =  ' + hexCodes.join(','));
-      this.lastCmdA = null;
-      this.lastCmdB = null;
+      this._setLastCmd(null, null);
     }
     return charCodes;
   }
@@ -1097,11 +1086,10 @@ class Cea608Parser {
       if (b === 0x2f)
         bkgData.underline = true;
     }
-    chNr = (a < 0x18) ? 1 : 2;
-    channel = this.channels[chNr - 1];
+    chNr = (a < 0x18) ? this.field : this.field + 1;
+    channel = this.channels[chNr];
     channel.setBkgData(bkgData);
-    this.lastCmdA = null;
-    this.lastCmdB = null;
+    this._setLastCmd(null, null);
     return true;
   }
 
@@ -1113,8 +1101,8 @@ class Cea608Parser {
       if (this.channels[i])
         this.channels[i].reset();
     }
-    this.lastCmdA = null;
-    this.lastCmdB = null;
+
+    this.cmdHistory = createCmdHistory();
   }
 
   /**
@@ -1126,6 +1114,50 @@ class Cea608Parser {
         this.channels[i].cueSplitAtTime(t);
     }
   }
+
+  _isCmdRepeated (a, b) {
+    const { field, cmdHistory } = this;
+    if (field < 1)
+      return;
+
+    return cmdHistory[field].a === a && cmdHistory[field].b === b;
+  }
+
+  _setLastCmd (a, b) {
+    const { field, cmdHistory } = this;
+    if (field < 1)
+      return;
+
+    cmdHistory[field].a = a;
+    cmdHistory[field].b = b;
+  }
+}
+
+function getChannelNumber (ccData0) {
+  let channel;
+  if (ccData0 === 0x14)
+    channel = 1;
+  else if (ccData0 === 0x1C)
+    channel = 2;
+  else if (ccData0 === 0x15)
+    channel = 3;
+  else if (ccData0 === 0x1D)
+    channel = 4;
+
+  return channel;
+}
+
+function createCmdHistory () {
+  return {
+    1: {
+      a: null,
+      b: null
+    },
+    3: {
+      a: null,
+      b: null
+    }
+  };
 }
 
 export default Cea608Parser;
