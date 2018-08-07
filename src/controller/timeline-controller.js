@@ -41,7 +41,7 @@ class TimelineController extends EventHandler {
     this.tracks = [];
     this.unparsedVttFrags = [];
     this.initPTS = undefined;
-    this.cueRanges = [];
+    this.cueRanges = {};
     this.captionsTracks = {};
     this.captionsProperties = {
       textTrack1: {
@@ -51,19 +51,32 @@ class TimelineController extends EventHandler {
       textTrack2: {
         label: this.config.captionsTextTrack2Label,
         languageCode: this.config.captionsTextTrack2LanguageCode
+      },
+      textTrack3: {
+        label: this.config.captionsTextTrack1Label,
+        languageCode: this.config.captionsTextTrack1LanguageCode
+      },
+      textTrack4: {
+        label: this.config.captionsTextTrack2Label,
+        languageCode: this.config.captionsTextTrack2LanguageCode
       }
     };
 
     if (this.config.enableCEA708Captions) {
       const channel1 = new OutputFilter(this, 'textTrack1');
       const channel2 = new OutputFilter(this, 'textTrack2');
-      this.cea608Parser = new Cea608Parser(0, channel1, channel2);
+      const channel3 = new OutputFilter(this, 'textTrack3');
+      const channel4 = new OutputFilter(this, 'textTrack4');
+      this.cea608Parser = new Cea608Parser(channel1, channel2, channel3, channel4);
     }
   }
 
   addCues (trackName, startTime, endTime, screen) {
     // skip cues which overlap more than 50% with previously parsed time ranges
-    const ranges = this.cueRanges;
+    let ranges = this.cueRanges[trackName];
+    if (!ranges) {
+      ranges = this.cueRanges[trackName] = [];
+    }
     let merged = false;
     for (let i = ranges.length; i--;) {
       let cueRange = ranges[i];
@@ -207,7 +220,7 @@ class TimelineController extends EventHandler {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = undefined;
-    this.cueRanges = [];
+    this.cueRanges = {};
 
     if (this.config.enableWebVTT) {
       const sameTracks = this.tracks && data.subtitles && this.tracks.length === data.subtitles.length;
@@ -247,7 +260,7 @@ class TimelineController extends EventHandler {
 
     if (this.config.enableCEA708Captions && data.captions) {
       data.captions.forEach(captionsTrack => {
-        let instreamIdMatch = /(?:CC|SERVICE)([1-2])/.exec(captionsTrack.instreamId);
+        let instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(captionsTrack.instreamId);
 
         if (!instreamIdMatch)
           return;
@@ -354,7 +367,8 @@ class TimelineController extends EventHandler {
     if (this.enabled && this.config.enableCEA708Captions) {
       for (let i = 0; i < data.samples.length; i++) {
         let ccdatas = this.extractCea608Data(data.samples[i].bytes);
-        this.cea608Parser.addData(data.samples[i].pts, ccdatas);
+        this.cea608Parser.addData(data.samples[i].pts, ccdatas[0], 1);
+        this.cea608Parser.addData(data.samples[i].pts, ccdatas[1], 3);
       }
     }
   }
@@ -370,7 +384,7 @@ class TimelineController extends EventHandler {
     let count = byteArray[0] & 31;
     let position = 2;
     let tmpByte, ccbyte1, ccbyte2, ccValid, ccType;
-    let actualCCBytes = [];
+    let actualCCBytes = [[], []];
 
     for (let j = 0; j < count; j++) {
       tmpByte = byteArray[position++];
@@ -383,9 +397,9 @@ class TimelineController extends EventHandler {
         continue;
 
       if (ccValid) {
-        if (ccType === 0) { // || ccType === 1
-          actualCCBytes.push(ccbyte1);
-          actualCCBytes.push(ccbyte2);
+        if (ccType === 0 || ccType === 1) {
+          actualCCBytes[ccType].push(ccbyte1);
+          actualCCBytes[ccType].push(ccbyte2);
         }
       }
     }
