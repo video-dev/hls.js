@@ -140,4 +140,75 @@ describe('StreamController tests', function () {
       });
     });
   });
+
+  describe('checkBuffer', function () {
+    let sandbox;
+    beforeEach(function () {
+      sandbox = sinon.sandbox.create();
+      streamController.gapController = {
+        poll: () => {}
+      };
+      streamController.media = {
+        buffered: {
+          length: 1
+        },
+        readyState: 1
+      };
+    });
+    afterEach(function () {
+      sandbox.restore();
+    });
+
+    it('should not throw when media is undefined', function () {
+      streamController.media = null;
+      streamController._checkBuffer();
+    });
+
+    it('should seek to start pos when metadata has not yet been loaded', function () {
+      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      streamController.loadedmetadata = false;
+      streamController._checkBuffer();
+      assert(seekStub.calledOnce);
+      assert(streamController.loadedmetadata);
+    });
+
+    it('should not seek to start pos when metadata has been loaded', function () {
+      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      streamController.loadedmetadata = true;
+      streamController._checkBuffer();
+      assert(seekStub.notCalled);
+      assert(streamController.loadedmetadata);
+    });
+
+    it('should not seek to start pos when nothing has been buffered', function () {
+      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      streamController.media.buffered.length = 0;
+      streamController._checkBuffer();
+      assert(seekStub.notCalled);
+      assert.strictEqual(streamController.loadedmetadata, undefined);
+    });
+
+    it('should complete the immediate switch if signalled', function () {
+      const levelSwitchStub = sandbox.stub(streamController, 'immediateLevelSwitchEnd');
+      streamController.loadedmetadata = true;
+      streamController.immediateSwitch = true;
+      streamController._checkBuffer();
+      assert(levelSwitchStub.called);
+    });
+
+    describe('_seekToStartPos', function () {
+      it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
+        streamController.startPosition = 5;
+        streamController._seekToStartPos();
+        assert.strictEqual(5, streamController.media.currentTime);
+      });
+
+      it('should not seek to startPosition when it is buffered', function () {
+        streamController.startPosition = 5;
+        streamController.media.currentTime = 5;
+        streamController._seekToStartPos();
+        assert.strictEqual(5, streamController.media.currentTime);
+      });
+    });
+  });
 });
