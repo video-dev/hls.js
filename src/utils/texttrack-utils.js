@@ -19,3 +19,19 @@ export function clearCurrentCues (track) {
     }
   }
 }
+
+/**
+ * Filters and returns TextTrack items from TextTrackList that are of `subtitles` kind.
+ *
+ * @param {TextTrackList} textTrackList
+ * @return {TextTrack[]}
+ */
+export function filterSubtitleTracks (textTrackList) {
+  let tracks = [];
+  for (let i = 0; i < textTrackList.length; i++) {
+    if (textTrackList[i].kind === 'subtitles') {
+      tracks.push(textTrackList[i]);
+    }
+  }
+  return tracks;
+}
