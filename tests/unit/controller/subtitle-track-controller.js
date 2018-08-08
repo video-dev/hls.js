@@ -107,7 +107,7 @@ describe('SubtitleTrackController', () => {
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
-      const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
+      const stopTimerSpy = sinon.spy(subtitleTrackController, 'clearInterval');
       const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
@@ -124,7 +124,7 @@ describe('SubtitleTrackController', () => {
     });
 
     it('should do nothing if called with out of bound indicies', function () {
-      const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
+      const stopTimerSpy = sinon.spy(subtitleTrackController, 'clearInterval');
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
       assert.equal(stopTimerSpy.callCount, 0);

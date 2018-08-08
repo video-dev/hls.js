@@ -139,13 +139,13 @@ describe('AudioTrackController', () => {
 
       audioTrackController.tracks = tracks;
 
-      audioTrackController.audioGroupId = '2';
+      audioTrackController._audioGroupId = '2';
 
       audioTrackController.onAudioTrackSwitched({
         id: 1
       });
 
-      assert.strictEqual(audioTrackController.audioGroupId, '1');
+      assert.strictEqual(audioTrackController._audioGroupId, '1');
     });
   });
 
