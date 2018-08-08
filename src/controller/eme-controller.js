@@ -10,6 +10,8 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
 
+const { XMLHttpRequest } = window;
+
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
 /**
@@ -162,8 +164,9 @@ class EMEController extends EventHandler {
   }
 
   get requestMediaKeySystemAccess () {
-    if (!this._requestMediaKeySystemAccess)
+    if (!this._requestMediaKeySystemAccess) {
       throw new Error('No requestMediaKeySystemAccess function configured');
+    }
 
     return this._requestMediaKeySystemAccess;
   }
@@ -337,8 +340,9 @@ class EMEController extends EventHandler {
         }
       }
       // if licenseXhrSetup did not yet call open, let's do it now
-      if (!xhr.readyState)
+      if (!xhr.readyState) {
         xhr.open('POST', url, true);
+      }
     } catch (e) {
       // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
       logger.error('Error setting up key-system license XHR', e);
@@ -455,8 +459,9 @@ class EMEController extends EventHandler {
   }
 
   onMediaAttached (data) {
-    if (!this._emeEnabled)
+    if (!this._emeEnabled) {
       return;
+    }
 
     const media = data.media;
 
@@ -471,8 +476,9 @@ class EMEController extends EventHandler {
   }
 
   onManifestParsed (data) {
-    if (!this._emeEnabled)
+    if (!this._emeEnabled) {
       return;
+    }
 
     const audioCodecs = data.levels.map((level) => level.audioCodec);
     const videoCodecs = data.levels.map((level) => level.videoCodec);

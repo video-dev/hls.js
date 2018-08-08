@@ -150,8 +150,8 @@ Let's
 
   <video id="video"></video>
   <script>
+    var video = document.getElementById('video');
     if (Hls.isSupported()) {
-      var video = document.getElementById('video');
       var hls = new Hls();
       // bind them together
       hls.attachMedia(video);
@@ -560,7 +560,7 @@ When set, use this level as the default hls.startLevel. Keep in mind that the st
 
 ### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 
-(default: 60000ms for fragment / 10000ms for level and manifest)
+(default: 20000ms for fragment / 10000ms for level and manifest)
 
 URL Loader timeout.
 A timeout callback will be triggered if loading duration exceeds this timeout.
@@ -1087,11 +1087,11 @@ get : array of subtitle tracks exposed in manifest
 
 ### `hls.subtitleTrack`
 
-get/set : subtitle track id (returned by). Returns -1 if no track is visible. Set to -1 to hide all subtitle tracks.
+get/set : subtitle track id (returned by). Returns -1 if no track is visible. Set to -1 to disable all subtitle tracks.
 
 ### `hls.subtitleDisplay`
 
-(default: `false`)
+(default: `true`)
 
 get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`.
 
@@ -1103,12 +1103,18 @@ get : position of live sync point (ie edge of live position minus safety delay d
 
 ## Runtime Events
 
-Hls.js fires a bunch of events, that could be registered as below:
+Hls.js fires a bunch of events, that could be registered and unregistered as below:
 
 ```js
-hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
+function onLevelLoaded (event, data) {
   var level_duration = data.details.totalduration;
-});
+}
+// subscribe event
+hls.on(Hls.Events.LEVEL_LOADED, onLevelLoaded);
+// unsubscribe event
+hls.off(Hls.Events.LEVEL_LOADED, onLevelLoaded);
+// subscribe for a single event call only
+hls.once(Hls.Events.LEVEL_LOADED, onLevelLoaded);
 ```
 Full list of Events is available below:
 

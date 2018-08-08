@@ -48,8 +48,9 @@ class EventHandler {
   registerListeners () {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function (event) {
-        if (FORBIDDEN_EVENT_NAMES.has(event))
+        if (FORBIDDEN_EVENT_NAMES.has(event)) {
           throw new Error('Forbidden event-name: ' + event);
+        }
 
         this.hls.on(event, this.onEvent);
       }, this);
@@ -77,8 +78,9 @@ class EventHandler {
 
     let eventToFunction = function (event, data) {
       let funcName = 'on' + event.replace('hls', '');
-      if (typeof this[funcName] !== 'function')
+      if (typeof this[funcName] !== 'function') {
         throw new Error(`Event ${event} has no generic handler in this ${this.constructor.name} class (tried ${funcName})`);
+      }
 
       return this[funcName].bind(this, data);
     };
