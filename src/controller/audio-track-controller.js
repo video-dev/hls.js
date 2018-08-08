@@ -64,12 +64,12 @@ class AudioTrackController extends TaskLoop {
     this.trackIdBlacklist = Object.create(null);
 
     /**
-     * @public
+     * @private
      * The currently running group ID for audio
      * (we grab this on manifest-parsed and new level-loaded)
      * @member {string}
      */
-    this.audioGroupId = null;
+    this._audioGroupId = null;
   }
 
   /**
@@ -135,8 +135,8 @@ class AudioTrackController extends TaskLoop {
    */
   onAudioTrackSwitched (data) {
     const audioGroupId = this.tracks[data.id].groupId;
-    if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
-      this.audioGroupId = audioGroupId;
+    if (audioGroupId && (this._audioGroupId !== audioGroupId)) {
+      this._audioGroupId = audioGroupId;
     }
   }
 
@@ -160,8 +160,8 @@ class AudioTrackController extends TaskLoop {
     }
 
     const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
-    if (this.audioGroupId !== audioGroupId) {
-      this.audioGroupId = audioGroupId;
+    if (this._audioGroupId !== audioGroupId) {
+      this._audioGroupId = audioGroupId;
       this._selectInitialAudioTrack();
     }
   }
@@ -227,7 +227,7 @@ class AudioTrackController extends TaskLoop {
     }
 
     // check if level idx is valid
-    if (newId < 0 || newId >= this.tracks.length) {
+    if (typeof newId !== 'number' || newId < 0 || newId >= this.tracks.length) {
       logger.warn('Invalid id passed to audio-track controller');
       return;
     }
@@ -289,7 +289,7 @@ class AudioTrackController extends TaskLoop {
         }
         // We need to match the (pre-)selected group ID
         // and the NAME of the current track.
-        if ((!this.audioGroupId || track.groupId === this.audioGroupId) &&
+        if ((!this._audioGroupId || track.groupId === this._audioGroupId) &&
           (!name || name === track.name)) {
           // If there was a previous track try to stay with the same `NAME`.
           // It should be unique across tracks of same group, and consistent through redundant track groups.
@@ -307,7 +307,7 @@ class AudioTrackController extends TaskLoop {
     }
 
     if (!trackFound) {
-      logger.error(`No track found for running audio group-ID: ${this.audioGroupId}`);
+      logger.error(`No track found for running audio group-ID: ${this._audioGroupId}`);
 
       this.hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,

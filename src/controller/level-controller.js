@@ -8,7 +8,7 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId } from './level-helper';
-import PlaylistLoader from '../loader/playlist-loader';
+import PlaylistLoader from '../loader/playlist-loader'
 
 const { performance } = window;
 let chromeOrFirefox;
@@ -77,6 +77,7 @@ export default class LevelController extends EventHandler {
     let audioCodecFound = false;
     let audioTracks = [];
     let subtitleTracks = [];
+
     // FIXME: we should centralizes all usages of userAgent in codebase
     let chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
