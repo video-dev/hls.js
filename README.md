@@ -28,9 +28,9 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 ## API docs and usage guide
 
-* API and code documention: [http://video-dev.github.io/hls.js/docs/html](http://video-dev.github.io/hls.js/docs/html)
+* [API and usage docs, with code examples](https://github.com/video-dev/hls.js/blob/master/docs/API.md)
 
-* Find a more detailed library usage guide, use-cases and example [here](/docs/API.md)
+* [Auto-Generated Docs](http://video-dev.github.io/hls.js/docs/html)
 
 ## Demo
 
