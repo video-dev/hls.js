@@ -117,7 +117,6 @@ made by [gramk](https://github.com/gramk/chrome-hls), plays hls from address bar
  - Firefox [native-hls](https://addons.mozilla.org/en-US/firefox/addon/native_hls_playback/)
 
 
-
 ## Dependencies
 
 No external JS libs are needed.
@@ -177,6 +176,12 @@ As of today, it is supported on:
 Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example above (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
 
 When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
+
+### Server-side-rendering (SSR) and `require` from a Node.js runtime
+
+We support this now. You can safely require this library in Node and absolutely nothing will happen :) See https://github.com/video-dev/hls.js/pull/1841
+
+(This is also known as "Universal builds" and "isomorphic apps")
 
 ## CORS
 
