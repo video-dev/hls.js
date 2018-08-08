@@ -52,7 +52,7 @@ class SubtitleTrackController extends TaskLoop {
      * Stores the selected track before media has been attached
      * @private {SubtitleTrack | null}
      */
-    this._queuedDefaultTrack = null
+    this._queuedDefaultTrack = null;
 
     /**
      * If should select tracks according to default track attribute
@@ -122,7 +122,7 @@ class SubtitleTrackController extends TaskLoop {
     if (this._subtitleGroupId !== subtitleGroupId) {
       this._subtitleGroupId = subtitleGroupId;
 
-       logger.log('set subtitle group id:', subtitleGroupId);
+      logger.log('set subtitle group id:', subtitleGroupId);
 
       this._selectInitialSubtitleTrack();
     }
@@ -183,7 +183,7 @@ class SubtitleTrackController extends TaskLoop {
     if (this.trackId !== subtitleTrackId) {
       this._toggleTrackModes(subtitleTrackId);
       this._setSubtitleTrack(subtitleTrackId);
-      this._selectDefaultTrack = fal^se;
+      this._selectDefaultTrack = false;
     }
   }
 
@@ -225,7 +225,7 @@ class SubtitleTrackController extends TaskLoop {
     }
   }
 
-  _updateTrack() {
+  _updateTrack () {
     const trackId = this.trackId;
     const subtitleTrack = this.tracks[trackId];
     if (!subtitleTrack) {
@@ -328,9 +328,8 @@ class SubtitleTrackController extends TaskLoop {
     }
 
     // Setting current subtitleTrack
-    this._setSubtitleTrack(trackId)
+    this._setSubtitleTrack(trackId);
   }
-
 }
 
 export default SubtitleTrackController;
