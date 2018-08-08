@@ -10,13 +10,15 @@ const self = getSelfScope();
 
 function bindConsole (method, prefix, prependTime) {
   const logFn = console[method];
-  if (!logFn)
+  if (!logFn) {
     throw new Error('No console support for: ' + method);
+  }
 
-  if (prependTime)
+  if (prependTime) {
     return (...args) => logFn.call(self.console, prefix, `[${(new Date()).toISOString()}]`, ...args);
-  else
+  } else {
     return logFn.bind(self.console, prefix);
+  }
 }
 
 // TODO: Replace `ENABLE_LOGS_DEFAULT` by a log-level check here and add a function set logging level :)
@@ -39,7 +41,7 @@ export const logger = {
 
 let _enabled = ENABLE_LOGS_DEFAULT;
 
-function isLogFunctionEnabled() {
+function isLogFunctionEnabled () {
   return _enabled;
 }
 

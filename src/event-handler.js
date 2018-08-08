@@ -73,8 +73,9 @@ class EventHandler {
   }
 
   onEventGeneric (event, data) {
-    if (this._debugLogEnabled)
+    if (this._debugLogEnabled) {
       logger.debug('Enter handling event:', event);
+    }
 
     let eventToFunction = function (event, data) {
       let funcName = 'on' + event.replace('hls', '');
@@ -91,8 +92,9 @@ class EventHandler {
       this.hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, err: err });
     }
 
-    if (this._debugLogEnabled)
+    if (this._debugLogEnabled) {
       logger.debug('Done handling event:', event);
+    }
   }
 
   setDebugLogEnabled (enabled) {
