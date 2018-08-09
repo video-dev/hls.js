@@ -301,10 +301,26 @@
           document.body.appendChild(s);
         }
 
-        // load compiled lib dist, or latest canary from jsdelivr (?canary=true)
-        var src = window.location.search.substring(1).split('&').indexOf('canary=true') >= 0
-          ? 'https://cdn.jsdelivr.net/npm/hls.js@canary'
-          : '../dist/hls.js';
+        var LOCAL_SRC = '../dist/hls.js';
+        var LATEST_SRC = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+
+        var queryParts = window.location.search.substring(1).split('&');
+        var src = null;
+        if (queryParts.indexOf('version=latest') >= 0) {
+          src = LATEST_SRC;
+        } else if (queryParts.indexOf('version=canary') >= 0 || queryParts.indexOf('canary=true') >= 0) {
+          src = 'https://cdn.jsdelivr.net/npm/hls.js@canary';
+        } else if (queryParts.indexOf('version=local') >= 0) {
+          src = LOCAL_SRC;
+        }
+        if (!src) {
+          if (window.location.port) {
+            // we are not on port 80/443. Probably running locally. default to local
+            src = LOCAL_SRC;
+          } else {
+            src = LATEST_SRC;
+          }
+        }
 
         loadScript(src, function() {
           // load compiled demo main
