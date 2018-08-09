@@ -12,11 +12,10 @@
 
     <link rel="stylesheet" href="style.css">
 
-    <link rel="preload" href="../dist/hls-demo.js" as="script">
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js"></script>
+
   </head>
 
   <body>
@@ -96,11 +95,6 @@
         </label>
 
         <label class="innerControls">
-          Metrics history (max limit, -1 is unlimited):
-          <input id="limitMetrics" style="width: 8em" type=number/>
-        </label>
-
-        <label class="innerControls">
           Player size:
           <select id="videoSize" style="float:right;">
             <option value="240">Tiny (240p)</option>
@@ -127,26 +121,23 @@
 
       <br>
 
-      <canvas id="bufferedCanvas" height="15" class="videoCentered" onclick="onClickBufferedRange(event);"></canvas>
+      <canvas id="buffered_c" height="15" class="videoCentered" onclick="onClickBufferedRange(event);"></canvas>
 
       <br><br>
 
-      <label class="center">Status:</label>
-      <pre id="statusOut" class="center" style="white-space: pre-wrap;"></pre>
-
-      <label class="center">Error:</label>
-      <pre id="errorOut" class="center" style="white-space: pre-wrap;"></pre>
+      <pre id="HlsStatus" class="center" style="white-space: pre-wrap;"></pre>
 
       <div class="center" style="text-align: center;" id="toggleButtons">
-        <button type="button" class="btn btn-sm" onclick="toggleTab('playbackControlTab');">Playback</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('qualityLevelControlTab');">Quality-levels</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('audioTrackControlTab');">Audio-tracks</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('statsDisplayTab');">Buffer &amp; Statistics</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('metricsDisplayTab'); showMetrics();">Real-time metrics</button>
+        <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">Playback controls</button>
+        <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">Quality-level controls</button>
+        <button type="button" class="btn btn-sm" onclick="$('#AudioTrackControl').toggle();">Audio-track controls</button>
+        <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">Metrics-display</button>
+        <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">Stats-display</button>
       </div>
 
-      <div class="center" id='playbackControlTab'>
-        <h4>Playback</h4>
+      <div class="center" id='PlaybackControl'>
+        <h4>Playback controls</h4>
+
         <center>
             <p>
               <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].play()">Play</button>
@@ -159,7 +150,7 @@
             </p>
 
             <p>
-              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">Seek to </button>
+              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
               <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}">
             </p>
 
@@ -185,13 +176,13 @@
 
       </div>
 
-      <div class="center" id='qualityLevelControlTab'>
-        <h4>Quality-levels</h4>
+      <div class="center" id='QualityLevelControl'>
+        <h4>Quality-level controls</h4>
         <center>
             <table>
                 <tr>
                   <td>
-                    <p>Currently played level:</p>
+                    <p>Currently played level</p>
                   </td>
                   <td>
                     <div id="currentLevelControl" style="display: inline;"></div>
@@ -199,7 +190,7 @@
                 </tr>
                 <tr>
                   <td>
-                    <p>Next level loaded:</p>
+                    <p>Next level loaded</p>
                   </td>
                   <td>
                     <div id="nextLevelControl" style="display: inline;"></div>
@@ -207,7 +198,7 @@
                 </tr>
                 <tr>
                   <td>
-                    <p>Currently loaded level:</p>
+                    <p>Currently loaded level</p>
                   </td>
                   <td>
                     <div id="loadLevelControl" style="display: inline;"></div>
@@ -215,7 +206,7 @@
                 </tr>
                 <tr>
                   <td>
-                    <p>Cap-limit level (maximum):</p>
+                    <p>Cap-limit level (maximum)</p>
                   </td>
                   <td>
                     <div id="levelCappingControl" style="display: inline;"></div>
@@ -225,18 +216,18 @@
         </center>
       </div>
 
-      <div class="center" id='audioTrackControlTab'>
-        <h4>Audio-tracks</h4>
+      <div class="center" id='AudioTrackControl'>
+        <h4>Audio-track controls</h4>
         <table>
           <tr>
-            <td>Current audio-track:</td>
-            <td width=10px>None selected</td>
+            <td>Current audio-track</td>
+            <td width=10px></td>
             <td> <div id="audioTrackControl" style="display: inline;"></div> </td>
           </tr>
         </table>
       </div>
 
-      <div class="center" id='metricsDisplayTab'>
+      <div class="center" id='MetricsDisplay'>
         <h4>Real-time metrics</h4>
         <div id="metricsButton">
           <button type="button" class="btn btn-xs btn-info" onclick="$('#metricsButtonWindow').toggle();$('#metricsButtonFixed').toggle();windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
@@ -271,12 +262,10 @@
         </div>
       </div>
 
-      <div class="center" id='statsDisplayTab'>
-        <h4>Buffer &amp; Statistics</h4>
-        <label>Buffer state:</label>
-        <pre id="bufferedOut"></pre>
-        <label>General stats:</label>
-        <pre id='statisticsOut'></pre>
+      <div class="center" id='StatsDisplay'>
+        <h4>Stats</h4>
+        <pre id='HlsStats'></pre>
+        <div id="buffered_log"></div>
       </div>
 
     </div>
@@ -290,27 +279,10 @@
     <script src="metrics.js"></script>
     <script src="jsonpack.js"></script>
 
-    <script>
-      (function() {
-        function loadScript(url, onLoad) {
-          var s = document.createElement("script");
-          s.setAttribute('src', url);
-          if (onLoad) {
-            s.onload = onLoad;
-          }
-          document.body.appendChild(s);
-        }
+    <!-- Compiled lib dist -->
+    <script src="../dist/hls.js"></script>
+    <!-- Compiled demo main -->
+    <script src="../dist/hls-demo.js"></script>
 
-        // load compiled lib dist, or latest canary from jsdelivr (?canary=true)
-        var src = window.location.search.substring(1).split('&').indexOf('canary=true') >= 0
-          ? 'https://cdn.jsdelivr.net/npm/hls.js@canary'
-          : '../dist/hls.js';
-
-        loadScript(src, function() {
-          // load compiled demo main
-          loadScript('../dist/hls-demo.js');
-        });
-      })();
-    </script>
   </body>
 </html>
