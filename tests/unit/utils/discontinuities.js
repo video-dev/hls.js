@@ -81,7 +81,7 @@ describe('level-helper', function () {
             endPTS: 24,
             duration: 4,
             cc: 0,
-            pdt: 1503892800000
+            programDateTime: 1503892800000
           },
           {
             start: 24,
@@ -109,7 +109,7 @@ describe('level-helper', function () {
           endPTS: 4,
           duration: 4,
           cc: 2,
-          pdt: 1503892850000
+          programDateTime: 1503892850000
         },
         {
           start: 4,
@@ -140,7 +140,7 @@ describe('level-helper', function () {
           endPTS: 74,
           duration: 4,
           cc: 2,
-          pdt: 1503892850000
+          programDateTime: 1503892850000
         },
         {
           start: 74,

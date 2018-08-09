@@ -344,20 +344,20 @@ function backfillProgramDateTimes (fragments, startIndex) {
   let fragPrev = fragments[startIndex];
   for (let i = startIndex - 1; i >= 0; i--) {
     const frag = fragments[i];
-    frag.pdt = fragPrev.pdt - (frag.duration * 1000);
+    frag.programDateTime = fragPrev.programDateTime - (frag.duration * 1000);
     fragPrev = frag;
   }
 }
 
 function assignProgramDateTime (frag, prevFrag) {
   if (frag.rawProgramDateTime) {
-    frag.pdt = Date.parse(frag.rawProgramDateTime);
-  } else if (prevFrag && prevFrag.pdt) {
-    frag.pdt = prevFrag.endPdt;
+    frag.programDateTime = Date.parse(frag.rawProgramDateTime);
+  } else if (prevFrag && prevFrag.programDateTime) {
+    frag.programDateTime = prevFrag.endProgramDateTime;
   }
 
-  if (!Number.isFinite(frag.pdt)) {
-    frag.pdt = null;
+  if (!Number.isFinite(frag.programDateTime)) {
+    frag.programDateTime = null;
     frag.rawProgramDateTime = null;
   }
 }

@@ -339,8 +339,8 @@ class PlaylistLoader extends EventHandler {
 
     const url = PlaylistLoader.getResponseUrl(response, context);
 
-    const levelUrlId = Number.isFinite(id) ? 0 : id;
-    const levelId = Number.isFinite(level) ? level : Number.isFinite(id) ? id : 0; // level -> id -> 0
+    const levelUrlId = Number.isFinite(id) ? id : 0;
+    const levelId = Number.isFinite(level) ? level : levelUrlId;
     const levelType = PlaylistLoader.mapContextToLevelType(context);
 
     const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType, levelUrlId);

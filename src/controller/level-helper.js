@@ -106,8 +106,6 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   }
 
   details.PTSKnown = true;
-  // logger.log(`frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
-
   return drift;
 }
 

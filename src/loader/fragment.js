@@ -9,7 +9,7 @@ export default class Fragment {
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
-    this.pdt = null;
+    this.programDateTime = null;
     this.rawProgramDateTime = null;
 
     // Holds the types of data this fragment supports
@@ -86,14 +86,14 @@ export default class Fragment {
     return this._decryptdata;
   }
 
-  get endPdt () {
-    if (!Number.isFinite(this.pdt)) {
+  get endProgramDateTime () {
+    if (!Number.isFinite(this.programDateTime)) {
       return null;
     }
 
     let duration = !Number.isFinite(this.duration) ? 0 : this.duration;
 
-    return this.pdt + (duration * 1000);
+    return this.programDateTime + (duration * 1000);
   }
 
   get encrypted () {

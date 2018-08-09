@@ -13,11 +13,11 @@ export function findFragmentByPDT (fragments, PDTValue, maxFragLookUpTolerance) 
   }
 
   // if less than start
-  if (PDTValue < fragments[0].pdt) {
+  if (PDTValue < fragments[0].programDateTime) {
     return null;
   }
 
-  if (PDTValue >= fragments[fragments.length - 1].endPdt) {
+  if (PDTValue >= fragments[fragments.length - 1].endProgramDateTime) {
     return null;
   }
 
@@ -28,6 +28,8 @@ export function findFragmentByPDT (fragments, PDTValue, maxFragLookUpTolerance) 
       return frag;
     }
   }
+
+  return null;
 }
 
 /**
@@ -92,5 +94,5 @@ export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpToleran
  */
 export function pdtWithinToleranceTest (pdtBufferEnd, maxFragLookUpTolerance, candidate) {
   let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
-  return candidate.endPdt - candidateLookupTolerance > pdtBufferEnd;
+  return candidate.endProgramDateTime - candidateLookupTolerance > pdtBufferEnd;
 }

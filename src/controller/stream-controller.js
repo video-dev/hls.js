@@ -364,8 +364,8 @@ class StreamController extends TaskLoop {
       if (fragPrevious) {
         if (levelDetails.hasProgramDateTime) {
           // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-          logger.log(`live playlist, switching playlist, load frag with same PDT: ${fragPrevious.pdt}`);
-          frag = findFragmentByPDT(fragments, fragPrevious.endPdt, config.maxFragLookUpTolerance);
+          logger.log(`live playlist, switching playlist, load frag with same PDT: ${fragPrevious.programDateTime}`);
+          frag = findFragmentByPDT(fragments, fragPrevious.endProgramDateTime, config.maxFragLookUpTolerance);
         } else {
           // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
           const targetSN = fragPrevious.sn + 1;

@@ -80,8 +80,8 @@ describe('StreamController tests', function () {
 
   describe('SN Searching', function () {
     let fragPrevious = {
-      pdt: 1505502671523,
-      endPdt: 1505502676523,
+      programDateTime: 1505502671523,
+      endProgramDateTime: 1505502676523,
       duration: 5.000,
       level: 1,
       start: 10.000,

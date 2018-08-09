@@ -117,8 +117,8 @@ export function alignPDT (details, lastDetails) {
     // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
     // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
     // then we can deduce that playlist B sliding is 1000+8 = 1008s
-    let lastPDT = lastDetails.fragments[0].pdt;
-    let newPDT = details.fragments[0].pdt;
+    let lastPDT = lastDetails.fragments[0].programDateTime;
+    let newPDT = details.fragments[0].programDateTime;
     // date diff is in ms. frag.start is in seconds
     let sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
     if (Number.isFinite(sliding)) {
