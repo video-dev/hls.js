@@ -306,7 +306,7 @@
 
         var queryParts = window.location.search.substring(1).split('&');
         var src = null;
-        var demoSrc = "";
+        var demoSrc = null;
         if (queryParts.indexOf('version=latest') >= 0) {
           src = LATEST_DIST_SRC;
           demoSrc = CANARY_DEMO_SRC;
