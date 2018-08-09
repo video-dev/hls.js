@@ -106,8 +106,8 @@ export function alignDiscontinuities (lastFrag, details, lastLevel) {
 
 /**
  * Computes the PTS of a new level's fragments using the difference in Program Date Time from the last level.
-  * @paramdetails- Thedetails of the new level
- * @param lastDetails - Thedetailsof the last loaded level
+  * @param details- The details of the new level
+ * @param lastDetails - The details of the last loaded level
  */
 export function alignPDT (details, lastDetails) {
   if (lastDetails && lastDetails.fragments.length) {
