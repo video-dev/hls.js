@@ -46,6 +46,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ];
       npm publish --tag canary
       echo "Published canary."
       curl https://purge.jsdelivr.net/npm/hls.js@canary
+      curl https://purge.jsdelivr.net/npm/hls.js@canary/dist/hls-demo.js
       echo "Cleared jsdelivr cache."
     elif [ "${TRAVIS_MODE}" = "release" ]; then
       npm publish
