@@ -21,8 +21,9 @@ class AACDemuxer {
 
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
   static probe (data) {
-    if (!data)
+    if (!data) {
       return false;
+    }
 
     // Check for the ADTS sync word
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1

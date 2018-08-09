@@ -32,12 +32,13 @@ class CapLevelController extends EventHandler {
 
   onFpsDropLevelCapping (data) {
     // Don't add a restricted level more than once
-    if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels))
+    if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels)) {
       this.restrictedLevels.push(data.droppedLevel);
+    }
   }
 
   onMediaAttaching (data) {
-    this.media = data.media instanceof HTMLVideoElement ? data.media : null;
+    this.media = data.media instanceof window.HTMLVideoElement ? data.media : null;
   }
 
   onManifestParsed (data) {
@@ -49,6 +50,24 @@ class CapLevelController extends EventHandler {
       // Start capping immediately if the manifest has signaled video codecs
       this._startCapping();
     }
+  }
+
+  // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
+  // to the first level
+  onBufferCodecs (data) {
+    const hls = this.hls;
+    if (hls.config.capLevelToPlayerSize && data.video) {
+      // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
+      this._startCapping();
+    }
+  }
+
+  onLevelsUpdated (data) {
+    this.levels = data.levels;
+  }
+
+  onMediaDetaching () {
+    this._stopCapping();
   }
 
   // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
@@ -89,8 +108,9 @@ class CapLevelController extends EventHandler {
   * returns level should be the one with the dimensions equal or greater than the media (player) dimensions (so the video will be downscaled)
   */
   getMaxLevel (capLevelIndex) {
-    if (!this.levels)
+    if (!this.levels) {
       return -1;
+    }
 
     const validLevels = this.levels.filter((level, index) =>
       CapLevelController.isLevelAllowed(index, this.restrictedLevels) && index <= capLevelIndex
@@ -115,8 +135,10 @@ class CapLevelController extends EventHandler {
     this.restrictedLevels = [];
     this.firstLevel = null;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
-    clearInterval(this.timer);
-    this.timer = null;
+    if (this.timer) {
+      this.timer = clearInterval(this.timer);
+      this.timer = null;
+    }
   }
 
   get mediaWidth () {
@@ -152,14 +174,16 @@ class CapLevelController extends EventHandler {
   }
 
   static getMaxLevelByMediaSize (levels, width, height) {
-    if (!levels || (levels && !levels.length))
+    if (!levels || (levels && !levels.length)) {
       return -1;
+    }
 
     // Levels can have the same dimensions but differing bandwidths - since levels are ordered, we can look to the next
     // to determine whether we've chosen the greatest bandwidth for the media's dimensions
     const atGreatestBandiwdth = (curLevel, nextLevel) => {
-      if (!nextLevel)
+      if (!nextLevel) {
         return true;
+      }
 
       return curLevel.width !== nextLevel.width || curLevel.height !== nextLevel.height;
     };

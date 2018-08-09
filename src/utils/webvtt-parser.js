@@ -12,8 +12,9 @@ const cueString2millis = function (timeString) {
   let mins = parseInt(timeString.substr(-9, 2));
   let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
-  if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours))
+  if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {
     return -1;
+  }
 
   ts += 1000 * secs;
   ts += 60 * 1000 * mins;
@@ -26,8 +27,9 @@ const cueString2millis = function (timeString) {
 const hash = function (text) {
   let hash = 5381;
   let i = text.length;
-  while (i)
+  while (i) {
     hash = (hash * 33) ^ text.charCodeAt(--i);
+  }
 
   return (hash >>> 0).toString();
 };
@@ -104,8 +106,9 @@ const WebVTTParser = {
 
       // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
       cue.text = decodeURIComponent(encodeURIComponent(cue.text));
-      if (cue.endTime > 0)
+      if (cue.endTime > 0) {
         cues.push(cue);
+      }
     };
 
     parser.onparsingerror = function (e) {
@@ -129,10 +132,11 @@ const WebVTTParser = {
           inHeader = false;
           // Extract LOCAL and MPEGTS.
           line.substr(16).split(',').forEach(timestamp => {
-            if (startsWith(timestamp, 'LOCAL:'))
+            if (startsWith(timestamp, 'LOCAL:')) {
               cueTime = timestamp.substr(6);
-            else if (startsWith(timestamp, 'MPEGTS:'))
+            } else if (startsWith(timestamp, 'MPEGTS:')) {
               mpegTs = parseInt(timestamp.substr(7));
+            }
           });
           try {
             // Calculate subtitle offset in milliseconds.
@@ -145,8 +149,9 @@ const WebVTTParser = {
             // Convert MPEGTS to seconds from 90kHz.
             presentationTime = mpegTs / 90000;
 
-            if (localTime === -1)
+            if (localTime === -1) {
               parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
+            }
           } catch (e) {
             parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
           }

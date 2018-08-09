@@ -1,58 +1,50 @@
 module.exports = {
-  "env": {
-    "browser": true,
-    "commonjs": true,
-    "es6": true,
+  'env': {
+    'commonjs': true,
+    'es6': true
   },
-  "globals": {
+  'globals': {
     // Allowed globals
-    "console": true,
-    //"MediaSource": true,
-    "performance": true,
-    "crypto": true,
-    "fetch": true,
-    "Request": true,
-    "Headers": true,
-    "escape": true,
+    'console': true,
 
     // Compile-time defines
-    "__VERSION__": true,
-    "__USE_SUBTITLES__": true,
-    "__USE_ALT_AUDIO__": true,
-    "__USE_EME_DRM__": true
+    '__VERSION__': true,
+    '__USE_SUBTITLES__': true,
+    '__USE_ALT_AUDIO__': true,
+    '__USE_EME_DRM__': true
   },
   // see https://standardjs.com/
   // see https://github.com/standard/eslint-config-standard
-  "extends": [
-    "eslint:recommended",
-    "standard"
+  'extends': [
+    'eslint:recommended',
+    'standard'
   ],
-  "parserOptions": {
-    "sourceType": "module"
+  'parserOptions': {
+    'sourceType': 'module'
   },
-  "rules": {
+  'rules': {
     // our basic style rules
-    "semi": [
-      "error",
-      "always"
+    'semi': [
+      'error',
+      'always'
     ],
-    "indent": [
-      "error",
+    'indent': [
+      'error',
       2
     ],
-    "quotes": [
-      "error",
-      "single"
+    'quotes': [
+      'error',
+      'single'
     ],
-    "linebreak-style": [
-      "error",
-      "unix"
+    'linebreak-style': [
+      'error',
+      'unix'
     ],
     // spacing
-    "space-infix-ops": 2,
-    "space-unary-ops": [2, {"words": true, "nonwords": false}],
-    "space-in-parens": ["error", "never"],
-    "keyword-spacing": [2, {"before": true, "after": true}],
+    'space-infix-ops': 2,
+    'space-unary-ops': [2, { 'words': true, 'nonwords': false }],
+    'space-in-parens': ['error', 'never'],
+    'keyword-spacing': [2, { 'before': true, 'after': true }],
     // enforce litteral objects on multiple lines
     "block-spacing": "error",
     "curly": ["warn", "multi-or-nest", "consistent"],
@@ -75,23 +67,24 @@ module.exports = {
     // (warnings for now)
 
     // forbid "one var" style, enforce one declaration per variable
-    "one-var": [
+    'one-var': [
       1,
-      "never"
+      'never'
     ],
 
-    "standard/no-callback-literal": 1,
-    "import/first": 1,
-    "no-var": 1,
-    "no-empty": 1,
-    "no-mixed-operators": 1,
-    "no-unused-vars": 1,
-    "no-console": 1,
-    "no-fallthrough": 1,
-    "no-case-declarations": 1,
-    "no-irregular-whitespace": 1,
-    "no-self-assign": 1,
-    "new-cap": 1,
-    "no-undefined": 1
+    'standard/no-callback-literal': 1,
+    'import/first': 1,
+    'no-var': 1,
+    'no-empty': 1,
+    'no-mixed-operators': 1,
+    'no-unused-vars': 1,
+    'no-console': 1,
+    'no-fallthrough': 1,
+    'no-case-declarations': 1,
+    'no-irregular-whitespace': 1,
+    'no-self-assign': 1,
+    'new-cap': 1,
+    'no-undefined': 1,
+    'no-global-assign': 2
   }
 };

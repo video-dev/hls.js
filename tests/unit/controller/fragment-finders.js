@@ -11,8 +11,8 @@ describe('Fragment finders', function () {
   });
 
   let fragPrevious = {
-    pdt: 1505502671523,
-    endPdt: 1505502676523,
+    programDateTime: 1505502671523,
+    endProgramDateTime: 1505502676523,
     duration: 5.000,
     level: 1,
     start: 10.000,
@@ -98,30 +98,30 @@ describe('Fragment finders', function () {
   });
 
   describe('findFragmentByPDT', function () {
-    it('finds a fragment with endPdt greater than the reference PDT', function () {
-      const foundFragment = findFragmentByPDT(mockFragments, fragPrevious.endPdt + 1);
+    it('finds a fragment with endProgramDateTime greater than the reference PDT', function () {
+      const foundFragment = findFragmentByPDT(mockFragments, fragPrevious.endProgramDateTime + 1);
       const resultSN = foundFragment ? foundFragment.sn : -1;
       assert.strictEqual(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
     });
 
     it('returns null when the reference pdt is outside of the pdt range of the fragment array', function () {
-      let foundFragment = findFragmentByPDT(mockFragments, mockFragments[0].pdt - 1);
+      let foundFragment = findFragmentByPDT(mockFragments, mockFragments[0].programDateTime - 1);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       assert.strictEqual(foundFragment, null, 'Expected sn -1, found sn segment ' + resultSN);
 
-      foundFragment = findFragmentByPDT(mockFragments, mockFragments[mockFragments.length - 1].endPdt + 1);
+      foundFragment = findFragmentByPDT(mockFragments, mockFragments[mockFragments.length - 1].endProgramDateTime + 1);
       resultSN = foundFragment ? foundFragment.sn : -1;
       assert.strictEqual(foundFragment, null, 'Expected sn -1, found sn segment ' + resultSN);
     });
 
     it('is able to find the first fragment', function () {
-      const foundFragment = findFragmentByPDT(mockFragments, mockFragments[0].pdt);
+      const foundFragment = findFragmentByPDT(mockFragments, mockFragments[0].programDateTime);
       const resultSN = foundFragment ? foundFragment.sn : -1;
       assert.strictEqual(foundFragment, mockFragments[0], 'Expected sn 0, found sn segment ' + resultSN);
     });
 
     it('is able to find the last fragment', function () {
-      const foundFragment = findFragmentByPDT(mockFragments, mockFragments[mockFragments.length - 1].pdt);
+      const foundFragment = findFragmentByPDT(mockFragments, mockFragments[mockFragments.length - 1].programDateTime);
       const resultSN = foundFragment ? foundFragment.sn : -1;
       assert.strictEqual(foundFragment, mockFragments[4], 'Expected sn 4, found sn segment ' + resultSN);
     });
@@ -129,13 +129,13 @@ describe('Fragment finders', function () {
     it('is able to find a fragment if the PDT value is 0', function () {
       const fragments = [
         {
-          pdt: 0,
-          endPdt: 1,
+          programDateTime: 0,
+          endProgramDateTime: 1,
           duration: 0.001
         },
         {
-          pdt: 1,
-          endPdt: 2,
+          programDateTime: 1,
+          endProgramDateTime: 2,
           duration: 0.001
         }
       ];
@@ -159,8 +159,8 @@ describe('Fragment finders', function () {
     let pdtBufferEnd = 1505502678523; // Fri Sep 15 2017 15:11:18 GMT-0400 (Eastern Daylight Time)
     it('returns true if the fragment range is equal to the end of the buffer', function () {
       const frag = {
-        pdt: pdtBufferEnd,
-        endPdt: pdtBufferEnd + 5000 - (tolerance * 1000),
+        programDateTime: pdtBufferEnd,
+        endProgramDateTime: pdtBufferEnd + 5000 - (tolerance * 1000),
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
@@ -169,8 +169,8 @@ describe('Fragment finders', function () {
 
     it('returns false if the fragment range is less than the end of the buffer', function () {
       const frag = {
-        pdt: pdtBufferEnd - 10000,
-        endPdt: pdtBufferEnd - 5000,
+        programDateTime: pdtBufferEnd - 10000,
+        endProgramDateTime: pdtBufferEnd - 5000,
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
@@ -179,8 +179,8 @@ describe('Fragment finders', function () {
 
     it('does not skip very small fragments', function () {
       const frag = {
-        pdt: pdtBufferEnd + 200,
-        endPdt: pdtBufferEnd + 300,
+        programDateTime: pdtBufferEnd + 200,
+        endProgramDateTime: pdtBufferEnd + 300,
         duration: 0.1,
         deltaPTS: 0.1
       };
@@ -188,10 +188,10 @@ describe('Fragment finders', function () {
       assert.strictEqual(true, actual);
     });
 
-    it('accounts for tolerance when checking the endPdt of the fragment', function () {
+    it('accounts for tolerance when checking the endProgramDateTime of the fragment', function () {
       const frag = {
-        pdt: pdtBufferEnd,
-        endPdt: pdtBufferEnd + (tolerance * 1000),
+        programDateTime: pdtBufferEnd,
+        endProgramDateTime: pdtBufferEnd + (tolerance * 1000),
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);

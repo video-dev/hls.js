@@ -3,33 +3,33 @@ import Fragment from '../../../src/loader/fragment';
 
 describe('Fragment class tests', function () {
   let frag;
-  describe('endPdt getter', function () {
+  describe('endProgramDateTime getter', function () {
     beforeEach(function () {
       frag = new Fragment();
     });
 
     it('computes endPdt when pdt and duration are valid', function () {
-      frag.pdt = 1000;
+      frag.programDateTime = 1000;
       frag.duration = 1;
-      assert.strictEqual(frag.endPdt, 2000);
+      assert.strictEqual(frag.endProgramDateTime, 2000);
     });
 
     it('considers 0 a valid pdt', function () {
-      frag.pdt = 0;
+      frag.programDateTime = 0;
       frag.duration = 1;
-      assert.strictEqual(frag.endPdt, 1000);
+      assert.strictEqual(frag.endProgramDateTime, 1000);
     });
 
     it('returns null if pdt is NaN', function () {
-      frag.pdt = 'foo';
+      frag.programDateTime = 'foo';
       frag.duration = 1;
-      assert.strictEqual(frag.endPdt, null);
+      assert.strictEqual(frag.endProgramDateTime, null);
     });
 
     it('defaults duration to 0 if duration is NaN', function () {
-      frag.pdt = 1000;
+      frag.programDateTime = 1000;
       frag.duration = 'foo';
-      assert.strictEqual(frag.endPdt, 1000);
+      assert.strictEqual(frag.endProgramDateTime, 1000);
     });
   });
 });

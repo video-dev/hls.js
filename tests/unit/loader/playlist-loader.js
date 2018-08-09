@@ -299,15 +299,17 @@ oceans_aes-audio=65000-video=236000-3.ts
     assert.strictEqual(result.fragments[0].decryptdata.method, 'AES-128');
     let sn = 1;
     let uint8View = new Uint8Array(16);
-    for (let i = 12; i < 16; i++)
+    for (let i = 12; i < 16; i++) {
       uint8View[i] = (sn >> 8 * (15 - i)) & 0xff;
+    }
 
     assert(bufferIsEqual(result.fragments[0].decryptdata.iv.buffer, uint8View.buffer));
 
     sn = 3;
     uint8View = new Uint8Array(16);
-    for (let i = 12; i < 16; i++)
+    for (let i = 12; i < 16; i++) {
       uint8View[i] = (sn >> 8 * (15 - i)) & 0xff;
+    }
 
     assert(bufferIsEqual(result.fragments[2].decryptdata.iv.buffer, uint8View.buffer));
   });
@@ -617,11 +619,11 @@ Rollover38803/20160525T064049-01-69844069.ts
     assert.strictEqual(result.hasProgramDateTime, true);
     assert.strictEqual(result.totalduration, 30);
     assert.strictEqual(result.fragments[0].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844067.ts');
-    assert.strictEqual(result.fragments[0].pdt, 1464366884000);
+    assert.strictEqual(result.fragments[0].programDateTime, 1464366884000);
     assert.strictEqual(result.fragments[1].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844068.ts');
-    assert.strictEqual(result.fragments[1].pdt, 1464366894000);
+    assert.strictEqual(result.fragments[1].programDateTime, 1464366894000);
     assert.strictEqual(result.fragments[2].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844069.ts');
-    assert.strictEqual(result.fragments[2].pdt, 1464366904000);
+    assert.strictEqual(result.fragments[2].programDateTime, 1464366904000);
   });
 
   it('parses #EXTINF without a leading digit', () => {
@@ -674,11 +676,11 @@ Rollover38803/20160525T064049-01-69844069.ts
       let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
       assert.strictEqual(result.hasProgramDateTime, true);
       assert.strictEqual(result.fragments[0].rawProgramDateTime, '2016-05-27T16:34:44Z');
-      assert.strictEqual(result.fragments[0].pdt, 1464366884000);
+      assert.strictEqual(result.fragments[0].programDateTime, 1464366884000);
       assert.strictEqual(result.fragments[1].rawProgramDateTime, '2016-05-27T16:34:54Z');
-      assert.strictEqual(result.fragments[1].pdt, 1464366894000);
+      assert.strictEqual(result.fragments[1].programDateTime, 1464366894000);
       assert.strictEqual(result.fragments[2].rawProgramDateTime, '2016-05-27T16:35:04Z');
-      assert.strictEqual(result.fragments[2].pdt, 1464366904000);
+      assert.strictEqual(result.fragments[2].programDateTime, 1464366904000);
     });
 
     it('backfills PDT values if the first segment does not start with PDT', function () {
@@ -695,8 +697,8 @@ frag2.ts
       const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
       assert.strictEqual(result.hasProgramDateTime, true);
       assert.strictEqual(result.fragments[2].rawProgramDateTime, '2016-05-27T16:35:04Z');
-      assert.strictEqual(result.fragments[1].pdt, 1464366894000);
-      assert.strictEqual(result.fragments[0].pdt, 1464366884000);
+      assert.strictEqual(result.fragments[1].programDateTime, 1464366894000);
+      assert.strictEqual(result.fragments[0].programDateTime, 1464366884000);
     });
 
     it('extrapolates PDT forward when subsequent fragments do not have a raw programDateTime', function () {
@@ -713,8 +715,8 @@ frag2.ts
       const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
       assert.strictEqual(result.hasProgramDateTime, true);
       assert.strictEqual(result.fragments[0].rawProgramDateTime, '2016-05-27T16:35:04Z');
-      assert.strictEqual(result.fragments[1].pdt, 1464366914000);
-      assert.strictEqual(result.fragments[2].pdt, 1464366924000);
+      assert.strictEqual(result.fragments[1].programDateTime, 1464366914000);
+      assert.strictEqual(result.fragments[2].programDateTime, 1464366924000);
     });
 
     it('recomputes PDT extrapolation whenever a new raw programDateTime is hit', function () {
@@ -742,15 +744,15 @@ frag5.ts
 
       const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
       assert.strictEqual(result.hasProgramDateTime, true);
-      assert.strictEqual(result.fragments[0].pdt, 1464366904000);
+      assert.strictEqual(result.fragments[0].programDateTime, 1464366904000);
       assert.strictEqual(result.fragments[0].rawProgramDateTime, '2016-05-27T16:35:04Z');
-      assert.strictEqual(result.fragments[1].pdt, 1464366914000);
-      assert.strictEqual(result.fragments[2].pdt, 1495902904000);
+      assert.strictEqual(result.fragments[1].programDateTime, 1464366914000);
+      assert.strictEqual(result.fragments[2].programDateTime, 1495902904000);
       assert.strictEqual(result.fragments[2].rawProgramDateTime, '2017-05-27T16:35:04Z');
-      assert.strictEqual(result.fragments[3].pdt, 1495902914000);
-      assert.strictEqual(result.fragments[4].pdt, 1432726923000);
+      assert.strictEqual(result.fragments[3].programDateTime, 1495902914000);
+      assert.strictEqual(result.fragments[4].programDateTime, 1432726923000);
       assert.strictEqual(result.fragments[4].rawProgramDateTime, '2015-05-27T11:42:03Z');
-      assert.strictEqual(result.fragments[5].pdt, 1432726933000);
+      assert.strictEqual(result.fragments[5].programDateTime, 1432726933000);
     });
 
     it('propagates the raw programDateTime to the fragment following the init segment', function () {
@@ -766,7 +768,7 @@ frag1.ts
       assert.strictEqual(result.hasProgramDateTime, true);
       assert.strictEqual(result.sn === 'initSegment', false);
       assert.strictEqual(result.fragments[0].rawProgramDateTime, '2016-05-27T16:35:04Z');
-      assert.strictEqual(result.fragments[0].pdt, 1464366904000);
+      assert.strictEqual(result.fragments[0].programDateTime, 1464366904000);
     });
 
     it('ignores bad PDT values', function () {
@@ -780,7 +782,31 @@ frag1.ts
       const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
       assert.strictEqual(result.hasProgramDateTime, false);
       assert.strictEqual(result.fragments[0].rawProgramDateTime, null);
-      assert.strictEqual(result.fragments[0].pdt, null);
+      assert.strictEqual(result.fragments[0].programDateTime, null);
     });
+  });
+
+  it('tests : at end of tag name is used to divide custom tags', () => {
+    let level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:9.40,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719926.ts
+#EXTINF:9.56,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719927.ts
+#EXT-X-CUSTOM-DATE:2016-05-27T16:34:44Z
+#EXT-X-CUSTOM-JSON:{"key":"value"}
+#EXT-X-CUSTOM-URI:http://dummy.url.com/hls/moreinfo.json
+#EXTINF:10, no desc
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
+    `;
+    let result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    assert.strictEqual(result.fragments[2].tagList[0][0], 'EXT-X-CUSTOM-DATE');
+    assert.strictEqual(result.fragments[2].tagList[0][1], '2016-05-27T16:34:44Z');
+    assert.strictEqual(result.fragments[2].tagList[1][0], 'EXT-X-CUSTOM-JSON');
+    assert.strictEqual(result.fragments[2].tagList[1][1], '{"key":"value"}');
+    assert.strictEqual(result.fragments[2].tagList[2][0], 'EXT-X-CUSTOM-URI');
+    assert.strictEqual(result.fragments[2].tagList[2][1], 'http://dummy.url.com/hls/moreinfo.json');
   });
 });

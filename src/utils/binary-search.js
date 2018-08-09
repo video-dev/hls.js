@@ -25,12 +25,13 @@ let BinarySearch = {
       currentElement = list[currentIndex];
 
       let comparisonResult = comparisonFunction(currentElement);
-      if (comparisonResult > 0)
+      if (comparisonResult > 0) {
         minIndex = currentIndex + 1;
-      else if (comparisonResult < 0)
+      } else if (comparisonResult < 0) {
         maxIndex = currentIndex - 1;
-      else
+      } else {
         return currentElement;
+      }
     }
 
     return null;
