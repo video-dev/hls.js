@@ -78,6 +78,7 @@ class AudioTrackController extends TaskLoop {
   onManifestLoading () {
     this.tracks = [];
     this._trackId = -1;
+    this._selectDefaultTrack = true;
   }
 
   /**
