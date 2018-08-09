@@ -40,14 +40,14 @@ class AudioTrackController extends TaskLoop {
      * Currently selected index in `tracks`
      * @member {number} trackId
      */
-    this.trackId = -1;
+    this._trackId = -1;
 
     /**
      * @private
      * If should select tracks according to default track attribute
-     * @member {boolean} selectDefaultTrack
+     * @member {boolean} _selectDefaultTrack
      */
-    this.selectDefaultTrack = true;
+    this._selectDefaultTrack = true;
 
     /**
      * @public
@@ -77,7 +77,7 @@ class AudioTrackController extends TaskLoop {
    */
   onManifestLoading () {
     this.tracks = [];
-    this.trackId = -1;
+    this._trackId = -1;
   }
 
   /**
@@ -202,7 +202,7 @@ class AudioTrackController extends TaskLoop {
    * @type {number} Index into audio-tracks list of currently selected track.
    */
   get audioTrack () {
-    return this.trackId;
+    return this._trackId;
   }
 
   /**
@@ -211,7 +211,7 @@ class AudioTrackController extends TaskLoop {
   set audioTrack (newId) {
     this._setAudioTrack(newId);
     // If audio track is selected from API then don't choose from the manifest default track
-    this.selectDefaultTrack = false;
+    this._selectDefaultTrack = false;
   }
 
   /**
@@ -220,7 +220,7 @@ class AudioTrackController extends TaskLoop {
    */
   _setAudioTrack (newId) {
     // noop on same audio track id as already set
-    if (this.trackId === newId && this.tracks[this.trackId].details) {
+    if (this._trackId === newId && this.tracks[this._trackId].details) {
       logger.debug('Same id as current audio-track passed, and track details available -> no-op');
       return;
     }
@@ -237,7 +237,7 @@ class AudioTrackController extends TaskLoop {
 
     // stopping live reloading timer if any
     this.clearInterval();
-    this.trackId = newId;
+    this._trackId = newId;
 
     const { url, type, id } = audioTrack;
     this.hls.trigger(Event.AUDIO_TRACK_SWITCHING, { id, type, url });
@@ -248,7 +248,7 @@ class AudioTrackController extends TaskLoop {
    * @override
    */
   doTick () {
-    this._updateTrack(this.trackId);
+    this._updateTrack(this._trackId);
   }
 
   /**
@@ -261,7 +261,7 @@ class AudioTrackController extends TaskLoop {
       return;
     }
 
-    const currentAudioTrack = this.tracks[this.trackId];
+    const currentAudioTrack = this.tracks[this._trackId];
 
     let name = null;
     if (currentAudioTrack) {
@@ -269,7 +269,7 @@ class AudioTrackController extends TaskLoop {
     }
 
     // Pre-select default tracks if there are any
-    if (this.selectDefaultTrack) {
+    if (this._selectDefaultTrack) {
       const defaultTracks = tracks.filter((track) => track.default);
       if (defaultTracks.length) {
         tracks = defaultTracks;
@@ -356,7 +356,7 @@ class AudioTrackController extends TaskLoop {
 
     // stopping live reloading timer if any
     this.clearInterval();
-    this.trackId = newId;
+    this._trackId = newId;
     logger.log(`trying to update audio-track ${newId}`);
     const audioTrack = this.tracks[newId];
     this._loadTrackDetailsIfNeeded(audioTrack);
@@ -367,10 +367,10 @@ class AudioTrackController extends TaskLoop {
    */
   _handleLoadError () {
     // First, let's black list current track id
-    this.trackIdBlacklist[this.trackId] = true;
+    this.trackIdBlacklist[this._trackId] = true;
 
     // Let's try to fall back on a functional audio-track with the same group ID
-    const previousId = this.trackId;
+    const previousId = this._trackId;
     const { name, language, groupId } = this.tracks[previousId];
 
     logger.warn(`Loading failed on audio track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${language}"`);
