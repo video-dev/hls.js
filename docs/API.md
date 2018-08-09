@@ -150,8 +150,8 @@ Let's
 
   <video id="video"></video>
   <script>
-    var video = document.getElementById('video');
     if (Hls.isSupported()) {
+      var video = document.getElementById('video');
       var hls = new Hls();
       // bind them together
       hls.attachMedia(video);
@@ -560,7 +560,7 @@ When set, use this level as the default hls.startLevel. Keep in mind that the st
 
 ### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 
-(default: 20000ms for fragment / 10000ms for level and manifest)
+(default: 60000ms for fragment / 10000ms for level and manifest)
 
 URL Loader timeout.
 A timeout callback will be triggered if loading duration exceeds this timeout.
@@ -1103,18 +1103,12 @@ get : position of live sync point (ie edge of live position minus safety delay d
 
 ## Runtime Events
 
-Hls.js fires a bunch of events, that could be registered and unregistered as below:
+Hls.js fires a bunch of events, that could be registered as below:
 
 ```js
-function onLevelLoaded (event, data) {
+hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
   var level_duration = data.details.totalduration;
-}
-// subscribe event
-hls.on(Hls.Events.LEVEL_LOADED, onLevelLoaded);
-// unsubscribe event
-hls.off(Hls.Events.LEVEL_LOADED, onLevelLoaded);
-// subscribe for a single event call only
-hls.once(Hls.Events.LEVEL_LOADED, onLevelLoaded);
+});
 ```
 Full list of Events is available below:
 

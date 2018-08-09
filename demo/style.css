@@ -71,17 +71,3 @@ select option {
   font-weight: bolder;
   background-color: rgb(181, 222, 255)
 }
-
-#statusOut {
-  height: auto;
-  max-height: 4em;
-  overflow: auto;
-  /*overflow-y: none;*/
-}
-
-#errorOut {
-  height: auto;
-  max-height: 4em;
-  overflow: auto;
-  /*overflow-y: none;*/
-}

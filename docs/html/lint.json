@@ -1,136 +1,46 @@
 [
   {
-    "name": "AudioTrackController#onAudioTrackLoaded",
-    "filePath": "src/controller/audio-track-controller.js",
-    "lines": [
-      {
-        "lineNumber": 87,
-        "line": "  /**"
-      },
-      {
-        "lineNumber": 88,
-        "line": "   * Store track details of loaded track in our data-model."
-      },
-      {
-        "lineNumber": 89,
-        "line": "   *"
-      },
-      {
-        "lineNumber": 90,
-        "line": "   * Set-up metadata update interval task for live-mode streams."
-      },
-      {
-        "lineNumber": 91,
-        "line": "   *"
-      },
-      {
-        "lineNumber": 92,
-        "line": "   * @param {} data"
-      },
-      {
-        "lineNumber": 93,
-        "line": "   */"
-      },
-      {
-        "lineNumber": 94,
-        "line": "  onAudioTrackLoaded (data) {"
-      }
-    ],
-    "codeParams": [
-      "data"
-    ],
-    "docParams": []
-  },
-  {
-    "name": "fragmentWithinToleranceTest",
-    "filePath": "src/controller/fragment-finders.js",
-    "lines": [
-      {
-        "lineNumber": 83,
-        "line": "/**"
-      },
-      {
-        "lineNumber": 84,
-        "line": " * The test function used by the findFragmentBySn's BinarySearch to look for the best match to the current buffer conditions."
-      },
-      {
-        "lineNumber": 85,
-        "line": " * @param {*} candidate - The fragment to test"
-      },
-      {
-        "lineNumber": 86,
-        "line": " * @param {number} [bufferEnd = 0] - The end of the current buffered range the playhead is currently within"
-      },
-      {
-        "lineNumber": 87,
-        "line": " * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous"
-      },
-      {
-        "lineNumber": 88,
-        "line": " * @returns {number} - 0 if it matches, 1 if too low, -1 if too high"
-      },
-      {
-        "lineNumber": 89,
-        "line": " */"
-      },
-      {
-        "lineNumber": 90,
-        "line": "export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpTolerance = 0, candidate) {"
-      }
-    ],
-    "codeParams": [
-      "bufferEnd",
-      "maxFragLookUpTolerance",
-      "candidate"
-    ],
-    "docParams": [
-      "candidate",
-      "bufferEnd",
-      "maxFragLookUpTolerance"
-    ]
-  },
-  {
     "name": "ExpGolomb#readSPS",
     "filePath": "src/demux/exp-golomb.js",
     "lines": [
       {
-        "lineNumber": 162,
+        "lineNumber": 158,
         "line": "  /**"
       },
       {
-        "lineNumber": 163,
+        "lineNumber": 159,
         "line": "   * Read a sequence parameter set and return some interesting video"
       },
       {
-        "lineNumber": 164,
+        "lineNumber": 160,
         "line": "   * properties. A sequence parameter set is the H264 metadata that"
       },
       {
-        "lineNumber": 165,
+        "lineNumber": 161,
         "line": "   * describes the properties of upcoming video frames."
       },
       {
-        "lineNumber": 166,
+        "lineNumber": 162,
         "line": "   * @param data {Uint8Array} the bytes of a sequence parameter set"
       },
       {
-        "lineNumber": 167,
+        "lineNumber": 163,
         "line": "   * @return {object} an object with configuration parsed from the"
       },
       {
-        "lineNumber": 168,
+        "lineNumber": 164,
         "line": "   * sequence parameter set, including the dimensions of the"
       },
       {
-        "lineNumber": 169,
+        "lineNumber": 165,
         "line": "   * associated video frames."
       },
       {
-        "lineNumber": 170,
+        "lineNumber": 166,
         "line": "   */"
       },
       {
-        "lineNumber": 171,
+        "lineNumber": 167,
         "line": "  readSPS () {"
       }
     ],
@@ -144,83 +54,83 @@
     "filePath": "src/demux/mp4demuxer.js",
     "lines": [
       {
-        "lineNumber": 235,
+        "lineNumber": 226,
         "line": "  /**"
       },
       {
-        "lineNumber": 236,
+        "lineNumber": 227,
         "line": "   * Parses an MP4 initialization segment and extracts stream type and"
       },
       {
-        "lineNumber": 237,
+        "lineNumber": 228,
         "line": "   * timescale values for any declared tracks. Timescale values indicate the"
       },
       {
-        "lineNumber": 238,
+        "lineNumber": 229,
         "line": "   * number of clock ticks per second to assume for time-based values"
       },
       {
-        "lineNumber": 239,
+        "lineNumber": 230,
         "line": "   * elsewhere in the MP4."
       },
       {
-        "lineNumber": 240,
+        "lineNumber": 231,
         "line": "   *"
       },
       {
-        "lineNumber": 241,
+        "lineNumber": 232,
         "line": "   * To determine the start time of an MP4, you need two pieces of"
       },
       {
-        "lineNumber": 242,
+        "lineNumber": 233,
         "line": "   * information: the timescale unit and the earliest base media decode"
       },
       {
-        "lineNumber": 243,
+        "lineNumber": 234,
         "line": "   * time. Multiple timescales can be specified within an MP4 but the"
       },
       {
-        "lineNumber": 244,
+        "lineNumber": 235,
         "line": "   * base media decode time is always expressed in the timescale from"
       },
       {
-        "lineNumber": 245,
+        "lineNumber": 236,
         "line": "   * the media header box for the track:"
       },
       {
-        "lineNumber": 246,
+        "lineNumber": 237,
         "line": "   * ```"
       },
       {
-        "lineNumber": 247,
+        "lineNumber": 238,
         "line": "   * moov > trak > mdia > mdhd.timescale"
       },
       {
-        "lineNumber": 248,
+        "lineNumber": 239,
         "line": "   * moov > trak > mdia > hdlr"
       },
       {
-        "lineNumber": 249,
+        "lineNumber": 240,
         "line": "   * ```"
       },
       {
-        "lineNumber": 250,
+        "lineNumber": 241,
         "line": "   * @param init {Uint8Array} the bytes of the init segment"
       },
       {
-        "lineNumber": 251,
+        "lineNumber": 242,
         "line": "   * @return {object} a hash of track type to timescale values or null if"
       },
       {
-        "lineNumber": 252,
+        "lineNumber": 243,
         "line": "   * the init segment is malformed."
       },
       {
-        "lineNumber": 253,
+        "lineNumber": 244,
         "line": "   */"
       },
       {
-        "lineNumber": 254,
+        "lineNumber": 245,
         "line": "  static parseInitSegment (initSegment) {"
       }
     ],
@@ -236,71 +146,71 @@
     "filePath": "src/demux/mp4demuxer.js",
     "lines": [
       {
-        "lineNumber": 293,
+        "lineNumber": 284,
         "line": "  /**"
       },
       {
-        "lineNumber": 294,
+        "lineNumber": 285,
         "line": " * Determine the base media decode start time, in seconds, for an MP4"
       },
       {
-        "lineNumber": 295,
+        "lineNumber": 286,
         "line": " * fragment. If multiple fragments are specified, the earliest time is"
       },
       {
-        "lineNumber": 296,
+        "lineNumber": 287,
         "line": " * returned."
       },
       {
-        "lineNumber": 297,
+        "lineNumber": 288,
         "line": " *"
       },
       {
-        "lineNumber": 298,
+        "lineNumber": 289,
         "line": " * The base media decode time can be parsed from track fragment"
       },
       {
-        "lineNumber": 299,
+        "lineNumber": 290,
         "line": " * metadata:"
       },
       {
-        "lineNumber": 300,
+        "lineNumber": 291,
         "line": " * ```"
       },
       {
-        "lineNumber": 301,
+        "lineNumber": 292,
         "line": " * moof > traf > tfdt.baseMediaDecodeTime"
       },
       {
-        "lineNumber": 302,
+        "lineNumber": 293,
         "line": " * ```"
       },
       {
-        "lineNumber": 303,
+        "lineNumber": 294,
         "line": " * It requires the timescale value from the mdhd to interpret."
       },
       {
-        "lineNumber": 304,
+        "lineNumber": 295,
         "line": " *"
       },
       {
-        "lineNumber": 305,
+        "lineNumber": 296,
         "line": " * @param timescale {object} a hash of track ids to timescale values."
       },
       {
-        "lineNumber": 306,
+        "lineNumber": 297,
         "line": " * @return {number} the earliest base media decode start time for the"
       },
       {
-        "lineNumber": 307,
+        "lineNumber": 298,
         "line": " * fragment, in seconds"
       },
       {
-        "lineNumber": 308,
+        "lineNumber": 299,
         "line": " */"
       },
       {
-        "lineNumber": 309,
+        "lineNumber": 300,
         "line": "  static getStartDTS (initData, fragment) {"
       }
     ],
@@ -317,19 +227,19 @@
     "filePath": "src/remux/mp4-generator.js",
     "lines": [
       {
-        "lineNumber": 232,
+        "lineNumber": 229,
         "line": "  /**"
       },
       {
-        "lineNumber": 233,
+        "lineNumber": 230,
         "line": " * @param tracks... (optional) {array} the tracks associated with this movie"
       },
       {
-        "lineNumber": 234,
+        "lineNumber": 231,
         "line": " */"
       },
       {
-        "lineNumber": 235,
+        "lineNumber": 232,
         "line": "  static moov (tracks) {"
       }
     ],
@@ -337,5 +247,39 @@
       "tracks"
     ],
     "docParams": []
+  },
+  {
+    "name": "TaskLoop#tick",
+    "filePath": "src/task-loop.js",
+    "lines": [
+      {
+        "lineNumber": 49,
+        "line": "  /**"
+      },
+      {
+        "lineNumber": 50,
+        "line": "   *"
+      },
+      {
+        "lineNumber": 51,
+        "line": "   * @param {Wether to force async} forceAsync"
+      },
+      {
+        "lineNumber": 52,
+        "line": "   * @returns {boolean} True when async, false when sync"
+      },
+      {
+        "lineNumber": 53,
+        "line": "   */"
+      },
+      {
+        "lineNumber": 54,
+        "line": "  tick () {"
+      }
+    ],
+    "codeParams": [],
+    "docParams": [
+      "forceAsync"
+    ]
   }
 ]

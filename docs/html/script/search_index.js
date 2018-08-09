@@ -1,8 +1,8 @@
 window.esdocSearchIndex = [
   [
-    "hls.js/src/remux/aac-helper.js~aac",
-    "class/src/remux/aac-helper.js~AAC.html",
-    "<span>AAC</span> <span class=\"search-result-import-path\">hls.js/src/remux/aac-helper.js</span>",
+    "hls.js/src/helper/aac.js~aac",
+    "class/src/helper/aac.js~AAC.html",
+    "<span>AAC</span> <span class=\"search-result-import-path\">hls.js/src/helper/aac.js</span>",
     "class"
   ],
   [
@@ -60,10 +60,10 @@ window.esdocSearchIndex = [
     "class"
   ],
   [
-    "hls.js/src/utils/buffer-helper.js~bufferhelper",
-    "class/src/utils/buffer-helper.js~BufferHelper.html",
-    "<span>BufferHelper</span> <span class=\"search-result-import-path\">hls.js/src/utils/buffer-helper.js</span>",
-    "class"
+    "hls.js/src/helper/buffer-helper.js~bufferhelper",
+    "variable/index.html#static-variable-BufferHelper",
+    "<span>BufferHelper</span> <span class=\"search-result-import-path\">hls.js/src/helper/buffer-helper.js</span>",
+    "variable"
   ],
   [
     "hls.js/src/controller/cap-level-controller.js~caplevelcontroller",
@@ -174,15 +174,15 @@ window.esdocSearchIndex = [
     "class"
   ],
   [
-    "hls.js/src/controller/fragment-tracker.js~fragmentstate",
+    "hls.js/src/helper/fragment-tracker.js~fragmentstate",
     "variable/index.html#static-variable-FragmentState",
-    "<span>FragmentState</span> <span class=\"search-result-import-path\">hls.js/src/controller/fragment-tracker.js</span>",
+    "<span>FragmentState</span> <span class=\"search-result-import-path\">hls.js/src/helper/fragment-tracker.js</span>",
     "variable"
   ],
   [
-    "hls.js/src/controller/fragment-tracker.js~fragmenttracker",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html",
-    "<span>FragmentTracker</span> <span class=\"search-result-import-path\">hls.js/src/controller/fragment-tracker.js</span>",
+    "hls.js/src/helper/fragment-tracker.js~fragmenttracker",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html",
+    "<span>FragmentTracker</span> <span class=\"search-result-import-path\">hls.js/src/helper/fragment-tracker.js</span>",
     "class"
   ],
   [
@@ -360,12 +360,6 @@ window.esdocSearchIndex = [
     "class"
   ],
   [
-    "hls.js/src/controller/level-helper.js~addgroupid",
-    "function/index.html#static-function-addGroupId",
-    "<span>addGroupId</span> <span class=\"search-result-import-path\">hls.js/src/controller/level-helper.js</span>",
-    "function"
-  ],
-  [
     "hls.js/src/utils/discontinuities.js~adjustpts",
     "function/index.html#static-function-adjustPts",
     "<span>adjustPts</span> <span class=\"search-result-import-path\">hls.js/src/utils/discontinuities.js</span>",
@@ -381,12 +375,6 @@ window.esdocSearchIndex = [
     "hls.js/src/demux/adts.js~appendframe",
     "function/index.html#static-function-appendFrame",
     "<span>appendFrame</span> <span class=\"search-result-import-path\">hls.js/src/demux/adts.js</span>",
-    "function"
-  ],
-  [
-    "hls.js/src/controller/fragment-finders.js~calculatenextpdt",
-    "function/index.html#static-function-calculateNextPDT",
-    "<span>calculateNextPDT</span> <span class=\"search-result-import-path\">hls.js/src/controller/fragment-finders.js</span>",
     "function"
   ],
   [
@@ -420,27 +408,9 @@ window.esdocSearchIndex = [
     "function"
   ],
   [
-    "hls.js/src/controller/fragment-finders.js~findfragmentbypdt",
-    "function/index.html#static-function-findFragmentByPDT",
-    "<span>findFragmentByPDT</span> <span class=\"search-result-import-path\">hls.js/src/controller/fragment-finders.js</span>",
-    "function"
-  ],
-  [
-    "hls.js/src/controller/fragment-finders.js~findfragmentbysn",
-    "function/index.html#static-function-findFragmentBySN",
-    "<span>findFragmentBySN</span> <span class=\"search-result-import-path\">hls.js/src/controller/fragment-finders.js</span>",
-    "function"
-  ],
-  [
     "hls.js/src/utils/vttparser.js~fixlinebreaks",
     "function/index.html#static-function-fixLineBreaks",
     "<span>fixLineBreaks</span> <span class=\"search-result-import-path\">hls.js/src/utils/vttparser.js</span>",
-    "function"
-  ],
-  [
-    "hls.js/src/controller/fragment-finders.js~fragmentwithintolerancetest",
-    "function/index.html#static-function-fragmentWithinToleranceTest",
-    "<span>fragmentWithinToleranceTest</span> <span class=\"search-result-import-path\">hls.js/src/controller/fragment-finders.js</span>",
     "function"
   ],
   [
@@ -468,15 +438,9 @@ window.esdocSearchIndex = [
     "function"
   ],
   [
-    "hls.js/src/utils/mediasource-helper.js~getmediasource",
+    "hls.js/src/helper/mediasource-helper.js~getmediasource",
     "function/index.html#static-function-getMediaSource",
-    "<span>getMediaSource</span> <span class=\"search-result-import-path\">hls.js/src/utils/mediasource-helper.js</span>",
-    "function"
-  ],
-  [
-    "hls.js/src/utils/get-self-scope.js~getselfscope",
-    "function/index.html#static-function-getSelfScope",
-    "<span>getSelfScope</span> <span class=\"search-result-import-path\">hls.js/src/utils/get-self-scope.js</span>",
+    "<span>getMediaSource</span> <span class=\"search-result-import-path\">hls.js/src/helper/mediasource-helper.js</span>",
     "function"
   ],
   [
@@ -516,9 +480,9 @@ window.esdocSearchIndex = [
     "function"
   ],
   [
-    "hls.js/src/is-supported.js~issupported",
+    "hls.js/src/helper/is-supported.js~issupported",
     "function/index.html#static-function-isSupported",
-    "<span>isSupported</span> <span class=\"search-result-import-path\">hls.js/src/is-supported.js</span>",
+    "<span>isSupported</span> <span class=\"search-result-import-path\">hls.js/src/helper/is-supported.js</span>",
     "function"
   ],
   [
@@ -528,15 +492,9 @@ window.esdocSearchIndex = [
     "variable"
   ],
   [
-    "hls.js/src/utils/make-array-from-array-like.js~makearrayfromarraylike",
-    "variable/index.html#static-variable-makeArrayFromArrayLike",
-    "<span>makeArrayFromArrayLike</span> <span class=\"search-result-import-path\">hls.js/src/utils/make-array-from-array-like.js</span>",
-    "variable"
-  ],
-  [
-    "hls.js/src/controller/level-helper.js~mergedetails",
+    "hls.js/src/helper/level-helper.js~mergedetails",
     "function/index.html#static-function-mergeDetails",
-    "<span>mergeDetails</span> <span class=\"search-result-import-path\">hls.js/src/controller/level-helper.js</span>",
+    "<span>mergeDetails</span> <span class=\"search-result-import-path\">hls.js/src/helper/level-helper.js</span>",
     "function"
   ],
   [
@@ -564,9 +522,9 @@ window.esdocSearchIndex = [
     "function"
   ],
   [
-    "hls.js/src/utils/mediakeys-helper.js~requestmediakeysystemaccess",
+    "hls.js/src/helper/mediakeys-helper.js~requestmediakeysystemaccess",
     "variable/index.html#static-variable-requestMediaKeySystemAccess",
-    "<span>requestMediaKeySystemAccess</span> <span class=\"search-result-import-path\">hls.js/src/utils/mediakeys-helper.js</span>",
+    "<span>requestMediaKeySystemAccess</span> <span class=\"search-result-import-path\">hls.js/src/helper/mediakeys-helper.js</span>",
     "variable"
   ],
   [
@@ -582,15 +540,15 @@ window.esdocSearchIndex = [
     "function"
   ],
   [
-    "hls.js/src/controller/level-helper.js~updatefragptsdts",
+    "hls.js/src/helper/level-helper.js~updatefragptsdts",
     "function/index.html#static-function-updateFragPTSDTS",
-    "<span>updateFragPTSDTS</span> <span class=\"search-result-import-path\">hls.js/src/controller/level-helper.js</span>",
+    "<span>updateFragPTSDTS</span> <span class=\"search-result-import-path\">hls.js/src/helper/level-helper.js</span>",
     "function"
   ],
   [
-    "hls.js/src/controller/level-helper.js~updatepts",
+    "hls.js/src/helper/level-helper.js~updatepts",
     "function/index.html#static-function-updatePTS",
-    "<span>updatePTS</span> <span class=\"search-result-import-path\">hls.js/src/controller/level-helper.js</span>",
+    "<span>updatePTS</span> <span class=\"search-result-import-path\">hls.js/src/helper/level-helper.js</span>",
     "function"
   ],
   [
@@ -1356,42 +1314,6 @@ window.esdocSearchIndex = [
     "file"
   ],
   [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#_handleloaderror",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-_handleLoadError",
-    "src/controller/audio-track-controller.js~AudioTrackController#_handleLoadError",
-    "method"
-  ],
-  [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#_loadtrackdetailsifneeded",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-_loadTrackDetailsIfNeeded",
-    "src/controller/audio-track-controller.js~AudioTrackController#_loadTrackDetailsIfNeeded",
-    "method"
-  ],
-  [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#_needstrackloading",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-_needsTrackLoading",
-    "src/controller/audio-track-controller.js~AudioTrackController#_needsTrackLoading",
-    "method"
-  ],
-  [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#_selectinitialaudiotrack",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-_selectInitialAudioTrack",
-    "src/controller/audio-track-controller.js~AudioTrackController#_selectInitialAudioTrack",
-    "method"
-  ],
-  [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#_updatetrack",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-_updateTrack",
-    "src/controller/audio-track-controller.js~AudioTrackController#_updateTrack",
-    "method"
-  ],
-  [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#audiogroupid",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-member-audioGroupId",
-    "src/controller/audio-track-controller.js~AudioTrackController#audioGroupId",
-    "member"
-  ],
-  [
     "src/controller/audio-track-controller.js~audiotrackcontroller#audiotrack",
     "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-get-audioTrack",
     "src/controller/audio-track-controller.js~AudioTrackController#audioTrack",
@@ -1410,9 +1332,21 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
+    "src/controller/audio-track-controller.js~audiotrackcontroller#cleantimer",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-cleanTimer",
+    "src/controller/audio-track-controller.js~AudioTrackController#cleanTimer",
+    "method"
+  ],
+  [
     "src/controller/audio-track-controller.js~audiotrackcontroller#constructor",
     "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-constructor-constructor",
     "src/controller/audio-track-controller.js~AudioTrackController#constructor",
+    "method"
+  ],
+  [
+    "src/controller/audio-track-controller.js~audiotrackcontroller#destroy",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-destroy",
+    "src/controller/audio-track-controller.js~AudioTrackController#destroy",
     "method"
   ],
   [
@@ -1428,21 +1362,9 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#onaudiotrackswitched",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-onAudioTrackSwitched",
-    "src/controller/audio-track-controller.js~AudioTrackController#onAudioTrackSwitched",
-    "method"
-  ],
-  [
     "src/controller/audio-track-controller.js~audiotrackcontroller#onerror",
     "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-onError",
     "src/controller/audio-track-controller.js~AudioTrackController#onError",
-    "method"
-  ],
-  [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#onlevelloaded",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-onLevelLoaded",
-    "src/controller/audio-track-controller.js~AudioTrackController#onLevelLoaded",
     "method"
   ],
   [
@@ -1458,15 +1380,39 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#trackid",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-member-trackId",
-    "src/controller/audio-track-controller.js~AudioTrackController#trackId",
+    "src/controller/audio-track-controller.js~audiotrackcontroller#ontick",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-member-ontick",
+    "src/controller/audio-track-controller.js~AudioTrackController#ontick",
     "member"
   ],
   [
-    "src/controller/audio-track-controller.js~audiotrackcontroller#trackidblacklist",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-member-trackIdBlacklist",
-    "src/controller/audio-track-controller.js~AudioTrackController#trackIdBlacklist",
+    "src/controller/audio-track-controller.js~audiotrackcontroller#setaudiotrackinternal",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-setAudioTrackInternal",
+    "src/controller/audio-track-controller.js~AudioTrackController#setAudioTrackInternal",
+    "method"
+  ],
+  [
+    "src/controller/audio-track-controller.js~audiotrackcontroller#tick",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-tick",
+    "src/controller/audio-track-controller.js~AudioTrackController#tick",
+    "method"
+  ],
+  [
+    "src/controller/audio-track-controller.js~audiotrackcontroller#ticks",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-member-ticks",
+    "src/controller/audio-track-controller.js~AudioTrackController#ticks",
+    "member"
+  ],
+  [
+    "src/controller/audio-track-controller.js~audiotrackcontroller#timer",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-member-timer",
+    "src/controller/audio-track-controller.js~AudioTrackController#timer",
+    "member"
+  ],
+  [
+    "src/controller/audio-track-controller.js~audiotrackcontroller#trackid",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-member-trackId",
+    "src/controller/audio-track-controller.js~AudioTrackController#trackId",
     "member"
   ],
   [
@@ -1474,6 +1420,12 @@ window.esdocSearchIndex = [
     "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-member-tracks",
     "src/controller/audio-track-controller.js~AudioTrackController#tracks",
     "member"
+  ],
+  [
+    "src/controller/audio-track-controller.js~audiotrackcontroller#updatetrack",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-method-updateTrack",
+    "src/controller/audio-track-controller.js~AudioTrackController#updateTrack",
+    "method"
   ],
   [
     "src/controller/buffer-controller.js",
@@ -1788,18 +1740,6 @@ window.esdocSearchIndex = [
     "file"
   ],
   [
-    "src/controller/cap-level-controller.js~caplevelcontroller#_startcapping",
-    "class/src/controller/cap-level-controller.js~CapLevelController.html#instance-method-_startCapping",
-    "src/controller/cap-level-controller.js~CapLevelController#_startCapping",
-    "method"
-  ],
-  [
-    "src/controller/cap-level-controller.js~caplevelcontroller#_stopcapping",
-    "class/src/controller/cap-level-controller.js~CapLevelController.html#instance-method-_stopCapping",
-    "src/controller/cap-level-controller.js~CapLevelController#_stopCapping",
-    "method"
-  ],
-  [
     "src/controller/cap-level-controller.js~caplevelcontroller#autolevelcapping",
     "class/src/controller/cap-level-controller.js~CapLevelController.html#instance-member-autoLevelCapping",
     "src/controller/cap-level-controller.js~CapLevelController#autoLevelCapping",
@@ -1822,12 +1762,6 @@ window.esdocSearchIndex = [
     "class/src/controller/cap-level-controller.js~CapLevelController.html#instance-method-detectPlayerSize",
     "src/controller/cap-level-controller.js~CapLevelController#detectPlayerSize",
     "method"
-  ],
-  [
-    "src/controller/cap-level-controller.js~caplevelcontroller#firstlevel",
-    "class/src/controller/cap-level-controller.js~CapLevelController.html#instance-member-firstLevel",
-    "src/controller/cap-level-controller.js~CapLevelController#firstLevel",
-    "member"
   ],
   [
     "src/controller/cap-level-controller.js~caplevelcontroller#getmaxlevel",
@@ -1860,21 +1794,9 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
-    "src/controller/cap-level-controller.js~caplevelcontroller#onbuffercodecs",
-    "class/src/controller/cap-level-controller.js~CapLevelController.html#instance-method-onBufferCodecs",
-    "src/controller/cap-level-controller.js~CapLevelController#onBufferCodecs",
-    "method"
-  ],
-  [
     "src/controller/cap-level-controller.js~caplevelcontroller#onfpsdroplevelcapping",
     "class/src/controller/cap-level-controller.js~CapLevelController.html#instance-method-onFpsDropLevelCapping",
     "src/controller/cap-level-controller.js~CapLevelController#onFpsDropLevelCapping",
-    "method"
-  ],
-  [
-    "src/controller/cap-level-controller.js~caplevelcontroller#onlevelsupdated",
-    "class/src/controller/cap-level-controller.js~CapLevelController.html#instance-method-onLevelsUpdated",
-    "src/controller/cap-level-controller.js~CapLevelController#onLevelsUpdated",
     "method"
   ],
   [
@@ -2160,144 +2082,6 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
-    "src/controller/fragment-finders.js",
-    "file/src/controller/fragment-finders.js.html",
-    "src/controller/fragment-finders.js",
-    "file"
-  ],
-  [
-    "src/controller/fragment-tracker.js",
-    "file/src/controller/fragment-tracker.js.html",
-    "src/controller/fragment-tracker.js",
-    "file"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#bufferpadding",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-member-bufferPadding",
-    "src/controller/fragment-tracker.js~FragmentTracker#bufferPadding",
-    "member"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#config",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-member-config",
-    "src/controller/fragment-tracker.js~FragmentTracker#config",
-    "member"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#constructor",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-constructor-constructor",
-    "src/controller/fragment-tracker.js~FragmentTracker#constructor",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#destroy",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-destroy",
-    "src/controller/fragment-tracker.js~FragmentTracker#destroy",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#detectevictedfragments",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-detectEvictedFragments",
-    "src/controller/fragment-tracker.js~FragmentTracker#detectEvictedFragments",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#detectpartialfragments",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-detectPartialFragments",
-    "src/controller/fragment-tracker.js~FragmentTracker#detectPartialFragments",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#fragments",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-member-fragments",
-    "src/controller/fragment-tracker.js~FragmentTracker#fragments",
-    "member"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#getbufferedfrag",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-getBufferedFrag",
-    "src/controller/fragment-tracker.js~FragmentTracker#getBufferedFrag",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#getbufferedtimes",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-getBufferedTimes",
-    "src/controller/fragment-tracker.js~FragmentTracker#getBufferedTimes",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#getfragmentkey",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-getFragmentKey",
-    "src/controller/fragment-tracker.js~FragmentTracker#getFragmentKey",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#getpartialfragment",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-getPartialFragment",
-    "src/controller/fragment-tracker.js~FragmentTracker#getPartialFragment",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#getstate",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-getState",
-    "src/controller/fragment-tracker.js~FragmentTracker#getState",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#hasfragment",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-hasFragment",
-    "src/controller/fragment-tracker.js~FragmentTracker#hasFragment",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#ispartial",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-isPartial",
-    "src/controller/fragment-tracker.js~FragmentTracker#isPartial",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#istimebuffered",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-isTimeBuffered",
-    "src/controller/fragment-tracker.js~FragmentTracker#isTimeBuffered",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#onbufferappended",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-onBufferAppended",
-    "src/controller/fragment-tracker.js~FragmentTracker#onBufferAppended",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#onfragbuffered",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-onFragBuffered",
-    "src/controller/fragment-tracker.js~FragmentTracker#onFragBuffered",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#onfragloaded",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-onFragLoaded",
-    "src/controller/fragment-tracker.js~FragmentTracker#onFragLoaded",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#removeallfragments",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-removeAllFragments",
-    "src/controller/fragment-tracker.js~FragmentTracker#removeAllFragments",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#removefragment",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-method-removeFragment",
-    "src/controller/fragment-tracker.js~FragmentTracker#removeFragment",
-    "method"
-  ],
-  [
-    "src/controller/fragment-tracker.js~fragmenttracker#timeranges",
-    "class/src/controller/fragment-tracker.js~FragmentTracker.html#instance-member-timeRanges",
-    "src/controller/fragment-tracker.js~FragmentTracker#timeRanges",
-    "member"
-  ],
-  [
     "src/controller/id3-track-controller.js",
     "file/src/controller/id3-track-controller.js.html",
     "src/controller/id3-track-controller.js",
@@ -2382,9 +2166,9 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
-    "src/controller/level-controller.js~levelcontroller#cleartimer",
-    "class/src/controller/level-controller.js~LevelController.html#instance-method-clearTimer",
-    "src/controller/level-controller.js~LevelController#clearTimer",
+    "src/controller/level-controller.js~levelcontroller#cleantimer",
+    "class/src/controller/level-controller.js~LevelController.html#instance-method-cleanTimer",
+    "src/controller/level-controller.js~LevelController#cleanTimer",
     "method"
   ],
   [
@@ -2413,13 +2197,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#level",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-level",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-level",
     "src/controller/level-controller.js~LevelController#level",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#level",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-level",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-level",
     "src/controller/level-controller.js~LevelController#level",
     "member"
   ],
@@ -2443,13 +2227,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#manuallevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-manualLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-manualLevel",
     "src/controller/level-controller.js~LevelController#manualLevel",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#manuallevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-manualLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-manualLevel",
     "src/controller/level-controller.js~LevelController#manualLevel",
     "member"
   ],
@@ -2470,12 +2254,6 @@ window.esdocSearchIndex = [
     "class/src/controller/level-controller.js~LevelController.html#instance-set-nextLoadLevel",
     "src/controller/level-controller.js~LevelController#nextLoadLevel",
     "member"
-  ],
-  [
-    "src/controller/level-controller.js~levelcontroller#onaudiotrackswitched",
-    "class/src/controller/level-controller.js~LevelController.html#instance-method-onAudioTrackSwitched",
-    "src/controller/level-controller.js~LevelController#onAudioTrackSwitched",
-    "method"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#onerror",
@@ -2550,12 +2328,6 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
-    "src/controller/level-helper.js",
-    "file/src/controller/level-helper.js.html",
-    "src/controller/level-helper.js",
-    "file"
-  ],
-  [
     "src/controller/stream-controller.js",
     "file/src/controller/stream-controller.js.html",
     "src/controller/stream-controller.js",
@@ -2604,21 +2376,27 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
+    "src/controller/stream-controller.js~streamcontroller#_findfragmentbypdt",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_findFragmentByPDT",
+    "src/controller/stream-controller.js~StreamController#_findFragmentByPDT",
+    "method"
+  ],
+  [
+    "src/controller/stream-controller.js~streamcontroller#_findfragmentbysn",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_findFragmentBySN",
+    "src/controller/stream-controller.js~StreamController#_findFragmentBySN",
+    "method"
+  ],
+  [
     "src/controller/stream-controller.js~streamcontroller#_livesyncposition",
     "class/src/controller/stream-controller.js~StreamController.html#instance-member-_liveSyncPosition",
     "src/controller/stream-controller.js~StreamController#_liveSyncPosition",
     "member"
   ],
   [
-    "src/controller/stream-controller.js~streamcontroller#_loadfragment",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_loadFragment",
-    "src/controller/stream-controller.js~StreamController#_loadFragment",
-    "method"
-  ],
-  [
-    "src/controller/stream-controller.js~streamcontroller#_loadkey",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_loadKey",
-    "src/controller/stream-controller.js~StreamController#_loadKey",
+    "src/controller/stream-controller.js~streamcontroller#_loadfragmentorkey",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_loadFragmentOrKey",
+    "src/controller/stream-controller.js~StreamController#_loadFragmentOrKey",
     "method"
   ],
   [
@@ -2628,40 +2406,10 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/controller/stream-controller.js~streamcontroller#_reportstall",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_reportStall",
-    "src/controller/stream-controller.js~StreamController#_reportStall",
-    "method"
-  ],
-  [
-    "src/controller/stream-controller.js~streamcontroller#_seektostartpos",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_seekToStartPos",
-    "src/controller/stream-controller.js~StreamController#_seekToStartPos",
-    "method"
-  ],
-  [
     "src/controller/stream-controller.js~streamcontroller#_state",
     "class/src/controller/stream-controller.js~StreamController.html#instance-member-_state",
     "src/controller/stream-controller.js~StreamController#_state",
     "member"
-  ],
-  [
-    "src/controller/stream-controller.js~streamcontroller#_tryfixbufferstall",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_tryFixBufferStall",
-    "src/controller/stream-controller.js~StreamController#_tryFixBufferStall",
-    "method"
-  ],
-  [
-    "src/controller/stream-controller.js~streamcontroller#_trynudgebuffer",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_tryNudgeBuffer",
-    "src/controller/stream-controller.js~StreamController#_tryNudgeBuffer",
-    "method"
-  ],
-  [
-    "src/controller/stream-controller.js~streamcontroller#_tryskipbufferhole",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-method-_trySkipBufferHole",
-    "src/controller/stream-controller.js~StreamController#_trySkipBufferHole",
-    "method"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#altaudio",
@@ -3091,13 +2839,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#state",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-set-state",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-get-state",
     "src/controller/stream-controller.js~StreamController#state",
     "member"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#state",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-get-state",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-set-state",
     "src/controller/stream-controller.js~StreamController#state",
     "member"
   ],
@@ -3276,18 +3024,6 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/controller/subtitle-track-controller.js~subtitletrackcontroller#_stoptimer",
-    "class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html#instance-method-_stopTimer",
-    "src/controller/subtitle-track-controller.js~SubtitleTrackController#_stopTimer",
-    "method"
-  ],
-  [
-    "src/controller/subtitle-track-controller.js~subtitletrackcontroller#_toggletrackmodes",
-    "class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html#instance-method-_toggleTrackModes",
-    "src/controller/subtitle-track-controller.js~SubtitleTrackController#_toggleTrackModes",
-    "method"
-  ],
-  [
     "src/controller/subtitle-track-controller.js~subtitletrackcontroller#constructor",
     "class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html#instance-constructor-constructor",
     "src/controller/subtitle-track-controller.js~SubtitleTrackController#constructor",
@@ -3426,6 +3162,12 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
+    "src/controller/timeline-controller.js~timelinecontroller#[trackvar]",
+    "class/src/controller/timeline-controller.js~TimelineController.html#instance-member-[trackVar]",
+    "src/controller/timeline-controller.js~TimelineController#[trackVar]",
+    "member"
+  ],
+  [
     "src/controller/timeline-controller.js~timelinecontroller#_cleantracks",
     "class/src/controller/timeline-controller.js~TimelineController.html#instance-method-_cleanTracks",
     "src/controller/timeline-controller.js~TimelineController#_cleanTracks",
@@ -3442,18 +3184,6 @@ window.esdocSearchIndex = [
     "class/src/controller/timeline-controller.js~TimelineController.html#instance-method-addCues",
     "src/controller/timeline-controller.js~TimelineController#addCues",
     "method"
-  ],
-  [
-    "src/controller/timeline-controller.js~timelinecontroller#captionsproperties",
-    "class/src/controller/timeline-controller.js~TimelineController.html#instance-member-captionsProperties",
-    "src/controller/timeline-controller.js~TimelineController#captionsProperties",
-    "member"
-  ],
-  [
-    "src/controller/timeline-controller.js~timelinecontroller#captionstracks",
-    "class/src/controller/timeline-controller.js~TimelineController.html#instance-member-captionsTracks",
-    "src/controller/timeline-controller.js~TimelineController#captionsTracks",
-    "member"
   ],
   [
     "src/controller/timeline-controller.js~timelinecontroller#cea608parser",
@@ -4944,6 +4674,180 @@ window.esdocSearchIndex = [
     "file"
   ],
   [
+    "src/helper/aac.js",
+    "file/src/helper/aac.js.html",
+    "src/helper/aac.js",
+    "file"
+  ],
+  [
+    "src/helper/aac.js~aac.getsilentframe",
+    "class/src/helper/aac.js~AAC.html#static-method-getSilentFrame",
+    "src/helper/aac.js~AAC.getSilentFrame",
+    "method"
+  ],
+  [
+    "src/helper/buffer-helper.js",
+    "file/src/helper/buffer-helper.js.html",
+    "src/helper/buffer-helper.js",
+    "file"
+  ],
+  [
+    "src/helper/fragment-tracker.js",
+    "file/src/helper/fragment-tracker.js.html",
+    "src/helper/fragment-tracker.js",
+    "file"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#bufferpadding",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-member-bufferPadding",
+    "src/helper/fragment-tracker.js~FragmentTracker#bufferPadding",
+    "member"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#config",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-member-config",
+    "src/helper/fragment-tracker.js~FragmentTracker#config",
+    "member"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#constructor",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-constructor-constructor",
+    "src/helper/fragment-tracker.js~FragmentTracker#constructor",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#destroy",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-destroy",
+    "src/helper/fragment-tracker.js~FragmentTracker#destroy",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#detectevictedfragments",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-detectEvictedFragments",
+    "src/helper/fragment-tracker.js~FragmentTracker#detectEvictedFragments",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#detectpartialfragments",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-detectPartialFragments",
+    "src/helper/fragment-tracker.js~FragmentTracker#detectPartialFragments",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#fragments",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-member-fragments",
+    "src/helper/fragment-tracker.js~FragmentTracker#fragments",
+    "member"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#getbufferedfrag",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getBufferedFrag",
+    "src/helper/fragment-tracker.js~FragmentTracker#getBufferedFrag",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#getbufferedtimes",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getBufferedTimes",
+    "src/helper/fragment-tracker.js~FragmentTracker#getBufferedTimes",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#getfragmentkey",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getFragmentKey",
+    "src/helper/fragment-tracker.js~FragmentTracker#getFragmentKey",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#getpartialfragment",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getPartialFragment",
+    "src/helper/fragment-tracker.js~FragmentTracker#getPartialFragment",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#getstate",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-getState",
+    "src/helper/fragment-tracker.js~FragmentTracker#getState",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#hasfragment",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-hasFragment",
+    "src/helper/fragment-tracker.js~FragmentTracker#hasFragment",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#ispartial",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-isPartial",
+    "src/helper/fragment-tracker.js~FragmentTracker#isPartial",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#istimebuffered",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-isTimeBuffered",
+    "src/helper/fragment-tracker.js~FragmentTracker#isTimeBuffered",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#onbufferappended",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-onBufferAppended",
+    "src/helper/fragment-tracker.js~FragmentTracker#onBufferAppended",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#onfragbuffered",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-onFragBuffered",
+    "src/helper/fragment-tracker.js~FragmentTracker#onFragBuffered",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#onfragloaded",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-onFragLoaded",
+    "src/helper/fragment-tracker.js~FragmentTracker#onFragLoaded",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#removeallfragments",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-removeAllFragments",
+    "src/helper/fragment-tracker.js~FragmentTracker#removeAllFragments",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#removefragment",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-method-removeFragment",
+    "src/helper/fragment-tracker.js~FragmentTracker#removeFragment",
+    "method"
+  ],
+  [
+    "src/helper/fragment-tracker.js~fragmenttracker#timeranges",
+    "class/src/helper/fragment-tracker.js~FragmentTracker.html#instance-member-timeRanges",
+    "src/helper/fragment-tracker.js~FragmentTracker#timeRanges",
+    "member"
+  ],
+  [
+    "src/helper/is-supported.js",
+    "file/src/helper/is-supported.js.html",
+    "src/helper/is-supported.js",
+    "file"
+  ],
+  [
+    "src/helper/level-helper.js",
+    "file/src/helper/level-helper.js.html",
+    "src/helper/level-helper.js",
+    "file"
+  ],
+  [
+    "src/helper/mediakeys-helper.js",
+    "file/src/helper/mediakeys-helper.js.html",
+    "src/helper/mediakeys-helper.js",
+    "file"
+  ],
+  [
+    "src/helper/mediasource-helper.js",
+    "file/src/helper/mediasource-helper.js.html",
+    "src/helper/mediasource-helper.js",
+    "file"
+  ],
+  [
     "src/hls.js",
     "file/src/hls.js.html",
     "src/hls.js",
@@ -4987,13 +4891,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#autolevelcapping",
-    "class/src/hls.js~Hls.html#instance-get-autoLevelCapping",
+    "class/src/hls.js~Hls.html#instance-set-autoLevelCapping",
     "src/hls.js~Hls#autoLevelCapping",
     "member"
   ],
   [
     "src/hls.js~hls#autolevelcapping",
-    "class/src/hls.js~Hls.html#instance-set-autoLevelCapping",
+    "class/src/hls.js~Hls.html#instance-get-autoLevelCapping",
     "src/hls.js~Hls#autoLevelCapping",
     "member"
   ],
@@ -5053,13 +4957,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#firstlevel",
-    "class/src/hls.js~Hls.html#instance-set-firstLevel",
+    "class/src/hls.js~Hls.html#instance-get-firstLevel",
     "src/hls.js~Hls#firstLevel",
     "member"
   ],
   [
     "src/hls.js~hls#firstlevel",
-    "class/src/hls.js~Hls.html#instance-get-firstLevel",
+    "class/src/hls.js~Hls.html#instance-set-firstLevel",
     "src/hls.js~Hls#firstLevel",
     "member"
   ],
@@ -5125,20 +5029,14 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#nextautolevel",
-    "class/src/hls.js~Hls.html#instance-get-nextAutoLevel",
-    "src/hls.js~Hls#nextAutoLevel",
-    "member"
-  ],
-  [
-    "src/hls.js~hls#nextautolevel",
     "class/src/hls.js~Hls.html#instance-set-nextAutoLevel",
     "src/hls.js~Hls#nextAutoLevel",
     "member"
   ],
   [
-    "src/hls.js~hls#nextlevel",
-    "class/src/hls.js~Hls.html#instance-set-nextLevel",
-    "src/hls.js~Hls#nextLevel",
+    "src/hls.js~hls#nextautolevel",
+    "class/src/hls.js~Hls.html#instance-get-nextAutoLevel",
+    "src/hls.js~Hls#nextAutoLevel",
     "member"
   ],
   [
@@ -5148,14 +5046,20 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
-    "src/hls.js~hls#nextloadlevel",
-    "class/src/hls.js~Hls.html#instance-get-nextLoadLevel",
-    "src/hls.js~Hls#nextLoadLevel",
+    "src/hls.js~hls#nextlevel",
+    "class/src/hls.js~Hls.html#instance-set-nextLevel",
+    "src/hls.js~Hls#nextLevel",
     "member"
   ],
   [
     "src/hls.js~hls#nextloadlevel",
     "class/src/hls.js~Hls.html#instance-set-nextLoadLevel",
+    "src/hls.js~Hls#nextLoadLevel",
+    "member"
+  ],
+  [
+    "src/hls.js~hls#nextloadlevel",
+    "class/src/hls.js~Hls.html#instance-get-nextLoadLevel",
     "src/hls.js~Hls#nextLoadLevel",
     "member"
   ],
@@ -5172,12 +5076,6 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
-    "src/hls.js~hls#once",
-    "class/src/hls.js~Hls.html#instance-member-once",
-    "src/hls.js~Hls#once",
-    "member"
-  ],
-  [
     "src/hls.js~hls#recovermediaerror",
     "class/src/hls.js~Hls.html#instance-method-recoverMediaError",
     "src/hls.js~Hls#recoverMediaError",
@@ -5185,13 +5083,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#startlevel",
-    "class/src/hls.js~Hls.html#instance-get-startLevel",
+    "class/src/hls.js~Hls.html#instance-set-startLevel",
     "src/hls.js~Hls#startLevel",
     "member"
   ],
   [
     "src/hls.js~hls#startlevel",
-    "class/src/hls.js~Hls.html#instance-set-startLevel",
+    "class/src/hls.js~Hls.html#instance-get-startLevel",
     "src/hls.js~Hls#startLevel",
     "member"
   ],
@@ -5221,13 +5119,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#subtitletrack",
-    "class/src/hls.js~Hls.html#instance-set-subtitleTrack",
+    "class/src/hls.js~Hls.html#instance-get-subtitleTrack",
     "src/hls.js~Hls#subtitleTrack",
     "member"
   ],
   [
     "src/hls.js~hls#subtitletrack",
-    "class/src/hls.js~Hls.html#instance-get-subtitleTrack",
+    "class/src/hls.js~Hls.html#instance-set-subtitleTrack",
     "src/hls.js~Hls#subtitleTrack",
     "member"
   ],
@@ -5263,13 +5161,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls.defaultconfig",
-    "class/src/hls.js~Hls.html#static-set-DefaultConfig",
+    "class/src/hls.js~Hls.html#static-get-DefaultConfig",
     "src/hls.js~Hls.DefaultConfig",
     "member"
   ],
   [
     "src/hls.js~hls.defaultconfig",
-    "class/src/hls.js~Hls.html#static-get-DefaultConfig",
+    "class/src/hls.js~Hls.html#static-set-DefaultConfig",
     "src/hls.js~Hls.DefaultConfig",
     "member"
   ],
@@ -5302,12 +5200,6 @@ window.esdocSearchIndex = [
     "class/src/hls.js~Hls.html#static-get-version",
     "src/hls.js~Hls.version",
     "member"
-  ],
-  [
-    "src/is-supported.js",
-    "file/src/is-supported.js.html",
-    "src/is-supported.js",
-    "file"
   ],
   [
     "src/loader/fragment-loader.js",
@@ -5439,12 +5331,6 @@ window.esdocSearchIndex = [
     "src/loader/fragment.js~fragment#decryptdata",
     "class/src/loader/fragment.js~Fragment.html#instance-get-decryptdata",
     "src/loader/fragment.js~Fragment#decryptdata",
-    "member"
-  ],
-  [
-    "src/loader/fragment.js~fragment#encrypted",
-    "class/src/loader/fragment.js~Fragment.html#instance-get-encrypted",
-    "src/loader/fragment.js~Fragment#encrypted",
     "member"
   ],
   [
@@ -5793,18 +5679,6 @@ window.esdocSearchIndex = [
     "src/loader/playlist-loader.js~playlistloader.mapcontexttoleveltype",
     "class/src/loader/playlist-loader.js~PlaylistLoader.html#static-method-mapContextToLevelType",
     "src/loader/playlist-loader.js~PlaylistLoader.mapContextToLevelType",
-    "method"
-  ],
-  [
-    "src/remux/aac-helper.js",
-    "file/src/remux/aac-helper.js.html",
-    "src/remux/aac-helper.js",
-    "file"
-  ],
-  [
-    "src/remux/aac-helper.js~aac.getsilentframe",
-    "class/src/remux/aac-helper.js~AAC.html#static-method-getSilentFrame",
-    "src/remux/aac-helper.js~AAC.getSilentFrame",
     "method"
   ],
   [
@@ -6210,12 +6084,6 @@ window.esdocSearchIndex = [
     "file"
   ],
   [
-    "src/task-loop.js~taskloop#_boundtick",
-    "class/src/task-loop.js~TaskLoop.html#instance-member-_boundTick",
-    "src/task-loop.js~TaskLoop#_boundTick",
-    "member"
-  ],
-  [
     "src/task-loop.js~taskloop#_tickcallcount",
     "class/src/task-loop.js~TaskLoop.html#instance-member-_tickCallCount",
     "src/task-loop.js~TaskLoop#_tickCallCount",
@@ -6228,27 +6096,21 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
-    "src/task-loop.js~taskloop#_ticktimer",
-    "class/src/task-loop.js~TaskLoop.html#instance-member-_tickTimer",
-    "src/task-loop.js~TaskLoop#_tickTimer",
-    "member"
-  ],
-  [
     "src/task-loop.js~taskloop#clearinterval",
     "class/src/task-loop.js~TaskLoop.html#instance-method-clearInterval",
     "src/task-loop.js~TaskLoop#clearInterval",
     "method"
   ],
   [
-    "src/task-loop.js~taskloop#clearnexttick",
-    "class/src/task-loop.js~TaskLoop.html#instance-method-clearNextTick",
-    "src/task-loop.js~TaskLoop#clearNextTick",
-    "method"
-  ],
-  [
     "src/task-loop.js~taskloop#constructor",
     "class/src/task-loop.js~TaskLoop.html#instance-constructor-constructor",
     "src/task-loop.js~TaskLoop#constructor",
+    "method"
+  ],
+  [
+    "src/task-loop.js~taskloop#destroy",
+    "class/src/task-loop.js~TaskLoop.html#instance-method-destroy",
+    "src/task-loop.js~TaskLoop#destroy",
     "method"
   ],
   [
@@ -6261,18 +6123,6 @@ window.esdocSearchIndex = [
     "src/task-loop.js~taskloop#hasinterval",
     "class/src/task-loop.js~TaskLoop.html#instance-method-hasInterval",
     "src/task-loop.js~TaskLoop#hasInterval",
-    "method"
-  ],
-  [
-    "src/task-loop.js~taskloop#hasnexttick",
-    "class/src/task-loop.js~TaskLoop.html#instance-method-hasNextTick",
-    "src/task-loop.js~TaskLoop#hasNextTick",
-    "method"
-  ],
-  [
-    "src/task-loop.js~taskloop#onhandlerdestroying",
-    "class/src/task-loop.js~TaskLoop.html#instance-method-onHandlerDestroying",
-    "src/task-loop.js~TaskLoop#onHandlerDestroying",
     "method"
   ],
   [
@@ -6352,30 +6202,6 @@ window.esdocSearchIndex = [
     "file/src/utils/binary-search.js.html",
     "src/utils/binary-search.js",
     "file"
-  ],
-  [
-    "src/utils/buffer-helper.js",
-    "file/src/utils/buffer-helper.js.html",
-    "src/utils/buffer-helper.js",
-    "file"
-  ],
-  [
-    "src/utils/buffer-helper.js~bufferhelper.bufferinfo",
-    "class/src/utils/buffer-helper.js~BufferHelper.html#static-method-bufferInfo",
-    "src/utils/buffer-helper.js~BufferHelper.bufferInfo",
-    "method"
-  ],
-  [
-    "src/utils/buffer-helper.js~bufferhelper.bufferedinfo",
-    "class/src/utils/buffer-helper.js~BufferHelper.html#static-method-bufferedInfo",
-    "src/utils/buffer-helper.js~BufferHelper.bufferedInfo",
-    "method"
-  ],
-  [
-    "src/utils/buffer-helper.js~bufferhelper.isbuffered",
-    "class/src/utils/buffer-helper.js~BufferHelper.html#static-method-isBuffered",
-    "src/utils/buffer-helper.js~BufferHelper.isBuffered",
-    "method"
   ],
   [
     "src/utils/cea-608-parser.js",
@@ -6690,12 +6516,6 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/utils/get-self-scope.js",
-    "file/src/utils/get-self-scope.js.html",
-    "src/utils/get-self-scope.js",
-    "file"
-  ],
-  [
     "src/utils/hex.js",
     "file/src/utils/hex.js.html",
     "src/utils/hex.js",
@@ -6705,24 +6525,6 @@ window.esdocSearchIndex = [
     "src/utils/logger.js",
     "file/src/utils/logger.js.html",
     "src/utils/logger.js",
-    "file"
-  ],
-  [
-    "src/utils/make-array-from-array-like.js",
-    "file/src/utils/make-array-from-array-like.js.html",
-    "src/utils/make-array-from-array-like.js",
-    "file"
-  ],
-  [
-    "src/utils/mediakeys-helper.js",
-    "file/src/utils/mediakeys-helper.js.html",
-    "src/utils/mediakeys-helper.js",
-    "file"
-  ],
-  [
-    "src/utils/mediasource-helper.js",
-    "file/src/utils/mediasource-helper.js.html",
-    "src/utils/mediasource-helper.js",
     "file"
   ],
   [
@@ -6774,9 +6576,9 @@ window.esdocSearchIndex = [
     "member"
   ],
   [
-    "src/utils/output-filter.js~outputfilter#trackname",
-    "class/src/utils/output-filter.js~OutputFilter.html#instance-member-trackName",
-    "src/utils/output-filter.js~OutputFilter#trackName",
+    "src/utils/output-filter.js~outputfilter#track",
+    "class/src/utils/output-filter.js~OutputFilter.html#instance-member-track",
+    "src/utils/output-filter.js~OutputFilter#track",
     "member"
   ],
   [
