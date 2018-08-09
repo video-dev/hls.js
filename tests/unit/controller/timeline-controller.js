@@ -1,7 +1,7 @@
-const assert = require('assert');
-
 import TimelineController from '../../../src/controller/timeline-controller';
 import Hls from '../../../src/hls';
+
+const assert = require('assert');
 
 describe('TimelineController', () => {
   let timelineController;

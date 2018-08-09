@@ -189,11 +189,10 @@ class StreamController extends TaskLoop {
     // if we have not yet loaded any fragment, start loading from start position
     let pos = 0;
     if (this.loadedmetadata) {
-        pos = media.currentTime;
+      pos = media.currentTime;
     } else if (this.nextLoadPosition) {
-        pos = this.nextLoadPosition;
+      pos = this.nextLoadPosition;
     }
-
 
     // determine next load level
     let level = hls.nextLoadLevel,

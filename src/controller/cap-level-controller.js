@@ -70,24 +70,6 @@ class CapLevelController extends EventHandler {
     this._stopCapping();
   }
 
-  // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
-  // to the first level
-  onBufferCodecs (data) {
-    const hls = this.hls;
-    if (hls.config.capLevelToPlayerSize && data.video) {
-      // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
-      this._startCapping();
-    }
-  }
-
-  onLevelsUpdated (data) {
-    this.levels = data.levels;
-  }
-
-  onMediaDetaching () {
-    this._stopCapping();
-  }
-
   detectPlayerSize () {
     if (this.media && this.mediaHeight > 0 && this.mediaWidth > 0) {
       let levelsLength = this.levels ? this.levels.length : 0;
