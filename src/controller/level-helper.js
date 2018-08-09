@@ -9,10 +9,27 @@
 
 import { logger } from '../utils/logger';
 
+export function addGroupId (level, type, id) {
+  switch (type) {
+  case 'audio':
+    if (!level.audioGroupIds) {
+      level.audioGroupIds = [];
+    }
+    level.audioGroupIds.push(id);
+    break;
+  case 'text':
+    if (!level.textGroupIds) {
+      level.textGroupIds = [];
+    }
+    level.textGroupIds.push(id);
+    break;
+  }
+}
+
 export function updatePTS (fragments, fromIdx, toIdx) {
   let fragFrom = fragments[fromIdx], fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
   // if we know startPTS[toIdx]
-  if (!isNaN(fragToPTS)) {
+  if (Number.isFinite(fragToPTS)) {
     // update fragment duration.
     // it helps to fix drifts between playlist reported duration and fragment real duration
     if (toIdx > fromIdx) {
@@ -39,10 +56,10 @@ export function updatePTS (fragments, fromIdx, toIdx) {
 export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, endDTS) {
   // update frag PTS/DTS
   let maxStartPTS = startPTS;
-  if (!isNaN(frag.startPTS)) {
+  if (Number.isFinite(frag.startPTS)) {
     // delta PTS between audio and video
     let deltaPTS = Math.abs(frag.startPTS - startPTS);
-    if (isNaN(frag.deltaPTS)) {
+    if (!Number.isFinite(frag.deltaPTS)) {
       frag.deltaPTS = deltaPTS;
     } else {
       frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
@@ -74,7 +91,7 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   fragments = details.fragments;
   // update frag reference in fragments array
   // rationale is that fragments array might not contain this frag object.
-  // this will happpen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
+  // this will happen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
   // if we don't update frag, we won't be able to propagate PTS info on the playlist
   // resulting in invalid sliding computation
   fragments[fragIdx] = frag;
@@ -89,8 +106,6 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   }
 
   details.PTSKnown = true;
-  // logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
-
   return drift;
 }
 
@@ -119,7 +134,7 @@ export function mergeDetails (oldDetails, newDetails) {
       newFrag = newfragments[i];
     if (newFrag && oldFrag) {
       ccOffset = oldFrag.cc - newFrag.cc;
-      if (!isNaN(oldFrag.startPTS)) {
+      if (Number.isFinite(oldFrag.startPTS)) {
         newFrag.start = newFrag.startPTS = oldFrag.startPTS;
         newFrag.endPTS = oldFrag.endPTS;
         newFrag.duration = oldFrag.duration;

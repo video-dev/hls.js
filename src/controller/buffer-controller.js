@@ -109,7 +109,7 @@ class BufferController extends EventHandler {
       ms.addEventListener('sourceended', this.onmse);
       ms.addEventListener('sourceclose', this.onmsc);
       // link video and media Source
-      media.src = URL.createObjectURL(ms);
+      media.src = window.URL.createObjectURL(ms);
       // cache the locally generated object url
       this._objectUrl = media.src;
     }
@@ -137,7 +137,7 @@ class BufferController extends EventHandler {
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
       if (this.media) {
-        URL.revokeObjectURL(this._objectUrl);
+        window.URL.revokeObjectURL(this._objectUrl);
 
         // clean up video tag src only if it's our own url. some external libraries might
         // hijack the video tag and change its 'src' without destroying the Hls instance first
@@ -413,8 +413,7 @@ class BufferController extends EventHandler {
       // Override duration to Infinity
       logger.log('Media Source duration is set to Infinity');
       this._msDuration = this.mediaSource.duration = Infinity;
-    } else if ((this._levelDuration > this._msDuration && this._levelDuration > duration) ||
-      (duration === Infinity || isNaN(duration))) {
+    } else if ((this._levelDuration > this._msDuration && this._levelDuration > duration) || !Number.isFinite(duration)) {
       // levelDuration was the last value we set.
       // not using mediaSource.duration as the browser may tweak this value
       // only update Media Source duration if its value increase, this is to avoid
