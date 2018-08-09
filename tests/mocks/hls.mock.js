@@ -1,5 +1,7 @@
 import Hls from '../../src/hls';
 
+const sinon = require('sinon');
+
 /**
  * All public methods of Hls instance
  */

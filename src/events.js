@@ -114,4 +114,5 @@ const HlsEvents = {
   // fired upon stream controller state transitions - data: { previousState, nextState }
   STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
 };
+
 export default HlsEvents;

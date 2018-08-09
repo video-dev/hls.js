@@ -1,5 +1,6 @@
 const assert = require('assert');
-import BufferHelper from '../../../src/helper/buffer-helper';
+
+import { BufferHelper } from '../../../src/utils/buffer-helper';
 
 function createMockBuffer (buffered) {
   return {

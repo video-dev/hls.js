@@ -22,9 +22,8 @@ export function clearCurrentCues (track) {
     if (trackMode === 'disabled')
       track.mode = 'hidden';
 
-    while (track.cues && track.cues.length > 0)
+    while (track.cues && track.cues.length > 0) {
       track.removeCue(track.cues[0]);
-
-    track.mode = trackMode;
+    }
   }
 }

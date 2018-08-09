@@ -217,7 +217,7 @@ describe('Demuxer tests', function () {
       }
     };
 
-    let spy = sinon.spy(URL, 'revokeObjectURL');
+    let spy = sinon.spy(window.URL, 'revokeObjectURL');
 
     demux.onWorkerMessage(evt);
 

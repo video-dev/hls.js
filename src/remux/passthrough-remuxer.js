@@ -20,11 +20,13 @@ class PassThroughRemuxer {
   remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, rawData) {
     let observer = this.observer;
     let streamType = '';
-    if (audioTrack)
+    if (audioTrack) {
       streamType += 'audio';
+    }
 
-    if (videoTrack)
+    if (videoTrack) {
       streamType += 'video';
+    }
 
     observer.trigger(Event.FRAG_PARSING_DATA, {
       data1: rawData,

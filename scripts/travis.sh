@@ -5,7 +5,8 @@ set -ev
 npm install --quiet
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
-	npm run lint && npm run build
+  npm run lint
+  npm run build
   # check that hls.js doesn't error if requiring in node
   # see https://github.com/video-dev/hls.js/pull/1642
   node -e 'require("./" + require("./package.json").main)'
@@ -29,6 +30,25 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 	if [ ${n} = ${maxRetries} ]; then
 		exit 1
 	fi
+elif [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
+  # update the version
+  # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
+  git fetch --unshallow
+  node ./scripts/set-canary-version.js
+  if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
+    npm run lint
+    npm run build
+    npm run test:unit
+    # write the token to config
+    # see https://docs.npmjs.com/private-modules/ci-server-config
+    echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
+    npm publish --tag canary
+    echo "Published canary."
+    curl https://purge.jsdelivr.net/npm/hls.js@canary
+    echo "Cleared jsdelivr cache."
+  else
+    echo "Canary already published."
+  fi
 else
 	echo "Unknown travis mode: ${TRAVIS_MODE}" 1>&2
 	exit 1
