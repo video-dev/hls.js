@@ -45,18 +45,18 @@ class AbrController extends EventHandler {
       // so we need to wait for stream manifest / playlist type to instantiate it.
       if (!this._bwEstimator) {
         const hls = this.hls;
-         const config = hls.config;
+        const config = hls.config;
         const level = frag.level;
-         const isLive = hls.levels[level].details.live;
+        const isLive = hls.levels[level].details.live;
 
-        let ewmaFast, ewmaSlow;if (isLive) {
+        let ewmaFast, ewmaSlow; if (isLive) {
           ewmaFast = config.abrEwmaFastLive;
           ewmaSlow = config.abrEwmaSlowLive;
         } else {
           ewmaFast = config.abrEwmaFastVoD;
           ewmaSlow = config.abrEwmaSlowVoD;
         }
-        this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);}
+        this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
       }
     }
   }

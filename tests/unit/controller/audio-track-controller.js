@@ -1,7 +1,7 @@
-const assert = require('assert');
-
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
+
+const assert = require('assert');
 
 describe('AudioTrackController', () => {
   const tracks = [{

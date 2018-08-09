@@ -176,14 +176,16 @@ class TimelineController extends EventHandler {
   _cleanTracks () {
     // clear outdated subtitles
     const media = this.media;
-    if (!media || !media.textTracks)
+    if (!media || !media.textTracks) {
       return;
+    }
 
     const textTracks = media.textTracks;
     for (let i = 0; i < textTracks.length; i++) {
       // do not clear tracks that are managed externally
-      if (textTracks[i].textTrack1 || textTracks[i].textTrack2)
+      if (textTracks[i].textTrack1 || textTracks[i].textTrack2) {
         clearCurrentCues(textTracks[i]);
+      }
     }
   }
 
@@ -200,23 +202,24 @@ class TimelineController extends EventHandler {
       if (this.config.renderNatively) {
         let inUseTracks = this.media ? this.media.textTracks : [];
 
-      this.tracks.forEach((track, index) => {
-        let textTrack;
-        if (index < inUseTracks.length) {
-          const inUseTrack = inUseTracks[index];
-          // Reuse tracks with the same label, but do not reuse 608/708 tracks
-          if (reuseVttTextTrack(inUseTrack, track)){
-            textTrack = inUseTrack;
-        }
-}        if (!textTrack){
-          textTrack = this.createTextTrack('subtitles', track.name, track.lang);}
+        this.tracks.forEach((track, index) => {
+          let textTrack;
+          if (index < inUseTracks.length) {
+            const inUseTrack = inUseTracks[index];
+            // Reuse tracks with the same label, but do not reuse 608/708 tracks
+            if (reuseVttTextTrack(inUseTrack, track)) {
+              textTrack = inUseTrack;
+            }
+          } if (!textTrack) {
+            textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+          }
 
-        if (track.default)
-          {textTrack.mode = this.hls.subtitleDisplay ? 'showing' : 'hidden';
-       } else{
-          textTrack.mode = 'disabled';
-
-}        this.textTracks.push(textTrack);});
+          if (track.default) {
+            textTrack.mode = this.hls.subtitleDisplay ? 'showing' : 'hidden';
+          } else {
+            textTrack.mode = 'disabled';
+          } this.textTracks.push(textTrack);
+        });
       } else if (!sameTracks && this.tracks && this.tracks.length) {
         // Create a list of tracks for the provider to consume
         let tracksList = this.tracks.map((track) => {
@@ -234,8 +237,9 @@ class TimelineController extends EventHandler {
       data.captions.forEach(captionsTrack => {
         let instreamIdMatch = /(?:CC|SERVICE)([1-2])/.exec(captionsTrack.instreamId);
 
-        if (!instreamIdMatch)
+        if (!instreamIdMatch) {
           return;
+        }
 
         let trackName = `textTrack${instreamIdMatch[1]}`;
         this.captionsProperties[trackName].label = captionsTrack.name;
@@ -349,8 +353,9 @@ class TimelineController extends EventHandler {
   onFragParsingInitSegment () {
     // If we receive this event, we have not received an onInitPtsFound event. This happens when the video track has no samples (but has audio)
     // In order to have captions display, which requires an initPTS, we assume one of 90000
-    if (typeof this.initPTS === 'undefined')
+    if (typeof this.initPTS === 'undefined') {
       this.onInitPtsFound({ initPTS: 90000 });
+    }
   }
 
   extractCea608Data (byteArray) {

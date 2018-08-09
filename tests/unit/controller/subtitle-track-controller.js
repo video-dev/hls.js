@@ -1,8 +1,8 @@
-const assert = require('assert');
-
 import sinon from 'sinon';
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import Hls from '../../../src/hls';
+
+const assert = require('assert');
 
 describe('SubtitleTrackController', () => {
   let subtitleTrackController;

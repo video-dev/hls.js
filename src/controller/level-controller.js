@@ -465,8 +465,9 @@ export default class LevelController extends EventHandler {
 
   removeLevel (levelIndex, urlId) {
     this._levels = this.levels.filter((level, index) => {
-      if (index !== levelIndex)
+      if (index !== levelIndex) {
         return true;
+      }
 
       if (level.url.length > 1 && urlId !== undefined) {
         level.url = level.url.filter((url, id) => id !== urlId);

@@ -28,15 +28,15 @@ export function createCues (startTime, endTime, captionScreen) {
       row.cueStartTime = startTime;
 
       // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
-      if (startTime === endTime){
+      if (startTime === endTime) {
         endTime += 0.0001;
       }
 
       cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
 
-      if (indent >= 16){
+      if (indent >= 16) {
         indent--;
-     } else{
+      } else {
         indent++;
       }
 

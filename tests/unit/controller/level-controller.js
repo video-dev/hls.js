@@ -1,10 +1,10 @@
-const assert = require('assert');
-const sinon = require('sinon');
-
 import LevelController from '../../../src/controller/level-controller';
 import HlsMock from '../../mocks/hls.mock';
 import Event from '../../../src/events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
+
+const assert = require('assert');
+const sinon = require('sinon');
 
 describe('LevelController', () => {
   let hls, levelController;

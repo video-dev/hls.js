@@ -46,22 +46,21 @@ module.exports = {
     'space-in-parens': ['error', 'never'],
     'keyword-spacing': [2, { 'before': true, 'after': true }],
     // enforce litteral objects on multiple lines
-    "block-spacing": "error",
-    "curly": ["warn", "multi-or-nest", "consistent"],
-    "object-curly-spacing": ["error", "always"],
-    "brace-style": ["error", "1tbs", { "allowSingleLine": true }],
-
+    'block-spacing': 'error',
+    'curly': 2,
+    'object-curly-spacing': ['error', 'always'],
+    'brace-style': ['error', '1tbs', { 'allowSingleLine': false }],
 
     // limit code block and line length
     /*
-    "max-len": 1,
-    "max-statements": 1,
-    "max-depth": 1,
-    "max-nested-callbacks": 1,
-    "max-params": 1,
-    "max-statements": 1,
-    "max-statements-per-line": 1
-    */
+        "max-len": 1,
+        "max-statements": 1,
+        "max-depth": 1,
+        "max-nested-callbacks": 1,
+        "max-params": 1,
+        "max-statements": 1,
+        "max-statements-per-line": 1
+        */
 
     // loosening of code-quality rules we may want to fix later
     // (warnings for now)
