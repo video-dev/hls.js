@@ -877,8 +877,9 @@ class Cea608Parser {
   parseCmd (a, b, field) {
     const cmdHistory = this.cmdHistory;
     const chNr = getChannelNumber(a);
+    const dataChannel = getDataChannel(b, field);
     const cond1 = chNr && (b >= 0x20 && b <= 0x2F);
-    const cond2 = (a === 0x17 || a === 0x1F) && (b >= 0x21 && b <= 0x23);
+    const cond2 = dataChannel && (b >= 0x21 && b <= 0x23);
 
     if (!(cond1 || cond2))
       return false;
@@ -889,8 +890,9 @@ class Cea608Parser {
       return true;
     }
 
-    let channel = this.channels[chNr];
+    let channel;
     if (chNr) {
+      channel = this.channels[chNr];
       if (b === 0x20)
         channel.ccRCL();
       else if (b === 0x21)
@@ -924,6 +926,7 @@ class Cea608Parser {
       else if (b === 0x2F)
         channel.ccEOC();
     } else { // a == 0x17 || a == 0x1F
+      channel = this.channels[dataChannel];
       channel.ccTO(b - 0x20);
     }
     setLastCmd(a, b, cmdHistory[field]);
@@ -1129,6 +1132,16 @@ function getChannelNumber (ccData0) {
     channel = 4;
 
   return channel;
+}
+
+function getDataChannel (ccData1, field) {
+  let dataChannel = null;
+  if (ccData1 === 0x17)
+    dataChannel = field;
+  else if (ccData1 === 0x1F)
+    dataChannel = field + 1;
+
+    return dataChannel;
 }
 
 function setLastCmd (a, b, cmdHistory) {
