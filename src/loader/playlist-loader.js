@@ -17,8 +17,7 @@ import { logger } from '../utils/logger';
 
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
-
-const { performance } = window;
+import performance from 'performance-now';
 
 /**
  * `type` property values for this loaders' context object
@@ -253,7 +252,7 @@ class PlaylistLoader extends EventHandler {
 
     const string = response.data;
 
-    stats.tload = performance.now();
+    stats.tload = performance();
     // stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
 
     // Validate if it is an M3U8 at all
@@ -368,7 +367,7 @@ class PlaylistLoader extends EventHandler {
     }
 
     // save parsing time
-    stats.tparsed = performance.now();
+    stats.tparsed = performance();
 
     // in case we need SIDX ranges
     // return early after calling load for
