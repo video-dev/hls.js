@@ -19,7 +19,15 @@ import { getSelfScope } from '../utils/get-self-scope';
 
 // see https://stackoverflow.com/a/11237259/589493
 const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
-const performance = global;
+
+let now;
+// performance.now() not available on WebWorker, at least on Safari Desktop
+try {
+  now = global.performance.now;
+} catch(err) {
+  console.warn('Unable to use global performance.now function, using Date.now, reason:', err.message);
+  now = global.Date.now;
+}
 
 class DemuxerInline {
   constructor (observer, typeSupported, config, vendor) {
@@ -43,24 +51,13 @@ class DemuxerInline {
         decrypter = this.decrypter = new Decrypter(this.observer, this.config);
       }
 
-      let localthis = this;
-      // performance.now() not available on WebWorker, at least on Safari Desktop
-      let startTime;
-      try {
-        startTime = performance.now();
-      } catch (error) {
-        startTime = Date.now();
-      }
-      decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
-        let endTime;
-        try {
-          endTime = performance.now();
-        } catch (error) {
-          endTime = Date.now();
-        }
-        localthis.observer.trigger(Event.FRAG_DECRYPTED, { stats: { tstart: startTime, tdecrypt: endTime } });
-        localthis.pushDecrypted(new Uint8Array(decryptedData), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
+      const startTime = now();
+      decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, (decryptedData) => {
+        const endTime = now();
+        this.observer.trigger(Event.FRAG_DECRYPTED, { stats: { tstart: startTime, tdecrypt: endTime } });
+        this.pushDecrypted(new Uint8Array(decryptedData), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
       });
+
     } else {
       this.pushDecrypted(new Uint8Array(data), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
     }
