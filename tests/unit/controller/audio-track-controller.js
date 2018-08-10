@@ -213,7 +213,7 @@ describe('AudioTrackController', () => {
     it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', () => {
       const currentTrackId = 4;
 
-      audioTrackController.trackId = currentTrackId;
+      audioTrackController._trackId = currentTrackId;
 
       audioTrackController.tracks = tracks;
 
