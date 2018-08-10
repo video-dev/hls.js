@@ -883,8 +883,8 @@ class Cea608Parser {
     if (!(cond1 || cond2))
       return false;
 
-    if (cmdHistory.hasCmdRepeated(a, b, field)) {
-      cmdHistory.setLastCmd(null, null, field);
+    if (hasCmdRepeated(a, b, cmdHistory[field])) {
+      setLastCmd(null, null, cmdHistory[field]);
       logger.log('DEBUG', 'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
       return true;
     }
@@ -926,7 +926,7 @@ class Cea608Parser {
     } else { // a == 0x17 || a == 0x1F
       channel.ccTO(b - 0x20);
     }
-    cmdHistory.setLastCmd(a, b, field);
+    setLastCmd(a, b, cmdHistory[field]);
     this.currChNr = chNr;
     return true;
   }
@@ -969,8 +969,8 @@ class Cea608Parser {
     if (!(case1 || case2))
       return false;
 
-    if (cmdHistory.hasCmdRepeated(a, b, field)) {
-      cmdHistory.setLastCmd(a, b, field);
+    if (hasCmdRepeated(a, b, cmdHistory[field])) {
+      setLastCmd(null, null, cmdHistory[field]);
       return true; // Repeated commands are dropped (once)
     }
 
@@ -990,7 +990,7 @@ class Cea608Parser {
     }
     const channel = this.channels[chNr];
     channel.setPAC(this.interpretPAC(row, b));
-    cmdHistory.setLastCmd(a, b, field);
+    setLastCmd(a, b, cmdHistory[field]);
     this.currChNr = chNr;
     return true;
   }
@@ -1054,7 +1054,7 @@ class Cea608Parser {
     if (charCodes) {
       const hexCodes = numArrayToHexArray(charCodes);
       logger.log('DEBUG', 'Char codes =  ' + hexCodes.join(','));
-      this.cmdHistory.setLastCmd(a, b, field);
+      setLastCmd(a, b, this.cmdHistory[field]);
     }
     return charCodes;
   }
@@ -1090,7 +1090,7 @@ class Cea608Parser {
     chNr = (a < 0x18) ? field : field + 1;
     channel = this.channels[chNr];
     channel.setBkgData(bkgData);
-    this.cmdHistory.setLastCmd(a, b, field);
+    setLastCmd(a, b, this.cmdHistory[field]);
     return true;
   }
 
@@ -1131,6 +1131,21 @@ function getChannelNumber (ccData0) {
   return channel;
 }
 
+function setLastCmd (a, b, cmdHistory) {
+  if (!cmdHistory)
+    return;
+
+  cmdHistory.a = a;
+  cmdHistory.b = b;
+}
+
+function hasCmdRepeated (a, b, cmdHistory) {
+  if (!cmdHistory)
+    return;
+
+  return cmdHistory.a === a && cmdHistory.b === b;
+}
+
 function createCmdHistory () {
   return {
     1: {
@@ -1140,19 +1155,6 @@ function createCmdHistory () {
     3: {
       a: null,
       b: null
-    },
-    setLastCmd (a, b, field) {
-      if (!this[field])
-        return;
-
-      this[field].a = a;
-      this[field].b = b;
-    },
-    hasCmdRepeated (a, b, field) {
-      if (!this[field])
-        return;
-
-      return this[field].a === a && this[field].b === b;
     }
   };
 }

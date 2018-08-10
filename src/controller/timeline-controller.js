@@ -260,7 +260,7 @@ class TimelineController extends EventHandler {
 
     if (this.config.enableCEA708Captions && data.captions) {
       data.captions.forEach(captionsTrack => {
-        let instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(captionsTrack.instreamId);
+        const instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(captionsTrack.instreamId);
 
         if (!instreamIdMatch)
           return;
