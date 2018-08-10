@@ -269,7 +269,7 @@ class AudioTrackController extends TaskLoop {
         }
         // We need to match the (pre-)selected group ID
         // and the NAME of the current track.
-        if ((!this.audioGroupId || track.groupId === this.audioGroupId) &&
+        if ((!this.audioGroupId || track.groupId === this.audioGroupId) &&
           (!name || name === track.name)) {
           // If there was a previous track try to stay with the same `NAME`.
           // It should be unique across tracks of same group, and consistent through redundant track groups.
