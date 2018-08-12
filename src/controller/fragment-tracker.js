@@ -105,7 +105,7 @@ export class FragmentTracker extends EventHandler {
       fragmentEntity.buffered = true;
 
       Object.keys(this.timeRanges).forEach(elementaryStream => {
-        if (fragment.hasElementaryStream(elementaryStream) === true) {
+        if (fragment.hasElementaryStream(elementaryStream)) {
           let timeRange = this.timeRanges[elementaryStream];
           // Check for malformed fragments
           // Gaps need to be calculated for each elementaryStream
@@ -234,7 +234,7 @@ export class FragmentTracker extends EventHandler {
     let fragment = e.frag;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
-    if (!isNaN(fragment.sn) && !fragment.bitrateTest) {
+    if (Number.isFinite(fragment.sn) && !fragment.bitrateTest) {
       let fragKey = this.getFragmentKey(fragment);
       let fragmentEntity = {
         body: fragment,
