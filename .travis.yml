@@ -7,48 +7,64 @@ sudo: required
 # before_install: if [ "${TRAVIS_MODE}" != "funcTests" ]; then unset SAUCE_USERNAME && unset SAUCE_ACCESS_KEY; fi
 script: ./scripts/travis.sh
 after_script: if [ "${TRAVIS_MODE}" = "funcTests" ]; then echo -n "travis_fold:start:sauce_logs\nSauce connect log:\n" && cat /home/travis/sauce-connect.log && echo -n "\ntravis_fold:end:sauce_logs\n"; fi
-after_success: npm run coverage
 env:
   global:
     - SAUCE_USERNAME=mangui
 stages:
-  - required
-  - optional
+  - buildAndTest
+  - releaseCanary
+  - release
+  - testFuncRequired
+  - testFuncOptional
 jobs:
   # stage: optional is allowed to be failure
   fast_finish: true
   allow_failures:
-    - stage: optional
+    - stage: testFuncOptional
   include:
+    # https://docs.travis-ci.com/user/build-stages/deploy-github-releases/
+    - stage: release
+      if: tag IS present
+      env: TRAVIS_MODE=release
+      deploy:
+        provider: releases
+        api_key:
+          secure: "kR9xHKhWfOv6vwxz1d//PpC22VDupnPI59L9czLkpLoIdzm5rm3eV7he4XPlQfbSrV1UBgURARgF+yekmeqUZk9vqfo4F5oa+6KiBxAdnI9PjsjYRSXitdq4a6kpIR854nxUIOlDXR5AbD2MgNaKsQHiaNlngdR/870OhiwqRJVwQOLKVUADw1QWECXe/DXrQiFbMunxBrTyutbrGuI8cT7wzqFn+aPkI/3liiw8PTr93GrtxZ/bFxI899KzMSHHMXB+eDDMtxPFD+VApruD7h6f+1C0psJeOV8/PkzrRkbPELPBKKaPH9TvVOPUf2OSRHVna828wnLHwseae0rgtuk7+ZJmB9XZKX9FUBDT4/Gv/AkE+m/cwnoqaatAMJYR+yiQqsosjBLDAaTUOPHu3wBdAaR5uL5fGsSsKe3sUfSQHrv86vReNl9ETU06apmyWtsIbyhMtv98j9I+hNVjKZUI30g1ee6LgjlDlBavMk8KAbLbyBTcJlNAexj8Rppdqg+AdW7rYW+S6SgfTyyYQKTLeFwmDjfrkqzHJnk78sV18+xPLI1hbzBGp/bXaW23sLDBLLV5Sxifr8flUMkUdH28zsLCHUQ7C4GKQ19el2NZgIxSsnxRA8vGZof7OXasR4HJVjv/PSx+DN6Fi1PV1SiNBcwgPCGIIxBF7TUPxJk="
+        file_glob: true
+        file: dist/*
+        draft: true
+        skip_cleanup: true
+        on:
+          tags: true
     # publish canary package if on master
-    - stage: required
+    - stage: releaseCanary
       if: branch = master AND type != pull_request
       env: TRAVIS_MODE=releaseCanary
     # Required tests
-    - stage: required
+    - stage: buildAndTest
       env:   TRAVIS_MODE=build
-    - stage: required
+    - stage: buildAndTest
       env:   TRAVIS_MODE=unitTests
-    - stage: required
+    - stage: testFuncRequired
       env:   TRAVIS_MODE=funcTests UA=chrome              OS="Windows 10"
     # Optional Func tests
-    - stage: optional
+    - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA=firefox             OS="Windows 10"
-    - stage: optional
+    - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA=chrome              OS="Windows 7"
-    - stage: optional
+    - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA=firefox             OS="Windows 7"
-    # - stage: optional
+    # - stage: testFuncOptional
     #  env:   TRAVIS_MODE=funcTests UA=MicrosoftEdge       OS="Windows 10"
-    - stage: optional
+    - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA="internet explorer" OS="Windows 8.1"  UA_VERSION="11.0"
-    - stage: optional
+    - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA="internet explorer" OS="Windows 10"
-    - stage: optional
+    - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA=chrome              OS="OS X 10.11"
-    # - stage: optional
+    # - stage: testFuncOptional
     #  env:   TRAVIS_MODE=funcTests UA=firefox     OS="OS X 10.11"
-    - stage: optional
+    - stage: testFuncOptional
       env:   TRAVIS_MODE=funcTests UA=safari              OS="OS X 10.11" UA_VERSION="9.0"
 addons:
   sauce_connect: true
