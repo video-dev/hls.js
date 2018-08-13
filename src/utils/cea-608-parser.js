@@ -1141,7 +1141,7 @@ function getDataChannel (ccData1, field) {
   else if (ccData1 === 0x1F)
     dataChannel = field + 1;
 
-    return dataChannel;
+  return dataChannel;
 }
 
 function setLastCmd (a, b, cmdHistory) {
