@@ -164,11 +164,11 @@ class PlaylistLoader extends EventHandler {
   }
 
   onAudioTrackLoading (data) {
-    this.load(data.url, { type: ContextType.AUDIO_TRACK, level: 0, id: data.id });
+    this.load(data.url, { type: ContextType.AUDIO_TRACK, level: null, id: data.id });
   }
 
   onSubtitleTrackLoading (data) {
-    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, level: 0, id: data.id });
+    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, level: null, id: data.id });
   }
 
   load (url, context) {

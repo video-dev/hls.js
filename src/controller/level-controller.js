@@ -120,6 +120,10 @@ export default class LevelController extends EventHandler {
 
     if (data.audioTracks) {
       audioTracks = data.audioTracks.filter(track => !track.audioCodec || isCodecSupportedInMp4(track.audioCodec, 'audio'));
+      // Reassign id's after filtering since they're used as array indices
+      audioTracks.forEach((track, index) => {
+        track.id = index;
+      });
     }
 
     if (levels.length > 0) {

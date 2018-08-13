@@ -27,6 +27,5 @@ npm run test
 
  - Use [EditorConfig](http://editorconfig.org/) or at least stay consistent to the file formats defined in the `.editorconfig` file.
  - Develop in a topic branch, not master
- - Don't commit the updated `dist/hls.js` file in your PR. We'll take care of generating an updated build right before releasing a new tagged version.
 
  Thanks! :heart: :heart: :heart:
