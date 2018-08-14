@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 
-Join the discussion on [Slack#hlsjs](http://video-dev.org) [![Slack Status](http://video-dev.org/badge.svg)](http://video-dev.org/)
+Join the discussion on [Slack#hlsjs](http://video-dev.org)
 
 # ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
 
