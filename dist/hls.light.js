@@ -5516,6 +5516,10 @@ var url_toolkit_default = /*#__PURE__*/__webpack_require__.n(url_toolkit);
 // EXTERNAL MODULE: ./src/errors.js
 var errors = __webpack_require__(2);
 
+// CONCATENATED MODULE: ./src/polyfills/number-isFinite.js
+var isFiniteNumber = Number.isFinite || function (value) {
+  return typeof value === 'number' && isFinite(value);
+};
 // EXTERNAL MODULE: ./src/events.js
 var events = __webpack_require__(1);
 
@@ -5650,6 +5654,8 @@ var level_key_LevelKey = function () {
 
 /* harmony default export */ var level_key = (level_key_LevelKey);
 // CONCATENATED MODULE: ./src/loader/fragment.js
+
+
 var fragment__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function fragment__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -5668,6 +5674,8 @@ var fragment_Fragment = function () {
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
+    this.pdt = null;
+    this.rawProgramDateTime = null;
 
     // Holds the types of data this fragment supports
     this._elementaryStreams = (_elementaryStreams = {}, _elementaryStreams[Fragment.ElementaryStreamTypes.AUDIO] = false, _elementaryStreams[Fragment.ElementaryStreamTypes.VIDEO] = false, _elementaryStreams);
@@ -5743,13 +5751,6 @@ var fragment_Fragment = function () {
       this._url = value;
     }
   }, {
-    key: 'programDateTime',
-    get: function get() {
-      if (!this._programDateTime && this.rawProgramDateTime) this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
-
-      return this._programDateTime;
-    }
-  }, {
     key: 'byteRange',
     get: function get() {
       if (!this._byteRange && !this.rawByteRange) return [];
@@ -5792,6 +5793,15 @@ var fragment_Fragment = function () {
 
       return this._decryptdata;
     }
+  }, {
+    key: 'endPdt',
+    get: function get() {
+      if (!isFiniteNumber(this.pdt)) return null;
+
+      var duration = !isFiniteNumber(this.duration) ? 0 : this.duration;
+
+      return this.pdt + duration * 1000;
+    }
   }], [{
     key: 'ElementaryStreamTypes',
     get: function get() {
@@ -5805,7 +5815,46 @@ var fragment_Fragment = function () {
   return Fragment;
 }();
 
-/* harmony default export */ var fragment = (fragment_Fragment);
+/* harmony default export */ var loader_fragment = (fragment_Fragment);
+// CONCATENATED MODULE: ./src/loader/level.js
+
+
+var level__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function level__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var level_Level = function () {
+  function Level(baseUrl) {
+    level__classCallCheck(this, Level);
+
+    // Please keep properties in alphabetical order
+    this.endCC = 0;
+    this.endSN = 0;
+    this.fragments = [];
+    this.initSegment = null;
+    this.live = true;
+    this.needSidxRanges = false;
+    this.startCC = 0;
+    this.startSN = 0;
+    this.startTimeOffset = null;
+    this.targetduration = 0;
+    this.totalduration = 0;
+    this.type = null;
+    this.url = baseUrl;
+    this.version = null;
+  }
+
+  level__createClass(Level, [{
+    key: "hasProgramDateTime",
+    get: function get() {
+      return !!(this.fragments[0] && isFiniteNumber(this.fragments[0].pdt));
+    }
+  }]);
+
+  return Level;
+}();
+
+/* harmony default export */ var loader_level = (level_Level);
 // CONCATENATED MODULE: ./src/utils/attr-list.js
 function attr_list__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -5967,7 +6016,10 @@ function isCodecSupportedInMp4(codec, type) {
 
 
 // CONCATENATED MODULE: ./src/loader/m3u8-parser.js
+
+
 function m3u8_parser__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 
 
 
@@ -6059,7 +6111,6 @@ var m3u8_parser_M3U8Parser = function () {
 
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       var level = {};
-
       var attrs = level.attrs = new attr_list(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
@@ -6115,15 +6166,17 @@ var m3u8_parser_M3U8Parser = function () {
   };
 
   M3U8Parser.parseLevelPlaylist = function parseLevelPlaylist(string, baseurl, id, type) {
-    var currentSN = 0,
-        totalduration = 0,
-        level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
-        levelkey = new level_key(),
-        cc = 0,
-        prevFrag = null,
-        frag = new fragment(),
-        result = void 0,
-        i = void 0;
+    var currentSN = 0;
+    var totalduration = 0;
+    var level = new loader_level(baseurl);
+    var levelkey = new level_key();
+    var cc = 0;
+    var prevFrag = null;
+    var frag = new loader_fragment();
+    var result = void 0;
+    var i = void 0;
+
+    var firstPdtIndex = null;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
@@ -6138,7 +6191,7 @@ var m3u8_parser_M3U8Parser = function () {
         frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
       } else if (result[3]) {
         // url
-        if (!isNaN(frag.duration)) {
+        if (isFiniteNumber(frag.duration)) {
           var sn = currentSN++;
           frag.type = type;
           frag.start = totalduration;
@@ -6149,28 +6202,13 @@ var m3u8_parser_M3U8Parser = function () {
           frag.baseurl = baseurl;
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
-
-          if (level.programDateTime) {
-            if (prevFrag) {
-              if (frag.rawProgramDateTime) {
-                // PDT discontinuity found
-                frag.pdt = Date.parse(frag.rawProgramDateTime);
-              } else {
-                // Contiguous fragment
-                frag.pdt = prevFrag.pdt + prevFrag.duration * 1000;
-              }
-            } else {
-              // First fragment
-              frag.pdt = Date.parse(level.programDateTime);
-            }
-            frag.endPdt = frag.pdt + frag.duration * 1000;
-          }
+          assignProgramDateTime(frag, prevFrag);
 
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
 
-          frag = new fragment();
+          frag = new loader_fragment();
         }
       } else if (result[4]) {
         // X-BYTERANGE
@@ -6184,7 +6222,7 @@ var m3u8_parser_M3U8Parser = function () {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (level.programDateTime === undefined) level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
+        if (firstPdtIndex === null) firstPdtIndex = level.fragments.length;
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -6248,7 +6286,7 @@ var m3u8_parser_M3U8Parser = function () {
             var startAttrs = new attr_list(startParams);
             var startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
             // TIME-OFFSET can be 0
-            if (!isNaN(startTimeOffset)) level.startTimeOffset = startTimeOffset;
+            if (isFiniteNumber(startTimeOffset)) level.startTimeOffset = startTimeOffset;
 
             break;
           case 'MAP':
@@ -6260,7 +6298,8 @@ var m3u8_parser_M3U8Parser = function () {
             frag.type = type;
             frag.sn = 'initSegment';
             level.initSegment = frag;
-            frag = new fragment();
+            frag = new loader_fragment();
+            frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
             break;
           default:
             logger["b" /* logger */].warn('line parsed but not handled: ' + result);
@@ -6291,7 +6330,7 @@ var m3u8_parser_M3U8Parser = function () {
       })) {
         logger["b" /* logger */].warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
-        frag = new fragment();
+        frag = new loader_fragment();
         frag.relurl = level.fragments[0].relurl;
         frag.baseurl = baseurl;
         frag.level = id;
@@ -6302,6 +6341,17 @@ var m3u8_parser_M3U8Parser = function () {
         level.needSidxRanges = true;
       }
     }
+
+    /**
+     * Backfill any missing PDT values
+       "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
+       one or more Media Segment URIs, the client SHOULD extrapolate
+       backward from that tag (using EXTINF durations and/or media
+       timestamps) to associate dates with those segments."
+     * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
+     * computed.
+     */
+    if (firstPdtIndex) backfillProgramDateTimes(level.fragments, firstPdtIndex);
 
     return level;
   };
@@ -6315,7 +6365,27 @@ var m3u8_parser_M3U8Parser = function () {
 function endsWith(str, search) {
   return str.substring(str.length - search.length, str.length) === search;
 }
+
+function backfillProgramDateTimes(fragments, startIndex) {
+  var fragPrev = fragments[startIndex];
+  for (var i = startIndex - 1; i >= 0; i--) {
+    var frag = fragments[i];
+    frag.pdt = fragPrev.pdt - frag.duration * 1000;
+    fragPrev = frag;
+  }
+}
+
+function assignProgramDateTime(frag, prevFrag) {
+  if (frag.rawProgramDateTime) frag.pdt = Date.parse(frag.rawProgramDateTime);else if (prevFrag && prevFrag.pdt) frag.pdt = prevFrag.endPdt;
+
+  if (!isFiniteNumber(frag.pdt)) {
+    frag.pdt = null;
+    frag.rawProgramDateTime = null;
+  }
+}
 // CONCATENATED MODULE: ./src/loader/playlist-loader.js
+
+
 var playlist_loader__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function playlist_loader__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -6666,7 +6736,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
     var url = PlaylistLoader.getResponseUrl(response, context);
 
-    var levelId = !isNaN(level) ? level : !isNaN(id) ? id : 0; // level -> id -> 0
+    var levelId = isFiniteNumber(level) ? level : isFiniteNumber(id) ? id : 0; // level -> id -> 0
     var levelType = PlaylistLoader.mapContextToLevelType(context);
 
     var levelDetails = m3u8_parser.parseLevelPlaylist(response.data, url, levelId, levelType);
@@ -6857,6 +6927,8 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
 /* harmony default export */ var playlist_loader = (playlist_loader_PlaylistLoader);
 // CONCATENATED MODULE: ./src/loader/fragment-loader.js
+
+
 function fragment_loader__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function fragment_loader__possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -6923,7 +6995,7 @@ var fragment_loader_FragmentLoader = function (_EventHandler) {
     var start = frag.byteRangeStartOffset,
         end = frag.byteRangeEndOffset;
 
-    if (!isNaN(start) && !isNaN(end)) {
+    if (isFiniteNumber(start) && isFiniteNumber(end)) {
       loaderContext.rangeStart = start;
       loaderContext.rangeEnd = end;
     }
@@ -7251,6 +7323,8 @@ function getMediaSource() {
   if (typeof window !== 'undefined') return window.MediaSource || window.WebKitMediaSource;
 }
 // CONCATENATED MODULE: ./src/demux/demuxer.js
+
+
 function demuxer__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 
@@ -7360,7 +7434,7 @@ var demuxer_Demuxer = function () {
 
   Demuxer.prototype.push = function push(data, initSegment, audioCodec, videoCodec, frag, duration, accurateTimeOffset, defaultInitPTS) {
     var w = this.w;
-    var timeOffset = !isNaN(frag.startDTS) ? frag.startDTS : frag.start;
+    var timeOffset = isFiniteNumber(frag.startDTS) ? frag.startDTS : frag.start;
     var decryptdata = frag.decryptdata;
     var lastFrag = this.frag;
     var discontinuity = !(lastFrag && frag.cc === lastFrag.cc);
@@ -7409,6 +7483,8 @@ var demuxer_Demuxer = function () {
 
 /* harmony default export */ var demux_demuxer = (demuxer_Demuxer);
 // CONCATENATED MODULE: ./src/helper/fragment-tracker.js
+
+
 function fragment_tracker__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function fragment_tracker__possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -7530,7 +7606,7 @@ var fragment_tracker_FragmentTracker = function (_EventHandler) {
       fragmentEntity.buffered = true;
 
       Object.keys(this.timeRanges).forEach(function (elementaryStream) {
-        if (fragment.hasElementaryStream(elementaryStream) === true) {
+        if (fragment.hasElementaryStream(elementaryStream)) {
           var timeRange = _this3.timeRanges[elementaryStream];
           // Check for malformed fragments
           // Gaps need to be calculated for each elementaryStream
@@ -7660,7 +7736,7 @@ var fragment_tracker_FragmentTracker = function (_EventHandler) {
   FragmentTracker.prototype.onFragLoaded = function onFragLoaded(e) {
     var fragment = e.frag;
     // dont track initsegment (for which sn is not a number)
-    if (!isNaN(fragment.sn)) {
+    if (isFiniteNumber(fragment.sn)) {
       var fragKey = this.getFragmentKey(fragment);
       var fragmentEntity = {
         body: fragment,
@@ -7731,6 +7807,7 @@ var fragment_tracker_FragmentTracker = function (_EventHandler) {
   return FragmentTracker;
 }(event_handler);
 // CONCATENATED MODULE: ./src/helper/level-helper.js
+
 /**
  * Level Helper class, providing methods dealing with playlist sliding and drift
 */
@@ -7742,7 +7819,7 @@ function updatePTS(fragments, fromIdx, toIdx) {
       fragTo = fragments[toIdx],
       fragToPTS = fragTo.startPTS;
   // if we know startPTS[toIdx]
-  if (!isNaN(fragToPTS)) {
+  if (isFiniteNumber(fragToPTS)) {
     // update fragment duration.
     // it helps to fix drifts between playlist reported duration and fragment real duration
     if (toIdx > fromIdx) {
@@ -7761,10 +7838,10 @@ function updatePTS(fragments, fromIdx, toIdx) {
 function updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS) {
   // update frag PTS/DTS
   var maxStartPTS = startPTS;
-  if (!isNaN(frag.startPTS)) {
+  if (isFiniteNumber(frag.startPTS)) {
     // delta PTS between audio and video
     var deltaPTS = Math.abs(frag.startPTS - startPTS);
-    if (isNaN(frag.deltaPTS)) frag.deltaPTS = deltaPTS;else frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
+    if (!isFiniteNumber(frag.deltaPTS)) frag.deltaPTS = deltaPTS;else frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
 
     maxStartPTS = Math.max(startPTS, frag.startPTS);
     startPTS = Math.min(startPTS, frag.startPTS);
@@ -7792,7 +7869,7 @@ function updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS) {
   fragments = details.fragments;
   // update frag reference in fragments array
   // rationale is that fragments array might not contain this frag object.
-  // this will happpen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
+  // this will happen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
   // if we don't update frag, we won't be able to propagate PTS info on the playlist
   // resulting in invalid sliding computation
   fragments[fragIdx] = frag;
@@ -7803,7 +7880,7 @@ function updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS) {
   for (i = fragIdx; i < fragments.length - 1; i++) {
     updatePTS(fragments, i, i + 1);
   }details.PTSKnown = true;
-  // logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
+  // logger.log(`frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
 
   return drift;
 }
@@ -7831,7 +7908,7 @@ function mergeDetails(oldDetails, newDetails) {
         newFrag = newfragments[i];
     if (newFrag && oldFrag) {
       ccOffset = oldFrag.cc - newFrag.cc;
-      if (!isNaN(oldFrag.startPTS)) {
+      if (isFiniteNumber(oldFrag.startPTS)) {
         newFrag.start = newFrag.startPTS = oldFrag.startPTS;
         newFrag.endPTS = oldFrag.endPTS;
         newFrag.duration = oldFrag.duration;
@@ -7885,6 +7962,7 @@ var TimeRanges = {
 
 /* harmony default export */ var time_ranges = (TimeRanges);
 // CONCATENATED MODULE: ./src/utils/discontinuities.js
+
 
 
 
@@ -7947,10 +8025,33 @@ function adjustPts(sliding, details) {
   details.PTSKnown = true;
 }
 
-// If a change in CC is detected, the PTS can no longer be relied upon
-// Attempt to align the level by using the last level - find the last frag matching the current CC and use it's PTS
-// as a reference
-function alignDiscontinuities(lastFrag, lastLevel, details) {
+/**
+ * Using the parameters of the last level, this function computes PTS' of the new fragments so that they form a
+ * contiguous stream with the last fragments.
+ * The PTS of a fragment lets Hls.js know where it fits into a stream - by knowing every PTS, we know which fragment to
+ * download at any given time. PTS is normally computed when the fragment is demuxed, so taking this step saves us time
+ * and an extra download.
+ * @param lastFrag
+ * @param lastLevel
+ * @param details
+ */
+function alignStream(lastFrag, lastLevel, details) {
+  alignDiscontinuities(lastFrag, details, lastLevel);
+  if (!details.PTSKnown && lastLevel) {
+    // If the PTS wasn't figured out via discontinuity sequence that means there was no CC increase within the level.
+    // Aligning via Program Date Time should therefore be reliable, since PDT should be the same within the same
+    // discontinuity sequence.
+    alignPDT(details, lastLevel.details);
+  }
+}
+
+/**
+ * Computes the PTS if a new level's fragments using the PTS of a fragment in the last level which shares the same
+ * discontinuity sequence.
+ * @param lastLevel - The details of the last loaded level
+ * @param details - The details of the new level
+ */
+function alignDiscontinuities(lastFrag, details, lastLevel) {
   if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
     var referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
     if (referenceFrag) {
@@ -7958,16 +8059,26 @@ function alignDiscontinuities(lastFrag, lastLevel, details) {
       adjustPts(referenceFrag.start, details);
     }
   }
-  // try to align using programDateTime attribute (if available)
-  if (details.PTSKnown === false && lastLevel && lastLevel.details && lastLevel.details.fragments && lastLevel.details.fragments.length) {
+}
+
+/**
+ * Computes the PTS of a new level's fragments using the difference in Program Date Time from the last level.
+ * @param details - The details of the new level
+ * @param lastDetails - The details of the last loaded level
+ */
+function alignPDT(details, lastDetails) {
+  if (lastDetails && lastDetails.fragments.length) {
+    if (!details.hasProgramDateTime || !lastDetails.hasProgramDateTime) {
+      return;
+    }
     // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
     // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
     // then we can deduce that playlist B sliding is 1000+8 = 1008s
-    var lastPDT = lastLevel.details.programDateTime;
-    var newPDT = details.programDateTime;
+    var lastPDT = lastDetails.fragments[0].pdt;
+    var newPDT = details.fragments[0].pdt;
     // date diff is in ms. frag.start is in seconds
-    var sliding = (newPDT - lastPDT) / 1000 + lastLevel.details.fragments[0].start;
-    if (!isNaN(sliding)) {
+    var sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
+    if (isFiniteNumber(sliding)) {
       logger["b" /* logger */].log('adjusting PTS using programDateTime delta, sliding:' + sliding.toFixed(3));
       adjustPts(sliding, details);
     }
@@ -8100,62 +8211,35 @@ var TaskLoop = function (_EventHandler) {
 // CONCATENATED MODULE: ./src/controller/fragment-finders.js
 
 
-/**
- * Calculates the PDT of the next load position.
- * bufferEnd in this function is usually the position of the playhead.
- * @param {number} [start = 0] - The PTS of the first fragment within the level
- * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {*} levelDetails - An object containing the parsed and computed properties of the currently playing level
- * @returns {number} nextPdt - The computed PDT
- */
-function calculateNextPDT() {
-  var start = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-  var bufferEnd = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-  var levelDetails = arguments[2];
-
-  var pdt = 0;
-  if (levelDetails.programDateTime) {
-    var parsedDateInt = Date.parse(levelDetails.programDateTime);
-    if (!isNaN(parsedDateInt)) {
-      pdt = bufferEnd * 1000 + parsedDateInt - 1000 * start;
-    }
-  }
-  return pdt;
-}
 
 /**
- * Finds the first fragment whose endPDT value exceeds the given PDT.
+ * Returns first fragment whose endPdt value exceeds the given PDT.
  * @param {Array} fragments - The array of candidate fragments
  * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
+ * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*|null} fragment - The best matching fragment
  */
-function findFragmentByPDT(fragments) {
-  var PDTValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
-  if (!fragments || !fragments.length || PDTValue === null) {
+function findFragmentByPDT(fragments, PDTValue, maxFragLookUpTolerance) {
+  if (!fragments || !fragments.length || !isFiniteNumber(PDTValue)) {
     return null;
   }
 
   // if less than start
-  var firstSegment = fragments[0];
-
-  if (PDTValue < firstSegment.pdt) {
+  if (PDTValue < fragments[0].pdt) {
     return null;
   }
 
-  var lastSegment = fragments[fragments.length - 1];
-
-  if (PDTValue >= lastSegment.endPdt) {
+  if (PDTValue >= fragments[fragments.length - 1].endPdt) {
     return null;
   }
 
+  maxFragLookUpTolerance = maxFragLookUpTolerance || 0;
   for (var seg = 0; seg < fragments.length; ++seg) {
     var frag = fragments[seg];
-    if (PDTValue < frag.endPdt) {
+    if (pdtWithinToleranceTest(PDTValue, maxFragLookUpTolerance, frag)) {
       return frag;
     }
   }
-  return null;
 }
 
 /**
@@ -8165,30 +8249,19 @@ function findFragmentByPDT(fragments) {
  * @param {*} fragPrevious - The last frag successfully appended
  * @param {Array} fragments - The array of candidate fragments
  * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {number} [end = 0] - The computed end time of the stream
- * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start can be within in order to be considered contiguous
+ * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*} foundFrag - The best matching fragment
  */
-function findFragmentBySN(fragPrevious, fragments) {
+function findFragmentByPTS(fragPrevious, fragments) {
   var bufferEnd = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-  var end = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-  var maxFragLookUpTolerance = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
+  var maxFragLookUpTolerance = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
 
-  var foundFrag = void 0;
   var fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : null;
-  if (bufferEnd < end) {
-    if (bufferEnd > end - maxFragLookUpTolerance) {
-      maxFragLookUpTolerance = 0;
-    }
-
-    // Prefer the next fragment if it's within tolerance
-    if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
-      foundFrag = fragNext;
-    } else {
-      foundFrag = binary_search.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
-    }
+  // Prefer the next fragment if it's within tolerance
+  if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
+    return fragNext;
   }
-  return foundFrag;
+  return binary_search.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
 }
 
 /**
@@ -8227,7 +8300,221 @@ function fragmentWithinToleranceTest() {
 
   return 0;
 }
+
+/**
+ * The test function used by the findFragmentByPdt's BinarySearch to look for the best match to the current buffer conditions.
+ * This function tests the candidate's program date time values, as represented in Unix time
+ * @param {*} candidate - The fragment to test
+ * @param {number} [pdtBufferEnd = 0] - The Unix time representing the end of the current buffered range
+ * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
+ * @returns {boolean} True if contiguous, false otherwise
+ */
+function pdtWithinToleranceTest(pdtBufferEnd, maxFragLookUpTolerance, candidate) {
+  var candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
+  return candidate.endPdt - candidateLookupTolerance > pdtBufferEnd;
+}
+// CONCATENATED MODULE: ./src/controller/gap-controller.js
+function gap_controller__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+
+
+
+
+
+var stallDebounceInterval = 1000;
+var jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
+
+var gap_controller_GapController = function () {
+  function GapController(config, media, fragmentTracker, hls) {
+    gap_controller__classCallCheck(this, GapController);
+
+    this.config = config;
+    this.media = media;
+    this.fragmentTracker = fragmentTracker;
+    this.hls = hls;
+    this.stallReported = false;
+  }
+
+  /**
+   * Checks if the playhead is stuck within a gap, and if so, attempts to free it.
+   * A gap is an unbuffered range between two buffered ranges (or the start and the first buffered range).
+   * @param lastCurrentTime
+   * @param buffered
+   */
+
+
+  GapController.prototype.poll = function poll(lastCurrentTime, buffered) {
+    var config = this.config,
+        media = this.media;
+
+    var currentTime = media.currentTime;
+    var tnow = window.performance.now();
+
+    if (currentTime !== lastCurrentTime) {
+      // The playhead is now moving, but was previously stalled
+      if (this.stallReported) {
+        logger["b" /* logger */].warn('playback not stuck anymore @' + currentTime + ', after ' + Math.round(tnow - this.stalled) + 'ms');
+        this.stallReported = false;
+      }
+      this.stalled = null;
+      this.nudgeRetry = 0;
+      return;
+    }
+
+    if (media.ended || !media.buffered.length || media.readyState > 2) {
+      return;
+    }
+
+    if (media.seeking && buffer_helper.isBuffered(media, currentTime)) {
+      return;
+    }
+
+    // The playhead isn't moving but it should be
+    // Allow some slack time to for small stalls to resolve themselves
+    var stalledDuration = tnow - this.stalled;
+    var bufferInfo = buffer_helper.bufferInfo(media, currentTime, config.maxBufferHole);
+    if (!this.stalled) {
+      this.stalled = tnow;
+      return;
+    } else if (stalledDuration >= stallDebounceInterval) {
+      // Report stalling after trying to fix
+      this._reportStall(bufferInfo.len);
+    }
+
+    this._tryFixBufferStall(bufferInfo, stalledDuration);
+  };
+
+  /**
+   * Detects and attempts to fix known buffer stalling issues.
+   * @param bufferInfo - The properties of the current buffer.
+   * @param stalledDuration - The amount of time Hls.js has been stalling for.
+   * @private
+   */
+
+
+  GapController.prototype._tryFixBufferStall = function _tryFixBufferStall(bufferInfo, stalledDuration) {
+    var config = this.config,
+        fragmentTracker = this.fragmentTracker,
+        media = this.media;
+
+    var currentTime = media.currentTime;
+
+    var partial = fragmentTracker.getPartialFragment(currentTime);
+    if (partial) {
+      // Try to skip over the buffer hole caused by a partial fragment
+      // This method isn't limited by the size of the gap between buffered ranges
+      this._trySkipBufferHole(partial);
+    }
+
+    if (bufferInfo.len > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
+      // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
+      // We only try to jump the hole if it's under the configured size
+      // Reset stalled so to rearm watchdog timer
+      this.stalled = null;
+      this._tryNudgeBuffer();
+    }
+  };
+
+  /**
+   * Triggers a BUFFER_STALLED_ERROR event, but only once per stall period.
+   * @param bufferLen - The playhead distance from the end of the current buffer segment.
+   * @private
+   */
+
+
+  GapController.prototype._reportStall = function _reportStall(bufferLen) {
+    var hls = this.hls,
+        media = this.media,
+        stallReported = this.stallReported;
+
+    if (!stallReported) {
+      // Report stalled error once
+      this.stallReported = true;
+      logger["b" /* logger */].warn('Playback stalling at @' + media.currentTime + ' due to low buffer');
+      hls.trigger(events["a" /* default */].ERROR, {
+        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
+        details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR,
+        fatal: false,
+        buffer: bufferLen
+      });
+    }
+  };
+
+  /**
+   * Attempts to fix buffer stalls by jumping over known gaps caused by partial fragments
+   * @param partial - The partial fragment found at the current time (where playback is stalling).
+   * @private
+   */
+
+
+  GapController.prototype._trySkipBufferHole = function _trySkipBufferHole(partial) {
+    var hls = this.hls,
+        media = this.media;
+
+    var currentTime = media.currentTime;
+    var lastEndTime = 0;
+    // Check if currentTime is between unbuffered regions of partial fragments
+    for (var i = 0; i < media.buffered.length; i++) {
+      var startTime = media.buffered.start(i);
+      if (currentTime >= lastEndTime && currentTime < startTime) {
+        media.currentTime = Math.max(startTime, media.currentTime + 0.1);
+        logger["b" /* logger */].warn('skipping hole, adjusting currentTime from ' + currentTime + ' to ' + media.currentTime);
+        this.stalled = null;
+        hls.trigger(events["a" /* default */].ERROR, {
+          type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
+          details: errors["a" /* ErrorDetails */].BUFFER_SEEK_OVER_HOLE,
+          fatal: false,
+          reason: 'fragment loaded with buffer holes, seeking from ' + currentTime + ' to ' + media.currentTime,
+          frag: partial
+        });
+        return;
+      }
+      lastEndTime = media.buffered.end(i);
+    }
+  };
+
+  /**
+   * Attempts to fix buffer stalls by advancing the mediaElement's current time by a small amount.
+   * @private
+   */
+
+
+  GapController.prototype._tryNudgeBuffer = function _tryNudgeBuffer() {
+    var config = this.config,
+        hls = this.hls,
+        media = this.media;
+
+    var currentTime = media.currentTime;
+    var nudgeRetry = (this.nudgeRetry || 0) + 1;
+    this.nudgeRetry = nudgeRetry;
+
+    if (nudgeRetry < config.nudgeMaxRetry) {
+      var targetTime = currentTime + nudgeRetry * config.nudgeOffset;
+      logger["b" /* logger */].log('adjust currentTime from ' + currentTime + ' to ' + targetTime);
+      // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
+      media.currentTime = targetTime;
+      hls.trigger(events["a" /* default */].ERROR, {
+        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
+        details: errors["a" /* ErrorDetails */].BUFFER_NUDGE_ON_STALL,
+        fatal: false
+      });
+    } else {
+      logger["b" /* logger */].error('still stuck in high buffer @' + currentTime + ' after ' + config.nudgeMaxRetry + ', raise fatal error');
+      hls.trigger(events["a" /* default */].ERROR, {
+        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
+        details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR,
+        fatal: true
+      });
+    }
+  };
+
+  return GapController;
+}();
+
+/* harmony default export */ var gap_controller = (gap_controller_GapController);
 // CONCATENATED MODULE: ./src/controller/stream-controller.js
+
+
 var stream_controller__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function stream_controller__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -8239,6 +8526,7 @@ function stream_controller__inherits(subClass, superClass) { if (typeof superCla
 /*
  * Stream Controller
 */
+
 
 
 
@@ -8282,6 +8570,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     _this.audioCodecSwap = false;
     _this._state = State.STOPPED;
     _this.stallReported = false;
+    _this.gapController = null;
     return _this;
   }
 
@@ -8547,7 +8836,11 @@ var stream_controller_StreamController = function (_TaskLoop) {
          even if SN are not synchronized between playlists, loading this frag will help us
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
-        if (!levelDetails.programDateTime) {
+        if (levelDetails.hasProgramDateTime) {
+          // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
+          logger["b" /* logger */].log('live playlist, switching playlist, load frag with same PDT: ' + fragPrevious.pdt);
+          frag = findFragmentByPDT(fragments, fragPrevious.endPdt, config.maxFragLookUpTolerance);
+        } else {
           // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
           var targetSN = fragPrevious.sn + 1;
           if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
@@ -8565,9 +8858,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
             });
             if (frag) logger["b" /* logger */].log('live playlist, switching playlist, load frag with same CC: ' + frag.sn);
           }
-        } else {
-          // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-          frag = findFragmentByPDT(fragments, fragPrevious.endPdt + 1);
         }
       }
       if (!frag) {
@@ -8578,37 +8868,24 @@ var stream_controller_StreamController = function (_TaskLoop) {
         logger["b" /* logger */].log('live playlist, switching playlist, unknown, load middle frag : ' + frag.sn);
       }
     }
+
     return frag;
   };
 
   StreamController.prototype._findFragment = function _findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
     var config = this.hls.config;
-    var fragBySN = function fragBySN() {
-      return findFragmentBySN(fragPrevious, fragments, bufferEnd, end, config.maxFragLookUpTolerance);
-    };
     var frag = void 0;
-    var foundFrag = void 0;
 
     if (bufferEnd < end) {
-      if (!levelDetails.programDateTime) {
-        // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = fragBySN();
-      } else {
-        // Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
-        foundFrag = findFragmentByPDT(fragments, calculateNextPDT(start, bufferEnd, levelDetails));
-        if (!foundFrag || fragmentWithinToleranceTest(bufferEnd, config.maxFragLookUpTolerance, foundFrag)) {
-          // Fall back to SN order if finding by PDT returns a frag which won't fit within the stream
-          // fragmentWithToleranceTest returns 0 if the frag is within tolerance; 1 or -1 otherwise
-          logger["b" /* logger */].warn('Frag found by PDT search did not fit within tolerance; falling back to finding by SN');
-          foundFrag = fragBySN();
-        }
-      }
+      var lookupTolerance = bufferEnd > end - config.maxFragLookUpTolerance ? 0 : config.maxFragLookUpTolerance;
+      // Remove the tolerance if it would put the bufferEnd past the actual end of stream
+      // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+      frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
     } else {
       // reach end of playlist
-      foundFrag = fragments[fragLen - 1];
+      frag = fragments[fragLen - 1];
     }
-    if (foundFrag) {
-      frag = foundFrag;
+    if (frag) {
       var curSNIdx = frag.sn - levelDetails.startSN;
       var sameLevel = fragPrevious && frag.level === fragPrevious.level;
       var prevFrag = fragments[curSNIdx - 1];
@@ -8627,7 +8904,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
               logger["b" /* logger */].warn('SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this');
             } else {
               frag = nextFrag;
-              logger["b" /* logger */].log('SN just loaded, load next one: ' + frag.sn);
+              logger["b" /* logger */].log('SN just loaded, load next one: ' + frag.sn, frag);
             }
           } else {
             frag = null;
@@ -8670,7 +8947,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
       this.fragCurrent = frag;
       this.startFragRequested = true;
       // Don't update nextLoadPosition for fragments which are not buffered
-      if (!isNaN(frag.sn) && !frag.bitrateTest) this.nextLoadPosition = frag.start + frag.duration;
+      if (isFiniteNumber(frag.sn) && !frag.bitrateTest) this.nextLoadPosition = frag.start + frag.duration;
 
       // Allow backtracked fragments to load
       if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
@@ -8857,7 +9134,11 @@ var stream_controller_StreamController = function (_TaskLoop) {
     media.addEventListener('seeked', this.onvseeked);
     media.addEventListener('ended', this.onvended);
     var config = this.config;
-    if (this.levels && config.autoStartLoad) this.hls.startLoad(config.startPosition);
+    if (this.levels && config.autoStartLoad) {
+      this.hls.startLoad(config.startPosition);
+    }
+
+    this.gapController = new gap_controller(config, media, this.fragmentTracker, this.hls);
   };
 
   StreamController.prototype.onMediaDetaching = function onMediaDetaching() {
@@ -8894,7 +9175,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     var media = this.media,
         currentTime = media ? media.currentTime : undefined,
         config = this.config;
-    if (!isNaN(currentTime)) logger["b" /* logger */].log('media seeking to ' + currentTime.toFixed(3));
+    if (isFiniteNumber(currentTime)) logger["b" /* logger */].log('media seeking to ' + currentTime.toFixed(3));
 
     var mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
     var bufferInfo = buffer_helper.bufferInfo(mediaBuffer, currentTime, this.config.maxBufferHole);
@@ -8938,7 +9219,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
   StreamController.prototype.onMediaSeeked = function onMediaSeeked() {
     var media = this.media,
         currentTime = media ? media.currentTime : undefined;
-    if (!isNaN(currentTime)) logger["b" /* logger */].log('media seeked to ' + currentTime.toFixed(3));
+    if (isFiniteNumber(currentTime)) logger["b" /* logger */].log('media seeked to ' + currentTime.toFixed(3));
 
     // tick to speed up FRAGMENT_PLAYING triggering
     this.tick();
@@ -8999,16 +9280,16 @@ var stream_controller_StreamController = function (_TaskLoop) {
         mergeDetails(curDetails, newDetails);
         sliding = newDetails.fragments[0].start;
         this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
-        if (newDetails.PTSKnown && !isNaN(sliding)) {
+        if (newDetails.PTSKnown && isFiniteNumber(sliding)) {
           logger["b" /* logger */].log('live playlist sliding:' + sliding.toFixed(3));
         } else {
           logger["b" /* logger */].log('live playlist - outdated PTS, unknown sliding');
-          alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
+          alignStream(this.fragPrevious, lastLevel, newDetails);
         }
       } else {
         logger["b" /* logger */].log('live playlist - first load, unknown sliding');
         newDetails.PTSKnown = false;
-        alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
+        alignStream(this.fragPrevious, lastLevel, newDetails);
       }
     } else {
       newDetails.PTSKnown = false;
@@ -9023,7 +9304,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
       if (this.startPosition === -1 || this.lastCurrentTime === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         var startTimeOffset = newDetails.startTimeOffset;
-        if (!isNaN(startTimeOffset)) {
+        if (isFiniteNumber(startTimeOffset)) {
           if (startTimeOffset < 0) {
             logger["b" /* logger */].log('negative start time offset ' + startTimeOffset + ', count from end of last fragment');
             startTimeOffset = sliding + duration + startTimeOffset;
@@ -9092,8 +9373,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
             audioCodec = this.config.defaultAudioCodec || currentLevel.audioCodec;
         if (this.audioCodecSwap) {
           logger["b" /* logger */].log('swapping playlist audio codec');
-          if (audioCodec === undefined) audioCodec = this.lastAudioCodec;
-
           if (audioCodec) {
             if (audioCodec.indexOf('mp4a.40.5') !== -1) audioCodec = 'mp4a.40.2';else audioCodec = 'mp4a.40.5';
           }
@@ -9187,14 +9466,14 @@ var stream_controller_StreamController = function (_TaskLoop) {
     this.state === State.PARSING) {
       var level = this.levels[this.level],
           frag = fragCurrent;
-      if (isNaN(data.endPTS)) {
+      if (!isFiniteNumber(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      if (data.hasAudio === true) frag.addElementaryStream(fragment.ElementaryStreamTypes.AUDIO);
+      if (data.hasAudio === true) frag.addElementaryStream(loader_fragment.ElementaryStreamTypes.AUDIO);
 
-      if (data.hasVideo === true) frag.addElementaryStream(fragment.ElementaryStreamTypes.VIDEO);
+      if (data.hasVideo === true) frag.addElementaryStream(loader_fragment.ElementaryStreamTypes.VIDEO);
 
       logger["b" /* logger */].log('Parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb + ',dropped:' + (data.dropped || 0));
 
@@ -9452,15 +9731,13 @@ var stream_controller_StreamController = function (_TaskLoop) {
 
 
   StreamController.prototype._checkBuffer = function _checkBuffer() {
-    var config = this.config,
-        media = this.media;
+    var media = this.media;
 
     if (!media || !media.readyState) {
       // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
       return;
     }
 
-    var currentTime = media.currentTime;
     var mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
     var buffered = mediaBuffer.buffered;
 
@@ -9470,34 +9747,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
     } else {
-      var expectedPlaying = !(media.paused || // not playing when media is paused
-      media.ended || // not playing when media is ended
-      media.buffered.length === 0); // not playing if nothing buffered
-      var tnow = performance.now();
-
-      if (currentTime !== this.lastCurrentTime) {
-        // The playhead is now moving, but was previously stalled
-        if (this.stallReported) {
-          logger["b" /* logger */].warn('playback not stuck anymore @' + currentTime + ', after ' + Math.round(tnow - this.stalled) + 'ms');
-          this.stallReported = false;
-        }
-        this.stalled = null;
-        this.nudgeRetry = 0;
-      } else if (expectedPlaying) {
-        // The playhead isn't moving but it should be
-        // Allow some slack time to for small stalls to resolve themselves
-        var stalledDuration = tnow - this.stalled;
-        var bufferInfo = buffer_helper.bufferInfo(media, currentTime, config.maxBufferHole);
-        if (!this.stalled) {
-          this.stalled = tnow;
-          return;
-        } else if (stalledDuration >= 1000) {
-          // Report stalling after trying to fix
-          this._reportStall(bufferInfo.len);
-        }
-
-        this._tryFixBufferStall(bufferInfo, stalledDuration);
-      }
+      this.gapController.poll(this.lastCurrentTime, buffered);
     }
   };
 
@@ -9519,7 +9769,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     var media = this.mediaBuffer ? this.mediaBuffer : this.media;
     if (media) {
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      this.fragmentTracker.detectEvictedFragments(fragment.ElementaryStreamTypes.VIDEO, media.buffered);
+      this.fragmentTracker.detectEvictedFragments(loader_fragment.ElementaryStreamTypes.VIDEO, media.buffered);
     }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
@@ -9538,130 +9788,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
   StreamController.prototype.computeLivePosition = function computeLivePosition(sliding, levelDetails) {
     var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
     return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
-  };
-
-  /**
-   * Detects and attempts to fix known buffer stalling issues.
-   * @param bufferInfo - The properties of the current buffer.
-   * @param stalledDuration - The amount of time Hls.js has been stalling for.
-   * @private
-   */
-
-
-  StreamController.prototype._tryFixBufferStall = function _tryFixBufferStall(bufferInfo, stalledDuration) {
-    var config = this.config,
-        media = this.media;
-
-    var currentTime = media.currentTime;
-    var jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
-
-    var partial = this.fragmentTracker.getPartialFragment(currentTime);
-    if (partial) {
-      // Try to skip over the buffer hole caused by a partial fragment
-      // This method isn't limited by the size of the gap between buffered ranges
-      this._trySkipBufferHole(partial);
-    }
-
-    if (bufferInfo.len > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
-      // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
-      // We only try to jump the hole if it's under the configured size
-      // Reset stalled so to rearm watchdog timer
-      this.stalled = null;
-      this._tryNudgeBuffer();
-    }
-  };
-
-  /**
-   * Triggers a BUFFER_STALLED_ERROR event, but only once per stall period.
-   * @param bufferLen - The playhead distance from the end of the current buffer segment.
-   * @private
-   */
-
-
-  StreamController.prototype._reportStall = function _reportStall(bufferLen) {
-    var hls = this.hls,
-        media = this.media,
-        stallReported = this.stallReported;
-
-    if (!stallReported) {
-      // Report stalled error once
-      this.stallReported = true;
-      logger["b" /* logger */].warn('Playback stalling at @' + media.currentTime + ' due to low buffer');
-      hls.trigger(events["a" /* default */].ERROR, {
-        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
-        details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR,
-        fatal: false,
-        buffer: bufferLen
-      });
-    }
-  };
-
-  /**
-   * Attempts to fix buffer stalls by jumping over known gaps caused by partial fragments
-   * @param partial - The partial fragment found at the current time (where playback is stalling).
-   * @private
-   */
-
-
-  StreamController.prototype._trySkipBufferHole = function _trySkipBufferHole(partial) {
-    var hls = this.hls,
-        media = this.media;
-
-    var currentTime = media.currentTime;
-    var lastEndTime = 0;
-    // Check if currentTime is between unbuffered regions of partial fragments
-    for (var i = 0; i < media.buffered.length; i++) {
-      var startTime = media.buffered.start(i);
-      if (currentTime >= lastEndTime && currentTime < startTime) {
-        media.currentTime = Math.max(startTime, media.currentTime + 0.1);
-        logger["b" /* logger */].warn('skipping hole, adjusting currentTime from ' + currentTime + ' to ' + media.currentTime);
-        this.stalled = null;
-        hls.trigger(events["a" /* default */].ERROR, {
-          type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
-          details: errors["a" /* ErrorDetails */].BUFFER_SEEK_OVER_HOLE,
-          fatal: false,
-          reason: 'fragment loaded with buffer holes, seeking from ' + currentTime + ' to ' + media.currentTime,
-          frag: partial
-        });
-        return;
-      }
-      lastEndTime = media.buffered.end(i);
-    }
-  };
-
-  /**
-   * Attempts to fix buffer stalls by advancing the mediaElement's current time by a small amount.
-   * @private
-   */
-
-
-  StreamController.prototype._tryNudgeBuffer = function _tryNudgeBuffer() {
-    var config = this.config,
-        hls = this.hls,
-        media = this.media;
-
-    var currentTime = media.currentTime;
-    var nudgeRetry = this.nudgeRetry || 0;
-    this.nudgeRetry = ++nudgeRetry;
-
-    if (nudgeRetry < config.nudgeMaxRetry) {
-      var targetTime = currentTime + nudgeRetry * config.nudgeOffset;
-      logger["b" /* logger */].log('adjust currentTime from ' + currentTime + ' to ' + targetTime);
-      // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
-      media.currentTime = targetTime;
-      hls.trigger(events["a" /* default */].ERROR, {
-        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
-        details: errors["a" /* ErrorDetails */].BUFFER_NUDGE_ON_STALL,
-        fatal: false
-      });
-    } else {
-      logger["b" /* logger */].error('still stuck in high buffer @' + currentTime + ' after ' + config.nudgeMaxRetry + ', raise fatal error');
-      hls.trigger(events["a" /* default */].ERROR, {
-        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
-        details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR,
-        fatal: true
-      });
-    }
   };
 
   /**
@@ -10309,6 +10435,8 @@ var ewma_bandwidth_estimator_EwmaBandWidthEstimator = function () {
 
 /* harmony default export */ var ewma_bandwidth_estimator = (ewma_bandwidth_estimator_EwmaBandWidthEstimator);
 // CONCATENATED MODULE: ./src/controller/abr-controller.js
+
+
 var abr_controller__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function abr_controller__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -10460,7 +10588,7 @@ var abr_controller_AbrController = function (_EventHandler) {
 
   AbrController.prototype.onFragLoaded = function onFragLoaded(data) {
     var frag = data.frag;
-    if (frag.type === 'main' && !isNaN(frag.sn)) {
+    if (frag.type === 'main' && isFiniteNumber(frag.sn)) {
       // stop monitoring bw once frag loaded
       this.clearTimer();
       // store level id after successful fragment load
@@ -10492,7 +10620,7 @@ var abr_controller_AbrController = function (_EventHandler) {
     // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
     // and leading to wrong bw estimation
     // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
-    if (stats.aborted !== true && frag.type === 'main' && !isNaN(frag.sn) && (!frag.bitrateTest || stats.tload === stats.tbuffered)) {
+    if (stats.aborted !== true && frag.type === 'main' && isFiniteNumber(frag.sn) && (!frag.bitrateTest || stats.tload === stats.tbuffered)) {
       // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
       // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
       // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation
@@ -10527,11 +10655,15 @@ var abr_controller_AbrController = function (_EventHandler) {
 
   AbrController.prototype._findBestLevel = function _findBestLevel(currentLevel, currentFragDuration, currentBw, minAutoLevel, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
     for (var i = maxAutoLevel; i >= minAutoLevel; i--) {
-      var levelInfo = levels[i],
-          levelDetails = levelInfo.details,
-          avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration,
-          live = levelDetails ? levelDetails.live : false,
-          adjustedbw = void 0;
+      var levelInfo = levels[i];
+      if (!levelInfo) {
+        continue;
+      }
+
+      var levelDetails = levelInfo.details;
+      var avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration;
+      var live = levelDetails ? levelDetails.live : false;
+      var adjustedbw = void 0;
       // follow algorithm captured from stagefright :
       // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
       // Pick the highest bandwidth stream below or equal to estimated bandwidth.
@@ -10635,6 +10767,8 @@ var abr_controller_AbrController = function (_EventHandler) {
 
 /* harmony default export */ var abr_controller = (abr_controller_AbrController);
 // CONCATENATED MODULE: ./src/controller/buffer-controller.js
+
+
 function buffer_controller__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function buffer_controller__possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -11040,7 +11174,7 @@ var buffer_controller_BufferController = function (_EventHandler) {
       // Override duration to Infinity
       logger["b" /* logger */].log('Media Source duration is set to Infinity');
       this._msDuration = this.mediaSource.duration = Infinity;
-    } else if (this._levelDuration > this._msDuration && this._levelDuration > duration || duration === Infinity || isNaN(duration)) {
+    } else if (this._levelDuration > this._msDuration && this._levelDuration > duration || !isFiniteNumber(duration)) {
       // levelDuration was the last value we set.
       // not using mediaSource.duration as the browser may tweak this value
       // only update Media Source duration if its value increase, this is to avoid
@@ -11256,7 +11390,7 @@ var cap_level_controller_CapLevelController = function (_EventHandler) {
   function CapLevelController(hls) {
     cap_level_controller__classCallCheck(this, CapLevelController);
 
-    var _this = cap_level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].FPS_DROP_LEVEL_CAPPING, events["a" /* default */].MEDIA_ATTACHING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].LEVELS_UPDATED, events["a" /* default */].BUFFER_CODECS));
+    var _this = cap_level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].FPS_DROP_LEVEL_CAPPING, events["a" /* default */].MEDIA_ATTACHING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].LEVELS_UPDATED, events["a" /* default */].BUFFER_CODECS, events["a" /* default */].MEDIA_DETACHING));
 
     _this.autoLevelCapping = Number.POSITIVE_INFINITY;
     _this.firstLevel = null;
@@ -11308,6 +11442,10 @@ var cap_level_controller_CapLevelController = function (_EventHandler) {
 
   CapLevelController.prototype.onLevelsUpdated = function onLevelsUpdated(data) {
     this.levels = data.levels;
+  };
+
+  CapLevelController.prototype.onMediaDetaching = function onMediaDetaching() {
+    this._stopCapping();
   };
 
   CapLevelController.prototype.detectPlayerSize = function detectPlayerSize() {
