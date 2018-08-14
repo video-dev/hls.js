@@ -14,6 +14,7 @@ cp "./README.md" "$base/README.md"
 cp -r "./dist" "$base/dist"
 cp -r "./demo" "$base/demo"
 cp -r "./docs" "$base/docs"
+cp -r "./api-docs" "$base/api-docs"
 
 if [ ! -z "$tag" ]; then
   echo "Detected tag: $tag"
