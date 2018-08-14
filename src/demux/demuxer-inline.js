@@ -16,6 +16,7 @@ import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
 import { getSelfScope } from '../utils/get-self-scope';
+import { logger } from '../utils/logger';
 
 // see https://stackoverflow.com/a/11237259/589493
 const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
@@ -23,9 +24,9 @@ const global = getSelfScope(); // safeguard for code that might run both on work
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
 try {
-  now = global.performance.now;
-} catch(err) {
-  console.warn('Unable to use global performance.now function, using Date.now, reason:', err.message);
+  now = global.performance.now.bind(global.performance);
+} catch (err) {
+  logger.debug('Unable to use Performance API on this environment');
   now = global.Date.now;
 }
 
@@ -57,7 +58,6 @@ class DemuxerInline {
         this.observer.trigger(Event.FRAG_DECRYPTED, { stats: { tstart: startTime, tdecrypt: endTime } });
         this.pushDecrypted(new Uint8Array(decryptedData), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
       });
-
     } else {
       this.pushDecrypted(new Uint8Array(data), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
     }
