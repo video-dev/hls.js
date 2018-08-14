@@ -50,11 +50,16 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ];
       echo "Cleared jsdelivr cache."
     elif [ "${TRAVIS_MODE}" = "release" ]; then
       npm publish
+      curl https://purge.jsdelivr.net/npm/hls.js@latest
       echo "Published."
     fi
   else
     echo "Already published."
   fi
+elif [ "${TRAVIS_MODE}" = "gh-pages" ]; then
+  npm run lint
+  npm run build
+  ./scripts/build-gh-pages.sh
 else
 	echo "Unknown travis mode: ${TRAVIS_MODE}" 1>&2
 	exit 1
