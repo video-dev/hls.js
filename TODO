@@ -1,0 +1,24 @@
+https://akamai-axtest.akamaized.net/routes/lapd-v1-acceptance/www_c4/Manifest.m3u8
+https://wowza.peer5.com/live/smil:bbb_abr.smil/playlist.m3u8
+
+-> ZDF stream
+
+
+* Event-scheduler
+* Tools: HLS downloader
+
+
+- Remove Babel dependencies
+
+
+--------
+
+Legacy small low hanging fruits:
+
+* Centralize uses of navigator.userAgent
+
+* Get rid of buffer-stall error on seeks
+* Get rid of 1001 timeouts/intervals
+* Centralize QualityLevel stuff to respective class
+* Add v1.0-style API methods
+
