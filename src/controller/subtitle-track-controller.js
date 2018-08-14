@@ -12,6 +12,7 @@ import { filterSubtitleTracks } from '../utils/texttrack-utils';
 class SubtitleTrackController extends TaskLoop {
   constructor (hls) {
     super(hls,
+      Event.ERROR,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
       Event.MANIFEST_LOADING,
@@ -155,6 +156,12 @@ class SubtitleTrackController extends TaskLoop {
         this.clearInterval();
       }
     }
+  }
+
+  onError (data) {
+    // TODO: implement similar failure handling logic as in audio-track-controller
+    //       -> for this we first need to declare some error codes for subtitle track loading
+    //          and also actually trigger such an error event in subtitle-stream-controller
   }
 
   /**
