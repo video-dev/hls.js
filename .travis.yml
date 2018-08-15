@@ -41,6 +41,7 @@ jobs:
       if: branch = master AND type != pull_request
       env: TRAVIS_MODE=releaseCanary
     - stage: buildAndTest
+      if: tag IS present OR (branch = master AND type != pull_request)
       env: TRAVIS_MODE=gh-pages
       deploy:
         # Need two providers for pages. One watches tags, one watches master
