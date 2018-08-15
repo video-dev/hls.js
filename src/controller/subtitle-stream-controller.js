@@ -46,7 +46,7 @@ class SubtitleStreamController extends TaskLoop {
     super.onHandlerDestroyed();
   }
 
-  getBuffered () {
+  _getBuffered () {
     const buffered = this.tracksBuffered[this.currentTrackId];
     if (buffered) {
       return buffered;
@@ -127,7 +127,7 @@ class SubtitleStreamController extends TaskLoop {
       const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
       const maxFragLookUpTolerance = config.maxFragLookUpTolerance;
 
-      const bufferedInfo = BufferHelper.bufferedInfo(this.getBuffered(), this.media.currentTime, maxBufferHole);
+      const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), this.media.currentTime, maxBufferHole);
       const bufferEnd = bufferedInfo.end;
       const bufferLen = bufferedInfo.len;
 
