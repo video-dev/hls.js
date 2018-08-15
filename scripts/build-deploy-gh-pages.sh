@@ -40,7 +40,7 @@ if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
   cp -r "./demo" "$topDemo"
 fi
 
-rm -f "$latest"
+rm -rf "$latest"
 cp -r "$root/$id" "$latest"
 
 rm -f "$topReadme"
