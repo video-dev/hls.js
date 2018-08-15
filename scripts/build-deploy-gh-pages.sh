@@ -8,6 +8,7 @@ latest="$root/latest"
 stable="$root/stable"
 topReadme="$root/README.md"
 topDemo="$root/demo"
+topDist="$root/dist"
 tag=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "")
 
 echo "Cloning current gh-pages..."
@@ -38,6 +39,8 @@ if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
   cp -r "$root/$id" "$stable"
   rm -rf "$topDemo"
   cp -r "./demo" "$topDemo"
+  rm -rf "$topDist"
+  cp -r "./dist" "$topDist"
 fi
 
 rm -rf "$latest"
