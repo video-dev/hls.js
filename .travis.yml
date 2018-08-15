@@ -36,22 +36,31 @@ jobs:
         skip_cleanup: true
         on:
           tags: true
-    - stage: buildAndTest
-      if: branch = master AND type != pull_request
-      env: TRAVIS_MODE=gh-pages
-      deploy:
-        provider: pages
-        github_token:
-          secure: "kR9xHKhWfOv6vwxz1d//PpC22VDupnPI59L9czLkpLoIdzm5rm3eV7he4XPlQfbSrV1UBgURARgF+yekmeqUZk9vqfo4F5oa+6KiBxAdnI9PjsjYRSXitdq4a6kpIR854nxUIOlDXR5AbD2MgNaKsQHiaNlngdR/870OhiwqRJVwQOLKVUADw1QWECXe/DXrQiFbMunxBrTyutbrGuI8cT7wzqFn+aPkI/3liiw8PTr93GrtxZ/bFxI899KzMSHHMXB+eDDMtxPFD+VApruD7h6f+1C0psJeOV8/PkzrRkbPELPBKKaPH9TvVOPUf2OSRHVna828wnLHwseae0rgtuk7+ZJmB9XZKX9FUBDT4/Gv/AkE+m/cwnoqaatAMJYR+yiQqsosjBLDAaTUOPHu3wBdAaR5uL5fGsSsKe3sUfSQHrv86vReNl9ETU06apmyWtsIbyhMtv98j9I+hNVjKZUI30g1ee6LgjlDlBavMk8KAbLbyBTcJlNAexj8Rppdqg+AdW7rYW+S6SgfTyyYQKTLeFwmDjfrkqzHJnk78sV18+xPLI1hbzBGp/bXaW23sLDBLLV5Sxifr8flUMkUdH28zsLCHUQ7C4GKQ19el2NZgIxSsnxRA8vGZof7OXasR4HJVjv/PSx+DN6Fi1PV1SiNBcwgPCGIIxBF7TUPxJk="
-        skip_cleanup: true
-        keep_history: false
-        local_dir: gh-pages
-        on:
-          tags: true
     # publish canary package if on master
     - stage: releaseCanary
       if: branch = master AND type != pull_request
       env: TRAVIS_MODE=releaseCanary
+    - stage: buildAndTest
+      env: TRAVIS_MODE=gh-pages
+      deploy:
+        # Need two providers for pages. One watches tags, one watches master
+        # https://github.com/travis-ci/travis-ci/issues/7780
+        - provider: pages
+          github_token:
+            secure: "kR9xHKhWfOv6vwxz1d//PpC22VDupnPI59L9czLkpLoIdzm5rm3eV7he4XPlQfbSrV1UBgURARgF+yekmeqUZk9vqfo4F5oa+6KiBxAdnI9PjsjYRSXitdq4a6kpIR854nxUIOlDXR5AbD2MgNaKsQHiaNlngdR/870OhiwqRJVwQOLKVUADw1QWECXe/DXrQiFbMunxBrTyutbrGuI8cT7wzqFn+aPkI/3liiw8PTr93GrtxZ/bFxI899KzMSHHMXB+eDDMtxPFD+VApruD7h6f+1C0psJeOV8/PkzrRkbPELPBKKaPH9TvVOPUf2OSRHVna828wnLHwseae0rgtuk7+ZJmB9XZKX9FUBDT4/Gv/AkE+m/cwnoqaatAMJYR+yiQqsosjBLDAaTUOPHu3wBdAaR5uL5fGsSsKe3sUfSQHrv86vReNl9ETU06apmyWtsIbyhMtv98j9I+hNVjKZUI30g1ee6LgjlDlBavMk8KAbLbyBTcJlNAexj8Rppdqg+AdW7rYW+S6SgfTyyYQKTLeFwmDjfrkqzHJnk78sV18+xPLI1hbzBGp/bXaW23sLDBLLV5Sxifr8flUMkUdH28zsLCHUQ7C4GKQ19el2NZgIxSsnxRA8vGZof7OXasR4HJVjv/PSx+DN6Fi1PV1SiNBcwgPCGIIxBF7TUPxJk="
+          skip_cleanup: true
+          keep_history: false
+          local_dir: gh-pages
+          on:
+            tags: true
+        - provider: pages
+          github_token:
+            secure: "kR9xHKhWfOv6vwxz1d//PpC22VDupnPI59L9czLkpLoIdzm5rm3eV7he4XPlQfbSrV1UBgURARgF+yekmeqUZk9vqfo4F5oa+6KiBxAdnI9PjsjYRSXitdq4a6kpIR854nxUIOlDXR5AbD2MgNaKsQHiaNlngdR/870OhiwqRJVwQOLKVUADw1QWECXe/DXrQiFbMunxBrTyutbrGuI8cT7wzqFn+aPkI/3liiw8PTr93GrtxZ/bFxI899KzMSHHMXB+eDDMtxPFD+VApruD7h6f+1C0psJeOV8/PkzrRkbPELPBKKaPH9TvVOPUf2OSRHVna828wnLHwseae0rgtuk7+ZJmB9XZKX9FUBDT4/Gv/AkE+m/cwnoqaatAMJYR+yiQqsosjBLDAaTUOPHu3wBdAaR5uL5fGsSsKe3sUfSQHrv86vReNl9ETU06apmyWtsIbyhMtv98j9I+hNVjKZUI30g1ee6LgjlDlBavMk8KAbLbyBTcJlNAexj8Rppdqg+AdW7rYW+S6SgfTyyYQKTLeFwmDjfrkqzHJnk78sV18+xPLI1hbzBGp/bXaW23sLDBLLV5Sxifr8flUMkUdH28zsLCHUQ7C4GKQ19el2NZgIxSsnxRA8vGZof7OXasR4HJVjv/PSx+DN6Fi1PV1SiNBcwgPCGIIxBF7TUPxJk="
+          skip_cleanup: true
+          keep_history: false
+          local_dir: gh-pages
+          on:
+            branch: master
     # Required tests
     - stage: buildAndTest
       env:   TRAVIS_MODE=build
