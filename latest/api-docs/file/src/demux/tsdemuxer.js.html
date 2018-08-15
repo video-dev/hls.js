@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/demux/tsdemuxer.js | hls.js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="JavaScript HLS client using MediaSourceExtension"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="hls.js"><meta property="twitter:description" content="JavaScript HLS client using MediaSourceExtension"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/video-dev/hls.js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/event-handler.js~EventHandler.html">EventHandler</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/hls.js~Hls.html">Hls</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isSupported">isSupported</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/buffer-controller.js~BufferController.html">BufferController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/cap-level-controller.js~CapLevelController.html">CapLevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/eme-controller.js~EMEController.html">EMEController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fps-controller.js~FPSController.html">FPSController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fragment-tracker.js~FragmentTracker.html">FragmentTracker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/gap-controller.js~GapController.html">GapController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/id3-track-controller.js~ID3TrackController.html">ID3TrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/level-controller.js~LevelController.html">LevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/stream-controller.js~StreamController.html">StreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPDT">findFragmentByPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPTS">findFragmentByPTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fragmentWithinToleranceTest">fragmentWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-pdtWithinToleranceTest">pdtWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-addGroupId">addGroupId</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-mergeDetails">mergeDetails</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updatePTS">updatePTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-FragmentState">FragmentState</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/fast-aes-key.js~FastAESKey.html">FastAESKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-removePadding">removePadding</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#demux">demux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/aacdemuxer.js~AACDemuxer.html">AACDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer-inline.js~DemuxerInline.html">DemuxerInline</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer.js~Demuxer.html">Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/exp-golomb.js~ExpGolomb.html">ExpGolomb</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/id3.js~ID3.html">ID3</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp3demuxer.js~MP3Demuxer.html">MP3Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp4demuxer.js~MP4Demuxer.html">MP4Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/sample-aes.js~SampleAesDecrypter.html">SampleAesDecrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/tsdemuxer.js~TSDemuxer.html">TSDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-appendFrame">appendFrame</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getAudioConfig">getAudioConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFrameDuration">getFrameDuration</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFullFrameLength">getFullFrameLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getHeaderLength">getHeaderLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-initTrackConfig">initTrackConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeader">isHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeaderPattern">isHeaderPattern</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-parseFrameHeader">parseFrameHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-probe">probe</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-DemuxerWorker">DemuxerWorker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-utf8ArrayToStr">utf8ArrayToStr</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-MpegAudio">MpegAudio</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#loader">loader</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment-loader.js~FragmentLoader.html">FragmentLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/key-loader.js~KeyLoader.html">KeyLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level-key.js~LevelKey.html">LevelKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level.js~Level.html">Level</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/m3u8-parser.js~M3U8Parser.html">M3U8Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html">PlaylistLoader</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#polyfills">polyfills</a><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-isFiniteNumber">isFiniteNumber</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#remux">remux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/aac-helper.js~AAC.html">AAC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/dummy-remuxer.js~DummyRemuxer.html">DummyRemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-generator.js~MP4.html">MP4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-remuxer.js~MP4Remuxer.html">MP4Remuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/passthrough-remuxer.js~PassThroughRemuxer.html">PassThroughRemuxer</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#utils">utils</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/attr-list.js~AttrList.html">AttrList</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/buffer-helper.js~BufferHelper.html">BufferHelper</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/cea-608-parser.js~Cea608Parser.html">Cea608Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma-bandwidth-estimator.js~EwmaBandWidthEstimator.html">EwmaBandWidthEstimator</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma.js~EWMA.html">EWMA</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/fetch-loader.js~FetchLoader.html">FetchLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/output-filter.js~OutputFilter.html">OutputFilter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/xhr-loader.js~XhrLoader.html">XhrLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecSupportedInMp4">isCodecSupportedInMp4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecType">isCodecType</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-newCue">newCue</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-adjustPts">adjustPts</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignDiscontinuities">alignDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignPDT">alignPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignStream">alignStream</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findDiscontinuousReferenceFrag">findDiscontinuousReferenceFrag</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFirstFragWithCC">findFirstFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getSelfScope">getSelfScope</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getMediaSource">getMediaSource</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Hex">Hex</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-logger">logger</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-requestMediaKeySystemAccess">requestMediaKeySystemAccess</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-WebVTTParser">WebVTTParser</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/demux/tsdemuxer.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/**
+ * highly optimized TS demuxer:
+ * parse PAT, PMT
+ * extract PES packet from audio and video PIDs
+ * extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
+ * trigger the remuxer upon parsing completion
+ * it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
+ * it also controls the remuxing process :
+ * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
+*/
+
+import * as ADTS from &apos;./adts&apos;;
+import MpegAudio from &apos;./mpegaudio&apos;;
+import Event from &apos;../events&apos;;
+import ExpGolomb from &apos;./exp-golomb&apos;;
+import SampleAesDecrypter from &apos;./sample-aes&apos;;
+// import Hex from &apos;../utils/hex&apos;;
+import { logger } from &apos;../utils/logger&apos;;
+import { ErrorTypes, ErrorDetails } from &apos;../errors&apos;;
+
+// We are using fixed track IDs for driving the MP4 remuxer
+// instead of following the TS PIDs.
+// There is no reason not to do this and some browsers/SourceBuffer-demuxers
+// may not like if there are TrackID &quot;switches&quot;
+// See https://github.com/video-dev/hls.js/issues/1331
+// Here we are mapping our internal track types to constant MP4 track IDs
+// With MSE currently one can only have one track of each, and we are muxing
+// whatever video/audio rendition in them.
+const RemuxerTrackIdConfig = {
+  video: 1,
+  audio: 2,
+  id3: 3,
+  text: 4
+};
+
+class TSDemuxer {
+  constructor (observer, remuxer, config, typeSupported) {
+    this.observer = observer;
+    this.config = config;
+    this.typeSupported = typeSupported;
+    this.remuxer = remuxer;
+    this.sampleAes = null;
+  }
+
+  setDecryptData (decryptdata) {
+    if ((decryptdata != null) &amp;&amp; (decryptdata.key != null) &amp;&amp; (decryptdata.method === &apos;SAMPLE-AES&apos;)) {
+      this.sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptdata, this.discardEPB);
+    } else {
+      this.sampleAes = null;
+    }
+  }
+
+  static probe (data) {
+    const syncOffset = TSDemuxer._syncOffset(data);
+    if (syncOffset &lt; 0) {
+      return false;
+    } else {
+      if (syncOffset) {
+        logger.warn(`MPEG2-TS detected but first sync word found @ offset ${syncOffset}, junk ahead ?`);
+      }
+
+      return true;
+    }
+  }
+
+  static _syncOffset (data) {
+    // scan 1000 first bytes
+    const scanwindow = Math.min(1000, data.length - 3 * 188);
+    let i = 0;
+    while (i &lt; scanwindow) {
+      // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
+      if (data[i] === 0x47 &amp;&amp; data[i + 188] === 0x47 &amp;&amp; data[i + 2 * 188] === 0x47) {
+        return i;
+      } else {
+        i++;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Creates a track model internal to demuxer used to drive remuxing input
+   *
+   * @param {string} type &apos;audio&apos; | &apos;video&apos; | &apos;id3&apos; | &apos;text&apos;
+   * @param {number} duration
+   * @return {object} TSDemuxer&apos;s internal track model
+   */
+  static createTrack (type, duration) {
+    return {
+      container: type === &apos;video&apos; || type === &apos;audio&apos; ? &apos;video/mp2t&apos; : undefined,
+      type,
+      id: RemuxerTrackIdConfig[type],
+      pid: -1,
+      inputTimeScale: 90000,
+      sequenceNumber: 0,
+      samples: [],
+      len: 0,
+      dropped: type === &apos;video&apos; ? 0 : undefined,
+      isAAC: type === &apos;audio&apos; ? true : undefined,
+      duration: type === &apos;audio&apos; ? duration : undefined
+    };
+  }
+
+  /**
+   * Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start)
+   * Resets all internal track instances of the demuxer.
+   *
+   * @override Implements generic demuxing/remuxing interface (see DemuxerInline)
+   * @param {object} initSegment
+   * @param {string} audioCodec
+   * @param {string} videoCodec
+   * @param {number} duration (in TS timescale = 90kHz)
+   */
+  resetInitSegment (initSegment, audioCodec, videoCodec, duration) {
+    this.pmtParsed = false;
+    this._pmtId = -1;
+
+    this._avcTrack = TSDemuxer.createTrack(&apos;video&apos;, duration);
+    this._audioTrack = TSDemuxer.createTrack(&apos;audio&apos;, duration);
+    this._id3Track = TSDemuxer.createTrack(&apos;id3&apos;, duration);
+    this._txtTrack = TSDemuxer.createTrack(&apos;text&apos;, duration);
+
+    // flush any partial content
+    this.aacOverFlow = null;
+    this.aacLastPTS = null;
+    this.avcSample = null;
+    this.audioCodec = audioCodec;
+    this.videoCodec = videoCodec;
+    this._duration = duration;
+  }
+
+  /**
+   *
+   * @override
+   */
+  resetTimeStamp () {}
+
+  // feed incoming data to the front of the parsing pipeline
+  append (data, timeOffset, contiguous, accurateTimeOffset) {
+    let start, len = data.length, stt, pid, atf, offset, pes,
+      unknownPIDs = false;
+    this.contiguous = contiguous;
+    let pmtParsed = this.pmtParsed,
+      avcTrack = this._avcTrack,
+      audioTrack = this._audioTrack,
+      id3Track = this._id3Track,
+      avcId = avcTrack.pid,
+      audioId = audioTrack.pid,
+      id3Id = id3Track.pid,
+      pmtId = this._pmtId,
+      avcData = avcTrack.pesData,
+      audioData = audioTrack.pesData,
+      id3Data = id3Track.pesData,
+      parsePAT = this._parsePAT,
+      parsePMT = this._parsePMT,
+      parsePES = this._parsePES,
+      parseAVCPES = this._parseAVCPES.bind(this),
+      parseAACPES = this._parseAACPES.bind(this),
+      parseMPEGPES = this._parseMPEGPES.bind(this),
+      parseID3PES = this._parseID3PES.bind(this);
+
+    const syncOffset = TSDemuxer._syncOffset(data);
+
+    // don&apos;t parse last TS packet if incomplete
+    len -= (len + syncOffset) % 188;
+
+    // loop through TS packets
+    for (start = syncOffset; start &lt; len; start += 188) {
+      if (data[start] === 0x47) {
+        stt = !!(data[start + 1] &amp; 0x40);
+        // pid is a 13-bit field starting at the last bit of TS[1]
+        pid = ((data[start + 1] &amp; 0x1f) &lt;&lt; 8) + data[start + 2];
+        atf = (data[start + 3] &amp; 0x30) &gt;&gt; 4;
+        // if an adaption field is present, its length is specified by the fifth byte of the TS packet header.
+        if (atf &gt; 1) {
+          offset = start + 5 + data[start + 4];
+          // continue if there is only adaptation field
+          if (offset === (start + 188)) {
+            continue;
+          }
+        } else {
+          offset = start + 4;
+        }
+        switch (pid) {
+        case avcId:
+          if (stt) {
+            if (avcData &amp;&amp; (pes = parsePES(avcData)) &amp;&amp; pes.pts !== undefined) {
+              parseAVCPES(pes, false);
+            }
+
+            avcData = { data: [], size: 0 };
+          }
+          if (avcData) {
+            avcData.data.push(data.subarray(offset, start + 188));
+            avcData.size += start + 188 - offset;
+          }
+          break;
+        case audioId:
+          if (stt) {
+            if (audioData &amp;&amp; (pes = parsePES(audioData)) &amp;&amp; pes.pts !== undefined) {
+              if (audioTrack.isAAC) {
+                parseAACPES(pes);
+              } else {
+                parseMPEGPES(pes);
+              }
+            }
+            audioData = { data: [], size: 0 };
+          }
+          if (audioData) {
+            audioData.data.push(data.subarray(offset, start + 188));
+            audioData.size += start + 188 - offset;
+          }
+          break;
+        case id3Id:
+          if (stt) {
+            if (id3Data &amp;&amp; (pes = parsePES(id3Data)) &amp;&amp; pes.pts !== undefined) {
+              parseID3PES(pes);
+            }
+
+            id3Data = { data: [], size: 0 };
+          }
+          if (id3Data) {
+            id3Data.data.push(data.subarray(offset, start + 188));
+            id3Data.size += start + 188 - offset;
+          }
+          break;
+        case 0:
+          if (stt) {
+            offset += data[offset] + 1;
+          }
+
+          pmtId = this._pmtId = parsePAT(data, offset);
+          break;
+        case pmtId:
+          if (stt) {
+            offset += data[offset] + 1;
+          }
+
+          let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true, this.sampleAes != null);
+
+          // only update track id if track PID found while parsing PMT
+          // this is to avoid resetting the PID to -1 in case
+          // track PID transiently disappears from the stream
+          // this could happen in case of transient missing audio samples for example
+          // NOTE this is only the PID of the track as found in TS,
+          // but we are not using this for MP4 track IDs.
+          avcId = parsedPIDs.avc;
+          if (avcId &gt; 0) {
+            avcTrack.pid = avcId;
+          }
+
+          audioId = parsedPIDs.audio;
+          if (audioId &gt; 0) {
+            audioTrack.pid = audioId;
+            audioTrack.isAAC = parsedPIDs.isAAC;
+          }
+          id3Id = parsedPIDs.id3;
+          if (id3Id &gt; 0) {
+            id3Track.pid = id3Id;
+          }
+
+          if (unknownPIDs &amp;&amp; !pmtParsed) {
+            logger.log(&apos;reparse from beginning&apos;);
+            unknownPIDs = false;
+            // we set it to -188, the += 188 in the for loop will reset start to 0
+            start = syncOffset - 188;
+          }
+          pmtParsed = this.pmtParsed = true;
+          break;
+        case 17:
+        case 0x1fff:
+          break;
+        default:
+          unknownPIDs = true;
+          break;
+        }
+      } else {
+        this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: &apos;TS packet did not start with 0x47&apos; });
+      }
+    }
+    // try to parse last PES packets
+    if (avcData &amp;&amp; (pes = parsePES(avcData)) &amp;&amp; pes.pts !== undefined) {
+      parseAVCPES(pes, true);
+      avcTrack.pesData = null;
+    } else {
+      // either avcData null or PES truncated, keep it for next frag parsing
+      avcTrack.pesData = avcData;
+    }
+
+    if (audioData &amp;&amp; (pes = parsePES(audioData)) &amp;&amp; pes.pts !== undefined) {
+      if (audioTrack.isAAC) {
+        parseAACPES(pes);
+      } else {
+        parseMPEGPES(pes);
+      }
+
+      audioTrack.pesData = null;
+    } else {
+      if (audioData &amp;&amp; audioData.size) {
+        logger.log(&apos;last AAC PES packet truncated,might overlap between fragments&apos;);
+      }
+
+      // either audioData null or PES truncated, keep it for next frag parsing
+      audioTrack.pesData = audioData;
+    }
+
+    if (id3Data &amp;&amp; (pes = parsePES(id3Data)) &amp;&amp; pes.pts !== undefined) {
+      parseID3PES(pes);
+      id3Track.pesData = null;
+    } else {
+      // either id3Data null or PES truncated, keep it for next frag parsing
+      id3Track.pesData = id3Data;
+    }
+
+    if (this.sampleAes == null) {
+      this.remuxer.remux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+    } else {
+      this.decryptAndRemux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+    }
+  }
+
+  decryptAndRemux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+    if (audioTrack.samples &amp;&amp; audioTrack.isAAC) {
+      let localthis = this;
+      this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function () {
+        localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      });
+    } else {
+      this.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+    }
+  }
+
+  decryptAndRemuxAvc (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+    if (videoTrack.samples) {
+      let localthis = this;
+      this.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
+        localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      });
+    } else {
+      this.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+    }
+  }
+
+  destroy () {
+    this._initPTS = this._initDTS = undefined;
+    this._duration = 0;
+  }
+
+  _parsePAT (data, offset) {
+    // skip the PSI header and parse the first PMT entry
+    return (data[offset + 10] &amp; 0x1F) &lt;&lt; 8 | data[offset + 11];
+    // logger.log(&apos;PMT PID:&apos;  + this._pmtId);
+  }
+
+  _parsePMT (data, offset, mpegSupported, isSampleAes) {
+    let sectionLength, tableEnd, programInfoLength, pid, result = { audio: -1, avc: -1, id3: -1, isAAC: true };
+    sectionLength = (data[offset + 1] &amp; 0x0f) &lt;&lt; 8 | data[offset + 2];
+    tableEnd = offset + 3 + sectionLength - 4;
+    // to determine where the table is, we have to figure out how
+    // long the program info descriptors are
+    programInfoLength = (data[offset + 10] &amp; 0x0f) &lt;&lt; 8 | data[offset + 11];
+    // advance the offset to the first entry in the mapping table
+    offset += 12 + programInfoLength;
+    while (offset &lt; tableEnd) {
+      pid = (data[offset + 1] &amp; 0x1F) &lt;&lt; 8 | data[offset + 2];
+      switch (data[offset]) {
+      case 0xcf: // SAMPLE-AES AAC
+        if (!isSampleAes) {
+          logger.log(&apos;unkown stream type:&apos; + data[offset]);
+          break;
+        }
+        /* falls through */
+
+        // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
+      case 0x0f:
+        // logger.log(&apos;AAC PID:&apos;  + pid);
+        if (result.audio === -1) {
+          result.audio = pid;
+        }
+
+        break;
+
+        // Packetized metadata (ID3)
+      case 0x15:
+        // logger.log(&apos;ID3 PID:&apos;  + pid);
+        if (result.id3 === -1) {
+          result.id3 = pid;
+        }
+
+        break;
+
+      case 0xdb: // SAMPLE-AES AVC
+        if (!isSampleAes) {
+          logger.log(&apos;unkown stream type:&apos; + data[offset]);
+          break;
+        }
+        /* falls through */
+
+        // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
+      case 0x1b:
+        // logger.log(&apos;AVC PID:&apos;  + pid);
+        if (result.avc === -1) {
+          result.avc = pid;
+        }
+
+        break;
+
+        // ISO/IEC 11172-3 (MPEG-1 audio)
+        // or ISO/IEC 13818-3 (MPEG-2 halved sample rate audio)
+      case 0x03:
+      case 0x04:
+        // logger.log(&apos;MPEG PID:&apos;  + pid);
+        if (!mpegSupported) {
+          logger.log(&apos;MPEG audio found, not supported in this browser for now&apos;);
+        } else if (result.audio === -1) {
+          result.audio = pid;
+          result.isAAC = false;
+        }
+        break;
+
+      case 0x24:
+        logger.warn(&apos;HEVC stream type found, not supported for now&apos;);
+        break;
+
+      default:
+        logger.log(&apos;unkown stream type:&apos; + data[offset]);
+        break;
+      }
+      // move to the next table entry
+      // skip past the elementary stream descriptors, if present
+      offset += ((data[offset + 3] &amp; 0x0F) &lt;&lt; 8 | data[offset + 4]) + 5;
+    }
+    return result;
+  }
+
+  _parsePES (stream) {
+    let i = 0, frag, pesFlags, pesPrefix, pesLen, pesHdrLen, pesData, pesPts, pesDts, payloadStartOffset, data = stream.data;
+    // safety check
+    if (!stream || stream.size === 0) {
+      return null;
+    }
+
+    // we might need up to 19 bytes to read PES header
+    // if first chunk of data is less than 19 bytes, let&apos;s merge it with following ones until we get 19 bytes
+    // usually only one merge is needed (and this is rare ...)
+    while (data[0].length &lt; 19 &amp;&amp; data.length &gt; 1) {
+      let newData = new Uint8Array(data[0].length + data[1].length);
+      newData.set(data[0]);
+      newData.set(data[1], data[0].length);
+      data[0] = newData;
+      data.splice(1, 1);
+    }
+    // retrieve PTS/DTS from first fragment
+    frag = data[0];
+    pesPrefix = (frag[0] &lt;&lt; 16) + (frag[1] &lt;&lt; 8) + frag[2];
+    if (pesPrefix === 1) {
+      pesLen = (frag[4] &lt;&lt; 8) + frag[5];
+      // if PES parsed length is not zero and greater than total received length, stop parsing. PES might be truncated
+      // minus 6 : PES header size
+      if (pesLen &amp;&amp; pesLen &gt; stream.size - 6) {
+        return null;
+      }
+
+      pesFlags = frag[7];
+      if (pesFlags &amp; 0xC0) {
+        /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
+            as PTS / DTS is 33 bit we cannot use bitwise operator in JS,
+            as Bitwise operators treat their operands as a sequence of 32 bits */
+        pesPts = (frag[9] &amp; 0x0E) * 536870912 +// 1 &lt;&lt; 29
+          (frag[10] &amp; 0xFF) * 4194304 +// 1 &lt;&lt; 22
+          (frag[11] &amp; 0xFE) * 16384 +// 1 &lt;&lt; 14
+          (frag[12] &amp; 0xFF) * 128 +// 1 &lt;&lt; 7
+          (frag[13] &amp; 0xFE) / 2;
+        // check if greater than 2^32 -1
+        if (pesPts &gt; 4294967295) {
+          // decrement 2^33
+          pesPts -= 8589934592;
+        }
+        if (pesFlags &amp; 0x40) {
+          pesDts = (frag[14] &amp; 0x0E) * 536870912 +// 1 &lt;&lt; 29
+            (frag[15] &amp; 0xFF) * 4194304 +// 1 &lt;&lt; 22
+            (frag[16] &amp; 0xFE) * 16384 +// 1 &lt;&lt; 14
+            (frag[17] &amp; 0xFF) * 128 +// 1 &lt;&lt; 7
+            (frag[18] &amp; 0xFE) / 2;
+          // check if greater than 2^32 -1
+          if (pesDts &gt; 4294967295) {
+            // decrement 2^33
+            pesDts -= 8589934592;
+          }
+          if (pesPts - pesDts &gt; 60 * 90000) {
+            logger.warn(`${Math.round((pesPts - pesDts) / 90000)}s delta between PTS and DTS, align them`);
+            pesPts = pesDts;
+          }
+        } else {
+          pesDts = pesPts;
+        }
+      }
+      pesHdrLen = frag[8];
+      // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
+      payloadStartOffset = pesHdrLen + 9;
+
+      stream.size -= payloadStartOffset;
+      // reassemble PES packet
+      pesData = new Uint8Array(stream.size);
+      for (let j = 0, dataLen = data.length; j &lt; dataLen; j++) {
+        frag = data[j];
+        let len = frag.byteLength;
+        if (payloadStartOffset) {
+          if (payloadStartOffset &gt; len) {
+            // trim full frag if PES header bigger than frag
+            payloadStartOffset -= len;
+            continue;
+          } else {
+            // trim partial frag if PES header smaller than frag
+            frag = frag.subarray(payloadStartOffset);
+            len -= payloadStartOffset;
+            payloadStartOffset = 0;
+          }
+        }
+        pesData.set(frag, i);
+        i += len;
+      }
+      if (pesLen) {
+        // payload size : remove PES header + PES extension
+        pesLen -= pesHdrLen + 3;
+      }
+      return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
+    } else {
+      return null;
+    }
+  }
+
+  pushAccesUnit (avcSample, avcTrack) {
+    if (avcSample.units.length &amp;&amp; avcSample.frame) {
+      const samples = avcTrack.samples;
+      const nbSamples = samples.length;
+      // only push AVC sample if starting with a keyframe is not mandatory OR
+      //    if keyframe already found in this fragment OR
+      //       keyframe found in last fragment (track.sps) AND
+      //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+      if (!this.config.forceKeyFrameOnDiscontinuity ||
+          avcSample.key === true ||
+          (avcTrack.sps &amp;&amp; (nbSamples || this.contiguous))) {
+        avcSample.id = nbSamples;
+        samples.push(avcSample);
+      } else {
+        // dropped samples, track it
+        avcTrack.dropped++;
+      }
+    }
+    if (avcSample.debug.length) {
+      logger.log(avcSample.pts + &apos;/&apos; + avcSample.dts + &apos;:&apos; + avcSample.debug);
+    }
+  }
+
+  _parseAVCPES (pes, last) {
+    // logger.log(&apos;parse new PES&apos;);
+    let track = this._avcTrack,
+      units = this._parseAVCNALu(pes.data),
+      debug = false,
+      expGolombDecoder,
+      avcSample = this.avcSample,
+      push,
+      spsfound = false,
+      i,
+      pushAccesUnit = this.pushAccesUnit.bind(this),
+      createAVCSample = function (key, pts, dts, debug) {
+        return { key: key, pts: pts, dts: dts, units: [], debug: debug };
+      };
+    // free pes.data to save up some memory
+    pes.data = null;
+
+    // if new NAL units found and last sample still there, let&apos;s push ...
+    // this helps parsing streams with missing AUD (only do this if AUD never found)
+    if (avcSample &amp;&amp; units.length &amp;&amp; !track.audFound) {
+      pushAccesUnit(avcSample, track);
+      avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, &apos;&apos;);
+    }
+
+    units.forEach(unit =&gt; {
+      switch (unit.type) {
+      // NDR
+      case 1:
+        push = true;
+        if (!avcSample) {
+          avcSample = this.avcSample = createAVCSample(true, pes.pts, pes.dts, &apos;&apos;);
+        }
+
+        if (debug) {
+          avcSample.debug += &apos;NDR &apos;;
+        }
+
+        avcSample.frame = true;
+        let data = unit.data;
+        // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
+        if (spsfound &amp;&amp; data.length &gt; 4) {
+          // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
+          let sliceType = new ExpGolomb(data).readSliceType();
+          // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
+          // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
+          // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
+          // I slice: A slice that is not an SI slice that is decoded using intra prediction only.
+          // if (sliceType === 2 || sliceType === 7) {
+          if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
+            avcSample.key = true;
+          }
+        }
+        break;
+        // IDR
+      case 5:
+        push = true;
+        // handle PES not starting with AUD
+        if (!avcSample) {
+          avcSample = this.avcSample = createAVCSample(true, pes.pts, pes.dts, &apos;&apos;);
+        }
+
+        if (debug) {
+          avcSample.debug += &apos;IDR &apos;;
+        }
+
+        avcSample.key = true;
+        avcSample.frame = true;
+        break;
+        // SEI
+      case 6:
+        push = true;
+        if (debug &amp;&amp; avcSample) {
+          avcSample.debug += &apos;SEI &apos;;
+        }
+
+        expGolombDecoder = new ExpGolomb(this.discardEPB(unit.data));
+
+        // skip frameType
+        expGolombDecoder.readUByte();
+
+        var payloadType = 0;
+        var payloadSize = 0;
+        var endOfCaptions = false;
+        var b = 0;
+
+        while (!endOfCaptions &amp;&amp; expGolombDecoder.bytesAvailable &gt; 1) {
+          payloadType = 0;
+          do {
+            b = expGolombDecoder.readUByte();
+            payloadType += b;
+          } while (b === 0xFF);
+
+          // Parse payload size.
+          payloadSize = 0;
+          do {
+            b = expGolombDecoder.readUByte();
+            payloadSize += b;
+          } while (b === 0xFF);
+
+          // TODO: there can be more than one payload in an SEI packet...
+          // TODO: need to read type and size in a while loop to get them all
+          if (payloadType === 4 &amp;&amp; expGolombDecoder.bytesAvailable !== 0) {
+            endOfCaptions = true;
+
+            let countryCode = expGolombDecoder.readUByte();
+
+            if (countryCode === 181) {
+              let providerCode = expGolombDecoder.readUShort();
+
+              if (providerCode === 49) {
+                let userStructure = expGolombDecoder.readUInt();
+
+                if (userStructure === 0x47413934) {
+                  let userDataType = expGolombDecoder.readUByte();
+
+                  // Raw CEA-608 bytes wrapped in CEA-708 packet
+                  if (userDataType === 3) {
+                    let firstByte = expGolombDecoder.readUByte();
+                    let secondByte = expGolombDecoder.readUByte();
+
+                    let totalCCs = 31 &amp; firstByte;
+                    let byteArray = [firstByte, secondByte];
+
+                    for (i = 0; i &lt; totalCCs; i++) {
+                      // 3 bytes per CC
+                      byteArray.push(expGolombDecoder.readUByte());
+                      byteArray.push(expGolombDecoder.readUByte());
+                      byteArray.push(expGolombDecoder.readUByte());
+                    }
+
+                    this._insertSampleInOrder(this._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
+                  }
+                }
+              }
+            }
+          } else if (payloadSize &lt; expGolombDecoder.bytesAvailable) {
+            for (i = 0; i &lt; payloadSize; i++) {
+              expGolombDecoder.readUByte();
+            }
+          }
+        }
+        break;
+        // SPS
+      case 7:
+        push = true;
+        spsfound = true;
+        if (debug &amp;&amp; avcSample) {
+          avcSample.debug += &apos;SPS &apos;;
+        }
+
+        if (!track.sps) {
+          expGolombDecoder = new ExpGolomb(unit.data);
+          let config = expGolombDecoder.readSPS();
+          track.width = config.width;
+          track.height = config.height;
+          track.pixelRatio = config.pixelRatio;
+          track.sps = [unit.data];
+          track.duration = this._duration;
+          let codecarray = unit.data.subarray(1, 4);
+          let codecstring = &apos;avc1.&apos;;
+          for (i = 0; i &lt; 3; i++) {
+            let h = codecarray[i].toString(16);
+            if (h.length &lt; 2) {
+              h = &apos;0&apos; + h;
+            }
+
+            codecstring += h;
+          }
+          track.codec = codecstring;
+        }
+        break;
+        // PPS
+      case 8:
+        push = true;
+        if (debug &amp;&amp; avcSample) {
+          avcSample.debug += &apos;PPS &apos;;
+        }
+
+        if (!track.pps) {
+          track.pps = [unit.data];
+        }
+
+        break;
+        // AUD
+      case 9:
+        push = false;
+        track.audFound = true;
+        if (avcSample) {
+          pushAccesUnit(avcSample, track);
+        }
+
+        avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, debug ? &apos;AUD &apos; : &apos;&apos;);
+        break;
+        // Filler Data
+      case 12:
+        push = false;
+        break;
+      default:
+        push = false;
+        if (avcSample) {
+          avcSample.debug += &apos;unknown NAL &apos; + unit.type + &apos; &apos;;
+        }
+
+        break;
+      }
+      if (avcSample &amp;&amp; push) {
+        let units = avcSample.units;
+        units.push(unit);
+      }
+    });
+    // if last PES packet, push samples
+    if (last &amp;&amp; avcSample) {
+      pushAccesUnit(avcSample, track);
+      this.avcSample = null;
+    }
+  }
+
+  _insertSampleInOrder (arr, data) {
+    let len = arr.length;
+    if (len &gt; 0) {
+      if (data.pts &gt;= arr[len - 1].pts) {
+        arr.push(data);
+      } else {
+        for (let pos = len - 1; pos &gt;= 0; pos--) {
+          if (data.pts &lt; arr[pos].pts) {
+            arr.splice(pos, 0, data);
+            break;
+          }
+        }
+      }
+    } else {
+      arr.push(data);
+    }
+  }
+
+  _getLastNalUnit () {
+    let avcSample = this.avcSample, lastUnit;
+    // try to fallback to previous sample if current one is empty
+    if (!avcSample || avcSample.units.length === 0) {
+      let track = this._avcTrack, samples = track.samples;
+      avcSample = samples[samples.length - 1];
+    }
+    if (avcSample) {
+      let units = avcSample.units;
+      lastUnit = units[units.length - 1];
+    }
+    return lastUnit;
+  }
+
+  _parseAVCNALu (array) {
+    let i = 0, len = array.byteLength, value, overflow, track = this._avcTrack, state = track.naluState || 0, lastState = state;
+    let units = [], unit, unitType, lastUnitStart = -1, lastUnitType;
+    // logger.log(&apos;PES:&apos; + Hex.hexDump(array));
+
+    if (state === -1) {
+    // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
+      lastUnitStart = 0;
+      // NALu type is value read from offset 0
+      lastUnitType = array[0] &amp; 0x1f;
+      state = 0;
+      i = 1;
+    }
+
+    while (i &lt; len) {
+      value = array[i++];
+      // optimization. state 0 and 1 are the predominant case. let&apos;s handle them outside of the switch/case
+      if (!state) {
+        state = value ? 0 : 1;
+        continue;
+      }
+      if (state === 1) {
+        state = value ? 0 : 2;
+        continue;
+      }
+      // here we have state either equal to 2 or 3
+      if (!value) {
+        state = 3;
+      } else if (value === 1) {
+        if (lastUnitStart &gt;= 0) {
+          unit = { data: array.subarray(lastUnitStart, i - state - 1), type: lastUnitType };
+          // logger.log(&apos;pushing NALU, type/size:&apos; + unit.type + &apos;/&apos; + unit.data.byteLength);
+          units.push(unit);
+        } else {
+          // lastUnitStart is undefined =&gt; this is the first start code found in this PES packet
+          // first check if start code delimiter is overlapping between 2 PES packets,
+          // ie it started in last packet (lastState not zero)
+          // and ended at the beginning of this PES packet (i &lt;= 4 - lastState)
+          let lastUnit = this._getLastNalUnit();
+          if (lastUnit) {
+            if (lastState &amp;&amp; (i &lt;= 4 - lastState)) {
+              // start delimiter overlapping between PES packets
+              // strip start delimiter bytes from the end of last NAL unit
+              // check if lastUnit had a state different from zero
+              if (lastUnit.state) {
+                // strip last bytes
+                lastUnit.data = lastUnit.data.subarray(0, lastUnit.data.byteLength - lastState);
+              }
+            }
+            // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+            overflow = i - state - 1;
+            if (overflow &gt; 0) {
+              // logger.log(&apos;first NALU found with overflow:&apos; + overflow);
+              let tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
+              tmp.set(lastUnit.data, 0);
+              tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
+              lastUnit.data = tmp;
+            }
+          }
+        }
+        // check if we can read unit type
+        if (i &lt; len) {
+          unitType = array[i] &amp; 0x1f;
+          // logger.log(&apos;find NALU @ offset:&apos; + i + &apos;,type:&apos; + unitType);
+          lastUnitStart = i;
+          lastUnitType = unitType;
+          state = 0;
+        } else {
+          // not enough byte to read unit type. let&apos;s read it on next PES parsing
+          state = -1;
+        }
+      } else {
+        state = 0;
+      }
+    }
+    if (lastUnitStart &gt;= 0 &amp;&amp; state &gt;= 0) {
+      unit = { data: array.subarray(lastUnitStart, len), type: lastUnitType, state: state };
+      units.push(unit);
+      // logger.log(&apos;pushing NALU, type/size/state:&apos; + unit.type + &apos;/&apos; + unit.data.byteLength + &apos;/&apos; + state);
+    }
+    // no NALu found
+    if (units.length === 0) {
+      // append pes.data to previous NAL unit
+      let lastUnit = this._getLastNalUnit();
+      if (lastUnit) {
+        let tmp = new Uint8Array(lastUnit.data.byteLength + array.byteLength);
+        tmp.set(lastUnit.data, 0);
+        tmp.set(array, lastUnit.data.byteLength);
+        lastUnit.data = tmp;
+      }
+    }
+    track.naluState = state;
+    return units;
+  }
+
+  /**
+   * remove Emulation Prevention bytes from a RBSP
+   */
+  discardEPB (data) {
+    let length = data.byteLength,
+      EPBPositions = [],
+      i = 1,
+      newLength, newData;
+
+    // Find all `Emulation Prevention Bytes`
+    while (i &lt; length - 2) {
+      if (data[i] === 0 &amp;&amp;
+          data[i + 1] === 0 &amp;&amp;
+          data[i + 2] === 0x03) {
+        EPBPositions.push(i + 2);
+        i += 2;
+      } else {
+        i++;
+      }
+    }
+
+    // If no Emulation Prevention Bytes were found just return the original
+    // array
+    if (EPBPositions.length === 0) {
+      return data;
+    }
+
+    // Create a new array to hold the NAL unit data
+    newLength = length - EPBPositions.length;
+    newData = new Uint8Array(newLength);
+    let sourceIndex = 0;
+
+    for (i = 0; i &lt; newLength; sourceIndex++, i++) {
+      if (sourceIndex === EPBPositions[0]) {
+        // Skip this byte
+        sourceIndex++;
+        // Remove this position index
+        EPBPositions.shift();
+      }
+      newData[i] = data[sourceIndex];
+    }
+    return newData;
+  }
+
+  _parseAACPES (pes) {
+    let track = this._audioTrack,
+      data = pes.data,
+      pts = pes.pts,
+      startOffset = 0,
+      aacOverFlow = this.aacOverFlow,
+      aacLastPTS = this.aacLastPTS,
+      frameDuration, frameIndex, offset, stamp, len;
+    if (aacOverFlow) {
+      let tmp = new Uint8Array(aacOverFlow.byteLength + data.byteLength);
+      tmp.set(aacOverFlow, 0);
+      tmp.set(data, aacOverFlow.byteLength);
+      // logger.log(`AAC: append overflowing ${aacOverFlow.byteLength} bytes to beginning of new PES`);
+      data = tmp;
+    }
+    // look for ADTS header (0xFFFx)
+    for (offset = startOffset, len = data.length; offset &lt; len - 1; offset++) {
+      if (ADTS.isHeader(data, offset)) {
+        break;
+      }
+    }
+    // if ADTS header does not start straight from the beginning of the PES payload, raise an error
+    if (offset) {
+      let reason, fatal;
+      if (offset &lt; len - 1) {
+        reason = `AAC PES did not start with ADTS header,offset:${offset}`;
+        fatal = false;
+      } else {
+        reason = &apos;no ADTS header found in AAC PES&apos;;
+        fatal = true;
+      }
+      logger.warn(`parsing error:${reason}`);
+      this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
+      if (fatal) {
+        return;
+      }
+    }
+
+    ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
+    frameIndex = 0;
+    frameDuration = ADTS.getFrameDuration(track.samplerate);
+
+    // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
+    // first sample PTS should be equal to last sample PTS + frameDuration
+    if (aacOverFlow &amp;&amp; aacLastPTS) {
+      let newPTS = aacLastPTS + frameDuration;
+      if (Math.abs(newPTS - pts) &gt; 1) {
+        logger.log(`AAC: align PTS for overlapping frames by ${Math.round((newPTS - pts) / 90)}`);
+        pts = newPTS;
+      }
+    }
+
+    // scan for aac samples
+    while (offset &lt; len) {
+      if (ADTS.isHeader(data, offset) &amp;&amp; (offset + 5) &lt; len) {
+        let frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
+        if (frame) {
+          // logger.log(`${Math.round(frame.sample.pts)} : AAC`);
+          offset += frame.length;
+          stamp = frame.sample.pts;
+          frameIndex++;
+        } else {
+          // logger.log(&apos;Unable to parse AAC frame&apos;);
+          break;
+        }
+      } else {
+        // nothing found, keep looking
+        offset++;
+      }
+    }
+
+    if (offset &lt; len) {
+      aacOverFlow = data.subarray(offset, len);
+      // logger.log(`AAC: overflow detected:${len-offset}`);
+    } else {
+      aacOverFlow = null;
+    }
+
+    this.aacOverFlow = aacOverFlow;
+    this.aacLastPTS = stamp;
+  }
+
+  _parseMPEGPES (pes) {
+    let data = pes.data;
+    let length = data.length;
+    let frameIndex = 0;
+    let offset = 0;
+    let pts = pes.pts;
+
+    while (offset &lt; length) {
+      if (MpegAudio.isHeader(data, offset)) {
+        let frame = MpegAudio.appendFrame(this._audioTrack, data, offset, pts, frameIndex);
+        if (frame) {
+          offset += frame.length;
+          frameIndex++;
+        } else {
+          // logger.log(&apos;Unable to parse Mpeg audio frame&apos;);
+          break;
+        }
+      } else {
+        // nothing found, keep looking
+        offset++;
+      }
+    }
+  }
+
+  _parseID3PES (pes) {
+    this._id3Track.samples.push(pes);
+  }
+}
+
+export default TSDemuxer;
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.1.0)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
