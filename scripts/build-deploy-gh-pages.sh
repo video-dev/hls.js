@@ -14,6 +14,7 @@ echo "Cloning current gh-pages..."
 rm -rf "$root"
 mkdir "$root"
 cd "$root"
+git config --global user.name "HLS.JS CI"
 git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b gh-pages .
 cd ..
 
@@ -28,15 +29,16 @@ cp -r "./api-docs" "$base/api-docs"
 
 if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
   echo "Detected tag: $tag"
-  symlink="$root/$tag"
-  rm -f "$symlink"
-  ln -s "./$id" "$symlink"
-  rm -f "$stable"
-  ln -s "./$id" "$stable"
+  tagloc="./gh-pages/$tag"
+  rm -rf "$tagloc"
+  # would be nicer as a symlink, but doesn't work on travis
+  cp -r "$root/$id" "$tagloc"
+  rm -rf "$stable"
+  cp -r "$root/$id" "$stable"
 fi
 
 rm -f "$latest"
-ln -s "./$id" "$latest"
+cp -r "$root/$id" "$latest"
 
 rm -f "$topReadme"
 cp "./README.md" "$topReadme"
@@ -46,7 +48,7 @@ echo "Built gh-pages."
 echo "Deploying gh-pages."
 cd "$root"
 git add -A
-git commit -m "gh-pages: $id"
+git commit -m "gh-pages for $id"
 # GITHUB_TOKEN set in travis
 git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"
 cd ..
