@@ -39,7 +39,7 @@
      *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
      */
 
-let specialCea608CharsCodes = {
+const specialCea608CharsCodes = {
   0x2a: 0xe1, // lowercase a, acute accent
   0x5c: 0xe9, // lowercase e, acute accent
   0x5e: 0xed, // lowercase i, acute accent
@@ -142,7 +142,7 @@ let specialCea608CharsCodes = {
 /**
  * Utils
  */
-let getCharForByte = function (byte) {
+const getCharForByte = function (byte) {
   let charCode = byte;
   if (specialCea608CharsCodes.hasOwnProperty(byte)) {
     charCode = specialCea608CharsCodes[byte];
@@ -151,20 +151,20 @@ let getCharForByte = function (byte) {
   return String.fromCharCode(charCode);
 };
 
-let NR_ROWS = 15,
-  NR_COLS = 100;
+const NR_ROWS = 15;
+const NR_COLS = 100;
 // Tables to look up row from PAC data
-let rowsLowCh1 = { 0x11: 1, 0x12: 3, 0x15: 5, 0x16: 7, 0x17: 9, 0x10: 11, 0x13: 12, 0x14: 14 };
-let rowsHighCh1 = { 0x11: 2, 0x12: 4, 0x15: 6, 0x16: 8, 0x17: 10, 0x13: 13, 0x14: 15 };
-let rowsLowCh2 = { 0x19: 1, 0x1A: 3, 0x1D: 5, 0x1E: 7, 0x1F: 9, 0x18: 11, 0x1B: 12, 0x1C: 14 };
-let rowsHighCh2 = { 0x19: 2, 0x1A: 4, 0x1D: 6, 0x1E: 8, 0x1F: 10, 0x1B: 13, 0x1C: 15 };
+const rowsLowCh1 = { 0x11: 1, 0x12: 3, 0x15: 5, 0x16: 7, 0x17: 9, 0x10: 11, 0x13: 12, 0x14: 14 };
+const rowsHighCh1 = { 0x11: 2, 0x12: 4, 0x15: 6, 0x16: 8, 0x17: 10, 0x13: 13, 0x14: 15 };
+const rowsLowCh2 = { 0x19: 1, 0x1A: 3, 0x1D: 5, 0x1E: 7, 0x1F: 9, 0x18: 11, 0x1B: 12, 0x1C: 14 };
+const rowsHighCh2 = { 0x19: 2, 0x1A: 4, 0x1D: 6, 0x1E: 8, 0x1F: 10, 0x1B: 13, 0x1C: 15 };
 
-let backgroundColors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'black', 'transparent'];
+const backgroundColors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'black', 'transparent'];
 
 /**
  * Simple logger class to be able to write with time-stamps and filter on level.
  */
-let logger = {
+const logger = {
   verboseFilter: { 'DATA': 3, 'DEBUG': 3, 'INFO': 2, 'WARNING': 2, 'TEXT': 1, 'ERROR': 0 },
   time: null,
   verboseLevel: 0, // Only write errors
@@ -172,15 +172,15 @@ let logger = {
     this.time = newTime;
   },
   log: function (severity, msg) {
-    let minLevel = this.verboseFilter[severity];
+    const minLevel = this.verboseFilter[severity];
     if (this.verboseLevel >= minLevel) {
-      // console.log(this.time + ' [' + severity + '] ' + msg);
+      console.log(this.time + ' [' + severity + '] ' + msg);
     }
   }
 };
 
-let numArrayToHexArray = function (numArray) {
-  let hexArray = [];
+const numArrayToHexArray = function (numArray) {
+  const hexArray = [];
   for (let j = 0; j < numArray.length; j++) {
     hexArray.push(numArray[j].toString(16));
   }
@@ -206,9 +206,9 @@ class PenState {
   }
 
   setStyles (styles) {
-    let attribs = ['foreground', 'underline', 'italics', 'background', 'flash'];
+    const attribs = ['foreground', 'underline', 'italics', 'background', 'flash'];
     for (let i = 0; i < attribs.length; i++) {
-      let style = attribs[i];
+      const style = attribs[i];
       if (styles.hasOwnProperty(style)) {
         this[style] = styles[style];
       }
@@ -344,7 +344,7 @@ class Row {
      * Move the cursor relative to current position.
      */
   moveCursor (relPos) {
-    let newPos = this.pos + relPos;
+    const newPos = this.pos + relPos;
     if (relPos > 1) {
       for (let i = this.pos + 1; i < newPos + 1; i++) {
         this.chars[i].setPenState(this.currPenState);
@@ -365,7 +365,7 @@ class Row {
     if (byte >= 0x90) { // Extended char
       this.backSpace();
     }
-    let char = getCharForByte(byte);
+    const char = getCharForByte(byte);
     if (this.pos >= NR_COLS) {
       logger.log('ERROR', 'Cannot insert ' + byte.toString(16) +
                         ' (' + char + ') at position ' + this.pos + '. Skipping it!');
@@ -393,7 +393,7 @@ class Row {
   }
 
   getTextString () {
-    let chars = [];
+    const chars = [];
     let empty = true;
     for (let i = 0; i < NR_COLS; i++) {
       let char = this.chars[i].uchar;
@@ -412,7 +412,7 @@ class Row {
 
   setPenStyles (styles) {
     this.currPenState.setStyles(styles);
-    let currChar = this.chars[this.pos];
+    const currChar = this.chars[this.pos];
     currChar.setPenState(this.currPenState);
   }
 }
@@ -430,6 +430,7 @@ class CaptionScreen {
 
     this.currRow = NR_ROWS - 1;
     this.nrRollUpRows = null;
+    this.lastOutputScreen = null;
     this.reset();
   }
 
@@ -470,12 +471,12 @@ class CaptionScreen {
   }
 
   backSpace () {
-    let row = this.rows[this.currRow];
+    const row = this.rows[this.currRow];
     row.backSpace();
   }
 
   clearToEndOfRow () {
-    let row = this.rows[this.currRow];
+    const row = this.rows[this.currRow];
     row.clearToEndOfRow();
   }
 
@@ -483,23 +484,23 @@ class CaptionScreen {
      * Insert a character (without styling) in the current row.
      */
   insertChar (char) {
-    let row = this.rows[this.currRow];
+    const row = this.rows[this.currRow];
     row.insertChar(char);
   }
 
   setPen (styles) {
-    let row = this.rows[this.currRow];
+    const row = this.rows[this.currRow];
     row.setPenStyles(styles);
   }
 
   moveCursor (relPos) {
-    let row = this.rows[this.currRow];
+    const row = this.rows[this.currRow];
     row.moveCursor(relPos);
   }
 
   setCursor (absPos) {
     logger.log('INFO', 'setCursor: ' + absPos);
-    let row = this.rows[this.currRow];
+    const row = this.rows[this.currRow];
     row.setCursor(absPos);
   }
 
@@ -519,12 +520,12 @@ class CaptionScreen {
 
       // Copy this.nrRollUpRows rows from lastOutputScreen and place it in the newRow location
       // topRowIndex - the start of rows to copy (inclusive index)
-      let topRowIndex = this.currRow + 1 - (this.nrRollUpRows);
+      const topRowIndex = this.currRow + 1 - (this.nrRollUpRows);
       // We only copy if the last position was already shown.
       // We use the cueStartTime value to check this.
       const lastOutputScreen = this.lastOutputScreen;
       if (lastOutputScreen) {
-        let prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
+        const prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
         if (prevLineTime && prevLineTime < logger.time) {
           for (let i = 0; i < this.nrRollUpRows; i++) {
             this.rows[newRow - this.nrRollUpRows + i + 1].copy(lastOutputScreen.rows[topRowIndex + i]);
@@ -534,14 +535,14 @@ class CaptionScreen {
     }
 
     this.currRow = newRow;
-    let row = this.rows[this.currRow];
+    const row = this.rows[this.currRow];
     if (pacData.indent !== null) {
-      let indent = pacData.indent;
-      let prevPos = Math.max(indent - 1, 0);
+      const indent = pacData.indent;
+      const prevPos = Math.max(indent - 1, 0);
       row.setCursor(pacData.indent);
       pacData.color = row.chars[prevPos].penState.foreground;
     }
-    let styles = { foreground: pacData.color, underline: pacData.underline, italics: pacData.italics, background: 'black', flash: false };
+    const styles = { foreground: pacData.color, underline: pacData.underline, italics: pacData.italics, background: 'black', flash: false };
     this.setPen(styles);
   }
 
@@ -565,8 +566,8 @@ class CaptionScreen {
       return; // Not properly setup
     }
     logger.log('TEXT', this.getDisplayText());
-    let topRowIndex = this.currRow + 1 - this.nrRollUpRows;
-    let topRow = this.rows.splice(topRowIndex, 1)[0];
+    const topRowIndex = this.currRow + 1 - this.nrRollUpRows;
+    const topRow = this.rows.splice(topRowIndex, 1)[0];
     topRow.clear();
     this.rows.splice(this.currRow, 0, topRow);
     logger.log('INFO', 'Rolling up');
@@ -578,7 +579,7 @@ class CaptionScreen {
     */
   getDisplayText (asOneRow) {
     asOneRow = asOneRow || false;
-    let displayText = [];
+    const displayText = [];
     let text = '';
     let rowNr = -1;
     for (let i = 0; i < NR_ROWS; i++) {
@@ -633,7 +634,6 @@ class Cea608Channel {
     this.writeScreen = this.displayedMemory;
     this.mode = null;
     this.cueStartTime = null;
-    this.lastCueEndTime = null;
   }
 
   getHandler () {
@@ -763,7 +763,7 @@ class Cea608Channel {
   ccEOC () { // End of Caption (Flip Memories)
     logger.log('INFO', 'EOC - End Of Caption');
     if (this.mode === 'MODE_POP-ON') {
-      let tmp = this.displayedMemory;
+      const tmp = this.displayedMemory;
       this.displayedMemory = this.nonDisplayedMemory;
       this.nonDisplayedMemory = tmp;
       this.writeScreen = this.nonDisplayedMemory;
@@ -778,13 +778,12 @@ class Cea608Channel {
   }
 
   ccMIDROW (secondByte) { // Parse MIDROW command
-    let styles = { flash: false };
+    const styles = { flash: false };
     styles.underline = secondByte % 2 === 1;
     styles.italics = secondByte >= 0x2e;
     if (!styles.italics) {
-      let colorIndex = Math.floor(secondByte / 2) - 0x10;
-      let colors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta'];
-      styles.foreground = colors[colorIndex];
+      const colors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta'];
+      styles.foreground = colors[Math.floor(secondByte / 2) - 0x10];
     } else {
       styles.foreground = 'white';
     }
@@ -793,7 +792,7 @@ class Cea608Channel {
   }
 
   outputDataUpdate (dispatch = false) {
-    let t = logger.time;
+    const t = logger.time;
     if (t === null) {
       return;
     }
@@ -830,17 +829,15 @@ class Cea608Channel {
 }
 
 class Cea608Parser {
-  constructor (field, out1, out2) {
-    this.field = field || 1;
-    this.outputs = [out1, out2];
-    this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2)];
+  constructor (out1, out2, out3, out4) {
+    this.channels = {
+      1: new Cea608Channel(1, out1),
+      2: new Cea608Channel(2, out2),
+      3: new Cea608Channel(3, out3),
+      4: new Cea608Channel(4, out4)
+    };
     this.currChNr = -1; // Will be 1 or 2
-    this.lastCmdA = null; // First byte of last command
-    this.lastCmdB = null; // Second byte of last command
-    this.bufferedData = [];
-    this.startTime = null;
-    this.lastTime = null;
-    this.dataCounters = { 'padding': 0, 'char': 0, 'cmd': 0, 'other': 0 };
+    this.cmdHistory = createCmdHistory();
   }
 
   getHandler (index) {
@@ -854,52 +851,49 @@ class Cea608Parser {
   /**
      * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
      */
-  addData (t, byteList) {
-    let cmdFound, a, b,
-      charsFound = false;
+  addData (t, byteList, field) {
+    let cmdFound;
+    let a;
+    let b;
+    let charsFound = false;
 
-    this.lastTime = t;
     logger.setTime(t);
 
     for (let i = 0; i < byteList.length; i += 2) {
       a = byteList[i] & 0x7f;
       b = byteList[i + 1] & 0x7f;
       if (a === 0 && b === 0) {
-        this.dataCounters.padding += 2;
         continue;
       } else {
         logger.log('DATA', '[' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
       }
-      cmdFound = this.parseCmd(a, b);
+
+      cmdFound = this.parseCmd(a, b, field);
+
       if (!cmdFound) {
-        cmdFound = this.parseMidrow(a, b);
+        cmdFound = this.parseMidrow(a, b, field);
       }
 
       if (!cmdFound) {
-        cmdFound = this.parsePAC(a, b);
+        cmdFound = this.parsePAC(a, b, field);
       }
 
       if (!cmdFound) {
-        cmdFound = this.parseBackgroundAttributes(a, b);
+        cmdFound = this.parseBackgroundAttributes(a, b, field);
       }
 
       if (!cmdFound) {
         charsFound = this.parseChars(a, b);
         if (charsFound) {
           if (this.currChNr && this.currChNr >= 0) {
-            let channel = this.channels[this.currChNr - 1];
+            const channel = this.channels[field];
             channel.insertChars(charsFound);
           } else {
             logger.log('WARNING', 'No channel found yet. TEXT-MODE?');
           }
         }
       }
-      if (cmdFound) {
-        this.dataCounters.cmd += 2;
-      } else if (charsFound) {
-        this.dataCounters.char += 2;
-      } else {
-        this.dataCounters.other += 2;
+      if (!cmdFound && !charsFound) {
         logger.log('WARNING', 'Couldn\'t parse cleaned data ' + numArrayToHexArray([a, b]) +
                             ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
       }
@@ -910,31 +904,26 @@ class Cea608Parser {
      * Parse Command.
      * @returns {Boolean} Tells if a command was found
      */
-  parseCmd (a, b) {
-    let chNr = null;
+  parseCmd (a, b, field) {
+    const cmdHistory = this.cmdHistory;
+    const chNr = getChannelNumber(a);
+    const dataChannel = getDataChannel(b, field);
+    const cond1 = chNr && (b >= 0x20 && b <= 0x2F);
+    const cond2 = dataChannel && (b >= 0x21 && b <= 0x23);
 
-    let cond1 = (a === 0x14 || a === 0x1C) && (b >= 0x20 && b <= 0x2F);
-    let cond2 = (a === 0x17 || a === 0x1F) && (b >= 0x21 && b <= 0x23);
     if (!(cond1 || cond2)) {
       return false;
     }
 
-    if (a === this.lastCmdA && b === this.lastCmdB) {
-      this.lastCmdA = null;
-      this.lastCmdB = null; // Repeated commands are dropped (once)
+    if (hasCmdRepeated(a, b, cmdHistory[field])) {
+      setLastCmd(null, null, cmdHistory[field]);
       logger.log('DEBUG', 'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
       return true;
     }
 
-    if (a === 0x14 || a === 0x17) {
-      chNr = 1;
-    } else {
-      chNr = 2;
-    } // (a === 0x1C || a=== 0x1f)
-
-    let channel = this.channels[chNr - 1];
-
-    if (a === 0x14 || a === 0x1C) {
+    let channel;
+    if (chNr) {
+      channel = this.channels[chNr];
       if (b === 0x20) {
         channel.ccRCL();
       } else if (b === 0x21) {
@@ -969,10 +958,10 @@ class Cea608Parser {
         channel.ccEOC();
       }
     } else { // a == 0x17 || a == 0x1F
+      channel = this.channels[dataChannel];
       channel.ccTO(b - 0x20);
     }
-    this.lastCmdA = a;
-    this.lastCmdB = b;
+    setLastCmd(a, b, cmdHistory[field]);
     this.currChNr = chNr;
     return true;
   }
@@ -981,21 +970,21 @@ class Cea608Parser {
      * Parse midrow styling command
      * @returns {Boolean}
      */
-  parseMidrow (a, b) {
+  parseMidrow (a, b, field) {
     let chNr = null;
 
     if (((a === 0x11) || (a === 0x19)) && b >= 0x20 && b <= 0x2f) {
       if (a === 0x11) {
-        chNr = 1;
+        chNr = field;
       } else {
-        chNr = 2;
+        chNr = field + 1;
       }
 
       if (chNr !== this.currChNr) {
         logger.log('ERROR', 'Mismatch channel in midrow parsing');
         return false;
       }
-      let channel = this.channels[chNr - 1];
+      let channel = this.channels[chNr];
       channel.ccMIDROW(b);
       logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
       return true;
@@ -1006,7 +995,8 @@ class Cea608Parser {
      * Parse Preable Access Codes (Table 53).
      * @returns {Boolean} Tells if PAC found
      */
-  parsePAC (a, b) {
+  parsePAC (a, b, field) {
+    const cmdHistory = this.cmdHistory;
     let chNr = null;
     let row = null;
 
@@ -1016,24 +1006,28 @@ class Cea608Parser {
       return false;
     }
 
-    if (a === this.lastCmdA && b === this.lastCmdB) {
-      this.lastCmdA = null;
-      this.lastCmdB = null;
+    if (hasCmdRepeated(a, b, cmdHistory[field])) {
+      setLastCmd(null, null, cmdHistory[field]);
       return true; // Repeated commands are dropped (once)
     }
 
-    chNr = (a <= 0x17) ? 1 : 2;
+    let dataChannel;
+    if (a <= 0x17) {
+      dataChannel = 1;
+      chNr = field;
+    } else {
+      dataChannel = 2;
+      chNr = field + 1;
+    }
 
     if (b >= 0x40 && b <= 0x5F) {
-      row = (chNr === 1) ? rowsLowCh1[a] : rowsLowCh2[a];
+      row = (dataChannel === 1) ? rowsLowCh1[a] : rowsLowCh2[a];
     } else { // 0x60 <= b <= 0x7F
-      row = (chNr === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
+      row = (dataChannel === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
     }
-    let pacData = this.interpretPAC(row, b);
-    let channel = this.channels[chNr - 1];
-    channel.setPAC(pacData);
-    this.lastCmdA = a;
-    this.lastCmdB = b;
+    const channel = this.channels[chNr];
+    channel.setPAC(this.interpretPAC(row, b));
+    setLastCmd(a, b, cmdHistory[field]);
     this.currChNr = chNr;
     return true;
   }
@@ -1044,7 +1038,7 @@ class Cea608Parser {
      */
   interpretPAC (row, byte) {
     let pacIndex = byte;
-    let pacData = { color: null, italics: false, indent: null, underline: false, row: row };
+    const pacData = { color: null, italics: false, indent: null, underline: false, row: row };
 
     if (byte > 0x5F) {
       pacIndex = byte - 0x60;
@@ -1065,13 +1059,13 @@ class Cea608Parser {
   }
 
   /**
-     * Parse characters.
-     * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
-     */
-  parseChars (a, b) {
-    let channelNr = null,
-      charCodes = null,
-      charCode1 = null;
+   * Parse characters.
+   * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
+   */
+  parseChars (a, b, field) {
+    let channelNr = null;
+    let charCodes = null;
+    let charCode1 = null;
 
     if (a >= 0x19) {
       channelNr = 2;
@@ -1097,10 +1091,9 @@ class Cea608Parser {
       charCodes = (b === 0) ? [a] : [a, b];
     }
     if (charCodes) {
-      let hexCodes = numArrayToHexArray(charCodes);
+      const hexCodes = numArrayToHexArray(charCodes);
       logger.log('DEBUG', 'Char codes =  ' + hexCodes.join(','));
-      this.lastCmdA = null;
-      this.lastCmdB = null;
+      setLastCmd(a, b, this.cmdHistory[field]);
     }
     return charCodes;
   }
@@ -1109,11 +1102,11 @@ class Cea608Parser {
     * Parse extended background attributes as well as new foreground color black.
     * @returns{Boolean} Tells if background attributes are found
     */
-  parseBackgroundAttributes (a, b) {
-    let bkgData,
-      index,
-      chNr,
-      channel;
+  parseBackgroundAttributes (a, b, field) {
+    let bkgData;
+    let index;
+    let chNr;
+    let channel;
 
     let case1 = (a === 0x10 || a === 0x18) && (b >= 0x20 && b <= 0x2f);
     let case2 = (a === 0x17 || a === 0x1f) && (b >= 0x2d && b <= 0x2f);
@@ -1136,11 +1129,10 @@ class Cea608Parser {
         bkgData.underline = true;
       }
     }
-    chNr = (a < 0x18) ? 1 : 2;
-    channel = this.channels[chNr - 1];
+    chNr = (a < 0x18) ? field : field + 1;
+    channel = this.channels[chNr];
     channel.setBkgData(bkgData);
-    this.lastCmdA = null;
-    this.lastCmdB = null;
+    setLastCmd(a, b, this.cmdHistory[field]);
     return true;
   }
 
@@ -1153,8 +1145,8 @@ class Cea608Parser {
         this.channels[i].reset();
       }
     }
-    this.lastCmdA = null;
-    this.lastCmdB = null;
+
+    this.cmdHistory = createCmdHistory();
   }
 
   /**
@@ -1167,6 +1159,62 @@ class Cea608Parser {
       }
     }
   }
+}
+
+function getChannelNumber (ccData0) {
+  let channel;
+  if (ccData0 === 0x14) {
+    channel = 1;
+  } else if (ccData0 === 0x1C) {
+    channel = 2;
+  } else if (ccData0 === 0x15) {
+    channel = 3;
+  } else if (ccData0 === 0x1D) {
+    channel = 4;
+  }
+
+  return channel;
+}
+
+function getDataChannel (ccData1, field) {
+  let dataChannel = null;
+  if (ccData1 === 0x17) {
+    dataChannel = field;
+  } else if (ccData1 === 0x1F) {
+    dataChannel = field + 1;
+  }
+
+  return dataChannel;
+}
+
+function setLastCmd (a, b, cmdHistory) {
+  if (!cmdHistory) {
+    return;
+  }
+
+  cmdHistory.a = a;
+  cmdHistory.b = b;
+}
+
+function hasCmdRepeated (a, b, cmdHistory) {
+  if (!cmdHistory) {
+    return;
+  }
+
+  return cmdHistory.a === a && cmdHistory.b === b;
+}
+
+function createCmdHistory () {
+  return {
+    1: {
+      a: null,
+      b: null
+    },
+    3: {
+      a: null,
+      b: null
+    }
+  };
 }
 
 export default Cea608Parser;
