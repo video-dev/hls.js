@@ -18,7 +18,7 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig } from './config';
 
-import HlsEvents from './events';
+import { HlsEvents } from './events';
 
 import { EventEmitter } from 'events';
 
@@ -26,28 +26,37 @@ import { EventEmitter } from 'events';
 require('string.prototype.endswith');
 require('./polyfills/number-is-finite');
 
+declare var __VERSION__: string;
+
+const Events = HlsEvents;
+
+export type HlsConfig = any;
+
 /**
  * @module Hls
  * @class
  * @constructor
  */
 export default class Hls {
+
+  static defaultConfig: HlsConfig;
+
   /**
    * @type {string}
    */
-  static get version () {
+  static get version (): string {
     return __VERSION__;
   }
 
   /**
    * @type {boolean}
    */
-  static isSupported () {
+  static isSupported (): boolean {
     return isSupported();
   }
 
   /**
-   * @type {HlsEvents}
+   * @type {Events}
    */
   static get Events () {
     return HlsEvents;
@@ -91,7 +100,7 @@ export default class Hls {
    * @constructs Hls
    * @param {HlsConfig} config
    */
-  constructor (config = {}) {
+  constructor (config: HlsConfig = {}) {
     let defaultConfig = Hls.DefaultConfig;
 
     if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
@@ -112,8 +121,10 @@ export default class Hls {
     }
 
     enableLogs(config.debug);
+
     this.config = config;
     this._autoLevelCapping = -1;
+
     // observer setup
     let observer = this.observer = new EventEmitter();
     observer.trigger = function trigger (event, ...data) {
@@ -241,7 +252,7 @@ export default class Hls {
    */
   destroy () {
     logger.log('destroy');
-    this.trigger(HlsEvents.DESTROYING);
+    this.trigger(Events.DESTROYING);
     this.detachMedia();
     this.coreComponents.concat(this.networkControllers).forEach(component => {
       component.destroy();
@@ -258,7 +269,7 @@ export default class Hls {
   attachMedia (media) {
     logger.log('attachMedia');
     this.media = media;
-    this.trigger(HlsEvents.MEDIA_ATTACHING, { media: media });
+    this.trigger(Events.MEDIA_ATTACHING, { media: media });
   }
 
   /**
@@ -266,7 +277,7 @@ export default class Hls {
    */
   detachMedia () {
     logger.log('detachMedia');
-    this.trigger(HlsEvents.MEDIA_DETACHING);
+    this.trigger(Events.MEDIA_DETACHING);
     this.media = null;
   }
 
@@ -279,7 +290,7 @@ export default class Hls {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(HlsEvents.MANIFEST_LOADING, { url: url });
+    this.trigger(Events.MANIFEST_LOADING, { url: url });
   }
 
   /**
