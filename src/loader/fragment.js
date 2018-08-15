@@ -1,5 +1,5 @@
 
-import URLToolkit from 'url-toolkit';
+import * as URLToolkit from 'url-toolkit';
 
 import LevelKey from './level-key';
 

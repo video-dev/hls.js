@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "allowJs": true,
+    "module": "commonjs",
+    "target": "ES5",
+    "strict": false
+  },
+  "include": [
+    "demo/**/*",
+    "src/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.*"
+  ]
+}
