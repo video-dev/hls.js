@@ -7,6 +7,7 @@ base="$root/$id"
 latest="$root/latest"
 stable="$root/stable"
 topReadme="$root/README.md"
+topDemo="$root/demo"
 tag=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "")
 
 echo "Cloning current gh-pages..."
@@ -42,6 +43,9 @@ cp -r "$root/$id" "$latest"
 
 rm -f "$topReadme"
 cp "./README.md" "$topReadme"
+
+rm -rf "$topDemo"
+cp -r "./demo" "$topDemo"
 
 echo "Built gh-pages."
 
