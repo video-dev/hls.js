@@ -18,14 +18,14 @@ cp -r "./api-docs" "$base/api-docs"
 
 if [ ! -z "$tag" ]; then
   echo "Detected tag: $tag"
-  symlink="./gh-pages/$tag"
-  rm -f "$symlink"
-  ln -s "./$id" "$symlink"
+  tagloc="./gh-pages/$tag"
+  rm -rf "$tagloc"
+  # would be nicer as a symlink, but doesn't work on travis
+  cp -r "./gh-pages/$id" "$tagloc"
 fi
 
-symlink="./gh-pages/"
-rm -f "$latest"
-ln -s "./$id" "$latest"
+rm -rf "$latest"
+cp -r "./gh-pages/$id" "$latest"
 
 rm -f "$topReadme"
 cp "./README.md" "$topReadme"
