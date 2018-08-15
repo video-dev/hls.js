@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/remux/mp4-remuxer.js | hls.js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="JavaScript HLS client using MediaSourceExtension"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="hls.js"><meta property="twitter:description" content="JavaScript HLS client using MediaSourceExtension"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/video-dev/hls.js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/event-handler.js~EventHandler.html">EventHandler</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/hls.js~Hls.html">Hls</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isSupported">isSupported</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/buffer-controller.js~BufferController.html">BufferController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/cap-level-controller.js~CapLevelController.html">CapLevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/eme-controller.js~EMEController.html">EMEController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fps-controller.js~FPSController.html">FPSController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fragment-tracker.js~FragmentTracker.html">FragmentTracker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/gap-controller.js~GapController.html">GapController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/id3-track-controller.js~ID3TrackController.html">ID3TrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/level-controller.js~LevelController.html">LevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/stream-controller.js~StreamController.html">StreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPDT">findFragmentByPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPTS">findFragmentByPTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fragmentWithinToleranceTest">fragmentWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-pdtWithinToleranceTest">pdtWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-addGroupId">addGroupId</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-mergeDetails">mergeDetails</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updatePTS">updatePTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-FragmentState">FragmentState</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/fast-aes-key.js~FastAESKey.html">FastAESKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-removePadding">removePadding</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#demux">demux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/aacdemuxer.js~AACDemuxer.html">AACDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer-inline.js~DemuxerInline.html">DemuxerInline</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer.js~Demuxer.html">Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/exp-golomb.js~ExpGolomb.html">ExpGolomb</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/id3.js~ID3.html">ID3</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp3demuxer.js~MP3Demuxer.html">MP3Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp4demuxer.js~MP4Demuxer.html">MP4Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/sample-aes.js~SampleAesDecrypter.html">SampleAesDecrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/tsdemuxer.js~TSDemuxer.html">TSDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-appendFrame">appendFrame</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getAudioConfig">getAudioConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFrameDuration">getFrameDuration</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFullFrameLength">getFullFrameLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getHeaderLength">getHeaderLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-initTrackConfig">initTrackConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeader">isHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeaderPattern">isHeaderPattern</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-parseFrameHeader">parseFrameHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-probe">probe</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-DemuxerWorker">DemuxerWorker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-utf8ArrayToStr">utf8ArrayToStr</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-MpegAudio">MpegAudio</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#loader">loader</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment-loader.js~FragmentLoader.html">FragmentLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/key-loader.js~KeyLoader.html">KeyLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level-key.js~LevelKey.html">LevelKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level.js~Level.html">Level</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/m3u8-parser.js~M3U8Parser.html">M3U8Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html">PlaylistLoader</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#remux">remux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/aac-helper.js~AAC.html">AAC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/dummy-remuxer.js~DummyRemuxer.html">DummyRemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-generator.js~MP4.html">MP4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-remuxer.js~MP4Remuxer.html">MP4Remuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/passthrough-remuxer.js~PassThroughRemuxer.html">PassThroughRemuxer</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#utils">utils</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/attr-list.js~AttrList.html">AttrList</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/buffer-helper.js~BufferHelper.html">BufferHelper</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/cea-608-parser.js~Cea608Parser.html">Cea608Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma-bandwidth-estimator.js~EwmaBandWidthEstimator.html">EwmaBandWidthEstimator</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma.js~EWMA.html">EWMA</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/fetch-loader.js~FetchLoader.html">FetchLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/output-filter.js~OutputFilter.html">OutputFilter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/xhr-loader.js~XhrLoader.html">XhrLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecSupportedInMp4">isCodecSupportedInMp4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecType">isCodecType</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-newCue">newCue</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-adjustPts">adjustPts</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignDiscontinuities">alignDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignPDT">alignPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignStream">alignStream</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findDiscontinuousReferenceFrag">findDiscontinuousReferenceFrag</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFirstFragWithCC">findFirstFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getSelfScope">getSelfScope</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getMediaSource">getMediaSource</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Hex">Hex</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-logger">logger</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-requestMediaKeySystemAccess">requestMediaKeySystemAccess</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-WebVTTParser">WebVTTParser</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/remux/mp4-remuxer.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/**
+ * fMP4 remuxer
+*/
+
+import AAC from &apos;./aac-helper&apos;;
+import MP4 from &apos;./mp4-generator&apos;;
+
+import Event from &apos;../events&apos;;
+import { ErrorTypes, ErrorDetails } from &apos;../errors&apos;;
+
+import { logger } from &apos;../utils/logger&apos;;
+
+// 10 seconds
+const MAX_SILENT_FRAME_DURATION = 10 * 1000;
+
+class MP4Remuxer {
+  constructor (observer, config, typeSupported, vendor) {
+    this.observer = observer;
+    this.config = config;
+    this.typeSupported = typeSupported;
+    const userAgent = navigator.userAgent;
+    this.isSafari = vendor &amp;&amp; vendor.indexOf(&apos;Apple&apos;) &gt; -1 &amp;&amp; userAgent &amp;&amp; !userAgent.match(&apos;CriOS&apos;);
+    this.ISGenerated = false;
+  }
+
+  destroy () {
+  }
+
+  resetTimeStamp (defaultTimeStamp) {
+    this._initPTS = this._initDTS = defaultTimeStamp;
+  }
+
+  resetInitSegment () {
+    this.ISGenerated = false;
+  }
+
+  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+    // generate Init Segment if needed
+    if (!this.ISGenerated) {
+      this.generateIS(audioTrack, videoTrack, timeOffset);
+    }
+
+    if (this.ISGenerated) {
+      const nbAudioSamples = audioTrack.samples.length;
+      const nbVideoSamples = videoTrack.samples.length;
+      let audioTimeOffset = timeOffset;
+      let videoTimeOffset = timeOffset;
+      if (nbAudioSamples &amp;&amp; nbVideoSamples) {
+        // timeOffset is expected to be the offset of the first timestamp of this fragment (first DTS)
+        // if first audio DTS is not aligned with first video DTS then we need to take that into account
+        // when providing timeOffset to remuxAudio / remuxVideo. if we don&apos;t do that, there might be a permanent / small
+        // drift between audio and video streams
+        let audiovideoDeltaDts = (audioTrack.samples[0].dts - videoTrack.samples[0].dts) / videoTrack.inputTimeScale;
+        audioTimeOffset += Math.max(0, audiovideoDeltaDts);
+        videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
+      }
+      // Purposefully remuxing audio before video, so that remuxVideo can use nextAudioPts, which is
+      // calculated in remuxAudio.
+      // logger.log(&apos;nb AAC samples:&apos; + audioTrack.samples.length);
+      if (nbAudioSamples) {
+        // if initSegment was generated without video samples, regenerate it again
+        if (!audioTrack.timescale) {
+          logger.warn(&apos;regenerate InitSegment as audio detected&apos;);
+          this.generateIS(audioTrack, videoTrack, timeOffset);
+        }
+        let audioData = this.remuxAudio(audioTrack, audioTimeOffset, contiguous, accurateTimeOffset);
+        // logger.log(&apos;nb AVC samples:&apos; + videoTrack.samples.length);
+        if (nbVideoSamples) {
+          let audioTrackLength;
+          if (audioData) {
+            audioTrackLength = audioData.endPTS - audioData.startPTS;
+          }
+
+          // if initSegment was generated without video samples, regenerate it again
+          if (!videoTrack.timescale) {
+            logger.warn(&apos;regenerate InitSegment as video detected&apos;);
+            this.generateIS(audioTrack, videoTrack, timeOffset);
+          }
+          this.remuxVideo(videoTrack, videoTimeOffset, contiguous, audioTrackLength, accurateTimeOffset);
+        }
+      } else {
+        // logger.log(&apos;nb AVC samples:&apos; + videoTrack.samples.length);
+        if (nbVideoSamples) {
+          let videoData = this.remuxVideo(videoTrack, videoTimeOffset, contiguous, 0, accurateTimeOffset);
+          if (videoData &amp;&amp; audioTrack.codec) {
+            this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
+          }
+        }
+      }
+    }
+    // logger.log(&apos;nb ID3 samples:&apos; + audioTrack.samples.length);
+    if (id3Track.samples.length) {
+      this.remuxID3(id3Track, timeOffset);
+    }
+
+    // logger.log(&apos;nb ID3 samples:&apos; + audioTrack.samples.length);
+    if (textTrack.samples.length) {
+      this.remuxText(textTrack, timeOffset);
+    }
+
+    // notify end of parsing
+    this.observer.trigger(Event.FRAG_PARSED);
+  }
+
+  generateIS (audioTrack, videoTrack, timeOffset) {
+    let observer = this.observer,
+      audioSamples = audioTrack.samples,
+      videoSamples = videoTrack.samples,
+      typeSupported = this.typeSupported,
+      container = &apos;audio/mp4&apos;,
+      tracks = {},
+      data = { tracks: tracks },
+      computePTSDTS = (this._initPTS === undefined),
+      initPTS, initDTS;
+
+    if (computePTSDTS) {
+      initPTS = initDTS = Infinity;
+    }
+
+    if (audioTrack.config &amp;&amp; audioSamples.length) {
+      // let&apos;s use audio sampling rate as MP4 time scale.
+      // rationale is that there is a integer nb of audio frames per audio sample (1024 for AAC)
+      // using audio sampling rate here helps having an integer MP4 frame duration
+      // this avoids potential rounding issue and AV sync issue
+      audioTrack.timescale = audioTrack.samplerate;
+      logger.log(`audio sampling rate : ${audioTrack.samplerate}`);
+      if (!audioTrack.isAAC) {
+        if (typeSupported.mpeg) { // Chrome and Safari
+          container = &apos;audio/mpeg&apos;;
+          audioTrack.codec = &apos;&apos;;
+        } else if (typeSupported.mp3) { // Firefox
+          audioTrack.codec = &apos;mp3&apos;;
+        }
+      }
+      tracks.audio = {
+        container: container,
+        codec: audioTrack.codec,
+        initSegment: !audioTrack.isAAC &amp;&amp; typeSupported.mpeg ? new Uint8Array() : MP4.initSegment([audioTrack]),
+        metadata: {
+          channelCount: audioTrack.channelCount
+        }
+      };
+      if (computePTSDTS) {
+        // remember first PTS of this demuxing context. for audio, PTS = DTS
+        initPTS = initDTS = audioSamples[0].pts - audioTrack.inputTimeScale * timeOffset;
+      }
+    }
+
+    if (videoTrack.sps &amp;&amp; videoTrack.pps &amp;&amp; videoSamples.length) {
+      // let&apos;s use input time scale as MP4 video timescale
+      // we use input time scale straight away to avoid rounding issues on frame duration / cts computation
+      const inputTimeScale = videoTrack.inputTimeScale;
+      videoTrack.timescale = inputTimeScale;
+      tracks.video = {
+        container: &apos;video/mp4&apos;,
+        codec: videoTrack.codec,
+        initSegment: MP4.initSegment([videoTrack]),
+        metadata: {
+          width: videoTrack.width,
+          height: videoTrack.height
+        }
+      };
+      if (computePTSDTS) {
+        initPTS = Math.min(initPTS, videoSamples[0].pts - inputTimeScale * timeOffset);
+        initDTS = Math.min(initDTS, videoSamples[0].dts - inputTimeScale * timeOffset);
+        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS });
+      }
+    }
+
+    if (Object.keys(tracks).length) {
+      observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, data);
+      this.ISGenerated = true;
+      if (computePTSDTS) {
+        this._initPTS = initPTS;
+        this._initDTS = initDTS;
+      }
+    } else {
+      observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: &apos;no audio/video samples found&apos; });
+    }
+  }
+
+  remuxVideo (track, timeOffset, contiguous, audioTrackLength, accurateTimeOffset) {
+    let offset = 8,
+      timeScale = track.timescale,
+      mp4SampleDuration,
+      mdat, moof,
+      firstPTS, firstDTS,
+      nextDTS,
+      lastPTS, lastDTS,
+      inputSamples = track.samples,
+      outputSamples = [],
+      nbSamples = inputSamples.length,
+      ptsNormalize = this._PTSNormalize,
+      initDTS = this._initDTS;
+
+    // for (let i = 0; i &lt; track.samples.length; i++) {
+    //   let avcSample = track.samples[i];
+    //   let units = avcSample.units;
+    //   let unitsString = &apos;&apos;;
+    //   for (let j = 0; j &lt; units.length ; j++) {
+    //     unitsString += units[j].type + &apos;,&apos;;
+    //     if (units[j].data.length &lt; 500) {
+    //       unitsString += Hex.hexDump(units[j].data);
+    //     }
+    //   }
+    //   logger.log(avcSample.pts + &apos;/&apos; + avcSample.dts + &apos;,&apos; + unitsString + avcSample.units.length);
+    // }
+
+    // if parsed fragment is contiguous with last one, let&apos;s use last DTS value as reference
+    let nextAvcDts = this.nextAvcDts;
+
+    const isSafari = this.isSafari;
+
+    if (nbSamples === 0) {
+      return;
+    }
+
+    // Safari does not like overlapping DTS on consecutive fragments. let&apos;s use nextAvcDts to overcome this if fragments are consecutive
+    if (isSafari) {
+      // also consider consecutive fragments as being contiguous (even if a level switch occurs),
+      // for sake of clarity:
+      // consecutive fragments are frags with
+      //  - less than 100ms gaps between new time offset (if accurate) and next expected PTS OR
+      //  - less than 200 ms PTS gaps (timeScale/5)
+      contiguous |= (inputSamples.length &amp;&amp; nextAvcDts &amp;&amp;
+                     ((accurateTimeOffset &amp;&amp; Math.abs(timeOffset - nextAvcDts / timeScale) &lt; 0.1) ||
+                      Math.abs((inputSamples[0].pts - nextAvcDts - initDTS)) &lt; timeScale / 5)
+      );
+    }
+
+    if (!contiguous) {
+      // if not contiguous, let&apos;s use target timeOffset
+      nextAvcDts = timeOffset * timeScale;
+    }
+
+    // PTS is coded on 33bits, and can loop from -2^32 to 2^32
+    // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
+    inputSamples.forEach(function (sample) {
+      sample.pts = ptsNormalize(sample.pts - initDTS, nextAvcDts);
+      sample.dts = ptsNormalize(sample.dts - initDTS, nextAvcDts);
+    });
+
+    // sort video samples by DTS then PTS then demux id order
+    inputSamples.sort(function (a, b) {
+      const deltadts = a.dts - b.dts;
+      const deltapts = a.pts - b.pts;
+      return deltadts || (deltapts || (a.id - b.id));
+    });
+
+    // handle broken streams with PTS &lt; DTS, tolerance up 200ms (18000 in 90kHz timescale)
+    let PTSDTSshift = inputSamples.reduce((prev, curr) =&gt; Math.max(Math.min(prev, curr.pts - curr.dts), -18000), 0);
+    if (PTSDTSshift &lt; 0) {
+      logger.warn(`PTS &lt; DTS detected in video samples, shifting DTS by ${Math.round(PTSDTSshift / 90)} ms to overcome this issue`);
+      for (let i = 0; i &lt; inputSamples.length; i++) {
+        inputSamples[i].dts += PTSDTSshift;
+      }
+    }
+
+    // compute first DTS and last DTS, normalize them against reference value
+    let sample = inputSamples[0];
+    firstDTS = Math.max(sample.dts, 0);
+    firstPTS = Math.max(sample.pts, 0);
+
+    // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
+    let delta = Math.round((firstDTS - nextAvcDts) / 90);
+    // if fragment are contiguous, detect hole/overlapping between fragments
+    if (contiguous) {
+      if (delta) {
+        if (delta &gt; 1) {
+          logger.log(`AVC:${delta} ms hole between fragments detected,filling it`);
+        } else if (delta &lt; -1) {
+          logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
+        }
+
+        // remove hole/gap : set DTS to next expected DTS
+        firstDTS = nextAvcDts;
+        inputSamples[0].dts = firstDTS;
+        // offset PTS as well, ensure that PTS is smaller or equal than new DTS
+        firstPTS = Math.max(firstPTS - delta, nextAvcDts);
+        inputSamples[0].pts = firstPTS;
+        logger.log(`Video/PTS/DTS adjusted: ${Math.round(firstPTS / 90)}/${Math.round(firstDTS / 90)},delta:${delta} ms`);
+      }
+    }
+    nextDTS = firstDTS;
+
+    // compute lastPTS/lastDTS
+    sample = inputSamples[inputSamples.length - 1];
+    lastDTS = Math.max(sample.dts, 0);
+    lastPTS = Math.max(sample.pts, 0, lastDTS);
+
+    // on Safari let&apos;s signal the same sample duration for all samples
+    // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
+    // set this constant duration as being the avg delta between consecutive DTS.
+    if (isSafari) {
+      mp4SampleDuration = Math.round((lastDTS - firstDTS) / (inputSamples.length - 1));
+    }
+
+    let nbNalu = 0, naluLen = 0;
+    for (let i = 0; i &lt; nbSamples; i++) {
+      // compute total/avc sample length and nb of NAL units
+      let sample = inputSamples[i], units = sample.units, nbUnits = units.length, sampleLen = 0;
+      for (let j = 0; j &lt; nbUnits; j++) {
+        sampleLen += units[j].data.length;
+      }
+
+      naluLen += sampleLen;
+      nbNalu += nbUnits;
+      sample.length = sampleLen;
+
+      // normalize PTS/DTS
+      if (isSafari) {
+        // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
+        sample.dts = firstDTS + i * mp4SampleDuration;
+      } else {
+        // ensure sample monotonic DTS
+        sample.dts = Math.max(sample.dts, firstDTS);
+      }
+      // ensure that computed value is greater or equal than sample DTS
+      sample.pts = Math.max(sample.pts, sample.dts);
+    }
+
+    /* concatenate the video data and construct the mdat in place
+      (need 8 more bytes to fill length and mpdat type) */
+    let mdatSize = naluLen + (4 * nbNalu) + 8;
+    try {
+      mdat = new Uint8Array(mdatSize);
+    } catch (err) {
+      this.observer.trigger(Event.ERROR, { type: ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: `fail allocating video mdat ${mdatSize}` });
+      return;
+    }
+    let view = new DataView(mdat.buffer);
+    view.setUint32(0, mdatSize);
+    mdat.set(MP4.types.mdat, 4);
+
+    for (let i = 0; i &lt; nbSamples; i++) {
+      let avcSample = inputSamples[i],
+        avcSampleUnits = avcSample.units,
+        mp4SampleLength = 0,
+        compositionTimeOffset;
+      // convert NALU bitstream to MP4 format (prepend NALU with size field)
+      for (let j = 0, nbUnits = avcSampleUnits.length; j &lt; nbUnits; j++) {
+        let unit = avcSampleUnits[j],
+          unitData = unit.data,
+          unitDataLen = unit.data.byteLength;
+        view.setUint32(offset, unitDataLen);
+        offset += 4;
+        mdat.set(unitData, offset);
+        offset += unitDataLen;
+        mp4SampleLength += 4 + unitDataLen;
+      }
+
+      if (!isSafari) {
+        // expected sample duration is the Decoding Timestamp diff of consecutive samples
+        if (i &lt; nbSamples - 1) {
+          mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
+        } else {
+          let config = this.config,
+            lastFrameDuration = avcSample.dts - inputSamples[i &gt; 0 ? i - 1 : i].dts;
+          if (config.stretchShortVideoTrack) {
+            // In some cases, a segment&apos;s audio track duration may exceed the video track duration.
+            // Since we&apos;ve already remuxed audio, and we know how long the audio track is, we look to
+            // see if the delta to the next segment is longer than maxBufferHole.
+            // If so, playback would potentially get stuck, so we artificially inflate
+            // the duration of the last frame to minimize any potential gap between segments.
+            let maxBufferHole = config.maxBufferHole,
+              gapTolerance = Math.floor(maxBufferHole * timeScale),
+              deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
+            if (deltaToFrameEnd &gt; gapTolerance) {
+              // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
+              // frame overlap. maxBufferHole should be &gt;&gt; lastFrameDuration anyway.
+              mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
+              if (mp4SampleDuration &lt; 0) {
+                mp4SampleDuration = lastFrameDuration;
+              }
+
+              logger.log(`It is approximately ${deltaToFrameEnd / 90} ms to the next segment; using duration ${mp4SampleDuration / 90} ms for the last video frame.`);
+            } else {
+              mp4SampleDuration = lastFrameDuration;
+            }
+          } else {
+            mp4SampleDuration = lastFrameDuration;
+          }
+        }
+        compositionTimeOffset = Math.round(avcSample.pts - avcSample.dts);
+      } else {
+        compositionTimeOffset = Math.max(0, mp4SampleDuration * Math.round((avcSample.pts - avcSample.dts) / mp4SampleDuration));
+      }
+
+      // console.log(&apos;PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}&apos;);
+      outputSamples.push({
+        size: mp4SampleLength,
+        // constant duration
+        duration: mp4SampleDuration,
+        cts: compositionTimeOffset,
+        flags: {
+          isLeading: 0,
+          isDependedOn: 0,
+          hasRedundancy: 0,
+          degradPrio: 0,
+          dependsOn: avcSample.key ? 2 : 1,
+          isNonSync: avcSample.key ? 0 : 1
+        }
+      });
+    }
+    // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
+    this.nextAvcDts = lastDTS + mp4SampleDuration;
+    let dropped = track.dropped;
+    track.len = 0;
+    track.nbNalu = 0;
+    track.dropped = 0;
+    if (outputSamples.length &amp;&amp; navigator.userAgent.toLowerCase().indexOf(&apos;chrome&apos;) &gt; -1) {
+      let flags = outputSamples[0].flags;
+      // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
+      // https://code.google.com/p/chromium/issues/detail?id=229412
+      flags.dependsOn = 2;
+      flags.isNonSync = 0;
+    }
+    track.samples = outputSamples;
+    moof = MP4.moof(track.sequenceNumber++, firstDTS, track);
+    track.samples = [];
+
+    let data = {
+      data1: moof,
+      data2: mdat,
+      startPTS: firstPTS / timeScale,
+      endPTS: (lastPTS + mp4SampleDuration) / timeScale,
+      startDTS: firstDTS / timeScale,
+      endDTS: this.nextAvcDts / timeScale,
+      type: &apos;video&apos;,
+      hasAudio: false,
+      hasVideo: true,
+      nb: outputSamples.length,
+      dropped: dropped
+    };
+    this.observer.trigger(Event.FRAG_PARSING_DATA, data);
+    return data;
+  }
+
+  remuxAudio (track, timeOffset, contiguous, accurateTimeOffset) {
+    const inputTimeScale = track.inputTimeScale,
+      mp4timeScale = track.timescale,
+      scaleFactor = inputTimeScale / mp4timeScale,
+      mp4SampleDuration = track.isAAC ? 1024 : 1152,
+      inputSampleDuration = mp4SampleDuration * scaleFactor,
+      ptsNormalize = this._PTSNormalize,
+      initDTS = this._initDTS,
+      rawMPEG = !track.isAAC &amp;&amp; this.typeSupported.mpeg;
+
+    let offset,
+      mp4Sample,
+      fillFrame,
+      mdat, moof,
+      firstPTS, lastPTS,
+      inputSamples = track.samples,
+      outputSamples = [],
+      nextAudioPts = this.nextAudioPts;
+
+    // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
+    // for sake of clarity:
+    // consecutive fragments are frags with
+    //  - less than 100ms gaps between new time offset (if accurate) and next expected PTS OR
+    //  - less than 20 audio frames distance
+    // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
+    // this helps ensuring audio continuity
+    // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
+    contiguous |= (inputSamples.length &amp;&amp; nextAudioPts &amp;&amp;
+                   ((accurateTimeOffset &amp;&amp; Math.abs(timeOffset - nextAudioPts / inputTimeScale) &lt; 0.1) ||
+                    Math.abs((inputSamples[0].pts - nextAudioPts - initDTS)) &lt; 20 * inputSampleDuration)
+    );
+
+    // compute normalized PTS
+    inputSamples.forEach(function (sample) {
+      sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, timeOffset * inputTimeScale);
+    });
+
+    // filter out sample with negative PTS that are not playable anyway
+    // if we don&apos;t remove these negative samples, they will shift all audio samples forward.
+    // leading to audio overlap between current / next fragment
+    inputSamples = inputSamples.filter(function (sample) {
+      return sample.pts &gt;= 0;
+    });
+
+    // in case all samples have negative PTS, and have been filtered out, return now
+    if (inputSamples.length === 0) {
+      return;
+    }
+
+    if (!contiguous) {
+      if (!accurateTimeOffset) {
+        // if frag are mot contiguous and if we cant trust time offset, let&apos;s use first sample PTS as next audio PTS
+        nextAudioPts = inputSamples[0].pts;
+      } else {
+        // if timeOffset is accurate, let&apos;s use it as predicted next audio PTS
+        nextAudioPts = timeOffset * inputTimeScale;
+      }
+    }
+
+    // If the audio track is missing samples, the frames seem to get &quot;left-shifted&quot; within the
+    // resulting mp4 segment, causing sync issues and leaving gaps at the end of the audio segment.
+    // In an effort to prevent this from happening, we inject frames here where there are gaps.
+    // When possible, we inject a silent frame; when that&apos;s not possible, we duplicate the last
+    // frame.
+
+    if (track.isAAC) {
+      const maxAudioFramesDrift = this.config.maxAudioFramesDrift;
+      for (let i = 0, nextPts = nextAudioPts; i &lt; inputSamples.length;) {
+        // First, let&apos;s see how far off this frame is from where we expect it to be
+        var sample = inputSamples[i], delta;
+        let pts = sample.pts;
+        delta = pts - nextPts;
+
+        const duration = Math.abs(1000 * delta / inputTimeScale);
+
+        // If we&apos;re overlapping by more than a duration, drop this sample
+        if (delta &lt;= -maxAudioFramesDrift * inputSampleDuration) {
+          logger.warn(`Dropping 1 audio frame @ ${(nextPts / inputTimeScale).toFixed(3)}s due to ${Math.round(duration)} ms overlap.`);
+          inputSamples.splice(i, 1);
+          track.len -= sample.unit.length;
+          // Don&apos;t touch nextPtsNorm or i
+        } // eslint-disable-line brace-style
+
+        // Insert missing frames if:
+        // 1: We&apos;re more than maxAudioFramesDrift frame away
+        // 2: Not more than MAX_SILENT_FRAME_DURATION away
+        // 3: currentTime (aka nextPtsNorm) is not 0
+        else if (delta &gt;= maxAudioFramesDrift * inputSampleDuration &amp;&amp; duration &lt; MAX_SILENT_FRAME_DURATION &amp;&amp; nextPts) {
+          let missing = Math.round(delta / inputSampleDuration);
+          logger.warn(`Injecting ${missing} audio frame @ ${(nextPts / inputTimeScale).toFixed(3)}s due to ${Math.round(1000 * delta / inputTimeScale)} ms gap.`);
+          for (let j = 0; j &lt; missing; j++) {
+            let newStamp = Math.max(nextPts, 0);
+            fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
+            if (!fillFrame) {
+              logger.log(&apos;Unable to get silent frame for given audio codec; duplicating last frame instead.&apos;);
+              fillFrame = sample.unit.subarray();
+            }
+            inputSamples.splice(i, 0, { unit: fillFrame, pts: newStamp, dts: newStamp });
+            track.len += fillFrame.length;
+            nextPts += inputSampleDuration;
+            i++;
+          }
+
+          // Adjust sample to next expected pts
+          sample.pts = sample.dts = nextPts;
+          nextPts += inputSampleDuration;
+          i++;
+        } else {
+        // Otherwise, just adjust pts
+          if (Math.abs(delta) &gt; (0.1 * inputSampleDuration)) {
+            // logger.log(`Invalid frame delta ${Math.round(delta + inputSampleDuration)} at PTS ${Math.round(pts / 90)} (should be ${Math.round(inputSampleDuration)}).`);
+          }
+          sample.pts = sample.dts = nextPts;
+          nextPts += inputSampleDuration;
+          i++;
+        }
+      }
+    }
+
+    for (let j = 0, nbSamples = inputSamples.length; j &lt; nbSamples; j++) {
+      let audioSample = inputSamples[j];
+      let unit = audioSample.unit;
+      let pts = audioSample.pts;
+      // logger.log(`Audio/PTS:${Math.round(pts/90)}`);
+      // if not first sample
+      if (lastPTS !== undefined) {
+        mp4Sample.duration = Math.round((pts - lastPTS) / scaleFactor);
+      } else {
+        let delta = Math.round(1000 * (pts - nextAudioPts) / inputTimeScale),
+          numMissingFrames = 0;
+        // if fragment are contiguous, detect hole/overlapping between fragments
+        // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
+        if (contiguous &amp;&amp; track.isAAC) {
+          // log delta
+          if (delta) {
+            if (delta &gt; 0 &amp;&amp; delta &lt; MAX_SILENT_FRAME_DURATION) {
+              numMissingFrames = Math.round((pts - nextAudioPts) / inputSampleDuration);
+              logger.log(`${delta} ms hole between AAC samples detected,filling it`);
+              if (numMissingFrames &gt; 0) {
+                fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
+                if (!fillFrame) {
+                  fillFrame = unit.subarray();
+                }
+
+                track.len += numMissingFrames * fillFrame.length;
+              }
+              // if we have frame overlap, overlapping for more than half a frame duraion
+            } else if (delta &lt; -12) {
+              // drop overlapping audio frames... browser will deal with it
+              logger.log(`drop overlapping AAC sample, expected/parsed/delta:${(nextAudioPts / inputTimeScale).toFixed(3)}s/${(pts / inputTimeScale).toFixed(3)}s/${(-delta)}ms`);
+              track.len -= unit.byteLength;
+              continue;
+            }
+            // set PTS/DTS to expected PTS/DTS
+            pts = nextAudioPts;
+          }
+        }
+        // remember first PTS of our audioSamples
+        firstPTS = pts;
+        if (track.len &gt; 0) {
+          /* concatenate the audio data and construct the mdat in place
+            (need 8 more bytes to fill length and mdat type) */
+          let mdatSize = rawMPEG ? track.len : track.len + 8;
+          offset = rawMPEG ? 0 : 8;
+          try {
+            mdat = new Uint8Array(mdatSize);
+          } catch (err) {
+            this.observer.trigger(Event.ERROR, { type: ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: `fail allocating audio mdat ${mdatSize}` });
+            return;
+          }
+          if (!rawMPEG) {
+            const view = new DataView(mdat.buffer);
+            view.setUint32(0, mdatSize);
+            mdat.set(MP4.types.mdat, 4);
+          }
+        } else {
+          // no audio samples
+          return;
+        }
+        for (let i = 0; i &lt; numMissingFrames; i++) {
+          fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
+          if (!fillFrame) {
+            logger.log(&apos;Unable to get silent frame for given audio codec; duplicating this frame instead.&apos;);
+            fillFrame = unit.subarray();
+          }
+          mdat.set(fillFrame, offset);
+          offset += fillFrame.byteLength;
+          mp4Sample = {
+            size: fillFrame.byteLength,
+            cts: 0,
+            duration: 1024,
+            flags: {
+              isLeading: 0,
+              isDependedOn: 0,
+              hasRedundancy: 0,
+              degradPrio: 0,
+              dependsOn: 1
+            }
+          };
+          outputSamples.push(mp4Sample);
+        }
+      }
+      mdat.set(unit, offset);
+      let unitLen = unit.byteLength;
+      offset += unitLen;
+      // console.log(&apos;PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(audioSample.pts/4294967296).toFixed(3)}&apos;);
+      mp4Sample = {
+        size: unitLen,
+        cts: 0,
+        duration: 0,
+        flags: {
+          isLeading: 0,
+          isDependedOn: 0,
+          hasRedundancy: 0,
+          degradPrio: 0,
+          dependsOn: 1
+        }
+      };
+      outputSamples.push(mp4Sample);
+      lastPTS = pts;
+    }
+    let lastSampleDuration = 0;
+    let nbSamples = outputSamples.length;
+    // set last sample duration as being identical to previous sample
+    if (nbSamples &gt;= 2) {
+      lastSampleDuration = outputSamples[nbSamples - 2].duration;
+      mp4Sample.duration = lastSampleDuration;
+    }
+    if (nbSamples) {
+      // next audio sample PTS should be equal to last sample PTS + duration
+      this.nextAudioPts = nextAudioPts = lastPTS + scaleFactor * lastSampleDuration;
+      // logger.log(&apos;Audio/PTS/PTSend:&apos; + audioSample.pts.toFixed(0) + &apos;/&apos; + this.nextAacDts.toFixed(0));
+      track.len = 0;
+      track.samples = outputSamples;
+      if (rawMPEG) {
+        moof = new Uint8Array();
+      } else {
+        moof = MP4.moof(track.sequenceNumber++, firstPTS / scaleFactor, track);
+      }
+
+      track.samples = [];
+      const start = firstPTS / inputTimeScale;
+      const end = nextAudioPts / inputTimeScale;
+      const audioData = {
+        data1: moof,
+        data2: mdat,
+        startPTS: start,
+        endPTS: end,
+        startDTS: start,
+        endDTS: end,
+        type: &apos;audio&apos;,
+        hasAudio: true,
+        hasVideo: false,
+        nb: nbSamples
+      };
+      this.observer.trigger(Event.FRAG_PARSING_DATA, audioData);
+      return audioData;
+    }
+    return null;
+  }
+
+  remuxEmptyAudio (track, timeOffset, contiguous, videoData) {
+    let inputTimeScale = track.inputTimeScale,
+      mp4timeScale = track.samplerate ? track.samplerate : inputTimeScale,
+      scaleFactor = inputTimeScale / mp4timeScale,
+      nextAudioPts = this.nextAudioPts,
+
+      // sync with video&apos;s timestamp
+      startDTS = (nextAudioPts !== undefined ? nextAudioPts : videoData.startDTS * inputTimeScale) + this._initDTS,
+      endDTS = videoData.endDTS * inputTimeScale + this._initDTS,
+      // one sample&apos;s duration value
+      sampleDuration = 1024,
+      frameDuration = scaleFactor * sampleDuration,
+
+      // samples count of this segment&apos;s duration
+      nbSamples = Math.ceil((endDTS - startDTS) / frameDuration),
+
+      // silent frame
+      silentFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
+
+    logger.warn(&apos;remux empty Audio&apos;);
+    // Can&apos;t remux if we can&apos;t generate a silent frame...
+    if (!silentFrame) {
+      logger.trace(&apos;Unable to remuxEmptyAudio since we were unable to get a silent frame for given audio codec!&apos;);
+      return;
+    }
+
+    let samples = [];
+    for (let i = 0; i &lt; nbSamples; i++) {
+      let stamp = startDTS + i * frameDuration;
+      samples.push({ unit: silentFrame, pts: stamp, dts: stamp });
+      track.len += silentFrame.length;
+    }
+    track.samples = samples;
+
+    this.remuxAudio(track, timeOffset, contiguous);
+  }
+
+  remuxID3 (track, timeOffset) {
+    let length = track.samples.length, sample;
+    const inputTimeScale = track.inputTimeScale;
+    const initPTS = this._initPTS;
+    const initDTS = this._initDTS;
+    // consume samples
+    if (length) {
+      for (let index = 0; index &lt; length; index++) {
+        sample = track.samples[index];
+        // setting id3 pts, dts to relative time
+        // using this._initPTS and this._initDTS to calculate relative time
+        sample.pts = ((sample.pts - initPTS) / inputTimeScale);
+        sample.dts = ((sample.dts - initDTS) / inputTimeScale);
+      }
+      this.observer.trigger(Event.FRAG_PARSING_METADATA, {
+        samples: track.samples
+      });
+    }
+
+    track.samples = [];
+    timeOffset = timeOffset;
+  }
+
+  remuxText (track, timeOffset) {
+    track.samples.sort(function (a, b) {
+      return (a.pts - b.pts);
+    });
+
+    let length = track.samples.length, sample;
+    const inputTimeScale = track.inputTimeScale;
+    const initPTS = this._initPTS;
+    // consume samples
+    if (length) {
+      for (let index = 0; index &lt; length; index++) {
+        sample = track.samples[index];
+        // setting text pts, dts to relative time
+        // using this._initPTS and this._initDTS to calculate relative time
+        sample.pts = ((sample.pts - initPTS) / inputTimeScale);
+      }
+      this.observer.trigger(Event.FRAG_PARSING_USERDATA, {
+        samples: track.samples
+      });
+    }
+
+    track.samples = [];
+    timeOffset = timeOffset;
+  }
+
+  _PTSNormalize (value, reference) {
+    let offset;
+    if (reference === undefined) {
+      return value;
+    }
+
+    if (reference &lt; value) {
+      // - 2^33
+      offset = -8589934592;
+    } else {
+      // + 2^33
+      offset = 8589934592;
+    }
+    /* PTS is 33bit (from 0 to 2^33 -1)
+      if diff between value and reference is bigger than half of the amplitude (2^32) then it means that
+      PTS looping occured. fill the gap */
+    while (Math.abs(value - reference) &gt; 4294967296) {
+      value += offset;
+    }
+
+    return value;
+  }
+}
+
+export default MP4Remuxer;
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.1.0)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
