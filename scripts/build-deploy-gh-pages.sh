@@ -47,6 +47,6 @@ cd gh-pages
 git add -A
 git commit -m "gh-pages: $id"
 # GITHUB_TOKEN set in travis
-git push --force "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" origin gh-pages
+git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"
 cd ..
 echo "Deployed gh-pages."
