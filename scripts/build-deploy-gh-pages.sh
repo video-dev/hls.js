@@ -8,6 +8,14 @@ stable="./gh-pages/stable"
 topReadme="./gh-pages/README.md"
 tag=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "")
 
+echo "Cloning current gh-pages..."
+
+rm -rf gh-pages
+mkdir gh-pages
+cd gh-pages
+git clone --depth 1 "https://${GITHUB_TOKEN}@$github.com/video-dev/hls.js.git" -b gh-pages
+cd ..
+
 echo "Building gh-pages for $id"
 
 mkdir -p "$base"
@@ -19,18 +27,26 @@ cp -r "./api-docs" "$base/api-docs"
 
 if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
   echo "Detected tag: $tag"
-  tagloc="./gh-pages/$tag"
-  rm -rf "$tagloc"
-  # would be nicer as a symlink, but doesn't work on travis
-  cp -r "./gh-pages/$id" "$tagloc"
-  rm -rf "$stable"
-  cp -r "./gh-pages/$id" "$stable"
+  symlink="./gh-pages/$tag"
+  rm -f "$symlink"
+  ln -s "./$id" "$symlink"
+  rm -f "$stable"
+  ln -s "./$id" "$stable"
 fi
 
-rm -rf "$latest"
-cp -r "./gh-pages/$id" "$latest"
+rm -f "$latest"
+ln -s "./$id" "$latest"
 
 rm -f "$topReadme"
 cp "./README.md" "$topReadme"
 
 echo "Built gh-pages."
+
+echo "Deploying gh-pages."
+cd gh-pages
+git add -A
+git commit -m "gh-pages: $id"
+# GITHUB_TOKEN set in travis
+git push --force "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" origin gh-pages
+cd ..
+echo "Deployed gh-pages."
