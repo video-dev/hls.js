@@ -16,7 +16,7 @@ echo "Cloning current gh-pages..."
 rm -rf "$root"
 mkdir "$root"
 cd "$root"
-git config --global user.name "HLS.JS CI"
+git config user.name "HLS.JS CI"
 git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b gh-pages .
 cd ..
 
