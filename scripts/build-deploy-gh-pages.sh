@@ -6,7 +6,6 @@ root="./gh-pages"
 base="$root/$id"
 latest="$root/latest"
 stable="$root/stable"
-topReadme="$root/README.md"
 topDemo="$root/demo"
 topDist="$root/dist"
 tag=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "")
@@ -45,9 +44,6 @@ fi
 
 rm -rf "$latest"
 cp -r "$root/$id" "$latest"
-
-rm -f "$topReadme"
-cp "./README.md" "$topReadme"
 
 echo "Built gh-pages."
 
