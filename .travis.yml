@@ -33,6 +33,8 @@ jobs:
         file_glob: true
         file: dist/*
         draft: true
+        tag_name: $TRAVIS_TAG
+        target_commitish: $TRAVIS_COMMIT
         skip_cleanup: true
         on:
           tags: true
