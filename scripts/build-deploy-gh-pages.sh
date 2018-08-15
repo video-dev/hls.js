@@ -32,10 +32,12 @@ if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
   echo "Detected tag: $tag"
   tagloc="./gh-pages/$tag"
   rm -rf "$tagloc"
-  # would be nicer as a symlink, but doesn't work on travis
+  # would be nicer as a symlink, but doesn't work on github
   cp -r "$root/$id" "$tagloc"
   rm -rf "$stable"
   cp -r "$root/$id" "$stable"
+  rm -rf "$topDemo"
+  cp -r "./demo" "$topDemo"
 fi
 
 rm -f "$latest"
@@ -43,9 +45,6 @@ cp -r "$root/$id" "$latest"
 
 rm -f "$topReadme"
 cp "./README.md" "$topReadme"
-
-rm -rf "$topDemo"
-cp -r "./demo" "$topDemo"
 
 echo "Built gh-pages."
 
