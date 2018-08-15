@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/controller/eme-controller.js | hls.js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="JavaScript HLS client using MediaSourceExtension"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="hls.js"><meta property="twitter:description" content="JavaScript HLS client using MediaSourceExtension"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/video-dev/hls.js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/event-handler.js~EventHandler.html">EventHandler</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/hls.js~Hls.html">Hls</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isSupported">isSupported</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/buffer-controller.js~BufferController.html">BufferController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/cap-level-controller.js~CapLevelController.html">CapLevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/eme-controller.js~EMEController.html">EMEController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fps-controller.js~FPSController.html">FPSController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fragment-tracker.js~FragmentTracker.html">FragmentTracker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/id3-track-controller.js~ID3TrackController.html">ID3TrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/level-controller.js~LevelController.html">LevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/stream-controller.js~StreamController.html">StreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-calculateNextPDT">calculateNextPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPDT">findFragmentByPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentBySN">findFragmentBySN</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fragmentWithinToleranceTest">fragmentWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-addGroupId">addGroupId</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-mergeDetails">mergeDetails</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updatePTS">updatePTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-FragmentState">FragmentState</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/fast-aes-key.js~FastAESKey.html">FastAESKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-removePadding">removePadding</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#demux">demux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/aacdemuxer.js~AACDemuxer.html">AACDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer-inline.js~DemuxerInline.html">DemuxerInline</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer.js~Demuxer.html">Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/exp-golomb.js~ExpGolomb.html">ExpGolomb</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/id3.js~ID3.html">ID3</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp3demuxer.js~MP3Demuxer.html">MP3Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp4demuxer.js~MP4Demuxer.html">MP4Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/sample-aes.js~SampleAesDecrypter.html">SampleAesDecrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/tsdemuxer.js~TSDemuxer.html">TSDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-appendFrame">appendFrame</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getAudioConfig">getAudioConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFrameDuration">getFrameDuration</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFullFrameLength">getFullFrameLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getHeaderLength">getHeaderLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-initTrackConfig">initTrackConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeader">isHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeaderPattern">isHeaderPattern</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-parseFrameHeader">parseFrameHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-probe">probe</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-DemuxerWorker">DemuxerWorker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-utf8ArrayToStr">utf8ArrayToStr</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-MpegAudio">MpegAudio</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#loader">loader</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment-loader.js~FragmentLoader.html">FragmentLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/key-loader.js~KeyLoader.html">KeyLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level-key.js~LevelKey.html">LevelKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/m3u8-parser.js~M3U8Parser.html">M3U8Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html">PlaylistLoader</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#remux">remux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/aac-helper.js~AAC.html">AAC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/dummy-remuxer.js~DummyRemuxer.html">DummyRemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-generator.js~MP4.html">MP4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-remuxer.js~MP4Remuxer.html">MP4Remuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/passthrough-remuxer.js~PassThroughRemuxer.html">PassThroughRemuxer</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#utils">utils</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/attr-list.js~AttrList.html">AttrList</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/buffer-helper.js~BufferHelper.html">BufferHelper</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/cea-608-parser.js~Cea608Parser.html">Cea608Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma-bandwidth-estimator.js~EwmaBandWidthEstimator.html">EwmaBandWidthEstimator</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma.js~EWMA.html">EWMA</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/fetch-loader.js~FetchLoader.html">FetchLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/output-filter.js~OutputFilter.html">OutputFilter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/xhr-loader.js~XhrLoader.html">XhrLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecSupportedInMp4">isCodecSupportedInMp4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecType">isCodecType</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-newCue">newCue</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-adjustPts">adjustPts</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignDiscontinuities">alignDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findDiscontinuousReferenceFrag">findDiscontinuousReferenceFrag</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFirstFragWithCC">findFirstFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getSelfScope">getSelfScope</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getMediaSource">getMediaSource</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Hex">Hex</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-logger">logger</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-makeArrayFromArrayLike">makeArrayFromArrayLike</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-requestMediaKeySystemAccess">requestMediaKeySystemAccess</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-WebVTTParser">WebVTTParser</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/controller/eme-controller.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/**
+ * @author Stephan Hesse &lt;disparat@gmail.com&gt; | &lt;tchakabam@gmail.com&gt;
+ *
+ * DRM support for Hls.js
+ */
+
+import EventHandler from &apos;../event-handler&apos;;
+import Event from &apos;../events&apos;;
+import { ErrorTypes, ErrorDetails } from &apos;../errors&apos;;
+
+import { logger } from &apos;../utils/logger&apos;;
+
+const { XMLHttpRequest } = window;
+
+const MAX_LICENSE_REQUEST_FAILURES = 3;
+
+/**
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
+ */
+const KeySystems = {
+  WIDEVINE: &apos;com.widevine.alpha&apos;,
+  PLAYREADY: &apos;com.microsoft.playready&apos;
+};
+
+/**
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration
+ * @param {Array&lt;string&gt;} audioCodecs List of required audio codecs to support
+ * @param {Array&lt;string&gt;} videoCodecs List of required video codecs to support
+ * @param {object} drmSystemOptions Optional parameters/requirements for the key-system
+ * @returns {Array&lt;MediaSystemConfiguration&gt;} An array of supported configurations
+ */
+
+const createWidevineMediaKeySystemConfigurations = function (audioCodecs, videoCodecs, drmSystemOptions) { /* jshint ignore:line */
+  const baseConfig = {
+    // initDataTypes: [&apos;keyids&apos;, &apos;mp4&apos;],
+    // label: &quot;&quot;,
+    // persistentState: &quot;not-allowed&quot;, // or &quot;required&quot; ?
+    // distinctiveIdentifier: &quot;not-allowed&quot;, // or &quot;required&quot; ?
+    // sessionTypes: [&apos;temporary&apos;],
+    videoCapabilities: [
+      // { contentType: &apos;video/mp4; codecs=&quot;avc1.42E01E&quot;&apos; }
+    ]
+  };
+
+  videoCodecs.forEach((codec) =&gt; {
+    baseConfig.videoCapabilities.push({
+      contentType: `video/mp4; codecs=&quot;${codec}&quot;`
+    });
+  });
+
+  return [
+    baseConfig
+  ];
+};
+
+/**
+ * The idea here is to handle key-system (and their respective platforms) specific configuration differences
+ * in order to work with the local requestMediaKeySystemAccess method.
+ *
+ * We can also rule-out platform-related key-system support at this point by throwing an error or returning null.
+ *
+ * @param {string} keySystem Identifier for the key-system, see `KeySystems` enum
+ * @param {Array&lt;string&gt;} audioCodecs List of required audio codecs to support
+ * @param {Array&lt;string&gt;} videoCodecs List of required video codecs to support
+ * @returns {Array&lt;MediaSystemConfiguration&gt; | null} A non-empty Array of MediaKeySystemConfiguration objects or `null`
+ */
+const getSupportedMediaKeySystemConfigurations = function (keySystem, audioCodecs, videoCodecs) {
+  switch (keySystem) {
+  case KeySystems.WIDEVINE:
+    return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs);
+  default:
+    throw Error(&apos;Unknown key-system: &apos; + keySystem);
+  }
+};
+
+/**
+ * Controller to deal with encrypted media extensions (EME)
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/Encrypted_Media_Extensions_API
+ *
+ * @class
+ * @constructor
+ */
+class EMEController extends EventHandler {
+  /**
+     * @constructs
+     * @param {Hls} hls Our Hls.js instance
+     */
+  constructor (hls) {
+    super(hls,
+      Event.MEDIA_ATTACHED,
+      Event.MANIFEST_PARSED
+    );
+
+    this._widevineLicenseUrl = hls.config.widevineLicenseUrl;
+    this._licenseXhrSetup = hls.config.licenseXhrSetup;
+    this._emeEnabled = hls.config.emeEnabled;
+
+    this._requestMediaKeySystemAccess = hls.config.requestMediaKeySystemAccessFunc;
+
+    this._mediaKeysList = [];
+    this._media = null;
+
+    this._hasSetMediaKeys = false;
+    this._isMediaEncrypted = false;
+
+    this._requestLicenseFailureCount = 0;
+  }
+
+  /**
+     *
+     * @param {string} keySystem Identifier for the key-system, see `KeySystems` enum
+     * @returns {string} License server URL for key-system (if any configured, otherwise causes error)
+     */
+  getLicenseServerUrl (keySystem) {
+    let url;
+    switch (keySystem) {
+    case KeySystems.WIDEVINE:
+      url = this._widevineLicenseUrl;
+      break;
+    default:
+      url = null;
+      break;
+    }
+
+    if (!url) {
+      logger.error(`No license server URL configured for key-system &quot;${keySystem}&quot;`);
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+        fatal: true
+      });
+    }
+
+    return url;
+  }
+
+  /**
+     * Requests access object and adds it to our list upon success
+     * @private
+     * @param {string} keySystem System ID (see `KeySystems`)
+     * @param {Array&lt;string&gt;} audioCodecs List of required audio codecs to support
+     * @param {Array&lt;string&gt;} videoCodecs List of required video codecs to support
+     */
+  _attemptKeySystemAccess (keySystem, audioCodecs, videoCodecs) {
+    // TODO: add other DRM &quot;options&quot;
+
+    const mediaKeySystemConfigs = getSupportedMediaKeySystemConfigurations(keySystem, audioCodecs, videoCodecs);
+
+    if (!mediaKeySystemConfigs) {
+      logger.warn(&apos;Can not create config for key-system (maybe because platform is not supported):&apos;, keySystem);
+      return;
+    }
+
+    logger.log(&apos;Requesting encrypted media key-system access&apos;);
+
+    // expecting interface like window.navigator.requestMediaKeySystemAccess
+    this.requestMediaKeySystemAccess(keySystem, mediaKeySystemConfigs)
+      .then((mediaKeySystemAccess) =&gt; {
+        this._onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess);
+      })
+      .catch((err) =&gt; {
+        logger.error(`Failed to obtain key-system &quot;${keySystem}&quot; access:`, err);
+      });
+  }
+
+  get requestMediaKeySystemAccess () {
+    if (!this._requestMediaKeySystemAccess) {
+      throw new Error(&apos;No requestMediaKeySystemAccess function configured&apos;);
+    }
+
+    return this._requestMediaKeySystemAccess;
+  }
+
+  /**
+     * Handles obtaining access to a key-system
+     *
+     * @param {string} keySystem
+     * @param {MediaKeySystemAccess} mediaKeySystemAccess https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess
+     */
+  _onMediaKeySystemAccessObtained (keySystem, mediaKeySystemAccess) {
+    logger.log(`Access for key-system &quot;${keySystem}&quot; obtained`);
+
+    const mediaKeysListItem = {
+      mediaKeys: null,
+      mediaKeysSession: null,
+      mediaKeysSessionInitialized: false,
+      mediaKeySystemAccess: mediaKeySystemAccess,
+      mediaKeySystemDomain: keySystem
+    };
+
+    this._mediaKeysList.push(mediaKeysListItem);
+
+    mediaKeySystemAccess.createMediaKeys()
+      .then((mediaKeys) =&gt; {
+        mediaKeysListItem.mediaKeys = mediaKeys;
+
+        logger.log(`Media-keys created for key-system &quot;${keySystem}&quot;`);
+
+        this._onMediaKeysCreated();
+      })
+      .catch((err) =&gt; {
+        logger.error(&apos;Failed to create media-keys:&apos;, err);
+      });
+  }
+
+  /**
+     * Handles key-creation (represents access to CDM). We are going to create key-sessions upon this
+     * for all existing keys where no session exists yet.
+     */
+  _onMediaKeysCreated () {
+    // check for all key-list items if a session exists, otherwise, create one
+    this._mediaKeysList.forEach((mediaKeysListItem) =&gt; {
+      if (!mediaKeysListItem.mediaKeysSession) {
+        mediaKeysListItem.mediaKeysSession = mediaKeysListItem.mediaKeys.createSession();
+        this._onNewMediaKeySession(mediaKeysListItem.mediaKeysSession);
+      }
+    });
+  }
+
+  /**
+     *
+     * @param {*} keySession
+     */
+  _onNewMediaKeySession (keySession) {
+    logger.log(`New key-system session ${keySession.sessionId}`);
+
+    keySession.addEventListener(&apos;message&apos;, (event) =&gt; {
+      this._onKeySessionMessage(keySession, event.message);
+    }, false);
+  }
+
+  _onKeySessionMessage (keySession, message) {
+    logger.log(&apos;Got EME message event, creating license request&apos;);
+
+    this._requestLicense(message, (data) =&gt; {
+      logger.log(&apos;Received license data, updating key-session&apos;);
+      keySession.update(data);
+    });
+  }
+
+  _onMediaEncrypted (initDataType, initData) {
+    logger.log(`Media is encrypted using &quot;${initDataType}&quot; init data type`);
+
+    this._isMediaEncrypted = true;
+    this._mediaEncryptionInitDataType = initDataType;
+    this._mediaEncryptionInitData = initData;
+
+    this._attemptSetMediaKeys();
+    this._generateRequestWithPreferredKeySession();
+  }
+
+  _attemptSetMediaKeys () {
+    if (!this._hasSetMediaKeys) {
+      // FIXME: see if we can/want/need-to really to deal with several potential key-sessions?
+      const keysListItem = this._mediaKeysList[0];
+      if (!keysListItem || !keysListItem.mediaKeys) {
+        logger.error(&apos;Fatal: Media is encrypted but no CDM access or no keys have been obtained yet&apos;);
+        this.hls.trigger(Event.ERROR, {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
+          fatal: true
+        });
+        return;
+      }
+
+      logger.log(&apos;Setting keys for encrypted media&apos;);
+
+      this._media.setMediaKeys(keysListItem.mediaKeys);
+      this._hasSetMediaKeys = true;
+    }
+  }
+
+  _generateRequestWithPreferredKeySession () {
+    // FIXME: see if we can/want/need-to really to deal with several potential key-sessions?
+    const keysListItem = this._mediaKeysList[0];
+    if (!keysListItem) {
+      logger.error(&apos;Fatal: Media is encrypted but not any key-system access has been obtained yet&apos;);
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
+        fatal: true
+      });
+      return;
+    }
+
+    if (keysListItem.mediaKeysSessionInitialized) {
+      logger.warn(&apos;Key-Session already initialized but requested again&apos;);
+      return;
+    }
+
+    const keySession = keysListItem.mediaKeysSession;
+    if (!keySession) {
+      logger.error(&apos;Fatal: Media is encrypted but no key-session existing&apos;);
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
+        fatal: true
+      });
+    }
+
+    const initDataType = this._mediaEncryptionInitDataType;
+    const initData = this._mediaEncryptionInitData;
+
+    logger.log(`Generating key-session request for &quot;${initDataType}&quot; init data type`);
+
+    keysListItem.mediaKeysSessionInitialized = true;
+
+    keySession.generateRequest(initDataType, initData)
+      .then(() =&gt; {
+        logger.debug(&apos;Key-session generation succeeded&apos;);
+      })
+      .catch((err) =&gt; {
+        logger.error(&apos;Error generating key-session request:&apos;, err);
+        this.hls.trigger(Event.ERROR, {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
+          fatal: false
+        });
+      });
+  }
+
+  /**
+     * @param {string} url License server URL
+     * @param {ArrayBuffer} keyMessage Message data issued by key-system
+     * @param {function} callback Called when XHR has succeeded
+     * @returns {XMLHttpRequest} Unsent (but opened state) XHR object
+     */
+  _createLicenseXhr (url, keyMessage, callback) {
+    const xhr = new XMLHttpRequest();
+    const licenseXhrSetup = this._licenseXhrSetup;
+
+    try {
+      if (licenseXhrSetup) {
+        try {
+          licenseXhrSetup(xhr, url);
+        } catch (e) {
+          // let&apos;s try to open before running setup
+          xhr.open(&apos;POST&apos;, url, true);
+          licenseXhrSetup(xhr, url);
+        }
+      }
+      // if licenseXhrSetup did not yet call open, let&apos;s do it now
+      if (!xhr.readyState) {
+        xhr.open(&apos;POST&apos;, url, true);
+      }
+    } catch (e) {
+      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+      logger.error(&apos;Error setting up key-system license XHR&apos;, e);
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+        fatal: true
+      });
+      return;
+    }
+
+    xhr.responseType = &apos;arraybuffer&apos;;
+    xhr.onreadystatechange =
+        this._onLicenseRequestReadyStageChange.bind(this, xhr, url, keyMessage, callback);
+    return xhr;
+  }
+
+  /**
+     * @param {XMLHttpRequest} xhr
+     * @param {string} url License server URL
+     * @param {ArrayBuffer} keyMessage Message data issued by key-system
+     * @param {function} callback Called when XHR has succeeded
+     *
+     */
+  _onLicenseRequestReadyStageChange (xhr, url, keyMessage, callback) {
+    switch (xhr.readyState) {
+    case 4:
+      if (xhr.status === 200) {
+        this._requestLicenseFailureCount = 0;
+        logger.log(&apos;License request succeeded&apos;);
+        callback(xhr.response);
+      } else {
+        logger.error(`License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`);
+
+        this._requestLicenseFailureCount++;
+        if (this._requestLicenseFailureCount &lt;= MAX_LICENSE_REQUEST_FAILURES) {
+          const attemptsLeft = MAX_LICENSE_REQUEST_FAILURES - this._requestLicenseFailureCount + 1;
+          logger.warn(`Retrying license request, ${attemptsLeft} attempts left`);
+          this._requestLicense(keyMessage, callback);
+          return;
+        }
+
+        this.hls.trigger(Event.ERROR, {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+          fatal: true
+        });
+      }
+      break;
+    }
+  }
+
+  /**
+     * @param {object} keysListItem
+     * @param {ArrayBuffer} keyMessage
+     * @returns {ArrayBuffer} Challenge data posted to license server
+     */
+  _generateLicenseRequestChallenge (keysListItem, keyMessage) {
+    let challenge;
+
+    if (keysListItem.mediaKeySystemDomain === KeySystems.PLAYREADY) {
+      logger.error(&apos;PlayReady is not supported (yet)&apos;);
+
+      // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
+      /*
+        if (this.licenseType !== this.LICENSE_TYPE_WIDEVINE) {
+            // For PlayReady CDMs, we need to dig the Challenge out of the XML.
+            var keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), &apos;application/xml&apos;);
+            if (keyMessageXml.getElementsByTagName(&apos;Challenge&apos;)[0]) {
+                challenge = atob(keyMessageXml.getElementsByTagName(&apos;Challenge&apos;)[0].childNodes[0].nodeValue);
+            } else {
+                throw &apos;Cannot find &lt;Challenge&gt; in key message&apos;;
+            }
+            var headerNames = keyMessageXml.getElementsByTagName(&apos;name&apos;);
+            var headerValues = keyMessageXml.getElementsByTagName(&apos;value&apos;);
+            if (headerNames.length !== headerValues.length) {
+                throw &apos;Mismatched header &lt;name&gt;/&lt;value&gt; pair in key message&apos;;
+            }
+            for (var i = 0; i &lt; headerNames.length; i++) {
+                xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
+            }
+        }
+        */
+    } else if (keysListItem.mediaKeySystemDomain === KeySystems.WIDEVINE) {
+      // For Widevine CDMs, the challenge is the keyMessage.
+      challenge = keyMessage;
+    } else {
+      logger.error(&apos;Unsupported key-system:&apos;, keysListItem.mediaKeySystemDomain);
+    }
+
+    return challenge;
+  }
+
+  _requestLicense (keyMessage, callback) {
+    logger.log(&apos;Requesting content license for key-system&apos;);
+
+    const keysListItem = this._mediaKeysList[0];
+    if (!keysListItem) {
+      logger.error(&apos;Fatal error: Media is encrypted but no key-system access has been obtained yet&apos;);
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
+        fatal: true
+      });
+      return;
+    }
+
+    const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
+    const xhr = this._createLicenseXhr(url, keyMessage, callback);
+
+    logger.log(`Sending license request to URL: ${url}`);
+
+    xhr.send(this._generateLicenseRequestChallenge(keysListItem, keyMessage));
+  }
+
+  onMediaAttached (data) {
+    if (!this._emeEnabled) {
+      return;
+    }
+
+    const media = data.media;
+
+    // keep reference of media
+    this._media = media;
+
+    // FIXME: also handle detaching media !
+
+    media.addEventListener(&apos;encrypted&apos;, (e) =&gt; {
+      this._onMediaEncrypted(e.initDataType, e.initData);
+    });
+  }
+
+  onManifestParsed (data) {
+    if (!this._emeEnabled) {
+      return;
+    }
+
+    const audioCodecs = data.levels.map((level) =&gt; level.audioCodec);
+    const videoCodecs = data.levels.map((level) =&gt; level.videoCodec);
+
+    this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
+  }
+}
+
+export default EMEController;
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.1.0)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
