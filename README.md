@@ -33,20 +33,24 @@ To build our distro bundle and serve our development environment we use [Webpack
 
 ## API docs and usage guide
 
-* [API and usage docs, with code examples](https://github.com/video-dev/hls.js/blob/master/docs/API.md)
+* [API and usage docs, with code examples](./docs/API.md)
 
-* [Auto-Generated Docs](http://video-dev.github.io/hls.js/docs/html)
+* [Auto-Generated Docs (Latest Release)](http://video-dev.github.io/hls.js/stable/api-docs)
+* [Auto-Generated Docs (Master)](http://video-dev.github.io/hls.js/latest/api-docs)
+
+_Note you can access the docs for a particular version using "http://video-dev.github.io/hls.js/v[x.y.z]/api-docs"_
 
 ## Demo
 
 ### Latest Release
 [https://video-dev.github.io/hls.js/demo](https://video-dev.github.io/hls.js/demo)
 
-### Canary
-[https://video-dev.github.io/hls.js/demo?version=canary](https://video-dev.github.io/hls.js/demo?version=canary)
+### Master
+[https://video-dev.github.io/hls.js/latest/demo](https://video-dev.github.io/hls.js/latest/demo)
 
-### Local
-[https://video-dev.github.io/hls.js/demo?version=local](https://video-dev.github.io/hls.js/demo?version=local)
+### Specific Version
+"http://video-dev.github.io/hls.js/v[x.y.z]/demo"
+
 
 ## Getting Started
 
