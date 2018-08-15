@@ -42,10 +42,10 @@ _Note you can access the docs for a particular version using "http://video-dev.g
 
 ## Demo
 
-### Master
+### Latest Release
 [https://video-dev.github.io/hls.js/demo](https://video-dev.github.io/hls.js/demo)
 
-### Canary
+### Master
 [https://video-dev.github.io/hls.js/latest/demo](https://video-dev.github.io/hls.js/latest/demo)
 
 ### Specific Version
