@@ -33,7 +33,7 @@ To build our distro bundle and serve our development environment we use [Webpack
 
 ## API docs and usage guide
 
-* [API and usage docs, with code examples](https://github.com/video-dev/hls.js/blob/master/docs/API.md)
+* [API and usage docs, with code examples](./docs/API.md)
 
 * [Auto-Generated Docs (Latest Release)](http://video-dev.github.io/hls.js/stable/api-docs)
 * [Auto-Generated Docs (Master)](http://video-dev.github.io/hls.js/latest/api-docs)
