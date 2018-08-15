@@ -48,7 +48,7 @@ export function findFragmentByPTS (fragPrevious, fragments, bufferEnd = 0, maxFr
   if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
     return fragNext;
   }
-  return BinarySearch.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
+  return BinarySearch.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance)) || fragNext;
 }
 
 /**
