@@ -59,6 +59,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ];
 elif [ "${TRAVIS_MODE}" = "gh-pages" ]; then
   npm run lint
   npm run build
+  npm run docs
   ./scripts/build-gh-pages.sh
 else
 	echo "Unknown travis mode: ${TRAVIS_MODE}" 1>&2
