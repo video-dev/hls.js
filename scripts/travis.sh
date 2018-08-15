@@ -2,6 +2,13 @@
 # https://docs.travis-ci.com/user/customizing-the-build/#Implementing-Complex-Build-Steps
 set -ev
 
+function setVersion () {
+  # update the version
+  # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
+  git fetch --unshallow
+  node ./scripts/set-package-version.js
+}
+
 npm install
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
@@ -31,10 +38,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 		exit 1
 	fi
 elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
-  # update the version
-  # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
-  git fetch --unshallow
-  node ./scripts/set-package-version.js
+  setVersion
   npm run lint
   npm run build
   npm run test:unit
@@ -57,6 +61,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ];
     echo "Already published."
   fi
 elif [ "${TRAVIS_MODE}" = "gh-pages" ]; then
+  setVersion
   npm run lint
   npm run build
   npm run docs
