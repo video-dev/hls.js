@@ -9,7 +9,7 @@ const clone = (...args) => Object.assign({}, ...args);
 /* Allow to customise builds through env-vars */
 const env = process.env;
 
-const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES ;
+const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES;
 const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
 const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
 const runAnalyzer = !!env.ANALYZE;
@@ -22,6 +22,7 @@ const baseConfig = {
     extensions: [".ts", ".js"]
   },
   module: {
+    strictExportPresence: true,
     rules: [
       // all files with a `.ts` extension will be handled by `ts-loader`
       { test: /\.ts?$/, loader: "ts-loader" },
@@ -58,6 +59,7 @@ function getPluginsForConfig(type, minify = false) {
   const defineConstants = getConstantsForConfig(type);
 
   const plugins = [
+    new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
     new webpack.optimize.OccurrenceOrderPlugin(),
     new webpack.DefinePlugin(defineConstants)
   ];
@@ -69,13 +71,13 @@ function getPluginsForConfig(type, minify = false) {
     }));
   } else {
     // https://github.com/webpack-contrib/webpack-bundle-analyzer/issues/115
-    plugins.push(new webpack.optimize.ModuleConcatenationPlugin())
+    plugins.push(new webpack.optimize.ModuleConcatenationPlugin());
   }
 
   return plugins;
 }
 
-function getConstantsForConfig(type) {
+function getConstantsForConfig (type) {
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
     __VERSION__: JSON.stringify(pkgJson.version),
@@ -85,7 +87,7 @@ function getConstantsForConfig(type) {
   };
 }
 
-function getAliasesForLightDist() {
+function getAliasesForLightDist () {
   let aliases = {};
 
   if (!addEMESupport) {
@@ -129,7 +131,7 @@ const multiConfig = [
       globalObject: 'this'
     },
     plugins: getPluginsForConfig('main'),
-    devtool: 'source-map',
+    devtool: 'source-map'
   },
   {
     name: 'dist',
