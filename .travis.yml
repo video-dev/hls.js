@@ -23,6 +23,7 @@ jobs:
     - stage: testFuncOptional
   include:
     # https://docs.travis-ci.com/user/build-stages/deploy-github-releases/
+    # publish package (and deploy gh-pages)
     - stage: release
       if: tag IS present
       env: TRAVIS_MODE=release
@@ -38,13 +39,10 @@ jobs:
         skip_cleanup: true
         on:
           tags: true
-    # publish canary package if on master
+    # publish canary package (and deploy gh-pages) if on master
     - stage: releaseCanary
       if: branch = master AND type != pull_request
       env: TRAVIS_MODE=releaseCanary
-    - stage: buildAndTest
-      if: tag IS present OR (branch = master AND type != pull_request)
-      env: TRAVIS_MODE=gh-pages
     # Required tests
     - stage: buildAndTest
       env:   TRAVIS_MODE=build
