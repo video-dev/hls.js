@@ -1,5 +1,5 @@
 
-import URLToolkit from 'url-toolkit';
+import * as URLToolkit from 'url-toolkit';
 
 import LevelKey from './level-key';
 
@@ -9,6 +9,8 @@ export default class Fragment {
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
+    this.programDateTime = null;
+    this.rawProgramDateTime = null;
 
     // Holds the types of data this fragment supports
     this._elementaryStreams = {
@@ -39,14 +41,6 @@ export default class Fragment {
 
   set url (value) {
     this._url = value;
-  }
-
-  get programDateTime () {
-    if (!this._programDateTime && this.rawProgramDateTime) {
-      this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
-    }
-
-    return this._programDateTime;
   }
 
   get byteRange () {
@@ -90,6 +84,16 @@ export default class Fragment {
     }
 
     return this._decryptdata;
+  }
+
+  get endProgramDateTime () {
+    if (!Number.isFinite(this.programDateTime)) {
+      return null;
+    }
+
+    let duration = !Number.isFinite(this.duration) ? 0 : this.duration;
+
+    return this.programDateTime + (duration * 1000);
   }
 
   get encrypted () {

@@ -408,7 +408,7 @@ class AudioStreamController extends TaskLoop {
   _loadFragment (frag) {
     this.fragCurrent = frag;
     this.startFragRequested = true;
-    if (!isNaN(frag.sn)) {
+    if (Number.isFinite(frag.sn)) {
       this.nextLoadPosition = frag.start + frag.duration;
     }
 
@@ -534,7 +534,7 @@ class AudioStreamController extends TaskLoop {
       if (this.startPosition === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
-        if (!isNaN(startTimeOffset)) {
+        if (Number.isFinite(startTimeOffset)) {
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
         } else {
@@ -663,7 +663,7 @@ class AudioStreamController extends TaskLoop {
         track = this.tracks[trackId],
         hls = this.hls;
 
-      if (isNaN(data.endPTS)) {
+      if (!Number.isFinite(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }

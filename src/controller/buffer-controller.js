@@ -413,8 +413,7 @@ class BufferController extends EventHandler {
       // Override duration to Infinity
       logger.log('Media Source duration is set to Infinity');
       this._msDuration = this.mediaSource.duration = Infinity;
-    } else if ((this._levelDuration > this._msDuration && this._levelDuration > duration) ||
-      (duration === Infinity || isNaN(duration))) {
+    } else if ((this._levelDuration > this._msDuration && this._levelDuration > duration) || !Number.isFinite(duration)) {
       // levelDuration was the last value we set.
       // not using mediaSource.duration as the browser may tweak this value
       // only update Media Source duration if its value increase, this is to avoid

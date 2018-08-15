@@ -1,5 +1,5 @@
-import EventEmitter from 'events';
-import work from 'webworkify-webpack';
+import { EventEmitter } from 'events';
+import * as work from 'webworkify-webpack';
 
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
@@ -64,7 +64,8 @@ class Demuxer {
         };
         w.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
-        logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+        logger.warn('Error in worker:', err);
+        logger.error('Error while initializing DemuxerWorker, fallback on DemuxerInline');
         if (w) {
           // revoke the Object URL that was used to create demuxer worker, so as not to leak it
           global.URL.revokeObjectURL(w.objectURL);
@@ -99,7 +100,7 @@ class Demuxer {
 
   push (data, initSegment, audioCodec, videoCodec, frag, duration, accurateTimeOffset, defaultInitPTS) {
     const w = this.w;
-    const timeOffset = !isNaN(frag.startDTS) ? frag.startDTS : frag.start;
+    const timeOffset = Number.isFinite(frag.startDTS) ? frag.startDTS : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
     const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));

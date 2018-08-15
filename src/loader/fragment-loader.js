@@ -53,7 +53,7 @@ class FragmentLoader extends EventHandler {
     let start = frag.byteRangeStartOffset,
       end = frag.byteRangeEndOffset;
 
-    if (!isNaN(start) && !isNaN(end)) {
+    if (Number.isFinite(start) && Number.isFinite(end)) {
       loaderContext.rangeStart = start;
       loaderContext.rangeEnd = end;
     }
@@ -84,22 +84,24 @@ class FragmentLoader extends EventHandler {
   }
 
   loaderror (response, context, networkDetails = null) {
-    let loader = context.loader;
+    const frag = context.frag;
+    let loader = frag.loader;
     if (loader) {
       loader.abort();
     }
 
-    this.loaders[context.type] = undefined;
+    this.loaders[frag.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails });
   }
 
   loadtimeout (stats, context, networkDetails = null) {
-    let loader = context.loader;
+    const frag = context.frag;
+    let loader = frag.loader;
     if (loader) {
       loader.abort();
     }
 
-    this.loaders[context.type] = undefined;
+    this.loaders[frag.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails });
   }
 
