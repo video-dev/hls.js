@@ -359,6 +359,7 @@ class TimelineController extends EventHandler {
 
   onSubtitleTracksCleared () {
     this.tracks = [];
+    this.captionsTracks = {};
   }
 
   onFragParsingUserdata (data) {
