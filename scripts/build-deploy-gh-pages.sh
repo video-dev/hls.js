@@ -13,7 +13,7 @@ echo "Cloning current gh-pages..."
 rm -rf gh-pages
 mkdir gh-pages
 cd gh-pages
-git clone --depth 1 "https://${GITHUB_TOKEN}@$github.com/video-dev/hls.js.git" -b gh-pages
+git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b gh-pages
 cd ..
 
 echo "Building gh-pages for $id"
