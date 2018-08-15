@@ -2,18 +2,19 @@
 set -e
 
 id=$(git rev-parse HEAD)
-base="./gh-pages/$id"
-latest="./gh-pages/latest"
-stable="./gh-pages/stable"
-topReadme="./gh-pages/README.md"
+root="./gh-pages"
+base="$root/$id"
+latest="$root/latest"
+stable="$root/stable"
+topReadme="$root/README.md"
 tag=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "")
 
 echo "Cloning current gh-pages..."
 
-rm -rf gh-pages
-mkdir gh-pages
-cd gh-pages
-git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b gh-pages
+rm -rf "$root"
+mkdir "$root"
+cd "$root"
+git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b gh-pages .
 cd ..
 
 echo "Building gh-pages for $id"
@@ -27,7 +28,7 @@ cp -r "./api-docs" "$base/api-docs"
 
 if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
   echo "Detected tag: $tag"
-  symlink="./gh-pages/$tag"
+  symlink="$root/$tag"
   rm -f "$symlink"
   ln -s "./$id" "$symlink"
   rm -f "$stable"
@@ -43,7 +44,7 @@ cp "./README.md" "$topReadme"
 echo "Built gh-pages."
 
 echo "Deploying gh-pages."
-cd gh-pages
+cd "$root"
 git add -A
 git commit -m "gh-pages: $id"
 # GITHUB_TOKEN set in travis
