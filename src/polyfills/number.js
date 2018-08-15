@@ -1,4 +1,4 @@
-import { getSelfScope } from "../utils/get-self-scope";
+import { getSelfScope } from '../utils/get-self-scope';
 
 const self = getSelfScope();
 const Number = self.Number;
@@ -8,4 +8,4 @@ Number.isFinite = Number.isFinite || function (value) {
   return typeof value === 'number' && isFinite(value);
 };
 
-export {Number};
+export { Number };
