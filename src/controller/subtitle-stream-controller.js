@@ -156,7 +156,6 @@ class SubtitleStreamController extends TaskLoop {
 
         this.hls.trigger(Event.FRAG_LOADING, { frag: foundFrag });
       }
-
     }
   }
 
