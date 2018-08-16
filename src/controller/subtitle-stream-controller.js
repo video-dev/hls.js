@@ -1,6 +1,6 @@
-/*
- * Subtitle Stream Controller
-*/
+/**
+ * @class SubtitleStreamController
+ */
 
 import Event from '../events';
 import { logger } from '../utils/logger';
