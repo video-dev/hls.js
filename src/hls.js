@@ -22,10 +22,6 @@ import HlsEvents from './events';
 
 import { EventEmitter } from 'events';
 
-// polyfill for IE11
-require('string.prototype.endswith');
-require('./polyfills/number-is-finite');
-
 /**
  * @module Hls
  * @class
