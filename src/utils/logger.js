@@ -54,25 +54,18 @@ export const logger = {
  * @param {boolean | LoggerConfig} enabled
  */
 export function enableLogs (loggerConfig) {
-
   if (typeof loggerConfig === 'boolean') {
-    _enabled = enabled;
+    _enabled = loggerConfig;
   } else if (typeof loggerConfig === 'object') {
     _enabled = true;
     ['debug',
-    'log',
-    'info',
-    'warn',
-    'error'].forEach((logFn) => {
+      'log',
+      'info',
+      'warn',
+      'error'].forEach((logFn) => {
       if (loggerConfig[logFn]) {
 
       }
-    })
+    });
   }
-
-
 }
-
-
-
-
