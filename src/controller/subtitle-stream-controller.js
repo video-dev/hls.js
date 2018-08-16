@@ -137,20 +137,26 @@ class SubtitleStreamController extends TaskLoop {
       const fragLen = fragments.length;
       const end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
 
+      let foundFrag;
       if (bufferLen < maxConfigBuffer && bufferEnd < end) {
-        const foundFrag = findFragmentBySN(this.fragPrevious, fragments, bufferEnd, end, maxFragLookUpTolerance);
-        if (foundFrag && foundFrag.encrypted) {
-          logger.log(`Loading key for ${foundFrag.sn}`);
-          this.state = State.KEY_LOADING;
-          this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });
-        } else if (foundFrag && this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
-          // only load if fragment is not loaded
-          foundFrag.trackId = trackId; // Frags don't know their subtitle track ID, so let's just add that...
-          this.fragCurrent = foundFrag;
-          this.state = State.FRAG_LOADING;
-          this.hls.trigger(Event.FRAG_LOADING, { frag: foundFrag });
-        }
+        foundFrag = findFragmentByPTS(this.fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance)
+      } else if (trackDetails.hasProgramDateTime && this.fragPrevious) {
+        foundFrag = findFragmentByPDT(fragments, this.fragPrevious.endProgramDateTime, maxFragLookUpTolerance)
       }
+
+      if (foundFrag && foundFrag.encrypted) {
+        logger.log(`Loading key for ${foundFrag.sn}`);
+        this.state = State.KEY_LOADING;
+        this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });
+      } else if (foundFrag && this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
+        // only load if fragment is not loaded
+        foundFrag.trackId = trackId; // Frags don't know their subtitle track ID, so let's just add that...
+        this.fragCurrent = foundFrag;
+        this.state = State.FRAG_LOADING;
+
+        this.hls.trigger(Event.FRAG_LOADING, { frag: foundFrag });
+      }
+
     }
   }
 
