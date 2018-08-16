@@ -18,6 +18,8 @@ import { logger } from '../utils/logger';
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
 
+const { performance } = window;
+
 /**
  * `type` property values for this loaders' context object
  * @enum
@@ -154,7 +156,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   onManifestLoading (data) {
-    this.load(data.url, { type: ContextType.MANIFEST });
+    this.load(data.url, { type: ContextType.MANIFEST, level: 0, id: null });
   }
 
   onLevelLoading (data) {
@@ -162,15 +164,17 @@ class PlaylistLoader extends EventHandler {
   }
 
   onAudioTrackLoading (data) {
-    this.load(data.url, { type: ContextType.AUDIO_TRACK, id: data.id });
+    this.load(data.url, { type: ContextType.AUDIO_TRACK, level: null, id: data.id });
   }
 
   onSubtitleTrackLoading (data) {
-    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, id: data.id });
+    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, level: null, id: data.id });
   }
 
   load (url, context) {
     const config = this.hls.config;
+
+    logger.debug(`Loading playlist of type ${context.type}, level: ${context.level}, id: ${context.id}`);
 
     // Check if a loader for this context already exists
     let loader = this.getInternalLoader(context);
@@ -184,6 +188,7 @@ class PlaylistLoader extends EventHandler {
         loader.abort();
       }
     }
+
     let maxRetry,
       timeout,
       retryDelay,
@@ -209,7 +214,6 @@ class PlaylistLoader extends EventHandler {
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
       maxRetryDelay = config.levelLoadingMaxRetryTimeout;
-      logger.log(`Playlist loader for ${context.type} ${context.level || context.id}`);
       break;
     }
 
@@ -218,20 +222,20 @@ class PlaylistLoader extends EventHandler {
     context.url = url;
     context.responseType = context.responseType || ''; // FIXME: (should not be necessary to do this)
 
-    let loaderConfig, loaderCallbacks;
-
-    loaderConfig = {
+    const loaderConfig = {
       timeout,
       maxRetry,
       retryDelay,
       maxRetryDelay
     };
 
-    loaderCallbacks = {
+    const loaderCallbacks = {
       onSuccess: this.loadsuccess.bind(this),
       onError: this.loaderror.bind(this),
       onTimeout: this.loadtimeout.bind(this)
     };
+
+    logger.debug(`Calling internal loader delegate for URL: ${url}`);
 
     loader.load(context, loaderConfig, loaderCallbacks);
 
@@ -335,8 +339,8 @@ class PlaylistLoader extends EventHandler {
 
     const url = PlaylistLoader.getResponseUrl(response, context);
 
-    const levelUrlId = isNaN(id) ? 0 : id;
-    const levelId = isNaN(level) ? levelUrlId : level; // level -> id -> 0
+    const levelUrlId = Number.isFinite(id) ? id : 0;
+    const levelId = Number.isFinite(level) ? level : levelUrlId;
     const levelType = PlaylistLoader.mapContextToLevelType(context);
 
     const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType, levelUrlId);
@@ -416,6 +420,8 @@ class PlaylistLoader extends EventHandler {
   }
 
   _handleNetworkError (context, networkDetails, timeout = false) {
+    logger.info(`A network error occured while loading a ${context.type}-type playlist`);
+
     let details;
     let fatal;
 

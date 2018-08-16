@@ -1,8 +1,8 @@
-const assert = require('assert');
-const sinon = require('sinon');
-
 import Event from '../../../src/events.js';
 import Demuxer from '../../../src/demux/demuxer.js';
+
+const assert = require('assert');
+const sinon = require('sinon');
 
 describe('Demuxer tests', function () {
   it('Demuxer constructor no worker', function () {
@@ -217,7 +217,7 @@ describe('Demuxer tests', function () {
       }
     };
 
-    let spy = sinon.spy(URL, 'revokeObjectURL');
+    let spy = sinon.spy(window.URL, 'revokeObjectURL');
 
     demux.onWorkerMessage(evt);
 

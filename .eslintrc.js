@@ -1,19 +1,11 @@
 module.exports = {
   'env': {
-    'browser': true,
     'commonjs': true,
     'es6': true
   },
   'globals': {
     // Allowed globals
     'console': true,
-    // "MediaSource": true,
-    'performance': true,
-    'crypto': true,
-    'fetch': true,
-    'Request': true,
-    'Headers': true,
-    'escape': true,
 
     // Compile-time defines
     '__VERSION__': true,
@@ -26,6 +18,10 @@ module.exports = {
   'extends': [
     'eslint:recommended',
     'standard'
+  ],
+  'parser': 'typescript-eslint-parser',
+  'plugins': [
+      'typescript'
   ],
   'parserOptions': {
     'sourceType': 'module'
@@ -91,6 +87,7 @@ module.exports = {
     'no-irregular-whitespace': 1,
     'no-self-assign': 1,
     'new-cap': 1,
-    'no-undefined': 1
+    'no-undefined': 1,
+    'no-global-assign': 2
   }
 };

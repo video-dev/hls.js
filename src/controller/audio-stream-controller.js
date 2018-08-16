@@ -15,6 +15,8 @@ import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import Fragment from '../loader/fragment';
 
+const { performance } = window;
+
 const State = {
   STOPPED: 'STOPPED',
   STARTING: 'STARTING',
@@ -64,11 +66,13 @@ class AudioStreamController extends TaskLoop {
 
   onHandlerDestroying () {
     this.stopLoad();
+    super.onHandlerDestroying();
   }
 
   onHandlerDestroyed () {
     this.state = State.STOPPED;
     this.fragmentTracker = null;
+    super.onHandlerDestroyed();
   }
 
   // Signal that video PTS was found
@@ -337,7 +341,7 @@ class AudioStreamController extends TaskLoop {
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
               this.fragCurrent = frag;
               this.startFragRequested = true;
-              if (!isNaN(frag.sn)) {
+              if (Number.isFinite(frag.sn)) {
                 this.nextLoadPosition = frag.start + frag.duration;
               }
 
@@ -523,7 +527,7 @@ class AudioStreamController extends TaskLoop {
       if (this.startPosition === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
-        if (!isNaN(startTimeOffset)) {
+        if (Number.isFinite(startTimeOffset)) {
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
         } else {
@@ -652,7 +656,7 @@ class AudioStreamController extends TaskLoop {
         track = this.tracks[trackId],
         hls = this.hls;
 
-      if (isNaN(data.endPTS)) {
+      if (!Number.isFinite(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
@@ -687,7 +691,7 @@ class AudioStreamController extends TaskLoop {
       let pendingData = this.pendingData;
 
       if (!pendingData) {
-        console.warn('Apparently attempt to enqueue media payload without codec initialization data upfront');
+        logger.warn('Apparently attempt to enqueue media payload without codec initialization data upfront');
         hls.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: null, fatal: true });
         return;
       }
@@ -789,6 +793,12 @@ class AudioStreamController extends TaskLoop {
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:
     case ErrorDetails.FRAG_LOAD_TIMEOUT:
+      const frag = data.frag;
+      // don't handle frag error not related to audio fragment
+      if (frag && frag.type !== 'audio') {
+        break;
+      }
+
       if (!data.fatal) {
         let loadError = this.fragLoadError;
         if (loadError) {
@@ -797,17 +807,17 @@ class AudioStreamController extends TaskLoop {
           loadError = 1;
         }
 
-        let config = this.config;
+        const config = this.config;
         if (loadError <= config.fragLoadingMaxRetry) {
           this.fragLoadError = loadError;
           // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-          let delay = Math.min(Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay, config.fragLoadingMaxRetryTimeout);
-          logger.warn(`audioStreamController: frag loading failed, retry in ${delay} ms`);
+          const delay = Math.min(Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay, config.fragLoadingMaxRetryTimeout);
+          logger.warn(`AudioStreamController: frag loading failed, retry in ${delay} ms`);
           this.retryDate = performance.now() + delay;
           // retry loading state
           this.state = State.FRAG_LOADING_WAITING_RETRY;
         } else {
-          logger.error(`audioStreamController: ${data.details} reaches max retry, redispatch as fatal ...`);
+          logger.error(`AudioStreamController: ${data.details} reaches max retry, redispatch as fatal ...`);
           // switch error to fatal
           data.fatal = true;
           this.state = State.ERROR;
@@ -822,7 +832,7 @@ class AudioStreamController extends TaskLoop {
       if (this.state !== State.ERROR) {
         // if fatal error, stop processing, otherwise move to IDLE to retry loading
         this.state = data.fatal ? State.ERROR : State.IDLE;
-        logger.warn(`audioStreamController: ${data.details} while loading frag,switch to ${this.state} state ...`);
+        logger.warn(`AudioStreamController: ${data.details} while loading frag, now switching to ${this.state} state ...`);
       }
       break;
     case ErrorDetails.BUFFER_FULL_ERROR:
@@ -837,14 +847,14 @@ class AudioStreamController extends TaskLoop {
           if (config.maxMaxBufferLength >= config.maxBufferLength) {
             // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
             config.maxMaxBufferLength /= 2;
-            logger.warn(`audio:reduce max buffer length to ${config.maxMaxBufferLength}s`);
+            logger.warn(`AudioStreamController: reduce max buffer length to ${config.maxMaxBufferLength}s`);
           }
           this.state = State.IDLE;
         } else {
           // current position is not buffered, but browser is still complaining about buffer full error
           // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
           // in that case flush the whole audio buffer to recover
-          logger.warn('buffer full error also media.currentTime is not buffered, flush audio buffer');
+          logger.warn('AudioStreamController: buffer full error also media.currentTime is not buffered, flush audio buffer');
           this.fragCurrent = null;
           // flush everything
           this.state = State.BUFFER_FLUSHING;
@@ -860,7 +870,7 @@ class AudioStreamController extends TaskLoop {
   onBufferFlushed () {
     let pendingData = this.pendingData;
     if (pendingData && pendingData.length) {
-      logger.log('appending pending audio data on Buffer Flushed');
+      logger.log('AudioStreamController: appending pending audio data after buffer flushed');
       pendingData.forEach(appendObj => {
         this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
       });

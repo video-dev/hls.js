@@ -4,6 +4,8 @@
 
 import { logger } from '../utils/logger';
 
+const { performance, XMLHttpRequest } = window;
+
 class XhrLoader {
   constructor (config) {
     if (config && config.xhrSetup) {

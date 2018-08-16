@@ -1,7 +1,7 @@
-
-import URLToolkit from 'url-toolkit';
+import * as URLToolkit from 'url-toolkit';
 
 import Fragment from './fragment';
+import Level from './level';
 import LevelKey from './level-key';
 
 import AttrList from '../utils/attr-list';
@@ -25,7 +25,9 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /|#.*/.source // All other non-segment oriented tags will match with all groups empty
 ].join(''), 'g');
 
-const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)([^:]*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+
+const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
 export default class M3U8Parser {
   static findGroup (groups, mediaGroupId) {
@@ -85,10 +87,10 @@ export default class M3U8Parser {
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
 
-      let attrs = level.attrs = new AttrList(result[1]);
+      const attrs = level.attrs = new AttrList(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
-      let resolution = attrs.decimalResolution('RESOLUTION');
+      const resolution = attrs.decimalResolution('RESOLUTION');
       if (resolution) {
         level.width = resolution.width;
         level.height = resolution.height;
@@ -143,15 +145,17 @@ export default class M3U8Parser {
   }
 
   static parseLevelPlaylist (string, baseurl, id, type, levelUrlId) {
-    let currentSN = 0,
-      totalduration = 0,
-      level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
-      levelkey = new LevelKey(),
-      cc = 0,
-      prevFrag = null,
-      frag = new Fragment(),
-      result,
-      i;
+    let currentSN = 0;
+    let totalduration = 0;
+    let level = new Level(baseurl);
+    let levelkey = new LevelKey();
+    let cc = 0;
+    let prevFrag = null;
+    let frag = new Fragment();
+    let result;
+    let i;
+
+    let firstPdtIndex = null;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
@@ -164,7 +168,7 @@ export default class M3U8Parser {
         frag.title = title || null;
         frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
       } else if (result[3]) { // url
-        if (!isNaN(frag.duration)) {
+        if (Number.isFinite(frag.duration)) {
           const sn = currentSN++;
           frag.type = type;
           frag.start = totalduration;
@@ -176,19 +180,7 @@ export default class M3U8Parser {
           frag.baseurl = baseurl;
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
-
-          if (level.programDateTime) {
-            if (prevFrag) {
-              if (frag.rawProgramDateTime) { // PDT discontinuity found
-                frag.pdt = Date.parse(frag.rawProgramDateTime);
-              } else { // Contiguous fragment
-                frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
-              }
-            } else { // First fragment
-              frag.pdt = Date.parse(level.programDateTime);
-            }
-            frag.endPdt = frag.pdt + (frag.duration * 1000);
-          }
+          assignProgramDateTime(frag, prevFrag);
 
           level.fragments.push(frag);
           prevFrag = frag;
@@ -208,8 +200,8 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (level.programDateTime === undefined) {
-          level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
+        if (firstPdtIndex === null) {
+          firstPdtIndex = level.fragments.length;
         }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
@@ -276,7 +268,7 @@ export default class M3U8Parser {
           let startAttrs = new AttrList(startParams);
           let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
           // TIME-OFFSET can be 0
-          if (!isNaN(startTimeOffset)) {
+          if (Number.isFinite(startTimeOffset)) {
             level.startTimeOffset = startTimeOffset;
           }
 
@@ -291,6 +283,7 @@ export default class M3U8Parser {
           frag.sn = 'initSegment';
           level.initSegment = frag;
           frag = new Fragment();
+          frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
           break;
         default:
           logger.warn(`line parsed but not handled: ${result}`);
@@ -314,9 +307,7 @@ export default class M3U8Parser {
       // this is a bit lurky but HLS really has no other way to tell us
       // if the fragments are TS or MP4, except if we download them :/
       // but this is to be able to handle SIDX.
-      // FIXME: replace string test by a regex that matches
-      //        also `m4s` `m4a` `m4v` and other popular extensions
-      if (level.fragments.every((frag) => frag.relurl.endsWith('.mp4'))) {
+      if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl))) {
         logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
         frag = new Fragment();
@@ -331,6 +322,41 @@ export default class M3U8Parser {
       }
     }
 
+    /**
+     * Backfill any missing PDT values
+       "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
+       one or more Media Segment URIs, the client SHOULD extrapolate
+       backward from that tag (using EXTINF durations and/or media
+       timestamps) to associate dates with those segments."
+     * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
+     * computed.
+     */
+    if (firstPdtIndex) {
+      backfillProgramDateTimes(level.fragments, firstPdtIndex);
+    }
+
     return level;
+  }
+}
+
+function backfillProgramDateTimes (fragments, startIndex) {
+  let fragPrev = fragments[startIndex];
+  for (let i = startIndex - 1; i >= 0; i--) {
+    const frag = fragments[i];
+    frag.programDateTime = fragPrev.programDateTime - (frag.duration * 1000);
+    fragPrev = frag;
+  }
+}
+
+function assignProgramDateTime (frag, prevFrag) {
+  if (frag.rawProgramDateTime) {
+    frag.programDateTime = Date.parse(frag.rawProgramDateTime);
+  } else if (prevFrag && prevFrag.programDateTime) {
+    frag.programDateTime = prevFrag.endProgramDateTime;
+  }
+
+  if (!Number.isFinite(frag.programDateTime)) {
+    frag.programDateTime = null;
+    frag.rawProgramDateTime = null;
   }
 }

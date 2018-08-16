@@ -71,21 +71,23 @@ module.exports = {
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
+  /* // went offline for us :( would be good to replace this for regression test with something mimicking the issue
   issue649: {
-    'url': 'http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
+    'url': 'https://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
     'description': 'hls.js/issues/649',
     'live': false,
     'abr': false
   },
+  */
   closedCaptions: {
-    'url': 'http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
+    'url': 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
     'description': 'CNN special report, with CC',
     'live': false,
     'abr': false,
     'blacklist_ua': ['safari']
   },
   oceansAES: {
-    'url': 'http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
+    'url': 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
     'description': 'AES encrypted,ABR',
     'live': false,
     'abr': true

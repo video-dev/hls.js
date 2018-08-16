@@ -10,6 +10,8 @@ import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentBySN } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 
+const { performance } = window;
+
 const State = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',

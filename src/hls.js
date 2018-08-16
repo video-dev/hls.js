@@ -1,4 +1,4 @@
-import URLToolkit from 'url-toolkit';
+import * as URLToolkit from 'url-toolkit';
 
 import {
   ErrorTypes,
@@ -19,10 +19,12 @@ import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig } from './config';
 
 import HlsEvents from './events';
-import EventEmitter from 'events';
+
+import { EventEmitter } from 'events';
 
 // polyfill for IE11
 require('string.prototype.endswith');
+require('./polyfills/number-is-finite');
 
 /**
  * @module Hls
@@ -123,6 +125,7 @@ export default class Hls {
     };
     this.on = observer.on.bind(observer);
     this.off = observer.off.bind(observer);
+    this.once = observer.once.bind(observer);
     this.trigger = observer.trigger.bind(observer);
 
     // core controllers and network loaders
@@ -611,7 +614,7 @@ export default class Hls {
   }
 
   /**
-   * @type {booelan}
+   * @type {boolean}
    */
   get subtitleDisplay () {
     const subtitleTrackController = this.subtitleTrackController;
