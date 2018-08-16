@@ -364,80 +364,6 @@ function isUndefined(arg) {
 
 /***/ }),
 
-/***/ "./node_modules/string.prototype.endswith/endswith.js":
-/*!************************************************************!*\
-  !*** ./node_modules/string.prototype.endswith/endswith.js ***!
-  \************************************************************/
-/*! no static exports found */
-/*! ModuleConcatenation bailout: Module is not an ECMAScript module */
-/***/ (function(module, exports) {
-
-/*! http://mths.be/endswith v0.2.0 by @mathias */
-if (!String.prototype.endsWith) {
-    (function () {
-        'use strict'; // needed to support `apply`/`call` with `undefined`/`null`
-        var defineProperty = (function () {
-            // IE 8 only supports `Object.defineProperty` on DOM elements
-            try {
-                var object = {};
-                var $defineProperty = Object.defineProperty;
-                var result = $defineProperty(object, object, object) && $defineProperty;
-            }
-            catch (error) { }
-            return result;
-        }());
-        var toString = {}.toString;
-        var endsWith = function (search) {
-            if (this == null) {
-                throw TypeError();
-            }
-            var string = String(this);
-            if (search && toString.call(search) == '[object RegExp]') {
-                throw TypeError();
-            }
-            var stringLength = string.length;
-            var searchString = String(search);
-            var searchLength = searchString.length;
-            var pos = stringLength;
-            if (arguments.length > 1) {
-                var position = arguments[1];
-                if (position !== undefined) {
-                    // `ToInteger`
-                    pos = position ? Number(position) : 0;
-                    if (pos != pos) { // better `isNaN`
-                        pos = 0;
-                    }
-                }
-            }
-            var end = Math.min(Math.max(pos, 0), stringLength);
-            var start = end - searchLength;
-            if (start < 0) {
-                return false;
-            }
-            var index = -1;
-            while (++index < searchLength) {
-                if (string.charCodeAt(start + index) != searchString.charCodeAt(index)) {
-                    return false;
-                }
-            }
-            return true;
-        };
-        if (defineProperty) {
-            defineProperty(String.prototype, 'endsWith', {
-                'value': endsWith,
-                'configurable': true,
-                'writable': true
-            });
-        }
-        else {
-            String.prototype.endsWith = endsWith;
-        }
-    }());
-}
-
-
-/***/ }),
-
 /***/ "./node_modules/url-toolkit/src/url-toolkit.js":
 /*!*****************************************************!*\
   !*** ./node_modules/url-toolkit/src/url-toolkit.js ***!
@@ -906,7 +832,7 @@ if (false) {}
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 /*
  * simple ABR Controller
  *  - compute next level based on last fragment bw heuristics
@@ -1208,6 +1134,7 @@ var AbrController = /** @class */ (function (_super) {
 }(event_handler_1.default));
 exports.default = AbrController;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -1220,7 +1147,7 @@ exports.default = AbrController;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 /*
  * Buffer Controller
 */
@@ -1793,6 +1720,7 @@ var BufferController = /** @class */ (function (_super) {
 }(event_handler_1.default));
 exports.default = BufferController;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -1805,7 +1733,7 @@ exports.default = BufferController;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 /*
  * cap stream level to media size dimension controller
 */
@@ -1992,6 +1920,7 @@ var CapLevelController = /** @class */ (function (_super) {
 }(event_handler_1.default));
 exports.default = CapLevelController;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -2098,7 +2027,7 @@ exports.default = FPSController;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var binary_search_1 = __webpack_require__(/*! ../utils/binary-search */ "./src/utils/binary-search.js");
 /**
@@ -2199,6 +2128,7 @@ function pdtWithinToleranceTest(pdtBufferEnd, maxFragLookUpTolerance, candidate)
 }
 exports.pdtWithinToleranceTest = pdtWithinToleranceTest;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -2211,7 +2141,7 @@ exports.pdtWithinToleranceTest = pdtWithinToleranceTest;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2493,6 +2423,7 @@ var FragmentTracker = /** @class */ (function (_super) {
 }(event_handler_1.default));
 exports.FragmentTracker = FragmentTracker;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -3251,7 +3182,7 @@ exports.default = LevelController;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 /**
  * @module LevelHelper
  *
@@ -3414,6 +3345,7 @@ function mergeDetails(oldDetails, newDetails) {
 }
 exports.mergeDetails = mergeDetails;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -3426,7 +3358,7 @@ exports.mergeDetails = mergeDetails;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 /*
  * Stream Controller
 */
@@ -4787,6 +4719,7 @@ var StreamController = /** @class */ (function (_super) {
 }(task_loop_1.default));
 exports.default = StreamController;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -5215,7 +5148,7 @@ exports.default = FastAESKey;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * AAC demuxer
@@ -5295,6 +5228,7 @@ var AACDemuxer = /** @class */ (function () {
 }());
 exports.default = AACDemuxer;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -5761,7 +5695,7 @@ exports.default = DemuxerWorker;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var events_1 = __webpack_require__(/*! events */ "./node_modules/node-libs-browser/node_modules/events/events.js");
 var work = __webpack_require__(/*! webworkify-webpack */ "./node_modules/webworkify-webpack/index.js");
@@ -5918,6 +5852,7 @@ var Demuxer = /** @class */ (function () {
 }());
 exports.default = Demuxer;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -8569,9 +8504,6 @@ var logger_1 = __webpack_require__(/*! ./utils/logger */ "./src/utils/logger.js"
 var config_1 = __webpack_require__(/*! ./config */ "./src/config.js");
 var events_1 = __webpack_require__(/*! ./events */ "./src/events.js");
 var events_2 = __webpack_require__(/*! events */ "./node_modules/node-libs-browser/node_modules/events/events.js");
-// polyfill for IE11
-__webpack_require__(/*! string.prototype.endswith */ "./node_modules/string.prototype.endswith/endswith.js");
-__webpack_require__(/*! ./polyfills/number-is-finite */ "./src/polyfills/number-is-finite.js");
 /**
  * @module Hls
  * @class
@@ -8719,7 +8651,7 @@ var Hls = /** @class */ (function () {
          * @type {string}
          */
         get: function () {
-            return "0.11.1-canary.4078";
+            return "0.11.1-canary.4082";
         },
         enumerable: true,
         configurable: true
@@ -9257,7 +9189,7 @@ exports.isSupported = isSupported;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 /*
  * Fragment Loader
 */
@@ -9365,6 +9297,7 @@ var FragmentLoader = /** @class */ (function (_super) {
 }(event_handler_1.default));
 exports.default = FragmentLoader;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -9377,7 +9310,7 @@ exports.default = FragmentLoader;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var URLToolkit = __webpack_require__(/*! url-toolkit */ "./node_modules/url-toolkit/src/url-toolkit.js");
 var level_key_1 = __webpack_require__(/*! ./level-key */ "./src/loader/level-key.js");
@@ -9539,6 +9472,7 @@ var Fragment = /** @class */ (function () {
 }());
 exports.default = Fragment;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -9689,7 +9623,7 @@ exports.default = LevelKey;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var Level = /** @class */ (function () {
     function Level(baseUrl) {
@@ -9720,6 +9654,7 @@ var Level = /** @class */ (function () {
 }());
 exports.default = Level;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -9732,7 +9667,7 @@ exports.default = Level;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var URLToolkit = __webpack_require__(/*! url-toolkit */ "./node_modules/url-toolkit/src/url-toolkit.js");
 var fragment_1 = __webpack_require__(/*! ./fragment */ "./src/loader/fragment.js");
@@ -10063,6 +9998,7 @@ function assignProgramDateTime(frag, prevFrag) {
     }
 }
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -10075,7 +10011,7 @@ function assignProgramDateTime(frag, prevFrag) {
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 /**
  * PlaylistLoader - delegate for media manifest/playlist loading tasks. Takes care of parsing media to internal data-models.
  *
@@ -10520,17 +10456,25 @@ var PlaylistLoader = /** @class */ (function (_super) {
 }(event_handler_1.default));
 exports.default = PlaylistLoader;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
-/***/ "./src/polyfills/number-is-finite.js":
-/*!*******************************************!*\
-  !*** ./src/polyfills/number-is-finite.js ***!
-  \*******************************************/
+/***/ "./src/polyfills/number.js":
+/*!*********************************!*\
+  !*** ./src/polyfills/number.js ***!
+  \*********************************/
 /*! no static exports found */
 /*! ModuleConcatenation bailout: Module is not an ECMAScript module */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var get_self_scope_1 = __webpack_require__(/*! ../utils/get-self-scope */ "./src/utils/get-self-scope.js");
+var self = get_self_scope_1.getSelfScope();
+var Number = self.Number;
+exports.Number = Number;
 // TODO: get rid of global polyfills and replace them with wrappers ("ponyfills")
 Number.isFinite = Number.isFinite || function (value) {
     return typeof value === 'number' && isFinite(value);
@@ -12123,7 +12067,7 @@ exports.default = TaskLoop;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/; // eslint-disable-line no-useless-escape
 var ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g; // eslint-disable-line no-useless-escape
@@ -12200,6 +12144,7 @@ var AttrList = /** @class */ (function () {
 }());
 exports.default = AttrList;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 
@@ -12482,7 +12427,7 @@ exports.isCodecSupportedInMp4 = isCodecSupportedInMp4;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(Number) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var binary_search_1 = __webpack_require__(/*! ./binary-search */ "./src/utils/binary-search.js");
 var logger_1 = __webpack_require__(/*! ../utils/logger */ "./src/utils/logger.js");
@@ -12610,6 +12555,7 @@ function alignPDT(details, lastDetails) {
 }
 exports.alignPDT = alignPDT;
 
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./src/polyfills/number */ "./src/polyfills/number.js")["Number"]))
 
 /***/ }),
 

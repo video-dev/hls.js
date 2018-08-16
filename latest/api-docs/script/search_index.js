@@ -282,6 +282,12 @@ window.esdocSearchIndex = [
     "variable"
   ],
   [
+    "hls.js/src/polyfills/number.js~number",
+    "variable/index.html#static-variable-Number",
+    "<span>Number</span> <span class=\"search-result-import-path\">hls.js/src/polyfills/number.js</span>",
+    "variable"
+  ],
+  [
     "hls.js/src/utils/output-filter.js~outputfilter",
     "class/src/utils/output-filter.js~OutputFilter.html",
     "<span>OutputFilter</span> <span class=\"search-result-import-path\">hls.js/src/utils/output-filter.js</span>",
@@ -985,13 +991,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/abr-controller.js~abrcontroller#nextautolevel",
-    "class/src/controller/abr-controller.js~AbrController.html#instance-get-nextAutoLevel",
+    "class/src/controller/abr-controller.js~AbrController.html#instance-set-nextAutoLevel",
     "src/controller/abr-controller.js~AbrController#nextAutoLevel",
     "member"
   ],
   [
     "src/controller/abr-controller.js~abrcontroller#nextautolevel",
-    "class/src/controller/abr-controller.js~AbrController.html#instance-set-nextAutoLevel",
+    "class/src/controller/abr-controller.js~AbrController.html#instance-get-nextAutoLevel",
     "src/controller/abr-controller.js~AbrController#nextAutoLevel",
     "member"
   ],
@@ -1321,13 +1327,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/audio-stream-controller.js~audiostreamcontroller#state",
-    "class/src/controller/audio-stream-controller.js~AudioStreamController.html#instance-set-state",
+    "class/src/controller/audio-stream-controller.js~AudioStreamController.html#instance-get-state",
     "src/controller/audio-stream-controller.js~AudioStreamController#state",
     "member"
   ],
   [
     "src/controller/audio-stream-controller.js~audiostreamcontroller#state",
-    "class/src/controller/audio-stream-controller.js~AudioStreamController.html#instance-get-state",
+    "class/src/controller/audio-stream-controller.js~AudioStreamController.html#instance-set-state",
     "src/controller/audio-stream-controller.js~AudioStreamController#state",
     "member"
   ],
@@ -2533,13 +2539,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#level",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-level",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-level",
     "src/controller/level-controller.js~LevelController#level",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#level",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-level",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-level",
     "src/controller/level-controller.js~LevelController#level",
     "member"
   ],
@@ -2641,13 +2647,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#startlevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-startLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-startLevel",
     "src/controller/level-controller.js~LevelController#startLevel",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#startlevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-startLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-startLevel",
     "src/controller/level-controller.js~LevelController#startLevel",
     "member"
   ],
@@ -2941,13 +2947,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#livesyncposition",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-get-liveSyncPosition",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-set-liveSyncPosition",
     "src/controller/stream-controller.js~StreamController#liveSyncPosition",
     "member"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#livesyncposition",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-set-liveSyncPosition",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-get-liveSyncPosition",
     "src/controller/stream-controller.js~StreamController#liveSyncPosition",
     "member"
   ],
@@ -3193,13 +3199,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#state",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-get-state",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-set-state",
     "src/controller/stream-controller.js~StreamController#state",
     "member"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#state",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-set-state",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-get-state",
     "src/controller/stream-controller.js~StreamController#state",
     "member"
   ],
@@ -5065,13 +5071,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#audiotrack",
-    "class/src/hls.js~Hls.html#instance-set-audioTrack",
+    "class/src/hls.js~Hls.html#instance-get-audioTrack",
     "src/hls.js~Hls#audioTrack",
     "member"
   ],
   [
     "src/hls.js~hls#audiotrack",
-    "class/src/hls.js~Hls.html#instance-get-audioTrack",
+    "class/src/hls.js~Hls.html#instance-set-audioTrack",
     "src/hls.js~Hls#audioTrack",
     "member"
   ],
@@ -5125,13 +5131,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#currentlevel",
-    "class/src/hls.js~Hls.html#instance-get-currentLevel",
+    "class/src/hls.js~Hls.html#instance-set-currentLevel",
     "src/hls.js~Hls#currentLevel",
     "member"
   ],
   [
     "src/hls.js~hls#currentlevel",
-    "class/src/hls.js~Hls.html#instance-set-currentLevel",
+    "class/src/hls.js~Hls.html#instance-get-currentLevel",
     "src/hls.js~Hls#currentLevel",
     "member"
   ],
@@ -5179,13 +5185,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#loadlevel",
-    "class/src/hls.js~Hls.html#instance-get-loadLevel",
+    "class/src/hls.js~Hls.html#instance-set-loadLevel",
     "src/hls.js~Hls#loadLevel",
     "member"
   ],
   [
     "src/hls.js~hls#loadlevel",
-    "class/src/hls.js~Hls.html#instance-set-loadLevel",
+    "class/src/hls.js~Hls.html#instance-get-loadLevel",
     "src/hls.js~Hls#loadLevel",
     "member"
   ],
@@ -5227,13 +5233,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#nextautolevel",
-    "class/src/hls.js~Hls.html#instance-get-nextAutoLevel",
+    "class/src/hls.js~Hls.html#instance-set-nextAutoLevel",
     "src/hls.js~Hls#nextAutoLevel",
     "member"
   ],
   [
     "src/hls.js~hls#nextautolevel",
-    "class/src/hls.js~Hls.html#instance-set-nextAutoLevel",
+    "class/src/hls.js~Hls.html#instance-get-nextAutoLevel",
     "src/hls.js~Hls#nextAutoLevel",
     "member"
   ],
@@ -5311,25 +5317,25 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#subtitledisplay",
-    "class/src/hls.js~Hls.html#instance-set-subtitleDisplay",
-    "src/hls.js~Hls#subtitleDisplay",
-    "member"
-  ],
-  [
-    "src/hls.js~hls#subtitledisplay",
     "class/src/hls.js~Hls.html#instance-get-subtitleDisplay",
     "src/hls.js~Hls#subtitleDisplay",
     "member"
   ],
   [
-    "src/hls.js~hls#subtitletrack",
-    "class/src/hls.js~Hls.html#instance-get-subtitleTrack",
-    "src/hls.js~Hls#subtitleTrack",
+    "src/hls.js~hls#subtitledisplay",
+    "class/src/hls.js~Hls.html#instance-set-subtitleDisplay",
+    "src/hls.js~Hls#subtitleDisplay",
     "member"
   ],
   [
     "src/hls.js~hls#subtitletrack",
     "class/src/hls.js~Hls.html#instance-set-subtitleTrack",
+    "src/hls.js~Hls#subtitleTrack",
+    "member"
+  ],
+  [
+    "src/hls.js~hls#subtitletrack",
+    "class/src/hls.js~Hls.html#instance-get-subtitleTrack",
     "src/hls.js~Hls#subtitleTrack",
     "member"
   ],
@@ -5365,13 +5371,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls.defaultconfig",
-    "class/src/hls.js~Hls.html#static-get-DefaultConfig",
+    "class/src/hls.js~Hls.html#static-set-DefaultConfig",
     "src/hls.js~Hls.DefaultConfig",
     "member"
   ],
   [
     "src/hls.js~hls.defaultconfig",
-    "class/src/hls.js~Hls.html#static-set-DefaultConfig",
+    "class/src/hls.js~Hls.html#static-get-DefaultConfig",
     "src/hls.js~Hls.DefaultConfig",
     "member"
   ],
@@ -6006,9 +6012,9 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/polyfills/number-is-finite.js",
-    "file/src/polyfills/number-is-finite.js.html",
-    "src/polyfills/number-is-finite.js",
+    "src/polyfills/number.js",
+    "file/src/polyfills/number.js.html",
+    "src/polyfills/number.js",
     "file"
   ],
   [

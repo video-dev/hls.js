@@ -1,6 +1,6 @@
 {
-  "coverage": "15.88%",
-  "expectCount": 1234,
+  "coverage": "15.85%",
+  "expectCount": 1236,
   "actualCount": 196,
   "files": {
     "src/config.js": {
@@ -874,14 +874,14 @@
       "expectCount": 60,
       "actualCount": 52,
       "undocumentLines": [
-        115,
-        116,
-        126,
-        127,
-        128,
-        129,
-        249,
-        260
+        111,
+        112,
+        122,
+        123,
+        124,
+        125,
+        245,
+        256
       ]
     },
     "src/is-supported.js": {
@@ -1025,6 +1025,14 @@
         411,
         422,
         464
+      ]
+    },
+    "src/polyfills/number.js": {
+      "expectCount": 2,
+      "actualCount": 0,
+      "undocumentLines": [
+        3,
+        4
       ]
     },
     "src/remux/aac-helper.js": {
