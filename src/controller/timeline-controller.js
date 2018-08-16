@@ -231,7 +231,11 @@ class TimelineController extends EventHandler {
     let outputs = [null, null, null, null];
     for (let i = 0; i < captionAttrs.length; i++) {
       if (captionAttrs[i].id > -1) {
-        outputs[captionAttrs[i].id] = new OutputFilter(this, 'textTrack' + (i + 1));
+        const instreamId = captionAttrs[i].instreamId;
+        if (instreamId && instreamId.slice(0, 2) === 'CC') {
+          const outputNr = Number(instreamId.slice(-1));
+          outputs[outputNr - 1] = new OutputFilter(this, 'textTrack' + (i + 1));
+        }
       }
     }
     const field1 = new Cea608Parser(1, outputs[0], outputs[1]);

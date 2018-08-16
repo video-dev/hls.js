@@ -133,6 +133,10 @@ export default class M3U8Parser {
           media.name = media.lang;
         }
 
+        if (attrs['INSTREAM-ID']) {
+          media.instreamId = attrs['INSTREAM-ID'];
+        }
+
         if (audioGroups.length) {
           const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
           media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
