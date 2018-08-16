@@ -64,7 +64,7 @@ export function enableLogs (loggerConfig) {
       'warn',
       'error'].forEach((logFn) => {
       if (loggerConfig[logFn]) {
-
+        logger[logFn] = loggerConfig[logFn];
       }
     });
   }
