@@ -46,7 +46,10 @@ class KeyLoader extends EventHandler {
 
       let loaderContext, loaderConfig, loaderCallbacks;
       loaderContext = { url: uri, frag: frag, responseType: 'arraybuffer' };
-      loaderConfig = { timeout: config.fragLoadingTimeOut, maxRetry: config.fragLoadingMaxRetry, retryDelay: config.fragLoadingRetryDelay, maxRetryDelay: config.fragLoadingMaxRetryTimeout };
+      // maxRetry is 0 so that instead of retrying the same key on the same variant multiple times,
+      // key-loader will trigger an error and rely on stream-controller to handle retry logic.
+      // this will also align retry logic with fragment-loader
+      loaderConfig = { timeout: config.fragLoadingTimeOut, maxRetry: 0, retryDelay: config.fragLoadingRetryDelay, maxRetryDelay: config.fragLoadingMaxRetryTimeout };
       loaderCallbacks = { onSuccess: this.loadsuccess.bind(this), onError: this.loaderror.bind(this), onTimeout: this.loadtimeout.bind(this) };
       frag.loader.load(loaderContext, loaderConfig, loaderCallbacks);
     } else if (this.decryptkey) {
