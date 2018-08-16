@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import TaskLoop from '../task-loop';
 import { BufferHelper } from '../utils/buffer-helper';
-import { findFragmentBySN } from './fragment-finders';
+import { findFragmentByPTS, findFragmentByPDT } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 
 const { performance } = window;
@@ -139,9 +139,9 @@ class SubtitleStreamController extends TaskLoop {
 
       let foundFrag;
       if (bufferLen < maxConfigBuffer && bufferEnd < end) {
-        foundFrag = findFragmentByPTS(this.fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance)
+        foundFrag = findFragmentByPTS(this.fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
       } else if (trackDetails.hasProgramDateTime && this.fragPrevious) {
-        foundFrag = findFragmentByPDT(fragments, this.fragPrevious.endProgramDateTime, maxFragLookUpTolerance)
+        foundFrag = findFragmentByPDT(fragments, this.fragPrevious.endProgramDateTime, maxFragLookUpTolerance);
       }
 
       if (foundFrag && foundFrag.encrypted) {
