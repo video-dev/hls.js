@@ -49,7 +49,7 @@ echo "Built gh-pages."
 echo "Deploying gh-pages."
 cd "$root"
 git add -A
-if ! git diff --quiet; then
+if ! git diff --cached --quiet; then
   git -c user.name="HLS.JS CI" commit -m "gh-pages for $id"
   # GITHUB_TOKEN set in travis
   git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"
