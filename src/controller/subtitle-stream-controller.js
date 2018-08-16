@@ -217,21 +217,15 @@ class SubtitleStreamController extends TaskLoop {
         data.frag.type === 'subtitle' &&
         fragCurrent.sn === data.frag.sn) {
       // check to see if the payload needs to be decrypted
-      if ((data.payload.byteLength > 0) && (decryptData != null) && (decryptData.key != null) && (decryptData.method === 'AES-128')) {
-        let startTime;
-        try {
-          startTime = performance.now();
-        } catch (error) {
-          startTime = Date.now();
-        }
+      if ((data.payload.byteLength > 0) &&
+          (decryptData != null) && (decryptData.key != null) &&
+          (decryptData.method === 'AES-128')) {
+        let startTime = performance.now();
+
         // decrypt the subtitles
         this.decrypter.decrypt(data.payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {
-          let endTime;
-          try {
-            endTime = performance.now();
-          } catch (error) {
-            endTime = Date.now();
-          }
+          let endTime = performance.now();
+
           hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload: decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
         });
       }
