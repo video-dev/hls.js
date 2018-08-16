@@ -207,10 +207,11 @@ function loadSelectedStream() {
   }
 
   const hlsConfig = {
-    debug            : true,
-    enableWorker     : enableWorker,
+    debug: true,
+    enableWorker: enableWorker,
     defaultAudioCodec: defaultAudioCodec,
-    widevineLicenseUrl: widevineLicenseUrl
+    widevineLicenseUrl: widevineLicenseUrl,
+
   };
 
   if (selectedTestStream && selectedTestStream.config) {
