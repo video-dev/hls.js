@@ -15,7 +15,6 @@ echo "Cloning current gh-pages..."
 rm -rf "$root"
 mkdir "$root"
 cd "$root"
-git config user.name "HLS.JS CI"
 git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b gh-pages .
 cd ..
 
@@ -50,8 +49,12 @@ echo "Built gh-pages."
 echo "Deploying gh-pages."
 cd "$root"
 git add -A
-git commit -m "gh-pages for $id"
-# GITHUB_TOKEN set in travis
-git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"
+if [ ! git diff --quiet ]; then
+  git -c user.name="HLS.JS CI" commit -m "gh-pages for $id"
+  # GITHUB_TOKEN set in travis
+  git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"
+else
+  echo "No changed to deploy."
+fi
 cd ..
 echo "Deployed gh-pages."
