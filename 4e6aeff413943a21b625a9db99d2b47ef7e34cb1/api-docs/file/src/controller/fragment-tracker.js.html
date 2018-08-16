@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/controller/fragment-tracker.js | hls.js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="JavaScript HLS client using MediaSourceExtension"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="hls.js"><meta property="twitter:description" content="JavaScript HLS client using MediaSourceExtension"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/video-dev/hls.js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/event-handler.js~EventHandler.html">EventHandler</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/hls.js~Hls.html">Hls</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isSupported">isSupported</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/buffer-controller.js~BufferController.html">BufferController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/cap-level-controller.js~CapLevelController.html">CapLevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/eme-controller.js~EMEController.html">EMEController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fps-controller.js~FPSController.html">FPSController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fragment-tracker.js~FragmentTracker.html">FragmentTracker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/gap-controller.js~GapController.html">GapController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/id3-track-controller.js~ID3TrackController.html">ID3TrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/level-controller.js~LevelController.html">LevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/stream-controller.js~StreamController.html">StreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPDT">findFragmentByPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPTS">findFragmentByPTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fragmentWithinToleranceTest">fragmentWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-pdtWithinToleranceTest">pdtWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-addGroupId">addGroupId</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-mergeDetails">mergeDetails</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updatePTS">updatePTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-FragmentState">FragmentState</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/fast-aes-key.js~FastAESKey.html">FastAESKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-removePadding">removePadding</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#demux">demux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/aacdemuxer.js~AACDemuxer.html">AACDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer-inline.js~DemuxerInline.html">DemuxerInline</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer.js~Demuxer.html">Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/exp-golomb.js~ExpGolomb.html">ExpGolomb</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/id3.js~ID3.html">ID3</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp3demuxer.js~MP3Demuxer.html">MP3Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp4demuxer.js~MP4Demuxer.html">MP4Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/sample-aes.js~SampleAesDecrypter.html">SampleAesDecrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/tsdemuxer.js~TSDemuxer.html">TSDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-appendFrame">appendFrame</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getAudioConfig">getAudioConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFrameDuration">getFrameDuration</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFullFrameLength">getFullFrameLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getHeaderLength">getHeaderLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-initTrackConfig">initTrackConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeader">isHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeaderPattern">isHeaderPattern</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-parseFrameHeader">parseFrameHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-probe">probe</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-DemuxerWorker">DemuxerWorker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-utf8ArrayToStr">utf8ArrayToStr</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-MpegAudio">MpegAudio</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#loader">loader</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment-loader.js~FragmentLoader.html">FragmentLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/key-loader.js~KeyLoader.html">KeyLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level-key.js~LevelKey.html">LevelKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level.js~Level.html">Level</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/m3u8-parser.js~M3U8Parser.html">M3U8Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html">PlaylistLoader</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#remux">remux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/aac-helper.js~AAC.html">AAC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/dummy-remuxer.js~DummyRemuxer.html">DummyRemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-generator.js~MP4.html">MP4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-remuxer.js~MP4Remuxer.html">MP4Remuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/passthrough-remuxer.js~PassThroughRemuxer.html">PassThroughRemuxer</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#utils">utils</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/attr-list.js~AttrList.html">AttrList</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/buffer-helper.js~BufferHelper.html">BufferHelper</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/cea-608-parser.js~Cea608Parser.html">Cea608Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma-bandwidth-estimator.js~EwmaBandWidthEstimator.html">EwmaBandWidthEstimator</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma.js~EWMA.html">EWMA</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/fetch-loader.js~FetchLoader.html">FetchLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/output-filter.js~OutputFilter.html">OutputFilter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/xhr-loader.js~XhrLoader.html">XhrLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecSupportedInMp4">isCodecSupportedInMp4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecType">isCodecType</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-newCue">newCue</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-adjustPts">adjustPts</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignDiscontinuities">alignDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignPDT">alignPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignStream">alignStream</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findDiscontinuousReferenceFrag">findDiscontinuousReferenceFrag</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFirstFragWithCC">findFirstFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getSelfScope">getSelfScope</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getMediaSource">getMediaSource</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Hex">Hex</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-logger">logger</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-requestMediaKeySystemAccess">requestMediaKeySystemAccess</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-WebVTTParser">WebVTTParser</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/controller/fragment-tracker.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import EventHandler from &apos;../event-handler&apos;;
+import Event from &apos;../events&apos;;
+
+export const FragmentState = {
+  NOT_LOADED: &apos;NOT_LOADED&apos;,
+  APPENDING: &apos;APPENDING&apos;,
+  PARTIAL: &apos;PARTIAL&apos;,
+  OK: &apos;OK&apos;
+};
+
+export class FragmentTracker extends EventHandler {
+  constructor (hls) {
+    super(hls,
+      Event.BUFFER_APPENDED,
+      Event.FRAG_BUFFERED,
+      Event.FRAG_LOADED
+    );
+
+    this.bufferPadding = 0.2;
+
+    this.fragments = Object.create(null);
+    this.timeRanges = Object.create(null);
+
+    this.config = hls.config;
+  }
+
+  destroy () {
+    this.fragments = null;
+    this.timeRanges = null;
+    this.config = null;
+    EventHandler.prototype.destroy.call(this);
+    super.destroy();
+  }
+
+  /**
+   * Return a Fragment that match the position and levelType.
+   * If not found any Fragment, return null
+   * @param {number} position
+   * @param {LevelType} levelType
+   * @returns {Fragment|null}
+   */
+  getBufferedFrag (position, levelType) {
+    const fragments = this.fragments;
+    const bufferedFrags = Object.keys(fragments).filter(key =&gt; {
+      const fragmentEntity = fragments[key];
+      if (fragmentEntity.body.type !== levelType) {
+        return false;
+      }
+
+      if (!fragmentEntity.buffered) {
+        return false;
+      }
+
+      const frag = fragmentEntity.body;
+      return frag.startPTS &lt;= position &amp;&amp; position &lt;= frag.endPTS;
+    });
+    if (bufferedFrags.length === 0) {
+      return null;
+    } else {
+      // https://github.com/video-dev/hls.js/pull/1545#discussion_r166229566
+      const bufferedFragKey = bufferedFrags.pop();
+      return fragments[bufferedFragKey].body;
+    }
+  }
+
+  /**
+   * Partial fragments effected by coded frame eviction will be removed
+   * The browser will unload parts of the buffer to free up memory for new buffer data
+   * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
+   * @param {String} elementaryStream The elementaryStream of media this is (eg. video/audio)
+   * @param {TimeRanges} timeRange TimeRange object from a sourceBuffer
+   */
+  detectEvictedFragments (elementaryStream, timeRange) {
+    let fragmentTimes, time;
+    // Check if any flagged fragments have been unloaded
+    Object.keys(this.fragments).forEach(key =&gt; {
+      const fragmentEntity = this.fragments[key];
+      if (fragmentEntity.buffered === true) {
+        const esData = fragmentEntity.range[elementaryStream];
+        if (esData) {
+          fragmentTimes = esData.time;
+          for (let i = 0; i &lt; fragmentTimes.length; i++) {
+            time = fragmentTimes[i];
+
+            if (this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
+              // Unregister partial fragment as it needs to load again to be reused
+              this.removeFragment(fragmentEntity.body);
+              break;
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Checks if the fragment passed in is loaded in the buffer properly
+   * Partially loaded fragments will be registered as a partial fragment
+   * @param {Object} fragment Check the fragment against all sourceBuffers loaded
+   */
+  detectPartialFragments (fragment) {
+    let fragKey = this.getFragmentKey(fragment);
+    let fragmentEntity = this.fragments[fragKey];
+    if (fragmentEntity) {
+      fragmentEntity.buffered = true;
+
+      Object.keys(this.timeRanges).forEach(elementaryStream =&gt; {
+        if (fragment.hasElementaryStream(elementaryStream)) {
+          let timeRange = this.timeRanges[elementaryStream];
+          // Check for malformed fragments
+          // Gaps need to be calculated for each elementaryStream
+          fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
+        }
+      });
+    }
+  }
+
+  getBufferedTimes (startPTS, endPTS, timeRange) {
+    let fragmentTimes = [];
+    let startTime, endTime;
+    let fragmentPartial = false;
+    for (let i = 0; i &lt; timeRange.length; i++) {
+      startTime = timeRange.start(i) - this.bufferPadding;
+      endTime = timeRange.end(i) + this.bufferPadding;
+      if (startPTS &gt;= startTime &amp;&amp; endPTS &lt;= endTime) {
+        // Fragment is entirely contained in buffer
+        // No need to check the other timeRange times since it&apos;s completely playable
+        fragmentTimes.push({
+          startPTS: Math.max(startPTS, timeRange.start(i)),
+          endPTS: Math.min(endPTS, timeRange.end(i))
+        });
+        break;
+      } else if (startPTS &lt; endTime &amp;&amp; endPTS &gt; startTime) {
+        // Check for intersection with buffer
+        // Get playable sections of the fragment
+        fragmentTimes.push({
+          startPTS: Math.max(startPTS, timeRange.start(i)),
+          endPTS: Math.min(endPTS, timeRange.end(i))
+        });
+        fragmentPartial = true;
+      } else if (endPTS &lt;= startTime) {
+        // No need to check the rest of the timeRange as it is in order
+        break;
+      }
+    }
+
+    return {
+      time: fragmentTimes,
+      partial: fragmentPartial
+    };
+  }
+
+  getFragmentKey (fragment) {
+    return `${fragment.type}_${fragment.level}_${fragment.urlId}_${fragment.sn}`;
+  }
+
+  /**
+   * Gets the partial fragment for a certain time
+   * @param {Number} time
+   * @returns {Object} fragment Returns a partial fragment at a time or null if there is no partial fragment
+   */
+  getPartialFragment (time) {
+    let timePadding, startTime, endTime;
+    let bestFragment = null;
+    let bestOverlap = 0;
+    Object.keys(this.fragments).forEach(key =&gt; {
+      const fragmentEntity = this.fragments[key];
+      if (this.isPartial(fragmentEntity)) {
+        startTime = fragmentEntity.body.startPTS - this.bufferPadding;
+        endTime = fragmentEntity.body.endPTS + this.bufferPadding;
+        if (time &gt;= startTime &amp;&amp; time &lt;= endTime) {
+          // Use the fragment that has the most padding from start and end time
+          timePadding = Math.min(time - startTime, endTime - time);
+          if (bestOverlap &lt;= timePadding) {
+            bestFragment = fragmentEntity.body;
+            bestOverlap = timePadding;
+          }
+        }
+      }
+    });
+    return bestFragment;
+  }
+
+  /**
+   * @param {Object} fragment The fragment to check
+   * @returns {String} Returns the fragment state when a fragment never loaded or if it partially loaded
+   */
+  getState (fragment) {
+    let fragKey = this.getFragmentKey(fragment);
+    let fragmentEntity = this.fragments[fragKey];
+    let state = FragmentState.NOT_LOADED;
+
+    if (fragmentEntity !== undefined) {
+      if (!fragmentEntity.buffered) {
+        state = FragmentState.APPENDING;
+      } else if (this.isPartial(fragmentEntity) === true) {
+        state = FragmentState.PARTIAL;
+      } else {
+        state = FragmentState.OK;
+      }
+    }
+
+    return state;
+  }
+
+  isPartial (fragmentEntity) {
+    return fragmentEntity.buffered === true &amp;&amp;
+      ((fragmentEntity.range.video !== undefined &amp;&amp; fragmentEntity.range.video.partial === true) ||
+        (fragmentEntity.range.audio !== undefined &amp;&amp; fragmentEntity.range.audio.partial === true));
+  }
+
+  isTimeBuffered (startPTS, endPTS, timeRange) {
+    let startTime, endTime;
+    for (let i = 0; i &lt; timeRange.length; i++) {
+      startTime = timeRange.start(i) - this.bufferPadding;
+      endTime = timeRange.end(i) + this.bufferPadding;
+      if (startPTS &gt;= startTime &amp;&amp; endPTS &lt;= endTime) {
+        return true;
+      }
+
+      if (endPTS &lt;= startTime) {
+        // No need to check the rest of the timeRange as it is in order
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Fires when a fragment loading is completed
+   */
+  onFragLoaded (e) {
+    const fragment = e.frag;
+    // don&apos;t track initsegment (for which sn is not a number)
+    // don&apos;t track frags used for bitrateTest, they&apos;re irrelevant.
+    if (Number.isFinite(fragment.sn) &amp;&amp; !fragment.bitrateTest) {
+      this.fragments[this.getFragmentKey(fragment)] = {
+        body: fragment,
+        range: Object.create(null),
+        buffered: false
+      };
+    }
+  }
+
+  /**
+   * Fires when the buffer is updated
+   */
+  onBufferAppended (e) {
+    // Store the latest timeRanges loaded in the buffer
+    this.timeRanges = e.timeRanges;
+    Object.keys(this.timeRanges).forEach(elementaryStream =&gt; {
+      let timeRange = this.timeRanges[elementaryStream];
+      this.detectEvictedFragments(elementaryStream, timeRange);
+    });
+  }
+
+  /**
+   * Fires after a fragment has been loaded into the source buffer
+   */
+  onFragBuffered (e) {
+    this.detectPartialFragments(e.frag);
+  }
+
+  /**
+   * Return true if fragment tracker has the fragment.
+   * @param {Object} fragment
+   * @returns {boolean}
+   */
+  hasFragment (fragment) {
+    const fragKey = this.getFragmentKey(fragment);
+    return this.fragments[fragKey] !== undefined;
+  }
+
+  /**
+   * Remove a fragment from fragment tracker until it is loaded again
+   * @param {Object} fragment The fragment to remove
+   */
+  removeFragment (fragment) {
+    let fragKey = this.getFragmentKey(fragment);
+    delete this.fragments[fragKey];
+  }
+
+  /**
+   * Remove all fragments from fragment tracker.
+   */
+  removeAllFragments () {
+    this.fragments = Object.create(null);
+  }
+}
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.1.0)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
