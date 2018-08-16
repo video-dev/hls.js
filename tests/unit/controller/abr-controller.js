@@ -1,8 +1,8 @@
-const assert = require('assert');
-
 import AbrController from '../../../src/controller/abr-controller';
 import EwmaBandWidthEstimator from '../../../src/utils/ewma-bandwidth-estimator';
 import Hls from '../../../src/hls';
+
+const assert = require('assert');
 
 describe('AbrController', () => {
   it('should return correct next auto level', () => {
