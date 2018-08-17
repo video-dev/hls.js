@@ -166,6 +166,25 @@ export default class M3U8Parser {
         frag.title = title || null;
         frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
       } else if (result[3]) { // url
+        // aware discontinuity when sequence of ts in chunklist is not continuous
+        if (prevFrag) {
+          let discontinuity;
+          if (frag.tagList) {
+            discontinuity = frag.tagList.find(function (el) {
+              return el[0] === 'DIS';
+            });
+          }
+          if (!discontinuity) {
+            const preRes = /(\d+)\.ts/.exec(prevFrag.relurl);
+            const res = /(\d+)\.ts/.exec(result[3]);
+            if (preRes && res) {
+              if (parseInt(res[1]) !== parseInt(preRes[1]) + 1) {
+                cc++;
+                frag.tagList.push(['DIS']);
+              }
+            }
+          }
+        }
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
           frag.type = type;
