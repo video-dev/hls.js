@@ -8,6 +8,8 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { getSelfScope } from '../utils/get-self-scope';
 
+import { Observer } from '../observer';
+
 // see https://stackoverflow.com/a/11237259/589493
 const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
 const MediaSource = getMediaSource();
@@ -16,23 +18,16 @@ class Demuxer {
   constructor (hls, id) {
     this.hls = hls;
     this.id = id;
-    // observer setup
-    const observer = this.observer = new EventEmitter();
+
+    const observer = this.observer = new Observer();
     const config = hls.config;
-    observer.trigger = function trigger (event, ...data) {
-      observer.emit(event, event, ...data);
-    };
 
-    observer.off = function off (event, ...data) {
-      observer.removeListener(event, ...data);
-    };
-
-    let forwardMessage = function (ev, data) {
+    const forwardMessage = (ev, data) => {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
       hls.trigger(ev, data);
-    }.bind(this);
+    };
 
     // forward events to main thread
     observer.on(Event.FRAG_DECRYPTED, forwardMessage);
@@ -91,7 +86,7 @@ class Demuxer {
         this.demuxer = null;
       }
     }
-    let observer = this.observer;
+    const observer = this.observer;
     if (observer) {
       observer.removeAllListeners();
       this.observer = null;
