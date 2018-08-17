@@ -1,7 +1,7 @@
-const assert = require('assert');
-
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
+
+const assert = require('assert');
 
 describe('AudioTrackController', () => {
   const tracks = [{
@@ -213,7 +213,7 @@ describe('AudioTrackController', () => {
     it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', () => {
       const currentTrackId = 4;
 
-      audioTrackController.trackId = currentTrackId;
+      audioTrackController._trackId = currentTrackId;
 
       audioTrackController.tracks = tracks;
 
