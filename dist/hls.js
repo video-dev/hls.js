@@ -7,7 +7,7 @@
 		exports["Hls"] = factory();
 	else
 		root["Hls"] = factory();
-})(typeof self !== 'undefined' ? self : this, function() {
+})(this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -396,14 +396,14 @@ var ErrorDetails = {
         if (!opts.alwaysNormalize) {
           return baseURL;
         }
-        var basePartsForNormalise = URLToolkit.parseURL(baseURL);
-        if (!basePartsForNormalise) {
+        var basePartsForNormalise = this.parseURL(baseURL);
+        if (!baseParts) {
           throw new Error('Error trying to parse base URL.');
         }
         basePartsForNormalise.path = URLToolkit.normalizePath(basePartsForNormalise.path);
         return URLToolkit.buildURLFromParts(basePartsForNormalise);
       }
-      var relativeParts = URLToolkit.parseURL(relativeURL);
+      var relativeParts = this.parseURL(relativeURL);
       if (!relativeParts) {
         throw new Error('Error trying to parse relative URL.');
       }
@@ -416,7 +416,7 @@ var ErrorDetails = {
         relativeParts.path = URLToolkit.normalizePath(relativeParts.path);
         return URLToolkit.buildURLFromParts(relativeParts);
       }
-      var baseParts = URLToolkit.parseURL(baseURL);
+      var baseParts = this.parseURL(baseURL);
       if (!baseParts) {
         throw new Error('Error trying to parse base URL.');
       }
@@ -15345,6 +15345,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
 
   TimelineController.prototype.onSubtitleTracksCleared = function onSubtitleTracksCleared() {
     this.tracks = [];
+    this.captionsTracks = {};
   };
 
   TimelineController.prototype.onFragParsingUserdata = function onFragParsingUserdata(data) {
@@ -17319,11 +17320,6 @@ function webpackBootstrapFunc (modules) {
 /******/    }
 /******/  };
 
-/******/  // define __esModule on exports
-/******/  __webpack_require__.r = function(exports) {
-/******/    Object.defineProperty(exports, '__esModule', { value: true });
-/******/  };
-
 /******/  // getDefaultExport function for compatibility with non-harmony modules
 /******/  __webpack_require__.n = function(module) {
 /******/    var getter = module && module.__esModule ?
@@ -17354,10 +17350,6 @@ function quoteRegExp (str) {
   return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&')
 }
 
-function isNumeric(n) {
-  return !isNaN(1 * n); // 1 * n converts integers, integers as string ("123"), 1e3 and "1e3" to integers and strings to NaN
-}
-
 function getModuleDependencies (sources, module, queueName) {
   var retval = {}
   retval[queueName] = []
@@ -17384,16 +17376,6 @@ function getModuleDependencies (sources, module, queueName) {
     }
     retval[match[2]] = retval[match[2]] || []
     retval[match[2]].push(match[4])
-  }
-
-  // convert 1e3 back to 1000 - this can be important after uglify-js converted 1000 to 1e3
-  var keys = Object.keys(retval);
-  for (var i = 0; i < keys.length; i++) {
-    for (var j = 0; j < retval[keys[i]].length; j++) {
-      if (isNumeric(retval[keys[i]][j])) {
-        retval[keys[i]][j] = 1 * retval[keys[i]][j];
-      }
-    }
   }
 
   return retval
@@ -17446,7 +17428,7 @@ module.exports = function (moduleId, options) {
     main: __webpack_require__.m
   }
 
-  var requiredModules = options.all ? { main: Object.keys(sources.main) } : getRequiredModules(sources, moduleId)
+  var requiredModules = options.all ? { main: Object.keys(sources) } : getRequiredModules(sources, moduleId)
 
   var src = ''
 
@@ -17460,7 +17442,7 @@ module.exports = function (moduleId, options) {
     src = src + 'var ' + module + ' = (' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(entryModule)) + ')({' + requiredModules[module].map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[module][id].toString() }).join(',') + '});\n'
   })
 
-  src = src + 'new ((' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.main.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources.main[id].toString() }).join(',') + '}))(self);'
+  src = src + '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.main.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources.main[id].toString() }).join(',') + '})(self);'
 
   var blob = new window.Blob([src], { type: 'text/javascript' })
   if (options.bare) { return blob }
