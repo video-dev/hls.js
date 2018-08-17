@@ -1,7 +1,5 @@
 import * as URLToolkit from 'url-toolkit';
 
-import { EventEmitter } from 'events';
-
 import {
   ErrorTypes,
   ErrorDetails
@@ -20,16 +18,16 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig } from './config';
 
-import HlsEvents from './events';
+import { Observer } from './observer';
 
-const ENABLE_TRACE_LOG_EVENT_TRIGGER = false;
+import HlsEvents from './events';
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls {
+export default class Hls extends Observer {
   /**
    * @type {string}
    */
@@ -90,7 +88,9 @@ export default class Hls {
    * @param {HlsConfig} config
    */
   constructor (config = {}) {
-    let defaultConfig = Hls.DefaultConfig;
+    super();
+
+    const defaultConfig = Hls.DefaultConfig;
 
     if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
@@ -110,25 +110,14 @@ export default class Hls {
     }
 
     enableLogs(config.debug);
+
     this.config = config;
+
+    /**
+     * @private
+     * @member {number}
+     */
     this._autoLevelCapping = -1;
-    // observer setup
-    let observer = this.observer = new EventEmitter();
-    observer.trigger = function trigger (event, ...data) {
-      if (ENABLE_TRACE_LOG_EVENT_TRIGGER) {
-        logger.trace('Event triggered:', event);
-      }
-
-      observer.emit(event, event, ...data);
-    };
-
-    observer.off = function off (event, ...data) {
-      observer.removeListener(event, ...data);
-    };
-    this.on = observer.on.bind(observer);
-    this.off = observer.off.bind(observer);
-    this.once = observer.once.bind(observer);
-    this.trigger = observer.trigger.bind(observer);
 
     // core controllers and network loaders
 
@@ -249,8 +238,7 @@ export default class Hls {
       component.destroy();
     });
     this.url = null;
-    this.observer.removeAllListeners();
-    this._autoLevelCapping = -1;
+    this.removeAllListeners();
   }
 
   /**
@@ -472,7 +460,7 @@ export default class Hls {
    * @type {number}
    */
   set autoLevelCapping (newLevel) {
-    logger.log(`set autoLevelCapping:${newLevel}`);
+    logger.log(`set autoLevelCapping: ${newLevel}`);
     this._autoLevelCapping = newLevel;
   }
 

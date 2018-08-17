@@ -42,7 +42,7 @@
     "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000"
   },
   "dependencies": {
-    "events": "^3.0.0",
+    "eventemitter3": "3.1.0",
     "url-toolkit": "^2.1.2"
   },
   "devDependencies": {
