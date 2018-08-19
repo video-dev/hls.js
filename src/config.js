@@ -89,8 +89,7 @@ export var hlsDefaultConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
-  requestMediaKeySystemAccessFunc:
-            requestMediaKeySystemAccess // used by eme-controller
+  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess // used by eme-controller
 };
 
 if (__USE_SUBTITLES__) {
