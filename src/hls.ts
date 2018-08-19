@@ -1,3 +1,9 @@
+/**
+ * @module Hls
+ * @class
+ * @constructor
+ */
+
 import * as URLToolkit from 'url-toolkit';
 
 import {
@@ -28,19 +34,10 @@ const Events = HlsEvents;
 
 export type HlsConfig = any;
 
-/**
- * @module Hls
- * @class
- * @constructor
- */
-<<<<<<< HEAD:src/hls.ts
-export default class Hls {
+export default class Hls extends Observer {
 
   static defaultConfig: HlsConfig;
 
-=======
-export default class Hls extends Observer {
->>>>>>> master:src/hls.js
   /**
    * @type {string}
    */
@@ -100,15 +97,11 @@ export default class Hls extends Observer {
    * @constructs Hls
    * @param {HlsConfig} config
    */
-<<<<<<< HEAD:src/hls.ts
   constructor (config: HlsConfig = {}) {
-    let defaultConfig = Hls.DefaultConfig;
-=======
-  constructor (config = {}) {
+
     super();
 
     const defaultConfig = Hls.DefaultConfig;
->>>>>>> master:src/hls.js
 
     if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
@@ -131,23 +124,6 @@ export default class Hls extends Observer {
 
     this.config = config;
     this._autoLevelCapping = -1;
-<<<<<<< HEAD:src/hls.ts
-
-    // observer setup
-    let observer = this.observer = new EventEmitter();
-    observer.trigger = function trigger (event, ...data) {
-      observer.emit(event, event, ...data);
-    };
-
-    observer.off = function off (event, ...data) {
-      observer.removeListener(event, ...data);
-    };
-    this.on = observer.on.bind(observer);
-    this.off = observer.off.bind(observer);
-    this.once = observer.once.bind(observer);
-    this.trigger = observer.trigger.bind(observer);
-=======
->>>>>>> master:src/hls.js
 
     // core controllers and network loaders
 
