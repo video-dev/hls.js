@@ -2,7 +2,7 @@
  * @readonly
  * @enum {string}
  */
-enum HlsEvents {
+enum Events {
   // fired before MediaSource is attaching to media element - data: { media }
   MEDIA_ATTACHING = 'hlsMediaAttaching',
   // fired when MediaSource has been succesfully attached to media element - data: { }
@@ -105,6 +105,6 @@ enum HlsEvents {
   KEY_LOADED = 'hlsKeyLoaded',
   // fired upon stream controller state transitions - data: { previousState, nextState }
   STREAM_STATE_TRANSITION = 'hlsStreamStateTransition'
-};
+}
 
-export { HlsEvents };
+export { Events };
