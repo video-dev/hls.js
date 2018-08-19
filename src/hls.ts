@@ -20,11 +20,7 @@ import { hlsDefaultConfig } from './config';
 
 import { HlsEvents } from './events';
 
-import { EventEmitter } from 'events';
-
-// polyfill for IE11
-require('string.prototype.endswith');
-require('./polyfills/number-is-finite');
+import { Observer } from './observer';
 
 declare var __VERSION__: string;
 
@@ -37,10 +33,14 @@ export type HlsConfig = any;
  * @class
  * @constructor
  */
+<<<<<<< HEAD:src/hls.ts
 export default class Hls {
 
   static defaultConfig: HlsConfig;
 
+=======
+export default class Hls extends Observer {
+>>>>>>> master:src/hls.js
   /**
    * @type {string}
    */
@@ -100,8 +100,15 @@ export default class Hls {
    * @constructs Hls
    * @param {HlsConfig} config
    */
+<<<<<<< HEAD:src/hls.ts
   constructor (config: HlsConfig = {}) {
     let defaultConfig = Hls.DefaultConfig;
+=======
+  constructor (config = {}) {
+    super();
+
+    const defaultConfig = Hls.DefaultConfig;
+>>>>>>> master:src/hls.js
 
     if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
@@ -124,6 +131,7 @@ export default class Hls {
 
     this.config = config;
     this._autoLevelCapping = -1;
+<<<<<<< HEAD:src/hls.ts
 
     // observer setup
     let observer = this.observer = new EventEmitter();
@@ -138,6 +146,8 @@ export default class Hls {
     this.off = observer.off.bind(observer);
     this.once = observer.once.bind(observer);
     this.trigger = observer.trigger.bind(observer);
+=======
+>>>>>>> master:src/hls.js
 
     // core controllers and network loaders
 
@@ -258,7 +268,7 @@ export default class Hls {
       component.destroy();
     });
     this.url = null;
-    this.observer.removeAllListeners();
+    this.removeAllListeners();
     this._autoLevelCapping = -1;
   }
 

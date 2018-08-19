@@ -61,7 +61,10 @@ function getPluginsForConfig(type, minify = false) {
   const plugins = [
     new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
     new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.DefinePlugin(defineConstants)
+    new webpack.DefinePlugin(defineConstants),
+    new webpack.ProvidePlugin({
+      Number: [path.resolve('./src/polyfills/number'), 'Number']
+    })
   ];
 
   if (runAnalyzer && !minify) {
