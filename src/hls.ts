@@ -38,6 +38,8 @@ import EMEController from './controller/eme-controller';
 import AudioStreamController from './controller/audio-stream-controller';
 import SubtitleStreamController from './controller/subtitle-stream-controller';
 import TimelineController from './controller/timeline-controller';
+import AttrList from './utils/attr-list';
+import Fragment from './loader/fragment';
 
 let __VERSION__: string;
 
@@ -132,6 +134,70 @@ export type HlsConfig = {
   captionsTextTrack1LanguageCode: string, // used by timeline-controller
   captionsTextTrack2Label: string; // used by timeline-controller
   captionsTextTrack2LanguageCode: string // used by timeline-controller
+};
+
+export enum AlternateMediaType {
+  AUDIO = 'AUDIO',
+  SUBTITLES = 'SUBTITLES'
+}
+
+export type MediaVariantDetails = {
+  PTSKnown: boolean,
+  fragments: Fragment[],
+  url: string,
+  readonly hasProgramDateTime: boolean,
+  live: boolean,
+  averagetargetduration: number,
+  targetduration: number,
+  totalduration: number,
+  startCC: number,
+  endCC: number,
+  startSN: number,
+  endSN: number,
+  startTimeOffset: number | null,
+  tload: number | null,
+  type: string | null,
+  version: number | null,
+  initSegment: Fragment | null
+  needSidxRanges: boolean,
+};
+
+export type QualityLevel = {
+  attrs: AttrList,
+  audioCodec: string,
+  videoCodec: string,
+  unknownCodecs: string[],
+  bitrate: number,
+  realBitrate?: number,
+  fragmentError: boolean,
+  height: number,
+  width: number,
+  url: string[],
+  urlId: number,
+  audioGroupdIds: string[],
+  textGroupdIds: string[],
+  details: MediaVariantDetails
+};
+
+export type AlternateMediaTrack = {
+  id: number,
+  groupId: string,
+  autoselect: boolean,
+  default: boolean,
+  forced: boolean,
+  lang: string,
+  name: string,
+  type: AlternateMediaType
+  url: string,
+  details?: MediaVariantDetails
+};
+
+export type AudioTrack = AlternateMediaTrack & {
+  audioCodec: string,
+};
+
+export type SubtitleTrack = AlternateMediaTrack & {
+  subtitleCodec: string
 };
 
 export default class Hls extends Observer {
@@ -438,7 +504,7 @@ export default class Hls extends Observer {
   /**
    * @type {QualityLevel[]}
    */
-  get levels () {
+  get levels (): QualityLevel[] {
     return this.levelController.levels;
   }
 
@@ -603,13 +669,18 @@ export default class Hls extends Observer {
    * @type {number}
    */
   get minAutoLevel (): number {
-    let hls = this, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate, len = levels ? levels.length : 0;
+    const hls = this;
+    const levels = hls.levels;
+    const minAutoBitrate = hls.config.minAutoBitrate;
+    const len = levels ? levels.length : 0;
+
     for (let i = 0; i < len; i++) {
       const levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate;
       if (levelNextBitrate > minAutoBitrate) {
         return i;
       }
     }
+
     return 0;
   }
 
@@ -657,9 +728,14 @@ export default class Hls extends Observer {
   /**
    * @type {AudioTrack[]}
    */
-  get audioTracks () {
+  get audioTracks (): AudioTrack[] {
     const audioTrackController = this.audioTrackController;
-    return audioTrackController ? audioTrackController.audioTracks : [];
+    if (this.audioTrackController) {
+      const audioTracks: any = audioTrackController.audioTracks;
+      return audioTracks;
+    } else {
+      return [];
+    }
   }
 
   /**
@@ -693,7 +769,7 @@ export default class Hls extends Observer {
    * get alternate subtitle tracks list from playlist
    * @type {SubtitleTrack[]}
    */
-  get subtitleTracks () {
+  get subtitleTracks (): SubtitleTrack[] {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
