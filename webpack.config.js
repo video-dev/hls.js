@@ -16,7 +16,7 @@ const runAnalyzer = !!env.ANALYZE;
 
 const baseConfig = {
   mode: 'development',
-  entry: './src/hls',
+  entry: './src/hls.ts',
   resolve: {
     // Add `.ts` as a resolvable extension.
     extensions: [".ts", ".js"]
