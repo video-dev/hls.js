@@ -89,5 +89,12 @@ module.exports = {
     'new-cap': 1,
     'no-undefined': 1,
     'no-global-assign': 2
+  },
+  'overrides': {
+    files: ['**/*.ts'],
+    parser: 'typescript-eslint-parser',
+    rules: {
+      'no-undef': 'off'
+    }
   }
 };
