@@ -72,7 +72,7 @@ export type HlsConfig = {
   liveMaxLatencyDuration: number, // used by stream-controller
   liveDurationInfinity: boolean, // used by buffer-controller
   maxMaxBufferLength: number, // used by stream-controller
-  enableWorker: ConstrainBoolean, // used by demuxer
+  enableWorker: boolean, // used by demuxer
   enableSoftwareAES: boolean, // used by decrypter
   manifestLoadingTimeOut: number, // used by playlist-loader
   manifestLoadingMaxRetry: number, // used by playlist-loader
@@ -172,7 +172,8 @@ export type QualityLevel = {
   fragmentError: boolean,
   height: number,
   width: number,
-  url: string[],
+  name: string,
+  url: string[] | string,
   urlId: number,
   audioGroupdIds: string[],
   textGroupdIds: string[],
@@ -190,14 +191,16 @@ export type AlternateMediaTrack = {
   type: AlternateMediaType
   url: string,
   details?: MediaVariantDetails
+  audioCodec?: string,
+  subtitleCodec?: string
 };
 
 export type AudioTrack = AlternateMediaTrack & {
-  audioCodec: string,
+
 };
 
 export type SubtitleTrack = AlternateMediaTrack & {
-  subtitleCodec: string
+
 };
 
 export default class Hls extends Observer {

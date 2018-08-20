@@ -7,6 +7,9 @@ import LevelKey from './level-key';
 import AttrList from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import { isCodecType } from '../utils/codecs';
+import { QualityLevel, AlternateMediaTrack } from '../hls';
+
+const _logger: any = logger;
 
 /**
  * M3U8 parser
@@ -63,8 +66,10 @@ export default class M3U8Parser {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
-  static parseMasterPlaylist (string, baseurl) {
-    let levels = [], result;
+  static parseMasterPlaylist (data: string, baseurl: string): QualityLevel[] {
+    const levels: QualityLevel[] = [];
+    let result;
+
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
     function setCodecs (codecs, level) {
@@ -84,10 +89,11 @@ export default class M3U8Parser {
       level.unknownCodecs = codecs;
     }
 
-    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
-      const level = {};
+    while ((result = MASTER_PLAYLIST_REGEX.exec(data)) != null) {
+      const level: QualityLevel = {} as any;
 
       const attrs = level.attrs = new AttrList(result[1]);
+
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
       const resolution = attrs.decimalResolution('RESOLUTION');
@@ -96,9 +102,9 @@ export default class M3U8Parser {
         level.height = resolution.height;
       }
       level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
-      level.name = attrs.NAME;
+      level.name = attrs['NAME'];
 
-      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+      setCodecs([].concat((attrs['CODECS'] || '').split(/[ ,]+/)), level);
 
       if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
         level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
@@ -109,26 +115,29 @@ export default class M3U8Parser {
     return levels;
   }
 
-  static parseMasterPlaylistMedia (string, baseurl, type, audioGroups = []) {
+  static parseMasterPlaylistMedia (string, baseurl, type, audioGroups = []): AlternateMediaTrack[] {
+    const medias: AlternateMediaTrack[] = [];
+
     let result;
-    let medias = [];
     let id = 0;
+
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
+
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
-      const media = {};
+      const media: AlternateMediaTrack = {} as any;
       const attrs = new AttrList(result[1]);
-      if (attrs.TYPE === type) {
+      if (attrs['TYPE'] === type) {
         media.groupId = attrs['GROUP-ID'];
-        media.name = attrs.NAME;
+        media.name = attrs['NAME'];
         media.type = type;
-        media.default = (attrs.DEFAULT === 'YES');
-        media.autoselect = (attrs.AUTOSELECT === 'YES');
-        media.forced = (attrs.FORCED === 'YES');
-        if (attrs.URI) {
-          media.url = M3U8Parser.resolve(attrs.URI, baseurl);
+        media.default = (attrs['DEFAULT'] === 'YES');
+        media.autoselect = (attrs['AUTOSELECT'] === 'YES');
+        media.forced = (attrs['FORCED'] === 'YES');
+        if (attrs['URI']) {
+          media.url = M3U8Parser.resolve(attrs['URI'], baseurl);
         }
 
-        media.lang = attrs.LANGUAGE;
+        media.lang = attrs['LANGUAGE'];
         if (!media.name) {
           media.name = media.lang;
         }
@@ -141,17 +150,20 @@ export default class M3U8Parser {
         medias.push(media);
       }
     }
+
     return medias;
   }
 
-  static parseLevelPlaylist (string, baseurl, id, type, levelUrlId) {
-    let currentSN = 0;
-    let totalduration = 0;
+  static parseLevelPlaylist (data: string, baseurl: string, id: number, type: string, levelUrlId: number): Level {
     let level = new Level(baseurl);
     let levelkey = new LevelKey();
+    let frag = new Fragment();
+
+    let currentSN = 0;
+    let totalduration = 0;
     let cc = 0;
     let prevFrag = null;
-    let frag = new Fragment();
+
     let result;
     let i;
 
@@ -159,7 +171,7 @@ export default class M3U8Parser {
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
-    while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
+    while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(data)) !== null) {
       const duration = result[1];
       if (duration) { // INF
         frag.duration = parseFloat(duration);
@@ -248,15 +260,15 @@ export default class M3U8Parser {
           var decryptparams = value1;
           var keyAttrs = new AttrList(decryptparams);
           var decryptmethod = keyAttrs.enumeratedString('METHOD'),
-            decrypturi = keyAttrs.URI,
+            decrypturi = keyAttrs['URI'],
             decryptiv = keyAttrs.hexadecimalInteger('IV');
           if (decryptmethod) {
             levelkey = new LevelKey();
             if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
               levelkey.method = decryptmethod;
               // URI to get the key
-              levelkey.baseuri = baseurl;
-              levelkey.reluri = decrypturi;
+              (levelkey as any).baseuri = baseurl;
+              (levelkey as any).reluri = decrypturi;
               levelkey.key = null;
               // Initialization Vector (IV)
               levelkey.iv = decryptiv;
@@ -275,8 +287,8 @@ export default class M3U8Parser {
           break;
         case 'MAP':
           let mapAttrs = new AttrList(value1);
-          frag.relurl = mapAttrs.URI;
-          frag.rawByteRange = mapAttrs.BYTERANGE;
+          frag.relurl = mapAttrs['URI'];
+          frag.rawByteRange = mapAttrs['BYTERANGE'];
           frag.baseurl = baseurl;
           frag.level = id;
           frag.type = type;
@@ -286,7 +298,7 @@ export default class M3U8Parser {
           frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
           break;
         default:
-          logger.warn(`line parsed but not handled: ${result}`);
+          _logger.warn(`line parsed but not handled: ${result}`);
           break;
         }
       }
@@ -308,7 +320,7 @@ export default class M3U8Parser {
       // if the fragments are TS or MP4, except if we download them :/
       // but this is to be able to handle SIDX.
       if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl))) {
-        logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
+        _logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
         frag = new Fragment();
         frag.relurl = level.fragments[0].relurl;
