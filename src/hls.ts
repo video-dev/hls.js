@@ -443,7 +443,7 @@ export default class Hls extends Observer {
    */
   loadSource (url: string): void {
     url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
-    _logger.log(`loadSource:${url}`);
+    _logger.log(`loadSource: ${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
     this.trigger(Events.MANIFEST_LOADING, { url: url });
@@ -546,7 +546,7 @@ export default class Hls extends Observer {
    * @type {number} -1 for automatic level selection
    */
   set nextLevel (newLevel: number) {
-    _logger.log(`set nextLevel:${newLevel}`);
+    _logger.log(`set nextLevel: ${newLevel}`);
     this.levelController.manualLevel = newLevel;
     this.streamController.nextLevelSwitch();
   }
@@ -566,7 +566,7 @@ export default class Hls extends Observer {
    * @type {number} newLevel -1 for automatic level selection
    */
   set loadLevel (newLevel: number) {
-    _logger.log(`set loadLevel:${newLevel}`);
+    _logger.log(`set loadLevel: ${newLevel}`);
     this.levelController.manualLevel = newLevel;
   }
 
@@ -601,7 +601,7 @@ export default class Hls extends Observer {
    * @type {number}
    */
   set firstLevel (newLevel: number) {
-    _logger.log(`set firstLevel:${newLevel}`);
+    _logger.log(`set firstLevel: ${newLevel}`);
     this.levelController.firstLevel = newLevel;
   }
 
@@ -624,7 +624,7 @@ export default class Hls extends Observer {
    * @type {number} newLevel
    */
   set startLevel (newLevel: number) {
-    _logger.log(`set startLevel:${newLevel}`);
+    _logger.log(`set startLevel: ${newLevel}`);
     const hls = this;
     // if not in automatic start level detection, ensure startLevel is greater than minAutoLevel
     if (newLevel !== -1) {
@@ -647,7 +647,7 @@ export default class Hls extends Observer {
    * @type {number}
    */
   set autoLevelCapping (newLevel: number) {
-    _logger.log(`set autoLevelCapping:${newLevel}`);
+    _logger.log(`set autoLevelCapping: ${newLevel}`);
     this._autoLevelCapping = newLevel;
   }
 
