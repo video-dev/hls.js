@@ -1,7 +1,7 @@
 import {sortObject, copyTextToClipboard} from './demo-utils'
 
 const testStreams = require('../tests/test-streams');
-const defaultTestStreamUrl = testStreams['bbb'].url;
+const defaultTestStreamUrl = testStreams['sintel'].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl))
 
 let demoConfig = getURLParam('demoConfig', null)

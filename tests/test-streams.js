@@ -35,6 +35,15 @@ function createTestStreamWithConfig (target, config) {
 }
 
 module.exports = {
+  sintel: createTestStreamWithConfig({
+    url: 'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8',
+    description: 'Sintel - multiple qualities, audio tracks and subtitles'
+  },
+  {
+    // try to workaround test failing because of slow seek on Chrome/Win10
+    nudgeMaxRetry: 5
+  }
+  ),
   bbb: createTestStreamWithConfig({
     url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8',
     description: 'Big Buck Bunny - adaptive qualities'
