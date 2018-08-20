@@ -313,10 +313,10 @@ class StreamController extends TaskLoop {
 
     if (frag) {
       if (frag.encrypted) {
-        logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
+        logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}], level ${level}`);
         this._loadKey(frag);
       } else {
-        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
+        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN}, ${levelDetails.endSN}], level ${level}, currentTime: ${pos.toFixed(3)}, bufferEnd: ${bufferEnd.toFixed(3)}`);
         this._loadFragment(frag);
       }
     }
