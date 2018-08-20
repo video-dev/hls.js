@@ -108,3 +108,5 @@ enum Events {
 }
 
 export { Events };
+
+export default Events;
