@@ -16,7 +16,7 @@ const runAnalyzer = !!env.ANALYZE;
 
 const baseConfig = {
   mode: 'development',
-  entry: './src/hls.js',
+  entry: './src/hls',
   resolve: {
     // Add `.ts` as a resolvable extension.
     extensions: [".ts", ".js"]
@@ -26,7 +26,7 @@ const baseConfig = {
     rules: [
       // all files with a `.ts` extension will be handled by `ts-loader`
       { test: /\.ts?$/, loader: "ts-loader" },
-      { test: /\.js?$/, loader: "ts-loader" }
+      { test: /\.js?$/, exclude: [/node_modules/], loader: "ts-loader" },
     ]
   }
 };
