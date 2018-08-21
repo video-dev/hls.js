@@ -218,7 +218,8 @@ module.exports = (envArgs) => {
 
     if (!enabledConfig) {
       console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
-      return;
+
+      throw new Error('Hls.js webpack config: Invalid environment parameters');
     }
 
     configs = [enabledConfig, demoConfig];
