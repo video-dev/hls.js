@@ -148,16 +148,18 @@ export default class M3U8Parser {
   static parseMasterPlaylistSessionData (string) {
     let result;
     let sessionData = {};
+    let hasSessionData = false;
     MASTER_PLAYLIST_SESSION_DATA_REGEX.lastIndex = 0;
 
     while ((result = MASTER_PLAYLIST_SESSION_DATA_REGEX.exec(string)) != null) {
       let sessionAttrs = new AttrList(result[1]);
       if (sessionAttrs['DATA-ID']) {
+        hasSessionData = true;
         sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
       }
     }
 
-    return sessionData;
+    return hasSessionData ? sessionData : null;
   }
 
   static parseLevelPlaylist (string, baseurl, id, type, levelUrlId) {

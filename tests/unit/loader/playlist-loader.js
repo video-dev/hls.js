@@ -171,7 +171,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     let result = M3U8Parser.parseMasterPlaylistSessionData(manifest);
-    assert.deepEqual(result, {});
+    assert.equal(result, null);
   });
 
   it('parses empty levels returns empty fragment array', () => {

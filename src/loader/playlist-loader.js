@@ -365,7 +365,7 @@ class PlaylistLoader extends EventHandler {
         url,
         stats,
         networkDetails,
-        sessionData: {}
+        sessionData: null
       });
     }
 
