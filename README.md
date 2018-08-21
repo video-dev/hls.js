@@ -102,7 +102,7 @@ HTMLVideoElement control and events could be used seamlessly.
 |[<img src="http://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)|[<img src="https://static3.1tv.ru/assets/web/logo-8ff7c63246d8df0397233927db52edbb.svg" width="120" height="120">](https://www.1tv.ru/) | [<img src="https://user-images.githubusercontent.com/1480052/40482633-c013ebce-5f55-11e8-96d5-b776415de0ce.png" width="120">](https://www.zdf.de) | [<img src="https://github.com/cdnbye/hlsjs-p2p-engine/blob/master/figs/cdnbye.png" width="120">](https://github.com/cdnbye/hlsjs-p2p-engine)| |
 |[<img src="https://streaming.cdn77.com/live-streaming-logo-dark.png" width="120">](https://streaming.cdn77.com/)| [<img src="https://avatars0.githubusercontent.com/u/7442371?s=200&v=4" width="120">](https://r7.com/)|[<img src="https://raw.githubusercontent.com/Novage/p2p-media-loader/gh-pages/images/p2pml-logo.png" width="120">](https://github.com/Novage/p2p-media-loader)
 
-## Player tntegration
+## Player Integration
 
 hls.js is (being) integrated in the following players:
 
@@ -287,7 +287,7 @@ Only debug:
 npm run build:debug
 ```
 
-Only debug with watch proc (like dev-server but actually writes files, not server though):
+Build and watch
 ```
 npm run build:watch
 ```
@@ -332,10 +332,6 @@ Run unit tests:
 npm run test:unit
 ```
 
-Run unit tests:
-```
-npm run test:unit
-```
 
 Run unit tests in watch mode:
 ```
