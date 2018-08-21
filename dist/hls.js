@@ -7,7 +7,7 @@
 		exports["Hls"] = factory();
 	else
 		root["Hls"] = factory();
-})(this, function() {
+})(typeof self !== 'undefined' ? self : this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -396,14 +396,14 @@ var ErrorDetails = {
         if (!opts.alwaysNormalize) {
           return baseURL;
         }
-        var basePartsForNormalise = this.parseURL(baseURL);
-        if (!baseParts) {
+        var basePartsForNormalise = URLToolkit.parseURL(baseURL);
+        if (!basePartsForNormalise) {
           throw new Error('Error trying to parse base URL.');
         }
         basePartsForNormalise.path = URLToolkit.normalizePath(basePartsForNormalise.path);
         return URLToolkit.buildURLFromParts(basePartsForNormalise);
       }
-      var relativeParts = this.parseURL(relativeURL);
+      var relativeParts = URLToolkit.parseURL(relativeURL);
       if (!relativeParts) {
         throw new Error('Error trying to parse relative URL.');
       }
@@ -416,7 +416,7 @@ var ErrorDetails = {
         relativeParts.path = URLToolkit.normalizePath(relativeParts.path);
         return URLToolkit.buildURLFromParts(relativeParts);
       }
-      var baseParts = this.parseURL(baseURL);
+      var baseParts = URLToolkit.parseURL(baseURL);
       if (!baseParts) {
         throw new Error('Error trying to parse base URL.');
       }
@@ -8277,10 +8277,10 @@ function findFragmentByPTS(fragPrevious, fragments) {
 
   var fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : null;
   // Prefer the next fragment if it's within tolerance
-  if (fragNext && !fragment_finders_fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
+  if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
     return fragNext;
   }
-  return binary_search.search(fragments, fragment_finders_fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
+  return binary_search.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
 }
 
 /**
@@ -8290,7 +8290,7 @@ function findFragmentByPTS(fragPrevious, fragments) {
  * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
  * @returns {number} - 0 if it matches, 1 if too low, -1 if too high
  */
-function fragment_finders_fragmentWithinToleranceTest() {
+function fragmentWithinToleranceTest() {
   var bufferEnd = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
   var maxFragLookUpTolerance = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
   var candidate = arguments[2];
@@ -12270,35 +12270,9 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
             } else {
               var foundFrag = void 0;
               var maxFragLookUpTolerance = config.maxFragLookUpTolerance;
-              var fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
-              var fragmentWithinToleranceTest = function fragmentWithinToleranceTest(candidate) {
-                // offset should be within fragment boundary - config.maxFragLookUpTolerance
-                // this is to cope with situations like
-                // bufferEnd = 9.991
-                // frag[Ø] : [0,10]
-                // frag[1] : [10,20]
-                // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
-                //              frag start               frag start+duration
-                //                  |-----------------------------|
-                //              <--->                         <--->
-                //  ...--------><-----------------------------><---------....
-                // previous frag         matching fragment         next frag
-                //  return -1             return 0                 return 1
-                // logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-                // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
-                var candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration);
-                if (candidate.start + candidate.duration - candidateLookupTolerance <= bufferEnd) return 1;
-                // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
-                else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start) return -1;
-
-                return 0;
-              };
-
               if (bufferEnd < end) {
                 if (bufferEnd > end - maxFragLookUpTolerance) maxFragLookUpTolerance = 0;
-
-                // Prefer the next fragment if it's within tolerance
-                if (fragNext && !fragmentWithinToleranceTest(fragNext)) foundFrag = fragNext;else foundFrag = binary_search.search(fragments, fragmentWithinToleranceTest);
+                foundFrag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
               } else {
                 // reach end of playlist
                 foundFrag = fragments[fragLen - 1];
@@ -12610,48 +12584,44 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
     var fragCurrent = this.fragCurrent;
     var fragNew = data.frag;
     if (fragCurrent && data.id === 'audio' && data.type === 'audio' && fragNew.sn === fragCurrent.sn && fragNew.level === fragCurrent.level && this.state === audio_stream_controller_State.PARSING) {
-      var trackId = this.trackId,
-          track = this.tracks[trackId],
-          hls = this.hls;
+      var audioSwitch = this.audioSwitch,
+          hls = this.hls,
+          media = this.media,
+          pendingData = this.pendingData,
+          trackId = this.trackId;
 
+
+      fragCurrent.addElementaryStream(loader_fragment.ElementaryStreamTypes.AUDIO);
       if (!isFiniteNumber(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
-
-      fragCurrent.addElementaryStream(loader_fragment.ElementaryStreamTypes.AUDIO);
-
       logger["b" /* logger */].log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
+
+      var track = this.tracks[trackId];
       updateFragPTSDTS(track.details, fragCurrent, data.startPTS, data.endPTS);
 
-      var audioSwitch = this.audioSwitch,
-          media = this.media,
-          appendOnBufferFlush = false;
+      var appendOnBufferFlush = false;
       // Only flush audio from old audio tracks when PTS is known on new audio track
-      if (audioSwitch && media) {
-        if (media.readyState) {
+      if (audioSwitch) {
+        if (media && media.readyState) {
           var currentTime = media.currentTime;
-          logger["b" /* logger */].log('switching audio track : currentTime:' + currentTime);
           if (currentTime >= data.startPTS) {
             logger["b" /* logger */].log('switching audio track : flushing all audio');
             this.state = audio_stream_controller_State.BUFFER_FLUSHING;
-            hls.trigger(events["a" /* default */].BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
+            hls.trigger(events["a" /* default */].BUFFER_FLUSHING, {
+              startOffset: 0,
+              endOffset: Number.POSITIVE_INFINITY,
+              type: 'audio'
+            });
             appendOnBufferFlush = true;
-            // Lets announce that the initial audio track switch flush occur
-            this.audioSwitch = false;
-            hls.trigger(events["a" /* default */].AUDIO_TRACK_SWITCHED, { id: trackId });
           }
-        } else {
-          // Lets announce that the initial audio track switch flush occur
-          this.audioSwitch = false;
-          hls.trigger(events["a" /* default */].AUDIO_TRACK_SWITCHED, { id: trackId });
         }
+        this.audioSwitch = false;
+        hls.trigger(events["a" /* default */].AUDIO_TRACK_SWITCHED, { id: trackId });
       }
 
-      var pendingData = this.pendingData;
-
-      if (!pendingData) {
-        console.warn('Apparently attempt to enqueue media payload without codec initialization data upfront');
+      if (!this.pendingData) {
         hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: null, fatal: true });
         return;
       }
@@ -12667,7 +12637,7 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
             if (_this2.state === audio_stream_controller_State.PARSING) {
               // arm pending Buffering flag before appending a segment
               _this2.pendingBuffering = true;
-              _this2.hls.trigger(events["a" /* default */].BUFFER_APPENDING, appendObj);
+              hls.trigger(events["a" /* default */].BUFFER_APPENDING, appendObj);
             }
           });
           this.pendingData = [];
@@ -17342,81 +17312,38 @@ function webpackBootstrapFunc (modules) {
   return f.default || f // try to call default if defined to also support babel esmodule exports
 }
 
-var moduleNameReqExp = '[\\.|\\-|\\+|\\w|\/|@]+'
-var dependencyRegExp = '\\((\/\\*.*?\\*\/)?\s?.*?(' + moduleNameReqExp + ').*?\\)' // additional chars when output.pathinfo is true
-
 // http://stackoverflow.com/a/2593661/130442
 function quoteRegExp (str) {
   return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&')
 }
 
-function getModuleDependencies (sources, module, queueName) {
-  var retval = {}
-  retval[queueName] = []
-
+function getModuleDependencies (module) {
+  var retval = []
   var fnString = module.toString()
   var wrapperSignature = fnString.match(/^function\s?\(\w+,\s*\w+,\s*(\w+)\)/)
   if (!wrapperSignature) return retval
-  var webpackRequireName = wrapperSignature[1]
 
-  // main bundle deps
-  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + dependencyRegExp, 'g')
+  var webpackRequireName = wrapperSignature[1]
+  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + '\\((\/\\*.*?\\*\/)?\s?.*?([\\.|\\-|\\w|\/|@]+).*?\\)', 'g') // additional chars when output.pathinfo is true
   var match
   while ((match = re.exec(fnString))) {
-    if (match[3] === 'dll-reference') continue
-    retval[queueName].push(match[3])
+    retval.push(match[3])
   }
-
-  // dll deps
-  re = new RegExp('\\(' + quoteRegExp(webpackRequireName) + '\\("(dll-reference\\s(' + moduleNameReqExp + '))"\\)\\)' + dependencyRegExp, 'g')
-  while ((match = re.exec(fnString))) {
-    if (!sources[match[2]]) {
-      retval[queueName].push(match[1])
-      sources[match[2]] = __webpack_require__(match[1]).m
-    }
-    retval[match[2]] = retval[match[2]] || []
-    retval[match[2]].push(match[4])
-  }
-
   return retval
 }
 
-function hasValuesInQueues (queues) {
-  var keys = Object.keys(queues)
-  return keys.reduce(function (hasValues, key) {
-    return hasValues || queues[key].length > 0
-  }, false)
-}
-
 function getRequiredModules (sources, moduleId) {
-  var modulesQueue = {
-    main: [moduleId]
-  }
-  var requiredModules = {
-    main: []
-  }
-  var seenModules = {
-    main: {}
-  }
+  var modulesQueue = [moduleId]
+  var requiredModules = []
+  var seenModules = {}
 
-  while (hasValuesInQueues(modulesQueue)) {
-    var queues = Object.keys(modulesQueue)
-    for (var i = 0; i < queues.length; i++) {
-      var queueName = queues[i]
-      var queue = modulesQueue[queueName]
-      var moduleToCheck = queue.pop()
-      seenModules[queueName] = seenModules[queueName] || {}
-      if (seenModules[queueName][moduleToCheck] || !sources[queueName][moduleToCheck]) continue
-      seenModules[queueName][moduleToCheck] = true
-      requiredModules[queueName] = requiredModules[queueName] || []
-      requiredModules[queueName].push(moduleToCheck)
-      var newModules = getModuleDependencies(sources, sources[queueName][moduleToCheck], queueName)
-      var newModulesKeys = Object.keys(newModules)
-      for (var j = 0; j < newModulesKeys.length; j++) {
-        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]] || []
-        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]].concat(newModules[newModulesKeys[j]])
-      }
-    }
+  while (modulesQueue.length) {
+    var moduleToCheck = modulesQueue.pop()
+    if (seenModules[moduleToCheck] || !sources[moduleToCheck]) continue
+    seenModules[moduleToCheck] = true
+    requiredModules.push(moduleToCheck)
+    var newModules = getModuleDependencies(sources[moduleToCheck])
+    modulesQueue = modulesQueue.concat(newModules)
   }
 
   return requiredModules
@@ -17424,25 +17351,10 @@ function getRequiredModules (sources, moduleId) {
 
 module.exports = function (moduleId, options) {
   options = options || {}
-  var sources = {
-    main: __webpack_require__.m
-  }
+  var sources = __webpack_require__.m
 
-  var requiredModules = options.all ? { main: Object.keys(sources) } : getRequiredModules(sources, moduleId)
-
-  var src = ''
-
-  Object.keys(requiredModules).filter(function (m) { return m !== 'main' }).forEach(function (module) {
-    var entryModule = 0
-    while (requiredModules[module][entryModule]) {
-      entryModule++
-    }
-    requiredModules[module].push(entryModule)
-    sources[module][entryModule] = '(function(module, exports, __webpack_require__) { module.exports = __webpack_require__; })'
-    src = src + 'var ' + module + ' = (' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(entryModule)) + ')({' + requiredModules[module].map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[module][id].toString() }).join(',') + '});\n'
-  })
-
-  src = src + '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.main.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources.main[id].toString() }).join(',') + '})(self);'
+  var requiredModules = options.all ? Object.keys(sources) : getRequiredModules(sources, moduleId)
+  var src = '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[id].toString() }).join(',') + '})(self);'
 
   var blob = new window.Blob([src], { type: 'text/javascript' })
   if (options.bare) { return blob }
