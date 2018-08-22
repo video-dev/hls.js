@@ -1361,7 +1361,7 @@ class StreamController extends TaskLoop {
         this.bufferStallCorrection = MIN_FRAGMENT_DURATION;
       }
       this.fragPrevious = null;
-      this.startLoad(this.media.currentTime - this.bufferStallCorrection);
+      this.startLoad(this.media.currentTime);
       break;
     default:
       break;
