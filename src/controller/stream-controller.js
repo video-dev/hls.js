@@ -405,7 +405,15 @@ class StreamController extends TaskLoop {
     return frag;
   }
 
-  _findFragment (start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
+  /**
+   *
+   * @param {Fragment} fragPrevious Previous fragment
+   * @param {Fragment[]} fragments List of current level
+   * @param {number} bufferEnd Last timestamp of buffered time-range
+   * @param {number} end Last timestamp of current level fragment list
+   * @param {*} levelDetails Current level details object
+   */
+  _findFragment (fragPrevious, fragments, bufferEnd, end, levelDetails) {
     const config = this.hls.config;
     let frag;
 
@@ -416,7 +424,7 @@ class StreamController extends TaskLoop {
       frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
     } else {
       // reach end of playlist
-      frag = fragments[fragLen - 1];
+      frag = fragments[fragments.length - 1];
     }
     if (frag) {
       const curSNIdx = frag.sn - levelDetails.startSN;
