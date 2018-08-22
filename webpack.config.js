@@ -4,6 +4,9 @@ const webpack = require('webpack');
 
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+const getGitVersion = require('git-tag-version');
+const getGitCommitInfo = require('git-commit-info');
+
 const clone = (...args) => Object.assign({}, ...args);
 
 /* Allow to customise builds through env-vars */
@@ -58,6 +61,8 @@ function getPluginsForConfig(type, minify = false) {
 
   const defineConstants = getConstantsForConfig(type);
 
+  // console.log('DefinePlugin constants:', JSON.stringify(defineConstants, null, 2))
+
   const plugins = [
     new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
     new webpack.optimize.OccurrenceOrderPlugin(),
@@ -81,9 +86,10 @@ function getPluginsForConfig(type, minify = false) {
 }
 
 function getConstantsForConfig (type) {
+
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
-    __VERSION__: JSON.stringify(pkgJson.version),
+    __VERSION__: JSON.stringify(pkgJson.version || (getGitVersion() + '-' + getGitCommitInfo().shortCommit)),
     __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
     __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
