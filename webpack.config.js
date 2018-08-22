@@ -1,10 +1,10 @@
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
-
-const {merge} = require('webpack-assembler')
-
+const {merge} = require('webpack-assembler');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const getGitVersion = require('git-tag-version');
+const getGitCommitInfo = require('git-commit-info');
 
 /* Allow to customise builds through env-vars */
 const env = process.env;
@@ -59,6 +59,8 @@ function getPluginsForConfig(type, minify = false) {
 
   const defineConstants = getConstantsForConfig(type);
 
+  // console.log('DefinePlugin constants:', JSON.stringify(defineConstants, null, 2))
+
   const plugins = [
     new webpack.BannerPlugin({
       entryOnly: true,
@@ -86,9 +88,10 @@ function getPluginsForConfig(type, minify = false) {
 }
 
 function getConstantsForConfig (type) {
+
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
-    __VERSION__: JSON.stringify(pkgJson.version),
+    __VERSION__: JSON.stringify(pkgJson.version || (getGitVersion() + '-' + getGitCommitInfo().shortCommit)),
     __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
     __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
@@ -226,7 +229,8 @@ module.exports = (envArgs) => {
 
     if (!enabledConfig) {
       console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
-      return;
+
+      throw new Error('Hls.js webpack config: Invalid environment parameters');
     }
 
     configs = [enabledConfig, demoConfig];
