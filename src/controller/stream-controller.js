@@ -59,6 +59,8 @@ class StreamController extends TaskLoop {
     this._state = State.STOPPED;
     this.stallReported = false;
     this.gapController = null;
+
+    this.bufferStallCorrection = 0;
   }
 
   onHandlerDestroying () {
@@ -308,7 +310,10 @@ class StreamController extends TaskLoop {
       }
     }
     if (!frag) {
-      frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
+      frag = this._findFragment(fragPrevious, fragments, bufferEnd - this.bufferStallCorrection, end, levelDetails);
+      if (this.bufferStallCorrection !== 0) {
+        this.bufferStallCorrection = 0;
+      }
     }
 
     if (frag) {
@@ -1331,6 +1336,16 @@ class StreamController extends TaskLoop {
           this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
         }
       }
+      break;
+    case ErrorDetails.BUFFER_STALLED_ERROR:
+      logger.log('attempting buffer stall correction on load position');
+      const currentFragment = this.fragCurrent;
+      if (this.media.currentTime < currentFragment.start) {
+        this.bufferStallCorrection = currentFragment.start - this.media.currentTime + 0.02;
+      } else {
+        this.bufferStallCorrection = this.media.currentTime - currentFragment.start + 0.02;
+      }
+      this.startLoad(this.media.currentTime - this.bufferStallCorrection);
       break;
     default:
       break;
