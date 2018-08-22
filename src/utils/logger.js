@@ -5,7 +5,7 @@ const ENABLE_LOGS_DEFAULT = true; // the default setting on lib initialization
 const ENABLE_TRACE_LOGS = true;
 
 const DEBUG_PREFIX = ''; // use this to prefix Hls.js when needed for debugging
-const DEBUG_PREPEND_TIMESTAMP = false; // use this to prepend with timestamp when needed for debugging
+const DEBUG_PREPEND_TIMESTAMP = false; // use this to prepend with timestamp when needed for debugging (makes line-number opaque)
 
 const noop = () => void 0;
 const self = getSelfScope();
@@ -19,6 +19,16 @@ function bindConsole (method, prefix, prependTime) {
     return noop;
   }
 
+  /**
+   * NOTE on line-number in browser console log output and using DEBUG_PREPEND_TIMESTAMP
+   *
+   * Preserving line-numbers requires exporting a bound native log function as-is
+   * to the calling code.
+   *
+   * Any kind of wrapping, necessary for example to dynamically insert values (unlike static values
+   * inserted via `bind`) like needed for timestamp prefixing will cause line-numbers to not be preserved,
+   * i.e line-number will be opaque against whichever the wrapper line-number is.
+   */
   if (prependTime) {
     return (...args) => logFn.call(console, prefix, `[${(new Date()).toISOString()}]`, ...args);
   } else {
