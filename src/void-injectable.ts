@@ -1,12 +1,5 @@
-import EventHandler from './event-handler';
-import Hls from './hls';
-
-abstract class VoidInjectable extends EventHandler {
-  /*
-  constructor (hls: Hls) {
-    super(hls);
-  }
-  */
-}
-
+/**
+ * This is a shim for modules that get only conditionnally bundled (see "light" config in webpack file)
+ */
+type VoidInjectable = any;
 export default VoidInjectable;
