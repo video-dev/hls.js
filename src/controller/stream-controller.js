@@ -320,7 +320,6 @@ class StreamController extends TaskLoop {
       }
 
       logger.log(`stream-controller: _findFragment at ${fragmentFindPosition}, buffer-end ${bufferEnd}, position ${pos}`, fragPrevious);
-      // this.bufferStallCorrection = 0;
       frag = this._findFragment(fragPrevious, fragments, fragmentFindPosition, end, levelDetails);
     }
 
