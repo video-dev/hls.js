@@ -767,7 +767,7 @@ class StreamController extends TaskLoop {
       logger.log(`media seeking to ${currentTime.toFixed(3)}`);
     }
 
-    let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+    let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media; // FIXME: why do we have to do this?
     let bufferInfo = BufferHelper.bufferInfo(mediaBuffer, currentTime, this.config.maxBufferHole);
     if (this.state === State.FRAG_LOADING) {
       let fragCurrent = this.fragCurrent;
