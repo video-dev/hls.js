@@ -106,9 +106,9 @@ export var hlsDefaultConfig: HlsConfig = {
   captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
 };
 
-declare var __USE_SUBTITLES__: boolean;
-declare var __USE_ALT_AUDIO__: boolean;
-declare var __USE_EME_DRM__: boolean;
+declare const __USE_SUBTITLES__: boolean;
+declare const __USE_ALT_AUDIO__: boolean;
+declare const __USE_EME_DRM__: boolean;
 
 if (__USE_SUBTITLES__) {
   hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;

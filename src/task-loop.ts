@@ -132,4 +132,4 @@ abstract class TaskLoop extends EventHandler {
 
 export default TaskLoop;
 
-export {TaskLoop};
+export { TaskLoop };

@@ -44,7 +44,7 @@ import AudioStreamController from './controller/audio-stream-controller';
 import SubtitleStreamController from './controller/subtitle-stream-controller';
 import TimelineController from './controller/timeline-controller';
 
-declare var __VERSION__: string;
+declare const __VERSION__: string;
 
 const _logger: any = logger;
 

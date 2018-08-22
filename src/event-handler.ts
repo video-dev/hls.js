@@ -6,7 +6,7 @@
 
 import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
-import {Event} from './events';
+import { Event } from './events';
 
 import Hls from './hls';
 
@@ -20,7 +20,6 @@ const FORBIDDEN_EVENT_NAMES = new Set([
 ]);
 
 abstract class EventHandler {
-
   private _hls: Hls;
   private _handledEvents: string[];
   private _useGenericHandler: boolean;
@@ -35,7 +34,9 @@ abstract class EventHandler {
     this.registerListeners();
   }
 
-  get hls(): Hls { return this._hls };
+  get hls (): Hls {
+    return this._hls;
+  }
 
   destroy () {
     this.onHandlerDestroying();
