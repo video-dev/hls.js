@@ -29,10 +29,10 @@ export default class GapController {
     if (currentTime !== lastCurrentTime) {
       // The playhead is now moving, but was previously stalled
       if (this.stallReported) {
-        logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(tnow - this.stalled)}ms`);
+        logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(tnow - this._stalledTime)}ms`);
         this.stallReported = false;
       }
-      this.stalled = null;
+      this._stalledTime = null;
       this.nudgeRetry = 0;
       return;
     }
@@ -47,10 +47,10 @@ export default class GapController {
 
     // The playhead isn't moving but it should be
     // Allow some slack time to for small stalls to resolve themselves
-    const stalledDuration = tnow - this.stalled;
+    const stalledDuration = tnow - this._stalledTime;
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
-    if (!this.stalled) {
-      this.stalled = tnow;
+    if (!this._stalledTime) {
+      this._stalledTime = tnow; // TODO: rename `stalled` to `stalledTime`
       return;
     } else if (stalledDuration >= stallDebounceInterval) {
       // Report stalling after trying to fix
@@ -81,7 +81,7 @@ export default class GapController {
       // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
       // We only try to jump the hole if it's under the configured size
       // Reset stalled so to rearm watchdog timer
-      this.stalled = null;
+      this._stalledTime = null;
       this._tryNudgeBuffer();
     }
   }
@@ -121,7 +121,7 @@ export default class GapController {
       if (currentTime >= lastEndTime && currentTime < startTime) {
         media.currentTime = Math.max(startTime, media.currentTime + 0.1);
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${media.currentTime}`);
-        this.stalled = null;
+        this._stalledTime = null;
         hls.trigger(Event.ERROR, {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
