@@ -20,6 +20,9 @@ import { Observer } from './observer';
 
 import EventHandler from './event-handler';
 
+import AttrList from './utils/attr-list';
+import Fragment from './loader/fragment';
+
 // Core components
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
@@ -32,16 +35,16 @@ import AbrController from './controller/abr-controller';
 import BufferController from './controller/buffer-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
+
+// Optional components
 import AudioTrackController from './controller/audio-track-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import EMEController from './controller/eme-controller';
 import AudioStreamController from './controller/audio-stream-controller';
 import SubtitleStreamController from './controller/subtitle-stream-controller';
 import TimelineController from './controller/timeline-controller';
-import AttrList from './utils/attr-list';
-import Fragment from './loader/fragment';
 
-let __VERSION__: string;
+declare var __VERSION__: string;
 
 const _logger: any = logger;
 

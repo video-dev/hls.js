@@ -2,9 +2,9 @@ const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
 
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const {merge} = require('webpack-assembler')
 
-const clone = (...args) => Object.assign({}, ...args);
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 /* Allow to customise builds through env-vars */
 const env = process.env;
@@ -28,10 +28,11 @@ const baseConfig = {
       { test: /\.ts?$/, loader: "ts-loader" },
       { test: /\.js?$/, exclude: [/node_modules/], loader: "ts-loader" },
     ]
-  }
+  },
+  plugins: []
 };
 
-const demoConfig = clone(baseConfig, {
+const demoConfig = merge(baseConfig, {
   name: 'demo',
   mode: 'development',
   entry: './demo/main',
@@ -59,7 +60,11 @@ function getPluginsForConfig(type, minify = false) {
   const defineConstants = getConstantsForConfig(type);
 
   const plugins = [
-    new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
+    new webpack.BannerPlugin({
+      entryOnly: true,
+      raw: true,
+      banner: 'typeof window !== "undefined" &&' // SSR/Node.js guard
+    }),
     new webpack.optimize.OccurrenceOrderPlugin(),
     new webpack.DefinePlugin(defineConstants),
     new webpack.ProvidePlugin({
@@ -91,27 +96,30 @@ function getConstantsForConfig (type) {
 }
 
 function getAliasesForLightDist () {
+
+  const VOID_INJECTABLE_PATH = './void-injectable.ts';
+
   let aliases = {};
 
   if (!addEMESupport) {
     aliases = Object.assign({}, aliases, {
-      './controller/eme-controller': './empty.js'
+      './controller/eme-controller': VOID_INJECTABLE_PATH
     });
   }
 
   if (!addSubtitleSupport) {
-    aliases = clone(aliases, {
-      './utils/cues': './empty.js',
-      './controller/timeline-controller': './empty.js',
-      './controller/subtitle-track-controller': './empty.js',
-      './controller/subtitle-stream-controller': './empty.js'
+    aliases = merge(aliases, {
+      './utils/cues': VOID_INJECTABLE_PATH,
+      './controller/timeline-controller': VOID_INJECTABLE_PATH,
+      './controller/subtitle-track-controller': VOID_INJECTABLE_PATH,
+      './controller/subtitle-stream-controller': VOID_INJECTABLE_PATH
     });
   }
 
   if (!addAltAudioSupport) {
-    aliases = clone(aliases, {
-      './controller/audio-track-controller': './empty.js',
-      './controller/audio-stream-controller': './empty.js'
+    aliases = merge(aliases, {
+      './controller/audio-track-controller': VOID_INJECTABLE_PATH,
+      './controller/audio-stream-controller': VOID_INJECTABLE_PATH
     });
   }
 
@@ -197,7 +205,7 @@ const multiConfig = [
     },
     devtool: 'source-map'
   }
-].map(config => clone(baseConfig, config));
+].map(config => merge(baseConfig, config));
 
 multiConfig.push(demoConfig);
 
@@ -225,8 +233,10 @@ module.exports = (envArgs) => {
   }
 
   console.log(
-    `Building configs: ${configs.map(config => config.name).join(', ')}.\n`
+    `Created webpack configuration for: ${configs.map(config => config.name).join(', ')}.\n`
   );
+
+  // console.log('Resulting Webpack multi-config object:', JSON.stringify(configs, null, 4));
 
   return configs;
 };
