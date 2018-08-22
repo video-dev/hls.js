@@ -270,10 +270,10 @@ class StreamController extends TaskLoop {
   }
 
   _fetchPayloadOrEos (pos, bufferInfo, levelDetails) {
-    const fragPrevious = this.fragPrevious,
-      level = this.level,
-      fragments = levelDetails.fragments,
-      fragLen = fragments.length;
+    const fragPrevious = this.fragPrevious;
+    const level = this.level;
+    const fragments = levelDetails.fragments;
+    const fragLen = fragments.length;
 
     // empty playlist
     if (fragLen === 0) {
@@ -281,10 +281,10 @@ class StreamController extends TaskLoop {
     }
 
     // find fragment index, contiguous with end of buffer position
-    let start = fragments[0].start,
-      end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration,
-      bufferEnd = bufferInfo.end,
-      frag;
+    let start = fragments[0].start;
+    let end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
+    let bufferEnd = bufferInfo.end;
+    let frag;
 
     if (levelDetails.initSegment && !levelDetails.initSegment.data) {
       frag = levelDetails.initSegment;
@@ -329,7 +329,7 @@ class StreamController extends TaskLoop {
         logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
       } else {
-        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
+        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)}, bufferEnd:${bufferEnd.toFixed(3)}`);
         this._loadFragment(frag);
       }
     }
