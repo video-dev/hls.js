@@ -310,10 +310,18 @@ class StreamController extends TaskLoop {
       }
     }
     if (!frag) {
-      frag = this._findFragment(fragPrevious, fragments, bufferEnd - this.bufferStallCorrection, end, levelDetails);
+      let fragmentFindPosition;
       if (this.bufferStallCorrection !== 0) {
+        fragmentFindPosition = pos - this.bufferStallCorrection;
+        logger.debug('Applying fragment-finder correction:', this.bufferStallCorrection);
         this.bufferStallCorrection = 0;
+      } else {
+        fragmentFindPosition = bufferEnd;
       }
+
+      logger.log(`stream-controller: _findFragment at ${fragmentFindPosition}, buffer-end ${bufferEnd}, position ${pos}`, fragPrevious);
+      // this.bufferStallCorrection = 0;
+      frag = this._findFragment(fragPrevious, fragments, fragmentFindPosition, end, levelDetails);
     }
 
     if (frag) {
@@ -1347,12 +1355,12 @@ class StreamController extends TaskLoop {
       break;
     case ErrorDetails.BUFFER_STALLED_ERROR:
       logger.log('attempting buffer stall correction on load position');
+      const MIN_FRAGMENT_DURATION = 0.5;
       const currentFragment = this.fragCurrent;
       if (this.media.currentTime < currentFragment.start) {
-        this.bufferStallCorrection = currentFragment.start - this.media.currentTime + 0.02;
-      } else {
-        this.bufferStallCorrection = this.media.currentTime - currentFragment.start + 0.02;
+        this.bufferStallCorrection = MIN_FRAGMENT_DURATION;
       }
+      this.fragPrevious = null;
       this.startLoad(this.media.currentTime - this.bufferStallCorrection);
       break;
     default:
