@@ -107,6 +107,6 @@ enum Events {
   STREAM_STATE_TRANSITION = 'hlsStreamStateTransition'
 }
 
-export { Events };
+export { Events as Event };
 
 export default Events;

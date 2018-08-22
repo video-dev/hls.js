@@ -15,7 +15,7 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig } from './config';
 
-import { Events } from './events';
+import { Event } from './events';
 import { Observer } from './observer';
 
 import EventHandler from './event-handler';
@@ -50,7 +50,7 @@ const _logger: any = logger;
 
 const _hlsDefaultConfig: any = hlsDefaultConfig;
 
-export type Injectable = any;
+export type Injectable = any | null;
 
 export type HlsConfig = {
   autoStartLoad: boolean, // used by stream-controller
@@ -123,16 +123,19 @@ export type HlsConfig = {
   maxLoadingDelay: number, // used by abr-controller
   minAutoBitrate: number, // used by hls
   emeEnabled: boolean, // used by eme-controller
-  widevineLicenseUrl: string, // used by eme-controller
+  widevineLicenseUrl: string | null, // used by eme-controller
   requestMediaKeySystemAccessFunc: (keySystem: string, config: MediaKeySystemConfiguration) => Promise<MediaKeySystemAccess> // used by eme-controller
 
+  audioStreamController: Injectable,
+  audioTrackController: Injectable,
+  emeController: Injectable,
   subtitleStreamController: Injectable // ISubtitleStreamController,
   subtitleTrackController: Injectable // ISubtitleTrackController,
   timelineController: Injectable // ITimelineControllerm,
   cueHandler: Injectable // ICueHandler, // used by timeline-controller
 
-  nableCEA708Captions: true, // used by timeline-controller
-  enableWebVTT: true, // used by timeline-controller
+  enableCEA708Captions: boolean, // used by timeline-controller
+  enableWebVTT: boolean, // used by timeline-controller
   captionsTextTrack1Label: string, // used by timeline-controller
   captionsTextTrack1LanguageCode: string, // used by timeline-controller
   captionsTextTrack2Label: string; // used by timeline-controller
@@ -207,7 +210,7 @@ export type SubtitleTrack = AlternateMediaTrack & {
 };
 
 export default class Hls extends Observer {
-  static defaultConfig: HlsConfig;
+  private static _defaultConfig: HlsConfig;
 
   /**
    * @type {string}
@@ -227,7 +230,7 @@ export default class Hls extends Observer {
    * @type {Events}
    */
   static get Events () {
-    return Events;
+    return Event;
   }
 
   /**
@@ -248,18 +251,18 @@ export default class Hls extends Observer {
    * @type {HlsConfig}
    */
   static get DefaultConfig (): HlsConfig {
-    if (!Hls.defaultConfig) {
+    if (!Hls._defaultConfig) {
       return _hlsDefaultConfig;
     }
 
-    return Hls.defaultConfig;
+    return Hls._defaultConfig;
   }
 
   /**
    * @type {HlsConfig}
    */
   static set DefaultConfig (defaultConfig: HlsConfig) {
-    Hls.defaultConfig = defaultConfig;
+    Hls._defaultConfig = defaultConfig;
   }
 
   public config: HlsConfig;
@@ -295,22 +298,15 @@ export default class Hls extends Observer {
    * @constructs Hls
    * @param {HlsConfig} config
    */
-  constructor (config: any = {}) {
+  constructor (config: Partial<HlsConfig> = {}) {
     super();
 
     enableLogs(config.debug);
 
-    this.config = config;
-
-    const defaultConfig = Hls.DefaultConfig;
+    this.config = Object.assign(config, Hls.DefaultConfig);
 
     if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
-    }
-
-    for (let prop in defaultConfig) {
-      if (prop in config) continue;
-      config[prop] = defaultConfig[prop];
     }
 
     if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
@@ -411,7 +407,7 @@ export default class Hls extends Observer {
    */
   destroy () {
     _logger.log('destroy');
-    this.trigger(Events.DESTROYING);
+    this.trigger(Event.DESTROYING);
     this.detachMedia();
     this.coreComponents.forEach(component => {
       component.destroy();
@@ -428,7 +424,7 @@ export default class Hls extends Observer {
   attachMedia (media: HTMLMediaElement) {
     _logger.log('attachMedia');
     this.media = media;
-    this.trigger(Events.MEDIA_ATTACHING, { media: media });
+    this.trigger(Event.MEDIA_ATTACHING, { media: media });
   }
 
   /**
@@ -436,7 +432,7 @@ export default class Hls extends Observer {
    */
   detachMedia (): void {
     _logger.log('detachMedia');
-    this.trigger(Events.MEDIA_DETACHING);
+    this.trigger(Event.MEDIA_DETACHING);
     this.media = null;
   }
 
@@ -449,7 +445,7 @@ export default class Hls extends Observer {
     _logger.log(`loadSource: ${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(Events.MANIFEST_LOADING, { url: url });
+    this.trigger(Event.MANIFEST_LOADING, { url: url });
   }
 
   /**

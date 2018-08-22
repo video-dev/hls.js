@@ -6,23 +6,36 @@
 
 import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
-import Event from './events';
+import {Event} from './events';
 
+import Hls from './hls';
+
+const _logger: any = logger;
+
+// These are forbidden as they clash with the base class interface
 const FORBIDDEN_EVENT_NAMES = new Set([
   'hlsEventGeneric',
   'hlsHandlerDestroying',
   'hlsHandlerDestroyed'
 ]);
 
-class EventHandler {
-  constructor (hls, ...events) {
-    this.hls = hls;
+abstract class EventHandler {
+
+  private _hls: Hls;
+  private _handledEvents: string[];
+  private _useGenericHandler: boolean;
+
+  constructor (hls: Hls, ...events: Event[]) {
+    this._hls = hls;
+    this._handledEvents = events;
+    this._useGenericHandler = true;
+
     this.onEvent = this.onEvent.bind(this);
-    this.handledEvents = events;
-    this.useGenericHandler = true;
 
     this.registerListeners();
   }
+
+  get hls(): Hls { return this._hls };
 
   destroy () {
     this.onHandlerDestroying();
@@ -34,12 +47,12 @@ class EventHandler {
   onHandlerDestroyed () {}
 
   isEventHandler () {
-    return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
+    return typeof this._handledEvents === 'object' && this._handledEvents.length && typeof this.onEvent === 'function';
   }
 
   registerListeners () {
     if (this.isEventHandler()) {
-      this.handledEvents.forEach(function (event) {
+      this._handledEvents.forEach(function (event) {
         if (FORBIDDEN_EVENT_NAMES.has(event)) {
           throw new Error('Forbidden event-name: ' + event);
         }
@@ -51,7 +64,7 @@ class EventHandler {
 
   unregisterListeners () {
     if (this.isEventHandler()) {
-      this.handledEvents.forEach(function (event) {
+      this._handledEvents.forEach(function (event) {
         this.hls.off(event, this.onEvent);
       }, this);
     }
@@ -76,10 +89,12 @@ class EventHandler {
     try {
       eventToFunction.call(this, event, data).call();
     } catch (err) {
-      logger.error(`An internal error happened while handling event ${event}. Error message: "${err.message}". Here is a stacktrace:`, err);
+      _logger.error(`An internal error happened while handling event ${event}. Error message: "${err.message}". Here is a stacktrace:`, err);
       this.hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, err: err });
     }
   }
 }
 
 export default EventHandler;
+
+export { EventHandler };

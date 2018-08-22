@@ -1,4 +1,4 @@
-import EventHandler from './event-handler';
+import { EventHandler } from './event-handler';
 
 /**
  * Sub-class specialization of EventHandler base class.
@@ -29,7 +29,12 @@ import EventHandler from './event-handler';
  * task processing on the next main loop iteration (also known as "next tick" in the Node/JS runtime lingo).
  */
 
-export default class TaskLoop extends EventHandler {
+abstract class TaskLoop extends EventHandler {
+  private _tickInterval: number;
+  private _tickTimer: number;
+  private _tickCallCount: number;
+  private _boundTick: () => void;
+
   constructor (hls, ...events) {
     super(hls, ...events);
 
@@ -68,7 +73,7 @@ export default class TaskLoop extends EventHandler {
    */
   setInterval (millis) {
     if (!this._tickInterval) {
-      this._tickInterval = setInterval(this._boundTick, millis);
+      this._tickInterval = window.setInterval(this._boundTick, millis);
       return true;
     }
     return false;
@@ -79,7 +84,7 @@ export default class TaskLoop extends EventHandler {
    */
   clearInterval () {
     if (this._tickInterval) {
-      clearInterval(this._tickInterval);
+      window.clearInterval(this._tickInterval);
       this._tickInterval = null;
       return true;
     }
@@ -91,7 +96,7 @@ export default class TaskLoop extends EventHandler {
    */
   clearNextTick () {
     if (this._tickTimer) {
-      clearTimeout(this._tickTimer);
+      window.clearTimeout(this._tickTimer);
       this._tickTimer = null;
       return true;
     }
@@ -112,7 +117,7 @@ export default class TaskLoop extends EventHandler {
       if (this._tickCallCount > 1) {
         // make sure only one timer exists at any time at max
         this.clearNextTick();
-        this._tickTimer = setTimeout(this._boundTick, 0);
+        this._tickTimer = window.setTimeout(this._boundTick, 0);
       }
       this._tickCallCount = 0;
     }
@@ -122,5 +127,9 @@ export default class TaskLoop extends EventHandler {
    * For subclass to implement task logic
    * @abstract
    */
-  doTick () {}
+  abstract doTick ();
 }
+
+export default TaskLoop;
+
+export {TaskLoop};

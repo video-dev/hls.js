@@ -19,8 +19,9 @@ import SubtitleStreamController from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
 
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
+import { HlsConfig } from './hls';
 
-export var hlsDefaultConfig = {
+export var hlsDefaultConfig: HlsConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
   defaultAudioCodec: undefined, // used by stream-controller
@@ -64,10 +65,10 @@ export var hlsDefaultConfig = {
   appendErrorMaxRetry: 3, // used by buffer-controller
   loader: XhrLoader,
   // loader: FetchLoader,
-  fLoader: undefined, // used by fragment-loader
-  pLoader: undefined, // used by playlist-loader
-  xhrSetup: undefined, // used by xhr-loader
-  licenseXhrSetup: undefined, // used by eme-controller
+  fLoader: null, // used by fragment-loader
+  pLoader: null, // used by playlist-loader
+  xhrSetup: null, // used by xhr-loader
+  licenseXhrSetup: null, // used by eme-controller
   // fetchSetup: undefined,
   abrController: AbrController,
   bufferController: BufferController,
@@ -88,9 +89,26 @@ export var hlsDefaultConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
-  widevineLicenseUrl: undefined, // used by eme-controller
-  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess // used by eme-controller
+  widevineLicenseUrl: null, // used by eme-controller
+  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
+  audioStreamController: null,
+  audioTrackController: null,
+  emeController: null,
+  subtitleStreamController: SubtitleStreamController,
+  subtitleTrackController: SubtitleTrackController,
+  timelineController: TimelineController,
+  cueHandler: Cues,
+  enableCEA708Captions: true, // used by timeline-controller
+  enableWebVTT: true, // used by timeline-controller
+  captionsTextTrack1Label: 'English', // used by timeline-controller
+  captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
+  captionsTextTrack2Label: 'Spanish', // used by timeline-controller
+  captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
 };
+
+declare var __USE_SUBTITLES__: boolean;
+declare var __USE_ALT_AUDIO__: boolean;
+declare var __USE_EME_DRM__: boolean;
 
 if (__USE_SUBTITLES__) {
   hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
