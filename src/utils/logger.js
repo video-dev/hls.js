@@ -15,7 +15,8 @@ const console = self.console;
 function bindConsole (method, prefix, prependTime) {
   const logFn = console[method];
   if (!logFn) {
-    throw new Error('No console support for: ' + method);
+    // console.warn('No console support for: ' + method);
+    return noop;
   }
 
   if (prependTime) {
