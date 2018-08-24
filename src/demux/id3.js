@@ -182,6 +182,8 @@ class ID3 {
   static _decodeFrame (frame) {
     if (frame.type === 'PRIV') {
       return ID3._decodePrivFrame(frame);
+    } else if (frame.type === 'GEOB') {
+      return ID3._decodeGeobFrame(frame);
     } else if (frame.type[0] === 'T') {
       return ID3._decodeTextFrame(frame);
     } else if (frame.type[0] === 'W') {
@@ -211,6 +213,37 @@ class ID3 {
     }
 
     return undefined;
+  }
+
+  static _decodeGeobFrame (frame) {
+    /*
+      Format:
+      [0]   = {Text Encoding}
+      [1]   = {MIME type}
+      [2]   = {Filename}
+      [3]   = {Content description}
+      [4]   = {Encapsulated object}
+      */
+    if (frame.size < 2) {
+      return undefined;
+    }
+
+    const info = [];
+    let data = '';
+    let index = 1;
+
+    while (frame.data.subarray(index).length > 0) {
+      const frameData = ID3._utf8ArrayToStr(frame.data.subarray(index), true);
+      index += frameData.length + 1;
+
+      if (frame.data.subarray(index).length > 0) {
+        info.push(frameData);
+      } else {
+        data = frameData;
+      }
+    }
+
+    return { key: frame.type, info, data };
   }
 
   static _decodePrivFrame (frame) {
