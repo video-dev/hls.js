@@ -272,9 +272,9 @@ class AudioStreamController extends TaskLoop {
           let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
           if (bufferEnd < end) {
             if (bufferEnd > end - maxFragLookUpTolerance) {
-                maxFragLookUpTolerance = 0;
+              maxFragLookUpTolerance = 0;
             }
-             foundFrag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
+            foundFrag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
           } else {
             // reach end of playlist
             foundFrag = fragments[fragLen - 1];
