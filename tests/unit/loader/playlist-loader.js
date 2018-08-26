@@ -1,8 +1,8 @@
-const assert = require('assert');
-const bufferIsEqual = require('arraybuffer-equal');
-
 import PlaylistLoader from '../../../src/loader/playlist-loader';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
+
+const assert = require('assert');
+const bufferIsEqual = require('arraybuffer-equal');
 
 describe('PlaylistLoader', () => {
   it('parses empty manifest returns empty array', () => {

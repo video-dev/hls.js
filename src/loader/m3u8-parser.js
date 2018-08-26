@@ -1,5 +1,4 @@
-
-import URLToolkit from 'url-toolkit';
+import * as URLToolkit from 'url-toolkit';
 
 import Fragment from './fragment';
 import Level from './level';
