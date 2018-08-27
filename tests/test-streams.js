@@ -23,8 +23,9 @@ function createTestStream (url, description, live = false, abr = true, blacklist
  * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
  */
 function createTestStreamWithConfig (target, config) {
-  if (typeof target !== 'object')
+  if (typeof target !== 'object') {
     throw new Error('target should be object');
+  }
 
   const testStream = createTestStream(target.url, target.description, target.live, target.abr, target.blacklist_ua);
 
@@ -64,37 +65,39 @@ module.exports = {
     'blacklist_ua': ['internet explorer']
   },
   issue666: {
-    'url': 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    'url': 'https://video-dev.github.io/streams/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
     'description': 'hls.js/issues/666',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
   issue649: {
-    'url': 'http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
+    'url': 'https://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
     'description': 'hls.js/issues/649',
     'live': false,
     'abr': false
   },
   closedCaptions: {
-    'url': 'http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
+    'url': 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
     'description': 'CNN special report, with CC',
     'live': false,
     'abr': false,
     'blacklist_ua': ['safari']
   },
   oceansAES: {
-    'url': 'http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
+    'url': 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
     'description': 'AES encrypted,ABR',
     'live': false,
     'abr': true
   },
+  /*
   bbbAES: {
-    'url': 'http://streambox.fr/playlists/sample_aes/index.m3u8',
+    'url': 'https://video-dev.github.io/streams/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
   },
+  */
   mp3Audio: {
     'url': 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
     'description': 'MP3 VOD demo',
@@ -129,10 +132,12 @@ module.exports = {
     'live': false,
     'abr': false
   },
+  /*
   uspHLSAteam: createTestStream(
     'http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199',
     'A-Team movie trailer - HLS by Unified Streaming Platform'
   ),
+  */
   angelOneShakaWidevine: createTestStreamWithConfig({
     url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8',
     description: 'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
@@ -143,6 +148,12 @@ module.exports = {
     emeEnabled: true
   }
   ),
+  audioOnlyMultipleLevels: {
+    'url': 'https://s3.amazonaws.com/bob.jwplayer.com/~alex/121628/new_master.m3u8',
+    'description': 'Multiple non-alternate audio levels',
+    'live': false,
+    'abr': false
+  },
   pdtDuplicate: {
     url: 'https://playertest.longtailvideo.com/adaptive/artbeats/manifest.m3u8',
     description: 'Stream with duplicate sequential PDT values'

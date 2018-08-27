@@ -28,23 +28,25 @@ export function createCues (startTime, endTime, captionScreen) {
       row.cueStartTime = startTime;
 
       // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
-      if (startTime === endTime)
-
+      if (startTime === endTime) {
         endTime += 0.0001;
+      }
 
       cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
 
-      if (indent >= 16)
-
+      if (indent >= 16) {
         indent--;
-
-      else
+      } else {
         indent++;
+      }
 
-      // The row value specifies which of the fifteen screen rows should contain the caption text
-      // https://en.wikipedia.org/wiki/EIA-608#Control_commands
-      // Need to normalize this value to 1-15 since r is 0-based
-      cue.line = r + 1;
+      // VTTCue.line get's flakey when using controls, so let's now include line 13&14
+      // also, drop line 1 since it's to close to the top
+      if (navigator.userAgent.match(/Firefox\//)) {
+        cue.line = r + 1;
+      } else {
+        cue.line = (r > 7 ? r - 2 : r + 1);
+      }
 
       // Assume that if there's the same amount of white space (indent) before and after cue.text,
       // the text should be centered.

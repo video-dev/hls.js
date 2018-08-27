@@ -43,11 +43,13 @@ export class FragmentTracker extends EventHandler {
     const fragments = this.fragments;
     const bufferedFrags = Object.keys(fragments).filter(key => {
       const fragmentEntity = fragments[key];
-      if (fragmentEntity.body.type !== levelType)
+      if (fragmentEntity.body.type !== levelType) {
         return false;
+      }
 
-      if (!fragmentEntity.buffered)
+      if (!fragmentEntity.buffered) {
         return false;
+      }
 
       const frag = fragmentEntity.body;
       return frag.startPTS <= position && position <= frag.endPTS;
@@ -149,7 +151,7 @@ export class FragmentTracker extends EventHandler {
   }
 
   getFragmentKey (fragment) {
-    return `${fragment.type}_${fragment.level}_${fragment.sn}`;
+    return `${fragment.type}_${fragment.level}_${fragment.urlId}_${fragment.sn}`;
   }
 
   /**
@@ -189,12 +191,13 @@ export class FragmentTracker extends EventHandler {
     let state = FragmentState.NOT_LOADED;
 
     if (fragmentEntity !== undefined) {
-      if (!fragmentEntity.buffered)
+      if (!fragmentEntity.buffered) {
         state = FragmentState.APPENDING;
-      else if (this.isPartial(fragmentEntity) === true)
+      } else if (this.isPartial(fragmentEntity) === true) {
         state = FragmentState.PARTIAL;
-      else
+      } else {
         state = FragmentState.OK;
+      }
     }
 
     return state;
@@ -211,8 +214,9 @@ export class FragmentTracker extends EventHandler {
     for (let i = 0; i < timeRange.length; i++) {
       startTime = timeRange.start(i) - this.bufferPadding;
       endTime = timeRange.end(i) + this.bufferPadding;
-      if (startPTS >= startTime && endPTS <= endTime)
+      if (startPTS >= startTime && endPTS <= endTime) {
         return true;
+      }
 
       if (endPTS <= startTime) {
         // No need to check the rest of the timeRange as it is in order
@@ -227,16 +231,15 @@ export class FragmentTracker extends EventHandler {
    * Fires when a fragment loading is completed
    */
   onFragLoaded (e) {
-    let fragment = e.frag;
-    // dont track initsegment (for which sn is not a number)
-    if (Number.isFinite(fragment.sn)) {
-      let fragKey = this.getFragmentKey(fragment);
-      let fragmentEntity = {
+    const fragment = e.frag;
+    // don't track initsegment (for which sn is not a number)
+    // don't track frags used for bitrateTest, they're irrelevant.
+    if (Number.isFinite(fragment.sn) && !fragment.bitrateTest) {
+      this.fragments[this.getFragmentKey(fragment)] = {
         body: fragment,
         range: Object.create(null),
         buffered: false
       };
-      this.fragments[fragKey] = fragmentEntity;
     }
   }
 

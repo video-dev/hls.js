@@ -15,7 +15,9 @@ module.exports = function(config) {
 		frameworks: ['mocha', 'sinon'],
 
 		// list of files / patterns to load in the browser
-		files: ['tests/tests.webpack.js'],
+		files: [
+      'tests/unit/**/*.js'
+    ],
 
 		// list of files to exclude
 		exclude: [],
@@ -23,7 +25,7 @@ module.exports = function(config) {
 		// preprocess matching files before serving them to the browser
 		// available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
 		preprocessors: {
-			'tests/tests.webpack.js': ['webpack', 'sourcemap']
+		  '**/*.js': ['webpack', 'sourcemap']
 		},
 
 		// test results reporter to use

@@ -1,15 +1,16 @@
-let assert = require('assert');
 import BinarySearch from '../../../src/utils/binary-search';
+let assert = require('assert');
 
 describe('binary search util', function () {
   describe('search helper', function () {
     let list = null;
     let buildComparisonFunction = function (itemToSearchFor) {
       return function (candidate) {
-        if (candidate < itemToSearchFor)
+        if (candidate < itemToSearchFor) {
           return 1;
-        else if (candidate > itemToSearchFor)
+        } else if (candidate > itemToSearchFor) {
           return -1;
+        }
 
         return 0;
       };

@@ -1,5 +1,5 @@
-let assert = require('assert');
 import Events from '../../src/events';
+let assert = require('assert');
 
 function getAllCapsSnakeCaseToCamelCase (eventType) {
   let eventValue = '';
@@ -7,8 +7,9 @@ function getAllCapsSnakeCaseToCamelCase (eventType) {
 
   for (let i = 0; i < eventType.length; i++) {
     nextChar = eventType.charAt(i);
-    if (i !== 0 && !previousWasUscore)
+    if (i !== 0 && !previousWasUscore) {
       nextChar = nextChar.toLowerCase();
+    }
 
     previousWasUscore = false;
     if (nextChar === '_') {

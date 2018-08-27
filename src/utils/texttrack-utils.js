@@ -19,12 +19,12 @@ export function clearCurrentCues (track) {
     // When track.mode is disabled, track.cues will be null.
     // To guarantee the removal of cues, we need to temporarily
     // change the mode to hidden
-    if (trackMode === 'disabled')
+    if (trackMode === 'disabled') {
       track.mode = 'hidden';
+    }
 
-    while (track.cues && track.cues.length > 0)
+    while (track.cues && track.cues.length > 0) {
       track.removeCue(track.cues[0]);
-
-    track.mode = trackMode;
+    }
   }
 }

@@ -1,4 +1,4 @@
-import BufferHelper from '../helper/buffer-helper';
+import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Event from '../events';
 import { logger } from '../utils/logger';

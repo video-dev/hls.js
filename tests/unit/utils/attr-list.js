@@ -1,8 +1,8 @@
+import AttrList from '../../../src/utils/attr-list';
+
 const assert = require('assert');
 const bufferIsEqual = require('arraybuffer-equal');
 const deepStrictEqual = require('deep-strict-equal');
-
-import AttrList from '../../../src/utils/attr-list';
 
 describe('AttrList', () => {
   it('constructor() supports empty arguments', () => {

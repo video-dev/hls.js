@@ -9,7 +9,7 @@ export default class Fragment {
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
-    this.pdt = null;
+    this.programDateTime = null;
     this.rawProgramDateTime = null;
 
     // Holds the types of data this fragment supports
@@ -32,8 +32,9 @@ export default class Fragment {
   }
 
   get url () {
-    if (!this._url && this.relurl)
+    if (!this._url && this.relurl) {
       this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
+    }
 
     return this._url;
   }
@@ -43,11 +44,13 @@ export default class Fragment {
   }
 
   get byteRange () {
-    if (!this._byteRange && !this.rawByteRange)
+    if (!this._byteRange && !this.rawByteRange) {
       return [];
+    }
 
-    if (this._byteRange)
+    if (this._byteRange) {
       return this._byteRange;
+    }
 
     let byteRange = [];
     if (this.rawByteRange) {
@@ -76,19 +79,25 @@ export default class Fragment {
   }
 
   get decryptdata () {
-    if (!this._decryptdata)
+    if (!this._decryptdata) {
       this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
+    }
 
     return this._decryptdata;
   }
 
-  get endPdt () {
-    if (!Number.isFinite(this.pdt))
+  get endProgramDateTime () {
+    if (!Number.isFinite(this.programDateTime)) {
       return null;
+    }
 
     let duration = !Number.isFinite(this.duration) ? 0 : this.duration;
 
-    return this.pdt + (duration * 1000);
+    return this.programDateTime + (duration * 1000);
+  }
+
+  get encrypted () {
+    return !!((this.decryptdata && this.decryptdata.uri !== null) && (this.decryptdata.key === null));
   }
 
   /**
@@ -112,8 +121,9 @@ export default class Fragment {
   createInitializationVector (segmentNumber) {
     let uint8View = new Uint8Array(16);
 
-    for (let i = 12; i < 16; i++)
+    for (let i = 12; i < 16; i++) {
       uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+    }
 
     return uint8View;
   }
