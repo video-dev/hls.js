@@ -1,5 +1,5 @@
-const assert = require('assert');
 import OutputFilter from '../../../src/utils/output-filter';
+const assert = require('assert');
 
 describe('OutputFilter', () => {
   let createMockTimelineController = () => {

@@ -4,7 +4,7 @@ import sinon from 'sinon';
 import Hls from '../../../src/hls';
 
 import GapController from '../../../src/controller/gap-controller';
-import { FragmentTracker } from '../../../src/helper/fragment-tracker';
+import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 
 import Event from '../../../src/events';
 

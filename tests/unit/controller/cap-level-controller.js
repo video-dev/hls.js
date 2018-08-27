@@ -1,8 +1,8 @@
-const assert = require('assert');
-
 import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import CapLevelController from '../../../src/controller/cap-level-controller';
+
+const assert = require('assert');
 
 const levels = [
   {

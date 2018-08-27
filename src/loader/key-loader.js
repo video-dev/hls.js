@@ -18,8 +18,9 @@ class KeyLoader extends EventHandler {
   destroy () {
     for (let loaderName in this.loaders) {
       let loader = this.loaders[loaderName];
-      if (loader)
+      if (loader) {
         loader.destroy();
+      }
     }
     this.loaders = {};
     EventHandler.prototype.destroy.call(this);
@@ -67,8 +68,9 @@ class KeyLoader extends EventHandler {
   loaderror (response, context) {
     let frag = context.frag,
       loader = frag.loader;
-    if (loader)
+    if (loader) {
       loader.abort();
+    }
 
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: response });
@@ -77,8 +79,9 @@ class KeyLoader extends EventHandler {
   loadtimeout (stats, context) {
     let frag = context.frag,
       loader = frag.loader;
-    if (loader)
+    if (loader) {
       loader.abort();
+    }
 
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag: frag });

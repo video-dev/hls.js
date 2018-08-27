@@ -18,7 +18,7 @@ import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
 
-import { requestMediaKeySystemAccess } from './helper/mediakeys-helper';
+import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 
 export var hlsDefaultConfig = {
   autoStartLoad: true, // used by stream-controller
@@ -111,5 +111,6 @@ if (__USE_ALT_AUDIO__) {
   hlsDefaultConfig.audioTrackController = AudioTrackController;
 }
 
-if (__USE_EME_DRM__)
+if (__USE_EME_DRM__) {
   hlsDefaultConfig.emeController = EMEController;
+}

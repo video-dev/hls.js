@@ -12,5 +12,5 @@ coverage/
 # JetBrains
 .idea/*
 
-# Build reports
-dist/bundle-analyzer-report.*
+# Build
+/dist

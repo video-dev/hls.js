@@ -6,14 +6,17 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 
+const { performance } = window;
+
 class FPSController extends EventHandler {
   constructor (hls) {
     super(hls, Event.MEDIA_ATTACHING);
   }
 
   destroy () {
-    if (this.timer)
+    if (this.timer) {
       clearInterval(this.timer);
+    }
 
     this.isVideoPlaybackQualityAvailable = false;
   }
@@ -21,9 +24,10 @@ class FPSController extends EventHandler {
   onMediaAttaching (data) {
     const config = this.hls.config;
     if (config.capLevelOnFPSDrop) {
-      const video = this.video = data.media instanceof HTMLVideoElement ? data.media : null;
-      if (typeof video.getVideoPlaybackQuality === 'function')
+      const video = this.video = data.media instanceof window.HTMLVideoElement ? data.media : null;
+      if (typeof video.getVideoPlaybackQuality === 'function') {
         this.isVideoPlaybackQualityAvailable = true;
+      }
 
       clearInterval(this.timer);
       this.timer = setInterval(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);

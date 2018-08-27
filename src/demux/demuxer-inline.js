@@ -1,5 +1,8 @@
-/*  inline demuxer.
- *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
+/**
+ *
+ * inline demuxer: probe fragments and instantiate
+ * appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
+ *
  */
 
 import Event from '../events';
@@ -12,6 +15,12 @@ import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
+import { getSelfScope } from '../utils/get-self-scope';
+
+// see https://stackoverflow.com/a/11237259/589493
+const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
+const performance = global.performance;
+
 class DemuxerInline {
   constructor (observer, typeSupported, config, vendor) {
     this.observer = observer;
@@ -22,15 +31,17 @@ class DemuxerInline {
 
   destroy () {
     let demuxer = this.demuxer;
-    if (demuxer)
+    if (demuxer) {
       demuxer.destroy();
+    }
   }
 
   push (data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       let decrypter = this.decrypter;
-      if (decrypter == null)
+      if (decrypter == null) {
         decrypter = this.decrypter = new Decrypter(this.observer, this.config);
+      }
 
       let localthis = this;
       // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -100,8 +111,9 @@ class DemuxerInline {
       demuxer.resetTimeStamp(defaultInitPTS);
       remuxer.resetTimeStamp(defaultInitPTS);
     }
-    if (typeof demuxer.setDecryptData === 'function')
+    if (typeof demuxer.setDecryptData === 'function') {
       demuxer.setDecryptData(decryptdata);
+    }
 
     demuxer.append(data, timeOffset, contiguous, accurateTimeOffset);
   }

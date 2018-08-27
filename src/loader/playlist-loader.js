@@ -18,6 +18,8 @@ import { logger } from '../utils/logger';
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
 
+const { performance } = window;
+
 /**
  * `type` property values for this loaders' context object
  * @enum
@@ -128,8 +130,9 @@ class PlaylistLoader extends EventHandler {
   }
 
   resetInternalLoader (contextType) {
-    if (this.loaders[contextType])
+    if (this.loaders[contextType]) {
       delete this.loaders[contextType];
+    }
   }
 
   /**
@@ -138,8 +141,9 @@ class PlaylistLoader extends EventHandler {
   destroyInternalLoaders () {
     for (let contextType in this.loaders) {
       let loader = this.loaders[contextType];
-      if (loader)
+      if (loader) {
         loader.destroy();
+      }
 
       this.resetInternalLoader(contextType);
     }
@@ -152,7 +156,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   onManifestLoading (data) {
-    this.load(data.url, { type: ContextType.MANIFEST });
+    this.load(data.url, { type: ContextType.MANIFEST, level: 0, id: null });
   }
 
   onLevelLoading (data) {
@@ -160,15 +164,17 @@ class PlaylistLoader extends EventHandler {
   }
 
   onAudioTrackLoading (data) {
-    this.load(data.url, { type: ContextType.AUDIO_TRACK, id: data.id });
+    this.load(data.url, { type: ContextType.AUDIO_TRACK, level: null, id: data.id });
   }
 
   onSubtitleTrackLoading (data) {
-    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, id: data.id });
+    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, level: null, id: data.id });
   }
 
   load (url, context) {
     const config = this.hls.config;
+
+    logger.debug(`Loading playlist of type ${context.type}, level: ${context.level}, id: ${context.id}`);
 
     // Check if a loader for this context already exists
     let loader = this.getInternalLoader(context);
@@ -182,6 +188,7 @@ class PlaylistLoader extends EventHandler {
         loader.abort();
       }
     }
+
     let maxRetry,
       timeout,
       retryDelay,
@@ -207,7 +214,6 @@ class PlaylistLoader extends EventHandler {
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
       maxRetryDelay = config.levelLoadingMaxRetryTimeout;
-      logger.log(`Playlist loader for ${context.type} ${context.level || context.id}`);
       break;
     }
 
@@ -216,20 +222,20 @@ class PlaylistLoader extends EventHandler {
     context.url = url;
     context.responseType = context.responseType || ''; // FIXME: (should not be necessary to do this)
 
-    let loaderConfig, loaderCallbacks;
-
-    loaderConfig = {
+    const loaderConfig = {
       timeout,
       maxRetry,
       retryDelay,
       maxRetryDelay
     };
 
-    loaderCallbacks = {
+    const loaderCallbacks = {
       onSuccess: this.loadsuccess.bind(this),
       onError: this.loaderror.bind(this),
       onTimeout: this.loadtimeout.bind(this)
     };
+
+    logger.debug(`Calling internal loader delegate for URL: ${url}`);
 
     loader.load(context, loaderConfig, loaderCallbacks);
 
@@ -257,10 +263,11 @@ class PlaylistLoader extends EventHandler {
     }
 
     // Check if chunk-list or master. handle empty chunk list case (first EXTINF not signaled, but TARGETDURATION present)
-    if (string.indexOf('#EXTINF:') > 0 || string.indexOf('#EXT-X-TARGETDURATION:') > 0)
+    if (string.indexOf('#EXTINF:') > 0 || string.indexOf('#EXT-X-TARGETDURATION:') > 0) {
       this._handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
-    else
+    } else {
       this._handleMasterPlaylist(response, stats, context, networkDetails);
+    }
   }
 
   loaderror (response, context, networkDetails = null) {
@@ -298,8 +305,9 @@ class PlaylistLoader extends EventHandler {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
       let embeddedAudioFound = false;
       audioTracks.forEach(audioTrack => {
-        if (!audioTrack.url)
+        if (!audioTrack.url) {
           embeddedAudioFound = true;
+        }
       });
 
       // if no embedded audio track defined, but audio codec signaled in quality level,
@@ -333,10 +341,11 @@ class PlaylistLoader extends EventHandler {
 
     const url = PlaylistLoader.getResponseUrl(response, context);
 
-    const levelId = Number.isFinite(level) ? level : Number.isFinite(id) ? id : 0; // level -> id -> 0
+    const levelUrlId = Number.isFinite(id) ? id : 0;
+    const levelId = Number.isFinite(level) ? level : levelUrlId;
     const levelType = PlaylistLoader.mapContextToLevelType(context);
 
-    const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType);
+    const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType, levelUrlId);
     // set stats on level structure
     levelDetails.tload = stats.tload;
 
@@ -404,8 +413,9 @@ class PlaylistLoader extends EventHandler {
       const segRefInfo = segmentRef.info;
       const frag = context.levelDetails.fragments[index];
 
-      if (frag.byteRange.length === 0)
+      if (frag.byteRange.length === 0) {
         frag.rawByteRange = String(1 + segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
+      }
     });
 
     context.levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
@@ -423,6 +433,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   _handleNetworkError (response, context, networkDetails, timeout = false) {
+    logger.info(`A network error occured while loading a ${context.type}-type playlist`);
     let details;
     let fatal;
 

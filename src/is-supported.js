@@ -1,4 +1,4 @@
-import { getMediaSource } from './mediasource-helper';
+import { getMediaSource } from './utils/mediasource-helper';
 
 export function isSupported () {
   const mediaSource = getMediaSource();
