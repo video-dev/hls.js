@@ -218,30 +218,33 @@ class ID3 {
   static _decodeGeobFrame (frame) {
     /*
       Format:
-      [0]   = {Text Encoding}
-      [1]   = {MIME type}
-      [2]   = {Filename}
-      [3]   = {Content description}
-      [4]   = {Encapsulated object}
+      [0]   = {MIME type}
+      [1]   = {Filename}
+      [2]   = {Content description}
+      [3]   = {Encapsulated object}
       */
     if (frame.size < 2) {
       return undefined;
     }
 
-    const info = [];
-    let data = '';
     let index = 1;
 
-    while (frame.data.subarray(index).length > 0) {
-      const frameData = ID3._utf8ArrayToStr(frame.data.subarray(index), true);
-      index += frameData.length + 1;
+    const mime = ID3._utf8ArrayToStr(frame.data.subarray(index), true);
+    index += mime.length + 1;
 
-      if (frame.data.subarray(index).length > 0) {
-        info.push(frameData);
-      } else {
-        data = frameData;
-      }
-    }
+    const filename = ID3._utf8ArrayToStr(frame.data.subarray(index), true);
+    index += filename.length + 1;
+
+    const description = ID3._utf8ArrayToStr(frame.data.subarray(index), true);
+    index += description.length + 1;
+
+    const data = ID3._utf8ArrayToStr(frame.data.subarray(index), true);
+
+    const info = {
+      mime,
+      filename,
+      description
+    };
 
     return { key: frame.type, info, data };
   }
