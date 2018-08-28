@@ -155,6 +155,11 @@ design idea is pretty simple :
     - utility class to extract Exponential-Golomb coded data. needed by TS demuxer for SPS parsing.
   - [src/demux/id3.js][]
     - utility class that detect and parse ID3 tags, used by AAC demuxer
+    - currently supported ID3 frame types:
+        - GEOB
+        - PRIV
+        - TXXX
+        - WXXX
   - [src/demux/tsdemuxer.js][]
     - highly optimized TS demuxer:
      - parse PAT, PMT

@@ -1248,6 +1248,36 @@ let myHls = new Hls({
   }
 });
 ```
+## ID3 Metadata
+Metadata is available in the text tracks for streams containing ID3 tags. You can access the metadata via the `TextTrack` `cuechange` event.
+
+Example:
+
+```
+video.textTracks.addEventListener('addtrack', onTextTrack);
+
+const onCueChange = event => {
+  [].map.call(event.target.activeCues, cue => {
+    console.log(cue.value);
+  });
+};
+
+const onTextTrack = event => {
+  if (event.track.kind === 'metadata') {
+    event.track.oncuechange = onCueChange;
+  }
+};
+```
+Supported ID3 frame types:
+
+- GEOB
+  - data: `{ key: 'GEOB', info: { description: 'descriptionstring', filename: 'filename.js', mime: 'application/json' }, data: 'datastring' }`
+- PRIV
+  - data: `{ key: 'PRIV', info: 'infostring', data: ArrayBuffer }`
+- TXXX
+  - data: `{ key: 'TXXX', info: 'infostring', data: 'datastring' }`
+- WXXX
+  - data: `{ key: 'WXXX', info: 'infostring', data: 'datastring' }`
 
 ## Errors
 
