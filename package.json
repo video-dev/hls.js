@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "eventemitter3": "3.1.0",
-    "url-toolkit": "^2.1.2"
+    "url-toolkit": "^2.1.6"
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
