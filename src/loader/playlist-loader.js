@@ -447,8 +447,12 @@ class PlaylistLoader extends EventHandler {
       details = (timeout ? ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT : ErrorDetails.AUDIO_TRACK_LOAD_ERROR);
       fatal = false;
       break;
+    case ContextType.SUBTITLE_TRACK:
+      details = (timeout ? ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT : ErrorDetails.SUBTITLE_TRACK_LOAD_ERROR);
+      fatal = false;
+      break;
     default:
-      // details = ...?
+      logger.warn(`Handled network error for unknown context-type: ${context.type}`);
       fatal = false;
     }
 
