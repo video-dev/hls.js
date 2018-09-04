@@ -38,6 +38,10 @@ export const ErrorDetails = {
   AUDIO_TRACK_LOAD_ERROR: 'audioTrackLoadError',
   // Identifier for an audio track load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   AUDIO_TRACK_LOAD_TIMEOUT: 'audioTrackLoadTimeOut',
+  // Identifier for an subs track load error - data: { url : faulty URL, response : { code: error code, text: error text }}
+  SUBTITLE_TRACK_LOAD_ERROR: 'subtitleTrackLoadError',
+  // Identifier for an subs track load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
+  SUBTITLE_TRACK_LOAD_TIMEOUT: 'subtitleTrackLoadError',
   // Identifier for fragment load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   FRAG_LOAD_ERROR: 'fragLoadError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
