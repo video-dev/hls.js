@@ -995,21 +995,15 @@ class TSDemuxer {
 
     // scan for aac samples
     while (offset < len) {
-      if (ADTS.isHeader(data, offset)) {
-        if ((offset + 5) < len) {
-          let frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
-          if (frame) {
-            // logger.log(`${Math.round(frame.sample.pts)} : AAC`);
-            offset += frame.length;
-            stamp = frame.sample.pts;
-            frameIndex++;
-          } else {
-            // logger.log('Unable to parse AAC frame');
-            break;
-          }
+      if (ADTS.isHeader(data, offset) && (offset + 5) < len) {
+        let frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
+        if (frame) {
+          // logger.log(`${Math.round(frame.sample.pts)} : AAC`);
+          offset += frame.length;
+          stamp = frame.sample.pts;
+          frameIndex++;
         } else {
-          // If we don't have enough data to actually finish this ADTS frame, return
-          // and wait for more data
+          // logger.log('Unable to parse AAC frame');
           break;
         }
       } else {
