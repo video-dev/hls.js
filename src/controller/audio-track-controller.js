@@ -58,8 +58,8 @@ class AudioTrackController extends TaskLoop {
 
     /**
      * @public
-     * List of blacklisted audio track IDs (that have caused failure)
-     * @member {number[]}
+     * Flag hash of blacklisted track IDs (that have caused failure)
+     * @member {{[id: number] => boolean}}
      */
     this.trackIdBlacklist = Object.create(null);
 

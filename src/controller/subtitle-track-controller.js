@@ -2,6 +2,7 @@ import Event from '../events';
 import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
 import { filterSubtitleTracks } from '../utils/texttrack-utils';
+import { ErrorDetails, ErrorTypes } from '../errors';
 
 /**
  * Subtitle-track-controller, handles states of text-track selection combining user API inputs,
@@ -40,6 +41,13 @@ class SubtitleTrackController extends TaskLoop {
      * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
      */
     this.subtitleDisplay = true;
+
+    /**
+     * @public
+     * Flag hash of blacklisted track IDs (that have caused failure)
+     * @member {{[id: number] => boolean}}
+     */
+    this.trackIdBlacklist = Object.create(null);
 
     /**
      * @private
@@ -162,6 +170,24 @@ class SubtitleTrackController extends TaskLoop {
     // TODO: implement similar failure handling logic as in audio-track-controller
     //       -> for this we first need to declare some error codes for subtitle track loading
     //          and also actually trigger such an error event in subtitle-stream-controller
+
+    // Only handle network errors
+    if (data.type !== ErrorTypes.NETWORK_ERROR) {
+      return;
+    }
+
+    // If fatal network error, cancel update task
+    if (data.fatal) {
+      this.clearInterval();
+    }
+
+    // If not an subs-track loading error don't handle further
+    if (data.details !== ErrorDetails.SUBTITLE_TRACK_LOAD_ERROR) {
+      return;
+    }
+
+    logger.warn('Network failure on subtitle-track id:', data.context.id);
+    this._handleLoadError();
   }
 
   /**
@@ -336,6 +362,43 @@ class SubtitleTrackController extends TaskLoop {
 
     // Setting current subtitleTrack
     this._setSubtitleTrack(trackId);
+  }
+
+  /**
+   * @private
+   */
+  _handleLoadError () {
+    // First, let's black list current track id
+    this.trackIdBlacklist[this._trackId] = true;
+
+    // Let's try to fall back on a functional audio-track with the same group ID
+    const previousId = this.trackId;
+    const { name, language, groupId } = this.tracks[previousId];
+
+    logger.warn(`Loading failed on subtitle track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${language}"`);
+
+    // Find a non-blacklisted track ID with the same NAME
+    // At least a track that is not blacklisted, thus on another group-ID.
+    let newId = previousId;
+    for (let i = 0; i < this.tracks.length; i++) {
+      if (this.trackIdBlacklist[i]) {
+        continue;
+      }
+      const newTrack = this.tracks[i];
+      if (newTrack.name === name) {
+        newId = i;
+        break;
+      }
+    }
+
+    if (newId === previousId) {
+      logger.warn(`No fallback subtitle-track found for name/language: "${name}" / "${language}"`);
+      return;
+    }
+
+    logger.log('Attempting subtitle-track fallback id:', newId, 'group-id:', this.tracks[newId].groupId);
+
+    this._setSubtitleTrack(newId);
   }
 }
 
