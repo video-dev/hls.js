@@ -369,7 +369,7 @@ class SubtitleTrackController extends TaskLoop {
    */
   _handleLoadError () {
     // First, let's black list current track id
-    this.trackIdBlacklist[this._trackId] = true;
+    this.trackIdBlacklist[this.trackId] = true;
 
     // Let's try to fall back on a functional audio-track with the same group ID
     const previousId = this.trackId;
