@@ -135,6 +135,18 @@ class TimelineController extends EventHandler {
   }
 
   createCaptionsTrack (trackName) {
+    if (this.captionsTracks[trackName]) {
+      return;
+    }
+
+    if (this.config.renderNatively) {
+      this.createNativeTrack(trackName);
+    } else {
+      this.createNonNativeTrack(trackName);
+    }
+  }
+
+  createNativeTrack (trackName) {
     const { label, languageCode } = this.captionsProperties[trackName];
     const captionsTracks = this.captionsTracks;
     if (!captionsTracks[trackName]) {
@@ -153,6 +165,24 @@ class TimelineController extends EventHandler {
         sendAddTrackEvent(captionsTracks[trackName], this.media);
       }
     }
+  }
+
+  createNonNativeTrack (trackName) {
+    // Create a list of a single track for the provider to consume
+    const { captionsTracks, captionsProperties } = this;
+    const props = captionsProperties[trackName];
+    if (!props) {
+      return;
+    }
+    const label = props.label;
+    const track = {
+      '_id': trackName,
+      label,
+      kind: 'captions',
+      'default': false
+    };
+    captionsTracks[trackName] = track;
+    this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
   }
 
   createTextTrack (kind, label, lang) {
