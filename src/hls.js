@@ -417,7 +417,7 @@ export default class Hls {
    */
   set nextLoadLevel (level) {
     // Check newLevel before set manual level.
-    if (!this.isLevelValid(newLevel)) {
+    if (!this.isLevelValid(level)) {
       return;
     }
     this.levelController.nextLoadLevel = level;
@@ -560,7 +560,7 @@ export default class Hls {
    */
   set nextAutoLevel (nextLevel) {
     // Check newLevel before set manual level.
-    if (!this.isLevelValid(newLevel)) {
+    if (!this.isLevelValid(nextLevel)) {
       return;
     }
     const hls = this;
@@ -652,7 +652,7 @@ export default class Hls {
   
   isLevelValid(newLevel) {
     let levels = this.levelController.levels;
-    if (newLevel < -1 || newLevel >= levels.length) {
+    if (newLevel < -1 || (levels && newLevel >= levels.length)) {
       // invalid level id given, trigger error
       this.trigger(HlsEvents.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
