@@ -91,7 +91,6 @@ HTMLVideoElement control and events could be used seamlessly.
 
 ## they use hls.js in production !
 
-
 |[<img src="http://i.cdn.turner.com/adultswim/big/img/global/adultswim.jpg" width="120">](http://www.adultswim.com/videos/streams)|[<img src="https://www.akamai.com/fr/fr/multimedia/images/logo/akamai-logo.png" width="120">](https://www.akamai.com)|[<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Canal%2B.svg/2000px-Canal%2B.svg.png" width="120">](https://www.canalplus.fr)|[<img src="https://avatars2.githubusercontent.com/u/115313" width="120">](http://www.dailymotion.com)|
 |---|---|---|---|
 |[<img src="https://user-images.githubusercontent.com/4006693/44003595-baff193c-9e8f-11e8-9848-7bb91563499f.png" width="120">](https://freshlive.tv)|[<img src="https://flowplayer.org/media/img/logo-blue.png" width="120">](http://www.flowplayer.org)|[<img src="https://avatars1.githubusercontent.com/u/12554082?s=240" width="120">](http://www.foxsports.com.au)|[<img src="https://cloud.githubusercontent.com/assets/244265/12556435/dfaceb48-c353-11e5-971b-2c4429725469.png" width="120">](http://www.globo.com)|
@@ -102,11 +101,6 @@ HTMLVideoElement control and events could be used seamlessly.
 |[<img src="http://media.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)|[<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)|[<img src="https://s3.amazonaws.com/uploads.hipchat.com/87223/4876411/7Rybnl26ReFzlt3/jw-logo-red.png" width="120">](https://www.jwplayer.com)|[<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)|
 |[<img src="http://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)|[<img src="https://static3.1tv.ru/assets/web/logo-8ff7c63246d8df0397233927db52edbb.svg" width="120" height="120">](https://www.1tv.ru/) | [<img src="https://user-images.githubusercontent.com/1480052/40482633-c013ebce-5f55-11e8-96d5-b776415de0ce.png" width="120">](https://www.zdf.de) | [<img src="https://github.com/cdnbye/hlsjs-p2p-engine/blob/master/figs/cdnbye.png" width="120">](https://github.com/cdnbye/hlsjs-p2p-engine)| |
 |[<img src="https://streaming.cdn77.com/live-streaming-logo-dark.png" width="120">](https://streaming.cdn77.com/)| [<img src="https://avatars0.githubusercontent.com/u/7442371?s=200&v=4" width="120">](https://r7.com/)|[<img src="https://raw.githubusercontent.com/Novage/p2p-media-loader/gh-pages/images/p2pml-logo.png" width="120">](https://github.com/Novage/p2p-media-loader)
-
-
-
-
-
 
 ## Player Integration
 
@@ -121,14 +115,12 @@ hls.js is (being) integrated in the following players:
  - [Videojs](http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
  - [Fluid Player](https://www.fluidplayer.com)
 
-
 ## Chrome/Firefox integration
 
 made by [gramk](https://github.com/gramk/chrome-hls), plays hls from address bar and m3u8 links
 
  - Chrome [native-hls](https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof)
  - Firefox [native-hls](https://addons.mozilla.org/en-US/firefox/addon/native_hls_playback/)
-
 
 ## Dependencies
 
@@ -255,7 +247,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 
   hls.js is released under [Apache 2.0 License](LICENSE)
 
-## Contributing
+## Development and contributing - first steps
 
 Pull requests are welcome. Here is a quick guide on how to start.
 
@@ -273,6 +265,83 @@ npm run lint
  - Use [EditorConfig](http://editorconfig.org/) or at least stay consistent to the file formats defined in the `.editorconfig` file.
  - Develop in a topic branch, not master
  - Don't commit the updated `dist/hls.js` file in your PR. We'll take care of generating an updated build right before releasing a new tagged version.
+
+## Setup
+
+After cloning or pulling from the repository, first of all, make sure your local node-modules are up-to-date with the package deps:
+
+```
+npm install
+```
+
+## Build system (Webpack)
+
+Build all flavors:
+```
+npm install
+npm run build
+```
+
+Only debug:
+```
+npm run build:debug
+```
+
+Build and watch
+```
+npm run build:watch
+```
+
+Only specific flavor (known configs are: debug, dist, light, light-dist, demo):
+```
+npm run build -- --env.dist # replace "dist" by other configuration name, see above ^
+```
+Note: The "demo" config is always built.
+
+Build with bundle analyzer (to help optimize build size)
+```
+npm run build:analyze
+```
+
+## Linter (ESlint)
+
+Run linter:
+```
+npm run lint
+```
+
+Run linter with auto-fix mode:
+```
+npm run lint:fix
+```
+
+Run linter with errors only (no warnings)
+```
+npm run lint:quiet
+```
+
+## Automated tests (Mocha/Karma)
+
+Run all tests at once:
+```
+npm test
+```
+
+Run unit tests:
+```
+npm run test:unit
+```
+
+
+Run unit tests in watch mode:
+```
+npm run test:unit:watch
+```
+
+Run functional (integration) tests:
+```
+npm run test:func
+```
 
 ## Design
 

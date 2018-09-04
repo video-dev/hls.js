@@ -39,7 +39,7 @@ class SubtitleStreamController extends TaskLoop {
     this.state = State.STOPPED;
     this.tracksBuffered = [];
     this.currentTrackId = -1;
-    this.decrypter = new Decrypter(hls.observer, hls.config);
+    this.decrypter = new Decrypter(hls, hls.config);
   }
 
   onHandlerDestroyed () {
