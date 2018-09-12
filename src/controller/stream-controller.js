@@ -1360,14 +1360,16 @@ class StreamController extends TaskLoop {
       }
       break;
     case ErrorDetails.BUFFER_STALLED_ERROR:
+      /*
       logger.log('attempting buffer stall correction on load position');
       const MIN_FRAGMENT_DURATION = 0.5;
       const currentFragment = this.fragCurrent;
       if (this.media.currentTime < currentFragment.start) {
-        this.bufferStallCorrection = MIN_FRAGMENT_DURATION;
+        this._bufferStallCorrection = MIN_FRAGMENT_DURATION;
       }
       this.fragPrevious = null;
       this.startLoad(this.media.currentTime);
+      */
       break;
     default:
       break;
