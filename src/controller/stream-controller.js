@@ -331,6 +331,8 @@ class StreamController extends TaskLoop {
     }
 
     if (frag) {
+      logger.log('Found fragment:', frag);
+
       if (frag.encrypted) {
         logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
@@ -435,11 +437,51 @@ class StreamController extends TaskLoop {
       const lookupTolerance = (bufferEnd > end - config.maxFragLookUpTolerance) ? 0 : config.maxFragLookUpTolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+
+      logger.log(`Looking for fragment, target is at ${bufferEnd}`);
+
       frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
+
+      // Try to compensate the PTS-shift induced from initial timestamp, causing
+      // issues when seeking to unbuffered areas close to fragment boundaries.
+      // We should only need to do this when the `bufferEnd` is not in buffered time-range,
+      // i.e when this is a seek target which we have to resolve through a fragment load.
+      // TODO: Check that bufferEnd is not buffered TimeRange, and only do this in that case.
+      //       There is however currently no side-effect observed in doing this  for every lookup,
+      //       but it would be cleaner and avoid unnecessary logic to run.
+      let ptsError = frag.compareTimeInterval(bufferEnd);
+      if (ptsError !== 0) {
+        logger.warn('Fragment-lookup has PTS-shift:', ptsError);
+        let bufferEndPtsCorrection = 2 * ptsError;
+        logger.log('Applying PTS shift-correction to lookup target:', bufferEndPtsCorrection);
+        frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd + bufferEndPtsCorrection, lookupTolerance);
+      }
+
+      logger.log(`Fragment found is at [${frag.start}, ${frag.end}], lookup target was at ${bufferEnd}`);
+
+      /*
+      let errorCorrectionFactor = 0;
+      while(true) {
+        let ptsError = frag.compareTimeInterval(bufferEnd);
+        if (ptsError !== 0) {
+          logger.warn('Fragment lookup had PTS error:', ptsError);
+          let bufferEndPtsCorrection = ++errorCorrectionFactor * ptsError;
+          logger.log('Applying PTS error-correction to lookup target:', bufferEndPtsCorrection);
+          frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd + bufferEndPtsCorrection, lookupTolerance);
+        } else {
+          break;
+        }
+        if (errorCorrectionFactor > 32) {
+          throw new Error("Exceeded maximum error-correction iterations");
+          break;
+        }
+      }
+      */
     } else {
       // reach end of playlist
       frag = fragments[fragments.length - 1];
     }
+
     if (frag) {
       const curSNIdx = frag.sn - levelDetails.startSN;
       const sameLevel = fragPrevious && frag.level === fragPrevious.level;
