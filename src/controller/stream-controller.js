@@ -60,7 +60,7 @@ class StreamController extends TaskLoop {
     this.stallReported = false;
     this.gapController = null;
 
-    this.bufferStallCorrection = 0;
+    // this._bufferStallCorrection = 0;
   }
 
   onHandlerDestroying () {
@@ -311,15 +311,22 @@ class StreamController extends TaskLoop {
     }
     if (!frag) {
       let fragmentFindPosition;
-      if (this.bufferStallCorrection !== 0) {
-        fragmentFindPosition = pos - this.bufferStallCorrection;
-        logger.debug('Applying fragment-finder correction:', this.bufferStallCorrection);
-        this.bufferStallCorrection = 0;
+
+      /*
+      if (this._bufferStallCorrection !== 0) {
+        fragmentFindPosition = pos - this._bufferStallCorrection;
+        logger.debug('Applying fragment-finder correction:', this._bufferStallCorrection);
+        this._bufferStallCorrection = 0;
       } else {
         fragmentFindPosition = bufferEnd;
       }
+      */
 
-      logger.log(`stream-controller: _findFragment at ${fragmentFindPosition}, buffer-end ${bufferEnd}, position ${pos}`, fragPrevious);
+      fragmentFindPosition = bufferEnd;
+
+      logger.debug(`stream-controller: _findFragment at ${fragmentFindPosition},
+          buffer-end ${bufferEnd}, position ${pos}`, fragPrevious);
+
       frag = this._findFragment(fragPrevious, fragments, fragmentFindPosition, end, levelDetails);
     }
 
