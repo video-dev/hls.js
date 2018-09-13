@@ -7,7 +7,7 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-
+import { base64ToArrayBuffer } from '../utils/base64toArrayBuffer';
 import { logger } from '../utils/logger';
 
 const { XMLHttpRequest } = window;
@@ -72,18 +72,6 @@ const getSupportedMediaKeySystemConfigurations = function (keySystem, audioCodec
     throw Error('Unknown key-system: ' + keySystem);
   }
 };
-
-function base64ToArrayBuffer (base64String) {
-  let binaryString = window.atob(base64String);
-  let len = binaryString.length;
-  let bytes = new Uint8Array(len);
-
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-
-  return bytes;
-}
 
 /**
  * Controller to deal with encrypted media extensions (EME)
