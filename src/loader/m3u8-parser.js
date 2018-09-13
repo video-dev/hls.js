@@ -166,7 +166,7 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const title = (' ' + result[2]).slice(1);
         frag.title = title || null;
-        frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
+        frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
       } else if (result[3]) { // url
         if (Number.isFinite(frag.duration)) {
           const sn = currentSN++;
@@ -217,7 +217,7 @@ export default class M3U8Parser {
 
         switch (result[i]) {
         case '#':
-          frag.tagList.push(value2 ? [ value1, value2 ] : [ value1 ]);
+          frag.tagList.push(value2 ? [value1, value2] : [value1]);
           break;
         case 'PLAYLIST-TYPE':
           level.type = value1.toUpperCase();
@@ -252,7 +252,7 @@ export default class M3U8Parser {
             decryptiv = keyAttrs.hexadecimalInteger('IV');
           if (decryptmethod) {
             levelkey = new LevelKey();
-            if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
+            if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC', 'SAMPLE-AES-CTR'].indexOf(decryptmethod) >= 0)) {
               levelkey.method = decryptmethod;
               // URI to get the key
               levelkey.baseuri = baseurl;
@@ -302,6 +302,7 @@ export default class M3U8Parser {
     level.endSN = currentSN - 1;
     level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
     level.endCC = cc;
+    level.levelkey = levelkey;
 
     if (!level.initSegment && level.fragments.length) {
       // this is a bit lurky but HLS really has no other way to tell us
