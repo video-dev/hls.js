@@ -7,7 +7,7 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-
+import { base64ToArrayBuffer } from '../utils/base64toArrayBuffer';
 import { logger } from '../utils/logger';
 
 const { XMLHttpRequest } = window;
@@ -88,7 +88,9 @@ class EMEController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
-      Event.MANIFEST_PARSED
+      Event.MANIFEST_PARSED,
+      Event.LEVEL_LOADED,
+      Event.FRAG_LOADED
     );
 
     this._widevineLicenseUrl = hls.config.widevineLicenseUrl;
@@ -104,6 +106,9 @@ class EMEController extends EventHandler {
     this._isMediaEncrypted = false;
 
     this._requestLicenseFailureCount = 0;
+
+    this._initData = null;
+    this._initDataType = '';
   }
 
   /**
@@ -195,7 +200,6 @@ class EMEController extends EventHandler {
         mediaKeysListItem.mediaKeys = mediaKeys;
 
         logger.log(`Media-keys created for key-system "${keySystem}"`);
-
         this._onMediaKeysCreated();
       })
       .catch((err) => {
@@ -240,7 +244,6 @@ class EMEController extends EventHandler {
 
   _onMediaEncrypted (initDataType, initData) {
     logger.log(`Media is encrypted using "${initDataType}" init data type`);
-
     this._isMediaEncrypted = true;
     this._mediaEncryptionInitDataType = initDataType;
     this._mediaEncryptionInitData = initData;
@@ -356,7 +359,7 @@ class EMEController extends EventHandler {
 
     xhr.responseType = 'arraybuffer';
     xhr.onreadystatechange =
-        this._onLicenseRequestReadyStageChange.bind(this, xhr, url, keyMessage, callback);
+      this._onLicenseRequestReadyStageChange.bind(this, xhr, url, keyMessage, callback);
     return xhr;
   }
 
@@ -469,10 +472,11 @@ class EMEController extends EventHandler {
     this._media = media;
 
     // FIXME: also handle detaching media !
-
-    media.addEventListener('encrypted', (e) => {
-      this._onMediaEncrypted(e.initDataType, e.initData);
-    });
+    if (!this._hasSetMediaKeys) {
+      media.addEventListener('encrypted', (e) => {
+        this._onMediaEncrypted(e.initDataType, e.initData);
+      });
+    }
   }
 
   onManifestParsed (data) {
@@ -484,6 +488,38 @@ class EMEController extends EventHandler {
     const videoCodecs = data.levels.map((level) => level.videoCodec);
 
     this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
+  }
+
+  onFragLoaded () {
+    if (!this._emeEnabled) {
+      return;
+    }
+
+    // add initData and type if they are included in playlist
+    if (this._initData && !this._hasSetMediaKeys) {
+      this._onMediaEncrypted(this._initDataType, this._initData);
+    }
+  }
+
+  /**
+   * @param {object} data
+   */
+  onLevelLoaded (data) {
+    if (!this._emeEnabled) {
+      return;
+    }
+
+    if (data.details && data.details.levelkey) {
+      const levelkey = data.details.levelkey;
+      const details = levelkey.reluri.split(',');
+      const encoding = details[0];
+      const pssh = details[1];
+
+      if (encoding.includes('base64')) {
+        this._initDataType = 'cenc';
+        this._initData = base64ToArrayBuffer(pssh);
+      }
+    }
   }
 }
 

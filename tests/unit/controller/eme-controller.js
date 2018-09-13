@@ -4,7 +4,6 @@ import EventEmitter from 'events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
 
 import assert from 'assert';
-
 const sinon = require('sinon');
 
 const MediaMock = function () {
@@ -104,6 +103,44 @@ describe('EMEController', () => {
     setTimeout(() => {
       assert.equal(emeController.hls.trigger.args[0][1].details, ErrorDetails.KEY_SYSTEM_NO_KEYS);
       assert.equal(emeController.hls.trigger.args[1][1].details, ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+      done();
+    }, 0);
+  });
+
+  it('should retrieve PSSH data if it exists in manifest', (done) => {
+    let reqMediaKsAccessSpy = sinon.spy(() => {
+      return Promise.resolve({
+        // Media-keys mock
+      });
+    });
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+    });
+
+    const data = {
+      details: {
+        levelkey: {
+          reluri: 'data:text/plain;base64,AAAAPnBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB4iFnNoYWthX2NlYzJmNjRhYTc4OTBhMTFI49yVmwY='
+        }
+      }
+    };
+
+    emeController.onMediaAttached({ media });
+    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onLevelLoaded(data);
+
+    media.emit('encrypted', {
+      'initDataType': emeController._initDataType,
+      'initData': emeController._initData
+    });
+
+    assert.equal(emeController._initDataType, 'cenc');
+    assert.equal(62, emeController._initData.byteLength);
+
+    setTimeout(() => {
+      assert.equal(emeController._isMediaEncrypted, true);
       done();
     }, 0);
   });
