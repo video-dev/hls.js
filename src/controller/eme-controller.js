@@ -106,6 +106,9 @@ class EMEController extends EventHandler {
     this._isMediaEncrypted = false;
 
     this._requestLicenseFailureCount = 0;
+
+    this._initData = null;
+    this._initDataType = '';
   }
 
   /**
@@ -487,17 +490,20 @@ class EMEController extends EventHandler {
     this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
   }
 
-  onFragLoaded (data) {
+  onFragLoaded () {
     if (!this._emeEnabled) {
       return;
     }
 
     // add initData and type if they are not included in playlist
-    if (this.initData && !this._hasSetMediaKeys) {
-      this._onMediaEncrypted(this.initDataType, this.initData);
+    if (this._initData && !this._hasSetMediaKeys) {
+      this._onMediaEncrypted(this._initDataType, this._initData);
     }
   }
 
+  /**
+   * @param {object} data
+   */
   onLevelLoaded (data) {
     if (!this._emeEnabled) {
       return;
@@ -510,8 +516,8 @@ class EMEController extends EventHandler {
       const pssh = details[1];
 
       if (encoding.includes('base64')) {
-        this.initDataType = 'cenc';
-        this.initData = base64ToArrayBuffer(pssh);
+        this._initDataType = 'cenc';
+        this._initData = base64ToArrayBuffer(pssh);
       }
     }
   }

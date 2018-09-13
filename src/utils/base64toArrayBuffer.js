@@ -1,3 +1,7 @@
+/**
+ * @param {string} base64String base64 encoded string
+ * @returns {ArrayBuffer}
+ */
 export function base64ToArrayBuffer (base64String) {
   let binaryString = window.atob(base64String);
   let len = binaryString.length;
