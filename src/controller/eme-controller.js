@@ -495,7 +495,7 @@ class EMEController extends EventHandler {
       return;
     }
 
-    // add initData and type if they are not included in playlist
+    // add initData and type if they are included in playlist
     if (this._initData && !this._hasSetMediaKeys) {
       this._onMediaEncrypted(this._initDataType, this._initData);
     }
