@@ -55,16 +55,14 @@ class SubtitleStreamController extends TaskLoop {
     if (this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
       let queue = this.vttFragQueues[this.currentTrackId];
       let i = this.findQueuedFragmentIndexClosestToPlayhead(queue);
-      let frag;
       if (i >= 0) {
-        frag = queue[i];
-        queue.splice(i, 1);
+        this.fragCurrent = queue.splice(i, 1)[0];
       } else {
-        frag = queue.shift();
+        this.fragCurrent = queue.shift();
       }
 
-      this.fragCurrent = this.currentlyProcessing = frag;
-      this.hls.trigger(Event.FRAG_LOADING, { frag: frag });
+      this.currentlyProcessing = this.fragCurrent;
+      this.hls.trigger(Event.FRAG_LOADING, { frag: this.fragCurrent });
       this.state = State.FRAG_LOADING;
     }
   }
