@@ -7,10 +7,10 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { base64ToArrayBuffer } from '../utils/base64toArrayBuffer';
+import { base64ToArrayBuffer, buildPlayReadyPSSHBox } from '../utils/eme-helper';
 import { logger } from '../utils/logger';
 
-const { XMLHttpRequest } = window;
+const { XMLHttpRequest, atob, DOMParser } = window;
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
@@ -128,6 +128,8 @@ class EMEController extends EventHandler {
     case KeySystems.WIDEVINE:
       url = this._widevineLicenseUrl;
       break;
+    case KeySystems.PLAYREADY:
+      url = this._playreadyLicenseUrl;
     default:
       url = null;
       break;
@@ -222,7 +224,7 @@ class EMEController extends EventHandler {
     this._mediaKeysList.forEach((mediaKeysListItem) => {
       if (!mediaKeysListItem.mediaKeysSession) {
         mediaKeysListItem.mediaKeysSession = mediaKeysListItem.mediaKeys.createSession();
-        this._mediaKeysCreated = true;
+        this._haveKeySession = true;
         this._onNewMediaKeySession(mediaKeysListItem.mediaKeysSession);
       }
     });
@@ -410,32 +412,32 @@ class EMEController extends EventHandler {
      * @param {ArrayBuffer} keyMessage
      * @returns {ArrayBuffer} Challenge data posted to license server
      */
-  _generateLicenseRequestChallenge (keysListItem, keyMessage) {
+  _generateLicenseRequestChallenge (keysListItem, keyMessage, xhr) {
     let challenge;
 
     if (keysListItem.mediaKeySystemDomain === KeySystems.PLAYREADY) {
       logger.error('PlayReady is not supported (yet)');
 
       // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
-      /*
-        if (this.licenseType !== this.LICENSE_TYPE_WIDEVINE) {
-            // For PlayReady CDMs, we need to dig the Challenge out of the XML.
-            var keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
-            if (keyMessageXml.getElementsByTagName('Challenge')[0]) {
-                challenge = atob(keyMessageXml.getElementsByTagName('Challenge')[0].childNodes[0].nodeValue);
-            } else {
-                throw 'Cannot find <Challenge> in key message';
-            }
-            var headerNames = keyMessageXml.getElementsByTagName('name');
-            var headerValues = keyMessageXml.getElementsByTagName('value');
-            if (headerNames.length !== headerValues.length) {
-                throw 'Mismatched header <name>/<value> pair in key message';
-            }
-            for (var i = 0; i < headerNames.length; i++) {
-                xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
-            }
-        }
-        */
+      // For PlayReady CDMs, we need to dig the Challenge out of the XML.
+      const keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
+
+      if (keyMessageXml.getElementsByTagName('Challenge')[0]) {
+        challenge = atob(keyMessageXml.getElementsByTagName('Challenge')[0].childNodes[0].nodeValue);
+      } else {
+        throw Error('Cannot find <Challenge> in key message');
+      }
+
+      const headerNames = keyMessageXml.getElementsByTagName('name');
+      const headerValues = keyMessageXml.getElementsByTagName('value');
+
+      if (headerNames.length !== headerValues.length) {
+        throw Error('Mismatched header <name>/<value> pair in key message');
+      }
+
+      for (let i = 0; i < headerNames.length; i++) {
+        xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
+      }
     } else if (keysListItem.mediaKeySystemDomain === KeySystems.WIDEVINE) {
       // For Widevine CDMs, the challenge is the keyMessage.
       challenge = keyMessage;
@@ -465,7 +467,7 @@ class EMEController extends EventHandler {
 
     logger.log(`Sending license request to URL: ${url}`);
 
-    xhr.send(this._generateLicenseRequestChallenge(keysListItem, keyMessage));
+    xhr.send(this._generateLicenseRequestChallenge(keysListItem, keyMessage, xhr));
   }
 
   onMediaAttached (data) {
@@ -503,7 +505,7 @@ class EMEController extends EventHandler {
     }
 
     // add initData and type if they are included in playlist
-    if (this._initData && !this._hasSetMediaKeys && this._mediaKeysCreated) {
+    if (this._initData && !this._hasSetMediaKeys && this._haveKeySession) {
       this._onMediaEncrypted(this._initDataType, this._initData);
     }
   }
@@ -526,7 +528,11 @@ class EMEController extends EventHandler {
 
         if (levelkey.format === DRMIdentifiers[this._selectedDrm]) {
           if (encoding.includes('base64')) {
-            this._initData = base64ToArrayBuffer(pssh);
+            if (DRMIdentifiers[this._selectedDrm] === 'com.microsoft.playready') {
+              this._initData = buildPlayReadyPSSHBox(base64ToArrayBuffer(pssh));
+            } else {
+              this._initData = base64ToArrayBuffer(pssh);
+            }
           }
 
           this._initDataType = 'cenc';

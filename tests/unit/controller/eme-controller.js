@@ -61,7 +61,8 @@ describe('EMEController', () => {
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      drmSystem: 'WIDEVINE'
     });
 
     emeController.onMediaAttached({ media });
@@ -87,7 +88,8 @@ describe('EMEController', () => {
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      drmSystem: 'WIDEVINE'
     });
 
     let badData = {
@@ -116,14 +118,16 @@ describe('EMEController', () => {
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      drmSystem: 'WIDEVINE'
     });
 
     const data = {
       details: {
-        levelkey: {
+        drmInfo: [{
+          format: 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
           reluri: 'data:text/plain;base64,AAAAPnBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB4iFnNoYWthX2NlYzJmNjRhYTc4OTBhMTFI49yVmwY='
-        }
+        }]
       }
     };
 

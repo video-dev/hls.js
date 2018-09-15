@@ -1,4 +1,4 @@
-import { base64ToArrayBuffer } from '../../../src/utils/base64toArrayBuffer';
+import { base64ToArrayBuffer } from '../../../src/utils/eme-helper';
 import assert from 'assert';
 
 describe('base64 to arraybuffer util', function () {

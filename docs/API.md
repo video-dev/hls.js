@@ -78,6 +78,7 @@
   - [`licenseXhrSetup`](#licensexhrsetup)
   - [`drmSystem`](#drmsystem)
   - [`widevineLicenseUrl`](#widevinelicenseurl)
+  - [`playreadyLicenseUrl`](#playreadylicenseurl)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -998,12 +999,17 @@ This allows user to easily modify/setup XHR. See example below.
 
 Which DRM system use. (`WIDEVINE` or `PLAYREADY`)
 
-
 ### `widevineLicenseUrl`
 
 (default: `undefined`)
 
 Specify widevine license url.
+
+### `playreadyLicenseUrl`
+
+(default: `undefined`)
+
+Specify playready license url.
 
 ## Video Binding/Unbinding API
 

@@ -90,6 +90,7 @@ export var hlsDefaultConfig = {
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
   drmSystem: undefined, // used by eme-controller
+  playreadyLicenseUrl: undefined, // used by eme-controller
   requestMediaKeySystemAccessFunc:
             requestMediaKeySystemAccess // used by eme-controller
 };
