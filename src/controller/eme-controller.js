@@ -22,6 +22,11 @@ const KeySystems = {
   PLAYREADY: 'com.microsoft.playready'
 };
 
+const DRMIdentifiers = {
+  WIDEVINE: 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+  PLAYREADY: 'com.microsoft.playready'
+};
+
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration
  * @param {Array<string>} audioCodecs List of required audio codecs to support
@@ -96,6 +101,7 @@ class EMEController extends EventHandler {
     this._widevineLicenseUrl = hls.config.widevineLicenseUrl;
     this._licenseXhrSetup = hls.config.licenseXhrSetup;
     this._emeEnabled = hls.config.emeEnabled;
+    this._selectedDrm = hls.config.drmSystem;
 
     this._requestMediaKeySystemAccess = hls.config.requestMediaKeySystemAccessFunc;
 
@@ -216,6 +222,7 @@ class EMEController extends EventHandler {
     this._mediaKeysList.forEach((mediaKeysListItem) => {
       if (!mediaKeysListItem.mediaKeysSession) {
         mediaKeysListItem.mediaKeysSession = mediaKeysListItem.mediaKeys.createSession();
+        this._mediaKeysCreated = true;
         this._onNewMediaKeySession(mediaKeysListItem.mediaKeysSession);
       }
     });
@@ -487,7 +494,7 @@ class EMEController extends EventHandler {
     const audioCodecs = data.levels.map((level) => level.audioCodec);
     const videoCodecs = data.levels.map((level) => level.videoCodec);
 
-    this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
+    this._attemptKeySystemAccess(KeySystems[this._selectedDrm], audioCodecs, videoCodecs);
   }
 
   onFragLoaded () {
@@ -496,7 +503,7 @@ class EMEController extends EventHandler {
     }
 
     // add initData and type if they are included in playlist
-    if (this._initData && !this._hasSetMediaKeys) {
+    if (this._initData && !this._hasSetMediaKeys && this._mediaKeysCreated) {
       this._onMediaEncrypted(this._initDataType, this._initData);
     }
   }
@@ -509,16 +516,22 @@ class EMEController extends EventHandler {
       return;
     }
 
-    if (data.details && data.details.levelkey) {
-      const levelkey = data.details.levelkey;
-      const details = levelkey.reluri.split(',');
-      const encoding = details[0];
-      const pssh = details[1];
+    if (data.details && data.details.drmInfo && data.details.drmInfo.length > 0) {
+      const drmInfo = data.details.drmInfo;
 
-      if (encoding.includes('base64')) {
-        this._initDataType = 'cenc';
-        this._initData = base64ToArrayBuffer(pssh);
-      }
+      drmInfo.forEach((levelkey) => {
+        const details = levelkey.reluri.split(',');
+        const encoding = details[0];
+        const pssh = details[1];
+
+        if (levelkey.format === DRMIdentifiers[this._selectedDrm]) {
+          if (encoding.includes('base64')) {
+            this._initData = base64ToArrayBuffer(pssh);
+          }
+
+          this._initDataType = 'cenc';
+        }
+      });
     }
   }
 }

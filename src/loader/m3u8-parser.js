@@ -154,6 +154,7 @@ export default class M3U8Parser {
     let frag = new Fragment();
     let result;
     let i;
+    let drmInfo = [];
 
     let firstPdtIndex = null;
 
@@ -258,9 +259,12 @@ export default class M3U8Parser {
               levelkey.baseuri = baseurl;
               levelkey.reluri = decrypturi;
               levelkey.key = null;
+              levelkey.format = keyAttrs.KEYFORMAT;
               // Initialization Vector (IV)
               levelkey.iv = decryptiv;
             }
+
+            drmInfo.push(levelkey);
           }
           break;
         case 'START':
@@ -302,7 +306,7 @@ export default class M3U8Parser {
     level.endSN = currentSN - 1;
     level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
     level.endCC = cc;
-    level.levelkey = levelkey;
+    level.drmInfo = drmInfo;
 
     if (!level.initSegment && level.fragments.length) {
       // this is a bit lurky but HLS really has no other way to tell us
