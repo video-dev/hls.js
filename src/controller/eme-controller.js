@@ -72,6 +72,7 @@ const createWidevineMediaKeySystemConfigurations = function (audioCodecs, videoC
 const getSupportedMediaKeySystemConfigurations = function (keySystem, audioCodecs, videoCodecs) {
   switch (keySystem) {
   case KeySystems.WIDEVINE:
+  case KeySystems.PLAYREADY:
     return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs);
   default:
     throw Error('Unknown key-system: ' + keySystem);
@@ -99,6 +100,7 @@ class EMEController extends EventHandler {
     );
 
     this._widevineLicenseUrl = hls.config.widevineLicenseUrl;
+    this._playreadyLicenseUrl = hls.config.playreadyLicenseUrl;
     this._licenseXhrSetup = hls.config.licenseXhrSetup;
     this._emeEnabled = hls.config.emeEnabled;
     this._selectedDrm = hls.config.drmSystem;
@@ -130,6 +132,7 @@ class EMEController extends EventHandler {
       break;
     case KeySystems.PLAYREADY:
       url = this._playreadyLicenseUrl;
+      break;
     default:
       url = null;
       break;
@@ -416,8 +419,6 @@ class EMEController extends EventHandler {
     let challenge;
 
     if (keysListItem.mediaKeySystemDomain === KeySystems.PLAYREADY) {
-      logger.error('PlayReady is not supported (yet)');
-
       // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
       // For PlayReady CDMs, we need to dig the Challenge out of the XML.
       const keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
@@ -529,9 +530,11 @@ class EMEController extends EventHandler {
         if (levelkey.format === DRMIdentifiers[this._selectedDrm]) {
           if (encoding.includes('base64')) {
             if (DRMIdentifiers[this._selectedDrm] === 'com.microsoft.playready') {
-              this._initData = buildPlayReadyPSSHBox(base64ToArrayBuffer(pssh));
+              this._initData = buildPlayReadyPSSHBox(base64ToArrayBuffer(pssh)); // Playready is particular about the pssh box, so it needs to be handcrafted.
+            } else if (DRMIdentifiers[this._selectedDrm] === 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed') {
+              this._initData = base64ToArrayBuffer(pssh); // Widevine pssh box
             } else {
-              this._initData = base64ToArrayBuffer(pssh);
+              logger.log('not supported');
             }
           }
 
