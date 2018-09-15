@@ -74,6 +74,10 @@
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
+  - [`emeEnabled`](#emeenabled)
+  - [`licenseXhrSetup`](#licensexhrsetup)
+  - [`drmSystem`](#drmsystem)
+  - [`widevineLicenseUrl`](#widevinelicenseurl)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -964,6 +968,42 @@ then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality le
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
 Useful when browser or tab of the browser is not in the focus and bandwidth drops
 
+### `emeEnabled`
+
+(default: `false`)
+
+Whether or not to enable eme.
+
+### `licenseXhrSetup`
+
+(default: `undefined`)
+
+`XMLHttpRequest` customization callback for default XHR based loader.
+
+Parameter should be a function with two arguments `(xhr: XMLHttpRequest, url: string)`.
+If `licenseXhrSetup` is specified, default loader will invoke it before calling `xhr.send()`.
+This allows user to easily modify/setup XHR. See example below.
+
+```js
+  var config = {
+    licenseXhrSetup: function(xhr, url) {
+      xhr.setRequestHeader('Content-Type', 'text/xml; charset=utf-8'); //indicate resource is xml
+    }
+  }
+```
+
+### `drmSystem`
+
+(default: `undefined`)
+
+Which DRM system use. (`WIDEVINE` or `PLAYREADY`)
+
+
+### `widevineLicenseUrl`
+
+(default: `undefined`)
+
+Specify widevine license url.
 
 ## Video Binding/Unbinding API
 
