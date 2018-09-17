@@ -234,4 +234,3 @@ export class SubtitleStreamController extends TaskLoop {
     }
   }
 }
-
