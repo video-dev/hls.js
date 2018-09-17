@@ -415,7 +415,7 @@ class EMEController extends EventHandler {
      * @param {ArrayBuffer} keyMessage
      * @returns {ArrayBuffer} Challenge data posted to license server
      */
-  _generateLicenseRequestChallenge (keysListItem, keyMessage, xhr) {
+  _generateLicenseRequestChallenge (keysListItem, keyMessage) {
     let challenge;
 
     if (keysListItem.mediaKeySystemDomain === KeySystems.PLAYREADY) {
@@ -428,17 +428,6 @@ class EMEController extends EventHandler {
       } else {
         throw Error('Cannot find <Challenge> in key message');
       }
-
-      const headerNames = keyMessageXml.getElementsByTagName('name');
-      const headerValues = keyMessageXml.getElementsByTagName('value');
-
-      if (headerNames.length !== headerValues.length) {
-        throw Error('Mismatched header <name>/<value> pair in key message');
-      }
-
-      for (let i = 0; i < headerNames.length; i++) {
-        xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
-      }
     } else if (keysListItem.mediaKeySystemDomain === KeySystems.WIDEVINE) {
       // For Widevine CDMs, the challenge is the keyMessage.
       challenge = keyMessage;
@@ -447,6 +436,24 @@ class EMEController extends EventHandler {
     }
 
     return challenge;
+  }
+
+  /**
+   * @param {ArrayBuffer} keyMessage
+   * @param {XMLHttpRequest} xhr
+   */
+  _setPlayreadyHeaders (keyMessage, xhr) {
+    const keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
+    const headerNames = keyMessageXml.getElementsByTagName('name');
+    const headerValues = keyMessageXml.getElementsByTagName('value');
+
+    if (headerNames.length !== headerValues.length) {
+      throw Error('Mismatched header <name>/<value> pair in key message');
+    }
+
+    for (let i = 0; i < headerNames.length; i++) {
+      xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
+    }
   }
 
   _requestLicense (keyMessage, callback) {
@@ -465,10 +472,15 @@ class EMEController extends EventHandler {
 
     const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
     const xhr = this._createLicenseXhr(url, keyMessage, callback);
+    const challenge = this._generateLicenseRequestChallenge(keysListItem, keyMessage);
+
+    if (keysListItem.mediaKeySystemDomain === KeySystems.PLAYREADY) {
+      this._setPlayreadyHeaders(keyMessage, xhr);
+    }
 
     logger.log(`Sending license request to URL: ${url}`);
 
-    xhr.send(this._generateLicenseRequestChallenge(keysListItem, keyMessage, xhr));
+    xhr.send(challenge);
   }
 
   onMediaAttached (data) {
