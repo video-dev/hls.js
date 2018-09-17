@@ -422,9 +422,10 @@ class EMEController extends EventHandler {
       // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
       // For PlayReady CDMs, we need to dig the Challenge out of the XML.
       const keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
+      const challengeElement = keyMessageXml.querySelector('Challenge');
 
-      if (keyMessageXml.getElementsByTagName('Challenge')[0]) {
-        challenge = atob(keyMessageXml.getElementsByTagName('Challenge')[0].childNodes[0].nodeValue);
+      if (challengeElement) {
+        challenge = atob(challengeElement.textContent);
       } else {
         throw Error('Cannot find <Challenge> in key message');
       }
@@ -444,16 +445,11 @@ class EMEController extends EventHandler {
    */
   _setPlayreadyHeaders (keyMessage, xhr) {
     const keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
-    const headerNames = keyMessageXml.getElementsByTagName('name');
-    const headerValues = keyMessageXml.getElementsByTagName('value');
+    const headers = keyMessageXml.getElementsByTagName('HttpHeader');
 
-    if (headerNames.length !== headerValues.length) {
-      throw Error('Mismatched header <name>/<value> pair in key message');
-    }
-
-    for (let i = 0; i < headerNames.length; i++) {
-      xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
-    }
+    headers.forEach((header) => {
+      xhr.setRequestHeader(header.querySelector('name').textContent, header.querySelector('value').textContent);
+    });
   }
 
   _requestLicense (keyMessage, callback) {
