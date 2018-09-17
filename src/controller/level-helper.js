@@ -9,28 +9,30 @@
 
 import { logger } from '../utils/logger';
 
-import PlaylistLoader from '../loader/playlist-loader';
+import { LevelType } from '../loader/playlist-loader';
 
 /**
  *
- * @param {QualityLevel} level
- * @param {LevelType} type
- * @param {string} id
+ * @param {Level} level Level container object
+ * @param {'audio' | 'subtitle'} type Either audio or subtitle media
+ * @param {number} id Group-ID of media-group attached to this level
  */
 export function addGroupId (level, type, id) {
   switch (type) {
-  case PlaylistLoader.LevelType.AUDIO:
+  case LevelType.AUDIO:
     if (!level.audioGroupIds) {
       level.audioGroupIds = [];
     }
     level.audioGroupIds.push(id);
     break;
-  case PlaylistLoader.LevelType.SUBTITLE:
+  case LevelType.SUBTITLE:
     if (!level.subtitleGroupIds) {
       level.subtitleGroupIds = [];
     }
     level.subtitleGroupIds.push(id);
     break;
+  default:
+    throw new Error('Not a groupable media-type: ' + type);
   }
 }
 
