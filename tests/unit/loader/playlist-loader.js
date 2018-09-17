@@ -1,4 +1,4 @@
-import PlaylistLoader from '../../../src/loader/playlist-loader';
+import { PlaylistLoader } from '../../../src/loader/playlist-loader';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 
 const assert = require('assert');

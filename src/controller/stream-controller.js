@@ -8,7 +8,7 @@ import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { FragmentState } from './fragment-tracker';
 import Fragment from '../loader/fragment';
-import PlaylistLoader from '../loader/playlist-loader';
+import { PlaylistLoader } from '../loader/playlist-loader';
 import * as LevelHelper from './level-helper';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';

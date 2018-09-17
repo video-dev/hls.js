@@ -5,7 +5,7 @@ import {
   ErrorDetails
 } from './errors';
 
-import PlaylistLoader from './loader/playlist-loader';
+import { PlaylistLoader, LevelType } from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import KeyLoader from './loader/key-loader';
 
