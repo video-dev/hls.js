@@ -446,10 +446,12 @@ class EMEController extends EventHandler {
   _setPlayreadyHeaders (keyMessage, xhr) {
     const keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
     const headers = keyMessageXml.getElementsByTagName('HttpHeader');
+    let header;
 
-    headers.forEach((header) => {
+    for (let i = 0, len = headers.length; i < len; i++) {
+      header = headers[i];
       xhr.setRequestHeader(header.querySelector('name').textContent, header.querySelector('value').textContent);
-    });
+    }
   }
 
   _requestLicense (keyMessage, callback) {
