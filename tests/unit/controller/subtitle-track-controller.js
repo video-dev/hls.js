@@ -12,8 +12,8 @@ describe('SubtitleTrackController', () => {
   const fakeTracks = [
     { id: 0, url: 'baz', details: { live: false }, groupId: 'B', name: 'Foo' },
     { id: 1, url: 'bar', groupId: 'B', name: 'Bar' },
-    { id: 2, details: { live: true }, url: 'foo', group: 'A', name: 'Foo' },
-    { id: 3, details: { live: true }, url: 'foo', group: 'A', name: 'Bar' }
+    { id: 2, details: { live: true }, url: 'foo', groupId: 'A', name: 'Foo' },
+    { id: 3, details: { live: true }, url: 'foo', groupId: 'A', name: 'Bar' }
   ];
 
   beforeEach(() => {
