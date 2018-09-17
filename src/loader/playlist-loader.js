@@ -35,7 +35,7 @@ const ContextType = {
 /**
  * @enum {string}
  */
-const LevelType = {
+export const LevelType = {
   MAIN: 'main',
   AUDIO: 'audio',
   SUBTITLE: 'subtitle'
@@ -44,7 +44,7 @@ const LevelType = {
 /**
  * @constructor
  */
-class PlaylistLoader extends EventHandler {
+export class PlaylistLoader extends EventHandler {
   /**
    * @constructs
    * @param {Hls} hls
@@ -518,4 +518,3 @@ class PlaylistLoader extends EventHandler {
   }
 }
 
-export default PlaylistLoader;
