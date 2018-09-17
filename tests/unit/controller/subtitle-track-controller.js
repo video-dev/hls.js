@@ -1,6 +1,6 @@
 import sinon from 'sinon';
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
-import Hls from '../../../src/hls';
+import { Observer } from '../../../src/observer';
 
 const assert = require('assert');
 
@@ -8,14 +8,20 @@ describe('SubtitleTrackController', () => {
   let subtitleTrackController;
   let videoElement;
 
+  const fakeTracks = [
+    { id: 0, url: 'baz', details: { live: false } },
+    { id: 1, url: 'bar' },
+    { id: 2, details: { live: true }, url: 'foo' }
+  ];
+
   beforeEach(() => {
-    const hls = new Hls();
+    const hls = new Observer();
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
 
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = [{ id: 0, url: 'baz', details: { live: false } }, { id: 1, url: 'bar' }, { id: 2, details: { live: true }, url: 'foo' }];
+    subtitleTrackController.tracks = fakeTracks;
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
