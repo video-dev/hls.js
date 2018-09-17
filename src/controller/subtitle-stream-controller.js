@@ -12,16 +12,18 @@ import { FragmentState } from './fragment-tracker';
 
 const { performance } = window;
 
-const State = {
+export const SubtitleStreamControllerState = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',
   KEY_LOADING: 'KEY_LOADING',
   FRAG_LOADING: 'FRAG_LOADING'
 };
 
+const State = SubtitleStreamControllerState;
+
 const TICK_INTERVAL = 500; // how often to tick in ms
 
-class SubtitleStreamController extends TaskLoop {
+export class SubtitleStreamController extends TaskLoop {
   constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
@@ -232,4 +234,4 @@ class SubtitleStreamController extends TaskLoop {
     }
   }
 }
-export default SubtitleStreamController;
+
