@@ -1,8 +1,6 @@
 import PlaylistLoader from '../../../src/loader/playlist-loader';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 
-const bufferIsEqual = require('arraybuffer-equal');
-
 describe('PlaylistLoader', () => {
   it('parses empty manifest returns empty array', () => {
    expect(M3U8Parser.parseMasterPlaylist('', 'http://www.dailymotion.com')).to.deep.equal([]);
@@ -302,7 +300,7 @@ oceans_aes-audio=65000-video=236000-3.ts
       uint8View[i] = (sn >> 8 * (15 - i)) & 0xff;
     }
 
-    expect(bufferIsEqual(result.fragments[0].decryptdata.iv.buffer,uint8View.buffer)).to.be.true;
+    expect(result.fragments[0].decryptdata.iv.buffer).to.deep.equal(uint8View.buffer);
 
     sn = 3;
     uint8View = new Uint8Array(16);
@@ -310,7 +308,7 @@ oceans_aes-audio=65000-video=236000-3.ts
       uint8View[i] = (sn >> 8 * (15 - i)) & 0xff;
     }
 
-    expect(bufferIsEqual(result.fragments[2].decryptdata.iv.buffer,uint8View.buffer)).to.be.true;
+    expect(result.fragments[2].decryptdata.iv.buffer).to.deep.equal(uint8View.buffer);
   });
 
   it('parse level with #EXT-X-BYTERANGE before #EXTINF', () => {
