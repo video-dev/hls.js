@@ -15,6 +15,6 @@ describe('AbrController', () => {
     ];
     let abrController = new AbrController(hls);
     abrController.bwEstimator = new EwmaBandWidthEstimator(hls, 15, 4, 5e5);
-    expect(abrController.nextAutoLevel).to.equal(0)
+    expect(abrController.nextAutoLevel).to.equal(0);
   });
 });

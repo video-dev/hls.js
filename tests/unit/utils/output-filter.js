@@ -6,7 +6,7 @@ describe('OutputFilter', () => {
   let createMockTimelineController = () => {
     return {
       addCues: sandbox.spy(),
-      createCaptionsTrack: sandbox.spy(),
+      createCaptionsTrack: sandbox.spy()
     };
   };
 

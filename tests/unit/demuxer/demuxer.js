@@ -110,7 +110,7 @@ describe('Demuxer tests', function () {
       expect(obj1.contiguous).to.be.true;
       expect(obj1.duration).to.equal(duration, 'duration');
       expect(obj1.defaultInitPTS).to.equal(defaultInitPTS, 'defaultInitPTS');
-      expect(obj2[0]).to.equal(data, 'ArrayBuffer')
+      expect(obj2[0]).to.equal(data, 'ArrayBuffer');
     });
 
     demux.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);

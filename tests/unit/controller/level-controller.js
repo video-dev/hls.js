@@ -9,7 +9,6 @@ describe('LevelController', () => {
   let levelController;
   let triggerSpy;
 
-
   beforeEach(() => {
     hls = new HlsMock({}, sandbox);
     levelController = new LevelController(hls);
@@ -49,7 +48,7 @@ describe('LevelController', () => {
       fragmentError: false,
       level: 1,
       loadError: 0,
-      name: "240",
+      name: '240',
       url: [undefined],
       urlId: 0
     });
@@ -71,7 +70,7 @@ describe('LevelController', () => {
         fatal: true,
         url: undefined,
         reason: 'no level with compatible codecs found in manifest'
-      })
+      });
     });
 
     it('should trigger hlsManifestParsed when levels are found in the manifest', () => {
@@ -101,7 +100,7 @@ describe('LevelController', () => {
         levels: data.levels,
         stats: {},
         video: false
-      })
+      });
     });
 
     it.skip('should signal altAudio if present in the manifest', function () {
@@ -110,7 +109,7 @@ describe('LevelController', () => {
           { audioCodec: 'mp4a.40.5' }
         ],
         levels: [
-          { bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } },
+          { bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } }
         ],
         networkDetails: '',
         subtitles: [],

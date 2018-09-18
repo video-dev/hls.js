@@ -29,7 +29,7 @@ describe('Fragment finders', function () {
     it('finds a fragment with SN sequential to the previous fragment', function () {
       const actual = findFragmentByPTS(fragPrevious, mockFragments, bufferEnd, tolerance);
       const resultSN = actual ? actual.sn : -1;
-      expect(actual).to.equal(mockFragments[3],'Expected sn 3, found sn segment ' + resultSN);
+      expect(actual).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
       expect(binarySearchSpy).to.have.not.been.called;
     });
 

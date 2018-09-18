@@ -26,7 +26,7 @@ module.exports = function(config) {
 		// available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     // node_modules must not be webpacked or else Karma will fail to load frameworks
 		preprocessors: {
-		  'tests/**/*.js': ['webpack', 'sourcemap']
+		  'tests/index.js': ['webpack', 'sourcemap']
 		},
 
 		// test results reporter to use

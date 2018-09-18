@@ -97,7 +97,7 @@ describe('AttrList', () => {
     expect(list.decimalFloatingPoint('FLOAT')).to.be.NaN;
     expect(list.STRING).to.not.exist;
     expect(list.enumeratedString('ENUM')).to.not.exist;
-    expect(list.decimalResolution('RES')).to.not.exist
+    expect(list.decimalResolution('RES')).to.not.exist;
     expect(Object.keys(list)).to.have.lengthOf(0);
   });
 

@@ -17,4 +17,7 @@ module.exports = {
         "sinon": false,
         "xit": false
     },
+  "rules": {
+      "no-unused-expressions": 0
+  }
 };

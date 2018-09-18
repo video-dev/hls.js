@@ -92,8 +92,8 @@ describe('AudioTrackController', () => {
         details
       });
 
-     expect(audioTrackController.tracks[0].details).to.equal(details);
-     expect(audioTrackController.hasInterval()).to.be.false;
+      expect(audioTrackController.tracks[0].details).to.equal(details);
+      expect(audioTrackController.hasInterval()).to.be.false;
     });
 
     it('should set the track details from the event data and set the interval for a live track', () => {
@@ -109,8 +109,8 @@ describe('AudioTrackController', () => {
         details
       });
 
-     expect(audioTrackController.tracks[0].details).to.equal(details);
-     expect(audioTrackController.hasInterval()).to.be.true;
+      expect(audioTrackController.tracks[0].details).to.equal(details);
+      expect(audioTrackController.hasInterval()).to.be.true;
     });
   });
 
