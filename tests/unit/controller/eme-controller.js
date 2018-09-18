@@ -1,11 +1,7 @@
 import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
 import EventEmitter from 'events';
-import { ErrorTypes, ErrorDetails } from '../../../src/errors';
-
-import assert from 'assert';
-
-const sinon = require('sinon');
+import { ErrorDetails } from '../../../src/errors';
 
 const MediaMock = function () {
   let media = new EventEmitter();
@@ -37,8 +33,6 @@ describe('EMEController', () => {
     setupEach();
   });
 
-  it('should be constructable with an unconfigured Hls.js instance', () => {});
-
   it('should not do anything when `emeEnabled` is false (default)', () => {
     let reqMediaKsAccessSpy = sinon.spy();
 
@@ -49,8 +43,8 @@ describe('EMEController', () => {
     emeController.onMediaAttached({ media });
     emeController.onManifestParsed({ media });
 
-    assert.strictEqual(media.setMediaKeys.callCount, 0);
-    assert.strictEqual(reqMediaKsAccessSpy.callCount, 0);
+    expect(media.setMediaKeys.callCount).to.equal(0);
+    expect(reqMediaKsAccessSpy.callCount).to.equal(0);
   });
 
   it('should request keys when `emeEnabled` is true (but not set them)', (done) => {
@@ -67,14 +61,14 @@ describe('EMEController', () => {
 
     emeController.onMediaAttached({ media });
 
-    assert.strictEqual(media.setMediaKeys.callCount, 0);
-    assert.strictEqual(reqMediaKsAccessSpy.callCount, 0);
+    expect(media.setMediaKeys.callCount).to.equal(0);
+    expect(reqMediaKsAccessSpy.callCount).to.equal(0);
 
     emeController.onManifestParsed({ levels: fakeLevels });
 
     setTimeout(() => {
-      assert.strictEqual(media.setMediaKeys.callCount, 0);
-      assert.strictEqual(reqMediaKsAccessSpy.callCount, 1);
+      expect(media.setMediaKeys.callCount).to.equal(0);
+      expect(reqMediaKsAccessSpy.callCount).to.equal(1);
       done();
     }, 0);
   });
@@ -102,8 +96,8 @@ describe('EMEController', () => {
     media.emit('encrypted', badData);
 
     setTimeout(() => {
-      assert.equal(emeController.hls.trigger.args[0][1].details, ErrorDetails.KEY_SYSTEM_NO_KEYS);
-      assert.equal(emeController.hls.trigger.args[1][1].details, ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+      expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
+      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
       done();
     }, 0);
   });

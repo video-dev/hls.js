@@ -1,130 +1,126 @@
 import AttrList from '../../../src/utils/attr-list';
 
-const assert = require('assert');
-const bufferIsEqual = require('arraybuffer-equal');
-const deepStrictEqual = require('deep-strict-equal');
-
 describe('AttrList', () => {
   it('constructor() supports empty arguments', () => {
-    assert.deepEqual(new AttrList(), {});
-    assert.deepEqual(new AttrList({}), {});
-    assert.deepEqual(new AttrList(undefined), {});
+    expect(new AttrList()).to.deep.equal({});
+    expect(new AttrList({})).to.deep.equal({});
+    expect(new AttrList(undefined)).to.deep.equal({});
   });
   it('constructor() supports object argument', () => {
     const obj = { VALUE: '42' };
     const list = new AttrList(obj);
-    assert.strictEqual(list.decimalInteger('VALUE'), 42);
-    assert.strictEqual(Object.keys(list).length, 1);
+    expect(list.decimalInteger('VALUE')).to.equal(42);
+    expect(Object.keys(list).length).to.equal(1);
   });
 
   it('parses valid decimalInteger attribute', () => {
-    assert.strictEqual(new AttrList('INT=42').decimalInteger('INT'), 42);
-    assert.strictEqual(new AttrList('INT=0').decimalInteger('INT'), 0);
-    assert.strictEqual(new AttrList('INT="42"').decimalInteger('INT'), 42);
+    expect(new AttrList('INT=42').decimalInteger('INT')).to.equal(42);
+    expect(new AttrList('INT=0').decimalInteger('INT')).to.equal(0);
+    expect(new AttrList('INT="42"').decimalInteger('INT')).to.equal(42);
   });
 
   it('parses attribute with leading space', () => {
-    assert.strictEqual(new AttrList(' INT=42').decimalInteger('INT'), 42);
-    assert.strictEqual(new AttrList(' INT=0').decimalInteger('INT'), 0);
-    assert.strictEqual(new AttrList(' INT="42"').decimalInteger('INT'), 42);
+    expect(new AttrList(' INT=42').decimalInteger('INT')).to.equal(42);
+    expect(new AttrList(' INT=0').decimalInteger('INT')).to.equal(0);
+    expect(new AttrList(' INT="42"').decimalInteger('INT')).to.equal(42);
   });
 
   it('parses attribute with trailing space', () => {
-    assert.strictEqual(new AttrList('INT =42').decimalInteger('INT'), 42);
-    assert.strictEqual(new AttrList('INT =0').decimalInteger('INT'), 0);
-    assert.strictEqual(new AttrList('INT ="42"').decimalInteger('INT'), 42);
+    expect(new AttrList('INT =42').decimalInteger('INT')).to.equal(42);
+    expect(new AttrList('INT =0').decimalInteger('INT')).to.equal(0);
+    expect(new AttrList('INT ="42"').decimalInteger('INT')).to.equal(42);
   });
 
   it('parses valid hexadecimalInteger attribute', () => {
-    assert.strictEqual(new AttrList('HEX=0x42').hexadecimalIntegerAsNumber('HEX'), 0x42);
-    assert.strictEqual(new AttrList('HEX=0X42').hexadecimalIntegerAsNumber('HEX'), 0x42);
-    assert.strictEqual(new AttrList('HEX=0x0').hexadecimalIntegerAsNumber('HEX'), 0);
-    assert.strictEqual(new AttrList('HEX="0x42"').hexadecimalIntegerAsNumber('HEX'), 0x42);
+    expect(new AttrList('HEX=0x42').hexadecimalIntegerAsNumber('HEX')).to.equal(0x42);
+    expect(new AttrList('HEX=0X42').hexadecimalIntegerAsNumber('HEX')).to.equal(0x42);
+    expect(new AttrList('HEX=0x0').hexadecimalIntegerAsNumber('HEX')).to.equal(0);
+    expect(new AttrList('HEX="0x42"').hexadecimalIntegerAsNumber('HEX')).to.equal(0x42);
   });
   it('parses valid decimalFloatingPoint attribute', () => {
-    assert.strictEqual(new AttrList('FLOAT=0.42').decimalFloatingPoint('FLOAT'), 0.42);
-    assert.strictEqual(new AttrList('FLOAT=-0.42').decimalFloatingPoint('FLOAT'), -0.42);
-    assert.strictEqual(new AttrList('FLOAT=0').decimalFloatingPoint('FLOAT'), 0);
-    assert.strictEqual(new AttrList('FLOAT="0.42"').decimalFloatingPoint('FLOAT'), 0.42);
+    expect(new AttrList('FLOAT=0.42').decimalFloatingPoint('FLOAT')).to.equal(0.42);
+    expect(new AttrList('FLOAT=-0.42').decimalFloatingPoint('FLOAT')).to.equal(-0.42);
+    expect(new AttrList('FLOAT=0').decimalFloatingPoint('FLOAT')).to.equal(0);
+    expect(new AttrList('FLOAT="0.42"').decimalFloatingPoint('FLOAT')).to.equal(0.42);
   });
   it('parses valid quotedString attribute', () => {
-    assert.strictEqual(new AttrList('STRING="hi"').STRING, 'hi');
-    assert.strictEqual(new AttrList('STRING=""').STRING, '');
+    expect(new AttrList('STRING="hi"').STRING).to.equal('hi');
+    expect(new AttrList('STRING=""').STRING).to.equal('');
   });
   it('parses exotic quotedString attribute', () => {
     const list = new AttrList('STRING="hi,ENUM=OK,RES=4x2"');
-    assert.strictEqual(list.STRING, 'hi,ENUM=OK,RES=4x2');
-    assert.strictEqual(Object.keys(list).length, 1);
+    expect(list.STRING).to.equal('hi,ENUM=OK,RES=4x2');
+    expect(Object.keys(list).length).to.equal(1);
   });
   it('parses valid enumeratedString attribute', () => {
-    assert.strictEqual(new AttrList('ENUM=OK').enumeratedString('ENUM'), 'OK');
-    assert.strictEqual(new AttrList('ENUM="OK"').enumeratedString('ENUM'), 'OK');
+    expect(new AttrList('ENUM=OK').enumeratedString('ENUM')).to.equal('OK');
+    expect(new AttrList('ENUM="OK"').enumeratedString('ENUM')).to.equal('OK');
   });
   it('parses exotic enumeratedString attribute', () => {
-    assert.strictEqual(new AttrList('ENUM=1').enumeratedString('ENUM'), '1');
-    assert.strictEqual(new AttrList('ENUM=A=B').enumeratedString('ENUM'), 'A=B');
-    assert.strictEqual(new AttrList('ENUM=A=B=C').enumeratedString('ENUM'), 'A=B=C');
+    expect(new AttrList('ENUM=1').enumeratedString('ENUM')).to.equal('1');
+    expect(new AttrList('ENUM=A=B').enumeratedString('ENUM')).to.equal('A=B');
+    expect(new AttrList('ENUM=A=B=C').enumeratedString('ENUM')).to.equal('A=B=C');
     const list = new AttrList('ENUM1=A=B=C,ENUM2=42');
-    assert.strictEqual(list.enumeratedString('ENUM1'), 'A=B=C');
-    assert.strictEqual(list.enumeratedString('ENUM2'), '42');
+    expect(list.enumeratedString('ENUM1')).to.equal('A=B=C');
+    expect(list.enumeratedString('ENUM2')).to.equal('42');
   });
   it('parses valid decimalResolution attribute', () => {
-    assert(deepStrictEqual(new AttrList('RES=400x200').decimalResolution('RES'), { width: 400, height: 200 }));
-    assert(deepStrictEqual(new AttrList('RES=0x0').decimalResolution('RES'), { width: 0, height: 0 }));
-    assert(deepStrictEqual(new AttrList('RES="400x200"').decimalResolution('RES'), { width: 400, height: 200 }));
+    expect(new AttrList('RES=400x200').decimalResolution('RES')).to.deep.equal({ width: 400, height: 200 });
+    expect(new AttrList('RES=0x0').decimalResolution('RES')).to.deep.equal({ width: 0, height: 0 });
+    expect(new AttrList('RES="400x200"').decimalResolution('RES')).to.deep.equal({ width: 400, height: 200 });
   });
   it('handles invalid decimalResolution attribute', () => {
-    assert(deepStrictEqual(new AttrList('RES=400x-200').decimalResolution('RES'), undefined));
-    assert(deepStrictEqual(new AttrList('RES=400.5x200').decimalResolution('RES'), undefined));
-    assert(deepStrictEqual(new AttrList('RES=400x200.5').decimalResolution('RES'), undefined));
-    assert(deepStrictEqual(new AttrList('RES=400').decimalResolution('RES'), undefined));
-    assert(deepStrictEqual(new AttrList('RES=400x').decimalResolution('RES'), undefined));
-    assert(deepStrictEqual(new AttrList('RES=x200').decimalResolution('RES'), undefined));
-    assert(deepStrictEqual(new AttrList('RES=x').decimalResolution('RES'), undefined));
+    expect(new AttrList('RES=400x-200').decimalResolution('RES')).to.not.exist;
+    expect(new AttrList('RES=400.5x200').decimalResolution('RES')).to.not.exist;
+    expect(new AttrList('RES=400x200.5').decimalResolution('RES')).to.not.exist;
+    expect(new AttrList('RES=400').decimalResolution('RES')).to.not.exist;
+    expect(new AttrList('RES=400x').decimalResolution('RES')).to.not.exist;
+    expect(new AttrList('RES=x200').decimalResolution('RES')).to.not.exist;
+    expect(new AttrList('RES=x').decimalResolution('RES')).to.not.exist;
   });
 
   it('parses multiple attributes', () => {
     const list = new AttrList('INT=42,HEX=0x42,FLOAT=0.42,STRING="hi",ENUM=OK,RES=4x2');
-    assert.strictEqual(list.decimalInteger('INT'), 42);
-    assert.strictEqual(list.hexadecimalIntegerAsNumber('HEX'), 0x42);
-    assert.strictEqual(list.decimalFloatingPoint('FLOAT'), 0.42);
-    assert.strictEqual(list.STRING, 'hi');
-    assert.strictEqual(list.enumeratedString('ENUM'), 'OK');
-    assert(deepStrictEqual(list.decimalResolution('RES'), { width: 4, height: 2 }));
-    assert.strictEqual(Object.keys(list).length, 6);
+    expect(list.decimalInteger('INT')).to.equal(42);
+    expect(list.hexadecimalIntegerAsNumber('HEX')).to.equal(0x42);
+    expect(list.decimalFloatingPoint('FLOAT')).to.equal(0.42);
+    expect(list.STRING).to.equal('hi');
+    expect(list.enumeratedString('ENUM')).to.equal('OK');
+    expect(list.decimalResolution('RES')).to.deep.equal({ width: 4, height: 2 });
+    expect(Object.keys(list).length).to.equal(6);
   });
 
   it('handles missing attributes', () => {
     const list = new AttrList();
-    assert(isNaN(list.decimalInteger('INT')));
-    assert(isNaN(list.hexadecimalIntegerAsNumber('HEX')));
-    assert(isNaN(list.decimalFloatingPoint('FLOAT')));
-    assert.strictEqual(list.STRING, undefined);
-    assert.strictEqual(list.enumeratedString('ENUM'), undefined);
-    assert.strictEqual(list.decimalResolution('RES'), undefined);
-    assert.strictEqual(Object.keys(list).length, 0);
+    expect(list.decimalInteger('INT')).to.be.NaN;
+    expect(list.hexadecimalIntegerAsNumber('HEX')).to.be.NaN;
+    expect(list.decimalFloatingPoint('FLOAT')).to.be.NaN;
+    expect(list.STRING).to.not.exist;
+    expect(list.enumeratedString('ENUM')).to.not.exist;
+    expect(list.decimalResolution('RES')).to.not.exist
+    expect(Object.keys(list)).to.have.lengthOf(0);
   });
 
   it('parses dashed attribute names', () => {
     const list = new AttrList('INT-VALUE=42,H-E-X=0x42,-FLOAT=0.42,STRING-="hi",ENUM=OK');
-    assert.strictEqual(list.decimalInteger('INT-VALUE'), 42);
-    assert.strictEqual(list.hexadecimalIntegerAsNumber('H-E-X'), 0x42);
-    assert.strictEqual(list.decimalFloatingPoint('-FLOAT'), 0.42);
-    assert.strictEqual(list['STRING-'], 'hi');
-    assert.strictEqual(list.enumeratedString('ENUM'), 'OK');
-    assert.strictEqual(Object.keys(list).length, 5);
+    expect(list.decimalInteger('INT-VALUE')).to.equal(42);
+    expect(list.hexadecimalIntegerAsNumber('H-E-X')).to.equal(0x42);
+    expect(list.decimalFloatingPoint('-FLOAT')).to.equal(0.42);
+    expect(list['STRING-']).to.equal('hi');
+    expect(list.enumeratedString('ENUM')).to.equal('OK');
+    expect(Object.keys(list).length).to.equal(5);
   });
 
   it('handles hexadecimalInteger conversions', () => {
     const list = new AttrList('HEX1=0x0123456789abcdef0123456789abcdef,HEX2=0x123,HEX3=0x0');
-    assert(bufferIsEqual(list.hexadecimalInteger('HEX1').buffer, new Uint8Array([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]).buffer));
-    assert(bufferIsEqual(list.hexadecimalInteger('HEX2').buffer, new Uint8Array([0x01, 0x23]).buffer));
-    assert(bufferIsEqual(list.hexadecimalInteger('HEX3').buffer, new Uint8Array([0x0]).buffer));
+    expect(list.hexadecimalInteger('HEX1').buffer).to.deep.equal(new Uint8Array([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]).buffer);
+    expect(list.hexadecimalInteger('HEX2').buffer).to.deep.equal(new Uint8Array([0x01, 0x23]).buffer);
+    expect(list.hexadecimalInteger('HEX3').buffer).to.deep.equal(new Uint8Array([0x0]).buffer);
   });
 
   it('returns infinity on large number conversions', () => {
     const list = new AttrList('VAL=12345678901234567890,HEX=0x0123456789abcdef0123456789abcdef');
-    assert.strictEqual(list.decimalInteger('VAL'), Infinity);
-    assert.strictEqual(list.hexadecimalIntegerAsNumber('HEX'), Infinity);
+    expect(list.decimalInteger('VAL')).to.equal(Infinity);
+    expect(list.hexadecimalIntegerAsNumber('HEX')).to.equal(Infinity);
   });
 });

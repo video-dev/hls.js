@@ -3,6 +3,7 @@ module.exports = {
         "node": true,
         "commonjs": true,
         "es6": true,
+        "mocha": true
     },
     "globals": {
         // Test globals
@@ -12,8 +13,7 @@ module.exports = {
         "before": false,
         "beforeEach": false,
         "describe": false,
-        "expect": false,
-        "it": false,
+        "expect": true,
         "sinon": false,
         "xit": false
     },

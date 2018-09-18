@@ -1,8 +1,6 @@
 import TimelineController from '../../../src/controller/timeline-controller';
 import Hls from '../../../src/hls';
 
-const assert = require('assert');
-
 describe('TimelineController', () => {
   let timelineController;
   let hls;
@@ -21,8 +19,8 @@ describe('TimelineController', () => {
       subtitles: [{ id: 0 }, { id: 1, default: true }]
     });
 
-    assert.strictEqual(timelineController.textTracks[0].mode, 'disabled');
-    assert.strictEqual(timelineController.textTracks[1].mode, 'showing');
+    expect(timelineController.textTracks[0].mode).to.equal('disabled');
+    expect(timelineController.textTracks[1].mode).to.equal('showing');
   });
 
   it('should set default track to hidden when displaySubtitles is false', () => {
@@ -32,8 +30,8 @@ describe('TimelineController', () => {
       subtitles: [{ id: 0 }, { id: 1, default: true }]
     });
 
-    assert.strictEqual(timelineController.textTracks[0].mode, 'disabled');
-    assert.strictEqual(timelineController.textTracks[1].mode, 'hidden');
+    expect(timelineController.textTracks[0].mode).to.equal('disabled');
+    expect(timelineController.textTracks[1].mode).to.equal('hidden');
   });
 
   describe('reuse text track', () => {
@@ -45,26 +43,26 @@ describe('TimelineController', () => {
       });
 
       // text tracks model contain only newly added manifest tracks, in same order as in manifest
-      assert.strictEqual(timelineController.textTracks[0].label, 'en');
-      assert.strictEqual(timelineController.textTracks[1].label, 'ru');
-      assert.strictEqual(timelineController.textTracks.length, 2);
+      expect(timelineController.textTracks[0].label).to.equal('en');
+      expect(timelineController.textTracks[1].label).to.equal('ru');
+      expect(timelineController.textTracks).to.have.lengthOf(2);
       // text tracks of the media contain the newly added text tracks
-      assert.strictEqual(timelineController.media.textTracks[0].label, 'en');
-      assert.strictEqual(timelineController.media.textTracks[1].label, 'ru');
-      assert.strictEqual(timelineController.media.textTracks.length, 2);
+      expect(timelineController.media.textTracks[0].label).to.equal('en');
+      expect(timelineController.media.textTracks[1].label).to.equal('ru');
+      expect(timelineController.media.textTracks).to.have.lengthOf(2);
 
       timelineController.onManifestLoaded({
         subtitles: [{ id: 0, name: 'en' }, { id: 1, name: 'ru' }]
       });
 
       // text tracks model contain only newly added manifest tracks, in same order
-      assert.strictEqual(timelineController.textTracks[0].label, 'en');
-      assert.strictEqual(timelineController.textTracks[1].label, 'ru');
-      assert.strictEqual(timelineController.textTracks.length, 2);
+      expect(timelineController.textTracks[0].label).to.equal('en');
+      expect(timelineController.textTracks[1].label).to.equal('ru');
+      expect(timelineController.textTracks).to.have.lengthOf(2);
       // text tracks of the media contain the previously added text tracks, in same order as the manifest order
-      assert.strictEqual(timelineController.media.textTracks[0].label, 'en');
-      assert.strictEqual(timelineController.media.textTracks[1].label, 'ru');
-      assert.strictEqual(timelineController.media.textTracks.length, 2);
+      expect(timelineController.media.textTracks[0].label).to.equal('en');
+      expect(timelineController.media.textTracks[1].label).to.equal('ru');
+      expect(timelineController.media.textTracks).to.have.lengthOf(2);
     });
 
     it('should reuse text track when track order is not same between manifests', () => {
@@ -75,26 +73,26 @@ describe('TimelineController', () => {
       });
 
       // text tracks model contain only newly added manifest tracks, in same order as in manifest
-      assert.strictEqual(timelineController.textTracks[0].label, 'en');
-      assert.strictEqual(timelineController.textTracks[1].label, 'ru');
-      assert.strictEqual(timelineController.textTracks.length, 2);
+      expect(timelineController.textTracks[0].label).to.equal('en');
+      expect(timelineController.textTracks[1].label).to.equal('ru');
+      expect(timelineController.textTracks).to.have.lengthOf(2);
       // text tracks of the media contain the newly added text tracks
-      assert.strictEqual(timelineController.media.textTracks[0].label, 'en');
-      assert.strictEqual(timelineController.media.textTracks[1].label, 'ru');
-      assert.strictEqual(timelineController.media.textTracks.length, 2);
+      expect(timelineController.media.textTracks[0].label).to.equal('en');
+      expect(timelineController.media.textTracks[1].label).to.equal('ru');
+      expect(timelineController.media.textTracks).to.have.lengthOf(2);
 
       timelineController.onManifestLoaded({
         subtitles: [{ id: 0, name: 'ru' }, { id: 1, name: 'en' }]
       });
 
       // text tracks model contain only newly added manifest tracks, in same order
-      assert.strictEqual(timelineController.textTracks[0].label, 'ru');
-      assert.strictEqual(timelineController.textTracks[1].label, 'en');
-      assert.strictEqual(timelineController.textTracks.length, 2);
+      expect(timelineController.textTracks[0].label).to.equal('ru');
+      expect(timelineController.textTracks[1].label).to.equal('en');
+      expect(timelineController.textTracks).to.have.lengthOf(2);
       // text tracks of the media contain the previously added text tracks, in opposite order to the manifest order
-      assert.strictEqual(timelineController.media.textTracks[0].label, 'en');
-      assert.strictEqual(timelineController.media.textTracks[1].label, 'ru');
-      assert.strictEqual(timelineController.media.textTracks.length, 2);
+      expect(timelineController.media.textTracks[0].label).to.equal('en');
+      expect(timelineController.media.textTracks[1].label).to.equal('ru');
+      expect(timelineController.media.textTracks).to.have.lengthOf(2);
     });
   });
 });
