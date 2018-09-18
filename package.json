@@ -12,14 +12,6 @@
     "url": "https://github.com/video-dev/hls.js/issues"
   },
   "main": "./dist/hls.js",
-  "nyc": {
-    "reporter": [
-      "lcov"
-    ],
-    "exclude": [
-      "tests"
-    ]
-  },
   "publishConfig": {
     "access": "public"
   },
@@ -47,6 +39,7 @@
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
+    "chai": "^4.1.2",
     "chromedriver": "^2.38.3",
     "deep-strict-equal": "^0.2.0",
     "esdoc": "^1.1.0",
@@ -70,7 +63,7 @@
     "karma-coverage-istanbul-reporter": "^1.3.0",
     "karma-mocha": "^1.3.0",
     "karma-mocha-reporter": "^2.2.3",
-    "karma-sinon": "^1.0.5",
+    "karma-sinon-chai": "^2.0.2",
     "karma-sourcemap-loader": "^0.3.7",
     "karma-webpack": "^3.0.0",
     "mocha": "^3.0.2",
@@ -78,6 +71,7 @@
     "npm-run-all": "^4.1.3",
     "selenium-webdriver": "^3.1.0",
     "sinon": "^4.1.3",
+    "sinon-chai": "^3.2.0",
     "ts-loader": "^4.4.2",
     "ts-node": "^6.1.0",
     "typescript": "^2.9.1",
