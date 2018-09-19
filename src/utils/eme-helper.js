@@ -48,3 +48,27 @@ export function buildPlayReadyPSSHBox (binary) {
 
   return pssh;
 }
+
+/*
+* @param {ArrayBuffer} keyMessage
+* @returns {Array} playReadyHeaders
+*/
+export function makePlayreadyHeaders (keyMessage) {
+  const xmlContent = String.fromCharCode.apply(null, new Uint16Array(keyMessage));
+  const parser = new window.DOMParser();
+  const keyMessageXml = parser.parseFromString(xmlContent, 'application/xml');
+  const headers = keyMessageXml.getElementsByTagName('HttpHeader');
+  const playReadyHeaders = [];
+
+  let header;
+
+  for (let i = 0, len = headers.length; i < len; i++) {
+    header = headers[i];
+    playReadyHeaders.pushd({
+      'name': header.querySelector('name').textContent,
+      'value': header.querySelector('value').textContent
+    });
+  }
+
+  return playReadyHeaders;
+}

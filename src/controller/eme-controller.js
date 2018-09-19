@@ -7,7 +7,7 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { base64ToArrayBuffer, buildPlayReadyPSSHBox } from '../utils/eme-helper';
+import { base64ToArrayBuffer, buildPlayReadyPSSHBox, makePlayreadyHeaders } from '../utils/eme-helper';
 import { logger } from '../utils/logger';
 
 const { XMLHttpRequest, atob, DOMParser } = window;
@@ -439,21 +439,6 @@ class EMEController extends EventHandler {
     return challenge;
   }
 
-  /**
-   * @param {ArrayBuffer} keyMessage
-   * @param {XMLHttpRequest} xhr
-   */
-  _setPlayreadyHeaders (keyMessage, xhr) {
-    const keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
-    const headers = keyMessageXml.getElementsByTagName('HttpHeader');
-    let header;
-
-    for (let i = 0, len = headers.length; i < len; i++) {
-      header = headers[i];
-      xhr.setRequestHeader(header.querySelector('name').textContent, header.querySelector('value').textContent);
-    }
-  }
-
   _requestLicense (keyMessage, callback) {
     logger.log('Requesting content license for key-system');
 
@@ -473,7 +458,13 @@ class EMEController extends EventHandler {
     const challenge = this._generateLicenseRequestChallenge(keysListItem, keyMessage);
 
     if (keysListItem.mediaKeySystemDomain === KeySystems.PLAYREADY) {
-      this._setPlayreadyHeaders(keyMessage, xhr);
+      const playReadyHeaders = makePlayreadyHeaders(keyMessage);
+
+      if (playReadyHeaders.length > 0) {
+        playReadyHeaders.forEach((header) => {
+          xhr.setRequestHeader(header.name, header.value);
+        });
+      }
     }
 
     logger.log(`Sending license request to URL: ${url}`);
