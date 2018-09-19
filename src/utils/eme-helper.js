@@ -57,14 +57,14 @@ export function makePlayreadyHeaders (keyMessage) {
   const xmlContent = String.fromCharCode.apply(null, new Uint16Array(keyMessage));
   const parser = new window.DOMParser();
   const keyMessageXml = parser.parseFromString(xmlContent, 'application/xml');
-  const headers = keyMessageXml.getElementsByTagName('HttpHeader');
+  const headers = keyMessageXml.querySelectorAll('HttpHeader');
   const playReadyHeaders = [];
 
   let header;
 
   for (let i = 0, len = headers.length; i < len; i++) {
     header = headers[i];
-    playReadyHeaders.pushd({
+    playReadyHeaders.push({
       'name': header.querySelector('name').textContent,
       'value': header.querySelector('value').textContent
     });
