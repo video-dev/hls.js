@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/controller/buffer-controller.js | hls.js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="JavaScript HLS client using MediaSourceExtension"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="hls.js"><meta property="twitter:description" content="JavaScript HLS client using MediaSourceExtension"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/video-dev/hls.js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/event-handler.js~EventHandler.html">EventHandler</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/hls.js~Hls.html">Hls</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/observer.js~Observer.html">Observer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isSupported">isSupported</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/buffer-controller.js~BufferController.html">BufferController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/cap-level-controller.js~CapLevelController.html">CapLevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/eme-controller.js~EMEController.html">EMEController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fps-controller.js~FPSController.html">FPSController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fragment-tracker.js~FragmentTracker.html">FragmentTracker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/gap-controller.js~GapController.html">GapController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/id3-track-controller.js~ID3TrackController.html">ID3TrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/level-controller.js~LevelController.html">LevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/stream-controller.js~StreamController.html">StreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPDT">findFragmentByPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPTS">findFragmentByPTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fragmentWithinToleranceTest">fragmentWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-pdtWithinToleranceTest">pdtWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-addGroupId">addGroupId</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-mergeDetails">mergeDetails</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updatePTS">updatePTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-FragmentState">FragmentState</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/fast-aes-key.js~FastAESKey.html">FastAESKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-removePadding">removePadding</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#demux">demux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/aacdemuxer.js~AACDemuxer.html">AACDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer-inline.js~DemuxerInline.html">DemuxerInline</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer.js~Demuxer.html">Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/exp-golomb.js~ExpGolomb.html">ExpGolomb</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/id3.js~ID3.html">ID3</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp3demuxer.js~MP3Demuxer.html">MP3Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp4demuxer.js~MP4Demuxer.html">MP4Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/sample-aes.js~SampleAesDecrypter.html">SampleAesDecrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/tsdemuxer.js~TSDemuxer.html">TSDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-appendFrame">appendFrame</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getAudioConfig">getAudioConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFrameDuration">getFrameDuration</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFullFrameLength">getFullFrameLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getHeaderLength">getHeaderLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-initTrackConfig">initTrackConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeader">isHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeaderPattern">isHeaderPattern</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-parseFrameHeader">parseFrameHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-probe">probe</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-DemuxerWorker">DemuxerWorker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-utf8ArrayToStr">utf8ArrayToStr</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-MpegAudio">MpegAudio</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#loader">loader</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment-loader.js~FragmentLoader.html">FragmentLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/key-loader.js~KeyLoader.html">KeyLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level-key.js~LevelKey.html">LevelKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level.js~Level.html">Level</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/m3u8-parser.js~M3U8Parser.html">M3U8Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html">PlaylistLoader</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#polyfills">polyfills</a><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Number">Number</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#remux">remux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/aac-helper.js~AAC.html">AAC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/dummy-remuxer.js~DummyRemuxer.html">DummyRemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-generator.js~MP4.html">MP4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-remuxer.js~MP4Remuxer.html">MP4Remuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/passthrough-remuxer.js~PassThroughRemuxer.html">PassThroughRemuxer</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#utils">utils</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/attr-list.js~AttrList.html">AttrList</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/buffer-helper.js~BufferHelper.html">BufferHelper</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/cea-608-parser.js~Cea608Parser.html">Cea608Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma-bandwidth-estimator.js~EwmaBandWidthEstimator.html">EwmaBandWidthEstimator</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma.js~EWMA.html">EWMA</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/fetch-loader.js~FetchLoader.html">FetchLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/output-filter.js~OutputFilter.html">OutputFilter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/xhr-loader.js~XhrLoader.html">XhrLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecSupportedInMp4">isCodecSupportedInMp4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecType">isCodecType</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-newCue">newCue</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-adjustPts">adjustPts</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignDiscontinuities">alignDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignPDT">alignPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignStream">alignStream</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findDiscontinuousReferenceFrag">findDiscontinuousReferenceFrag</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFirstFragWithCC">findFirstFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getSelfScope">getSelfScope</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getMediaSource">getMediaSource</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Hex">Hex</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-logger">logger</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-requestMediaKeySystemAccess">requestMediaKeySystemAccess</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-WebVTTParser">WebVTTParser</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/controller/buffer-controller.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/*
+ * Buffer Controller
+*/
+
+import Event from &apos;../events&apos;;
+import EventHandler from &apos;../event-handler&apos;;
+import { logger } from &apos;../utils/logger&apos;;
+import { ErrorTypes, ErrorDetails } from &apos;../errors&apos;;
+import { getMediaSource } from &apos;../utils/mediasource-helper&apos;;
+
+const MediaSource = getMediaSource();
+
+class BufferController extends EventHandler {
+  constructor (hls) {
+    super(hls,
+      Event.MEDIA_ATTACHING,
+      Event.MEDIA_DETACHING,
+      Event.MANIFEST_PARSED,
+      Event.BUFFER_RESET,
+      Event.BUFFER_APPENDING,
+      Event.BUFFER_CODECS,
+      Event.BUFFER_EOS,
+      Event.BUFFER_FLUSHING,
+      Event.LEVEL_PTS_UPDATED,
+      Event.LEVEL_UPDATED);
+
+    // the value that we have set mediasource.duration to
+    // (the actual duration may be tweaked slighly by the browser)
+    this._msDuration = null;
+    // the value that we want to set mediaSource.duration to
+    this._levelDuration = null;
+    // current stream state: true - for live broadcast, false - for VoD content
+    this._live = null;
+    // cache the self generated object url to detect hijack of video tag
+    this._objectUrl = null;
+
+    // Source Buffer listeners
+    this.onsbue = this.onSBUpdateEnd.bind(this);
+    this.onsbe = this.onSBUpdateError.bind(this);
+    this.pendingTracks = {};
+    this.tracks = {};
+  }
+
+  destroy () {
+    EventHandler.prototype.destroy.call(this);
+  }
+
+  onLevelPtsUpdated (data) {
+    let type = data.type;
+    let audioTrack = this.tracks.audio;
+
+    // Adjusting `SourceBuffer.timestampOffset` (desired point in the timeline where the next frames should be appended)
+    // in Chrome browser when we detect MPEG audio container and time delta between level PTS and `SourceBuffer.timestampOffset`
+    // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos). At the time of change we issue
+    // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
+    // event if SB is in updating state.
+    // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
+
+    if (type === &apos;audio&apos; &amp;&amp; audioTrack &amp;&amp; audioTrack.container === &apos;audio/mpeg&apos;) { // Chrome audio mp3 track
+      let audioBuffer = this.sourceBuffer.audio;
+      let delta = Math.abs(audioBuffer.timestampOffset - data.start);
+
+      // adjust timestamp offset if time delta is greater than 100ms
+      if (delta &gt; 0.1) {
+        let updating = audioBuffer.updating;
+
+        try {
+          audioBuffer.abort();
+        } catch (err) {
+          updating = true;
+          logger.warn(&apos;can not abort audio buffer: &apos; + err);
+        }
+
+        if (!updating) {
+          logger.warn(&apos;change mpeg audio timestamp offset from &apos; + audioBuffer.timestampOffset + &apos; to &apos; + data.start);
+          audioBuffer.timestampOffset = data.start;
+        } else {
+          this.audioTimestampOffset = data.start;
+        }
+      }
+    }
+  }
+
+  onManifestParsed (data) {
+    let audioExpected = data.audio,
+      videoExpected = data.video || (data.levels.length &amp;&amp; data.altAudio),
+      sourceBufferNb = 0;
+    // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
+    // sourcebuffers will be created all at once when the expected nb of tracks will be reached
+    // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
+    // it will contain the expected nb of source buffers, no need to compute it
+    if (data.altAudio &amp;&amp; (audioExpected || videoExpected)) {
+      sourceBufferNb = (audioExpected ? 1 : 0) + (videoExpected ? 1 : 0);
+      logger.log(`${sourceBufferNb} sourceBuffer(s) expected`);
+    }
+    this.sourceBufferNb = sourceBufferNb;
+  }
+
+  onMediaAttaching (data) {
+    let media = this.media = data.media;
+    if (media) {
+      // setup the media source
+      let ms = this.mediaSource = new MediaSource();
+      // Media Source listeners
+      this.onmso = this.onMediaSourceOpen.bind(this);
+      this.onmse = this.onMediaSourceEnded.bind(this);
+      this.onmsc = this.onMediaSourceClose.bind(this);
+      ms.addEventListener(&apos;sourceopen&apos;, this.onmso);
+      ms.addEventListener(&apos;sourceended&apos;, this.onmse);
+      ms.addEventListener(&apos;sourceclose&apos;, this.onmsc);
+      // link video and media Source
+      media.src = window.URL.createObjectURL(ms);
+      // cache the locally generated object url
+      this._objectUrl = media.src;
+    }
+  }
+
+  onMediaDetaching () {
+    logger.log(&apos;media source detaching&apos;);
+    let ms = this.mediaSource;
+    if (ms) {
+      if (ms.readyState === &apos;open&apos;) {
+        try {
+          // endOfStream could trigger exception if any sourcebuffer is in updating state
+          // we don&apos;t really care about checking sourcebuffer state here,
+          // as we are anyway detaching the MediaSource
+          // let&apos;s just avoid this exception to propagate
+          ms.endOfStream();
+        } catch (err) {
+          logger.warn(`onMediaDetaching:${err.message} while calling endOfStream`);
+        }
+      }
+      ms.removeEventListener(&apos;sourceopen&apos;, this.onmso);
+      ms.removeEventListener(&apos;sourceended&apos;, this.onmse);
+      ms.removeEventListener(&apos;sourceclose&apos;, this.onmsc);
+
+      // Detach properly the MediaSource from the HTMLMediaElement as
+      // suggested in https://github.com/w3c/media-source/issues/53.
+      if (this.media) {
+        window.URL.revokeObjectURL(this._objectUrl);
+
+        // clean up video tag src only if it&apos;s our own url. some external libraries might
+        // hijack the video tag and change its &apos;src&apos; without destroying the Hls instance first
+        if (this.media.src === this._objectUrl) {
+          this.media.removeAttribute(&apos;src&apos;);
+          this.media.load();
+        } else {
+          logger.warn(&apos;media.src was changed by a third party - skip cleanup&apos;);
+        }
+      }
+
+      this.mediaSource = null;
+      this.media = null;
+      this._objectUrl = null;
+      this.pendingTracks = {};
+      this.tracks = {};
+      this.sourceBuffer = {};
+      this.flushRange = [];
+      this.segments = [];
+      this.appended = 0;
+    }
+    this.onmso = this.onmse = this.onmsc = null;
+    this.hls.trigger(Event.MEDIA_DETACHED);
+  }
+
+  onMediaSourceOpen () {
+    logger.log(&apos;media source opened&apos;);
+    this.hls.trigger(Event.MEDIA_ATTACHED, { media: this.media });
+    let mediaSource = this.mediaSource;
+    if (mediaSource) {
+      // once received, don&apos;t listen anymore to sourceopen event
+      mediaSource.removeEventListener(&apos;sourceopen&apos;, this.onmso);
+    }
+    this.checkPendingTracks();
+  }
+
+  checkPendingTracks () {
+    // if any buffer codecs pending, check if we have enough to create sourceBuffers
+    let pendingTracks = this.pendingTracks,
+      pendingTracksNb = Object.keys(pendingTracks).length;
+    // if any pending tracks and (if nb of pending tracks gt or equal than expected nb or if unknown expected nb)
+    if (pendingTracksNb &amp;&amp; (
+      this.sourceBufferNb &lt;= pendingTracksNb ||
+        this.sourceBufferNb === 0)) {
+      // ok, let&apos;s create them now !
+      this.createSourceBuffers(pendingTracks);
+      this.pendingTracks = {};
+      // append any pending segments now !
+      this.doAppending();
+    }
+  }
+
+  onMediaSourceClose () {
+    logger.log(&apos;media source closed&apos;);
+  }
+
+  onMediaSourceEnded () {
+    logger.log(&apos;media source ended&apos;);
+  }
+
+  onSBUpdateEnd () {
+    // update timestampOffset
+    if (this.audioTimestampOffset) {
+      let audioBuffer = this.sourceBuffer.audio;
+      logger.warn(&apos;change mpeg audio timestamp offset from &apos; + audioBuffer.timestampOffset + &apos; to &apos; + this.audioTimestampOffset);
+      audioBuffer.timestampOffset = this.audioTimestampOffset;
+      delete this.audioTimestampOffset;
+    }
+
+    if (this._needsFlush) {
+      this.doFlush();
+    }
+
+    if (this._needsEos) {
+      this.checkEos();
+    }
+
+    this.appending = false;
+    let parent = this.parent;
+    // count nb of pending segments waiting for appending on this sourcebuffer
+    let pending = this.segments.reduce((counter, segment) =&gt; (segment.parent === parent) ? counter + 1 : counter, 0);
+
+    // this.sourceBuffer is better to use than media.buffered as it is closer to the PTS data from the fragments
+    let timeRanges = {};
+    const sourceBuffer = this.sourceBuffer;
+    for (let streamType in sourceBuffer) {
+      timeRanges[streamType] = sourceBuffer[streamType].buffered;
+    }
+
+    this.hls.trigger(Event.BUFFER_APPENDED, { parent, pending, timeRanges });
+    // don&apos;t append in flushing mode
+    if (!this._needsFlush) {
+      this.doAppending();
+    }
+
+    this.updateMediaElementDuration();
+  }
+
+  onSBUpdateError (event) {
+    logger.error(&apos;sourceBuffer error:&apos;, event);
+    // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
+    // this error might not always be fatal (it is fatal if decode error is set, in that case
+    // it will be followed by a mediaElement error ...)
+    this.hls.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false });
+    // we don&apos;t need to do more than that, as accordin to the spec, updateend will be fired just after
+  }
+
+  onBufferReset () {
+    let sourceBuffer = this.sourceBuffer;
+    for (let type in sourceBuffer) {
+      let sb = sourceBuffer[type];
+      try {
+        this.mediaSource.removeSourceBuffer(sb);
+        sb.removeEventListener(&apos;updateend&apos;, this.onsbue);
+        sb.removeEventListener(&apos;error&apos;, this.onsbe);
+      } catch (err) {
+      }
+    }
+    this.sourceBuffer = {};
+    this.flushRange = [];
+    this.segments = [];
+    this.appended = 0;
+  }
+
+  onBufferCodecs (tracks) {
+    // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
+    // if sourcebuffers already created, do nothing ...
+    if (Object.keys(this.sourceBuffer).length === 0) {
+      for (let trackName in tracks) this.pendingTracks[trackName] = tracks[trackName];
+      let mediaSource = this.mediaSource;
+      if (mediaSource &amp;&amp; mediaSource.readyState === &apos;open&apos;) {
+        // try to create sourcebuffers if mediasource opened
+        this.checkPendingTracks();
+      }
+    }
+  }
+
+  createSourceBuffers (tracks) {
+    let sourceBuffer = this.sourceBuffer, mediaSource = this.mediaSource;
+
+    for (let trackName in tracks) {
+      if (!sourceBuffer[trackName]) {
+        let track = tracks[trackName];
+        // use levelCodec as first priority
+        let codec = track.levelCodec || track.codec;
+        let mimeType = `${track.container};codecs=${codec}`;
+        logger.log(`creating sourceBuffer(${mimeType})`);
+        try {
+          let sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
+          sb.addEventListener(&apos;updateend&apos;, this.onsbue);
+          sb.addEventListener(&apos;error&apos;, this.onsbe);
+          this.tracks[trackName] = { codec: codec, container: track.container };
+          track.buffer = sb;
+        } catch (err) {
+          logger.error(`error while trying to add sourceBuffer:${err.message}`);
+          this.hls.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_ADD_CODEC_ERROR, fatal: false, err: err, mimeType: mimeType });
+        }
+      }
+    }
+    this.hls.trigger(Event.BUFFER_CREATED, { tracks: tracks });
+  }
+
+  onBufferAppending (data) {
+    if (!this._needsFlush) {
+      if (!this.segments) {
+        this.segments = [ data ];
+      } else {
+        this.segments.push(data);
+      }
+
+      this.doAppending();
+    }
+  }
+
+  onBufferAppendFail (data) {
+    logger.error(&apos;sourceBuffer error:&apos;, data.event);
+    // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
+    // this error might not always be fatal (it is fatal if decode error is set, in that case
+    // it will be followed by a mediaElement error ...)
+    this.hls.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false });
+  }
+
+  // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
+  onBufferEos (data) {
+    let sb = this.sourceBuffer;
+    let dataType = data.type;
+    for (let type in sb) {
+      if (!dataType || type === dataType) {
+        if (!sb[type].ended) {
+          sb[type].ended = true;
+          logger.log(`${type} sourceBuffer now EOS`);
+        }
+      }
+    }
+    this.checkEos();
+  }
+
+  // if all source buffers are marked as ended, signal endOfStream() to MediaSource.
+  checkEos () {
+    let sb = this.sourceBuffer, mediaSource = this.mediaSource;
+    if (!mediaSource || mediaSource.readyState !== &apos;open&apos;) {
+      this._needsEos = false;
+      return;
+    }
+    for (let type in sb) {
+      let sbobj = sb[type];
+      if (!sbobj.ended) {
+        return;
+      }
+
+      if (sbobj.updating) {
+        this._needsEos = true;
+        return;
+      }
+    }
+    logger.log(&apos;all media data available, signal endOfStream() to MediaSource and stop loading fragment&apos;);
+    // Notify the media element that it now has all of the media data
+    try {
+      mediaSource.endOfStream();
+    } catch (e) {
+      logger.warn(&apos;exception while calling mediaSource.endOfStream()&apos;);
+    }
+    this._needsEos = false;
+  }
+
+  onBufferFlushing (data) {
+    this.flushRange.push({ start: data.startOffset, end: data.endOffset, type: data.type });
+    // attempt flush immediately
+    this.flushBufferCounter = 0;
+    this.doFlush();
+  }
+
+  onLevelUpdated ({ details }) {
+    if (details.fragments.length &gt; 0) {
+      this._levelDuration = details.totalduration + details.fragments[0].start;
+      this._live = details.live;
+      this.updateMediaElementDuration();
+    }
+  }
+
+  /**
+   * Update Media Source duration to current level duration or override to Infinity if configuration parameter
+   * &apos;liveDurationInfinity` is set to `true`
+   * More details: https://github.com/video-dev/hls.js/issues/355
+   */
+  updateMediaElementDuration () {
+    let { config } = this.hls;
+    let duration;
+
+    if (this._levelDuration === null ||
+      !this.media ||
+      !this.mediaSource ||
+      !this.sourceBuffer ||
+      this.media.readyState === 0 ||
+      this.mediaSource.readyState !== &apos;open&apos;) {
+      return;
+    }
+
+    for (let type in this.sourceBuffer) {
+      if (this.sourceBuffer[type].updating === true) {
+        // can&apos;t set duration whilst a buffer is updating
+        return;
+      }
+    }
+
+    duration = this.media.duration;
+    // initialise to the value that the media source is reporting
+    if (this._msDuration === null) {
+      this._msDuration = this.mediaSource.duration;
+    }
+
+    if (this._live === true &amp;&amp; config.liveDurationInfinity === true) {
+      // Override duration to Infinity
+      logger.log(&apos;Media Source duration is set to Infinity&apos;);
+      this._msDuration = this.mediaSource.duration = Infinity;
+    } else if ((this._levelDuration &gt; this._msDuration &amp;&amp; this._levelDuration &gt; duration) || !Number.isFinite(duration)) {
+      // levelDuration was the last value we set.
+      // not using mediaSource.duration as the browser may tweak this value
+      // only update Media Source duration if its value increase, this is to avoid
+      // flushing already buffered portion when switching between quality level
+      logger.log(`Updating Media Source duration to ${this._levelDuration.toFixed(3)}`);
+      this._msDuration = this.mediaSource.duration = this._levelDuration;
+    }
+  }
+
+  doFlush () {
+    // loop through all buffer ranges to flush
+    while (this.flushRange.length) {
+      let range = this.flushRange[0];
+      // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
+      if (this.flushBuffer(range.start, range.end, range.type)) {
+        // range flushed, remove from flush array
+        this.flushRange.shift();
+        this.flushBufferCounter = 0;
+      } else {
+        this._needsFlush = true;
+        // avoid looping, wait for SB update end to retrigger a flush
+        return;
+      }
+    }
+    if (this.flushRange.length === 0) {
+      // everything flushed
+      this._needsFlush = false;
+
+      // let&apos;s recompute this.appended, which is used to avoid flush looping
+      let appended = 0;
+      let sourceBuffer = this.sourceBuffer;
+      try {
+        for (let type in sourceBuffer) {
+          appended += sourceBuffer[type].buffered.length;
+        }
+      } catch (error) {
+        // error could be thrown while accessing buffered, in case sourcebuffer has already been removed from MediaSource
+        // this is harmess at this stage, catch this to avoid reporting an internal exception
+        logger.error(&apos;error while accessing sourceBuffer.buffered&apos;);
+      }
+      this.appended = appended;
+      this.hls.trigger(Event.BUFFER_FLUSHED);
+    }
+  }
+
+  doAppending () {
+    let hls = this.hls, sourceBuffer = this.sourceBuffer, segments = this.segments;
+    if (Object.keys(sourceBuffer).length) {
+      if (this.media.error) {
+        this.segments = [];
+        logger.error(&apos;trying to append although a media error occured, flush segment and abort&apos;);
+        return;
+      }
+      if (this.appending) {
+        // logger.log(`sb appending in progress`);
+        return;
+      }
+      if (segments &amp;&amp; segments.length) {
+        let segment = segments.shift();
+        try {
+          let type = segment.type, sb = sourceBuffer[type];
+          if (sb) {
+            if (!sb.updating) {
+              // reset sourceBuffer ended flag before appending segment
+              sb.ended = false;
+              // logger.log(`appending ${segment.content} ${type} SB, size:${segment.data.length}, ${segment.parent}`);
+              this.parent = segment.parent;
+              sb.appendBuffer(segment.data);
+              this.appendError = 0;
+              this.appended++;
+              this.appending = true;
+            } else {
+              segments.unshift(segment);
+            }
+          } else {
+            // in case we don&apos;t have any source buffer matching with this segment type,
+            // it means that Mediasource fails to create sourcebuffer
+            // discard this segment, and trigger update end
+            this.onSBUpdateEnd();
+          }
+        } catch (err) {
+          // in case any error occured while appending, put back segment in segments table
+          logger.error(`error while trying to append buffer:${err.message}`);
+          segments.unshift(segment);
+          let event = { type: ErrorTypes.MEDIA_ERROR, parent: segment.parent };
+          if (err.code !== 22) {
+            if (this.appendError) {
+              this.appendError++;
+            } else {
+              this.appendError = 1;
+            }
+
+            event.details = ErrorDetails.BUFFER_APPEND_ERROR;
+            /* with UHD content, we could get loop of quota exceeded error until
+              browser is able to evict some data from sourcebuffer. retrying help recovering this
+            */
+            if (this.appendError &gt; hls.config.appendErrorMaxRetry) {
+              logger.log(`fail ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
+              segments = [];
+              event.fatal = true;
+              hls.trigger(Event.ERROR, event);
+            } else {
+              event.fatal = false;
+              hls.trigger(Event.ERROR, event);
+            }
+          } else {
+            // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+            // let&apos;s stop appending any segments, and report BUFFER_FULL_ERROR error
+            this.segments = [];
+            event.details = ErrorDetails.BUFFER_FULL_ERROR;
+            event.fatal = false;
+            hls.trigger(Event.ERROR, event);
+          }
+        }
+      }
+    }
+  }
+
+  /*
+    flush specified buffered range,
+    return true once range has been flushed.
+    as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
+  */
+  flushBuffer (startOffset, endOffset, typeIn) {
+    let sb, i, bufStart, bufEnd, flushStart, flushEnd, sourceBuffer = this.sourceBuffer;
+    if (Object.keys(sourceBuffer).length) {
+      logger.log(`flushBuffer,pos/start/end: ${this.media.currentTime.toFixed(3)}/${startOffset}/${endOffset}`);
+      // safeguard to avoid infinite looping : don&apos;t try to flush more than the nb of appended segments
+      if (this.flushBufferCounter &lt; this.appended) {
+        for (let type in sourceBuffer) {
+          // check if sourcebuffer type is defined (typeIn): if yes, let&apos;s only flush this one
+          // if no, let&apos;s flush all sourcebuffers
+          if (typeIn &amp;&amp; type !== typeIn) {
+            continue;
+          }
+
+          sb = sourceBuffer[type];
+          // we are going to flush buffer, mark source buffer as &apos;not ended&apos;
+          sb.ended = false;
+          if (!sb.updating) {
+            try {
+              for (i = 0; i &lt; sb.buffered.length; i++) {
+                bufStart = sb.buffered.start(i);
+                bufEnd = sb.buffered.end(i);
+                // workaround firefox not able to properly flush multiple buffered range.
+                if (navigator.userAgent.toLowerCase().indexOf(&apos;firefox&apos;) !== -1 &amp;&amp; endOffset === Number.POSITIVE_INFINITY) {
+                  flushStart = startOffset;
+                  flushEnd = endOffset;
+                } else {
+                  flushStart = Math.max(bufStart, startOffset);
+                  flushEnd = Math.min(bufEnd, endOffset);
+                }
+                /* sometimes sourcebuffer.remove() does not flush
+                   the exact expected time range.
+                   to avoid rounding issues/infinite loop,
+                   only flush buffer range of length greater than 500ms.
+                */
+                if (Math.min(flushEnd, bufEnd) - flushStart &gt; 0.5) {
+                  this.flushBufferCounter++;
+                  logger.log(`flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${this.media.currentTime}`);
+                  sb.remove(flushStart, flushEnd);
+                  return false;
+                }
+              }
+            } catch (e) {
+              logger.warn(&apos;exception while accessing sourcebuffer, it might have been removed from MediaSource&apos;);
+            }
+          } else {
+            // logger.log(&apos;abort &apos; + type + &apos; append in progress&apos;);
+            // this will abort any appending in progress
+            // sb.abort();
+            logger.warn(&apos;cannot flush, sb updating in progress&apos;);
+            return false;
+          }
+        }
+      } else {
+        logger.warn(&apos;abort flushing too many retries&apos;);
+      }
+      logger.log(&apos;buffer flushed&apos;);
+    }
+    // everything flushed !
+    return true;
+  }
+}
+
+export default BufferController;
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.1.0)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
