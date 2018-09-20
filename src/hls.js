@@ -198,7 +198,7 @@ export default class Hls extends Observer {
     }
 
     Controller = config.emeController;
-    if (Controller) {
+    if (Controller && config.emeEnabled) {
       const emeController = new Controller(this);
 
       /**

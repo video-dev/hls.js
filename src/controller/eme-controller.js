@@ -473,10 +473,6 @@ class EMEController extends EventHandler {
   }
 
   onMediaAttached (data) {
-    if (!this._emeEnabled) {
-      return;
-    }
-
     const media = data.media;
 
     // keep reference of media
@@ -491,10 +487,6 @@ class EMEController extends EventHandler {
   }
 
   onManifestParsed (data) {
-    if (!this._emeEnabled) {
-      return;
-    }
-
     const audioCodecs = data.levels.map((level) => level.audioCodec);
     const videoCodecs = data.levels.map((level) => level.videoCodec);
 
@@ -502,10 +494,6 @@ class EMEController extends EventHandler {
   }
 
   onFragLoaded () {
-    if (!this._emeEnabled) {
-      return;
-    }
-
     // add initData and type if they are included in playlist
     if (this._initData && !this._hasSetMediaKeys && this._haveKeySession) {
       this._onMediaEncrypted(this._initDataType, this._initData);
@@ -516,10 +504,6 @@ class EMEController extends EventHandler {
    * @param {object} data
    */
   onLevelLoaded (data) {
-    if (!this._emeEnabled) {
-      return;
-    }
-
     if (data.details && data.details.drmInfo && data.details.drmInfo.length > 0) {
       const drmInfo = data.details.drmInfo;
 
