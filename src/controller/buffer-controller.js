@@ -67,7 +67,6 @@ class BufferController extends EventHandler {
         try {
           audioBuffer.abort();
         } catch (err) {
-          updating = true;
           logger.warn('can not abort audio buffer: ' + err);
         }
 
@@ -198,16 +197,15 @@ class BufferController extends EventHandler {
     logger.log('media source ended');
   }
 
-  updateTimestampOffset () {
+  onSBUpdateEnd () {
+    // update timestampOffset
     if (this.audioTimestampOffset) {
       let audioBuffer = this.sourceBuffer.audio;
       logger.warn('change mpeg audio timestamp offset from ' + audioBuffer.timestampOffset + ' to ' + this.audioTimestampOffset);
       audioBuffer.timestampOffset = this.audioTimestampOffset;
       delete this.audioTimestampOffset;
     }
-  }
 
-  onSBUpdateEnd () {
     if (this._needsFlush) {
       this.doFlush();
     }
@@ -476,9 +474,6 @@ class BufferController extends EventHandler {
         let segment = segments.shift();
         try {
           let type = segment.type, sb = sourceBuffer[type];
-
-          this.updateTimestampOffset();
-
           if (sb) {
             if (!sb.updating) {
               // reset sourceBuffer ended flag before appending segment
