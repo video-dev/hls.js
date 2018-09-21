@@ -1,42 +1,139 @@
-import EventHandler from './event-handler';
-
 /**
- * Sub-class specialization of EventHandler base class.
+ * @module TaskLoop
  *
- * TaskLoop allows to schedule a task function being called (optionnaly repeatedly) on the main loop,
- * scheduled asynchroneously, avoiding recursive calls in the same tick.
+ * Task-running service using a singleton timer/interval for scheduling to optimize
+ * browser main loop occupation.
  *
- * The task itself is implemented in `doTick`. It can be requested and called for single execution
- * using the `tick` method.
+ * TaskLoop is an abstract class. Subclass can implement `doTick` with the task to run.
  *
- * It will be assured that the task execution method (`tick`) only gets called once per main loop "tick",
- * no matter how often it gets requested for execution. Execution in further ticks will be scheduled accordingly.
+ * The singleton timers all schedule one function executing a loop over all existing
+ * (registered) TaskLoop instances (using a map of TaskLoopEntries).
  *
- * If further execution requests have already been scheduled on the next tick, it can be checked with `hasNextTick`,
- * and cancelled with `clearNextTick`.
+ * The instance has 3 ways to interact with the two timers, which are all used for different
+ * purpose by Hls components that have to schedule functions periodically.
  *
- * The task can be scheduled as an interval repeatedly with a period as parameter (see `setInterval`, `clearInterval`).
+ * 1. Set/clear interval (and set the *preferred* execution period). The fastest possible period is limited by
+ * the POLL_MS constant at which the singleton interval is scheduled.
  *
- * Sub-classes need to implement the `doTick` method which will effectively have the task execution routine.
+ * 2. Set/clear one-shot-timer that will guarantee execution on next interval tick
+ * (even if before/below preferred exeuction period)
  *
- * Further explanations:
- *
- * The baseclass has a `tick` method that will schedule the doTick call. It may be called synchroneously
- * only for a stack-depth of one. On re-entrant calls, sub-sequent calls are scheduled for next main loop ticks.
- *
- * When the task execution (`tick` method) is called in re-entrant way this is detected and
- * we are limiting the task execution per call stack to exactly one, but scheduling/post-poning further
- * task processing on the next main loop iteration (also known as "next tick" in the Node/JS runtime lingo).
+ * 3. Run immediate (at next native main-thread tick).
+ * This may be called by several task instances in the same tick and will allow every task
+ * requesting it to run asap by resetting the respective lastCalledAt property of the task entry to -Infinity.
  */
 
+import EventHandler from './event-handler';
+
+const POLL_MS = 500;
+
+/**
+ *
+ * @typedef {task: TaskLoop, lastTickAt: number} TaskLoopEntry
+ * @type {[name: string]: TaskLoopEntry}
+ */
+const taskLoopRegistry = {};
+let taskLoopRegistryId = 0;
+
+const performance = window.performance;
+
+let singletonInterval;
+let singletonTimer;
+
+// Call on destroy
+function cancelTickSource () {
+  clearInterval(singletonInterval);
+  singletonInterval = null;
+}
+
+function setTickSource () {
+  if (singletonInterval) {
+    return;
+  }
+  singletonInterval = setInterval(taskLoop, POLL_MS);
+}
+
+// Call on destroy
+function cancelTimer () {
+  clearTimeout(singletonTimer);
+  singletonTimer = null;
+}
+
+function scheduleTimer (time = POLL_MS) {
+  if (singletonTimer) {
+    throw new Error('Timer already set');
+  }
+  singletonTimer = setTimeout(taskLoop, time);
+}
+
+// could be exported and called by Hls constructor
+
+function taskLoop () {
+  Object.getOwnPropertyNames(taskLoopRegistry)
+    .forEach((name) => {
+      const entry = taskLoopRegistry[name];
+      const now = performance.now();
+      let run = false;
+      if (entry.task.hasNextTick()) {
+        run = true;
+      } else if (entry.task.hasInterval() &&
+        now - entry.lastTickAt >= entry.task.getInterval()) {
+        run = true;
+      }
+      if (run) {
+        entry.lastTickAt = performance.now();
+        entry.task.doTick();
+      }
+    });
+}
+
+function scheduleImmediateTick (name) {
+  taskLoopRegistry[name].lastTickAt = -Infinity;
+  cancelTimer();
+  scheduleTimer(0);
+}
+
+/**
+ *
+ * @param {string} name
+ * @param {TaskLoop} task
+ */
+function registerTask (name, task) {
+  if (taskLoopRegistry[name]) {
+    throw new Error('Task already registered: ' + name);
+  }
+  taskLoopRegistry[name] = {
+    task,
+    lastTickAt: -Infinity
+  };
+}
+
+function deregisterTask (name) {
+  delete taskLoopRegistry[name];
+}
+
+/**
+ * @class
+ * @abstract
+ */
 export default class TaskLoop extends EventHandler {
+  /**
+   *
+   * @param {string} name
+   * @param {Hls} hls
+   * @param  {...Event} events
+   */
   constructor (hls, ...events) {
     super(hls, ...events);
 
-    this._tickInterval = null;
-    this._tickTimer = null;
-    this._tickCallCount = 0;
+    this._name = String(taskLoopRegistryId++);
+    this._tickInterval = POLL_MS;
+    this._tickTimer = false;
     this._boundTick = this.tick.bind(this);
+
+    registerTask(this._name, this);
+
+    setTickSource();
   }
 
   /**
@@ -46,20 +143,24 @@ export default class TaskLoop extends EventHandler {
     // clear all timers before unregistering from event bus
     this.clearNextTick();
     this.clearInterval();
+
+    cancelTickSource();
+
+    deregisterTask(this._name);
   }
 
   /**
    * @returns {boolean}
    */
   hasInterval () {
-    return !!this._tickInterval;
+    return this._tickInterval;
   }
 
   /**
    * @returns {boolean}
    */
   hasNextTick () {
-    return !!this._tickTimer;
+    return this._tickTimer;
   }
 
   /**
@@ -67,35 +168,28 @@ export default class TaskLoop extends EventHandler {
    * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
    */
   setInterval (millis) {
-    if (!this._tickInterval) {
-      this._tickInterval = setInterval(this._boundTick, millis);
-      return true;
-    }
-    return false;
+    this._tickInterval = true;
+  }
+
+  /**
+   * @returns {number}
+   */
+  getInterval () {
+    return this._tickInterval;
   }
 
   /**
    * @returns {boolean} True when interval was cleared, false when none was set (no effect)
    */
   clearInterval () {
-    if (this._tickInterval) {
-      clearInterval(this._tickInterval);
-      this._tickInterval = null;
-      return true;
-    }
-    return false;
+    this._tickInterval = false;
   }
 
   /**
    * @returns {boolean} True when timeout was cleared, false when none was set (no effect)
    */
   clearNextTick () {
-    if (this._tickTimer) {
-      clearTimeout(this._tickTimer);
-      this._tickTimer = null;
-      return true;
-    }
-    return false;
+    this._tickTimer = false;
   }
 
   /**
@@ -104,18 +198,7 @@ export default class TaskLoop extends EventHandler {
    * in this tick (in case this is a re-entrant call).
    */
   tick () {
-    this._tickCallCount++;
-    if (this._tickCallCount === 1) {
-      this.doTick();
-      // re-entrant call to tick from previous doTick call stack
-      // -> schedule a call on the next main loop iteration to process this task processing request
-      if (this._tickCallCount > 1) {
-        // make sure only one timer exists at any time at max
-        this.clearNextTick();
-        this._tickTimer = setTimeout(this._boundTick, 0);
-      }
-      this._tickCallCount = 0;
-    }
+    scheduleImmediateTick(this._name);
   }
 
   /**
