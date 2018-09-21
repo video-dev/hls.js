@@ -66,8 +66,6 @@ function scheduleTimer (time = POLL_MS) {
   singletonTimer = setTimeout(taskLoop, time);
 }
 
-// could be exported and called by Hls constructor
-
 function taskLoop () {
   Object.getOwnPropertyNames(taskLoopRegistry)
     .forEach((name) => {
