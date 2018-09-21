@@ -5,49 +5,40 @@ const glob = require("glob");
 
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+const getGitVersion = require('git-tag-version');
+const getGitCommitInfo = require('git-commit-info');
+
 // Caution: shallow clone
 const clone = (...args) => Object.assign({}, ...args);
 
 /* Allow to customise builds through env-vars */
 const env = process.env;
 
-const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES ;
+const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES;
 const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
 const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
 const runAnalyzer = !!env.ANALYZE;
 
-const uglifyJsOptions = {
-  screwIE8: true,
-  stats: true,
-  compress: {
-    warnings: false
-  },
-  mangle: {
-    toplevel: true,
-    eval: true
-  },
-  sourceMap: true
-};
-
 const baseConfig = {
-  entry: './src/hls.js',
+  mode: 'development',
+  entry: './src/hls',
+  resolve: {
+    // Add `.ts` as a resolvable extension.
+    extensions: [".ts", ".js"]
+  },
   module: {
+    strictExportPresence: true,
     rules: [
-      {
-        test: /\.js$/,
-        exclude: [
-          path.resolve(__dirname, 'node_modules')
-        ],
-        use: {
-          loader: 'babel-loader'
-        }
-      }
+      // all files with a `.ts` extension will be handled by `ts-loader`
+      { test: /\.ts?$/, loader: "ts-loader" },
+      { test: /\.js?$/, exclude: [/node_modules/], loader: "ts-loader" },
     ]
   }
 };
 
 const demoConfig = clone(baseConfig, {
   name: 'demo',
+  mode: 'development',
   entry: './demo/main',
   output: {
     filename: 'hls-demo.js',
@@ -57,7 +48,11 @@ const demoConfig = clone(baseConfig, {
     publicPath: '/dist/',
     library: 'HlsDemo',
     libraryTarget: 'umd',
-    libraryExport: 'default'
+    libraryExport: 'default',
+    globalObject: 'this'  // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
+  },
+  optimization: {
+    minimize: false
   },
   plugins: [],
   devtool: 'source-map'
@@ -84,27 +79,16 @@ function getPluginsForConfig(type, minify = false) {
 
   const defineConstants = getConstantsForConfig(type);
 
-  console.log(
-    `Making webpack-plugins for config: <${ minify ? 'minified' : 'non-minified / debug' }> distro-type "${type}" with compile-time defined constants:`,
-    JSON.stringify(defineConstants, null, 4),
-    '\n'
-  );
+  // console.log('DefinePlugin constants:', JSON.stringify(defineConstants, null, 2))
 
   const plugins = [
+    new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
     new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.DefinePlugin(defineConstants)
+    new webpack.DefinePlugin(defineConstants),
+    new webpack.ProvidePlugin({
+      Number: [path.resolve('./src/polyfills/number'), 'Number']
+    })
   ];
-
-  if (minify) {
-    // minification plugins.
-    return plugins.concat([
-      new webpack.optimize.UglifyJsPlugin(uglifyJsOptions),
-      new webpack.LoaderOptionsPlugin({
-        minimize: true,
-        debug: false
-      })
-    ]);
-  }
 
   if (runAnalyzer && !minify) {
     plugins.push(new BundleAnalyzerPlugin({
@@ -113,23 +97,24 @@ function getPluginsForConfig(type, minify = false) {
     }));
   } else {
     // https://github.com/webpack-contrib/webpack-bundle-analyzer/issues/115
-    plugins.push(new webpack.optimize.ModuleConcatenationPlugin())
+    plugins.push(new webpack.optimize.ModuleConcatenationPlugin());
   }
 
   return plugins;
 }
 
-function getConstantsForConfig(type) {
+function getConstantsForConfig (type) {
+
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
-    __VERSION__: JSON.stringify(pkgJson.version),
+    __VERSION__: JSON.stringify(pkgJson.version || (getGitVersion() + '-' + getGitCommitInfo().shortCommit)),
     __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
     __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
   };
 }
 
-function getAliasesForLightDist() {
+function getAliasesForLightDist () {
   let aliases = {};
 
   if (!addEMESupport) {
@@ -160,6 +145,7 @@ function getAliasesForLightDist() {
 const multiConfig = [
   {
     name: 'debug',
+    mode: 'development',
     output: {
       filename: 'hls.js',
       chunkFilename: '[name].js',
@@ -168,13 +154,15 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     plugins: getPluginsForConfig('main'),
-    devtool: 'source-map',
+    devtool: 'source-map'
   },
   {
     name: 'dist',
+    mode: 'production',
     output: {
       filename: 'hls.min.js',
       chunkFilename: '[name].js',
@@ -182,13 +170,18 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     plugins: getPluginsForConfig('main', true),
+    optimization: {
+      minimize: true
+    },
     devtool: 'source-map'
   },
   {
     name: 'light',
+    mode: 'development',
     output: {
       filename: 'hls.light.js',
       chunkFilename: '[name].js',
@@ -197,7 +190,8 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     resolve: {
       alias: getAliasesForLightDist()
@@ -207,6 +201,7 @@ const multiConfig = [
   },
   {
     name: 'light-dist',
+    mode: 'production',
     output: {
       filename: 'hls.light.min.js',
       chunkFilename: '[name].js',
@@ -214,12 +209,16 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     resolve: {
       alias: getAliasesForLightDist()
     },
     plugins: getPluginsForConfig('light', true),
+    optimization: {
+      minimize: true
+    },
     devtool: 'source-map'
   }
 ].map(config => clone(baseConfig, config));
@@ -229,28 +228,31 @@ multiConfig.push(unitTestsConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
-  let resultConfigs = null;
+
+  let configs;
 
   if (!envArgs) {
     // If no arguments are specified, return every configuration
-    resultConfigs = multiConfig;
+    configs = multiConfig;
   } else {
     // Find the first enabled config within the arguments array
     const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
+
     // Filter out config with name
     const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
+
     if (!enabledConfig) {
-      console.error(`Couldn't find a valid config with the name "${enabledConfigName}".
-        Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
-      return;
+      console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
+
+      throw new Error('Hls.js webpack config: Invalid environment parameters');
     }
 
-    resultConfigs = [enabledConfig, demoConfig, unitTestsConfig];
-
+    configs = [enabledConfig, demoConfig, unitTestsConfig];
   }
 
-  console.log(`Building configs: ${resultConfigs.map(config => config.name).join(', ')}.\n`);
+  console.log(
+    `Building configs: ${configs.map(config => config.name).join(', ')}.\n`
+  );
 
-  return resultConfigs;
-
+  return configs;
 };

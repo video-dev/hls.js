@@ -1,5 +1,5 @@
-import EventEmitter from 'events';
-import work from 'webworkify-webpack';
+import { EventEmitter } from 'events';
+import * as work from 'webworkify-webpack';
 
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
@@ -8,33 +8,26 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { getSelfScope } from '../utils/get-self-scope';
 
-// see https://stackoverflow.com/a/11237259/589493
-/* eslint-disable-next-line no-undef */
-const window = getSelfScope(); // safeguard for code that might run both on worker and main thread
+import { Observer } from '../observer';
 
+// see https://stackoverflow.com/a/11237259/589493
+const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
 const MediaSource = getMediaSource();
 
 class Demuxer {
   constructor (hls, id) {
     this.hls = hls;
     this.id = id;
-    // observer setup
-    const observer = this.observer = new EventEmitter();
+
+    const observer = this.observer = new Observer();
     const config = hls.config;
-    observer.trigger = function trigger (event, ...data) {
-      observer.emit(event, event, ...data);
-    };
 
-    observer.off = function off (event, ...data) {
-      observer.removeListener(event, ...data);
-    };
-
-    let forwardMessage = function (ev, data) {
+    const forwardMessage = (ev, data) => {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
       hls.trigger(ev, data);
-    }.bind(this);
+    };
 
     // forward events to main thread
     observer.on(Event.FRAG_DECRYPTED, forwardMessage);
@@ -66,10 +59,11 @@ class Demuxer {
         };
         w.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
-        logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+        logger.warn('Error in worker:', err);
+        logger.error('Error while initializing DemuxerWorker, fallback on DemuxerInline');
         if (w) {
           // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-          window.URL.revokeObjectURL(w.objectURL);
+          global.URL.revokeObjectURL(w.objectURL);
         }
         this.demuxer = new DemuxerInline(observer, typeSupported, config, vendor);
         this.w = undefined;
@@ -92,7 +86,7 @@ class Demuxer {
         this.demuxer = null;
       }
     }
-    let observer = this.observer;
+    const observer = this.observer;
     if (observer) {
       observer.removeAllListeners();
       this.observer = null;
@@ -101,7 +95,7 @@ class Demuxer {
 
   push (data, initSegment, audioCodec, videoCodec, frag, duration, accurateTimeOffset, defaultInitPTS) {
     const w = this.w;
-    const timeOffset = !isNaN(frag.startDTS) ? frag.startDTS : frag.start;
+    const timeOffset = Number.isFinite(frag.startDTS) ? frag.startDTS : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
     const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
@@ -134,7 +128,7 @@ class Demuxer {
     switch (data.event) {
     case 'init':
       // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-      window.URL.revokeObjectURL(this.w.objectURL);
+      global.URL.revokeObjectURL(this.w.objectURL);
       break;
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
     case Event.FRAG_PARSING_DATA:

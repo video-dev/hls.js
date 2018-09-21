@@ -1,6 +1,6 @@
-const assert = require('assert');
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities, alignPDT } from '../../../src/utils/discontinuities';
 
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities } from '../../../src/utils/discontinuities';
+const assert = require('assert');
 
 const mockReferenceFrag = {
   start: 20,
@@ -70,18 +70,18 @@ describe('level-helper', function () {
   });
 
   it('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
-    const lastFrag = { cc: 0 };
     const lastLevel = {
       details: {
         PTSKnown: true,
-        programDateTime: new Date('2017-08-28 00:00:00'),
+        hasProgramDateTime: true,
         fragments: [
           {
             start: 20,
             startPTS: 20,
             endPTS: 24,
             duration: 4,
-            cc: 0
+            cc: 0,
+            programDateTime: 1503892800000
           },
           {
             start: 24,
@@ -108,7 +108,8 @@ describe('level-helper', function () {
           startPTS: 0,
           endPTS: 4,
           duration: 4,
-          cc: 2
+          cc: 2,
+          programDateTime: 1503892850000
         },
         {
           start: 4,
@@ -126,9 +127,9 @@ describe('level-helper', function () {
         }
       ],
       PTSKnown: false,
-      programDateTime: new Date('2017-08-28 00:00:50'),
       startCC: 2,
-      endCC: 3
+      endCC: 3,
+      hasProgramDateTime: true
     };
 
     let detailsExpected = {
@@ -138,7 +139,8 @@ describe('level-helper', function () {
           startPTS: 70,
           endPTS: 74,
           duration: 4,
-          cc: 2
+          cc: 2,
+          programDateTime: 1503892850000
         },
         {
           start: 74,
@@ -156,11 +158,11 @@ describe('level-helper', function () {
         }
       ],
       PTSKnown: true,
-      programDateTime: new Date('2017-08-28 00:00:50'),
       startCC: 2,
-      endCC: 3
+      endCC: 3,
+      hasProgramDateTime: true
     };
-    alignDiscontinuities(lastFrag, lastLevel, details);
+    alignPDT(details, lastLevel.details);
     assert.deepEqual(detailsExpected, details);
   });
 
