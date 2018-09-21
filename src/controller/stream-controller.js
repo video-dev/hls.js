@@ -743,6 +743,7 @@ class StreamController extends TaskLoop {
       media.removeEventListener('ended', this.onvended);
       this.onvseeking = this.onvseeked = this.onvended = null;
     }
+    this.gapController.destroy();
     this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
     this.stopLoad();
