@@ -13,6 +13,25 @@ export default class GapController {
     this.fragmentTracker = fragmentTracker;
     this.hls = hls;
     this.stallReported = false;
+
+    this._seeking = media.seeking;
+
+    this.media.addEventListener('seeking', () => this._onMediaSeek(false));
+    this.media.addEventListener('seeked', () => this._onMediaSeek(false));
+
+    // Problem: We have to take care of media attaching/detaching, which is not handled at all yet
+  }
+
+  destroy () {
+    // TODO deregister event listeners on media
+  }
+
+  _onMediaSeek (done) {
+    if (done) {
+      this._seeking = false;
+    } else {
+      this._seeking = true;
+    }
   }
 
   /**
@@ -41,7 +60,8 @@ export default class GapController {
       return;
     }
 
-    if (media.seeking && BufferHelper.isBuffered(media, currentTime)) {
+    // we are seeking or waiting for parsed data to get buffered. it's ok to stall.
+    if (this._seeking || !BufferHelper.isBuffered(media, currentTime)) {
       return;
     }
 
@@ -96,7 +116,7 @@ export default class GapController {
     if (!stallReported) {
       // Report stalled error once
       this.stallReported = true;
-      logger.warn(`Playback stalling at @${media.currentTime} due to low buffer`);
+      logger.warn(`Playback stalling at ${media.currentTime} due to low buffer`);
       hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
