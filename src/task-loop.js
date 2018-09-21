@@ -127,7 +127,7 @@ export default class TaskLoop extends EventHandler {
     super(hls, ...events);
 
     this._name = String(taskLoopRegistryId++);
-    this._tickInterval = POLL_MS;
+    this._tickInterval = -1;
     this._tickTimer = false;
     this._boundTick = this.tick.bind(this);
 
@@ -153,7 +153,7 @@ export default class TaskLoop extends EventHandler {
    * @returns {boolean}
    */
   hasInterval () {
-    return this._tickInterval;
+    return this._tickInterval > 0;
   }
 
   /**
@@ -168,7 +168,7 @@ export default class TaskLoop extends EventHandler {
    * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
    */
   setInterval (millis) {
-    this._tickInterval = true;
+    this._tickInterval = millis;
   }
 
   /**
@@ -182,7 +182,7 @@ export default class TaskLoop extends EventHandler {
    * @returns {boolean} True when interval was cleared, false when none was set (no effect)
    */
   clearInterval () {
-    this._tickInterval = false;
+    this._tickInterval = -1;
   }
 
   /**
