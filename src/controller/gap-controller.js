@@ -16,14 +16,16 @@ export default class GapController {
 
     this._seeking = media.seeking;
 
-    this.media.addEventListener('seeking', () => this._onMediaSeek(false));
-    this.media.addEventListener('seeked', () => this._onMediaSeek(false));
+    this._onMediaSeeking = () => this._onMediaSeek(false);
+    this._onMediaSeeked = () => this._onMediaSeek(true);
 
-    // Problem: We have to take care of media attaching/detaching, which is not handled at all yet
+    this.media.addEventListener('seeking', this._onMediaSeeking);
+    this.media.addEventListener('seeked', this._onMediaSeeked);
   }
 
   destroy () {
-    // TODO deregister event listeners on media
+    this.media.removeEventListener('seeking', this._onMediaSeeking);
+    this.media.removeEventListener('seeked', this._onMediaSeeked);
   }
 
   _onMediaSeek (done) {
@@ -61,7 +63,7 @@ export default class GapController {
     }
 
     // we are seeking or waiting for parsed data to get buffered. it's ok to stall.
-    if (this._seeking || !BufferHelper.isBuffered(media, currentTime)) {
+    if (media.seeking || this._seeking || !BufferHelper.isBuffered(media, currentTime)) {
       return;
     }
 
