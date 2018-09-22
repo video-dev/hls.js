@@ -20,6 +20,7 @@ class SubtitleStreamController extends TaskLoop {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHING,
       Event.ERROR,
       Event.KEY_LOADED,
       Event.FRAG_LOADED,
@@ -52,11 +53,34 @@ class SubtitleStreamController extends TaskLoop {
   // If no frag is being processed and queue isn't empty, initiate processing of next frag in line.
   nextFrag () {
     if (this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
-      let frag = this.currentlyProcessing = this.vttFragQueues[this.currentTrackId].shift();
-      this.fragCurrent = frag;
-      this.hls.trigger(Event.FRAG_LOADING, { frag: frag });
+      let queue = this.vttFragQueues[this.currentTrackId];
+      let i = this.findQueuedFragmentIndexClosestToPlayhead(queue);
+      if (i >= 0) {
+        this.fragCurrent = queue.splice(i, 1)[0];
+      } else {
+        this.fragCurrent = queue.shift();
+      }
+
+      this.currentlyProcessing = this.fragCurrent;
+      this.hls.trigger(Event.FRAG_LOADING, { frag: this.fragCurrent });
       this.state = State.FRAG_LOADING;
     }
+  }
+
+  // Try to be smart about choosing the fragment near or just after the current playhead
+  findQueuedFragmentIndexClosestToPlayhead (queue) {
+    let ts = this.media.currentTime;
+    for (let i = 0; i <= queue.length; i++) {
+      let frag = queue[i];
+      if (!frag) {
+        continue;
+      } else if (frag.start <= ts && (frag.start + frag.duration) >= ts) {
+        return i;
+      } else if (frag.start > ts) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   // When fragment has finished processing, add sn to list of completed if successful.
@@ -70,8 +94,13 @@ class SubtitleStreamController extends TaskLoop {
     this.nextFrag();
   }
 
-  onMediaAttached () {
+  onMediaAttached (data) {
     this.state = State.IDLE;
+    this.media = data.media;
+  }
+
+  onMediaDetaching () {
+    this.clearVttFragQueues();
   }
 
   // If something goes wrong, procede to next frag, if we were processing one.
