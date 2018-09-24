@@ -74,6 +74,7 @@ function taskLoop () {
       let run = false;
       if (entry.task.hasNextTick()) {
         run = true;
+        entry.task.clearNextTick();
       } else if (entry.task.hasInterval() &&
         now - entry.lastTickAt >= entry.task.getInterval()) {
         run = true;
