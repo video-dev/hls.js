@@ -155,13 +155,6 @@ export default class TaskLoop extends EventHandler {
   }
 
   /**
-   * @returns {boolean}
-   */
-  hasNextTick () {
-    return this._tickTimer;
-  }
-
-  /**
    * @param {number} millis Interval time (ms)
    * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
    */
@@ -184,16 +177,30 @@ export default class TaskLoop extends EventHandler {
   }
 
   /**
-   * @returns {boolean} True when timeout was cleared, false when none was set (no effect)
+   * @returns {boolean}
+   */
+  hasNextTick () {
+    return this._tickTimer;
+  }
+
+  /**
+   * Request execution on next task loop iteration (which may be either invoked by the active interval or
+   * a scheduled immediate run, see `tick` method).
+   */
+  requestNextTick () {
+    this._tickTimer = true;
+  }
+
+  /**
+   * Clears the next tick execution request
    */
   clearNextTick () {
     this._tickTimer = false;
   }
 
   /**
-   * Will call the subclass doTick implementation in this main loop tick
-   * or in the next one (via setTimeout(,0)) in case it has already been called
-   * in this tick (in case this is a re-entrant call).
+   * Will call the subclass doTick implementation asap on the next main thread iteration
+   * (will invoke task look asap).
    */
   tick () {
     scheduleImmediateTick(this._name);
