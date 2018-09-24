@@ -13,7 +13,7 @@ export function sendAddTrackEvent (track, videoEl) {
   videoEl.dispatchEvent(event);
 }
 
-function canManageCues(track) {
+function canManageCues (track) {
   return track && track.cues;
 }
 

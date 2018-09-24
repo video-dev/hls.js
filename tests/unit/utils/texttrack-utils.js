@@ -1,16 +1,16 @@
-import { spy, stub } from 'sinon';
+import { stub } from 'sinon';
 import { clearPastCues } from '../../../src/utils/texttrack-utils';
 
 const assert = require('assert');
 
 describe('Texttrack utils', () => {
   describe('clearPastCues', () => {
-    it ('should remove cue past current time', () => {
+    it('should remove cue past current time', () => {
       const cues = [
-        {startTime: 1, endTime: 5},
-        {startTime: 5, endTime: 7},
-        {startTime: 7, endTime: 9},
-        {startTime: 9, endTime: 13}
+        { startTime: 1, endTime: 5 },
+        { startTime: 5, endTime: 7 },
+        { startTime: 7, endTime: 9 },
+        { startTime: 9, endTime: 13 }
       ];
 
       const trackStub = {

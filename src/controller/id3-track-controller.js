@@ -55,7 +55,7 @@ class ID3TrackController extends EventHandler {
     }
   }
 
-  cleanupPastCues() {
+  cleanupPastCues () {
     const liveCleanupPastID3Cues = this.hls.config.liveCleanupPastID3Cues;
 
     if (this._live && liveCleanupPastID3Cues > 0) {

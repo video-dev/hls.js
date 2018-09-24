@@ -309,7 +309,7 @@ class TimelineController extends EventHandler {
     this._live = details && details.live;
   }
 
-  cleanupPastCues(textTrack) {
+  cleanupPastCues (textTrack) {
     const liveCleanupPastVTTCues = this.hls.config.liveCleanupPastVTTCues;
 
     if (this._live && liveCleanupPastVTTCues > 0) {
