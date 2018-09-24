@@ -148,21 +148,14 @@ export default class TaskLoop extends EventHandler {
   }
 
   /**
-   * @returns {boolean}
-   */
-  hasInterval () {
-    return this._tickInterval > 0;
-  }
-
-  /**
-   * @param {number} millis Interval time (ms)
-   * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
+   * @param {number} millis Preferred interval time (ms) for recurring task execution within the task loop invocations.
    */
   setInterval (millis) {
     this._tickInterval = millis;
   }
 
   /**
+   * The current preferred interval time (if set, otherwise returns -1)
    * @returns {number}
    */
   getInterval () {
@@ -170,17 +163,18 @@ export default class TaskLoop extends EventHandler {
   }
 
   /**
-   * @returns {boolean} True when interval was cleared, false when none was set (no effect)
+   * Returns true when a valid (> 0) preferred interval is set on this task
+   * @returns {boolean}
    */
-  clearInterval () {
-    this._tickInterval = -1;
+  hasInterval () {
+    return this._tickInterval > 0;
   }
 
   /**
-   * @returns {boolean}
+   * Resets the preferred interval value to -1
    */
-  hasNextTick () {
-    return this._tickTimer;
+  clearInterval () {
+    this._tickInterval = -1;
   }
 
   /**
@@ -189,6 +183,15 @@ export default class TaskLoop extends EventHandler {
    */
   requestNextTick () {
     this._tickTimer = true;
+  }
+
+  /**
+   * Returns true when we have requested (and have pending state for) execution of our task
+   * in the next task loop invocation.
+   * @returns {boolean}
+   */
+  hasNextTick () {
+    return this._tickTimer;
   }
 
   /**
