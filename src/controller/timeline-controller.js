@@ -8,7 +8,11 @@ import Cea608Parser from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
-import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import {
+  sendAddTrackEvent,
+  clearCurrentCues,
+  clearPastCues
+} from '../utils/texttrack-utils';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -28,7 +32,9 @@ class TimelineController extends EventHandler {
       Event.MANIFEST_LOADED,
       Event.FRAG_LOADED,
       Event.LEVEL_SWITCHING,
-      Event.INIT_PTS_FOUND);
+      Event.INIT_PTS_FOUND,
+      Event.LEVEL_UPDATED
+    );
 
     this.hls = hls;
     this.config = hls.config;
@@ -40,6 +46,8 @@ class TimelineController extends EventHandler {
     this.initPTS = undefined;
     this.cueRanges = [];
     this.captionsTracks = {};
+    this._live = false;
+    this.media = undefined;
 
     this.captionsProperties = {
       textTrack1: {
@@ -81,6 +89,8 @@ class TimelineController extends EventHandler {
     }
 
     this.Cues.newCue(this.captionsTracks[trackName], startTime, endTime, screen);
+
+    this.cleanupPastCues(this.captionsTracks[trackName]);
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
@@ -260,7 +270,7 @@ class TimelineController extends EventHandler {
       hls = this.hls;
 
     // Parse the WebVTT file contents.
-    WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+    WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, (cues) => {
       const currentTrack = textTracks[frag.trackId];
       // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
       // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
@@ -283,15 +293,28 @@ class TimelineController extends EventHandler {
             currentTrack.addCue(textTrackCue);
           }
         }
-      }
-      );
+      });
+
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
+      this.cleanupPastCues(this.textTracks[frag.trackId]);
     },
     function (e) {
       // Something went wrong while parsing. Trigger event with success false.
       logger.log(`Failed to parse VTT cue: ${e}`);
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
     });
+  }
+
+  onLevelUpdated ({ details }) {
+    this._live = details && details.live;
+  }
+
+  cleanupPastCues(textTrack) {
+    const liveCleanupPastVTTCues = this.hls.config.liveCleanupPastVTTCues;
+
+    if (this._live && liveCleanupPastVTTCues > 0) {
+      clearPastCues(textTrack, this.media.currentTime - liveCleanupPastVTTCues);
+    }
   }
 
   onFragDecrypted (data) {

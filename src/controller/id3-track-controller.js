@@ -5,16 +5,19 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
-import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import { sendAddTrackEvent, clearCurrentCues, clearPastCues } from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
-      Event.FRAG_PARSING_METADATA);
+      Event.FRAG_PARSING_METADATA,
+      Event.LEVEL_UPDATED
+    );
     this.id3Track = undefined;
     this.media = undefined;
+    this._live = false;
   }
 
   destroy () {
@@ -24,9 +27,6 @@ class ID3TrackController extends EventHandler {
   // Add ID3 metatadata text track.
   onMediaAttached (data) {
     this.media = data.media;
-    if (!this.media) {
-
-    }
   }
 
   onMediaDetaching () {
@@ -47,6 +47,20 @@ class ID3TrackController extends EventHandler {
       }
     }
     return this.media.addTextTrack('metadata', 'id3');
+  }
+
+  onLevelUpdated ({ details }) {
+    if (details) {
+      this._live = details.live;
+    }
+  }
+
+  cleanupPastCues() {
+    const liveCleanupPastID3Cues = this.hls.config.liveCleanupPastID3Cues;
+
+    if (this._live && liveCleanupPastID3Cues > 0) {
+      clearPastCues(this.id3Track, this.media.currentTime - liveCleanupPastID3Cues);
+    }
   }
 
   onFragParsingMetadata (data) {
@@ -85,6 +99,8 @@ class ID3TrackController extends EventHandler {
           }
         }
       }
+
+      this.cleanupPastCues();
     }
   }
 }
