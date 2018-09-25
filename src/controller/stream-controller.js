@@ -948,6 +948,12 @@ class StreamController extends TaskLoop {
       this.bitrateTest = false;
       this.stats = stats;
 
+      if (!details) {
+        logger.warn('Loaded fragment but level switch occured before');
+        this.state = State.IDLE;
+        return;
+      }
+
       logger.log(`Loaded ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}`);
       if (fragLoaded.bitrateTest && hls.nextLoadLevel) {
         // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
