@@ -256,6 +256,7 @@ class SubtitleTrackController extends TaskLoop {
     logger.log(`Selecting subtitle track id: ${selectedTrack.id}, name: ${selectedTrack.name}, group-ID: ${selectedTrack.groupId}`);
 
     if (this.media) {
+      this._toggleTrackModes(selectedTrack.id);
       this._setSubtitleTrack(selectedTrack.id);
     } else {
       this._queuedDefaultTrack = selectedTrack.id;
