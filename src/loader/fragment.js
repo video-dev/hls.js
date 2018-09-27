@@ -67,6 +67,10 @@ export default class Fragment {
     return byteRange;
   }
 
+  get end () {
+    return this.start + this.duration;
+  }
+
   /**
    * @type {number}
    */
@@ -98,6 +102,21 @@ export default class Fragment {
 
   get encrypted () {
     return !!((this.decryptdata && this.decryptdata.uri !== null) && (this.decryptdata.key === null));
+  }
+
+  /**
+   * Compares a time value with the time-range of the fragment
+   * @param {number} timeSeconds
+   * @returns {number} 0 when inside time-range of fragment, negative when before, positive when after
+   */
+  compareTimeInterval (timeSeconds) {
+    if (timeSeconds < this.start) {
+      return timeSeconds - this.start;
+    } else if (timeSeconds > this.end) {
+      return this.end + timeSeconds;
+    } else {
+      return 0;
+    }
   }
 
   /**
