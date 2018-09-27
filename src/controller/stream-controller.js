@@ -409,6 +409,24 @@ class StreamController extends TaskLoop {
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
       frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
+
+      // Lookup tolerance is allowing us to trade seek accuracy against
+      // efficiency of transmission. If we seek/lookup on a boundary we will
+      // get the segment which is after the boundary, at the cost of not getting
+      // the data with the exact timestamp.
+      // If we would not nudge the media position accordingly, we would obviously stall
+      // since the media would be waiting at a position for which we don't get data
+      // (since we get the data just *after* that).
+      // If the lookup tolerance is larger than zero we have to check
+      // wether is was applied: in that case the fragment we got actually does not match
+      // our seek target (where the media positon cursor is)
+      // we adjust the seek target to this.
+      if (lookupTolerance > 0) {
+        const timeRangeDiff = frag.compareTimeInterval(bufferEnd);
+        if (timeRangeDiff !== 0) {
+          this.media.currentTime -= timeRangeDiff;
+        }
+      }
     } else {
       // reach end of playlist
       frag = fragments[fragLen - 1];
