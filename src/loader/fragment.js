@@ -100,6 +100,24 @@ export default class Fragment {
     return !!((this.decryptdata && this.decryptdata.uri !== null) && (this.decryptdata.key === null));
   }
 
+  get end () {
+    return this.start + this.duration;
+  }
+
+  /**
+   *
+   * @param {number} timeSeconds 0 when inside, negative when before, positive when after
+   */
+  compareTimeInterval (timeSeconds) {
+    if (timeSeconds < this.start) {
+      return timeSeconds - this.start;
+    } else if (timeSeconds > this.end) {
+      return this.end + timeSeconds;
+    } else {
+      return 0;
+    }
+  }
+
   /**
    * @param {ElementaryStreamType} type
    */

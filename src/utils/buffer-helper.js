@@ -33,6 +33,13 @@ export class BufferHelper {
     return false;
   }
 
+  /**
+   *
+   * @param {HTMLMediaElement} media
+   * @param {number} pos
+   * @param {number} maxHoleDuration
+   * @returns {*}
+   */
   static bufferInfo (media, pos, maxHoleDuration) {
     try {
       if (media) {
@@ -41,7 +48,7 @@ export class BufferHelper {
           buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
         }
 
-        return this.bufferedInfo(buffered, pos, maxHoleDuration);
+        return BufferHelper.bufferedInfo(buffered, pos, maxHoleDuration);
       }
     } catch (error) {
       // this is to catch

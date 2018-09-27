@@ -59,6 +59,8 @@ class StreamController extends TaskLoop {
     this._state = State.STOPPED;
     this.stallReported = false;
     this.gapController = null;
+
+    // this._bufferStallCorrection = 0;
   }
 
   onHandlerDestroying () {
@@ -268,10 +270,10 @@ class StreamController extends TaskLoop {
   }
 
   _fetchPayloadOrEos (pos, bufferInfo, levelDetails) {
-    const fragPrevious = this.fragPrevious,
-      level = this.level,
-      fragments = levelDetails.fragments,
-      fragLen = fragments.length;
+    const fragPrevious = this.fragPrevious;
+    const level = this.level;
+    const fragments = levelDetails.fragments;
+    const fragLen = fragments.length;
 
     // empty playlist
     if (fragLen === 0) {
@@ -279,10 +281,10 @@ class StreamController extends TaskLoop {
     }
 
     // find fragment index, contiguous with end of buffer position
-    let start = fragments[0].start,
-      end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration,
-      bufferEnd = bufferInfo.end,
-      frag;
+    let start = fragments[0].start;
+    let end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
+    let bufferEnd = bufferInfo.end;
+    let frag;
 
     if (levelDetails.initSegment && !levelDetails.initSegment.data) {
       frag = levelDetails.initSegment;
@@ -308,15 +310,34 @@ class StreamController extends TaskLoop {
       }
     }
     if (!frag) {
-      frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
+      let fragmentFindPosition;
+
+      /*
+      if (this._bufferStallCorrection !== 0) {
+        fragmentFindPosition = pos - this._bufferStallCorrection;
+        logger.debug('Applying fragment-finder correction:', this._bufferStallCorrection);
+        this._bufferStallCorrection = 0;
+      } else {
+        fragmentFindPosition = bufferEnd;
+      }
+      */
+
+      fragmentFindPosition = bufferEnd;
+
+      logger.debug(`stream-controller: _findFragment at ${fragmentFindPosition},
+          buffer-end ${bufferEnd}, position ${pos}`, fragPrevious);
+
+      frag = this._findFragment(fragPrevious, fragments, fragmentFindPosition, end, levelDetails);
     }
 
     if (frag) {
+      logger.log('Found fragment:', frag);
+
       if (frag.encrypted) {
         logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
       } else {
-        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
+        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)}, bufferEnd:${bufferEnd.toFixed(3)}`);
         this._loadFragment(frag);
       }
     }
@@ -400,7 +421,15 @@ class StreamController extends TaskLoop {
     return frag;
   }
 
-  _findFragment (start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
+  /**
+   *
+   * @param {Fragment} fragPrevious Previous fragment
+   * @param {Fragment[]} fragments List of current level
+   * @param {number} bufferEnd Last timestamp of buffered time-range
+   * @param {number} end Last timestamp of current level fragment list
+   * @param {*} levelDetails Current level details object
+   */
+  _findFragment (fragPrevious, fragments, bufferEnd, end, levelDetails) {
     const config = this.hls.config;
     let frag;
 
@@ -408,11 +437,51 @@ class StreamController extends TaskLoop {
       const lookupTolerance = (bufferEnd > end - config.maxFragLookUpTolerance) ? 0 : config.maxFragLookUpTolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+
+      logger.log(`Looking for fragment, target is at ${bufferEnd}`);
+
       frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
+
+      // Try to compensate the PTS-shift induced from initial timestamp, causing
+      // issues when seeking to unbuffered areas close to fragment boundaries.
+      // We should only need to do this when the `bufferEnd` is not in buffered time-range,
+      // i.e when this is a seek target which we have to resolve through a fragment load.
+      // TODO: Check that bufferEnd is not buffered TimeRange, and only do this in that case.
+      //       There is however currently no side-effect observed in doing this  for every lookup,
+      //       but it would be cleaner and avoid unnecessary logic to run.
+      let ptsError = frag.compareTimeInterval(bufferEnd);
+      if (ptsError !== 0) {
+        logger.warn('Fragment-lookup has PTS-shift:', ptsError);
+        let bufferEndPtsCorrection = 2 * ptsError;
+        logger.log('Applying PTS shift-correction to lookup target:', bufferEndPtsCorrection);
+        frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd + bufferEndPtsCorrection, lookupTolerance);
+      }
+
+      logger.log(`Fragment found is at [${frag.start}, ${frag.end}], lookup target was at ${bufferEnd}`);
+
+      /*
+      let errorCorrectionFactor = 0;
+      while(true) {
+        let ptsError = frag.compareTimeInterval(bufferEnd);
+        if (ptsError !== 0) {
+          logger.warn('Fragment lookup had PTS error:', ptsError);
+          let bufferEndPtsCorrection = ++errorCorrectionFactor * ptsError;
+          logger.log('Applying PTS error-correction to lookup target:', bufferEndPtsCorrection);
+          frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd + bufferEndPtsCorrection, lookupTolerance);
+        } else {
+          break;
+        }
+        if (errorCorrectionFactor > 32) {
+          throw new Error("Exceeded maximum error-correction iterations");
+          break;
+        }
+      }
+      */
     } else {
       // reach end of playlist
-      frag = fragments[fragLen - 1];
+      frag = fragments[fragments.length - 1];
     }
+
     if (frag) {
       const curSNIdx = frag.sn - levelDetails.startSN;
       const sameLevel = fragPrevious && frag.level === fragPrevious.level;
@@ -754,7 +823,7 @@ class StreamController extends TaskLoop {
       logger.log(`media seeking to ${currentTime.toFixed(3)}`);
     }
 
-    let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+    let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media; // FIXME: why do we have to do this?
     let bufferInfo = BufferHelper.bufferInfo(mediaBuffer, currentTime, this.config.maxBufferHole);
     if (this.state === State.FRAG_LOADING) {
       let fragCurrent = this.fragCurrent;
@@ -1331,6 +1400,18 @@ class StreamController extends TaskLoop {
           this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
         }
       }
+      break;
+    case ErrorDetails.BUFFER_STALLED_ERROR:
+      /*
+      logger.log('attempting buffer stall correction on load position');
+      const MIN_FRAGMENT_DURATION = 0.5;
+      const currentFragment = this.fragCurrent;
+      if (this.media.currentTime < currentFragment.start) {
+        this._bufferStallCorrection = MIN_FRAGMENT_DURATION;
+      }
+      this.fragPrevious = null;
+      this.startLoad(this.media.currentTime);
+      */
       break;
     default:
       break;

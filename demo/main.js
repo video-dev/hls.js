@@ -210,6 +210,7 @@ function loadSelectedStream() {
     debug            : true,
     enableWorker     : enableWorker,
     defaultAudioCodec: defaultAudioCodec,
+    highBufferWatchdogPeriod: 300,
     widevineLicenseUrl: widevineLicenseUrl
   };
 
@@ -229,6 +230,8 @@ function loadSelectedStream() {
 
   onDemoConfigChanged();
   console.log('Using Hls.js config:', hlsConfig);
+
+  video.currentTime = 129.9
 
   window.hls = hls = new Hls(hlsConfig);
 
