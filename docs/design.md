@@ -28,7 +28,7 @@ design idea is pretty simple :
     - in charge of **monitoring fragment loading speed** (by monitoring the amount of data received from fragment loader `stats.loaded` counter)
      - "expected time of fragment load completion" is computed using "fragment loading instant bandwidth".
      - this time is compared to the "expected time of buffer starvation".
-     - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, and a **** event is triggered. this event will be handled by stream-controller.
+     - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, and a FRAG_LOAD_EMERGENCY_ABORTED event is triggered. this event will be handled by stream-controller.
   - [src/controller/audio-stream-controller.js][]
     - audio stream controller is in charge of filling audio buffer in case alternate audio tracks are used
     - if buffer is not filled up appropriately (i.e. as per defined maximum buffer size, it will trigger the following actions:
