@@ -29,6 +29,12 @@ class BufferController extends EventHandler {
     this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     this._levelDuration = null;
+    /**
+     * the target duration of the current playlist
+     *
+     * @default 10
+     */
+    this._levelTargetDuration = 10;
     // current stream state: true - for live broadcast, false - for VoD content
     this._live = null;
     // cache the self generated object url to detect hijack of video tag
@@ -381,24 +387,27 @@ class BufferController extends EventHandler {
       return;
     }
 
+    const { liveBackBufferLength } = this.hls.config;
+
+    if (isFinite(liveBackBufferLength) === false || liveBackBufferLength < 0) {
+      return;
+    }
+
     try {
-      let currentTime = this.media.currentTime;
-      let { liveMinBackBufferLength, liveMaxBackBufferLength } = this.hls.config;
-      let sourceBuffer = this.sourceBuffer;
+      const currentTime = this.media.currentTime;
+      const sourceBuffer = this.sourceBuffer;
+      const bufferTypes = Object.keys(sourceBuffer);
+      const targetBackBufferPosition = currentTime - Math.max(liveBackBufferLength, this._levelTargetDuration);
 
-      // max back buffer value is positive and current time already exceeds it
-      if (liveMaxBackBufferLength > 0 && currentTime > liveMaxBackBufferLength) {
-        let bufferTypes = Object.keys(sourceBuffer);
+      for (let index = bufferTypes.length - 1; index >= 0; index--) {
+        const bufferType = bufferTypes[index], buffered = sourceBuffer[bufferType].buffered;
 
-        for (let index = bufferTypes.length - 1; index >= 0; index--) {
-          let bufferType = bufferTypes[index], buffered = sourceBuffer[bufferType].buffered;
-
-          // when back buffer exceeded maximum value
-          if (buffered.length > 0 && (currentTime - buffered.start(0) - liveMinBackBufferLength) > liveMaxBackBufferLength) {
-            // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
-            // time will lead to playback freezing)
-            this.removeBufferRange(bufferType, sourceBuffer[bufferType], 0, currentTime - liveMinBackBufferLength);
-          }
+        // when target buffer start exceeds actual buffer start
+        if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
+          // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
+          // time will lead to playback freezing)
+          // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
+          this.removeBufferRange(bufferType, sourceBuffer[bufferType], 0, targetBackBufferPosition);
         }
       }
     } catch (error) {
@@ -409,6 +418,7 @@ class BufferController extends EventHandler {
   onLevelUpdated ({ details }) {
     if (details.fragments.length > 0) {
       this._levelDuration = details.totalduration + details.fragments[0].start;
+      this._levelTargetDuration = details.targetDuration || 10;
       this._live = details.live;
       this.updateMediaElementDuration();
     }

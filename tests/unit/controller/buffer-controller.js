@@ -33,8 +33,7 @@ describe('BufferController tests', function () {
 
     it('should trigger buffer removal with valid range for live', () => {
       bufferController.media = { currentTime: 360 };
-      hls.config.liveMinBackBufferLength = 4;
-      hls.config.liveMaxBackBufferLength = 60;
+      hls.config.liveBackBufferLength = 60;
       bufferController.sourceBuffer = {
         video: {
           buffered: {
@@ -59,9 +58,22 @@ describe('BufferController tests', function () {
           'video',
           bufferController.sourceBuffer.video,
           0,
-          bufferController.media.currentTime - hls.config.liveMinBackBufferLength
+          bufferController.media.currentTime - hls.config.liveBackBufferLength
         ),
-        'remove buffer range was not requested with valid data'
+        'remove buffer range was not requested with valid data from liveBackBufferLength'
+      );
+
+      hls.config.liveBackBufferLength = 0;
+      bufferController._levelTargetDuration = 10;
+      bufferController.clearLiveBackBuffer();
+      assert(
+        removeBufferRangeStub.calledWith(
+          'video',
+          bufferController.sourceBuffer.video,
+          0,
+          bufferController.media.currentTime - bufferController._levelTargetDuration
+        ),
+        'remove buffer range was not requested with valid data from _levelTargetDuration'
       );
     });
   });
