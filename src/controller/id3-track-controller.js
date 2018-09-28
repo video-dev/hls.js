@@ -18,6 +18,10 @@ class ID3TrackController extends EventHandler {
     this.id3Track = undefined;
     this.media = undefined;
     this._live = false;
+    /**
+     * Id of the scheduled cues cleanup.
+     */
+    this.cuesCleanupTimeout = -1;
   }
 
   destroy () {
@@ -33,6 +37,10 @@ class ID3TrackController extends EventHandler {
     clearCurrentCues(this.id3Track);
     this.id3Track = undefined;
     this.media = undefined;
+
+    // cancel scheduled cues cleanup if any
+    clearTimeout(this.cuesCleanupTimeout);
+    this.cuesCleanupTimeout = -1;
   }
 
   getID3Track (textTracks) {
@@ -55,11 +63,23 @@ class ID3TrackController extends EventHandler {
     }
   }
 
-  cleanupPastCues () {
+  /**
+   * Schedules cues cleanup for live stream to happen after `#liveCleanupPastID3Cues` seconds
+   * from hls config.
+   */
+  cleanupLivePastCues () {
+    if (!this._live) {
+      return;
+    }
+
     const liveCleanupPastID3Cues = this.hls.config.liveCleanupPastID3Cues;
 
-    if (this._live && liveCleanupPastID3Cues > 0) {
-      clearPastCues(this.id3Track, this.media.currentTime - liveCleanupPastID3Cues);
+    // don't schedule cleanup if it's already scheduled
+    if (liveCleanupPastID3Cues > 0 && this.cuesCleanupTimeout === -1) {
+      this.cuesCleanupTimeout = setTimeout(() => {
+        clearPastCues(this.id3Track, this.media.currentTime - liveCleanupPastID3Cues);
+        this.cuesCleanupTimeout = -1;
+      }, liveCleanupPastID3Cues * 1000);
     }
   }
 
@@ -99,9 +119,9 @@ class ID3TrackController extends EventHandler {
           }
         }
       }
-
-      this.cleanupPastCues();
     }
+
+    this.cleanupLivePastCues();
   }
 }
 

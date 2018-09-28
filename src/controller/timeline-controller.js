@@ -48,6 +48,7 @@ class TimelineController extends EventHandler {
     this.captionsTracks = {};
     this._live = false;
     this.media = undefined;
+    this.cuesCleanupSchedule = {};
 
     this.captionsProperties = {
       textTrack1: {
@@ -90,7 +91,7 @@ class TimelineController extends EventHandler {
 
     this.Cues.newCue(this.captionsTracks[trackName], startTime, endTime, screen);
 
-    this.cleanupPastCues(this.captionsTracks[trackName]);
+    this.cleanupLivePastCues(this.captionsTracks[trackName]);
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
@@ -157,6 +158,7 @@ class TimelineController extends EventHandler {
   onMediaAttaching (data) {
     this.media = data.media;
     this._cleanTracks();
+    this.cuesCleanupSchedule = {};
   }
 
   onMediaDetaching () {
@@ -165,6 +167,7 @@ class TimelineController extends EventHandler {
       clearCurrentCues(captionsTracks[trackName]);
       delete captionsTracks[trackName];
     });
+    Object.keys(this.cuesCleanupSchedule).forEach((cleanupKey) => clearTimeout(this.cuesCleanupSchedule[cleanupKey]));
   }
 
   onManifestLoading () {
@@ -296,7 +299,7 @@ class TimelineController extends EventHandler {
       });
 
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
-      this.cleanupPastCues(this.textTracks[frag.trackId]);
+      this.cleanupLivePastCues(this.textTracks[frag.trackId]);
     },
     function (e) {
       // Something went wrong while parsing. Trigger event with success false.
@@ -309,11 +312,18 @@ class TimelineController extends EventHandler {
     this._live = details && details.live;
   }
 
-  cleanupPastCues (textTrack) {
+  cleanupLivePastCues (textTrack) {
+    if (!this._live) {
+      return;
+    }
+
     const liveCleanupPastVTTCues = this.hls.config.liveCleanupPastVTTCues;
 
-    if (this._live && liveCleanupPastVTTCues > 0) {
-      clearPastCues(textTrack, this.media.currentTime - liveCleanupPastVTTCues);
+    if (liveCleanupPastVTTCues > 0 && !this.cuesCleanupSchedule[textTrack]) {
+      this.cuesCleanupSchedule[textTrack] = setTimeout(() => {
+        clearPastCues(textTrack, this.media.currentTime - liveCleanupPastVTTCues);
+        delete this.cuesCleanupSchedule[textTrack];
+      }, liveCleanupPastVTTCues * 1000);
     }
   }
 

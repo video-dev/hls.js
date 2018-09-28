@@ -13,12 +13,8 @@ export function sendAddTrackEvent (track, videoEl) {
   videoEl.dispatchEvent(event);
 }
 
-function canManageCues (track) {
-  return track && track.cues;
-}
-
 export function clearCurrentCues (track) {
-  if (canManageCues(track)) {
+  if (track && track.cues) {
     while (track.cues.length > 0) {
       track.removeCue(track.cues[0]);
     }
@@ -33,7 +29,7 @@ export function clearCurrentCues (track) {
  * @param {Number}    playheadTime  Playhead time anchor for past cue decision.
  */
 export function clearPastCues (track, playheadTime) {
-  if (canManageCues(track) && playheadTime > 0) {
+  if (track && track.cues && playheadTime > 0) {
     try {
       while (track.cues.length > 0 && track.cues[0].endTime < playheadTime) {
         track.removeCue(track.cues[0]);
