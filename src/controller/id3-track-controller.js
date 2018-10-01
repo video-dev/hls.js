@@ -5,7 +5,11 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
-import { sendAddTrackEvent, clearCurrentCues, clearPastCues } from '../utils/texttrack-utils';
+import {
+  sendAddTrackEvent,
+  clearCurrentCues,
+  clearPastCuesThrottled
+} from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
   constructor (hls) {
@@ -18,10 +22,6 @@ class ID3TrackController extends EventHandler {
     this.id3Track = undefined;
     this.media = undefined;
     this._live = false;
-    /**
-     * Id of the scheduled cues cleanup.
-     */
-    this.cuesCleanupTimeout = -1;
   }
 
   destroy () {
@@ -37,10 +37,6 @@ class ID3TrackController extends EventHandler {
     clearCurrentCues(this.id3Track);
     this.id3Track = undefined;
     this.media = undefined;
-
-    // cancel scheduled cues cleanup if any
-    clearTimeout(this.cuesCleanupTimeout);
-    this.cuesCleanupTimeout = -1;
   }
 
   getID3Track (textTracks) {
@@ -63,24 +59,14 @@ class ID3TrackController extends EventHandler {
     }
   }
 
-  /**
-   * Schedules cues cleanup for live stream to happen after `#liveCleanupPastID3Cues` seconds
-   * from hls config.
-   */
   cleanupLivePastCues () {
     if (!this._live) {
       return;
     }
 
-    const liveCleanupPastID3Cues = this.hls.config.liveCleanupPastID3Cues;
+    const livePastID3CuesLength = this.hls.config.livePastID3CuesLength;
 
-    // don't schedule cleanup if it's already scheduled
-    if (liveCleanupPastID3Cues > 0 && this.cuesCleanupTimeout === -1) {
-      this.cuesCleanupTimeout = setTimeout(() => {
-        clearPastCues(this.id3Track, this.media.currentTime - liveCleanupPastID3Cues);
-        this.cuesCleanupTimeout = -1;
-      }, liveCleanupPastID3Cues * 1000);
-    }
+    clearPastCuesThrottled(this.id3Track, this.media.currentTime, livePastID3CuesLength);
   }
 
   onFragParsingMetadata (data) {

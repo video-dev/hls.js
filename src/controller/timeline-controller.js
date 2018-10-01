@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 import {
   sendAddTrackEvent,
   clearCurrentCues,
-  clearPastCues
+  clearPastCuesThrottled
 } from '../utils/texttrack-utils';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
@@ -48,7 +48,6 @@ class TimelineController extends EventHandler {
     this.captionsTracks = {};
     this._live = false;
     this.media = undefined;
-    this.cuesCleanupSchedule = {};
 
     this.captionsProperties = {
       textTrack1: {
@@ -158,7 +157,6 @@ class TimelineController extends EventHandler {
   onMediaAttaching (data) {
     this.media = data.media;
     this._cleanTracks();
-    this.cuesCleanupSchedule = {};
   }
 
   onMediaDetaching () {
@@ -167,7 +165,6 @@ class TimelineController extends EventHandler {
       clearCurrentCues(captionsTracks[trackName]);
       delete captionsTracks[trackName];
     });
-    Object.keys(this.cuesCleanupSchedule).forEach((cleanupKey) => clearTimeout(this.cuesCleanupSchedule[cleanupKey]));
   }
 
   onManifestLoading () {
@@ -317,14 +314,9 @@ class TimelineController extends EventHandler {
       return;
     }
 
-    const liveCleanupPastVTTCues = this.hls.config.liveCleanupPastVTTCues;
+    const livePastVTTCuesLength = this.hls.config.livePastVTTCuesLength;
 
-    if (liveCleanupPastVTTCues > 0 && !this.cuesCleanupSchedule[textTrack]) {
-      this.cuesCleanupSchedule[textTrack] = setTimeout(() => {
-        clearPastCues(textTrack, this.media.currentTime - liveCleanupPastVTTCues);
-        delete this.cuesCleanupSchedule[textTrack];
-      }, liveCleanupPastVTTCues * 1000);
-    }
+    clearPastCuesThrottled(textTrack, this.media.currentTime, livePastVTTCuesLength);
   }
 
   onFragDecrypted (data) {

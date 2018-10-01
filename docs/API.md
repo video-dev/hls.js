@@ -40,7 +40,7 @@
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`liveDurationInfinity`](#livedurationinfinity)
-  - [`liveCleanupPastVTTCues` / `liveCleanupPastID3Cues`](#livecleanuppastvttcues--livecleanuppastid3cues)
+  - [`livePastVTTCuesLength` / `livePastID3CuesLength`](#livepastvttcueslength--livepastid3cueslength)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -541,12 +541,11 @@ Override current Media Source duration to `Infinity` for a live broadcast.
 Useful, if you are building a player which relies on native UI capabilities in modern browsers.
 If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
 
-### `liveCleanupPastVTTCues` / `liveCleanupPastID3Cues`
+### `livePastVTTCuesLength` / `livePastID3CuesLength`
 
-(default: `undefined`)
+(default: `Infinity`)
 
-Positive finite number value of seconds behind the current live stream playback time in order to cleanup past text track/ID3 cues (e.g. = 30 seconds
-will cleanup cues with end time less than `current time - 30` and will basically do that in 30 seconds intervals).
+Number of seconds behind the current live stream playback time in order to cleanup past text track/ID3 cues (e.g. = 30 seconds will cleanup cues with end time less than `current time - 30`).
 
 ### `enableWorker`
 

@@ -42,8 +42,8 @@ export var hlsDefaultConfig = {
   liveSyncDuration: undefined, // used by stream-controller
   liveMaxLatencyDuration: undefined, // used by stream-controller
   liveDurationInfinity: false, // used by buffer-controller
-  liveCleanupPastVTTCues: undefined, // used by timeline-controller
-  liveCleanupPastID3Cues: undefined, // used by id3-track-controller
+  livePastVTTCuesLength: Infinity, // used by timeline-controller
+  livePastID3CuesLength: Infinity, // used by id3-track-controller
   maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
   enableSoftwareAES: true, // used by decrypter

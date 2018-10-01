@@ -3,6 +3,15 @@ import { clearPastCues } from '../../../src/utils/texttrack-utils';
 
 const assert = require('assert');
 
+function getTextTrackStub (cues) {
+  const trackStub = {
+    cues: cues.concat(),
+    removeCue: stub().callsFake((cue) => trackStub.cues.splice(trackStub.cues.indexOf(cue), 1))
+  };
+
+  return trackStub;
+}
+
 describe('Texttrack utils', () => {
   describe('clearPastCues', () => {
     it('should remove cue past current time', () => {
@@ -13,10 +22,7 @@ describe('Texttrack utils', () => {
         { startTime: 9, endTime: 13 }
       ];
 
-      const trackStub = {
-        cues: cues.concat(),
-        removeCue: stub().callsFake((cue) => trackStub.cues.splice(trackStub.cues.indexOf(cue), 1))
-      };
+      const trackStub = getTextTrackStub(cues);
 
       clearPastCues(trackStub, 8);
 
