@@ -886,7 +886,7 @@ class Cea608Parser {
         charsFound = this.parseChars(a, b);
         if (charsFound) {
           if (this.currChNr && this.currChNr >= 0) {
-            const channel = this.channels[field];
+            const channel = this.channels[this.currChNr];
             channel.insertChars(charsFound);
           } else {
             logger.log('WARNING', 'No channel found yet. TEXT-MODE?');
