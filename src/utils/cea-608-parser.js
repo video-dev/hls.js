@@ -882,18 +882,12 @@ class Cea608Parser {
         cmdFound = this.parseBackgroundAttributes(a, b, field);
       }
 
-      console.log(field, this.currChNr);
       if (!cmdFound) {
         charsFound = this.parseChars(a, b);
         if (charsFound) {
           if (this.currChNr && this.currChNr >= 0) {
-              if (field === 3 && this.currChNr > 2 || field === 1 && this.currChNr < 3) {
-                  const channel = this.channels[this.currChNr];
-                  channel.insertChars(charsFound);
-              } else {
-                  logger.log('WARNING', 'The last seen channel number does not fall within the current field. ' +
-                      'Deferring character insertion until the field and channel match.');
-              }
+            const channel = this.channels[this.currChNr];
+            channel.insertChars(charsFound);
           } else {
             logger.log('WARNING', 'No channel found yet. TEXT-MODE?');
           }
