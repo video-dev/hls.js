@@ -39,7 +39,7 @@ export default class LevelController extends EventHandler {
 
   clearTimer () {
     if (this.timer !== null) {
-      clearTimeout(this.timer);
+      window.clearTimeout(this.timer);
       this.timer = null;
     }
   }
@@ -326,6 +326,7 @@ export default class LevelController extends EventHandler {
         // exponential backoff capped to max retry timeout
         delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
         // Schedule level reload
+        this.clearTimer();
         this.timer = setTimeout(() => this.loadLevel(), delay);
         // boolean used to inform stream controller not to switch back to IDLE on non fatal error
         errorEvent.levelRetry = true;
@@ -415,6 +416,7 @@ export default class LevelController extends EventHandler {
       // in any case, don't reload more than half of target duration
       reloadInterval = Math.max(targetdurationMs / 2, Math.round(reloadInterval));
       logger.log(`live playlist, reload in ${Math.round(reloadInterval)} ms`);
+      this.clearTimer();
       this.timer = setTimeout(() => this.loadLevel(), reloadInterval);
     } else {
       this.clearTimer();
@@ -471,6 +473,8 @@ export default class LevelController extends EventHandler {
 
         // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
         // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
+
+        this.clearTimer();
 
         this.hls.trigger(Event.LEVEL_LOADING, { url, level, id });
       }
