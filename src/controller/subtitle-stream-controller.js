@@ -51,14 +51,6 @@ export class SubtitleStreamController extends TaskLoop {
     super.onHandlerDestroyed();
   }
 
-  _getBuffered () {
-    const buffered = this.tracksBuffered[this.currentTrackId];
-    if (buffered) {
-      return buffered;
-    }
-    return [];
-  }
-
   onSubtitleFragProcessed (data) {
     this.state = State.IDLE;
 
@@ -116,6 +108,79 @@ export class SubtitleStreamController extends TaskLoop {
     this.state = State.IDLE;
   }
 
+  // Got all new subtitle tracks.
+  onSubtitleTracksUpdated (data) {
+    logger.log('subtitle tracks updated');
+    this.tracksBuffered = [];
+    this.tracks = data.subtitleTracks;
+    this.tracks.forEach((track) => {
+      this.tracksBuffered[track.id] = [];
+    });
+  }
+
+  onSubtitleTrackSwitch (data) {
+    this.currentTrackId = data.id;
+    if (!this.tracks || this.currentTrackId === -1) {
+      this.clearInterval();
+      return;
+    }
+
+    // Check if track has the necessary details to load fragments
+    const currentTrack = this.tracks[this.currentTrackId];
+    if (currentTrack && currentTrack.details) {
+      this.setInterval(TICK_INTERVAL);
+    }
+  }
+
+  // Got a new set of subtitle fragments.
+  onSubtitleTrackLoaded (data) {
+    const { id, details } = data;
+
+    if (!this.tracks) {
+      logger.warn('Can not update subtitle details, no tracks found');
+      return;
+    }
+
+    if (this.tracks[id]) {
+      logger.log('Updating subtitle track details');
+      this.tracks[id].details = details;
+    }
+
+    this.setInterval(TICK_INTERVAL);
+  }
+
+  onKeyLoaded () {
+    if (this.state === State.KEY_LOADING) {
+      this.state = State.IDLE;
+    }
+  }
+
+  onFragLoaded (data) {
+    const fragCurrent = this.fragCurrent;
+    const decryptData = data.frag.decryptdata;
+    const fragLoaded = data.frag;
+    const hls = this.hls;
+
+    if (this.state === State.FRAG_LOADING &&
+        fragCurrent &&
+        data.frag.type === 'subtitle' &&
+        fragCurrent.sn === data.frag.sn) {
+      // check to see if the payload needs to be decrypted
+      if ((data.payload.byteLength > 0) &&
+          (decryptData != null) && (decryptData.key != null) &&
+          (decryptData.method === 'AES-128')) {
+        let startTime = performance.now();
+
+        // decrypt the subtitles
+        this.decrypter.decrypt(data.payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {
+          let endTime = performance.now();
+
+          hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload: decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
+        });
+      }
+    }
+  }
+
   doTick () {
     if (!this.media) {
       this.state = State.IDLE;
@@ -168,75 +233,11 @@ export class SubtitleStreamController extends TaskLoop {
     }
   }
 
-  // Got all new subtitle tracks.
-  onSubtitleTracksUpdated (data) {
-    logger.log('subtitle tracks updated');
-    this.tracksBuffered = [];
-    this.tracks = data.subtitleTracks;
-    this.tracks.forEach((track) => {
-      this.tracksBuffered[track.id] = [];
-    });
-  }
-
-  onSubtitleTrackSwitch (data) {
-    this.currentTrackId = data.id;
-    if (!this.tracks || this.currentTrackId === -1) {
-      this.clearInterval();
-      return;
+  _getBuffered () {
+    const buffered = this.tracksBuffered[this.currentTrackId];
+    if (buffered) {
+      return buffered;
     }
-
-    // Check if track has the necessary details to load fragments
-    const currentTrack = this.tracks[this.currentTrackId];
-    if (currentTrack && currentTrack.details) {
-      this.setInterval(TICK_INTERVAL);
-    }
-  }
-
-  // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded (data) {
-    const { id, details } = data;
-
-    if (!this.tracks) {
-      logger.warn('Can not update subtitle details, no tracks found');
-      return;
-    }
-
-    if (this.tracks[id]) {
-      logger.log('Updating subtitle track details');
-      this.tracks[id].details = details;
-    }
-
-    this.setInterval(TICK_INTERVAL);
-  }
-
-  onKeyLoaded () {
-    if (this.state === State.KEY_LOADING) {
-      this.state = State.IDLE;
-    }
-  }
-
-  onFragLoaded (data) {
-    let fragCurrent = this.fragCurrent,
-      decryptData = data.frag.decryptdata;
-    let fragLoaded = data.frag,
-      hls = this.hls;
-    if (this.state === State.FRAG_LOADING &&
-        fragCurrent &&
-        data.frag.type === 'subtitle' &&
-        fragCurrent.sn === data.frag.sn) {
-      // check to see if the payload needs to be decrypted
-      if ((data.payload.byteLength > 0) &&
-          (decryptData != null) && (decryptData.key != null) &&
-          (decryptData.method === 'AES-128')) {
-        let startTime = performance.now();
-
-        // decrypt the subtitles
-        this.decrypter.decrypt(data.payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {
-          let endTime = performance.now();
-
-          hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload: decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
-        });
-      }
-    }
+    return [];
   }
 }
