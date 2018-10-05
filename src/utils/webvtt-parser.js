@@ -58,7 +58,7 @@ const calculateOffset = function (vttCCs, cc, presentationTime) {
   vttCCs.presentationOffset = presentationTime;
 };
 
-const ptsNormalize = function (value, reference) {
+const wrapPtsInteger = function (value, reference) {
   let offset;
   if (reference === undefined) {
     return value;
@@ -163,7 +163,7 @@ const WebVTTParser = {
           });
           try {
             // Calculate subtitle offset in milliseconds.
-            mpegTs = ptsNormalize(mpegTs - syncPTS, vttCCs.ccOffset * 90000);
+            mpegTs = wrapPtsInteger(mpegTs - syncPTS, vttCCs.ccOffset * 90000);
             // Convert cue time to seconds
             localTime = cueString2millis(cueTime) / 1000;
             // Convert MPEGTS to seconds from 90kHz.
