@@ -60,32 +60,40 @@ export class SubtitleStreamController extends TaskLoop {
   }
 
   onSubtitleFragProcessed (data) {
+    this.state = State.IDLE;
+
+    if (!data.success) {
+      return;
+    }
+
     const buffered = this.tracksBuffered[this.currentTrackId];
     const frag = data.frag;
-    if (data.success) {
-      this.fragPrevious = frag;
-      if (buffered) {
-        // Create/Update a buffered array matching the interface used by BufferHelper.bufferedInfo
-        // so we can re-use the logic used to detect how much have been buffered
-        let timeRange;
-        for (let i = 0; i < buffered.length; i++) {
-          if (frag.start >= buffered[i].start && frag.start <= buffered[i].end) {
-            timeRange = buffered[i];
-            break;
-          }
-        }
 
-        if (timeRange) {
-          timeRange.end = frag.start + frag.duration;
-        } else {
-          buffered.push({
-            start: frag.start,
-            end: frag.start + frag.duration
-          });
-        }
+    this.fragPrevious = frag;
+
+    if (!buffered) {
+      return;
+    }
+
+    // Create/update a buffered array matching the interface used by BufferHelper.bufferedInfo
+    // so we can re-use the logic used to detect how much have been buffered
+    // FIXME: put this in a utility function or proper object for time-ranges manipulation?
+    let timeRange;
+    for (let i = 0; i < buffered.length; i++) {
+      if (frag.start >= buffered[i].start && frag.start <= buffered[i].end) {
+        timeRange = buffered[i];
+        break;
       }
     }
-    this.state = State.IDLE;
+
+    if (timeRange) {
+      timeRange.end = frag.start + frag.duration;
+    } else {
+      buffered.push({
+        start: frag.start,
+        end: frag.start + frag.duration
+      });
+    }
   }
 
   onMediaAttached (data) {
@@ -109,23 +117,21 @@ export class SubtitleStreamController extends TaskLoop {
   }
 
   doTick () {
+    if (!this.media) {
+      this.state = State.IDLE;
+      return;
+    }
+
     switch (this.state) {
     case State.IDLE:
       const tracks = this.tracks;
       const trackId = this.currentTrackId;
-      if (!tracks || trackId === -1) {
+
+      if (!tracks || trackId < 0 || trackId >= tracks.length || !tracks[trackId].details) {
         break;
       }
-      let trackDetails;
-      if (trackId < tracks.length) {
-        trackDetails = tracks[trackId].details;
-      }
-      if (!trackDetails) {
-        break;
-      }
-      if (!this.media) {
-        break;
-      }
+
+      const trackDetails = tracks[trackId].details;
 
       const config = this.config;
       const maxBufferHole = config.maxBufferHole;
