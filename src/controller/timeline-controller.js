@@ -90,7 +90,7 @@ class TimelineController extends EventHandler {
       this.initPTS[cc] = initPTS;
     }
 
-    // Due to asynchroneous processing, initial PTS may arrive later than the first VTT fragments are loaded.
+    // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.
     // Parse any unparsed fragments upon receiving the initial PTS.
     if (this.unparsedVttFrags.length) {
       const unparsedVttFrags = this.unparsedVttFrags;
