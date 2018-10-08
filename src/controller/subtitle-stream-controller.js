@@ -115,7 +115,7 @@ class SubtitleStreamController extends TaskLoop {
 
       var trackDetails;
 
-      if (trackId < tracks.length) {
+      if ((trackId !== -1) && (trackId < tracks.length)) {
         trackDetails = tracks[trackId].details;
       }
 
