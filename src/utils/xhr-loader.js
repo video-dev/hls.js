@@ -27,6 +27,8 @@ class XhrLoader {
 
     window.clearTimeout(this.requestTimeout);
     this.requestTimeout = null;
+    window.clearTimeout(this.requestDoneTimeout);
+    this.requestDoneTimeout = null;
     window.clearTimeout(this.retryTimeout);
     this.retryTimeout = null;
   }
@@ -79,6 +81,10 @@ class XhrLoader {
 
     // setup timeout before we perform request
     this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
+    if (this.config.doneTimeout) {
+      this.requestDoneTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.doneTimeout);
+    }
+    this.startRequestTime = Date.now();
     xhr.send();
   }
 
@@ -98,6 +104,7 @@ class XhrLoader {
     if (readyState >= 2) {
       // clear xhr timeout and rearm it if readyState less than 4
       window.clearTimeout(this.requestTimeout);
+      window.clearTimeout(this.requestDoneTimeout);
       if (stats.tfirst === 0) {
         stats.tfirst = Math.max(performance.now(), stats.trequest);
       }
@@ -137,6 +144,13 @@ class XhrLoader {
         }
       } else {
         // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
+        if (this.config.doneTimeout) {
+          let timeElapsed = Date.now() - this.startRequestTime;
+          if (timeElapsed > config.doneTimeout) {
+            return this.loadtimeout();
+          }
+          this.requestDoneTimeout = window.setTimeout(this.loadtimeout.bind(this), config.doneTimeout - timeElapsed);
+        }
         this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout);
       }
     }
