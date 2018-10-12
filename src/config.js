@@ -42,7 +42,6 @@ export var hlsDefaultConfig = {
   liveSyncDuration: undefined, // used by stream-controller
   liveMaxLatencyDuration: undefined, // used by stream-controller
   liveDurationInfinity: false, // used by buffer-controller
-  livePastVTTCuesLength: Infinity, // used by timeline-controller
   livePastID3CuesLength: Infinity, // used by id3-track-controller
   maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
@@ -100,6 +99,7 @@ if (__USE_SUBTITLES__) {
   hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
   hlsDefaultConfig.timelineController = TimelineController;
   hlsDefaultConfig.cueHandler = Cues; // used by timeline-controller
+  hlsDefaultConfig.livePastCEA708CuesLength = Infinity; // used by timeline-controller
   hlsDefaultConfig.enableCEA708Captions = true; // used by timeline-controller
   hlsDefaultConfig.enableWebVTT = true; // used by timeline-controller
   hlsDefaultConfig.captionsTextTrack1Label = 'English'; // used by timeline-controller

@@ -314,9 +314,9 @@ class TimelineController extends EventHandler {
       return;
     }
 
-    const livePastVTTCuesLength = this.hls.config.livePastVTTCuesLength;
+    const livePastCEA708CuesLength = this.hls.config.livePastCEA708CuesLength;
 
-    clearPastCuesThrottled(textTrack, this.media.currentTime, livePastVTTCuesLength);
+    clearPastCuesThrottled(textTrack, this.media.currentTime, livePastCEA708CuesLength);
   }
 
   onFragDecrypted (data) {

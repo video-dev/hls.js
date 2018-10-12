@@ -40,7 +40,7 @@
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`liveDurationInfinity`](#livedurationinfinity)
-  - [`livePastVTTCuesLength` / `livePastID3CuesLength`](#livepastvttcueslength--livepastid3cueslength)
+  - [`livePastCEA708CuesLength` / `livePastID3CuesLength`](#livepastcea708cueslength--livepastid3cueslength)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -541,7 +541,7 @@ Override current Media Source duration to `Infinity` for a live broadcast.
 Useful, if you are building a player which relies on native UI capabilities in modern browsers.
 If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
 
-### `livePastVTTCuesLength` / `livePastID3CuesLength`
+### `livePastCEA708CuesLength` / `livePastID3CuesLength`
 
 (default: `Infinity`)
 
