@@ -149,7 +149,6 @@ class BufferController extends EventHandler {
       }
 
       this.mediaSource = null;
-      this.media = null;
       this._objectUrl = null;
       this.pendingTracks = {};
       this.tracks = {};
@@ -223,7 +222,18 @@ class BufferController extends EventHandler {
     let timeRanges = {};
     const sourceBuffer = this.sourceBuffer;
     for (let streamType in sourceBuffer) {
-      timeRanges[streamType] = sourceBuffer[streamType].buffered;
+      try {
+        timeRanges[streamType] = sourceBuffer[streamType].buffered;
+      } catch (err) {
+        // Retry
+        this.hls.trigger(Event.MEDIA_DETACHING);
+        this.hls.trigger(Event.MEDIA_ATTACHING, { media: this.media });
+        this.onBufferReset();
+        this.createSourceBuffers(this.tracks);
+        timeRanges['video'] = this.sourceBuffer['video'].buffered;
+        timeRanges['audio'] = this.sourceBuffer['audio'].buffered;
+        break;
+      }
     }
 
     this.hls.trigger(Event.BUFFER_APPENDED, { parent, pending, timeRanges });
