@@ -242,6 +242,10 @@ export default class Hls extends Observer {
    */
   attachMedia (media) {
     logger.log('attachMedia');
+    if (this.media !== null) {
+      this.detachMedia();
+    }
+
     this.media = media;
     this.trigger(HlsEvents.MEDIA_ATTACHING, { media: media });
   }
