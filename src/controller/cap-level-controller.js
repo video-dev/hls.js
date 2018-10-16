@@ -11,7 +11,8 @@ class CapLevelController extends EventHandler {
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED,
-      Event.BUFFER_CODECS);
+      Event.BUFFER_CODECS,
+      Event.MEDIA_DETACHING);
 
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.firstLevel = null;
@@ -62,6 +63,10 @@ class CapLevelController extends EventHandler {
 
   onLevelsUpdated (data) {
     this.levels = data.levels;
+  }
+
+  onMediaDetaching () {
+    this._stopCapping();
   }
 
   detectPlayerSize () {

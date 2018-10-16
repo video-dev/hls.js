@@ -12,7 +12,7 @@ const cueString2millis = function (timeString) {
   let mins = parseInt(timeString.substr(-9, 2));
   let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
-  if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) {
+  if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {
     return -1;
   }
 
