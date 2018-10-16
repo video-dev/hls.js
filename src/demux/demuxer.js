@@ -1,5 +1,5 @@
-import { EventEmitter } from 'events';
-import * as work from 'webworkify-webpack';
+import EventEmitter from 'events';
+import work from 'webworkify-webpack';
 
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
@@ -7,8 +7,6 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { getSelfScope } from '../utils/get-self-scope';
-
-import { Observer } from '../observer';
 
 // see https://stackoverflow.com/a/11237259/589493
 const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
@@ -18,16 +16,23 @@ class Demuxer {
   constructor (hls, id) {
     this.hls = hls;
     this.id = id;
-
-    const observer = this.observer = new Observer();
+    // observer setup
+    const observer = this.observer = new EventEmitter();
     const config = hls.config;
+    observer.trigger = function trigger (event, ...data) {
+      observer.emit(event, event, ...data);
+    };
 
-    const forwardMessage = (ev, data) => {
+    observer.off = function off (event, ...data) {
+      observer.removeListener(event, ...data);
+    };
+
+    let forwardMessage = function (ev, data) {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
       hls.trigger(ev, data);
-    };
+    }.bind(this);
 
     // forward events to main thread
     observer.on(Event.FRAG_DECRYPTED, forwardMessage);
@@ -59,8 +64,7 @@ class Demuxer {
         };
         w.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
-        logger.warn('Error in worker:', err);
-        logger.error('Error while initializing DemuxerWorker, fallback on DemuxerInline');
+        logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
         if (w) {
           // revoke the Object URL that was used to create demuxer worker, so as not to leak it
           global.URL.revokeObjectURL(w.objectURL);
@@ -86,7 +90,7 @@ class Demuxer {
         this.demuxer = null;
       }
     }
-    const observer = this.observer;
+    let observer = this.observer;
     if (observer) {
       observer.removeAllListeners();
       this.observer = null;

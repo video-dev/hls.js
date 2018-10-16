@@ -16,5 +16,3 @@ coverage/
 
 # Build
 /dist
-/gh-pages
-/api-docs

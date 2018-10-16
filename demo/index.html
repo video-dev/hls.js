@@ -31,7 +31,7 @@
         </h2>
 
         <h3>
-          <a href="../docs/API.html">API docs | usage guide</a>
+          <a href="../docs/html">API docs | usage guide</a>
         </h3>
       </header>
     </div>
@@ -288,8 +288,51 @@
     <script src="metrics.js"></script>
     <script src="jsonpack.js"></script>
 
-    <!-- demo build -->
-    <script src="../dist/hls.js"></script>
-    <script src="../dist/hls-demo.js"></script>
+    <script>
+      (function() {
+        function loadScript(url, onLoad) {
+          var s = document.createElement("script");
+          s.setAttribute('src', url);
+          if (onLoad) {
+            s.onload = onLoad;
+          }
+          document.body.appendChild(s);
+        }
+
+        var LOCAL_DIST_SRC = '../dist/hls.js';
+        var LATEST_DIST_SRC = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+        var LOCAL_DEMO_SRC = '../dist/hls-demo.js';
+        var CANARY_DEMO_SRC = 'https://cdn.jsdelivr.net/npm/hls.js@canary/dist/hls-demo.js';
+
+        var queryParts = window.location.search.substring(1).split('&');
+        var src = null;
+        var demoSrc = null;
+        if (queryParts.indexOf('version=latest') >= 0) {
+          src = LATEST_DIST_SRC;
+          demoSrc = CANARY_DEMO_SRC;
+        } else if (queryParts.indexOf('version=canary') >= 0 || queryParts.indexOf('canary=true') >= 0) {
+          src = 'https://cdn.jsdelivr.net/npm/hls.js@canary';
+          demoSrc = CANARY_DEMO_SRC;
+        } else if (queryParts.indexOf('version=local') >= 0) {
+          src = LOCAL_DIST_SRC;
+          demoSrc = LOCAL_DEMO_SRC;
+        }
+        if (!src) {
+          if (window.location.port) {
+            // we are not on port 80/443. Probably running locally. default to local
+            src = LOCAL_DIST_SRC;
+            demoSrc = LOCAL_DEMO_SRC;
+          } else {
+            src = LATEST_DIST_SRC;
+            demoSrc = CANARY_DEMO_SRC;
+          }
+        }
+
+        loadScript(src, function() {
+          // load compiled demo main
+          loadScript(demoSrc);
+        });
+      })();
+    </script>
   </body>
 </html>

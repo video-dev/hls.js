@@ -67,6 +67,7 @@ class BufferController extends EventHandler {
         try {
           audioBuffer.abort();
         } catch (err) {
+          updating = true;
           logger.warn('can not abort audio buffer: ' + err);
         }
 

@@ -1,7 +1,7 @@
+const assert = require('assert');
+
 import EwmaBandWidthEstimator from '../../../src/utils/ewma-bandwidth-estimator';
 import Hls from '../../../src/hls';
-
-const assert = require('assert');
 
 describe('EwmaBandWidthEstimator', () => {
   it('returns default estimate if bw estimator not available yet', () => {

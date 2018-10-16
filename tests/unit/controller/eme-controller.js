@@ -3,9 +3,9 @@ import HlsMock from '../../mocks/hls.mock';
 import EventEmitter from 'events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
 
-import assert from 'assert';
-
 const sinon = require('sinon');
+
+import assert from 'assert';
 
 const MediaMock = function () {
   let media = new EventEmitter();

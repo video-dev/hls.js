@@ -1,7 +1,7 @@
+const assert = require('assert');
+
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
-
-const assert = require('assert');
 
 describe('AudioTrackController', () => {
   const tracks = [{
@@ -78,18 +78,6 @@ describe('AudioTrackController', () => {
       audioTrackController.onManifestParsed({
         audioTracks: null
       });
-    });
-  });
-
-  describe('_needsTrackLoading', () => {
-    it('should not need loading because the audioTrack is embedded in the main playlist', () => {
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true } }), false);
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null }), false);
-    });
-
-    it('should need loading because the track has not been loaded yet', () => {
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), true);
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' }), true);
     });
   });
 

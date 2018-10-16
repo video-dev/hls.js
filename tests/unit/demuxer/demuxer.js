@@ -1,8 +1,8 @@
-import Event from '../../../src/events.js';
-import Demuxer from '../../../src/demux/demuxer.js';
-
 const assert = require('assert');
 const sinon = require('sinon');
+
+import Event from '../../../src/events.js';
+import Demuxer from '../../../src/demux/demuxer.js';
 
 describe('Demuxer tests', function () {
   it('Demuxer constructor no worker', function () {

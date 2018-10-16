@@ -4,7 +4,7 @@ node_js: node
 # see https://github.com/video-dev/hls.js/pull/1710#discussion_r187754754
 sudo: required
 # don't connect to sauce labs unless running functional tests
-before_install: if [ "${TRAVIS_MODE}" != "funcTests" ]; then unset SAUCE_USERNAME && unset SAUCE_ACCESS_KEY; fi
+# before_install: if [ "${TRAVIS_MODE}" != "funcTests" ]; then unset SAUCE_USERNAME && unset SAUCE_ACCESS_KEY; fi
 script: ./scripts/travis.sh
 after_script: if [ "${TRAVIS_MODE}" = "funcTests" ]; then echo -n "travis_fold:start:sauce_logs\nSauce connect log:\n" && cat /home/travis/sauce-connect.log && echo -n "\ntravis_fold:end:sauce_logs\n"; fi
 env:
@@ -23,7 +23,6 @@ jobs:
     - stage: testFuncOptional
   include:
     # https://docs.travis-ci.com/user/build-stages/deploy-github-releases/
-    # publish package (and deploy gh-pages)
     - stage: release
       if: tag IS present
       env: TRAVIS_MODE=release
@@ -34,12 +33,10 @@ jobs:
         file_glob: true
         file: dist/*
         draft: true
-        tag_name: $TRAVIS_TAG
-        target_commitish: $TRAVIS_COMMIT
         skip_cleanup: true
         on:
           tags: true
-    # publish canary package (and deploy gh-pages) if on master
+    # publish canary package if on master
     - stage: releaseCanary
       if: branch = master AND type != pull_request
       env: TRAVIS_MODE=releaseCanary

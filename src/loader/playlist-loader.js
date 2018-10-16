@@ -396,21 +396,16 @@ class PlaylistLoader extends EventHandler {
 
   _handleSidxRequest (response, context) {
     const sidxInfo = MP4Demuxer.parseSegmentIndex(new Uint8Array(response.data));
-    // if provided fragment does not contain sidx, early return
-    if (!sidxInfo) {
-      return;
-    }
-    const sidxReferences = sidxInfo.references;
-    const levelDetails = context.levelDetails;
-    sidxReferences.forEach((segmentRef, index) => {
+    sidxInfo.references.forEach((segmentRef, index) => {
       const segRefInfo = segmentRef.info;
-      const frag = levelDetails.fragments[index];
+      const frag = context.levelDetails.fragments[index];
 
       if (frag.byteRange.length === 0) {
         frag.rawByteRange = String(1 + segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
       }
     });
-    levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
+
+    context.levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
   }
 
   _handleManifestParsingError (response, context, reason, networkDetails) {

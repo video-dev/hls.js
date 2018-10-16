@@ -1,4 +1,4 @@
-import * as URLToolkit from 'url-toolkit';
+import URLToolkit from 'url-toolkit';
 
 import {
   ErrorTypes,
@@ -19,15 +19,17 @@ import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig } from './config';
 
 import HlsEvents from './events';
+import EventEmitter from 'events';
 
-import { Observer } from './observer';
+// polyfill for IE11
+require('string.prototype.endswith');
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls extends Observer {
+export default class Hls {
   /**
    * @type {string}
    */
@@ -88,9 +90,7 @@ export default class Hls extends Observer {
    * @param {HlsConfig} config
    */
   constructor (config = {}) {
-    super();
-
-    const defaultConfig = Hls.DefaultConfig;
+    let defaultConfig = Hls.DefaultConfig;
 
     if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
@@ -112,6 +112,19 @@ export default class Hls extends Observer {
     enableLogs(config.debug);
     this.config = config;
     this._autoLevelCapping = -1;
+    // observer setup
+    let observer = this.observer = new EventEmitter();
+    observer.trigger = function trigger (event, ...data) {
+      observer.emit(event, event, ...data);
+    };
+
+    observer.off = function off (event, ...data) {
+      observer.removeListener(event, ...data);
+    };
+    this.on = observer.on.bind(observer);
+    this.off = observer.off.bind(observer);
+    this.once = observer.once.bind(observer);
+    this.trigger = observer.trigger.bind(observer);
 
     // core controllers and network loaders
 
@@ -232,7 +245,7 @@ export default class Hls extends Observer {
       component.destroy();
     });
     this.url = null;
-    this.removeAllListeners();
+    this.observer.removeAllListeners();
     this._autoLevelCapping = -1;
   }
 

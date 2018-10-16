@@ -10,7 +10,7 @@ import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 
-function canReuseVttTextTrack (inUseTrack, manifestTrack) {
+function reuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
 }
 
@@ -190,9 +190,9 @@ class TimelineController extends EventHandler {
       this.tracks.forEach((track, index) => {
         let textTrack;
         if (index < inUseTracks.length) {
-          const inUseTrack = Object.values(inUseTracks).find(inUseTrack => canReuseVttTextTrack(inUseTrack, track));
+          const inUseTrack = inUseTracks[index];
           // Reuse tracks with the same label, but do not reuse 608/708 tracks
-          if (inUseTrack) {
+          if (reuseVttTextTrack(inUseTrack, track)) {
             textTrack = inUseTrack;
           }
         }

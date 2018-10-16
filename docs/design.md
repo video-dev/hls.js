@@ -28,7 +28,7 @@ design idea is pretty simple :
     - in charge of **monitoring fragment loading speed** (by monitoring the amount of data received from fragment loader `stats.loaded` counter)
      - "expected time of fragment load completion" is computed using "fragment loading instant bandwidth".
      - this time is compared to the "expected time of buffer starvation".
-     - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, and a FRAG_LOAD_EMERGENCY_ABORTED event is triggered. this event will be handled by stream-controller.
+     - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, and a **** event is triggered. this event will be handled by stream-controller.
   - [src/controller/audio-stream-controller.js][]
     - audio stream controller is in charge of filling audio buffer in case alternate audio tracks are used
     - if buffer is not filled up appropriately (i.e. as per defined maximum buffer size, it will trigger the following actions:
@@ -52,6 +52,13 @@ design idea is pretty simple :
         - trigger BUFFER_FLUSHED event upon successful buffer flushing
   - [src/controller/cap-level-controller.js][]
     - in charge of determining best quality level to actual size (dimensions: width and height) of the player
+  - [src/controller/ewma-bandwidth-estimator.js][]
+    - Exponential Weighted Moving Average bandwidth estimator, heavily inspired from shaka-player
+      - Tracks bandwidth samples and estimates available bandwidth, based on the minimum of two exponentially-weighted moving averages with different half-lives.
+      - one fast average with a short half-life: useful to quickly react to bandwidth drop and switch rendition down quickly
+      - one slow average with a long half-life: useful to slowly react to bandwidth increase and avoid switching up rendition to quickly
+      - bandwidth estimate is Math.min(fast average,slow average)
+      - average half-life are configurable , refer to abrEwma* config params
   - [src/controller/fps-controller.js][]
     - in charge of monitoring frame rate, and fire FPS_DROP event in case FPS drop exceeds configured threshold. disabled for now.
   - [src/controller/id3-track-controller.js](../src/controller/id3-track-controller.js)
@@ -195,13 +202,6 @@ design idea is pretty simple :
     - Default CC renderer. Translates Screen objects from cea-608-parser into HTML5 VTTCue objects, rendered by the video tag
   - [src/utils/ewma.js][]
     - compute [exponential weighted moving average](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average)
-  - [src/utils/ewma-bandwidth-estimator.js][]
-    - Exponential Weighted Moving Average bandwidth estimator, heavily inspired from shaka-player
-      - Tracks bandwidth samples and estimates available bandwidth, based on the minimum of two exponentially-weighted moving averages with different half-lives.
-      - one fast average with a short half-life: useful to quickly react to bandwidth drop and switch rendition down quickly
-      - one slow average with a long half-life: useful to slowly react to bandwidth increase and avoid switching up rendition to quickly
-      - bandwidth estimate is Math.min(fast average,slow average)
-      - average half-life are configurable , refer to abrEwma* config params
   - [src/utils/hex.js][]
     - Hex dump utils, useful for debug
   - [src/utils/logger.js][]
