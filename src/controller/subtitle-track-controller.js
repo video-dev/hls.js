@@ -67,7 +67,7 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    if (this.queuedDefaultTrack) {
+    if (typeof this.queuedDefaultTrack !== 'undefined') {
       this.subtitleTrack = this.queuedDefaultTrack;
       delete this.queuedDefaultTrack;
     }
