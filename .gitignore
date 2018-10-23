@@ -14,5 +14,7 @@ coverage/
 
 .idea/*
 
-# Build reports
-dist/bundle-analyzer-report.*
+# Build
+/dist
+/gh-pages
+/api-docs
