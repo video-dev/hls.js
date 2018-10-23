@@ -713,6 +713,7 @@ class StreamController extends TaskLoop {
     let config = this.config;
     if (this.levels && config.autoStartLoad) {
       this.hls.startLoad(config.startPosition);
+      logger.log('this.levels = ', this.levels);
     }
 
     this.gapController = new GapController(config, media, this.fragmentTracker, this.hls);

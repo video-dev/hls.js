@@ -15,6 +15,5 @@ coverage/
 .idea/*
 
 # Build
-/dist
 /gh-pages
 /api-docs

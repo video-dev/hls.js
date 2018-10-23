@@ -40,6 +40,7 @@
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`liveDurationInfinity`](#livedurationinfinity)
+  - [`liveBackBufferLength`](#livebackbufferlength)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -539,6 +540,12 @@ A value too close from `liveSyncDuration` is likely to cause playback stalls.
 Override current Media Source duration to `Infinity` for a live broadcast.
 Useful, if you are building a player which relies on native UI capabilities in modern browsers.
 If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
+
+### `liveBackBufferLength`
+
+(default: `Infinity`)
+
+Enforce the length (seconds) of the back buffer (`Infinity` means no restriction on back buffer length, `0` - no back buffer is needed).
 
 ### `enableWorker`
 
