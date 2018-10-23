@@ -383,9 +383,10 @@ class BufferController extends EventHandler {
 
   clearLiveBackBuffer () {
     // clear back buffer for live only
-    if (!this._live) {
-      return;
-    }
+    logger.log('this._live', this._live);
+    // if (!this._live) {
+    //   return;
+    // }
 
     const { liveBackBufferLength } = this.hls.config;
 
