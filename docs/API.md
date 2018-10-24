@@ -545,7 +545,7 @@ If you want to have a native Live UI in environments like iOS Safari, Safari, An
 
 (default: `Infinity`)
 
-Enforce the length (seconds) of the back buffer (`Infinity` means no restriction on back buffer length, `0` - no back buffer is needed).
+Sets the maximum length of the buffer, in seconds, to keep durin a live stream. Any video buffered past this time will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted.
 
 ### `enableWorker`
 
