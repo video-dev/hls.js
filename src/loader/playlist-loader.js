@@ -425,9 +425,11 @@ class PlaylistLoader extends EventHandler {
     this.hls.trigger(Event.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
-      fatal: true,
+      fatal: context.type === ContextType.MANIFEST,
       url: response.url,
       reason,
+      response,
+      context,
       networkDetails
     });
   }
