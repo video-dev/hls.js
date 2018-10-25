@@ -323,13 +323,9 @@ class AudioTrackController extends TaskLoop {
    * @returns {boolean}
    */
   _needsTrackLoading (audioTrack) {
-    const { details } = audioTrack;
+    const { details, url } = audioTrack;
 
-    if (!details) {
-      return true;
-    } else if (details.live) {
-      return true;
-    }
+    return !!url && (!details || details.live === true);
   }
 
   /**
