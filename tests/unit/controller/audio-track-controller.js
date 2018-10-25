@@ -82,6 +82,18 @@ describe('AudioTrackController', () => {
     });
   });
 
+  describe('_needsTrackLoading', () => {
+    it('should not need loading because the audioTrack is embedded in the main playlist', () => {
+      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true } }), false);
+      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null }), false);
+    });
+
+    it('should need loading because the track has not been loaded yet', () => {
+      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), true);
+      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' }), true);
+    });
+  });
+
   describe('onAudioTrackLoaded', () => {
     it('should set the track details from the event data but not set the interval for a non-live track', () => {
       const details = {
@@ -274,7 +286,7 @@ describe('AudioTrackController', () => {
     it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', () => {
       const currentTrackId = 4;
 
-      audioTrackController.trackId = currentTrackId;
+      audioTrackController._trackId = currentTrackId;
 
       audioTrackController.tracks = tracks;
 

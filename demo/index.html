@@ -12,8 +12,6 @@
 
     <link rel="stylesheet" href="style.css">
 
-    <link rel="preload" href="../dist/hls-demo.js" as="script">
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js"></script>
@@ -33,7 +31,7 @@
         </h2>
 
         <h3>
-          <a href="../docs/html">API docs | usage guide</a>
+          <a href="../docs/API.html">API docs | usage guide</a>
         </h3>
       </header>
     </div>
@@ -290,27 +288,8 @@
     <script src="metrics.js"></script>
     <script src="jsonpack.js"></script>
 
-    <script>
-      (function() {
-        function loadScript(url, onLoad) {
-          var s = document.createElement("script");
-          s.setAttribute('src', url);
-          if (onLoad) {
-            s.onload = onLoad;
-          }
-          document.body.appendChild(s);
-        }
-
-        // load compiled lib dist, or latest canary from jsdelivr (?canary=true)
-        var src = window.location.search.substring(1).split('&').indexOf('canary=true') >= 0
-          ? 'https://cdn.jsdelivr.net/npm/hls.js@canary'
-          : '../dist/hls.js';
-
-        loadScript(src, function() {
-          // load compiled demo main
-          loadScript('../dist/hls-demo.js');
-        });
-      })();
-    </script>
+    <!-- demo build -->
+    <script src="../dist/hls.js"></script>
+    <script src="../dist/hls-demo.js"></script>
   </body>
 </html>

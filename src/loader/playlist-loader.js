@@ -164,11 +164,11 @@ class PlaylistLoader extends EventHandler {
   }
 
   onAudioTrackLoading (data) {
-    this.load(data.url, { type: ContextType.AUDIO_TRACK, level: 0, id: data.id });
+    this.load(data.url, { type: ContextType.AUDIO_TRACK, level: null, id: data.id });
   }
 
   onSubtitleTrackLoading (data) {
-    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, level: 0, id: data.id });
+    this.load(data.url, { type: ContextType.SUBTITLE_TRACK, level: null, id: data.id });
   }
 
   load (url, context) {
@@ -339,8 +339,8 @@ class PlaylistLoader extends EventHandler {
 
     const url = PlaylistLoader.getResponseUrl(response, context);
 
-    const levelUrlId = isNaN(id) ? 0 : id;
-    const levelId = isNaN(level) ? levelUrlId : level; // level -> id -> 0
+    const levelUrlId = Number.isFinite(id) ? id : 0;
+    const levelId = Number.isFinite(level) ? level : levelUrlId;
     const levelType = PlaylistLoader.mapContextToLevelType(context);
 
     const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType, levelUrlId);
@@ -396,16 +396,21 @@ class PlaylistLoader extends EventHandler {
 
   _handleSidxRequest (response, context) {
     const sidxInfo = MP4Demuxer.parseSegmentIndex(new Uint8Array(response.data));
-    sidxInfo.references.forEach((segmentRef, index) => {
+    // if provided fragment does not contain sidx, early return
+    if (!sidxInfo) {
+      return;
+    }
+    const sidxReferences = sidxInfo.references;
+    const levelDetails = context.levelDetails;
+    sidxReferences.forEach((segmentRef, index) => {
       const segRefInfo = segmentRef.info;
-      const frag = context.levelDetails.fragments[index];
+      const frag = levelDetails.fragments[index];
 
       if (frag.byteRange.length === 0) {
         frag.rawByteRange = String(1 + segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
       }
     });
-
-    context.levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
+    levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
   }
 
   _handleManifestParsingError (response, context, reason, networkDetails) {
