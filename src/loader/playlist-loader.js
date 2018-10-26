@@ -271,11 +271,11 @@ class PlaylistLoader extends EventHandler {
   }
 
   loaderror (response, context, networkDetails = null) {
-    this._handleNetworkError(context, networkDetails);
+    this._handleNetworkError(response, context, networkDetails);
   }
 
   loadtimeout (stats, context, networkDetails = null) {
-    this._handleNetworkError(context, networkDetails, true);
+    this._handleNetworkError(null, context, networkDetails, true);
   }
 
   _handleMasterPlaylist (response, stats, context, networkDetails) {
@@ -424,7 +424,7 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handleNetworkError (context, networkDetails, timeout = false) {
+  _handleNetworkError (response, context, networkDetails, timeout = false) {
     logger.info(`A network error occured while loading a ${context.type}-type playlist`);
 
     let details;
@@ -455,7 +455,7 @@ class PlaylistLoader extends EventHandler {
       this.resetInternalLoader(context.type);
     }
 
-    this.hls.trigger(Event.ERROR, {
+    let errorData = {
       type: ErrorTypes.NETWORK_ERROR,
       details,
       fatal,
@@ -463,7 +463,13 @@ class PlaylistLoader extends EventHandler {
       loader,
       context,
       networkDetails
-    });
+    };
+
+    if (response) {
+      errorData.response = response;
+    }
+
+    this.hls.trigger(Event.ERROR, errorData);
   }
 
   _handlePlaylistLoaded (response, stats, context, networkDetails) {
