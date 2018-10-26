@@ -462,7 +462,7 @@ class EMEController extends EventHandler {
 
       if (playReadyHeaders.length > 0) {
         playReadyHeaders.forEach((header) => {
-          xhr.setRequestHeader(header.name, header.value);
+          xhr.setRequestHeader(header[0], header[1]);
         });
       }
     }

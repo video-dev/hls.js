@@ -51,7 +51,7 @@ export function buildPlayReadyPSSHBox (binary) {
 
 /*
 * @param {ArrayBuffer} keyMessage
-* @returns {Array} playReadyHeaders
+* @returns {Array<[string, string]>} playReadyHeaders
 */
 export function makePlayreadyHeaders (keyMessage) {
   const xmlContent = String.fromCharCode.apply(null, new Uint16Array(keyMessage));
@@ -64,10 +64,7 @@ export function makePlayreadyHeaders (keyMessage) {
 
   for (let i = 0, len = headers.length; i < len; i++) {
     header = headers[i];
-    playReadyHeaders.push({
-      'name': header.querySelector('name').textContent,
-      'value': header.querySelector('value').textContent
-    });
+    playReadyHeaders.push([header.querySelector('name').textContent, header.querySelector('value').textContent]);
   }
 
   return playReadyHeaders;
