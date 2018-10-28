@@ -32,6 +32,12 @@ class SubtitleTrackController extends EventHandler {
      * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
      */
     this.subtitleDisplay = true;
+
+    /**
+     * Keeps reference to a default track id when media has not been attached yet
+     * @member {number}
+     */
+    this.queuedDefaultTrack = null;
   }
 
   _onTextTracksChanged () {
@@ -67,9 +73,9 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    if (typeof this.queuedDefaultTrack !== 'undefined') {
+    if (Number.isFinite(this.queuedDefaultTrack)) {
       this.subtitleTrack = this.queuedDefaultTrack;
-      delete this.queuedDefaultTrack;
+      this.queuedDefaultTrack = null;
     }
 
     this.trackChangeListener = this._onTextTracksChanged.bind(this);
