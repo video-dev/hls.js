@@ -29,11 +29,7 @@ class BufferController extends EventHandler {
     this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     this._levelDuration = null;
-    /**
-     * the target duration of the current playlist
-     *
-     * @default 10
-     */
+    // the target duration of the current media playlist
     this._levelTargetDuration = 10;
     // current stream state: true - for live broadcast, false - for VoD content
     this._live = null;
@@ -242,7 +238,7 @@ class BufferController extends EventHandler {
 
     // appending goes first
     if (pending === 0) {
-      this.clearLiveBackBuffer();
+      this.flushLiveBackBuffer();
     }
   }
 
@@ -363,7 +359,7 @@ class BufferController extends EventHandler {
         return;
       }
     }
-    logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
+    logger.log('all media data are available, signal endOfStream() to MediaSource and stop loading fragment');
     // Notify the media element that it now has all of the media data
     try {
       mediaSource.endOfStream();
@@ -380,44 +376,39 @@ class BufferController extends EventHandler {
     this.doFlush();
   }
 
-  clearLiveBackBuffer () {
+  flushLiveBackBuffer () {
     // clear back buffer for live only
     if (!this._live) {
       return;
     }
 
-    const { liveBackBufferLength } = this.hls.config;
-
-    if (isFinite(liveBackBufferLength) === false || liveBackBufferLength < 0) {
+    const liveBackBufferLength = this.hls.config.liveBackBufferLength;
+    if (!isFinite(liveBackBufferLength) || liveBackBufferLength < 0) {
       return;
     }
 
-    try {
-      const currentTime = this.media.currentTime;
-      const sourceBuffer = this.sourceBuffer;
-      const bufferTypes = Object.keys(sourceBuffer);
-      const targetBackBufferPosition = currentTime - Math.max(liveBackBufferLength, this._levelTargetDuration);
+    const currentTime = this.media.currentTime;
+    const sourceBuffer = this.sourceBuffer;
+    const bufferTypes = Object.keys(sourceBuffer);
+    const targetBackBufferPosition = currentTime - Math.max(liveBackBufferLength, this._levelTargetDuration);
 
-      for (let index = bufferTypes.length - 1; index >= 0; index--) {
-        const bufferType = bufferTypes[index], buffered = sourceBuffer[bufferType].buffered;
+    for (let index = bufferTypes.length - 1; index >= 0; index--) {
+      const bufferType = bufferTypes[index], buffered = sourceBuffer[bufferType].buffered;
 
-        // when target buffer start exceeds actual buffer start
-        if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
-          // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
-          // time will lead to playback freezing)
-          // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
-          this.removeBufferRange(bufferType, sourceBuffer[bufferType], 0, targetBackBufferPosition);
-        }
+      // when target buffer start exceeds actual buffer start
+      if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
+        // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
+        // time will lead to playback freezing)
+        // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
+        this.removeBufferRange(bufferType, sourceBuffer[bufferType], 0, targetBackBufferPosition);
       }
-    } catch (error) {
-      logger.warn('clearLiveBackBuffer failed', error);
     }
   }
 
   onLevelUpdated ({ details }) {
     if (details.fragments.length > 0) {
       this._levelDuration = details.totalduration + details.fragments[0].start;
-      this._levelTargetDuration = details.targetDuration || 10;
+      this._levelTargetDuration = details.averagetargetduration || details.targetduration || 10;
       this._live = details.live;
       this.updateMediaElementDuration();
     }
@@ -505,7 +496,7 @@ class BufferController extends EventHandler {
   }
 
   doAppending () {
-    let hls = this.hls, sourceBuffer = this.sourceBuffer, segments = this.segments;
+    let { hls, segments, sourceBuffer } = this;
     if (Object.keys(sourceBuffer).length) {
       if (this.media.error) {
         this.segments = [];
@@ -557,7 +548,7 @@ class BufferController extends EventHandler {
             */
             if (this.appendError > hls.config.appendErrorMaxRetry) {
               logger.log(`fail ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
-              segments = [];
+              this.segments = [];
               event.fatal = true;
               hls.trigger(Event.ERROR, event);
             } else {
@@ -583,7 +574,8 @@ class BufferController extends EventHandler {
     as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
   */
   flushBuffer (startOffset, endOffset, typeIn) {
-    let sb, sourceBuffer = this.sourceBuffer;
+    let sb;
+    const sourceBuffer = this.sourceBuffer;
     if (Object.keys(sourceBuffer).length) {
       logger.log(`flushBuffer,pos/start/end: ${this.media.currentTime.toFixed(3)}/${startOffset}/${endOffset}`);
       // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
@@ -604,9 +596,6 @@ class BufferController extends EventHandler {
               return false;
             }
           } else {
-            // logger.log('abort ' + type + ' append in progress');
-            // this will abort any appending in progress
-            // sb.abort();
             logger.warn('cannot flush, sb updating in progress');
             return false;
           }
@@ -632,20 +621,11 @@ class BufferController extends EventHandler {
    */
   removeBufferRange (type, sb, startOffset, endOffset) {
     try {
-      let i, length, bufStart, bufEnd, removeStart, removeEnd;
-
-      for (i = 0, length = sb.buffered.length; i < length; i++) {
-        bufStart = sb.buffered.start(i);
-        bufEnd = sb.buffered.end(i);
-
-        // workaround firefox not able to properly flush multiple buffered range.
-        if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
-          removeStart = startOffset;
-          removeEnd = endOffset;
-        } else {
-          removeStart = Math.max(bufStart, startOffset);
-          removeEnd = Math.min(bufEnd, endOffset);
-        }
+      for (let i = 0; i < sb.buffered.length; i++) {
+        let bufStart = sb.buffered.start(i);
+        let bufEnd = sb.buffered.end(i);
+        let removeStart = Math.max(bufStart, startOffset);
+        let removeEnd = Math.min(bufEnd, endOffset);
 
         /* sometimes sourcebuffer.remove() does not flush
           the exact expected time range.
