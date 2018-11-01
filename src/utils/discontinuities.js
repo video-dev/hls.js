@@ -119,7 +119,6 @@ export function alignPDT (details, lastDetails) {
     // then we can deduce that playlist B sliding is 1000+8 = 1008s
     let lastPDT = lastDetails.fragments[0].programDateTime;
     let newPDT = details.fragments[0].programDateTime;
-    // date diff is in ms. frag.start is in seconds
     let sliding = (newPDT - lastPDT) / 1000 + (lastDetails.fragments[0].start - details.fragments[0].start);
     if (Number.isFinite(sliding)) {
       logger.log(`adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(3)}`);
