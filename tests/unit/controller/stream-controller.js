@@ -4,7 +4,6 @@ import Hls from '../../../src/hls';
 import Event from '../../../src/events';
 import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
 import StreamController, { State } from '../../../src/controller/stream-controller';
-import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { mockFragments } from '../../mocks/data';
 import Fragment from '../../../src/loader/fragment';
 
@@ -25,7 +24,8 @@ describe('StreamController tests', function () {
    */
   const assertStreamControllerStarted = (streamController) => {
     assert.equal(streamController.hasInterval(), true, 'StreamController should start interval');
-    assert.notDeepEqual(streamController.state, State.STOPPED, 'StreamController\'s state should not be STOPPED');
+    assert.strictEqual(streamController.state, State.IDLE);
+    // assert.notDeepEqual(streamController.state, State.STOPPED, 'StreamController\'s state should not be STOPPED');
   };
 
   /**
@@ -55,26 +55,6 @@ describe('StreamController tests', function () {
       // no update
       streamController.state = State.STOPPED;
       assert.equal(spy.called, false);
-    });
-
-    it('should not start when controller have not levels data', function () {
-      streamController.startLoad(1);
-      assertStreamControllerStopped(streamController);
-    });
-
-    it('should start when controller have levels data', function () {
-      const manifest = `#EXTM3U
-  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
-  http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
-      const levels = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
-      // load levels data
-      streamController.onManifestParsed({
-        levels
-      });
-      streamController.startLoad(1);
-      assertStreamControllerStarted(streamController);
-      streamController.stopLoad();
-      assertStreamControllerStopped(streamController);
     });
   });
 
@@ -264,6 +244,54 @@ describe('StreamController tests', function () {
         streamController.media.currentTime = 5;
         streamController._seekToStartPos();
         assert.strictEqual(5, streamController.media.currentTime);
+      });
+    });
+
+    describe('startLoad', function () {
+      beforeEach(function () {
+        streamController.levels = [];
+      });
+      it('should not start when controller have not levels data', function () {
+        streamController.levels = null;
+        streamController.startLoad();
+        assertStreamControllerStopped(streamController);
+      });
+
+      it('should start when controller have levels data', function () {
+        streamController.startLoad(5);
+        assertStreamControllerStarted(streamController);
+        assert.strictEqual(streamController.nextLoadPosition, 5);
+        assert.strictEqual(streamController.startPosition, 5);
+        assert.strictEqual(streamController.lastCurrentTime, 5);
+      });
+
+      it('should set startPosition to lastCurrentTime if unset', function () {
+        streamController.lastCurrentTime = 5;
+        streamController.startLoad(-1);
+        assertStreamControllerStarted(streamController);
+        assert.strictEqual(streamController.nextLoadPosition, 5);
+        assert.strictEqual(streamController.startPosition, 5);
+        assert.strictEqual(streamController.lastCurrentTime, 5);
+      });
+
+      it('sets up for a bandwidth test if starting at auto', function () {
+        streamController.startFragRequested = false;
+        hls.startLevel = -1;
+
+        streamController.startLoad();
+        assert.strictEqual(streamController.level, 0);
+        assert(streamController.bitrateTest);
+      });
+
+      it('should not signal a bandwidth test if config.testBandwidth is false', function () {
+        streamController.startFragRequested = false;
+        hls.startLevel = -1;
+        hls.nextAutoLevel = 3;
+        hls.config.testBandwidth = false;
+
+        streamController.startLoad();
+        assert.strictEqual(streamController.level, hls.nextAutoLevel);
+        assert.strictEqual(streamController.bitrateTest, false);
       });
     });
   });

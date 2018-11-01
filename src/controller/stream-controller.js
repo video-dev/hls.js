@@ -55,12 +55,13 @@ class StreamController extends TaskLoop {
       Event.LEVELS_UPDATED
     );
 
-    this.fragmentTracker = fragmentTracker;
-    this.config = hls.config;
     this.audioCodecSwap = false;
-    this._state = State.STOPPED;
-    this.stallReported = false;
+    this.bitrateTest = false;
+    this.config = hls.config;
+    this.fragmentTracker = fragmentTracker;
     this.gapController = null;
+    this.stallReported = false;
+    this._state = State.STOPPED;
   }
 
   onHandlerDestroying () {
@@ -76,7 +77,7 @@ class StreamController extends TaskLoop {
 
   startLoad (startPosition) {
     if (this.levels) {
-      let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
+      const { lastCurrentTime, hls } = this;
       this.stopLoad();
       this.setInterval(100);
       this.level = -1;
@@ -85,9 +86,13 @@ class StreamController extends TaskLoop {
         // determine load level
         let startLevel = hls.startLevel;
         if (startLevel === -1) {
-          // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
-          startLevel = 0;
-          this.bitrateTest = true;
+          if (hls.config.testBandwidth) {
+            // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
+            startLevel = 0;
+            this.bitrateTest = true;
+          } else {
+            startLevel = hls.nextAutoLevel;
+          }
         }
         // set new level to playlist loader : this will trigger start level load
         // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded

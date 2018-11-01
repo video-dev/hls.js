@@ -227,32 +227,30 @@ class AbrController extends EventHandler {
     return nextABRAutoLevel;
   }
   get _nextABRAutoLevel () {
-    let hls = this.hls, maxAutoLevel = hls.maxAutoLevel, levels = hls.levels, config = hls.config, minAutoLevel = hls.minAutoLevel;
-    const video = hls.media,
-      currentLevel = this.lastLoadedFragLevel,
-      currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
-      pos = (video ? video.currentTime : 0),
-      // playbackRate is the absolute value of the playback rate; if video.playbackRate is 0, we use 1 to load as
-      // if we're playing back at the normal rate.
-      playbackRate = ((video && (video.playbackRate !== 0)) ? Math.abs(video.playbackRate) : 1.0),
-      avgbw = this._bwEstimator ? this._bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate,
-      // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
-      bufferStarvationDelay = (BufferHelper.bufferInfo(video, pos, config.maxBufferHole).end - pos) / playbackRate;
+    const { hls, fragCurrent, lastLevelLoaded: currentLevel, _bwEstimator } = this;
+    const { maxAutoLevel, levels, config, minAutoLevel, media: video } = hls;
+    let { abrBandWidthFactor: bwFactor, abrBandWidthUpFactor: bwUpFactor } = config;
+    const currentFragDuration = fragCurrent ? fragCurrent.duration : 0;
+    const pos = video ? video.currentTime : 0;
+    // playbackRate is the absolute value of the playback rate; if video.playbackRate is 0, we use 1 to load as
+    // if we're playing back at the normal rate.
+    const playbackRate = ((video && (video.playbackRate !== 0)) ? Math.abs(video.playbackRate) : 1.0);
+    const avgbw = _bwEstimator ? _bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate;
+    // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
+    const bufferStarvationDelay = (BufferHelper.bufferInfo(video, pos, config.maxBufferHole).end - pos) / playbackRate;
 
     // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
-    let bestLevel = this._findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+    let bestLevel = this._findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, bwFactor, bwUpFactor, levels);
     if (bestLevel >= 0) {
       return bestLevel;
     } else {
       logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
       // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
       // if no matching level found, logic will return 0
-      let maxStarvationDelay = currentFragDuration ? Math.min(currentFragDuration, config.maxStarvationDelay) : config.maxStarvationDelay,
-        bwFactor = config.abrBandWidthFactor,
-        bwUpFactor = config.abrBandWidthUpFactor;
+      let maxStarvationDelay = currentFragDuration ? Math.min(currentFragDuration, config.maxStarvationDelay) : config.maxStarvationDelay;
       if (bufferStarvationDelay === 0) {
         // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
-        let bitrateTestDelay = this.bitrateTestDelay;
+        const bitrateTestDelay = this.bitrateTestDelay;
         if (bitrateTestDelay) {
           // if it is the case, then we need to adjust our max starvation delay using maxLoadingDelay config value
           // max video loading delay used in  automatic start level selection :
