@@ -8,11 +8,11 @@ import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
 import Event from './events';
 
-const FORBIDDEN_EVENT_NAMES = new Set([
-  'hlsEventGeneric',
-  'hlsHandlerDestroying',
-  'hlsHandlerDestroyed'
-]);
+const FORBIDDEN_EVENT_NAMES = {
+  'hlsEventGeneric': true,
+  'hlsHandlerDestroying': true,
+  'hlsHandlerDestroyed': true
+};
 
 class EventHandler {
   constructor (hls, ...events) {
@@ -40,7 +40,7 @@ class EventHandler {
   registerListeners () {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function (event) {
-        if (FORBIDDEN_EVENT_NAMES.has(event)) {
+        if (FORBIDDEN_EVENT_NAMES[event]) {
           throw new Error('Forbidden event-name: ' + event);
         }
 
