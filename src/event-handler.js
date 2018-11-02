@@ -10,11 +10,11 @@ import Event from './events';
 
 const DEBUG_LOG_ENABLED_DEFAULT = false;
 
-const FORBIDDEN_EVENT_NAMES = new Set([
+const FORBIDDEN_EVENT_NAMES = [
   'hlsEventGeneric',
   'hlsHandlerDestroying',
   'hlsHandlerDestroyed'
-]);
+];
 
 class EventHandler {
   constructor (hls, ...events) {
@@ -48,7 +48,7 @@ class EventHandler {
   registerListeners () {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function (event) {
-        if (FORBIDDEN_EVENT_NAMES.has(event)) {
+        if (FORBIDDEN_EVENT_NAMES.indexOf(event) >= 0) {
           throw new Error('Forbidden event-name: ' + event);
         }
 
