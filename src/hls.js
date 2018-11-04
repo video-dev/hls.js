@@ -134,7 +134,7 @@ export default class Hls {
     const abrController = this.abrController = new config.abrController(this);
 
     const bufferController = new config.bufferController(this);
-    const capLevelController = new config.capLevelController(this);
+    const capLevelController = this.capLevelController = new config.capLevelController(this);
     const fpsController = new config.fpsController(this);
     const playListLoader = new PlaylistLoader(this);
     const fragmentLoader = new FragmentLoader(this);
@@ -453,6 +453,24 @@ export default class Hls {
     }
 
     hls.levelController.startLevel = newLevel;
+  }
+
+  /**
+   * Return if the current instance is current capped to Player Size.
+   *
+   * @type {boolean}
+   */
+  get capLevelToPlayerSize () {
+    return this.config.capLevelToPlayerSize;
+  }
+
+  /**
+   * set  dynamically set capLevelToPlayerSize against (`CapLevelController`)
+   *
+   * @type {boolean}
+   */
+  set capLevelToPlayerSize (shouldStartCapping) {
+    this.capLevelController.toggleCapLevelToPlayerSize(shouldStartCapping);
   }
 
   /**

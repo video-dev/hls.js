@@ -69,6 +69,23 @@ class CapLevelController extends EventHandler {
     this._stopCapping();
   }
 
+  toggleCapLevelToPlayerSize (shouldStartCapping) {
+    const hls = this.hls;
+    const newCapLevelToPlayerSize = !!shouldStartCapping;
+
+    if (newCapLevelToPlayerSize !== hls.config.capLevelToPlayerSize) {
+      if (newCapLevelToPlayerSize) {
+        this._startCapping(); // If capping occurs, nextLevelSwitch will happen based on size.
+      } else {
+        hls.autoLevelCapping = -1;
+        hls.streamController.nextLevelSwitch(); // Now we're uncapped, get the next level asap.
+        this._stopCapping();
+      }
+
+      hls.config.capLevelToPlayerSize = !!newCapLevelToPlayerSize;
+    }
+  }
+
   detectPlayerSize () {
     if (this.media) {
       let levelsLength = this.levels ? this.levels.length : 0;
