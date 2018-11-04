@@ -88,6 +88,7 @@
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
+  - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -1045,6 +1046,12 @@ Default value is `hls.firstLevel`.
 - get/set: Capping/max level value that could be used by ABR Controller.
 
 Default value is `-1` (no level capping).
+
+### `hls.capLevelToPlayerSize`
+
+- get/set: If player should enable/display Cap Level Controller to active video.
+
+Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in config.
 
 ## Version Control
 
