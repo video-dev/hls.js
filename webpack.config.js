@@ -205,7 +205,36 @@ const multiConfig = [
   }
 ].map(config => clone(baseConfig, config));
 
+const isSupportedConfig = {
+  name: 'is-supported',
+  mode: 'production',
+  entry: './src/is-supported.js',
+  resolve: {
+    extensions: ['.ts', '.js']
+  },
+  module: {
+    strictExportPresence: true,
+    rules: [
+      { test: /\.ts?$/, loader: 'ts-loader' },
+      { test: /\.js?$/, exclude: [/node_modules/], loader: 'ts-loader' }
+    ]
+  },
+  output: {
+    filename: 'is-supported.js',
+    chunkFilename: 'is-supported.js',
+    path: path.resolve(__dirname),
+    publicPath: '/',
+    library: 'Hls',
+    libraryTarget: 'umd',
+    libraryExport: 'default',
+    globalObject: 'this'
+  },
+  plugins: getPluginsForConfig('main', true)
+};
+
 multiConfig.push(demoConfig);
+
+multiConfig.push(isSupportedConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
