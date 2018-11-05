@@ -232,9 +232,8 @@ const isSupportedConfig = {
   plugins: getPluginsForConfig('main', true)
 };
 
-multiConfig.push(demoConfig);
-
 multiConfig.push(isSupportedConfig);
+multiConfig.push(demoConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
