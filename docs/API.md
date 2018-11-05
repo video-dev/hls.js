@@ -1196,7 +1196,7 @@ Full list of Events is available below:
   - `Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED`  - Identifier for fragment load aborting for emergency switch down
     - data: { frag : fragment object }
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
-    -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
+    -  data: { frag : fragment object, payload : fragment payload (Uint8Array), stats : { trequest, tfirst, tload, length}}
   - `Hls.Events.FRAG_DECRYPTED`  - fired when a fragment decryption is completed
     -  data: { id : demuxer id, frag : fragment object, payload : fragment payload, stats : { tstart, tdecrypt}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment

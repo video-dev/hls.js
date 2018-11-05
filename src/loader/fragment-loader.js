@@ -80,6 +80,12 @@ class FragmentLoader extends EventHandler {
     // detach fragment loader on load success
     frag.loader = undefined;
     this.loaders[frag.type] = undefined;
+
+    // Conversion to TypedArray ('/issues/1973')
+    if (payload instanceof ArrayBuffer) {
+      payload = new Uint8Array(payload);
+    }
+
     this.hls.trigger(Event.FRAG_LOADED, { payload: payload, frag: frag, stats: stats, networkDetails: networkDetails });
   }
 
