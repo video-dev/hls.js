@@ -4,9 +4,9 @@
 
 import { getSelfScope } from './get-self-scope';
 
-const ENABLE_LOGS_DEFAULT = true; // the default setting on lib initialization
+const ENABLE_LOGS_DEFAULT = false; // the default setting on lib initialization
 
-const ENABLE_TRACE_LOGS = false;
+const ENABLE_TRACE_LOGS = false; // disabled by default as only useful for debugging purposes
 
 const DEBUG_PREFIX = ''; // use this to prefix Hls.js when needed for debugging
 const DEBUG_PREPEND_TIMESTAMP = false; // use this to prepend with timestamp when needed for debugging (makes line-number opaque)
@@ -40,29 +40,21 @@ function bindConsole (method, prefix, prependTime) {
   }
 }
 
-let _enabled = ENABLE_LOGS_DEFAULT;
-
-function isLogFunctionEnabled () {
-  return _enabled;
-}
+let isLoggingEnabled = ENABLE_LOGS_DEFAULT;
 
 // TODO: Replace `ENABLE_LOGS_DEFAULT` by a log-level check here and add a function set logging level :)
 
-const trace = ENABLE_TRACE_LOGS && isLogFunctionEnabled() ? bindConsole('debug', DEBUG_PREFIX + ' [T] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-const debug = isLogFunctionEnabled() ? bindConsole('debug', DEBUG_PREFIX + ' [D] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-const log = isLogFunctionEnabled() ? bindConsole('log', DEBUG_PREFIX + ' [L] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-const info = isLogFunctionEnabled() ? bindConsole('info', DEBUG_PREFIX + ' [I] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-const warn = isLogFunctionEnabled() ? bindConsole('warn', DEBUG_PREFIX + ' [W] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-const error = isLogFunctionEnabled() ? bindConsole('error', DEBUG_PREFIX + ' [E] >', DEBUG_PREPEND_TIMESTAMP) : noop;
+export const logger = bindDefaultLogger();
 
-export const logger = {
-  trace,
-  debug,
-  log,
-  info,
-  warn,
-  error
-};
+function bindDefaultLogger (logger = {}) {
+  logger.trace = ENABLE_TRACE_LOGS && isLoggingEnabled ? bindConsole('debug', DEBUG_PREFIX + ' [T] >', DEBUG_PREPEND_TIMESTAMP) : noop;
+  logger.debug = isLoggingEnabled ? bindConsole('debug', DEBUG_PREFIX + ' [D] >', DEBUG_PREPEND_TIMESTAMP) : noop;
+  logger.log = isLoggingEnabled ? bindConsole('log', DEBUG_PREFIX + ' [L] >', DEBUG_PREPEND_TIMESTAMP) : noop;
+  logger.info = isLoggingEnabled ? bindConsole('info', DEBUG_PREFIX + ' [I] >', DEBUG_PREPEND_TIMESTAMP) : noop;
+  logger.warn = isLoggingEnabled ? bindConsole('warn', DEBUG_PREFIX + ' [W] >', DEBUG_PREPEND_TIMESTAMP) : noop;
+  logger.error = isLoggingEnabled ? bindConsole('error', DEBUG_PREFIX + ' [E] >', DEBUG_PREPEND_TIMESTAMP) : noop;
+  return logger;
+}
 
 /**
  *
@@ -70,9 +62,10 @@ export const logger = {
  */
 export function enableLogs (loggerConfig) {
   if (typeof loggerConfig === 'boolean') {
-    _enabled = loggerConfig;
+    isLoggingEnabled = loggerConfig;
+    bindDefaultLogger(logger);
   } else if (typeof loggerConfig === 'object') {
-    _enabled = true;
+    isLoggingEnabled = true;
     ['debug',
       'log',
       'info',
