@@ -25,10 +25,10 @@
   },
   "scripts": {
     "build": "webpack --progress",
-    "build:debug": "webpack --progress --env.debug",
-    "build:watch": "webpack --progress --env.debug --watch",
     "build:analyze": "ANALYZE=true webpack --progress",
-    "dev": "webpack-dev-server --progress --env.debug --port 8000",
+    "build:debug": "webpack --progress --env.debug --env.demo --env.tests",
+    "build:watch": "npm run build:debug -- --watch",
+    "dev": "webpack-dev-server --progress --env.debug --env.demo --env.tests --port 8000",
     "docs": "esdoc",
     "lint": "./scripts/lint.sh",
     "lint:fix": "./scripts/lint.sh --fix",
@@ -37,9 +37,9 @@
     "pretest": "npm run lint",
     "start": "npm run dev",
     "test": "npm run test:unit && npm run test:func",
+    "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 5000",
     "test:unit": "karma start karma.conf.js",
-    "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
-    "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 5000"
+    "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run"
   },
   "dependencies": {
     "eventemitter3": "3.1.0",
