@@ -1,3 +1,7 @@
+/**
+ * Logger module, slightly inspired of https://gist.github.com/tchakabam/ae4f369b8726a87c5bb6b8904acd167e
+ */
+
 import { getSelfScope } from './get-self-scope';
 
 const ENABLE_LOGS_DEFAULT = true; // the default setting on lib initialization
@@ -74,7 +78,7 @@ export function enableLogs (loggerConfig) {
       'info',
       'warn',
       'error'].forEach((logFn) => {
-      if (loggerConfig[logFn]) {
+      if (typeof loggerConfig[logFn] === 'function') {
         logger[logFn] = loggerConfig[logFn];
       }
     });
