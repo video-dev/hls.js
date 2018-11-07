@@ -228,26 +228,22 @@ multiConfig.push(unitTestsConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
-
   let configs;
 
   if (!envArgs) {
     // If no arguments are specified, return every configuration
     configs = multiConfig;
   } else {
-    // Find the first enabled config within the arguments array
-    const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
+    console.log('Environment args hash:', envArgs, '\n');
 
-    // Filter out config with name
-    const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
+    const enabledConfigs = multiConfig.filter((config) => !!envArgs[config.name]);
 
-    if (!enabledConfig) {
-      console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
-
-      throw new Error('Hls.js webpack config: Invalid environment parameters');
+    if (enabledConfigs.length === 0) {
+      console.error(`Couldn't find any config matching environment args "${envArgs}".
+        Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
+      throw new Error('Hls.js webpack config: Invalid build environment parameters: ' + JSON.stringify(envArgs, null, 2));
     }
-
-    configs = [enabledConfig, demoConfig, unitTestsConfig];
+    configs = enabledConfigs;
   }
 
   console.log(
