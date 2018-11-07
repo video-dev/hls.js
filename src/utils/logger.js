@@ -5,7 +5,6 @@
 import { getSelfScope } from './get-self-scope';
 
 const ENABLE_LOGS_DEFAULT = false; // the default setting on lib initialization
-
 const ENABLE_TRACE_LOGS = false; // disabled by default as only useful for debugging purposes
 
 const DEBUG_PREFIX = ''; // use this to prefix Hls.js when needed for debugging
@@ -13,7 +12,6 @@ const DEBUG_PREPEND_TIMESTAMP = false; // use this to prepend with timestamp whe
 
 const noop = () => void 0;
 const self = getSelfScope();
-
 const console = self.console;
 
 function bindConsole (method, prefix, prependTime) {
@@ -42,10 +40,6 @@ function bindConsole (method, prefix, prependTime) {
 
 let isLoggingEnabled = ENABLE_LOGS_DEFAULT;
 
-// TODO: Replace `ENABLE_LOGS_DEFAULT` by a log-level check here and add a function set logging level :)
-
-export const logger = bindDefaultLogger();
-
 function bindDefaultLogger (logger = {}) {
   logger.trace = ENABLE_TRACE_LOGS && isLoggingEnabled ? bindConsole('debug', DEBUG_PREFIX + ' [T] >', DEBUG_PREPEND_TIMESTAMP) : noop;
   logger.debug = isLoggingEnabled ? bindConsole('debug', DEBUG_PREFIX + ' [D] >', DEBUG_PREPEND_TIMESTAMP) : noop;
@@ -55,6 +49,8 @@ function bindDefaultLogger (logger = {}) {
   logger.error = isLoggingEnabled ? bindConsole('error', DEBUG_PREFIX + ' [E] >', DEBUG_PREPEND_TIMESTAMP) : noop;
   return logger;
 }
+
+export const logger = bindDefaultLogger();
 
 /**
  *
