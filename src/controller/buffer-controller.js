@@ -83,15 +83,14 @@ class BufferController extends EventHandler {
   }
 
   onManifestParsed (data) {
-    let audioExpected = data.audio,
-      videoExpected = data.video || (data.levels.length && data.altAudio),
-      sourceBufferNb = 0;
+    const { altAudio, audio, video } = data;
+    let sourceBufferNb = 0;
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    if (data.altAudio && (audioExpected || videoExpected)) {
-      sourceBufferNb = (audioExpected ? 1 : 0) + (videoExpected ? 1 : 0);
+    if (altAudio && (audio || video)) {
+      sourceBufferNb = (audio ? 1 : 0) + (video ? 1 : 0);
       logger.log(`${sourceBufferNb} sourceBuffer(s) expected`);
     }
     this.sourceBufferNb = sourceBufferNb;
@@ -177,12 +176,10 @@ class BufferController extends EventHandler {
 
   checkPendingTracks () {
     // if any buffer codecs pending, check if we have enough to create sourceBuffers
-    let pendingTracks = this.pendingTracks,
-      pendingTracksNb = Object.keys(pendingTracks).length;
+    const { pendingTracks, sourceBufferNb } = this;
+    const pendingTracksNb = Object.keys(pendingTracks).length;
     // if any pending tracks and (if nb of pending tracks gt or equal than expected nb or if unknown expected nb)
-    if (pendingTracksNb && (
-      this.sourceBufferNb <= pendingTracksNb ||
-        this.sourceBufferNb === 0)) {
+    if (pendingTracksNb && (sourceBufferNb <= pendingTracksNb || !sourceBufferNb)) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
@@ -271,13 +268,18 @@ class BufferController extends EventHandler {
   onBufferCodecs (tracks) {
     // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
     // if sourcebuffers already created, do nothing ...
-    if (Object.keys(this.sourceBuffer).length === 0) {
-      for (let trackName in tracks) this.pendingTracks[trackName] = tracks[trackName];
-      let mediaSource = this.mediaSource;
-      if (mediaSource && mediaSource.readyState === 'open') {
-        // try to create sourcebuffers if mediasource opened
-        this.checkPendingTracks();
-      }
+    if (Object.keys(this.sourceBuffer).length) {
+      return;
+    }
+
+    Object.keys(tracks).forEach(trackName => {
+      this.pendingTracks[trackName] = tracks[trackName];
+    });
+
+    const mediaSource = this.mediaSource;
+    if (mediaSource && mediaSource.readyState === 'open') {
+      // try to create sourcebuffers if mediasource opened
+      this.checkPendingTracks();
     }
   }
 

@@ -99,12 +99,13 @@ export default class LevelController extends EventHandler {
         levelFromSet.url.push(level.url);
       }
 
-      if (level.attrs && level.attrs.AUDIO) {
-        addGroupId(levelFromSet || level, 'audio', level.attrs.AUDIO);
-      }
-
-      if (level.attrs && level.attrs.SUBTITLES) {
-        addGroupId(levelFromSet || level, 'text', level.attrs.SUBTITLES);
+      if (level.attrs) {
+        if (level.attrs.AUDIO) {
+          addGroupId(levelFromSet || level, 'audio', level.attrs.AUDIO);
+        }
+        if (level.attrs.SUBTITLES) {
+          addGroupId(levelFromSet || level, 'text', level.attrs.SUBTITLES);
+        }
       }
     });
 
@@ -142,14 +143,16 @@ export default class LevelController extends EventHandler {
           break;
         }
       }
+
+      const hasVideo = !!levels.length;
       this.hls.trigger(Event.MANIFEST_PARSED, {
         levels,
         audioTracks,
         firstLevel: this._firstLevel,
         stats: data.stats,
         audio: audioCodecFound,
-        video: videoCodecFound,
-        altAudio: audioTracks.length > 0 && videoCodecFound
+        video: hasVideo,
+        altAudio: !!(audioTracks.length && hasVideo) // Audio is only alternate if there is a video track; otherwise, it's an audio-only stream
       });
     } else {
       this.hls.trigger(Event.ERROR, {
