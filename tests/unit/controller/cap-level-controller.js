@@ -130,14 +130,14 @@ describe('CapLevelController', function () {
       assert.strictEqual(capLevelController.restrictedLevels.length, 0);
     });
 
-    it('should start capping in MANIFEST_PARSED if a video codec was signaled', function () {
+    it('should start capping in MANIFEST_PARSED if a video codec was signaled in the manifest', function () {
       capLevelController.onManifestParsed({ video: {} });
       assert(startCappingSpy.calledOnce);
     });
 
-    it('should start capping in MANIFEST_PARSED if a levels and altAudio were signaled', function () {
+    it('does not start capping on MANIFEST_PARSED if no video codec was signaled in the manifest', function () {
       capLevelController.onManifestParsed({ levels: [{}], altAudio: true });
-      assert(startCappingSpy.calledOnce);
+      assert(startCappingSpy.notCalled);
     });
   });
 });

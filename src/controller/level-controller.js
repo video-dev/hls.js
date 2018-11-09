@@ -144,15 +144,15 @@ export default class LevelController extends EventHandler {
         }
       }
 
-      const hasVideo = !!levels.length;
+      // Audio is only alternate if manifest include a URI along with the audio group tag
       this.hls.trigger(Event.MANIFEST_PARSED, {
         levels,
         audioTracks,
         firstLevel: this._firstLevel,
         stats: data.stats,
         audio: audioCodecFound,
-        video: hasVideo,
-        altAudio: !!(audioTracks.length && hasVideo) // Audio is only alternate if there is a video track; otherwise, it's an audio-only stream
+        video: videoCodecFound,
+        altAudio: audioTracks.some(t => !!t.url)
       });
     } else {
       this.hls.trigger(Event.ERROR, {

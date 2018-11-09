@@ -83,17 +83,12 @@ class BufferController extends EventHandler {
   }
 
   onManifestParsed (data) {
-    const { altAudio, audio, video } = data;
-    let sourceBufferNb = 0;
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    if (altAudio && (audio || video)) {
-      sourceBufferNb = (audio ? 1 : 0) + (video ? 1 : 0);
-      logger.log(`${sourceBufferNb} sourceBuffer(s) expected`);
-    }
-    this.sourceBufferNb = sourceBufferNb;
+    this.sourceBufferNb = data.altAudio ? 2 : 1;
+    logger.log(`${this.sourceBufferNb} sourceBuffer(s) expected`);
   }
 
   onMediaAttaching (data) {
