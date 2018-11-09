@@ -7,7 +7,7 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { base64ToArrayBuffer, buildPlayReadyPSSHBox, makePlayreadyHeaders } from '../utils/eme-helper';
+import { base64ToUint8Array, buildPlayReadyPSSHBox, makePlayreadyHeaders } from '../utils/eme-helper';
 import { logger } from '../utils/logger';
 
 const { XMLHttpRequest, atob, DOMParser } = window;
@@ -515,9 +515,9 @@ class EMEController extends EventHandler {
         if (levelkey.format === DRMIdentifiers[this._selectedDrm]) {
           if (encoding.includes('base64')) {
             if (DRMIdentifiers[this._selectedDrm] === 'com.microsoft.playready') {
-              this._initData = buildPlayReadyPSSHBox(base64ToArrayBuffer(pssh)); // Playready is particular about the pssh box, so it needs to be handcrafted.
+              this._initData = buildPlayReadyPSSHBox(base64ToUint8Array(pssh)); // Playready is particular about the pssh box, so it needs to be handcrafted.
             } else if (DRMIdentifiers[this._selectedDrm] === 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed') {
-              this._initData = base64ToArrayBuffer(pssh); // Widevine pssh box
+              this._initData = base64ToUint8Array(pssh); // Widevine pssh box
             } else {
               logger.log('not supported');
             }

@@ -1,8 +1,8 @@
 /**
  * @param {string} base64String base64 encoded string
- * @returns {ArrayBuffer}
+ * @returns {Uint8Array}
  */
-export function base64ToArrayBuffer (base64String) {
+export function base64ToUint8Array (base64String) {
   let binaryString = window.atob(base64String);
   let len = binaryString.length;
   let bytes = new Uint8Array(len);
@@ -17,7 +17,7 @@ export function base64ToArrayBuffer (base64String) {
 /**
  * https://www.w3.org/TR/eme-initdata-cenc/
  * @param {ArrayBuffer} binary data from the URI in the manifest
- * @returns {ArrayBuffer}
+ * @returns {Uint8Array}
  */
 export function buildPlayReadyPSSHBox (binary) {
   // https://dashif.org/identifiers/protection/ playready uuid: 9a04f079-9840-4286-ab92-e65be0885f95
