@@ -102,7 +102,6 @@ class EMEController extends EventHandler {
     this._widevineLicenseUrl = hls.config.widevineLicenseUrl;
     this._playreadyLicenseUrl = hls.config.playreadyLicenseUrl;
     this._licenseXhrSetup = hls.config.licenseXhrSetup;
-    this._emeEnabled = hls.config.emeEnabled;
     this._selectedDrm = hls.config.drmSystem;
 
     this._requestMediaKeySystemAccess = hls.config.requestMediaKeySystemAccessFunc;

@@ -38,47 +38,6 @@ describe('EMEController', () => {
 
   it('should be constructable with an unconfigured Hls.js instance', () => {});
 
-  it('should not do anything when `emeEnabled` is false (default)', () => {
-    let reqMediaKsAccessSpy = sinon.spy();
-
-    setupEach({
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
-    });
-
-    emeController.onMediaAttached({ media });
-    emeController.onManifestParsed({ media });
-
-    media.setMediaKeys.callCount.should.be.equal(0);
-    reqMediaKsAccessSpy.callCount.should.be.equal(0);
-  });
-
-  it('should request keys when `emeEnabled` is true (but not set them)', (done) => {
-    let reqMediaKsAccessSpy = sinon.spy(() => {
-      return Promise.resolve({
-        // Media-keys mock
-      });
-    });
-
-    setupEach({
-      emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
-      drmSystem: 'WIDEVINE'
-    });
-
-    emeController.onMediaAttached({ media });
-
-    media.setMediaKeys.callCount.should.be.equal(0);
-    reqMediaKsAccessSpy.callCount.should.be.equal(0);
-
-    emeController.onManifestParsed({ levels: fakeLevels });
-
-    setTimeout(() => {
-      media.setMediaKeys.callCount.should.be.equal(0);
-      reqMediaKsAccessSpy.callCount.should.be.equal(1);
-      done();
-    }, 0);
-  });
-
   it('should trigger key system error when bad encrypted data is received', (done) => {
     let reqMediaKsAccessSpy = sinon.spy(() => {
       return Promise.resolve({
@@ -87,7 +46,6 @@ describe('EMEController', () => {
     });
 
     setupEach({
-      emeEnabled: true,
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
       drmSystem: 'WIDEVINE'
     });
@@ -117,7 +75,6 @@ describe('EMEController', () => {
     });
 
     setupEach({
-      emeEnabled: true,
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
       drmSystem: 'WIDEVINE'
     });
