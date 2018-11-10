@@ -505,27 +505,22 @@ class EMEController extends EventHandler {
    */
   onLevelLoaded (data) {
     if (data.details && data.details.drmInfo && data.details.drmInfo.length > 0) {
-      const drmInfo = data.details.drmInfo;
+      const drmIdentifier = DRMIdentifiers[this._selectedDrm];
 
-      drmInfo.forEach((levelkey) => {
-        const details = levelkey.reluri.split(',');
-        const encoding = details[0];
-        const pssh = details[1];
+      const selectedDrm = data.details.drmInfo.filter(levelkey => levelkey.format === drmIdentifier);
+      const levelkey = selectedDrm.shift();
 
-        if (levelkey.format === DRMIdentifiers[this._selectedDrm]) {
-          if (encoding.includes('base64')) {
-            if (DRMIdentifiers[this._selectedDrm] === 'com.microsoft.playready') {
-              this._initData = buildPlayReadyPSSHBox(base64ToUint8Array(pssh)); // Playready is particular about the pssh box, so it needs to be handcrafted.
-            } else if (DRMIdentifiers[this._selectedDrm] === 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed') {
-              this._initData = base64ToUint8Array(pssh); // Widevine pssh box
-            } else {
-              logger.log('not supported');
-            }
-          }
+      const details = levelkey.reluri.split(',');
+      const encoding = details[0];
+      const pssh = details[1];
 
-          this._initDataType = 'cenc';
-        }
-      });
+      if (drmIdentifier === 'com.microsoft.playready' && encoding.includes('base64')) {
+        this._initData = buildPlayReadyPSSHBox(base64ToUint8Array(pssh)); // Playready is particular about the pssh box, so it needs to be handcrafted.
+      } else if (drmIdentifier === 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed' && encoding.includes('base64')) {
+        this._initData = base64ToUint8Array(pssh); // Widevine pssh box
+      }
+
+      this._initDataType = 'cenc';
     }
   }
 }

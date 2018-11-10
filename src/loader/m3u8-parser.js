@@ -154,7 +154,8 @@ export default class M3U8Parser {
     let frag = new Fragment();
     let result;
     let i;
-    let drmInfo = [];
+
+    const drmInfo = [];
 
     let firstPdtIndex = null;
 
