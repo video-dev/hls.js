@@ -3,14 +3,15 @@
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
  */
 
- import DemuxerInline from '../demux/demuxer-inline';
- import Event from '../events';
- import {enableLogs} from '../utils/logger';
- import EventEmitter from 'events';
+import DemuxerInline from '../demux/demuxer-inline';
+import Event from '../events';
+import { enableLogs } from '../utils/logger';
 
-var DemuxerWorker = function (self) {
+import { EventEmitter } from 'events';
+
+let DemuxerWorker = function (self) {
   // observer setup
-  var observer = new EventEmitter();
+  let observer = new EventEmitter();
   observer.trigger = function trigger (event, ...data) {
     observer.emit(event, event, ...data);
   };
@@ -19,30 +20,28 @@ var DemuxerWorker = function (self) {
     observer.removeListener(event, ...data);
   };
 
-  var forwardMessage = function(ev,data) {
-    self.postMessage({event: ev, data:data });
+  let forwardMessage = function (ev, data) {
+    self.postMessage({ event: ev, data: data });
   };
 
   self.addEventListener('message', function (ev) {
-    var data = ev.data;
-    //console.log('demuxer cmd:' + data.cmd);
+    let data = ev.data;
+    // console.log('demuxer cmd:' + data.cmd);
     switch (data.cmd) {
-      case 'init':
-        let config = JSON.parse(data.config);
-        self.demuxer = new DemuxerInline(observer, data.typeSupported, config, data.vendor);
-        try {
-          enableLogs(config.debug === true);
-        } catch(err) {
-          console.warn('demuxerWorker: unable to enable logs');
-        }
-        // signal end of worker init
-        forwardMessage('init',null);
-        break;
-      case 'demux':
-        self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset,data.discontinuity, data.trackSwitch,data.contiguous,data.duration,data.accurateTimeOffset,data.defaultInitPTS);
-        break;
-      default:
-        break;
+    case 'init':
+      const config = JSON.parse(data.config);
+      self.demuxer = new DemuxerInline(observer, data.typeSupported, config, data.vendor);
+
+      enableLogs(config.debug);
+
+      // signal end of worker init
+      forwardMessage('init', null);
+      break;
+    case 'demux':
+      self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.discontinuity, data.trackSwitch, data.contiguous, data.duration, data.accurateTimeOffset, data.defaultInitPTS);
+      break;
+    default:
+      break;
     }
   });
 
@@ -56,9 +55,9 @@ var DemuxerWorker = function (self) {
   observer.on(Event.INIT_PTS_FOUND, forwardMessage);
 
   // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
-  observer.on(Event.FRAG_PARSING_DATA, function(ev, data) {
+  observer.on(Event.FRAG_PARSING_DATA, function (ev, data) {
     let transferable = [];
-    let message = {event: ev, data:data};
+    let message = { event: ev, data: data };
     if (data.data1) {
       message.data1 = data.data1.buffer;
       transferable.push(data.data1.buffer);
@@ -69,9 +68,8 @@ var DemuxerWorker = function (self) {
       transferable.push(data.data2.buffer);
       delete data.data2;
     }
-    self.postMessage(message,transferable);
+    self.postMessage(message, transferable);
   });
 };
 
 export default DemuxerWorker;
-

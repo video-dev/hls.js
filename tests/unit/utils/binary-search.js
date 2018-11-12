@@ -1,35 +1,35 @@
-var assert = require("assert");
-var BinarySearch = require("../../../src/utils/binary-search");
+import BinarySearch from '../../../src/utils/binary-search';
+let assert = require('assert');
 
-describe('binary search util', function() {
+describe('binary search util', function () {
   describe('search helper', function () {
-    var list = null;
-    var buildComparisonFunction = function(itemToSearchFor) {
-      return function(candidate) {
+    let list = null;
+    let buildComparisonFunction = function (itemToSearchFor) {
+      return function (candidate) {
         if (candidate < itemToSearchFor) {
           return 1;
-        }
-        else if (candidate > itemToSearchFor) {
+        } else if (candidate > itemToSearchFor) {
           return -1;
         }
+
         return 0;
       };
-    }
+    };
 
-    beforeEach(function() {
+    beforeEach(function () {
       list = [4, 8, 15, 16, 23, 42];
     });
     it('finds the element if it is present', function () {
-      for(var i=0; i<list.length; i++) {
-        var item = list[i];
-        var foundItem = BinarySearch.search(list, buildComparisonFunction(item));
+      for (let i = 0; i < list.length; i++) {
+        let item = list[i];
+        let foundItem = BinarySearch.search(list, buildComparisonFunction(item));
         assert.strictEqual(foundItem, item);
       }
     });
     it('does not find the element if it is not present', function () {
-      var item = 1000;
-      var foundItem = BinarySearch.search(list, buildComparisonFunction(item));
+      let item = 1000;
+      let foundItem = BinarySearch.search(list, buildComparisonFunction(item));
       assert.strictEqual(foundItem, null);
     });
   });
-});  
+});
