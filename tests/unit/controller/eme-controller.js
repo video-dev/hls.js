@@ -1,11 +1,7 @@
 import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
 import EventEmitter from 'events';
-import { ErrorTypes, ErrorDetails } from '../../../src/errors';
-
-import assert from 'assert';
-
-const sinon = require('sinon');
+import { ErrorDetails } from '../../../src/errors';
 
 const MediaMock = function () {
   let media = new EventEmitter();
@@ -32,14 +28,12 @@ const setupEach = function (config) {
   emeController = new EMEController(new HlsMock(config));
 };
 
-describe('EMEController', () => {
-  beforeEach(() => {
+describe('EMEController', function () {
+  beforeEach(function () {
     setupEach();
   });
 
-  it('should be constructable with an unconfigured Hls.js instance', () => {});
-
-  it('should not do anything when `emeEnabled` is false (default)', () => {
+  it('should not do anything when `emeEnabled` is false (default)', function () {
     let reqMediaKsAccessSpy = sinon.spy();
 
     setupEach({
@@ -49,12 +43,12 @@ describe('EMEController', () => {
     emeController.onMediaAttached({ media });
     emeController.onManifestParsed({ media });
 
-    assert.equal(media.setMediaKeys.callCount, 0);
-    assert.equal(reqMediaKsAccessSpy.callCount, 0);
+    expect(media.setMediaKeys.callCount).to.equal(0);
+    expect(reqMediaKsAccessSpy.callCount).to.equal(0);
   });
 
   it('should request keys when `emeEnabled` is true (but not set them)', (done) => {
-    let reqMediaKsAccessSpy = sinon.spy(() => {
+    let reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
       });
@@ -67,20 +61,20 @@ describe('EMEController', () => {
 
     emeController.onMediaAttached({ media });
 
-    assert.equal(media.setMediaKeys.callCount, 0);
-    assert.equal(reqMediaKsAccessSpy.callCount, 0);
+    expect(media.setMediaKeys.callCount).to.equal(0);
+    expect(reqMediaKsAccessSpy.callCount).to.equal(0);
 
     emeController.onManifestParsed({ levels: fakeLevels });
 
-    setTimeout(() => {
-      assert.equal(media.setMediaKeys.callCount, 0);
-      assert.equal(reqMediaKsAccessSpy.callCount, 1);
+    setTimeout(function () {
+      expect(media.setMediaKeys.callCount).to.equal(0);
+      expect(reqMediaKsAccessSpy.callCount).to.equal(1);
       done();
     }, 0);
   });
 
   it('should trigger key system error when bad encrypted data is received', (done) => {
-    let reqMediaKsAccessSpy = sinon.spy(() => {
+    let reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
       });
@@ -101,9 +95,9 @@ describe('EMEController', () => {
 
     media.emit('encrypted', badData);
 
-    setTimeout(() => {
-      assert.equal(emeController.hls.trigger.args[0][1].details, ErrorDetails.KEY_SYSTEM_NO_KEYS);
-      assert.equal(emeController.hls.trigger.args[1][1].details, ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+    setTimeout(function () {
+      expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
+      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
       done();
     }, 0);
   });
