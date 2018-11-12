@@ -253,7 +253,8 @@ class TimelineController extends EventHandler {
             if (reuseVttTextTrack(inUseTrack, track)) {
               textTrack = inUseTrack;
             }
-          } if (!textTrack) {
+          }
+          if (!textTrack) {
             textTrack = this.createTextTrack('subtitles', track.name, track.lang);
           }
 

@@ -2,13 +2,11 @@ import TimelineController from '../../../src/controller/timeline-controller';
 import Hls from '../../../src/hls';
 const sinon = require('sinon');
 
-const assert = require('assert');
-
-describe('Non-Native TimelineController functions', () => {
+describe('Non-Native TimelineController functions', function () {
   let timelineController;
   let hls;
 
-  beforeEach(() => {
+  beforeEach(function () {
     hls = new Hls();
     hls.config.renderNatively = false;
     hls.config.enableWebVTT = true;
@@ -17,11 +15,11 @@ describe('Non-Native TimelineController functions', () => {
   });
 
   it('has the createNonNativeTrack method', function () {
-    assert.strictEqual(typeof timelineController.createNonNativeTrack, 'function');
+    expect(timelineController.createNonNativeTrack).to.be.a('function');
   });
 
   it('has the createNativeTrack method', function () {
-    assert.strictEqual(typeof timelineController.createNativeTrack, 'function');
+    expect(timelineController.createNativeTrack).to.be.a('function');
   });
 
   it('calls createNonNativeTrack when renderNatively is false', function () {
@@ -29,17 +27,17 @@ describe('Non-Native TimelineController functions', () => {
     timelineController.createNonNativeTrack = nonNativeSpy;
 
     timelineController.createCaptionsTrack('foo');
-    assert.strictEqual(nonNativeSpy.calledOnce, true);
+    expect(nonNativeSpy).to.have.been.calledOnce;
   });
 
   it('fires the NON_NATIVE_TEXT_TRACKS_FOUND event', function (done) {
     hls.on(Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND, (event, data) => {
       const track = data.tracks[0];
-      assert.strictEqual(track._id, 'textTrack1');
-      assert.strictEqual(track.kind, 'captions');
-      assert.strictEqual(track.default, false);
-      assert.strictEqual(track.label, timelineController.captionsProperties['textTrack1'].label);
-      assert.strictEqual(timelineController.captionsTracks['textTrack1'], track);
+      expect(track._id).to.equal('textTrack1');
+      expect(track.kind).to.equal('captions');
+      expect(track.default).to.equal(false);
+      expect(track.label).to.equal(timelineController.captionsProperties['textTrack1'].label);
+      expect(timelineController.captionsTracks['textTrack1']).to.equal(track);
       done();
     });
 
@@ -49,6 +47,6 @@ describe('Non-Native TimelineController functions', () => {
   it('does not create a non native track if the track does not have any defined properties', function () {
     const triggerSpy = sinon.spy(hls, 'trigger');
     timelineController.createNonNativeTrack('foo');
-    assert.strictEqual(triggerSpy.notCalled, true);
+    expect(triggerSpy).to.have.not.been.called;
   });
 });

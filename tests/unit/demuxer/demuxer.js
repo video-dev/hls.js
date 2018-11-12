@@ -1,9 +1,6 @@
 import Event from '../../../src/events.js';
 import Demuxer from '../../../src/demux/demuxer.js';
 
-const assert = require('assert');
-const sinon = require('sinon');
-
 describe('Demuxer tests', function () {
   it('Demuxer constructor no worker', function () {
     let config = { enableWorker: false }; // Option debug : true crashes mocha
@@ -14,12 +11,11 @@ describe('Demuxer tests', function () {
     let id = 'main';
     let demux = new Demuxer(hls, id);
 
-    assert.equal(demux.hls, hls, 'Hls object created');
-    assert.equal(demux.id, id, 'Id has been set up');
-
-    assert.ok(demux.observer.trigger, 'Observer trigger set up');
-    assert.ok(demux.observer.off, 'Observer off set up');
-    assert.ok(demux.demuxer, 'Demuxer set up');
+    expect(demux.hls).to.equal(hls, 'Hls object created');
+    expect(demux.id).to.equal(id, 'Id has been set up');
+    expect(demux.observer.trigger).to.exist;
+    expect(demux.observer.off).to.exist;
+    expect(demux.demuxer).to.exist;
   });
 
   it('Demuxer constructor with worker', function () {
@@ -31,12 +27,12 @@ describe('Demuxer tests', function () {
     let id = 'main';
     let demux = new Demuxer(hls, id);
 
-    assert.equal(demux.hls, hls, 'Hls object created');
-    assert.equal(demux.id, id, 'Id has been set up');
+    expect(demux.hls).to.equal(hls, 'Hls object created');
+    expect(demux.id).to.equal(id, 'Id has been set up');
 
-    assert.ok(demux.observer.trigger, 'Observer trigger set up');
-    assert.ok(demux.observer.off, 'Observer off set up');
-    assert.ok(demux.w, 'Worker set up');
+    expect(demux.observer.trigger).to.exist;
+    expect(demux.observer.off).to.exist;
+    expect(demux.w).to.exist;
   });
 
   it('Destroy demuxer worker', function () {
@@ -49,9 +45,9 @@ describe('Demuxer tests', function () {
     let demux = new Demuxer(hls, id);
     demux.destroy();
 
-    assert.equal(demux.observer, null, 'Observer destroyed');
-    assert.equal(demux.demuxer, null, 'Demuxer destroyed');
-    assert.equal(demux.w, null, 'Worker destroyed');
+    expect(demux.observer).to.not.exist;
+    expect(demux.demuxer).to.not.exist;
+    expect(demux.w).to.not.exist;
   });
 
   it('Destroy demuxer no worker', function () {
@@ -64,9 +60,9 @@ describe('Demuxer tests', function () {
     let demux = new Demuxer(hls, id);
     demux.destroy();
 
-    assert.equal(demux.observer, null, 'Observer destroyed');
-    assert.equal(demux.demuxer, null, 'Demuxer destroyed');
-    assert.equal(demux.w, null, 'Worker destroyed');
+    expect(demux.observer).to.not.exist;
+    expect(demux.demuxer).to.not.exist;
+    expect(demux.w).to.not.exist;
   });
 
   it('Push data to demuxer with worker', function () {
@@ -102,24 +98,24 @@ describe('Demuxer tests', function () {
       defaultInitPTS = {};
 
     let stub = sinon.stub(demux.w, 'postMessage').callsFake(function (obj1, obj2) {
-      assert.equal(obj1.cmd, 'demux', 'cmd');
-      assert.equal(obj1.data, data, 'data');
-      assert.equal(obj1.decryptdata, newFrag.decryptdata, 'decryptdata');
-      assert.equal(obj1.initSegment, initSegment, 'initSegment');
-      assert.equal(obj1.audioCodec, audioCodec, 'audioCodec');
-      assert.equal(obj1.videoCodec, videoCodec, 'videoCodec');
-      assert.equal(obj1.timeOffset, newFrag.startDTS, 'timeOffset');
-      assert.equal(obj1.discontinuity, false, 'discontinuity');
-      assert.equal(obj1.trackSwitch, false, 'trackSwitch');
-      assert.equal(obj1.contiguous, true, 'contiguous');
-      assert.equal(obj1.duration, duration, 'duration');
-      assert.equal(obj1.defaultInitPTS, defaultInitPTS, 'defaultInitPTS');
-      assert.equal(obj2[0], data, 'ArrayBuffer');
+      expect(obj1.cmd).to.equal('demux', 'cmd');
+      expect(obj1.data).to.equal(data, 'data');
+      expect(obj1.decryptdata).to.equal(newFrag.decryptdata, 'decryptdata');
+      expect(obj1.initSegment).to.equal(initSegment, 'initSegment');
+      expect(obj1.audioCodec).to.equal(audioCodec, 'audioCodec');
+      expect(obj1.videoCodec).to.equal(videoCodec, 'videoCodec');
+      expect(obj1.timeOffset).to.equal(newFrag.startDTS, 'timeOffset');
+      expect(obj1.discontinuity).to.be.false;
+      expect(obj1.trackSwitch).to.be.false;
+      expect(obj1.contiguous).to.be.true;
+      expect(obj1.duration).to.equal(duration, 'duration');
+      expect(obj1.defaultInitPTS).to.equal(defaultInitPTS, 'defaultInitPTS');
+      expect(obj2[0]).to.equal(data, 'ArrayBuffer');
     });
 
     demux.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);
 
-    assert.ok(stub.calledOnce, 'postMessage called once');
+    expect(stub).to.have.been.calledOnce;
   });
 
   it('Push data to demuxer with no worker', function () {
@@ -154,24 +150,23 @@ describe('Demuxer tests', function () {
       accurateTimeOffset = {},
       defaultInitPTS = {};
 
-    let stub = sinon.stub(demux.demuxer, 'push').callsFake(function (obj1, obj2, obj3, obj4, obj5, obj6, obj7, obj8, obj9, obj10, obj11, obj12, obj13) {
-      assert.equal(obj1, data);
-      assert.equal(obj2, newFrag.decryptdata);
-      assert.equal(obj3, initSegment);
-      assert.equal(obj4, audioCodec);
-      assert.equal(obj5, videoCodec);
-      assert.equal(obj6, newFrag.start);
-      assert.equal(obj7, true);
-      assert.equal(obj8, true);
-      assert.equal(obj9, false);
-      assert.equal(obj10, duration);
-      assert.equal(obj11, accurateTimeOffset);
-      assert.equal(obj12, defaultInitPTS);
+    let stub = sinon.stub(demux.demuxer, 'push').callsFake(function (obj1, obj2, obj3, obj4, obj5, obj6, obj7, obj8, obj9, obj10, obj11, obj12) {
+      expect(obj1).to.equal(data);
+      expect(obj2).to.equal(newFrag.decryptdata);
+      expect(obj3).to.equal(initSegment);
+      expect(obj4).to.equal(audioCodec);
+      expect(obj5).to.equal(videoCodec);
+      expect(obj6).to.equal(newFrag.start);
+      expect(obj7).to.be.true;
+      expect(obj8).to.be.true;
+      expect(obj9).to.be.false;
+      expect(obj10).to.equal(duration);
+      expect(obj11).to.equal(accurateTimeOffset);
+      expect(obj12).to.equal(defaultInitPTS);
     });
 
     demux.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);
-
-    assert.ok(stub.calledWith(data, newFrag.decryptdata, initSegment, audioCodec, videoCodec, newFrag.start, true, true, false, duration, accurateTimeOffset, defaultInitPTS));
+    expect(stub).to.have.been.calledWith(data, newFrag.decryptdata, initSegment, audioCodec, videoCodec, newFrag.start, true, true, false, duration, accurateTimeOffset, defaultInitPTS);
   });
 
   it('Sent worker generic message', function () {
@@ -192,10 +187,10 @@ describe('Demuxer tests', function () {
     };
 
     hls.trigger = function (event, data) {
-      assert.equal(event, evt.data.event);
-      assert.equal(data, evt.data.data);
-      assert.equal(demux.frag, evt.data.data.frag);
-      assert.equal(id, evt.data.data.id);
+      expect(event).to.equal(evt.data.event);
+      expect(data).to.equal(evt.data.data);
+      expect(demux.frag).to.equal(evt.data.data.frag);
+      expect(id).to.equal(evt.data.data.id);
     };
 
     demux.onWorkerMessage(evt);
@@ -221,7 +216,7 @@ describe('Demuxer tests', function () {
 
     demux.onWorkerMessage(evt);
 
-    assert.ok(spy.calledOnce);
+    expect(spy).to.have.been.calledOnce;
   });
 
   it('Sent worker message FRAG_PARSING_DATA', function () {
@@ -244,7 +239,7 @@ describe('Demuxer tests', function () {
 
     demux.onWorkerMessage(evt);
 
-    assert.ok(evt.data.data.data1);
-    assert.ok(evt.data.data.data2);
+    expect(evt.data.data.data1).to.exist;
+    expect(evt.data.data.data2).to.exist;
   });
 });
