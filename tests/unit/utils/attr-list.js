@@ -1,8 +1,8 @@
+import AttrList from '../../../src/utils/attr-list';
+
 const assert = require('assert');
 const bufferIsEqual = require('arraybuffer-equal');
 const deepStrictEqual = require('deep-strict-equal');
-
-import AttrList from '../../../src/utils/attr-list';
 
 describe('AttrList', () => {
   it('constructor() supports empty arguments', () => {
@@ -11,7 +11,7 @@ describe('AttrList', () => {
     assert.deepEqual(new AttrList(undefined), {});
   });
   it('constructor() supports object argument', () => {
-    const obj = { VALUE: "42" };
+    const obj = { VALUE: '42' };
     const list = new AttrList(obj);
     assert.strictEqual(list.decimalInteger('VALUE'), 42);
     assert.strictEqual(Object.keys(list).length, 1);
@@ -69,9 +69,9 @@ describe('AttrList', () => {
     assert.strictEqual(list.enumeratedString('ENUM2'), '42');
   });
   it('parses valid decimalResolution attribute', () => {
-    assert(deepStrictEqual(new AttrList('RES=400x200').decimalResolution('RES'), { width:400, height:200 }));
-    assert(deepStrictEqual(new AttrList('RES=0x0').decimalResolution('RES'), { width:0, height:0 }));
-    assert(deepStrictEqual(new AttrList('RES="400x200"').decimalResolution('RES'), { width:400, height:200 }));
+    assert(deepStrictEqual(new AttrList('RES=400x200').decimalResolution('RES'), { width: 400, height: 200 }));
+    assert(deepStrictEqual(new AttrList('RES=0x0').decimalResolution('RES'), { width: 0, height: 0 }));
+    assert(deepStrictEqual(new AttrList('RES="400x200"').decimalResolution('RES'), { width: 400, height: 200 }));
   });
   it('handles invalid decimalResolution attribute', () => {
     assert(deepStrictEqual(new AttrList('RES=400x-200').decimalResolution('RES'), undefined));
@@ -90,7 +90,7 @@ describe('AttrList', () => {
     assert.strictEqual(list.decimalFloatingPoint('FLOAT'), 0.42);
     assert.strictEqual(list.STRING, 'hi');
     assert.strictEqual(list.enumeratedString('ENUM'), 'OK');
-    assert(deepStrictEqual(list.decimalResolution('RES'), { width:4, height:2 }));
+    assert(deepStrictEqual(list.decimalResolution('RES'), { width: 4, height: 2 }));
     assert.strictEqual(Object.keys(list).length, 6);
   });
 
@@ -117,8 +117,8 @@ describe('AttrList', () => {
 
   it('handles hexadecimalInteger conversions', () => {
     const list = new AttrList('HEX1=0x0123456789abcdef0123456789abcdef,HEX2=0x123,HEX3=0x0');
-    assert(bufferIsEqual(list.hexadecimalInteger('HEX1').buffer, new Uint8Array([0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef,0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef]).buffer));
-    assert(bufferIsEqual(list.hexadecimalInteger('HEX2').buffer, new Uint8Array([0x01,0x23]).buffer));
+    assert(bufferIsEqual(list.hexadecimalInteger('HEX1').buffer, new Uint8Array([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]).buffer));
+    assert(bufferIsEqual(list.hexadecimalInteger('HEX2').buffer, new Uint8Array([0x01, 0x23]).buffer));
     assert(bufferIsEqual(list.hexadecimalInteger('HEX3').buffer, new Uint8Array([0x0]).buffer));
   });
 
