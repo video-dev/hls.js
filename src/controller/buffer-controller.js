@@ -36,6 +36,8 @@ class BufferController extends EventHandler {
     // cache the self generated object url to detect hijack of video tag
     this._objectUrl = null;
 
+    this.bufferCodecEventsExpected = 0;
+
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
     this.onsbe = this.onSBUpdateError.bind(this);
@@ -87,8 +89,8 @@ class BufferController extends EventHandler {
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    this.sourceBufferNb = data.altAudio ? 2 : 1;
-    logger.log(`${this.sourceBufferNb} sourceBuffer(s) expected`);
+    this.bufferCodecEventsExpected = data.altAudio ? 2 : 1;
+    logger.log(`${this.bufferCodecEventsExpected} bufferCodec(s) expected`);
   }
 
   onMediaAttaching (data) {
@@ -170,17 +172,19 @@ class BufferController extends EventHandler {
   }
 
   checkPendingTracks () {
-    // if any buffer codecs pending, check if we have enough to create sourceBuffers
-    const { pendingTracks, sourceBufferNb } = this;
-    const pendingTracksNb = Object.keys(pendingTracks).length;
-    // if any pending tracks and (if nb of pending tracks gt or equal than expected nb or if unknown expected nb)
-    if (pendingTracksNb && (sourceBufferNb <= pendingTracksNb || !sourceBufferNb)) {
+    let { pendingTracks, bufferCodecEventsExpected: expectedEventsRemaining } = this;
+    // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
+    // This is important because the MSE spec allows implementations to throw QuotaExceededErrors if creating new sourceBuffers after
+    // data has been appended to existing ones.
+    expectedEventsRemaining = Math.max(expectedEventsRemaining - 1, 0);
+    if (Object.keys(pendingTracks).length && !expectedEventsRemaining) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
       // append any pending segments now !
       this.doAppending();
     }
+    this.bufferCodecEventsExpected = expectedEventsRemaining;
   }
 
   onMediaSourceClose () {
