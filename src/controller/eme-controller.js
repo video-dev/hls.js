@@ -27,6 +27,15 @@ const DRMIdentifiers = {
   PLAYREADY: 'com.microsoft.playready'
 };
 
+/*
+* https://www.w3.org/TR/eme-initdata-registry/
+*/
+const InitDataTypes = {
+  COMMON_ENCRYPTION: 'cenc',
+  KEY_IDS: 'keyids',
+  WEBM: 'webm'
+};
+
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration
  * @param {Array<string>} audioCodecs List of required audio codecs to support
@@ -114,8 +123,21 @@ class EMEController extends EventHandler {
 
     this._requestLicenseFailureCount = 0;
 
+    /**
+     * @private
+     * https://www.w3.org/TR/encrypted-media/#initialization-data
+     * Data used by CDN to generate license request
+     * @member {Uint8Array} _initData
+     */
     this._initData = null;
-    this._initDataType = '';
+
+    /**
+     * @private
+     * https://www.w3.org/TR/encrypted-media/#initialization-data-type
+     * a string that indicates the format of the accompanying Initialization Data
+     * @member {string} _initDataType
+     */
+    this._initDataType = null;
   }
 
   /**
@@ -519,7 +541,7 @@ class EMEController extends EventHandler {
         this._initData = base64ToUint8Array(pssh); // Widevine pssh box
       }
 
-      this._initDataType = 'cenc';
+      this._initDataType = InitDataTypes.COMMON_ENCRYPTION;
     }
   }
 }
