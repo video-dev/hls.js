@@ -147,7 +147,8 @@ module.exports = {
   },
   {
     widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
-    emeEnabled: true
+    emeEnabled: true,
+    drmSystem: 'WIDEVINE'
   }
   ),
   audioOnlyMultipleLevels: {
