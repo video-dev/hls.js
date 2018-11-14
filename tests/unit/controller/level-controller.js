@@ -128,7 +128,7 @@ describe('LevelController', () => {
       assert.strictEqual(payload.altAudio, false);
     });
 
-    it('signals altAudio if there is are audioTracks containing URIs', function () {
+    it('signals altAudio if there are audioTracks containing URIs', function () {
       data.levels[0].videoCodec = 'avc1.42e01e';
       data.audioTracks = [
         {

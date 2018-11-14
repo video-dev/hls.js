@@ -35,7 +35,7 @@ class BufferController extends EventHandler {
     this._live = null;
     // cache the self generated object url to detect hijack of video tag
     this._objectUrl = null;
-
+    // The number of BUFFER_CODEC events received before any sourceBuffers are created
     this.bufferCodecEventsExpected = 0;
 
     // Source Buffer listeners
@@ -172,19 +172,17 @@ class BufferController extends EventHandler {
   }
 
   checkPendingTracks () {
-    let { pendingTracks, bufferCodecEventsExpected: expectedEventsRemaining } = this;
+    let { bufferCodecEventsExpected, pendingTracks } = this;
     // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
     // This is important because the MSE spec allows implementations to throw QuotaExceededErrors if creating new sourceBuffers after
     // data has been appended to existing ones.
-    expectedEventsRemaining = Math.max(expectedEventsRemaining - 1, 0);
-    if (Object.keys(pendingTracks).length && !expectedEventsRemaining) {
+    if (Object.keys(pendingTracks).length && !bufferCodecEventsExpected) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
       // append any pending segments now !
       this.doAppending();
     }
-    this.bufferCodecEventsExpected = expectedEventsRemaining;
   }
 
   onMediaSourceClose () {
@@ -275,9 +273,10 @@ class BufferController extends EventHandler {
       this.pendingTracks[trackName] = tracks[trackName];
     });
 
-    const mediaSource = this.mediaSource;
-    if (mediaSource && mediaSource.readyState === 'open') {
-      // try to create sourcebuffers if mediasource opened
+    const { mediaSource } = this;
+    this.bufferCodecEventsExpected = Math.max(this.bufferCodecEventsExpected - 1, 0);
+    if (mediaSource && mediaSource.readyState === 'open' && !this.bufferCodecEventsExpected) {
+      // try to create sourcebuffers if mediasource opened, and all expected bufferCodec events have been received
       this.checkPendingTracks();
     }
   }
