@@ -16,7 +16,7 @@ about: Create a report to help us improve
 <!-- Replace [ ] with [x] to check off the list -->
 - [ ] The issue observed is not already reported by searching on Github under https://github.com/video-dev/hls.js/issues
 - [ ] The issue occurs in the stable client on https://video-dev.github.io/hls.js/stable/demo and not just on my page
-<!-- The stable client is built from the latest shipped release -->
+<!-- The stable client is built from the latest release -->
 - [ ] The issue occurs in the latest client on https://video-dev.github.io/hls.js/latest/demo/ and not just on my page
 <!-- The latest client is built from the comit head of the master branch -->
 - [ ] The stream has correct Access-Control-Allow-Origin headers (CORS)
