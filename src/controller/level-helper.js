@@ -53,9 +53,23 @@ export function updatePTS (fragments, fromIdx, toIdx) {
   }
 }
 
+/**
+ * Updates the fragment object with the PTS/DTS calculated during muxing. These values are the true start and duration
+ * time of the fragment, which can differ from what is stated in the manifest. After updating the fragment, we recompute
+ * the start times of all other fragments within the level. This function is usually called once for each elementary
+ * stream - audio and video
+ * @param details - The details of the level of which the fragment belongs
+ * @param frag - The details of the muxed fragment
+ * @param startPTS - The start PTS (presentation timestamp) of the fragment
+ * @param endPTS - The end PTS of the fragment
+ * @param startDTS - The start DTS (decode timestamp) of the fragment
+ * @param endDTS - The end DTS of the fragment
+ * @returns {number}
+ */
 export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, endDTS) {
   // update frag PTS/DTS
   let maxStartPTS = startPTS;
+  // frag.startPTS will already be set in the case that a fragment contains both audio and video
   if (Number.isFinite(frag.startPTS)) {
     // delta PTS between audio and video
     let deltaPTS = Math.abs(frag.startPTS - startPTS);
@@ -65,14 +79,18 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
       frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
     }
 
+    // Hls.js allocates a sourceBuffer for both audio and video. The HTMLMediaElement (aka video tag) reports its length
+    // as the intersection of these two sourceBuffers. Therefore, the start time of the fragment is the largest of the
+    // audio/video start PTS values, and the minimum of the audio/video end PTS values
     maxStartPTS = Math.max(startPTS, frag.startPTS);
-    startPTS = Math.min(startPTS, frag.startPTS);
-    endPTS = Math.max(endPTS, frag.endPTS);
-    startDTS = Math.min(startDTS, frag.startDTS);
-    endDTS = Math.max(endDTS, frag.endDTS);
+    startPTS = Math.max(startPTS, frag.startPTS);
+    endPTS = Math.min(endPTS, frag.endPTS);
+    startDTS = Math.max(startDTS, frag.startDTS);
+    endDTS = Math.min(endDTS, frag.endDTS);
   }
 
   const drift = startPTS - frag.start;
+  // According to MSE, buffer lengths are calculated via PTS (instead of DTS)
   frag.start = frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.endPTS = endPTS;
@@ -137,6 +155,7 @@ export function mergeDetails (oldDetails, newDetails) {
       if (Number.isFinite(oldFrag.startPTS)) {
         newFrag.start = newFrag.startPTS = oldFrag.startPTS;
         newFrag.endPTS = oldFrag.endPTS;
+        newFrag.startDTS = oldFrag.endDTS;
         newFrag.duration = oldFrag.duration;
         newFrag.backtracked = oldFrag.backtracked;
         newFrag.dropped = oldFrag.dropped;
