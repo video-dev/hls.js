@@ -171,5 +171,9 @@ module.exports = {
   pdtOneValue: {
     url: 'https://playertest.longtailvideo.com/adaptive/aviion/manifest.m3u8',
     description: 'One PDT, no discontinuities'
+  },
+  differentPTSDTSWithSmallSubsequentSegment: {
+    url: 'https://9secfail-tepnrytnng.now.sh/index.m3u8',
+    description: 'Audio/video has different PTS; the following segment is very small (0.04s) and tests buffer intersection'
   }
 };
