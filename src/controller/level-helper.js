@@ -81,12 +81,21 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
 
     // Hls.js allocates a sourceBuffer for both audio and video. The HTMLMediaElement (aka video tag) reports its length
     // as the intersection of these two sourceBuffers. Therefore, the start time of the fragment is the largest of the
-    // audio/video start PTS values, and the minimum of the audio/video end PTS values
-    maxStartPTS = Math.max(startPTS, frag.startPTS);
-    startPTS = Math.max(startPTS, frag.startPTS);
-    endPTS = Math.min(endPTS, frag.endPTS);
-    startDTS = Math.max(startDTS, frag.startDTS);
-    endDTS = Math.min(endDTS, frag.endDTS);
+    // audio/video start PTS values, and the minimum of the audio/video end PTS values.
+    // https://www.w3.org/TR/media-source/#htmlmediaelement-extensions for more info
+    if (frag.endPTS < startPTS) {
+      maxStartPTS = Math.max(startPTS, frag.startPTS);
+      startPTS = Math.max(startPTS, frag.startPTS);
+      endPTS = Math.min(endPTS, frag.endPTS);
+      startDTS = Math.max(startDTS, frag.startDTS);
+      endDTS = Math.min(endDTS, frag.endDTS);
+    }
+    // According to the spec: "If readyState is "ended", then set the end time on the last range in source ranges to highest end time."
+    // Therefore we should set the last frag's end time to the max end PTS; otherwise, it may fail to be selected for buffering
+    if (frag.sn === details.endSN && !details.live) {
+      endPTS = Math.max(endPTS, frag.endPTS);
+      endDTS = Math.max(endDTS, frag.endDTS);
+    }
   }
 
   const drift = startPTS - frag.start;
