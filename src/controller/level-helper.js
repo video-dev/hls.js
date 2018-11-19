@@ -79,22 +79,53 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
       frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
     }
 
-    // Hls.js allocates a sourceBuffer for both audio and video. The HTMLMediaElement (aka video tag) reports its length
-    // as the intersection of these two sourceBuffers. Therefore, the start time of the fragment is the largest of the
-    // audio/video start PTS values, and the minimum of the audio/video end PTS values.
-    // https://www.w3.org/TR/media-source/#htmlmediaelement-extensions for more info
-    if (frag.endPTS < startPTS) {
-      maxStartPTS = Math.max(startPTS, frag.startPTS);
-      startPTS = Math.max(startPTS, frag.startPTS);
-      endPTS = Math.min(endPTS, frag.endPTS);
-      startDTS = Math.max(startDTS, frag.startDTS);
-      endDTS = Math.min(endDTS, frag.endDTS);
-    }
-    // According to the spec: "If readyState is "ended", then set the end time on the last range in source ranges to highest end time."
-    // Therefore we should set the last frag's end time to the max end PTS; otherwise, it may fail to be selected for buffering
-    if (frag.sn === details.endSN && !details.live) {
+    /**
+     Hls.js allocates a sourceBuffer for both audio and video. The HTMLMediaElement (aka video tag) reports its length
+     as the intersection of these two sourceBuffers. Therefore, the start time of the fragment is the largest of the
+     audio/video start PTS values, and the minimum of the audio/video end PTS values.
+
+     A fragment with no overlap between audio/video will have an MSE buffered length of 0 because there is no
+     intersection between its two (audio/video) sourceBuffers. The actual length of the segment depends on where
+     other segments buffer. For example:
+
+     audio:    [           |----------|] (10, 20)
+     video:    [|---------|            ] (0, 9)
+     reported: [                       ] (0)
+
+     audio:    [                       |----------|] (20, 30)
+     video:    [           |----------|            ] (10, 19)
+     reported: [           |----------|            ] (10, 19)
+
+     on EOS:
+     reported: [           |-----------------------] (10, 30)
+
+     https://www.w3.org/TR/media-source/#htmlmediaelement-extensions for more info
+     **/
+
+    maxStartPTS = Math.max(startPTS, frag.startPTS);
+    if (startPTS > frag.endPTS || endPTS < frag.startPTS) {
+      logger.warn(`Audio/video tracks have no PTS intersection. This may cause unrecoverable playback stalls. 
+      frag: ${frag.startPTS},${frag.endPTS}, new values: ${startPTS},${endPTS}`);
+
+      // Set the fragment start/end to encompass its entire PTS range. If this causes loop loading, Hls.js will force the
+      // next fragment to load in _findFragment.
+      startPTS = Math.min(startPTS, frag.startPTS);
       endPTS = Math.max(endPTS, frag.endPTS);
+      startDTS = Math.min(startDTS, frag.startDTS);
       endDTS = Math.max(endDTS, frag.endDTS);
+    } else {
+      startPTS = Math.max(startPTS, frag.startPTS);
+      startDTS = Math.max(startDTS, frag.startDTS);
+
+      // According to the spec: "If readyState is "ended", then set the end time on the last range in source ranges to highest end time."
+      // Therefore we should set the last frag's end time to the max end PTS; otherwise, it may fail to be selected for buffering
+      if (details && !details.live && frag.sn === details.endSN) {
+        endPTS = Math.max(endPTS, frag.endPTS);
+        endDTS = Math.max(endDTS, frag.endDTS);
+      } else {
+        endPTS = Math.min(endPTS, frag.endPTS);
+        endDTS = Math.min(endDTS, frag.endDTS);
+      }
     }
   }
 
@@ -112,10 +143,8 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
   }
-
-  let fragIdx, fragments, i;
-  fragIdx = sn - details.startSN;
-  fragments = details.fragments;
+  let fragIdx = sn - details.startSN;
+  let fragments = details.fragments;
   // update frag reference in fragments array
   // rationale is that fragments array might not contain this frag object.
   // this will happen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
@@ -123,12 +152,12 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   // resulting in invalid sliding computation
   fragments[fragIdx] = frag;
   // adjust fragment PTS/duration from seqnum-1 to frag 0
-  for (i = fragIdx; i > 0; i--) {
+  for (let i = fragIdx; i > 0; i--) {
     updatePTS(fragments, i, i - 1);
   }
 
   // adjust fragment PTS/duration from seqnum to last frag
-  for (i = fragIdx; i < fragments.length - 1; i++) {
+  for (let i = fragIdx; i < fragments.length - 1; i++) {
     updatePTS(fragments, i, i + 1);
   }
 
@@ -164,7 +193,6 @@ export function mergeDetails (oldDetails, newDetails) {
       if (Number.isFinite(oldFrag.startPTS)) {
         newFrag.start = newFrag.startPTS = oldFrag.startPTS;
         newFrag.endPTS = oldFrag.endPTS;
-        newFrag.startDTS = oldFrag.endDTS;
         newFrag.duration = oldFrag.duration;
         newFrag.backtracked = oldFrag.backtracked;
         newFrag.dropped = oldFrag.dropped;
