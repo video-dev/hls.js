@@ -90,7 +90,7 @@ class BufferController extends EventHandler {
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
     this.bufferCodecEventsExpected = data.altAudio ? 2 : 1;
-    logger.log(`${this.bufferCodecEventsExpected} bufferCodec(s) expected`);
+    logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
   onMediaAttaching (data) {
