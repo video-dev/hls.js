@@ -632,7 +632,11 @@ export default class Hls extends Observer {
     if (!level) {
       return [];
     }
-    const currentGroupId = level.audioGroupIds[level.urlId];
+
+    const currentGroupId = level.audioGroupIds ? level.audioGroupIds[level.urlId] : null;
+    if (!currentGroupId) {
+      return this.audioTracks;
+    }
 
     return this.audioTracks.filter((track) => track.groupId === currentGroupId);
   }
@@ -645,7 +649,11 @@ export default class Hls extends Observer {
     if (!level) {
       return [];
     }
-    const currentGroupId = level.subtitleGroupIds[level.urlId];
+
+    const currentGroupId = level.subtitleGroupIds ? level.subtitleGroupIds[level.urlId] : null;
+    if (!currentGroupId) {
+      return this.audioTracks;
+    }
 
     return this.subtitleTracks.filter((track) => track.groupId === currentGroupId);
   }
