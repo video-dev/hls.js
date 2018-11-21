@@ -2,8 +2,6 @@ import { EventEmitter } from 'eventemitter3';
 
 import { logger } from './utils/logger';
 
-const ENABLE_TRACE_LOG_EVENT_TRIGGER = false;
-
 /**
  * @class
  *
