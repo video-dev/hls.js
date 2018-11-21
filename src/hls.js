@@ -652,7 +652,7 @@ export default class Hls extends Observer {
 
     const currentGroupId = level.subtitleGroupIds ? level.subtitleGroupIds[level.urlId] : null;
     if (!currentGroupId) {
-      return this.audioTracks;
+      return this.subtitleTracks;
     }
 
     return this.subtitleTracks.filter((track) => track.groupId === currentGroupId);
