@@ -60,7 +60,7 @@ const calculateOffset = function (vttCCs, cc, presentationTime) {
 
 const wrapPtsInteger = function (value, reference) {
   let offset;
-  if (reference === undefined) {
+  if (!Number.isFinite(reference)) {
     return value;
   }
 

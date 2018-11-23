@@ -304,7 +304,7 @@ class TimelineController extends EventHandler {
       frag = data.frag;
 
     if (frag.type === 'subtitle') {
-      if (!this.initPTS[frag.cc]) {
+      if (!Number.isFinite(this.initPTS[frag.cc])) {
         this.unparsedVttFrags.push(data);
         return;
       }
