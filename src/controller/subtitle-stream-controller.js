@@ -192,7 +192,7 @@ export class SubtitleStreamController extends TaskLoop {
       const tracks = this.tracks;
       const trackId = this.currentTrackId;
 
-      if (!tracks || trackId < 0 || trackId >= tracks.length || !tracks[trackId].details) {
+       if (!tracks || !tracks[trackId] || !tracks[trackId].details) { 
         break;
       }
 
