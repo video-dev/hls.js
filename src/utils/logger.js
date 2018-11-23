@@ -32,18 +32,17 @@ function bindConsole (method, prefix, prependTime) {
    */
 
   return logFn.bind(console, prefix);
-  
 }
 
 let isLoggingEnabled = ENABLE_LOGS_DEFAULT;
 
 function bindDefaultLogger (logger = {}) {
-  logger.trace = ENABLE_TRACE_LOGS && isLoggingEnabled ? bindConsole('debug', DEBUG_PREFIX + ' [T] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-  logger.debug = isLoggingEnabled ? bindConsole('debug', DEBUG_PREFIX + ' [D] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-  logger.log = isLoggingEnabled ? bindConsole('log', DEBUG_PREFIX + ' [L] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-  logger.info = isLoggingEnabled ? bindConsole('info', DEBUG_PREFIX + ' [I] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-  logger.warn = isLoggingEnabled ? bindConsole('warn', DEBUG_PREFIX + ' [W] >', DEBUG_PREPEND_TIMESTAMP) : noop;
-  logger.error = isLoggingEnabled ? bindConsole('error', DEBUG_PREFIX + ' [E] >', DEBUG_PREPEND_TIMESTAMP) : noop;
+  logger.trace = ENABLE_TRACE_LOGS && isLoggingEnabled ? bindConsole('debug', DEBUG_PREFIX + ' [T] >') : noop;
+  logger.debug = isLoggingEnabled ? bindConsole('debug', DEBUG_PREFIX + ' [D] >') : noop;
+  logger.log = isLoggingEnabled ? bindConsole('log', DEBUG_PREFIX + ' [L] >') : noop;
+  logger.info = isLoggingEnabled ? bindConsole('info', DEBUG_PREFIX + ' [I] >') : noop;
+  logger.warn = isLoggingEnabled ? bindConsole('warn', DEBUG_PREFIX + ' [W] >') : noop;
+  logger.error = isLoggingEnabled ? bindConsole('error', DEBUG_PREFIX + ' [E] >') : noop;
   return logger;
 }
 
