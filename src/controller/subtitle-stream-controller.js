@@ -166,9 +166,7 @@ export class SubtitleStreamController extends TaskLoop {
         data.frag.type === 'subtitle' &&
         fragCurrent.sn === data.frag.sn) {
       // check to see if the payload needs to be decrypted
-      if ((data.payload.byteLength > 0) &&
-      if (data.payload.byteLength > 0 && (decryptData && decryptData.key && decryptData.method === 'AES-128'))
-          (decryptData.method === 'AES-128')) {
+      if (data.payload.byteLength > 0 && (decryptData && decryptData.key && decryptData.method === 'AES-128')) {
         let startTime = performance.now();
 
         // decrypt the subtitles
@@ -192,7 +190,7 @@ export class SubtitleStreamController extends TaskLoop {
       const tracks = this.tracks;
       const trackId = this.currentTrackId;
 
-       if (!tracks || !tracks[trackId] || !tracks[trackId].details) { 
+      if (!tracks || !tracks[trackId] || !tracks[trackId].details) {
         break;
       }
 
@@ -234,10 +232,6 @@ export class SubtitleStreamController extends TaskLoop {
   }
 
   _getBuffered () {
-     return this.tracksBuffered[this.currentTrackId].buffered || []; 
-    if (buffered) {
-      return buffered;
-    }
-    return [];
+    return this.tracksBuffered[this.currentTrackId].buffered || [];
   }
 }
