@@ -234,7 +234,7 @@ export class SubtitleStreamController extends TaskLoop {
   }
 
   _getBuffered () {
-    const buffered = this.tracksBuffered[this.currentTrackId];
+     return this.tracksBuffered[this.currentTrackId].buffered || []; 
     if (buffered) {
       return buffered;
     }
