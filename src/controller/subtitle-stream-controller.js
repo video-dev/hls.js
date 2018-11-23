@@ -167,7 +167,7 @@ export class SubtitleStreamController extends TaskLoop {
         fragCurrent.sn === data.frag.sn) {
       // check to see if the payload needs to be decrypted
       if ((data.payload.byteLength > 0) &&
-          (decryptData != null) && (decryptData.key != null) &&
+      if (data.payload.byteLength > 0 && (decryptData && decryptData.key && decryptData.method === 'AES-128'))
           (decryptData.method === 'AES-128')) {
         let startTime = performance.now();
 
