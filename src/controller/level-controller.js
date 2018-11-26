@@ -104,8 +104,8 @@ export default class LevelController extends EventHandler {
 
       if (attributes) {
         if (attributes.AUDIO) {
-            audioCodecFound = true;
-            addGroupId(levelFromSet || level, 'audio', attributes.AUDIO);
+          audioCodecFound = true;
+          addGroupId(levelFromSet || level, 'audio', attributes.AUDIO);
         }
         if (attributes.SUBTITLES) {
           addGroupId(levelFromSet || level, 'text', attributes.SUBTITLES);
