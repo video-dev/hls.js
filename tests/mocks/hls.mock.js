@@ -32,6 +32,11 @@ export default class HlsMock {
     });
   }
 
+  getEventData (n) {
+    const event = this.trigger.getCall(n).args;
+    return { name: event[0], payload: event[1] };
+  }
+
   /**
    * Reset all spies
    */

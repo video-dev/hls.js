@@ -117,4 +117,76 @@ describe('BufferController tests', function () {
       assert(flushSpy.calledOnce, 'clear live back buffer was not called once');
     });
   });
+
+  describe('sourcebuffer creation', function () {
+    let createSbStub;
+    let checkPendingTracksSpy;
+    beforeEach(function () {
+      createSbStub = sandbox.stub(bufferController, 'createSourceBuffers');
+      checkPendingTracksSpy = sandbox.spy(bufferController, 'checkPendingTracks');
+      sandbox.stub(bufferController, 'doAppending');
+    });
+
+    it('initializes with zero expected BUFFER_CODEC events', function () {
+      assert.strictEqual(bufferController.bufferCodecEventsExpected, 0);
+    });
+
+    it('expects one bufferCodec event by default', function () {
+      bufferController.onManifestParsed({});
+      assert.strictEqual(bufferController.bufferCodecEventsExpected, 1);
+    });
+
+    it('expects two bufferCodec events if altAudio is signaled', function () {
+      bufferController.onManifestParsed({ altAudio: true });
+      assert.strictEqual(bufferController.bufferCodecEventsExpected, 2);
+    });
+
+    it('creates sourceBuffers when no more BUFFER_CODEC events are expected', function () {
+      bufferController.pendingTracks = { video: {} };
+
+      bufferController.checkPendingTracks();
+      assert.strictEqual(createSbStub.calledOnce, true);
+    });
+
+    it('does not create sourceBuffers when BUFFER_CODEC events are expected', function () {
+      bufferController.pendingTracks = { video: {} };
+      bufferController.bufferCodecEventsExpected = 1;
+
+      bufferController.checkPendingTracks();
+      assert.strictEqual(createSbStub.notCalled, true);
+      assert.strictEqual(bufferController.bufferCodecEventsExpected, 1);
+    });
+
+    it('checks pending tracks in onMediaSourceOpen', function () {
+      bufferController.onMediaSourceOpen();
+      assert.strictEqual(checkPendingTracksSpy.calledOnce, true);
+    });
+
+    it('does not check pending tracks in onBufferCodecs until called for the expected amount of times', function () {
+      bufferController.sourceBuffer = {};
+      bufferController.mediaSource = { readyState: 'open' };
+      bufferController.bufferCodecEventsExpected = 2;
+
+      bufferController.onBufferCodecs({});
+      assert.strictEqual(checkPendingTracksSpy.notCalled, true);
+      assert.strictEqual(bufferController.bufferCodecEventsExpected, 1);
+
+      bufferController.onBufferCodecs({});
+      assert.strictEqual(checkPendingTracksSpy.calledOnce, true);
+      assert.strictEqual(bufferController.bufferCodecEventsExpected, 0);
+    });
+
+    it('creates the expected amount of sourceBuffers given the standard event flow', function () {
+      bufferController.sourceBuffer = {};
+      bufferController.mediaSource = { readyState: 'open', removeEventListener: sandbox.stub() };
+
+      bufferController.onManifestParsed({ altAudio: true });
+      bufferController.onMediaSourceOpen();
+      bufferController.onBufferCodecs({ audio: {} });
+      bufferController.onBufferCodecs({ video: {} });
+
+      assert.strictEqual(createSbStub.calledOnce, true);
+      assert.strictEqual(createSbStub.calledWith({ audio: {}, video: {} }), true);
+    });
+  });
 });

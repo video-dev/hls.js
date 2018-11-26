@@ -35,6 +35,8 @@ class BufferController extends EventHandler {
     this._live = null;
     // cache the self generated object url to detect hijack of video tag
     this._objectUrl = null;
+    // The number of BUFFER_CODEC events received before any sourceBuffers are created
+    this.bufferCodecEventsExpected = 0;
 
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -83,18 +85,12 @@ class BufferController extends EventHandler {
   }
 
   onManifestParsed (data) {
-    let audioExpected = data.audio,
-      videoExpected = data.video || (data.levels.length && data.altAudio),
-      sourceBufferNb = 0;
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    if (data.altAudio && (audioExpected || videoExpected)) {
-      sourceBufferNb = (audioExpected ? 1 : 0) + (videoExpected ? 1 : 0);
-      logger.log(`${sourceBufferNb} sourceBuffer(s) expected`);
-    }
-    this.sourceBufferNb = sourceBufferNb;
+    this.bufferCodecEventsExpected = data.altAudio ? 2 : 1;
+    logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
   onMediaAttaching (data) {
@@ -176,13 +172,11 @@ class BufferController extends EventHandler {
   }
 
   checkPendingTracks () {
-    // if any buffer codecs pending, check if we have enough to create sourceBuffers
-    let pendingTracks = this.pendingTracks,
-      pendingTracksNb = Object.keys(pendingTracks).length;
-    // if any pending tracks and (if nb of pending tracks gt or equal than expected nb or if unknown expected nb)
-    if (pendingTracksNb && (
-      this.sourceBufferNb <= pendingTracksNb ||
-        this.sourceBufferNb === 0)) {
+    let { bufferCodecEventsExpected, pendingTracks } = this;
+    // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
+    // This is important because the MSE spec allows implementations to throw QuotaExceededErrors if creating new sourceBuffers after
+    // data has been appended to existing ones.
+    if (Object.keys(pendingTracks).length && !bufferCodecEventsExpected) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
@@ -271,13 +265,19 @@ class BufferController extends EventHandler {
   onBufferCodecs (tracks) {
     // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
     // if sourcebuffers already created, do nothing ...
-    if (Object.keys(this.sourceBuffer).length === 0) {
-      for (let trackName in tracks) this.pendingTracks[trackName] = tracks[trackName];
-      let mediaSource = this.mediaSource;
-      if (mediaSource && mediaSource.readyState === 'open') {
-        // try to create sourcebuffers if mediasource opened
-        this.checkPendingTracks();
-      }
+    if (Object.keys(this.sourceBuffer).length) {
+      return;
+    }
+
+    Object.keys(tracks).forEach(trackName => {
+      this.pendingTracks[trackName] = tracks[trackName];
+    });
+
+    const { mediaSource } = this;
+    this.bufferCodecEventsExpected = Math.max(this.bufferCodecEventsExpected - 1, 0);
+    if (mediaSource && mediaSource.readyState === 'open' && !this.bufferCodecEventsExpected) {
+      // try to create sourcebuffers if mediasource opened, and all expected bufferCodec events have been received
+      this.checkPendingTracks();
     }
   }
 
