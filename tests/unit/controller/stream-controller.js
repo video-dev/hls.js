@@ -8,7 +8,7 @@ import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { mockFragments } from '../../mocks/data';
 import Fragment from '../../../src/loader/fragment';
 
-describe('StreamController tests', function () {
+describe('StreamController', function () {
   let hls;
   let fragmentTracker;
   let streamController;
@@ -62,7 +62,7 @@ describe('StreamController tests', function () {
       assertStreamControllerStopped(streamController);
     });
 
-    it('should start when controller have levels data', function () {
+    it('should start without levels data', function () {
       const manifest = `#EXTM3U
   #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
   http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
