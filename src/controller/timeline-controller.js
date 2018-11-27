@@ -10,7 +10,7 @@ import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 
-function reuseVttTextTrack (inUseTrack, manifestTrack) {
+function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
 }
 
@@ -40,7 +40,7 @@ class TimelineController extends EventHandler {
     this.textTracks = [];
     this.tracks = [];
     this.unparsedVttFrags = [];
-    this.initPTS = undefined;
+    this.initPTS = [];
     this.cueRanges = {};
     this.captionsTracks = {};
 
@@ -107,17 +107,18 @@ class TimelineController extends EventHandler {
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
   onInitPtsFound (data) {
-    if (typeof this.initPTS === 'undefined') {
-      this.initPTS = data.initPTS;
+    if (data.id === 'main') {
+      this.initPTS[data.frag.cc] = data.initPTS;
     }
 
-    // Due to asynchrony, initial PTS may arrive later than the first VTT fragments are loaded.
+    // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.
     // Parse any unparsed fragments upon receiving the initial PTS.
     if (this.unparsedVttFrags.length) {
-      this.unparsedVttFrags.forEach(frag => {
+      const unparsedVttFrags = this.unparsedVttFrags;
+      this.unparsedVttFrags = [];
+      unparsedVttFrags.forEach(frag => {
         this.onFragLoaded(frag);
       });
-      this.unparsedVttFrags = [];
     }
   }
 
@@ -235,7 +236,7 @@ class TimelineController extends EventHandler {
   onManifestLoaded (data) {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
-    this.initPTS = undefined;
+    this.initPTS = [];
     this.cueRanges = {};
 
     if (this.config.enableWebVTT) {
@@ -248,9 +249,9 @@ class TimelineController extends EventHandler {
         this.tracks.forEach((track, index) => {
           let textTrack;
           if (index < inUseTracks.length) {
-            const inUseTrack = inUseTracks[index];
+            const inUseTrack = Object.values(inUseTracks).find(inUseTrack => canReuseVttTextTrack(inUseTrack, track));
             // Reuse tracks with the same label, but do not reuse 608/708 tracks
-            if (reuseVttTextTrack(inUseTrack, track)) {
+            if (inUseTrack) {
               textTrack = inUseTrack;
             }
           }
@@ -317,8 +318,12 @@ class TimelineController extends EventHandler {
     else if (frag.type === 'subtitle') {
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
-        if (typeof this.initPTS === 'undefined') {
+        if (!Number.isFinite(this.initPTS[frag.cc])) {
           this.unparsedVttFrags.push(data);
+          if (this.initPTS.length) {
+            // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
+            this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
+          }
           return;
         }
 
@@ -344,7 +349,7 @@ class TimelineController extends EventHandler {
     const hls = this.hls;
 
     // Parse the WebVTT file contents.
-    WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, (cues) => {
+    WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
       const currentTrack = tracks[frag.trackId];
 
       if (this.config.renderNatively) {
@@ -370,7 +375,7 @@ class TimelineController extends EventHandler {
       frag = data.frag;
 
     if (frag.type === 'subtitle') {
-      if (typeof this.initPTS === 'undefined') {
+      if (!Number.isFinite(this.initPTS[frag.cc])) {
         this.unparsedVttFrags.push(data);
         return;
       }

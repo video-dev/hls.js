@@ -1,4 +1,5 @@
 import OutputFilter from '../../../src/utils/output-filter';
+const assert = require('assert');
 
 describe('OutputFilter', function () {
   const sandbox = sinon.createSandbox();
