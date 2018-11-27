@@ -148,9 +148,9 @@ describe('LevelController', function () {
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Event.MANIFEST_PARSED);
-      expect(payload.video).to.equal( true);
-      expect(payload.audio).to.equal( false);
-      expect(payload.altAudio).to.equal( false);
+      expect(payload.video).to.equal(true);
+      expect(payload.audio).to.equal(false);
+      expect(payload.altAudio).to.equal(false);
     });
 
     it('signals audio if there is an audioCodec signaled', function () {
@@ -159,9 +159,9 @@ describe('LevelController', function () {
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Event.MANIFEST_PARSED);
-      expect(payload.video).to.equal( false);
-      expect(payload.audio).to.equal( true);
-      expect(payload.altAudio).to.equal( false);
+      expect(payload.video).to.equal(false);
+      expect(payload.audio).to.equal(true);
+      expect(payload.altAudio).to.equal(false);
     });
 
     it('signals audio if the level is part of an audio group', function () {
@@ -174,9 +174,9 @@ describe('LevelController', function () {
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Event.MANIFEST_PARSED);
-      expect(payload.video).to.equal( false);
-      expect(payload.audio).to.equal( true);
-      expect(payload.altAudio).to.equal( false);
+      expect(payload.video).to.equal(false);
+      expect(payload.audio).to.equal(true);
+      expect(payload.altAudio).to.equal(false);
     });
 
     it('signals altAudio if there are audioTracks containing URIs', function () {
@@ -207,9 +207,9 @@ describe('LevelController', function () {
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Event.MANIFEST_PARSED);
-      expect(payload.video).to.equal( true);
-      expect(payload.audio).to.equal( false);
-      expect(payload.altAudio).to.equal( true);
+      expect(payload.video).to.equal(true);
+      expect(payload.audio).to.equal(false);
+      expect(payload.altAudio).to.equal(true);
     });
 
     it('does not signal altAudio if the audioTracks do no not contain any URIs', function () {
@@ -239,9 +239,9 @@ describe('LevelController', function () {
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Event.MANIFEST_PARSED);
-      expect(payload.video).to.equal( true);
-      expect(payload.audio).to.equal( false);
-      expect(payload.altAudio).to.equal( false);
+      expect(payload.video).to.equal(true);
+      expect(payload.audio).to.equal(false);
+      expect(payload.altAudio).to.equal(false);
     });
   });
 });

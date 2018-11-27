@@ -185,7 +185,7 @@ describe('BufferController tests', function () {
       bufferController.onBufferCodecs({ video: {} });
 
       expect(createSbStub.calledOnce).to.be.true;
-      expect(createSbStub.calledWith({audio: {}, video: {} })).to.be.true;
+      expect(createSbStub.calledWith({ audio: {}, video: {} })).to.be.true;
     });
   });
 });

@@ -281,7 +281,7 @@ describe('StreamController', function () {
     describe('startLoad', function () {
       beforeEach(function () {
         streamController.levels = [];
-        streamController.media = null
+        streamController.media = null;
       });
       it('should not start when controller have not levels data', function () {
         streamController.levels = null;

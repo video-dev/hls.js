@@ -86,7 +86,7 @@ describe('TimelineController', function () {
         subtitles: [{ id: 0, name: 'ru' }, { id: 1, name: 'en' }]
       });
 
-        // text tracks model contain only newly added manifest tracks, in same order
+      // text tracks model contain only newly added manifest tracks, in same order
       expect(timelineController.textTracks[0].label).to.equal('ru');
       expect(timelineController.textTracks[1].label).to.equal('en');
       expect(timelineController.textTracks.length).to.equal(2);
