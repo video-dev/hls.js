@@ -33,7 +33,6 @@
     "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000"
   },
   "dependencies": {
-    "chai": "^4.2.0",
     "url-toolkit": "^2.1.2"
   },
   "devDependencies": {
@@ -41,11 +40,11 @@
     "babel-loader": "^7.1.1",
     "babel-preset-env": "^1.7.0",
     "babel-register": "^6.24.0",
+    "chai": "^4.2.0",
     "chromedriver": "^2.38.3",
     "cross-env": "^5.0.2",
     "esdoc": "^1.1.0",
     "esdoc-standard-plugin": "^1.0.0",
-    "esdoc-typescript-plugin": "^1.0.1",
     "eslint": "^4.13.1",
     "eslint-config-standard": "^11.0.0",
     "eslint-plugin-import": "^2.9.0",
