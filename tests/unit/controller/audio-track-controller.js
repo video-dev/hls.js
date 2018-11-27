@@ -1,6 +1,9 @@
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
 
+const assert = require('assert');
+const sinon = require('sinon');
+
 describe('AudioTrackController', function () {
   const tracks = [{
     groupId: '1',
@@ -75,6 +78,18 @@ describe('AudioTrackController', function () {
       audioTrackController.onManifestParsed({
         audioTracks: null
       });
+    });
+  });
+
+  describe('_needsTrackLoading', () => {
+    it('should not need loading because the audioTrack is embedded in the main playlist', () => {
+      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true } }), false);
+      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null }), false);
+    });
+
+    it('should need loading because the track has not been loaded yet', () => {
+      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), true);
+      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' }), true);
     });
   });
 
@@ -221,6 +236,66 @@ describe('AudioTrackController', function () {
       expect(needsTrackLoading).to.have.been.calledWith(trackWithOutUrl);
       expect(needsTrackLoading.firstCall.returnValue).to.be.false;
       expect(audioTrackLoadingCallback).to.not.have.been.called;
+    });
+
+    it('should load audio tracks with a url', () => {
+      const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
+      const audioTrackLoadingCallback = sinon.spy();
+      const trackWithUrl = {
+        groupId: '1',
+        id: 0,
+        name: 'A',
+        default: true,
+        url: './trackA.m3u8'
+      };
+
+      hls.on(Hls.Events.AUDIO_TRACK_LOADING, audioTrackLoadingCallback);
+
+      hls.levelController = {
+        levels: [{
+          urlId: 0,
+          audioGroupIds: ['1']
+        }]
+      };
+
+      audioTrackController.tracks = [trackWithUrl];
+
+      audioTrackController.onLevelLoaded({
+        level: 0
+      });
+
+      sinon.assert.calledOnce(needsTrackLoading);
+      sinon.assert.calledWith(needsTrackLoading, trackWithUrl);
+      assert.strictEqual(needsTrackLoading.firstCall.returnValue, true, 'expected _needsTrackLoading to return true');
+
+      sinon.assert.calledOnce(audioTrackLoadingCallback);
+    });
+
+    it('should not attempt to load audio tracks without a url', () => {
+      const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
+      const audioTrackLoadingCallback = sinon.spy();
+      const trackWithOutUrl = tracks[0];
+
+      hls.on(Hls.Events.AUDIO_TRACK_LOADING, audioTrackLoadingCallback);
+
+      hls.levelController = {
+        levels: [{
+          urlId: 0,
+          audioGroupIds: ['1']
+        }]
+      };
+
+      audioTrackController.tracks = tracks;
+
+      audioTrackController.onLevelLoaded({
+        level: 0
+      });
+
+      sinon.assert.calledOnce(needsTrackLoading);
+      sinon.assert.calledWith(needsTrackLoading, trackWithOutUrl);
+      assert.strictEqual(needsTrackLoading.firstCall.returnValue, false, 'expected _needsTrackLoading to return false');
+
+      sinon.assert.notCalled(audioTrackLoadingCallback);
     });
   });
 

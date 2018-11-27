@@ -1,6 +1,8 @@
 import PlaylistLoader from '../../../src/loader/playlist-loader';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 
+const assert = require('assert');
+
 describe('PlaylistLoader', function () {
   it('parses empty manifest returns empty array', function () {
     expect(M3U8Parser.parseMasterPlaylist('', 'http://www.dailymotion.com')).to.deep.equal([]);
@@ -805,5 +807,46 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
     expect(result.fragments[2].tagList[1][1]).to.equal('{"key":"value"}');
     expect(result.fragments[2].tagList[2][0]).to.equal('EXT-X-CUSTOM-URI');
     expect(result.fragments[2].tagList[2][1]).to.equal('http://dummy.url.com/hls/moreinfo.json');
+  });
+
+  it('allows spaces in the fragment files', () => {
+    const level = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-TARGETDURATION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:6.006,
+180724_Allison VLOG-v3_00001.ts
+#EXTINF:6.006,
+180724_Allison VLOG-v3_00002.ts
+#EXT-X-ENDLIST
+    `;
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    assert.strictEqual(result.fragments.length, 2);
+    assert.strictEqual(result.totalduration, 12.012);
+    assert.strictEqual(result.targetduration, 7);
+    assert.strictEqual(result.fragments[0].url, 'http://dummy.url.com/180724_Allison VLOG-v3_00001.ts');
+    assert.strictEqual(result.fragments[1].url, 'http://dummy.url.com/180724_Allison VLOG-v3_00002.ts');
+  });
+
+  it('deals with spaces after fragment files', () => {
+    // You can't see them, but there should be spaces directly after the .ts
+    const level = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-TARGETDURATION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:6.006,
+180724_Allison VLOG v3_00001.ts 
+#EXTINF:6.006,
+180724_Allison VLOG v3_00002.ts 
+#EXT-X-ENDLIST
+    `;
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    assert.strictEqual(result.fragments.length, 2);
+    assert.strictEqual(result.totalduration, 12.012);
+    assert.strictEqual(result.targetduration, 7);
+    assert.strictEqual(result.fragments[0].url, 'http://dummy.url.com/180724_Allison VLOG v3_00001.ts');
+    assert.strictEqual(result.fragments[1].url, 'http://dummy.url.com/180724_Allison VLOG v3_00002.ts');
   });
 });

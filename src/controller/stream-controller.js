@@ -32,6 +32,8 @@ export const State = {
   ERROR: 'ERROR'
 };
 
+const TICK_INTERVAL = 100; // how often to tick in ms
+
 class StreamController extends TaskLoop {
   constructor (hls, fragmentTracker) {
     super(hls,
@@ -79,7 +81,7 @@ class StreamController extends TaskLoop {
     if (this.levels) {
       const { lastCurrentTime, hls } = this;
       this.stopLoad();
-      this.setInterval(100);
+      this.setInterval(TICK_INTERVAL);
       this.level = -1;
       this.fragLoadError = 0;
       if (!this.startFragRequested) {
@@ -1372,6 +1374,8 @@ class StreamController extends TaskLoop {
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
+      // Need to check what the SourceBuffer reports as start time for the first fragment appended.
+      this.startPosition = buffered.start(0);
       this._seekToStartPos();
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
