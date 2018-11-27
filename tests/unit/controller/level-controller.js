@@ -3,8 +3,6 @@ import HlsMock from '../../mocks/hls.mock';
 import Event from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 
-const assert = require('assert');
-
 describe('LevelController', function () {
   const sandbox = sinon.createSandbox();
   let hls;
@@ -149,10 +147,10 @@ describe('LevelController', function () {
       levelController.onManifestLoaded(data);
 
       const { name, payload } = hls.getEventData(0);
-      assert.strictEqual(name, Event.MANIFEST_PARSED);
-      assert.strictEqual(payload.video, true);
-      assert.strictEqual(payload.audio, false);
-      assert.strictEqual(payload.altAudio, false);
+      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(payload.video).to.equal( true);
+      expect(payload.audio).to.equal( false);
+      expect(payload.altAudio).to.equal( false);
     });
 
     it('signals audio if there is an audioCodec signaled', function () {
@@ -160,10 +158,10 @@ describe('LevelController', function () {
       levelController.onManifestLoaded(data);
 
       const { name, payload } = hls.getEventData(0);
-      assert.strictEqual(name, Event.MANIFEST_PARSED);
-      assert.strictEqual(payload.video, false);
-      assert.strictEqual(payload.audio, true);
-      assert.strictEqual(payload.altAudio, false);
+      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(payload.video).to.equal( false);
+      expect(payload.audio).to.equal( true);
+      expect(payload.altAudio).to.equal( false);
     });
 
     it('signals audio if the level is part of an audio group', function () {
@@ -175,10 +173,10 @@ describe('LevelController', function () {
       levelController.onManifestLoaded(data);
 
       const { name, payload } = hls.getEventData(0);
-      assert.strictEqual(name, Event.MANIFEST_PARSED);
-      assert.strictEqual(payload.video, false);
-      assert.strictEqual(payload.audio, true);
-      assert.strictEqual(payload.altAudio, false);
+      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(payload.video).to.equal( false);
+      expect(payload.audio).to.equal( true);
+      expect(payload.altAudio).to.equal( false);
     });
 
     it('signals altAudio if there are audioTracks containing URIs', function () {
@@ -208,10 +206,10 @@ describe('LevelController', function () {
       levelController.onManifestLoaded(data);
 
       const { name, payload } = hls.getEventData(0);
-      assert.strictEqual(name, Event.MANIFEST_PARSED);
-      assert.strictEqual(payload.video, true);
-      assert.strictEqual(payload.audio, false);
-      assert.strictEqual(payload.altAudio, true);
+      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(payload.video).to.equal( true);
+      expect(payload.audio).to.equal( false);
+      expect(payload.altAudio).to.equal( true);
     });
 
     it('does not signal altAudio if the audioTracks do no not contain any URIs', function () {
@@ -240,10 +238,10 @@ describe('LevelController', function () {
       levelController.onManifestLoaded(data);
 
       const { name, payload } = hls.getEventData(0);
-      assert.strictEqual(name, Event.MANIFEST_PARSED);
-      assert.strictEqual(payload.video, true);
-      assert.strictEqual(payload.audio, false);
-      assert.strictEqual(payload.altAudio, false);
+      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(payload.video).to.equal( true);
+      expect(payload.audio).to.equal( false);
+      expect(payload.altAudio).to.equal( false);
     });
   });
 });

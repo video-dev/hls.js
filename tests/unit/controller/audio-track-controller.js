@@ -1,7 +1,6 @@
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
 
-const assert = require('assert');
 const sinon = require('sinon');
 
 describe('AudioTrackController', function () {
@@ -82,14 +81,14 @@ describe('AudioTrackController', function () {
   });
 
   describe('_needsTrackLoading', () => {
-    it('should not need loading because the audioTrack is embedded in the main playlist', () => {
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true } }), false);
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null }), false);
+    it('should not need loading because the audioTrack is embedded in the main playlist', function () {
+      expect(audioTrackController._needsTrackLoading({ details: { live: true } })).to.be.false;
+      expect(audioTrackController._needsTrackLoading({ details: null })).to.be.false;
     });
 
     it('should need loading because the track has not been loaded yet', () => {
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), true);
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' }), true);
+      expect(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' })).to.be.true;
+      expect(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' })).to.be.true;
     });
   });
 
@@ -264,11 +263,11 @@ describe('AudioTrackController', function () {
         level: 0
       });
 
-      sinon.assert.calledOnce(needsTrackLoading);
-      sinon.assert.calledWith(needsTrackLoading, trackWithUrl);
-      assert.strictEqual(needsTrackLoading.firstCall.returnValue, true, 'expected _needsTrackLoading to return true');
+      expect(needsTrackLoading).to.have.been.calledOnce;
+      expect(needsTrackLoading).to.have.been.calledWith(trackWithUrl);
+      expect(needsTrackLoading.firstCall.returnValue, true, 'expected _needsTrackLoading to return true');
 
-      sinon.assert.calledOnce(audioTrackLoadingCallback);
+      expect(audioTrackLoadingCallback).to.have.been.calledOnce;
     });
 
     it('should not attempt to load audio tracks without a url', () => {
@@ -291,11 +290,11 @@ describe('AudioTrackController', function () {
         level: 0
       });
 
-      sinon.assert.calledOnce(needsTrackLoading);
-      sinon.assert.calledWith(needsTrackLoading, trackWithOutUrl);
-      assert.strictEqual(needsTrackLoading.firstCall.returnValue, false, 'expected _needsTrackLoading to return false');
+      expect(needsTrackLoading).to.have.been.calledOnce;
+      expect(needsTrackLoading).to.have.been.calledWith(trackWithOutUrl);
+      expect(needsTrackLoading.firstCall.returnValue).to.be.false;
 
-      sinon.assert.notCalled(audioTrackLoadingCallback);
+      expect(audioTrackLoadingCallback).to.not.have.been.called;
     });
   });
 

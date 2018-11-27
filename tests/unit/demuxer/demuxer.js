@@ -1,7 +1,6 @@
 import Event from '../../../src/events.js';
 import Demuxer from '../../../src/demux/demuxer.js';
 
-const assert = require('assert');
 const sinon = require('sinon');
 
 describe('Demuxer tests', function () {
