@@ -1,7 +1,5 @@
 import { BufferHelper } from '../../../src/utils/buffer-helper';
 
-const assert = require('assert');
-
 function createMockBuffer (buffered) {
   return {
     start: i => (buffered.length > i) ? buffered[i].startPTS : null,

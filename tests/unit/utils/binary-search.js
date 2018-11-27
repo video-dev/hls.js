@@ -1,5 +1,4 @@
 import BinarySearch from '../../../src/utils/binary-search';
-let assert = require('assert');
 
 describe('binary search util', function () {
   describe('search helper', function () {

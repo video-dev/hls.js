@@ -3,8 +3,6 @@ import Event from '../../../src/events';
 import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
 import PlaylistLoader from '../../../src/loader/playlist-loader';
 
-const assert = require('assert');
-
 const LevelType = PlaylistLoader.LevelType;
 
 function createMockBuffer (buffered) {

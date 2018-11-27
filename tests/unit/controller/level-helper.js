@@ -1,5 +1,4 @@
 import * as LevelHelper from '../../../src/controller/level-helper';
-const assert = require('assert');
 
 describe('level-helper', function () {
   describe('updateFragPTSDTS', function () {
@@ -16,13 +15,13 @@ describe('level-helper', function () {
 
     describe('PTS/DTS updating', function () {
       function checkFragProperties (frag, startPTS, endPTS, startDTS, endDTS, maxStartPTS) {
-        assert.strictEqual(frag.start, startPTS);
-        assert.strictEqual(frag.startPTS, startPTS);
-        assert.strictEqual(frag.maxStartPTS, maxStartPTS);
-        assert.strictEqual(frag.endPTS, endPTS);
-        assert.strictEqual(frag.startDTS, startDTS);
-        assert.strictEqual(frag.endDTS, endDTS);
-        assert.strictEqual(frag.duration, endPTS - startPTS);
+        expect(frag.start).to.equal(startPTS);
+        expect(frag.startPTS).to.equal(startPTS);
+        expect(frag.maxStartPTS).to.equal(maxStartPTS);
+        expect(frag.endPTS).to.equal(endPTS);
+        expect(frag.startDTS).to.equal(startDTS);
+        expect(frag.endDTS).to.equal(endDTS);
+        expect(frag.duration).to.equal(endPTS - startPTS);
       }
 
       it('updates frag properties based on the provided PTS/DTS', function () {
@@ -48,7 +47,7 @@ describe('level-helper', function () {
 
         LevelHelper.updateFragPTSDTS(null, frag, startPTS, endPTS, startDTS, endDTS);
         checkFragProperties(frag, 3, 12, 2, 11, 3);
-        assert.strictEqual(frag.deltaPTS, 1);
+        expect(frag.deltaPTS).to.equal(1);
 
         frag.startPTS = 0;
         frag.endPTS = 10;
@@ -57,7 +56,7 @@ describe('level-helper', function () {
 
         LevelHelper.updateFragPTSDTS(null, frag, startPTS, endPTS, startDTS, endDTS);
         checkFragProperties(frag, 2, 10, 1, 10, 2);
-        assert.strictEqual(frag.deltaPTS, 2);
+        expect(frag.deltaPTS).to.equal(2);
       });
 
       it('chooses the min start and max end if the a/v PTS values do not intersect', function () {
@@ -73,7 +72,7 @@ describe('level-helper', function () {
 
         LevelHelper.updateFragPTSDTS(null, frag, startPTS, endPTS, startDTS, endDTS);
         checkFragProperties(frag, 3, 24, 1, 12, 14);
-        assert.strictEqual(frag.deltaPTS, 11);
+        expect(frag.deltaPTS).to.equal(11);
       });
 
       it('sets the end PTS/DTS to the max end PTS/DTS if the fragment is the last of a non-live stream, and has a/v intersection', function () {
@@ -93,7 +92,7 @@ describe('level-helper', function () {
 
         LevelHelper.updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS);
         checkFragProperties(frag, 3, 13, 2, 12, 3);
-        assert.strictEqual(frag.deltaPTS, 1);
+        expect(frag.deltaPTS).to.equal(1);
       });
     });
 
@@ -113,13 +112,13 @@ describe('level-helper', function () {
 
       it('returns a drift of 0 if the fragment is out of the sequence range of its level', function () {
         frag.sn = 50;
-        assert.strictEqual(LevelHelper.updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS), 0);
+        expect(LevelHelper.updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS)).to.equal(0);
       });
 
       it('returns the drift between startPTS and fragStart if the fragment is within the sequence range', function () {
         frag.sn = 0;
         frag.start = 0;
-        assert.strictEqual(LevelHelper.updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS), 2);
+        expect(LevelHelper.updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS)).to.equal(2);
       });
     });
   });

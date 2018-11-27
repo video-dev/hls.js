@@ -7,7 +7,6 @@ import Fragment from '../../../src/loader/fragment';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 
 import sinon from 'sinon';
-import assert from 'assert';
 
 describe('StreamController', function () {
   let hls;
@@ -55,7 +54,7 @@ describe('StreamController', function () {
       hls.on(Event.STREAM_STATE_TRANSITION, spy);
       // no update
       streamController.state = State.STOPPED;
-      assert.equal(spy.called, false);
+      expect(spy.called).to.be.false;
     });
 
     it('should not start when controller have not levels data', function () {
@@ -252,8 +251,8 @@ describe('StreamController', function () {
       streamController.startPosition = 6;
       streamController.loadedmetadata = false;
       streamController._checkBuffer();
-      assert(seekStub.calledOnce);
-      assert.strictEqual(streamController.startPosition, streamController.media.buffered.start());
+      expect(seekStub).to.have.been.calledOnce;
+      expect(streamController.startPosition).to.equal(streamController.media.buffered.start());
     });
 
     it('should complete the immediate switch if signalled', function () {
