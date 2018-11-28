@@ -275,7 +275,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   loadtimeout (stats, context, networkDetails = null) {
-    this._handleNetworkError(context, networkDetails, true,null);
+    this._handleNetworkError(context, networkDetails, true, null);
   }
 
   _handleMasterPlaylist (response, stats, context, networkDetails) {

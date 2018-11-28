@@ -19,10 +19,6 @@ module.exports = {
     'eslint:recommended',
     'standard'
   ],
-  'parser': 'typescript-eslint-parser',
-  'plugins': [
-      'typescript'
-  ],
   'parserOptions': {
     'sourceType': 'module'
   },
