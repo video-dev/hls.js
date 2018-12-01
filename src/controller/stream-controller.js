@@ -203,7 +203,7 @@ class StreamController extends TaskLoop {
     let levelBitrate = levelInfo.bitrate,
       maxBufLen;
 
-    // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
+    // compute max Buffer Length that we could get from this load level, based on level bitrate.
     if (levelBitrate) {
       maxBufLen = Math.max(8 * config.maxBufferSize / levelBitrate, config.maxBufferLength);
     } else {
