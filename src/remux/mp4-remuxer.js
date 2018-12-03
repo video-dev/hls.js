@@ -261,7 +261,7 @@ class MP4Remuxer {
     firstDTS = Math.max(sample.dts, 0);
     firstPTS = Math.max(sample.pts, 0);
 
-    // check timestamp continuity across consecutive fragments (this is to remove inter-fragment gap/hole)
+    // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
     let delta = Math.round((firstDTS - nextAvcDts) / 90);
     // if fragment are contiguous, detect hole/overlapping between fragments
     if (contiguous) {
