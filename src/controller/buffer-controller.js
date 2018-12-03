@@ -22,7 +22,8 @@ class BufferController extends EventHandler {
       Event.BUFFER_EOS,
       Event.BUFFER_FLUSHING,
       Event.LEVEL_PTS_UPDATED,
-      Event.LEVEL_UPDATED);
+      Event.LEVEL_UPDATED,
+      Event.ERROR);
 
     // the value that we have set mediasource.duration to
     // (the actual duration may be tweaked slighly by the browser)
@@ -643,6 +644,13 @@ class BufferController extends EventHandler {
     }
 
     return false;
+  }
+
+  onError (data) {
+    if (data.details === ErrorDetails.FRAG_PARSING_ERROR) {
+      this.bufferCodecEventsExpected--;
+      this.checkPendingTracks();
+    }
   }
 }
 
