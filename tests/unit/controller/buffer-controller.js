@@ -168,11 +168,11 @@ describe('BufferController tests', function () {
       bufferController.bufferCodecEventsExpected = 2;
 
       bufferController.onBufferCodecs({});
-      assert.strictEqual(checkPendingTracksSpy.notCalled, true);
+      assert.strictEqual(checkPendingTracksSpy.calledOnce, true);
       assert.strictEqual(bufferController.bufferCodecEventsExpected, 1);
 
       bufferController.onBufferCodecs({});
-      assert.strictEqual(checkPendingTracksSpy.calledOnce, true);
+      assert.strictEqual(checkPendingTracksSpy.calledTwice, true);
       assert.strictEqual(bufferController.bufferCodecEventsExpected, 0);
     });
 
