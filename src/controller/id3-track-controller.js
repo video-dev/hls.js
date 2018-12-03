@@ -5,14 +5,20 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
-import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import {
+  sendAddTrackEvent,
+  clearCurrentCues,
+  clearPastCues
+} from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
-      Event.FRAG_PARSING_METADATA);
+      Event.FRAG_PARSING_METADATA,
+      Event.BUFFER_RANGE_FLUSHED
+    );
     this.id3Track = undefined;
     this.media = undefined;
   }
@@ -24,9 +30,6 @@ class ID3TrackController extends EventHandler {
   // Add ID3 metatadata text track.
   onMediaAttached (data) {
     this.media = data.media;
-    if (!this.media) {
-
-    }
   }
 
   onMediaDetaching () {
@@ -86,6 +89,10 @@ class ID3TrackController extends EventHandler {
         }
       }
     }
+  }
+
+  onBufferRangeFlushed ({ startOffset, endOffset }) {
+    clearPastCues(this.id3Track, endOffset);
   }
 }
 

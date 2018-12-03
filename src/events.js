@@ -27,6 +27,8 @@ const HlsEvents = {
   BUFFER_FLUSHING: 'hlsBufferFlushing',
   // fired when the media buffer has been flushed - data: { }
   BUFFER_FLUSHED: 'hlsBufferFlushed',
+  // fired when the subset of media buffer has been flushed - data: { startOffset, endOffset }
+  BUFFER_RANGE_FLUSHED: 'hlsBufferRangeFlushed',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING: 'hlsManifestLoading',
   // fired after manifest has been loaded - data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}

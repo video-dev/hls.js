@@ -1149,6 +1149,8 @@ Full list of Events is available below:
     -  data: { startOffset, endOffset }
   - `Hls.Events.BUFFER_FLUSHED`  - fired when the media buffer has been flushed
     -  data: { startOffset, endOffset }
+  - `Hls.Events.BUFFER_RANGE_FLUSHED`  - fired when the subset of media buffer has been flushed
+    -  data: { startOffset, endOffset }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL }
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded

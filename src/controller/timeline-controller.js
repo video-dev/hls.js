@@ -8,7 +8,11 @@ import Cea608Parser from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
-import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import {
+  sendAddTrackEvent,
+  clearCurrentCues,
+  clearPastCues
+} from '../utils/texttrack-utils';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -28,7 +32,9 @@ class TimelineController extends EventHandler {
       Event.MANIFEST_LOADED,
       Event.FRAG_LOADED,
       Event.LEVEL_SWITCHING,
-      Event.INIT_PTS_FOUND);
+      Event.INIT_PTS_FOUND,
+      Event.BUFFER_RANGE_FLUSHED
+    );
 
     this.hls = hls;
     this.config = hls.config;
@@ -40,6 +46,7 @@ class TimelineController extends EventHandler {
     this.initPTS = [];
     this.cueRanges = [];
     this.captionsTracks = {};
+    this.media = undefined;
 
     this.captionsProperties = {
       textTrack1: {
@@ -288,8 +295,7 @@ class TimelineController extends EventHandler {
             currentTrack.addCue(textTrackCue);
           }
         }
-      }
-      );
+      });
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     },
     function (e) {
@@ -297,6 +303,12 @@ class TimelineController extends EventHandler {
       logger.log(`Failed to parse VTT cue: ${e}`);
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
     });
+  }
+
+  onBufferRangeFlushed ({ startOffset, endOffset }) {
+    this.textTracks
+      .concat(Object.values(this.captionsTracks))
+      .forEach(textTrack => clearPastCues(textTrack, endOffset));
   }
 
   onFragDecrypted (data) {
