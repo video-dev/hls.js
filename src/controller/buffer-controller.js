@@ -22,8 +22,7 @@ class BufferController extends EventHandler {
       Event.BUFFER_EOS,
       Event.BUFFER_FLUSHING,
       Event.LEVEL_PTS_UPDATED,
-      Event.LEVEL_UPDATED,
-      Event.ERROR);
+      Event.LEVEL_UPDATED);
 
     // the value that we have set mediasource.duration to
     // (the actual duration may be tweaked slighly by the browser)
@@ -177,7 +176,9 @@ class BufferController extends EventHandler {
     // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
     // This is important because the MSE spec allows implementations to throw QuotaExceededErrors if creating new sourceBuffers after
     // data has been appended to existing ones.
-    if (Object.keys(pendingTracks).length && !bufferCodecEventsExpected) {
+    // 2 tracks is the max (one for audio, one for video). If we've reach this max go ahead and create the buffers.
+    const pendingTracksCount = Object.keys(pendingTracks).length;
+    if ((pendingTracksCount && !bufferCodecEventsExpected) || pendingTracksCount === 2) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
@@ -276,8 +277,7 @@ class BufferController extends EventHandler {
 
     const { mediaSource } = this;
     this.bufferCodecEventsExpected = Math.max(this.bufferCodecEventsExpected - 1, 0);
-    if (mediaSource && mediaSource.readyState === 'open' && !this.bufferCodecEventsExpected) {
-      // try to create sourcebuffers if mediasource opened, and all expected bufferCodec events have been received
+    if (mediaSource && mediaSource.readyState === 'open') {
       this.checkPendingTracks();
     }
   }
@@ -644,13 +644,6 @@ class BufferController extends EventHandler {
     }
 
     return false;
-  }
-
-  onError (data) {
-    if (data.details === ErrorDetails.FRAG_PARSING_ERROR) {
-      this.bufferCodecEventsExpected--;
-      this.checkPendingTracks();
-    }
   }
 }
 
