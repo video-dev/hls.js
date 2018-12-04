@@ -30,10 +30,9 @@
     "test": "yarn test:unit && yarn test:func",
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
-    "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/setup.js --timeout 40000"
+    "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000"
   },
   "dependencies": {
-    "chai": "^4.2.0",
     "url-toolkit": "^2.1.2"
   },
   "devDependencies": {
@@ -41,6 +40,7 @@
     "babel-loader": "^7.1.1",
     "babel-preset-env": "^1.7.0",
     "babel-register": "^6.24.0",
+    "chai": "^4.2.0",
     "chromedriver": "^2.38.3",
     "cross-env": "^5.0.2",
     "esdoc": "^1.1.0",
@@ -51,6 +51,8 @@
     "eslint-plugin-node": "^6.0.1",
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
+    "git-commit-info": "^1.0.0",
+    "git-tag-version": "^1.2.0",
     "http-server": "^0.11.0",
     "husky": "^0.14.3",
     "istanbul-instrumenter-loader": "^3.0.1",

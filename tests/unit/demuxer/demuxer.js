@@ -1,6 +1,8 @@
 import Event from '../../../src/events.js';
 import Demuxer from '../../../src/demux/demuxer.js';
 
+const sinon = require('sinon');
+
 describe('Demuxer tests', function () {
   it('Demuxer constructor no worker', function () {
     let config = { enableWorker: false }; // Option debug : true crashes mocha

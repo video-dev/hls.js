@@ -806,4 +806,45 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
     expect(result.fragments[2].tagList[2][0]).to.equal('EXT-X-CUSTOM-URI');
     expect(result.fragments[2].tagList[2][1]).to.equal('http://dummy.url.com/hls/moreinfo.json');
   });
+
+  it('allows spaces in the fragment files', () => {
+    const level = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-TARGETDURATION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:6.006,
+180724_Allison VLOG-v3_00001.ts
+#EXTINF:6.006,
+180724_Allison VLOG-v3_00002.ts
+#EXT-X-ENDLIST
+    `;
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    expect(result.fragments.length).to.equal(2);
+    expect(result.totalduration).to.equal(12.012);
+    expect(result.targetduration).to.equal(7);
+    expect(result.fragments[0].url).to.equal('http://dummy.url.com/180724_Allison VLOG-v3_00001.ts');
+    expect(result.fragments[1].url).to.equal('http://dummy.url.com/180724_Allison VLOG-v3_00002.ts');
+  });
+
+  it('deals with spaces after fragment files', () => {
+    // You can't see them, but there should be spaces directly after the .ts
+    const level = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-TARGETDURATION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:6.006,
+180724_Allison VLOG v3_00001.ts 
+#EXTINF:6.006,
+180724_Allison VLOG v3_00002.ts 
+#EXT-X-ENDLIST
+    `;
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    expect(result.fragments.length).to.equal(2);
+    expect(result.totalduration).to.equal(12.012);
+    expect(result.targetduration).to.equal(7);
+    expect(result.fragments[0].url).to.equal('http://dummy.url.com/180724_Allison VLOG v3_00001.ts');
+    expect(result.fragments[1].url).to.equal('http://dummy.url.com/180724_Allison VLOG v3_00002.ts');
+  });
 });
