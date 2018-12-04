@@ -47,7 +47,7 @@ describe('BufferController tests', function () {
 
     it('exits early if not live', function () {
       bufferController.flushLiveBackBuffer();
-      expect(removeStub.notCalled).to.be.true;
+      expect(removeStub).to.not.have.been.called;
     });
 
     it('exits early if liveBackBufferLength is not a finite number, or is less than 0', function () {
@@ -57,7 +57,7 @@ describe('BufferController tests', function () {
       hls.config.liveBackBufferLength = -1;
       bufferController.flushLiveBackBuffer();
 
-      expect(removeStub.notCalled).to.be.true;
+      expect(removeStub).to.not.have.been.called;
     });
 
     it('does not flush if nothing is buffered', function () {
@@ -67,29 +67,29 @@ describe('BufferController tests', function () {
       mockSourceBuffer = null;
       bufferController.flushLiveBackBuffer();
 
-      expect(removeStub.notCalled).to.be.true;
+      expect(removeStub).to.not.have.been.called;
     });
 
     it('does not flush if no buffered range intersects with back buffer limit', function () {
       bufStart = 5;
       mockMedia.currentTime = 10;
       bufferController.flushLiveBackBuffer();
-      expect(removeStub.notCalled).to.be.true;
+      expect(removeStub).to.not.have.been.called;
     });
 
     it('does not flush if the liveBackBufferLength is Infinity', function () {
       hls.config.liveBackBufferLength = Infinity;
       mockMedia.currentTime = 15;
       bufferController.flushLiveBackBuffer();
-      expect(removeStub.notCalled).to.be.true;
+      expect(removeStub).to.not.have.been.called;
     });
 
     it('flushes up to the back buffer limit if the buffer intersects with that point', function () {
       mockMedia.currentTime = 15;
       bufferController.flushLiveBackBuffer();
-      expect(removeStub.calledOnce).to.be.true;
+      expect(removeStub).to.have.been.calledOnce;
       expect(bufferController.flushBufferCounter).to.be.undefined;
-      expect(removeStub.calledWith('video', mockSourceBuffer.video, 0, 5)).to.be.true;
+      expect(removeStub).to.have.been.calledWith('video', mockSourceBuffer.video, 0, 5);
     });
 
     it('flushes to a max of one targetDuration from currentTime, regardless of liveBackBufferLength', function () {
@@ -97,7 +97,7 @@ describe('BufferController tests', function () {
       bufferController._levelTargetDuration = 5;
       hls.config.liveBackBufferLength = 0;
       bufferController.flushLiveBackBuffer();
-      expect(removeStub.calledWith('video', mockSourceBuffer.video, 0, 10)).to.be.true;
+      expect(removeStub).to.have.been.calledWith('video', mockSourceBuffer.video, 0, 10);
     });
 
     it('should trigger clean back buffer when there are no pending appends', function () {
@@ -108,12 +108,12 @@ describe('BufferController tests', function () {
 
       bufferController.onSBUpdateEnd();
 
-      expect(flushSpy.notCalled).to.be.true;
+      expect(flushSpy).to.not.have.been.called;
 
       bufferController.segments = [];
       bufferController.onSBUpdateEnd();
 
-      expect(flushSpy.calledOnce).to.be.true;
+      expect(flushSpy).to.have.been.calledOnce;
     });
   });
 
@@ -144,7 +144,7 @@ describe('BufferController tests', function () {
       bufferController.pendingTracks = { video: {} };
 
       bufferController.checkPendingTracks();
-      expect(createSbStub.calledOnce).to.be.true;
+      expect(createSbStub).to.have.been.calledOnce;
     });
 
     it('does not create sourceBuffers when BUFFER_CODEC events are expected', function () {
@@ -152,13 +152,13 @@ describe('BufferController tests', function () {
       bufferController.bufferCodecEventsExpected = 1;
 
       bufferController.checkPendingTracks();
-      expect(createSbStub.notCalled).to.be.true;
+      expect(createSbStub).to.not.have.been.called;
       expect(bufferController.bufferCodecEventsExpected).to.equal(1);
     });
 
     it('checks pending tracks in onMediaSourceOpen', function () {
       bufferController.onMediaSourceOpen();
-      expect(checkPendingTracksSpy.calledOnce).to.be.true;
+      expect(checkPendingTracksSpy).to.have.been.calledOnce;
     });
 
     it('does not check pending tracks in onBufferCodecs until called for the expected amount of times', function () {
