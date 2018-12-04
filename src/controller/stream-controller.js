@@ -577,8 +577,7 @@ class StreamController extends TaskLoop {
 
       if (BufferHelper.isBuffered(video, currentTime)) {
         fragPlayingCurrent = this.getBufferedFrag(currentTime);
-      }
-      if (!fragPlayingCurrent && BufferHelper.isBuffered(video, currentTime + 0.1)) {
+      } else if (BufferHelper.isBuffered(video, currentTime + 0.1)) {
         /* ensure that FRAG_CHANGED event is triggered at startup,
           when first video frame is displayed and playback is paused.
           add a tolerance of 100ms, in case current position is not buffered,
