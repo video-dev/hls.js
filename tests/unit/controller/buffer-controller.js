@@ -167,11 +167,11 @@ describe('BufferController tests', function () {
       bufferController.bufferCodecEventsExpected = 2;
 
       bufferController.onBufferCodecs({});
-      expect(checkPendingTracksSpy.notCalled).to.be.true;
+      expect(checkPendingTracksSpy).to.have.been.calledOnce;
       expect(bufferController.bufferCodecEventsExpected).to.equal(1);
 
       bufferController.onBufferCodecs({});
-      expect(checkPendingTracksSpy.calledOnce).to.be.true;
+      expect(checkPendingTracksSpy).to.have.been.calledTwice;
       expect(bufferController.bufferCodecEventsExpected).to.equal(0);
     });
 
@@ -184,8 +184,8 @@ describe('BufferController tests', function () {
       bufferController.onBufferCodecs({ audio: {} });
       bufferController.onBufferCodecs({ video: {} });
 
-      expect(createSbStub.calledOnce).to.be.true;
-      expect(createSbStub.calledWith({ audio: {}, video: {} })).to.be.true;
+      expect(createSbStub).to.have.been.calledOnce;
+      expect(createSbStub).to.have.been.calledWith({ audio: {}, video: {} });
     });
   });
 });
