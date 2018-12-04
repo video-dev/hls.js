@@ -1,4 +1,4 @@
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignPDT } from '../../../src/utils/discontinuities';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities, alignPDT } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,

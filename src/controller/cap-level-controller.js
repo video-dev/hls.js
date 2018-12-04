@@ -46,7 +46,7 @@ class CapLevelController extends EventHandler {
     this.restrictedLevels = [];
     this.levels = data.levels;
     this.firstLevel = data.firstLevel;
-    if (hls.config.capLevelToPlayerSize && (data.video || (data.levels.length && data.altAudio))) {
+    if (hls.config.capLevelToPlayerSize && data.video) {
       // Start capping immediately if the manifest has signaled video codecs
       this._startCapping();
     }

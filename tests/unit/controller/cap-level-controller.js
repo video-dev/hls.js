@@ -1,3 +1,4 @@
+import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import CapLevelController from '../../../src/controller/cap-level-controller';
 
@@ -130,14 +131,14 @@ describe('CapLevelController', function () {
       expect(capLevelController.restrictedLevels).to.be.empty;
     });
 
-    it('should start capping in MANIFEST_PARSED if a video codec was signaled', function () {
+    it('should start capping in MANIFEST_PARSED if a video codec was signaled in the manifest', function () {
       capLevelController.onManifestParsed({ video: {} });
       expect(startCappingSpy.calledOnce).to.be.true;
     });
 
-    it('should start capping in MANIFEST_PARSED if a levels and altAudio were signaled', function () {
+    it('does not start capping on MANIFEST_PARSED if no video codec was signaled in the manifest', function () {
       capLevelController.onManifestParsed({ levels: [{}], altAudio: true });
-      expect(startCappingSpy.calledOnce).to.be.true;
+      expect(startCappingSpy.notCalled).to.be.true;
     });
   });
 });

@@ -1,5 +1,6 @@
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import Hls from '../../../src/hls';
+import sinon from 'sinon';
 
 describe('SubtitleTrackController', function () {
   let subtitleTrackController;

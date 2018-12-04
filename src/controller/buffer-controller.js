@@ -29,10 +29,14 @@ class BufferController extends EventHandler {
     this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     this._levelDuration = null;
+    // the target duration of the current media playlist
+    this._levelTargetDuration = 10;
     // current stream state: true - for live broadcast, false - for VoD content
     this._live = null;
     // cache the self generated object url to detect hijack of video tag
     this._objectUrl = null;
+    // The number of BUFFER_CODEC events received before any sourceBuffers are created
+    this.bufferCodecEventsExpected = 0;
 
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -67,7 +71,6 @@ class BufferController extends EventHandler {
         try {
           audioBuffer.abort();
         } catch (err) {
-          updating = true;
           logger.warn('can not abort audio buffer: ' + err);
         }
 
@@ -82,18 +85,12 @@ class BufferController extends EventHandler {
   }
 
   onManifestParsed (data) {
-    let audioExpected = data.audio,
-      videoExpected = data.video || (data.levels.length && data.altAudio),
-      sourceBufferNb = 0;
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    if (data.altAudio && (audioExpected || videoExpected)) {
-      sourceBufferNb = (audioExpected ? 1 : 0) + (videoExpected ? 1 : 0);
-      logger.log(`${sourceBufferNb} sourceBuffer(s) expected`);
-    }
-    this.sourceBufferNb = sourceBufferNb;
+    this.bufferCodecEventsExpected = data.altAudio ? 2 : 1;
+    logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
   onMediaAttaching (data) {
@@ -175,13 +172,13 @@ class BufferController extends EventHandler {
   }
 
   checkPendingTracks () {
-    // if any buffer codecs pending, check if we have enough to create sourceBuffers
-    let pendingTracks = this.pendingTracks,
-      pendingTracksNb = Object.keys(pendingTracks).length;
-    // if any pending tracks and (if nb of pending tracks gt or equal than expected nb or if unknown expected nb)
-    if (pendingTracksNb && (
-      this.sourceBufferNb <= pendingTracksNb ||
-        this.sourceBufferNb === 0)) {
+    let { bufferCodecEventsExpected, pendingTracks } = this;
+    // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
+    // This is important because the MSE spec allows implementations to throw QuotaExceededErrors if creating new sourceBuffers after
+    // data has been appended to existing ones.
+    // 2 tracks is the max (one for audio, one for video). If we've reach this max go ahead and create the buffers.
+    const pendingTracksCount = Object.keys(pendingTracks).length;
+    if ((pendingTracksCount && !bufferCodecEventsExpected) || pendingTracksCount === 2) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
@@ -202,7 +199,7 @@ class BufferController extends EventHandler {
     // update timestampOffset
     if (this.audioTimestampOffset) {
       let audioBuffer = this.sourceBuffer.audio;
-      logger.warn('change mpeg audio timestamp offset from ' + audioBuffer.timestampOffset + ' to ' + this.audioTimestampOffset);
+      logger.warn(`change mpeg audio timestamp offset from ${audioBuffer.timestampOffset} to ${this.audioTimestampOffset}`);
       audioBuffer.timestampOffset = this.audioTimestampOffset;
       delete this.audioTimestampOffset;
     }
@@ -234,6 +231,11 @@ class BufferController extends EventHandler {
     }
 
     this.updateMediaElementDuration();
+
+    // appending goes first
+    if (pending === 0) {
+      this.flushLiveBackBuffer();
+    }
   }
 
   onSBUpdateError (event) {
@@ -265,13 +267,18 @@ class BufferController extends EventHandler {
   onBufferCodecs (tracks) {
     // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
     // if sourcebuffers already created, do nothing ...
-    if (Object.keys(this.sourceBuffer).length === 0) {
-      for (let trackName in tracks) this.pendingTracks[trackName] = tracks[trackName];
-      let mediaSource = this.mediaSource;
-      if (mediaSource && mediaSource.readyState === 'open') {
-        // try to create sourcebuffers if mediasource opened
-        this.checkPendingTracks();
-      }
+    if (Object.keys(this.sourceBuffer).length) {
+      return;
+    }
+
+    Object.keys(tracks).forEach(trackName => {
+      this.pendingTracks[trackName] = tracks[trackName];
+    });
+
+    const { mediaSource } = this;
+    this.bufferCodecEventsExpected = Math.max(this.bufferCodecEventsExpected - 1, 0);
+    if (mediaSource && mediaSource.readyState === 'open') {
+      this.checkPendingTracks();
     }
   }
 
@@ -353,7 +360,7 @@ class BufferController extends EventHandler {
         return;
       }
     }
-    logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
+    logger.log('all media data are available, signal endOfStream() to MediaSource and stop loading fragment');
     // Notify the media element that it now has all of the media data
     try {
       mediaSource.endOfStream();
@@ -370,9 +377,39 @@ class BufferController extends EventHandler {
     this.doFlush();
   }
 
+  flushLiveBackBuffer () {
+    // clear back buffer for live only
+    if (!this._live) {
+      return;
+    }
+
+    const liveBackBufferLength = this.hls.config.liveBackBufferLength;
+    if (!isFinite(liveBackBufferLength) || liveBackBufferLength < 0) {
+      return;
+    }
+
+    const currentTime = this.media.currentTime;
+    const sourceBuffer = this.sourceBuffer;
+    const bufferTypes = Object.keys(sourceBuffer);
+    const targetBackBufferPosition = currentTime - Math.max(liveBackBufferLength, this._levelTargetDuration);
+
+    for (let index = bufferTypes.length - 1; index >= 0; index--) {
+      const bufferType = bufferTypes[index], buffered = sourceBuffer[bufferType].buffered;
+
+      // when target buffer start exceeds actual buffer start
+      if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
+        // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
+        // time will lead to playback freezing)
+        // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
+        this.removeBufferRange(bufferType, sourceBuffer[bufferType], 0, targetBackBufferPosition);
+      }
+    }
+  }
+
   onLevelUpdated ({ details }) {
     if (details.fragments.length > 0) {
       this._levelDuration = details.totalduration + details.fragments[0].start;
+      this._levelTargetDuration = details.averagetargetduration || details.targetduration || 10;
       this._live = details.live;
       this.updateMediaElementDuration();
     }
@@ -460,7 +497,7 @@ class BufferController extends EventHandler {
   }
 
   doAppending () {
-    let hls = this.hls, sourceBuffer = this.sourceBuffer, segments = this.segments;
+    let { hls, segments, sourceBuffer } = this;
     if (Object.keys(sourceBuffer).length) {
       if (this.media.error) {
         this.segments = [];
@@ -512,7 +549,7 @@ class BufferController extends EventHandler {
             */
             if (this.appendError > hls.config.appendErrorMaxRetry) {
               logger.log(`fail ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
-              segments = [];
+              this.segments = [];
               event.fatal = true;
               hls.trigger(Event.ERROR, event);
             } else {
@@ -538,7 +575,8 @@ class BufferController extends EventHandler {
     as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
   */
   flushBuffer (startOffset, endOffset, typeIn) {
-    let sb, i, bufStart, bufEnd, flushStart, flushEnd, sourceBuffer = this.sourceBuffer;
+    let sb;
+    const sourceBuffer = this.sourceBuffer;
     if (Object.keys(sourceBuffer).length) {
       logger.log(`flushBuffer,pos/start/end: ${this.media.currentTime.toFixed(3)}/${startOffset}/${endOffset}`);
       // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
@@ -554,37 +592,11 @@ class BufferController extends EventHandler {
           // we are going to flush buffer, mark source buffer as 'not ended'
           sb.ended = false;
           if (!sb.updating) {
-            try {
-              for (i = 0; i < sb.buffered.length; i++) {
-                bufStart = sb.buffered.start(i);
-                bufEnd = sb.buffered.end(i);
-                // workaround firefox not able to properly flush multiple buffered range.
-                if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
-                  flushStart = startOffset;
-                  flushEnd = endOffset;
-                } else {
-                  flushStart = Math.max(bufStart, startOffset);
-                  flushEnd = Math.min(bufEnd, endOffset);
-                }
-                /* sometimes sourcebuffer.remove() does not flush
-                   the exact expected time range.
-                   to avoid rounding issues/infinite loop,
-                   only flush buffer range of length greater than 500ms.
-                */
-                if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
-                  this.flushBufferCounter++;
-                  logger.log(`flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${this.media.currentTime}`);
-                  sb.remove(flushStart, flushEnd);
-                  return false;
-                }
-              }
-            } catch (e) {
-              logger.warn('exception while accessing sourcebuffer, it might have been removed from MediaSource');
+            if (this.removeBufferRange(type, sb, startOffset, endOffset)) {
+              this.flushBufferCounter++;
+              return false;
             }
           } else {
-            // logger.log('abort ' + type + ' append in progress');
-            // this will abort any appending in progress
-            // sb.abort();
             logger.warn('cannot flush, sb updating in progress');
             return false;
           }
@@ -596,6 +608,42 @@ class BufferController extends EventHandler {
     }
     // everything flushed !
     return true;
+  }
+
+  /**
+   * Removes first buffered range from provided source buffer that lies within given start and end offsets.
+   *
+   * @param type Type of the source buffer, logging purposes only.
+   * @param sb Target SourceBuffer instance.
+   * @param startOffset
+   * @param endOffset
+   *
+   * @returns {boolean} True when source buffer remove requested.
+   */
+  removeBufferRange (type, sb, startOffset, endOffset) {
+    try {
+      for (let i = 0; i < sb.buffered.length; i++) {
+        let bufStart = sb.buffered.start(i);
+        let bufEnd = sb.buffered.end(i);
+        let removeStart = Math.max(bufStart, startOffset);
+        let removeEnd = Math.min(bufEnd, endOffset);
+
+        /* sometimes sourcebuffer.remove() does not flush
+          the exact expected time range.
+          to avoid rounding issues/infinite loop,
+          only flush buffer range of length greater than 500ms.
+        */
+        if (Math.min(removeEnd, bufEnd) - removeStart > 0.5) {
+          logger.log(`sb remove ${type} [${removeStart},${removeEnd}], of [${bufStart},${bufEnd}], pos:${this.media.currentTime}`);
+          sb.remove(removeStart, removeEnd);
+          return true;
+        }
+      }
+    } catch (error) {
+      logger.warn('removeBufferRange failed', error);
+    }
+
+    return false;
   }
 }
 

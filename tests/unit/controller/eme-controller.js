@@ -3,6 +3,8 @@ import HlsMock from '../../mocks/hls.mock';
 import EventEmitter from 'events';
 import { ErrorDetails } from '../../../src/errors';
 
+const sinon = require('sinon');
+
 const MediaMock = function () {
   let media = new EventEmitter();
   media.setMediaKeys = sinon.spy();

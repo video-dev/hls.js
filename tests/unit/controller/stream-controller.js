@@ -4,8 +4,11 @@ import { FragmentTracker, FragmentState } from '../../../src/controller/fragment
 import StreamController, { State } from '../../../src/controller/stream-controller';
 import { mockFragments } from '../../mocks/data';
 import Fragment from '../../../src/loader/fragment';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
 
-describe('StreamController tests', function () {
+import sinon from 'sinon';
+
+describe('StreamController', function () {
   let hls;
   let fragmentTracker;
   let streamController;
@@ -52,6 +55,26 @@ describe('StreamController tests', function () {
       // no update
       streamController.state = State.STOPPED;
       expect(spy.called).to.be.false;
+    });
+
+    it('should not start when controller have not levels data', function () {
+      streamController.startLoad(1);
+      assertStreamControllerStopped(streamController);
+    });
+
+    it('should start without levels data', function () {
+      const manifest = `#EXTM3U
+  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+  http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+      const levels = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
+      // load levels data
+      streamController.onManifestParsed({
+        levels
+      });
+      streamController.startLoad(1);
+      assertStreamControllerStarted(streamController);
+      streamController.stopLoad();
+      assertStreamControllerStopped(streamController);
     });
   });
 
@@ -183,6 +206,9 @@ describe('StreamController tests', function () {
       };
       streamController.media = {
         buffered: {
+          start: function () {
+            return 6.014;
+          },
           length: 1
         }
       };
@@ -220,6 +246,15 @@ describe('StreamController tests', function () {
       expect(streamController.loadedmetadata).to.not.exist;
     });
 
+    it('should set startPosition to what buffer start reports and seek', function () {
+      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      streamController.startPosition = 6;
+      streamController.loadedmetadata = false;
+      streamController._checkBuffer();
+      expect(seekStub).to.have.been.calledOnce;
+      expect(streamController.startPosition).to.equal(streamController.media.buffered.start());
+    });
+
     it('should complete the immediate switch if signalled', function () {
       const levelSwitchStub = sandbox.stub(streamController, 'immediateLevelSwitchEnd');
       streamController.loadedmetadata = true;
@@ -246,6 +281,7 @@ describe('StreamController tests', function () {
     describe('startLoad', function () {
       beforeEach(function () {
         streamController.levels = [];
+        streamController.media = null;
       });
       it('should not start when controller have not levels data', function () {
         streamController.levels = null;
