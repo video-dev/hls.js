@@ -147,6 +147,14 @@ describe('BufferController tests', function () {
       expect(createSbStub).to.have.been.calledOnce;
     });
 
+    it('creates sourceBuffers on the first even if two tracks are received', function () {
+      bufferController.pendingTracks = { audio: {}, video: {} };
+      bufferController.bufferCodecEventsExpected = 2;
+
+      bufferController.checkPendingTracks();
+      expect(createSbStub).to.have.been.calledOnce;
+    });
+
     it('does not create sourceBuffers when BUFFER_CODEC events are expected', function () {
       bufferController.pendingTracks = { video: {} };
       bufferController.bufferCodecEventsExpected = 1;
@@ -161,7 +169,7 @@ describe('BufferController tests', function () {
       expect(checkPendingTracksSpy).to.have.been.calledOnce;
     });
 
-    it('does not check pending tracks in onBufferCodecs until called for the expected amount of times', function () {
+    it('checks pending tracks even when more events are expected', function () {
       bufferController.sourceBuffer = {};
       bufferController.mediaSource = { readyState: 'open' };
       bufferController.bufferCodecEventsExpected = 2;
