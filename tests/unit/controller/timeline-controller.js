@@ -35,8 +35,8 @@ describe('TimelineController', function () {
     expect(timelineController.textTracks[1].mode).to.equal('hidden');
   });
 
-  describe('reuse text track', () => {
-    it('should reuse text track when track order is same between manifests', () => {
+  describe('reuse text track', function () {
+    it('should reuse text track when track order is same between manifests', function () {
       hls.subtitleTrackController = { subtitleDisplay: false };
 
       timelineController.onManifestLoaded({
@@ -66,7 +66,7 @@ describe('TimelineController', function () {
       expect(timelineController.media.textTracks.length).to.equal(2);
     });
 
-    it('should reuse text track when track order is not same between manifests', () => {
+    it('should reuse text track when track order is not same between manifests', function () {
       hls.subtitleTrackController = { subtitleDisplay: false };
 
       timelineController.onManifestLoaded({
