@@ -6368,9 +6368,9 @@ var LEVEL_PLAYLIST_REGEX_FAST = new RegExp([/#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\
 /|#EXT-X-BYTERANGE:*(.+)/.source, // next segment's byterange, group 4 => range spec (x@y)
 /|#EXT-X-PROGRAM-DATE-TIME:(.+)/.source, // next segment's program date/time group 5 => the datetime spec
 /|#.*/.source // All other non-segment oriented tags will match with all groups empty
-].join(''), 'g');
+].join(""), "g");
 
-var LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+var LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)([^:]*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 var MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
@@ -6398,11 +6398,11 @@ var m3u8_parser_M3U8Parser = function () {
 
   M3U8Parser.convertAVC1ToAVCOTI = function convertAVC1ToAVCOTI(codec) {
     var result = void 0,
-        avcdata = codec.split('.');
+        avcdata = codec.split(".");
     if (avcdata.length > 2) {
-      result = avcdata.shift() + '.';
+      result = avcdata.shift() + ".";
       result += parseInt(avcdata.shift()).toString(16);
-      result += ('000' + parseInt(avcdata.shift()).toString(16)).substr(-4);
+      result += ("000" + parseInt(avcdata.shift()).toString(16)).substr(-4);
     } else {
       result = codec;
     }
@@ -6419,15 +6419,15 @@ var m3u8_parser_M3U8Parser = function () {
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
     function setCodecs(codecs, level) {
-      ['video', 'audio'].forEach(function (type) {
+      ["video", "audio"].forEach(function (type) {
         var filtered = codecs.filter(function (codec) {
           return isCodecType(codec, type);
         });
         if (filtered.length) {
           var preferred = filtered.filter(function (codec) {
-            return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+            return codec.lastIndexOf("avc1", 0) === 0 || codec.lastIndexOf("mp4a", 0) === 0;
           });
-          level[type + 'Codec'] = preferred.length > 0 ? preferred[0] : filtered[0];
+          level[type + "Codec"] = preferred.length > 0 ? preferred[0] : filtered[0];
 
           // remove from list
           codecs = codecs.filter(function (codec) {
@@ -6445,17 +6445,17 @@ var m3u8_parser_M3U8Parser = function () {
       var attrs = level.attrs = new attr_list(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
-      var resolution = attrs.decimalResolution('RESOLUTION');
+      var resolution = attrs.decimalResolution("RESOLUTION");
       if (resolution) {
         level.width = resolution.width;
         level.height = resolution.height;
       }
-      level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
+      level.bitrate = attrs.decimalInteger("AVERAGE-BANDWIDTH") || attrs.decimalInteger("BANDWIDTH");
       level.name = attrs.NAME;
 
-      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+      setCodecs([].concat((attrs.CODECS || "").split(/[ ,]+/)), level);
 
-      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+      if (level.videoCodec && level.videoCodec.indexOf("avc1") !== -1) {
         level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
       }
 
@@ -6475,12 +6475,12 @@ var m3u8_parser_M3U8Parser = function () {
       var media = {};
       var attrs = new attr_list(result[1]);
       if (attrs.TYPE === type) {
-        media.groupId = attrs['GROUP-ID'];
+        media.groupId = attrs["GROUP-ID"];
         media.name = attrs.NAME;
         media.type = type;
-        media.default = attrs.DEFAULT === 'YES';
-        media.autoselect = attrs.AUTOSELECT === 'YES';
-        media.forced = attrs.FORCED === 'YES';
+        media.default = attrs.DEFAULT === "YES";
+        media.autoselect = attrs.AUTOSELECT === "YES";
+        media.forced = attrs.FORCED === "YES";
         if (attrs.URI) {
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
         }
@@ -6488,6 +6488,11 @@ var m3u8_parser_M3U8Parser = function () {
         media.lang = attrs.LANGUAGE;
         if (!media.name) {
           media.name = media.lang;
+        }
+
+        if (attrs["INSTREAM-ID"]) {
+          media.instreamId = attrs["INSTREAM-ID"];
+          console.log("Where?");
         }
 
         if (audioGroups.length) {
@@ -6504,7 +6509,14 @@ var m3u8_parser_M3U8Parser = function () {
   M3U8Parser.parseLevelPlaylist = function parseLevelPlaylist(string, baseurl, id, type, levelUrlId) {
     var currentSN = 0,
         totalduration = 0,
-        level = { type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0 },
+        level = {
+      type: null,
+      version: null,
+      url: baseurl,
+      fragments: [],
+      live: true,
+      startSN: 0
+    },
         levelkey = new level_key(),
         cc = 0,
         prevFrag = null,
@@ -6520,9 +6532,9 @@ var m3u8_parser_M3U8Parser = function () {
         // INF
         frag.duration = parseFloat(duration);
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-        var title = (' ' + result[2]).slice(1);
+        var title = (" " + result[2]).slice(1);
         frag.title = title || null;
-        frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
+        frag.tagList.push(title ? ["INF", duration, title] : ["INF", duration]);
       } else if (result[3]) {
         // url
         if (!isNaN(frag.duration)) {
@@ -6536,7 +6548,7 @@ var m3u8_parser_M3U8Parser = function () {
           frag.urlId = levelUrlId;
           frag.baseurl = baseurl;
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-          frag.relurl = (' ' + result[3]).slice(1);
+          frag.relurl = (" " + result[3]).slice(1);
 
           if (level.programDateTime) {
             if (prevFrag) {
@@ -6562,7 +6574,7 @@ var m3u8_parser_M3U8Parser = function () {
         }
       } else if (result[4]) {
         // X-BYTERANGE
-        frag.rawByteRange = (' ' + result[4]).slice(1);
+        frag.rawByteRange = (" " + result[4]).slice(1);
         if (prevFrag) {
           var lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
           if (lastByteRangeEndOffset) {
@@ -6572,8 +6584,8 @@ var m3u8_parser_M3U8Parser = function () {
       } else if (result[5]) {
         // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-        frag.rawProgramDateTime = (' ' + result[5]).slice(1);
-        frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
+        frag.rawProgramDateTime = (" " + result[5]).slice(1);
+        frag.tagList.push(["PROGRAM-DATE-TIME", frag.rawProgramDateTime]);
         if (level.programDateTime === undefined) {
           level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
         }
@@ -6586,47 +6598,47 @@ var m3u8_parser_M3U8Parser = function () {
         }
 
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-        var value1 = (' ' + result[i + 1]).slice(1);
-        var value2 = (' ' + result[i + 2]).slice(1);
+        var value1 = (" " + result[i + 1]).slice(1);
+        var value2 = (" " + result[i + 2]).slice(1);
 
         switch (result[i]) {
-          case '#':
+          case "#":
             frag.tagList.push(value2 ? [value1, value2] : [value1]);
             break;
-          case 'PLAYLIST-TYPE':
+          case "PLAYLIST-TYPE":
             level.type = value1.toUpperCase();
             break;
-          case 'MEDIA-SEQUENCE':
+          case "MEDIA-SEQUENCE":
             currentSN = level.startSN = parseInt(value1);
             break;
-          case 'TARGETDURATION':
+          case "TARGETDURATION":
             level.targetduration = parseFloat(value1);
             break;
-          case 'VERSION':
+          case "VERSION":
             level.version = parseInt(value1);
             break;
-          case 'EXTM3U':
+          case "EXTM3U":
             break;
-          case 'ENDLIST':
+          case "ENDLIST":
             level.live = false;
             break;
-          case 'DIS':
+          case "DIS":
             cc++;
-            frag.tagList.push(['DIS']);
+            frag.tagList.push(["DIS"]);
             break;
-          case 'DISCONTINUITY-SEQ':
+          case "DISCONTINUITY-SEQ":
             cc = parseInt(value1);
             break;
-          case 'KEY':
+          case "KEY":
             // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
             var decryptparams = value1;
             var keyAttrs = new attr_list(decryptparams);
-            var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+            var decryptmethod = keyAttrs.enumeratedString("METHOD"),
                 decrypturi = keyAttrs.URI,
-                decryptiv = keyAttrs.hexadecimalInteger('IV');
+                decryptiv = keyAttrs.hexadecimalInteger("IV");
             if (decryptmethod) {
               levelkey = new level_key();
-              if (decrypturi && ['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0) {
+              if (decrypturi && ["AES-128", "SAMPLE-AES", "SAMPLE-AES-CENC"].indexOf(decryptmethod) >= 0) {
                 levelkey.method = decryptmethod;
                 // URI to get the key
                 levelkey.baseuri = baseurl;
@@ -6637,29 +6649,29 @@ var m3u8_parser_M3U8Parser = function () {
               }
             }
             break;
-          case 'START':
+          case "START":
             var startParams = value1;
             var startAttrs = new attr_list(startParams);
-            var startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+            var startTimeOffset = startAttrs.decimalFloatingPoint("TIME-OFFSET");
             // TIME-OFFSET can be 0
             if (!isNaN(startTimeOffset)) {
               level.startTimeOffset = startTimeOffset;
             }
 
             break;
-          case 'MAP':
+          case "MAP":
             var mapAttrs = new attr_list(value1);
             frag.relurl = mapAttrs.URI;
             frag.rawByteRange = mapAttrs.BYTERANGE;
             frag.baseurl = baseurl;
             frag.level = id;
             frag.type = type;
-            frag.sn = 'initSegment';
+            frag.sn = "initSegment";
             level.initSegment = frag;
             frag = new loader_fragment();
             break;
           default:
-            logger["b" /* logger */].warn('line parsed but not handled: ' + result);
+            logger["b" /* logger */].warn("line parsed but not handled: " + result);
             break;
         }
       }
@@ -6683,14 +6695,14 @@ var m3u8_parser_M3U8Parser = function () {
       if (level.fragments.every(function (frag) {
         return MP4_REGEX_SUFFIX.test(frag.relurl);
       })) {
-        logger["b" /* logger */].warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
+        logger["b" /* logger */].warn("MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX");
 
         frag = new loader_fragment();
         frag.relurl = level.fragments[0].relurl;
         frag.baseurl = baseurl;
         frag.level = id;
         frag.type = type;
-        frag.sn = 'initSegment';
+        frag.sn = "initSegment";
 
         level.initSegment = frag;
         level.needSidxRanges = true;
@@ -7025,6 +7037,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
     var audioTracks = m3u8_parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
     var subtitles = m3u8_parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    var captions = m3u8_parser.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -7052,6 +7065,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
       levels: levels,
       audioTracks: audioTracks,
       subtitles: subtitles,
+      captions: captions,
       url: url,
       stats: stats,
       networkDetails: networkDetails
@@ -7356,24 +7370,26 @@ var fragment_loader_FragmentLoader = function (_EventHandler) {
   FragmentLoader.prototype.loaderror = function loaderror(response, context) {
     var networkDetails = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-    var loader = context.loader;
+    var frag = context.frag;
+    var loader = frag.loader;
     if (loader) {
       loader.abort();
     }
 
-    this.loaders[context.type] = undefined;
+    this.loaders[frag.type] = undefined;
     this.hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: errors["a" /* ErrorDetails */].FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails });
   };
 
   FragmentLoader.prototype.loadtimeout = function loadtimeout(stats, context) {
     var networkDetails = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-    var loader = context.loader;
+    var frag = context.frag;
+    var loader = frag.loader;
     if (loader) {
       loader.abort();
     }
 
-    this.loaders[context.type] = undefined;
+    this.loaders[frag.type] = undefined;
     this.hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: errors["a" /* ErrorDetails */].FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails });
   };
 
@@ -8802,6 +8818,205 @@ function fragment_finders_fragmentWithinToleranceTest() {
 
   return 0;
 }
+// CONCATENATED MODULE: ./src/controller/gap-controller.js
+function gap_controller__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+
+
+
+
+
+var stallDebounceInterval = 1000;
+var jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
+
+var gap_controller_GapController = function () {
+  function GapController(config, media, fragmentTracker, hls) {
+    gap_controller__classCallCheck(this, GapController);
+
+    this.config = config;
+    this.media = media;
+    this.fragmentTracker = fragmentTracker;
+    this.hls = hls;
+    this.stallReported = false;
+  }
+
+  /**
+   * Checks if the playhead is stuck within a gap, and if so, attempts to free it.
+   * A gap is an unbuffered range between two buffered ranges (or the start and the first buffered range).
+   * @param lastCurrentTime
+   * @param buffered
+   */
+
+
+  GapController.prototype.poll = function poll(lastCurrentTime, buffered) {
+    var config = this.config,
+        media = this.media;
+
+    var currentTime = media.currentTime;
+    var tnow = window.performance.now();
+
+    if (currentTime !== lastCurrentTime) {
+      // The playhead is now moving, but was previously stalled
+      if (this.stallReported) {
+        logger["b" /* logger */].warn('playback not stuck anymore @' + currentTime + ', after ' + Math.round(tnow - this.stalled) + 'ms');
+        this.stallReported = false;
+      }
+      this.stalled = null;
+      this.nudgeRetry = 0;
+      return;
+    }
+
+    if (media.ended || !media.buffered.length || media.readyState > 2) {
+      return;
+    }
+
+    if (media.seeking && BufferHelper.isBuffered(media, currentTime)) {
+      return;
+    }
+
+    // The playhead isn't moving but it should be
+    // Allow some slack time to for small stalls to resolve themselves
+    var stalledDuration = tnow - this.stalled;
+    var bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
+    if (!this.stalled) {
+      this.stalled = tnow;
+      return;
+    } else if (stalledDuration >= stallDebounceInterval) {
+      // Report stalling after trying to fix
+      this._reportStall(bufferInfo.len);
+    }
+
+    this._tryFixBufferStall(bufferInfo, stalledDuration);
+  };
+
+  /**
+   * Detects and attempts to fix known buffer stalling issues.
+   * @param bufferInfo - The properties of the current buffer.
+   * @param stalledDuration - The amount of time Hls.js has been stalling for.
+   * @private
+   */
+
+
+  GapController.prototype._tryFixBufferStall = function _tryFixBufferStall(bufferInfo, stalledDuration) {
+    var config = this.config,
+        fragmentTracker = this.fragmentTracker,
+        media = this.media;
+
+    var currentTime = media.currentTime;
+
+    var partial = fragmentTracker.getPartialFragment(currentTime);
+    if (partial) {
+      // Try to skip over the buffer hole caused by a partial fragment
+      // This method isn't limited by the size of the gap between buffered ranges
+      this._trySkipBufferHole(partial);
+    }
+
+    if (bufferInfo.len > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
+      // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
+      // We only try to jump the hole if it's under the configured size
+      // Reset stalled so to rearm watchdog timer
+      this.stalled = null;
+      this._tryNudgeBuffer();
+    }
+  };
+
+  /**
+   * Triggers a BUFFER_STALLED_ERROR event, but only once per stall period.
+   * @param bufferLen - The playhead distance from the end of the current buffer segment.
+   * @private
+   */
+
+
+  GapController.prototype._reportStall = function _reportStall(bufferLen) {
+    var hls = this.hls,
+        media = this.media,
+        stallReported = this.stallReported;
+
+    if (!stallReported) {
+      // Report stalled error once
+      this.stallReported = true;
+      logger["b" /* logger */].warn('Playback stalling at @' + media.currentTime + ' due to low buffer');
+      hls.trigger(events["a" /* default */].ERROR, {
+        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
+        details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR,
+        fatal: false,
+        buffer: bufferLen
+      });
+    }
+  };
+
+  /**
+   * Attempts to fix buffer stalls by jumping over known gaps caused by partial fragments
+   * @param partial - The partial fragment found at the current time (where playback is stalling).
+   * @private
+   */
+
+
+  GapController.prototype._trySkipBufferHole = function _trySkipBufferHole(partial) {
+    var hls = this.hls,
+        media = this.media;
+
+    var currentTime = media.currentTime;
+    var lastEndTime = 0;
+    // Check if currentTime is between unbuffered regions of partial fragments
+    for (var i = 0; i < media.buffered.length; i++) {
+      var startTime = media.buffered.start(i);
+      if (currentTime >= lastEndTime && currentTime < startTime) {
+        media.currentTime = Math.max(startTime, media.currentTime + 0.1);
+        logger["b" /* logger */].warn('skipping hole, adjusting currentTime from ' + currentTime + ' to ' + media.currentTime);
+        this.stalled = null;
+        hls.trigger(events["a" /* default */].ERROR, {
+          type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
+          details: errors["a" /* ErrorDetails */].BUFFER_SEEK_OVER_HOLE,
+          fatal: false,
+          reason: 'fragment loaded with buffer holes, seeking from ' + currentTime + ' to ' + media.currentTime,
+          frag: partial
+        });
+        return;
+      }
+      lastEndTime = media.buffered.end(i);
+    }
+  };
+
+  /**
+   * Attempts to fix buffer stalls by advancing the mediaElement's current time by a small amount.
+   * @private
+   */
+
+
+  GapController.prototype._tryNudgeBuffer = function _tryNudgeBuffer() {
+    var config = this.config,
+        hls = this.hls,
+        media = this.media;
+
+    var currentTime = media.currentTime;
+    var nudgeRetry = (this.nudgeRetry || 0) + 1;
+    this.nudgeRetry = nudgeRetry;
+
+    if (nudgeRetry < config.nudgeMaxRetry) {
+      var targetTime = currentTime + nudgeRetry * config.nudgeOffset;
+      logger["b" /* logger */].log('adjust currentTime from ' + currentTime + ' to ' + targetTime);
+      // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
+      media.currentTime = targetTime;
+      hls.trigger(events["a" /* default */].ERROR, {
+        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
+        details: errors["a" /* ErrorDetails */].BUFFER_NUDGE_ON_STALL,
+        fatal: false
+      });
+    } else {
+      logger["b" /* logger */].error('still stuck in high buffer @' + currentTime + ' after ' + config.nudgeMaxRetry + ', raise fatal error');
+      hls.trigger(events["a" /* default */].ERROR, {
+        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
+        details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR,
+        fatal: true
+      });
+    }
+  };
+
+  return GapController;
+}();
+
+/* harmony default export */ var gap_controller = (gap_controller_GapController);
 // CONCATENATED MODULE: ./src/controller/stream-controller.js
 var stream_controller__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -8814,6 +9029,7 @@ function stream_controller__inherits(subClass, superClass) { if (typeof superCla
 /*
  * Stream Controller
 */
+
 
 
 
@@ -8857,6 +9073,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     _this.audioCodecSwap = false;
     _this._state = State.STOPPED;
     _this.stallReported = false;
+    _this.gapController = null;
     return _this;
   }
 
@@ -9498,6 +9715,8 @@ var stream_controller_StreamController = function (_TaskLoop) {
     if (this.levels && config.autoStartLoad) {
       this.hls.startLoad(config.startPosition);
     }
+
+    this.gapController = new gap_controller(config, media, this.fragmentTracker, this.hls);
   };
 
   StreamController.prototype.onMediaDetaching = function onMediaDetaching() {
@@ -10137,16 +10356,13 @@ var stream_controller_StreamController = function (_TaskLoop) {
 
 
   StreamController.prototype._checkBuffer = function _checkBuffer() {
-    var config = this.config,
-        media = this.media;
+    var media = this.media;
 
-    var stallDebounceInterval = 1000;
     if (!media || media.readyState === 0) {
       // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
       return;
     }
 
-    var currentTime = media.currentTime;
     var mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
     var buffered = mediaBuffer.buffered;
 
@@ -10156,34 +10372,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
     } else {
-      var expectedPlaying = !(media.paused && media.readyState > 1 || // not playing when media is paused and sufficiently buffered
-      media.ended || // not playing when media is ended
-      media.buffered.length === 0); // not playing if nothing buffered
-      var tnow = window.performance.now();
-
-      if (currentTime !== this.lastCurrentTime) {
-        // The playhead is now moving, but was previously stalled
-        if (this.stallReported) {
-          logger["b" /* logger */].warn('playback not stuck anymore @' + currentTime + ', after ' + Math.round(tnow - this.stalled) + 'ms');
-          this.stallReported = false;
-        }
-        this.stalled = null;
-        this.nudgeRetry = 0;
-      } else if (expectedPlaying) {
-        // The playhead isn't moving but it should be
-        // Allow some slack time to for small stalls to resolve themselves
-        var stalledDuration = tnow - this.stalled;
-        var bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
-        if (!this.stalled) {
-          this.stalled = tnow;
-          return;
-        } else if (stalledDuration >= stallDebounceInterval) {
-          // Report stalling after trying to fix
-          this._reportStall(bufferInfo.len);
-        }
-
-        this._tryFixBufferStall(bufferInfo, stalledDuration);
-      }
+      this.gapController.poll(this.lastCurrentTime, buffered);
     }
   };
 
@@ -10220,130 +10409,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
   StreamController.prototype.computeLivePosition = function computeLivePosition(sliding, levelDetails) {
     var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
     return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
-  };
-
-  /**
-   * Detects and attempts to fix known buffer stalling issues.
-   * @param bufferInfo - The properties of the current buffer.
-   * @param stalledDuration - The amount of time Hls.js has been stalling for.
-   * @private
-   */
-
-
-  StreamController.prototype._tryFixBufferStall = function _tryFixBufferStall(bufferInfo, stalledDuration) {
-    var config = this.config,
-        media = this.media;
-
-    var currentTime = media.currentTime;
-    var jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
-
-    var partial = this.fragmentTracker.getPartialFragment(currentTime);
-    if (partial) {
-      // Try to skip over the buffer hole caused by a partial fragment
-      // This method isn't limited by the size of the gap between buffered ranges
-      this._trySkipBufferHole(partial);
-    }
-
-    if (bufferInfo.len > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
-      // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
-      // We only try to jump the hole if it's under the configured size
-      // Reset stalled so to rearm watchdog timer
-      this.stalled = null;
-      this._tryNudgeBuffer();
-    }
-  };
-
-  /**
-   * Triggers a BUFFER_STALLED_ERROR event, but only once per stall period.
-   * @param bufferLen - The playhead distance from the end of the current buffer segment.
-   * @private
-   */
-
-
-  StreamController.prototype._reportStall = function _reportStall(bufferLen) {
-    var hls = this.hls,
-        media = this.media,
-        stallReported = this.stallReported;
-
-    if (!stallReported) {
-      // Report stalled error once
-      this.stallReported = true;
-      logger["b" /* logger */].warn('Playback stalling at @' + media.currentTime + ' due to low buffer');
-      hls.trigger(events["a" /* default */].ERROR, {
-        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
-        details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR,
-        fatal: false,
-        buffer: bufferLen
-      });
-    }
-  };
-
-  /**
-   * Attempts to fix buffer stalls by jumping over known gaps caused by partial fragments
-   * @param partial - The partial fragment found at the current time (where playback is stalling).
-   * @private
-   */
-
-
-  StreamController.prototype._trySkipBufferHole = function _trySkipBufferHole(partial) {
-    var hls = this.hls,
-        media = this.media;
-
-    var currentTime = media.currentTime;
-    var lastEndTime = 0;
-    // Check if currentTime is between unbuffered regions of partial fragments
-    for (var i = 0; i < media.buffered.length; i++) {
-      var startTime = media.buffered.start(i);
-      if (currentTime >= lastEndTime && currentTime < startTime) {
-        media.currentTime = Math.max(startTime, media.currentTime + 0.1);
-        logger["b" /* logger */].warn('skipping hole, adjusting currentTime from ' + currentTime + ' to ' + media.currentTime);
-        this.stalled = null;
-        hls.trigger(events["a" /* default */].ERROR, {
-          type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
-          details: errors["a" /* ErrorDetails */].BUFFER_SEEK_OVER_HOLE,
-          fatal: false,
-          reason: 'fragment loaded with buffer holes, seeking from ' + currentTime + ' to ' + media.currentTime,
-          frag: partial
-        });
-        return;
-      }
-      lastEndTime = media.buffered.end(i);
-    }
-  };
-
-  /**
-   * Attempts to fix buffer stalls by advancing the mediaElement's current time by a small amount.
-   * @private
-   */
-
-
-  StreamController.prototype._tryNudgeBuffer = function _tryNudgeBuffer() {
-    var config = this.config,
-        hls = this.hls,
-        media = this.media;
-
-    var currentTime = media.currentTime;
-    var nudgeRetry = (this.nudgeRetry || 0) + 1;
-    this.nudgeRetry = nudgeRetry;
-
-    if (nudgeRetry < config.nudgeMaxRetry) {
-      var targetTime = currentTime + nudgeRetry * config.nudgeOffset;
-      logger["b" /* logger */].log('adjust currentTime from ' + currentTime + ' to ' + targetTime);
-      // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
-      media.currentTime = targetTime;
-      hls.trigger(events["a" /* default */].ERROR, {
-        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
-        details: errors["a" /* ErrorDetails */].BUFFER_NUDGE_ON_STALL,
-        fatal: false
-      });
-    } else {
-      logger["b" /* logger */].error('still stuck in high buffer @' + currentTime + ' after ' + config.nudgeMaxRetry + ', raise fatal error');
-      hls.trigger(events["a" /* default */].ERROR, {
-        type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
-        details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR,
-        fatal: true
-      });
-    }
   };
 
   /**
@@ -10956,6 +11021,12 @@ function sendAddTrackEvent(track, videoEl) {
   videoEl.dispatchEvent(event);
 }
 
+function sendRemoveTrackEvent(track, videoEl) {
+  // As of 05/2018 there is no working browser removetrack event
+  // Disabling the track doesn't remove it but does signify it isn't in use
+  track.mode = 'disabled';
+}
+
 function clearCurrentCues(track) {
   if (track && track.cues) {
     while (track.cues.length > 0) {
@@ -11413,8 +11484,13 @@ var abr_controller_AbrController = function (_EventHandler) {
 
   AbrController.prototype._findBestLevel = function _findBestLevel(currentLevel, currentFragDuration, currentBw, minAutoLevel, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
     for (var i = maxAutoLevel; i >= minAutoLevel; i--) {
-      var levelInfo = levels[i],
-          levelDetails = levelInfo.details,
+      var levelInfo = levels[i];
+
+      if (!levelInfo) {
+        continue;
+      }
+
+      var levelDetails = levelInfo.details,
           avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration,
           live = levelDetails ? levelDetails.live : false,
           adjustedbw = void 0;
@@ -12174,7 +12250,7 @@ var cap_level_controller_CapLevelController = function (_EventHandler) {
   function CapLevelController(hls) {
     cap_level_controller__classCallCheck(this, CapLevelController);
 
-    var _this = cap_level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].FPS_DROP_LEVEL_CAPPING, events["a" /* default */].MEDIA_ATTACHING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].BUFFER_CODECS));
+    var _this = cap_level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].FPS_DROP_LEVEL_CAPPING, events["a" /* default */].MEDIA_ATTACHING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].BUFFER_CODECS, events["a" /* default */].MEDIA_DETACHING));
 
     _this.autoLevelCapping = Number.POSITIVE_INFINITY;
     _this.firstLevel = null;
@@ -12228,6 +12304,10 @@ var cap_level_controller_CapLevelController = function (_EventHandler) {
 
   CapLevelController.prototype.onLevelsUpdated = function onLevelsUpdated(data) {
     this.levels = data.levels;
+  };
+
+  CapLevelController.prototype.onMediaDetaching = function onMediaDetaching() {
+    this._stopCapping();
   };
 
   CapLevelController.prototype.detectPlayerSize = function detectPlayerSize() {
@@ -14832,9 +14912,12 @@ function cea_608_parser__classCallCheck(instance, Constructor) { if (!(instance 
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
+
+
+
 /**
-     *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
-     */
+ *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
+ */
 
 var specialCea608CharsCodes = {
   0x2a: 0xe1, // lowercase a, acute accent
@@ -14958,23 +15041,11 @@ var rowsHighCh2 = { 0x19: 2, 0x1A: 4, 0x1D: 6, 0x1E: 8, 0x1F: 10, 0x1B: 13, 0x1C
 
 var backgroundColors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'black', 'transparent'];
 
-/**
- * Simple logger class to be able to write with time-stamps and filter on level.
- */
-var cea_608_parser_logger = {
-  verboseFilter: { 'DATA': 3, 'DEBUG': 3, 'INFO': 2, 'WARNING': 2, 'TEXT': 1, 'ERROR': 0 },
-  time: null,
-  verboseLevel: 0, // Only write errors
-  setTime: function setTime(newTime) {
-    this.time = newTime;
-  },
-  log: function log(severity, msg) {
-    var minLevel = this.verboseFilter[severity];
-    if (this.verboseLevel >= minLevel) {
-      // console.log(this.time + ' [' + severity + '] ' + msg);
-    }
-  }
-};
+var ENABLE_LOGS = false; // true;
+var log = function log() {};
+var warn = function warn() {};
+
+var cea_608_parser_currentTime = null;
 
 var numArrayToHexArray = function numArrayToHexArray(numArray) {
   var hexArray = [];
@@ -15087,7 +15158,7 @@ var StyledUnicodeChar = function () {
  */
 
 
-var Row = function () {
+var cea_608_parser_Row = function () {
   function Row() {
     cea_608_parser__classCallCheck(this, Row);
 
@@ -15139,10 +15210,10 @@ var Row = function () {
     }
 
     if (this.pos < 0) {
-      cea_608_parser_logger.log('ERROR', 'Negative cursor position ' + this.pos);
+      logger["b" /* logger */].error('CEA608 parsing error: Negative cursor position ' + this.pos);
       this.pos = 0;
     } else if (this.pos > NR_COLS) {
-      cea_608_parser_logger.log('ERROR', 'Too large cursor position ' + this.pos);
+      logger["b" /* logger */].error('CEA608 parsing error: Too large cursor position ' + this.pos);
       this.pos = NR_COLS;
     }
   };
@@ -15179,7 +15250,7 @@ var Row = function () {
     }
     var char = getCharForByte(byte);
     if (this.pos >= NR_COLS) {
-      cea_608_parser_logger.log('ERROR', 'Cannot insert ' + byte.toString(16) + ' (' + char + ') at position ' + this.pos + '. Skipping it!');
+      logger["b" /* logger */].error('CEA608 parsing error: Cannot insert ' + byte.toString(16) + ' (' + char + ') at position ' + this.pos + '. Skipping it!');
       return;
     }
     this.chars[this.pos].setChar(char, this.currPenState);
@@ -15242,7 +15313,7 @@ var CaptionScreen = function () {
 
     this.rows = [];
     for (var i = 0; i < NR_ROWS; i++) {
-      this.rows.push(new Row());
+      this.rows.push(new cea_608_parser_Row());
     } // Note that we use zero-based numbering (0-14)
 
     this.currRow = NR_ROWS - 1;
@@ -15317,13 +15388,13 @@ var CaptionScreen = function () {
   };
 
   CaptionScreen.prototype.setCursor = function setCursor(absPos) {
-    cea_608_parser_logger.log('INFO', 'setCursor: ' + absPos);
+    log('CEA Parser: setCursor: ' + absPos);
     var row = this.rows[this.currRow];
     row.setCursor(absPos);
   };
 
   CaptionScreen.prototype.setPAC = function setPAC(pacData) {
-    cea_608_parser_logger.log('INFO', 'pacData = ' + JSON.stringify(pacData));
+    log('CEA Parser: pacData = ' + JSON.stringify(pacData));
     var newRow = pacData.row - 1;
     if (this.nrRollUpRows && newRow < this.nrRollUpRows - 1) {
       newRow = this.nrRollUpRows - 1;
@@ -15344,7 +15415,7 @@ var CaptionScreen = function () {
       var lastOutputScreen = this.lastOutputScreen;
       if (lastOutputScreen) {
         var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
-        if (prevLineTime && prevLineTime < cea_608_parser_logger.time) {
+        if (prevLineTime && prevLineTime < cea_608_parser_currentTime) {
           for (var _i = 0; _i < this.nrRollUpRows; _i++) {
             this.rows[newRow - this.nrRollUpRows + _i + 1].copy(lastOutputScreen.rows[topRowIndex + _i]);
           }
@@ -15370,7 +15441,7 @@ var CaptionScreen = function () {
 
 
   CaptionScreen.prototype.setBkgData = function setBkgData(bkgData) {
-    cea_608_parser_logger.log('INFO', 'bkgData = ' + JSON.stringify(bkgData));
+    log('CEA Parser: bkgData = ' + JSON.stringify(bkgData));
     this.backSpace();
     this.setPen(bkgData);
     this.insertChar(0x20); // Space
@@ -15382,16 +15453,16 @@ var CaptionScreen = function () {
 
   CaptionScreen.prototype.rollUp = function rollUp() {
     if (this.nrRollUpRows === null) {
-      cea_608_parser_logger.log('DEBUG', 'roll_up but nrRollUpRows not set yet');
+      log('CEA Parser: roll_up but nrRollUpRows not set yet');
       return; // Not properly setup
     }
-    cea_608_parser_logger.log('TEXT', this.getDisplayText());
+    log('CEA Parser: ' + this.getDisplayText());
     var topRowIndex = this.currRow + 1 - this.nrRollUpRows;
     var topRow = this.rows.splice(topRowIndex, 1)[0];
     topRow.clear();
     this.rows.splice(this.currRow, 0, topRow);
-    cea_608_parser_logger.log('INFO', 'Rolling up');
-    // logger.log('TEXT', this.get_display_text())
+    log('CEA Parser: Rolling up');
+    // log(this.get_display_text())
   };
 
   /**
@@ -15485,7 +15556,7 @@ var Cea608Channel = function () {
     }
 
     this.mode = newMode;
-    cea_608_parser_logger.log('INFO', 'MODE=' + newMode);
+    log('CEA Parser: MODE=' + newMode);
     if (this.mode === 'MODE_POP-ON') {
       this.writeScreen = this.nonDisplayedMemory;
     } else {
@@ -15505,22 +15576,22 @@ var Cea608Channel = function () {
     }
 
     var screen = this.writeScreen === this.displayedMemory ? 'DISP' : 'NON_DISP';
-    cea_608_parser_logger.log('INFO', screen + ': ' + this.writeScreen.getDisplayText(true));
+    log('CEA Parser: ' + screen + ': ' + this.writeScreen.getDisplayText(true));
     if (this.mode === 'MODE_PAINT-ON' || this.mode === 'MODE_ROLL-UP') {
-      cea_608_parser_logger.log('TEXT', 'DISPLAYED: ' + this.displayedMemory.getDisplayText(true));
+      log('CEA Parser: DISPLAYED: ' + this.displayedMemory.getDisplayText(true));
       this.outputDataUpdate();
     }
   };
 
   Cea608Channel.prototype.ccRCL = function ccRCL() {
     // Resume Caption Loading (switch mode to Pop On)
-    cea_608_parser_logger.log('INFO', 'RCL - Resume Caption Loading');
+    log('CEA Parser: RCL - Resume Caption Loading');
     this.setMode('MODE_POP-ON');
   };
 
   Cea608Channel.prototype.ccBS = function ccBS() {
     // BackSpace
-    cea_608_parser_logger.log('INFO', 'BS - BackSpace');
+    log('CEA Parser: BS - BackSpace');
     if (this.mode === 'MODE_TEXT') {
       return;
     }
@@ -15541,14 +15612,14 @@ var Cea608Channel = function () {
 
   Cea608Channel.prototype.ccDER = function ccDER() {
     // Delete to End of Row
-    cea_608_parser_logger.log('INFO', 'DER- Delete to End of Row');
+    log('CEA Parser: DER- Delete to End of Row');
     this.writeScreen.clearToEndOfRow();
     this.outputDataUpdate();
   };
 
   Cea608Channel.prototype.ccRU = function ccRU(nrRows) {
     // Roll-Up Captions-2,3,or 4 Rows
-    cea_608_parser_logger.log('INFO', 'RU(' + nrRows + ') - Roll Up');
+    log('CEA Parser: RU(' + nrRows + ') - Roll Up');
     this.writeScreen = this.displayedMemory;
     this.setMode('MODE_ROLL-UP');
     this.writeScreen.setRollUpRows(nrRows);
@@ -15556,64 +15627,64 @@ var Cea608Channel = function () {
 
   Cea608Channel.prototype.ccFON = function ccFON() {
     // Flash On
-    cea_608_parser_logger.log('INFO', 'FON - Flash On');
+    log('CEA Parser: FON - Flash On');
     this.writeScreen.setPen({ flash: true });
   };
 
   Cea608Channel.prototype.ccRDC = function ccRDC() {
     // Resume Direct Captioning (switch mode to PaintOn)
-    cea_608_parser_logger.log('INFO', 'RDC - Resume Direct Captioning');
+    log('CEA Parser: RDC - Resume Direct Captioning');
     this.setMode('MODE_PAINT-ON');
   };
 
   Cea608Channel.prototype.ccTR = function ccTR() {
     // Text Restart in text mode (not supported, however)
-    cea_608_parser_logger.log('INFO', 'TR');
+    log('CEA Parser: TR');
     this.setMode('MODE_TEXT');
   };
 
   Cea608Channel.prototype.ccRTD = function ccRTD() {
     // Resume Text Display in Text mode (not supported, however)
-    cea_608_parser_logger.log('INFO', 'RTD');
+    log('CEA Parser: RTD');
     this.setMode('MODE_TEXT');
   };
 
   Cea608Channel.prototype.ccEDM = function ccEDM() {
     // Erase Displayed Memory
-    cea_608_parser_logger.log('INFO', 'EDM - Erase Displayed Memory');
+    log('CEA Parser: EDM - Erase Displayed Memory');
     this.displayedMemory.reset();
     this.outputDataUpdate(true);
   };
 
   Cea608Channel.prototype.ccCR = function ccCR() {
     // Carriage Return
-    cea_608_parser_logger.log('CR - Carriage Return');
+    log('CEA Parser: CR - Carriage Return');
     this.writeScreen.rollUp();
     this.outputDataUpdate(true);
   };
 
   Cea608Channel.prototype.ccENM = function ccENM() {
     // Erase Non-Displayed Memory
-    cea_608_parser_logger.log('INFO', 'ENM - Erase Non-displayed Memory');
+    log('CEA Parser: ENM - Erase Non-displayed Memory');
     this.nonDisplayedMemory.reset();
   };
 
   Cea608Channel.prototype.ccEOC = function ccEOC() {
     // End of Caption (Flip Memories)
-    cea_608_parser_logger.log('INFO', 'EOC - End Of Caption');
+    log('CEA Parser: EOC - End Of Caption');
     if (this.mode === 'MODE_POP-ON') {
       var tmp = this.displayedMemory;
       this.displayedMemory = this.nonDisplayedMemory;
       this.nonDisplayedMemory = tmp;
       this.writeScreen = this.nonDisplayedMemory;
-      cea_608_parser_logger.log('TEXT', 'DISP: ' + this.displayedMemory.getDisplayText());
+      log('CEA Parser: DISP: ' + this.displayedMemory.getDisplayText());
     }
     this.outputDataUpdate(true);
   };
 
   Cea608Channel.prototype.ccTO = function ccTO(nrCols) {
     // Tab Offset 1,2, or 3 columns
-    cea_608_parser_logger.log('INFO', 'TO(' + nrCols + ') - Tab Offset');
+    log('CEA Parser: TO(' + nrCols + ') - Tab Offset');
     this.writeScreen.moveCursor(nrCols);
   };
 
@@ -15629,14 +15700,14 @@ var Cea608Channel = function () {
     } else {
       styles.foreground = 'white';
     }
-    cea_608_parser_logger.log('INFO', 'MIDROW: ' + JSON.stringify(styles));
+    log('CEA Parser: MIDROW: ' + JSON.stringify(styles));
     this.writeScreen.setPen(styles);
   };
 
   Cea608Channel.prototype.outputDataUpdate = function outputDataUpdate() {
     var dispatch = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
-    var t = cea_608_parser_logger.time;
+    var t = cea_608_parser_currentTime;
     if (t === null) {
       return;
     }
@@ -15650,7 +15721,7 @@ var Cea608Channel = function () {
           if (this.outputFilter.newCue) {
             this.outputFilter.newCue(this.cueStartTime, t, this.lastOutputScreen);
             if (dispatch === true && this.outputFilter.dispatchCue) {
-              this.outputFilter.dispatchCue();
+              this.outputFilter.dispatchCue(this.cueStartTime);
             }
           }
           this.cueStartTime = this.displayedMemory.isEmpty() ? null : t;
@@ -15675,7 +15746,7 @@ var Cea608Channel = function () {
   return Cea608Channel;
 }();
 
-var Cea608Parser = function () {
+var cea_608_parser_Cea608Parser = function () {
   function Cea608Parser(field, out1, out2) {
     cea_608_parser__classCallCheck(this, Cea608Parser);
 
@@ -15689,6 +15760,10 @@ var Cea608Parser = function () {
     this.startTime = null;
     this.lastTime = null;
     this.dataCounters = { 'padding': 0, 'char': 0, 'cmd': 0, 'other': 0 };
+    if (ENABLE_LOGS) {
+      log = logger["b" /* logger */].log;
+      warn = logger["b" /* logger */].warn;
+    }
   }
 
   Cea608Parser.prototype.getHandler = function getHandler(index) {
@@ -15711,16 +15786,22 @@ var Cea608Parser = function () {
         charsFound = false;
 
     this.lastTime = t;
-    cea_608_parser_logger.setTime(t);
+    cea_608_parser_currentTime = t;
 
     for (var i = 0; i < byteList.length; i += 2) {
       a = byteList[i] & 0x7f;
       b = byteList[i + 1] & 0x7f;
+      if (a >= 0x10 && a <= 0x1f && a === this.lastCmdA && b === this.lastCmdB) {
+        this.lastCmdA = null;
+        this.lastCmdB = null;
+        log('CEA Parser: Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
+        continue; // Repeated commands are dropped (once)
+      }
       if (a === 0 && b === 0) {
         this.dataCounters.padding += 2;
         continue;
       } else {
-        cea_608_parser_logger.log('DATA', '[' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
+        log('CEA Parser: [' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
       }
       cmdFound = this.parseCmd(a, b);
       if (!cmdFound) {
@@ -15742,7 +15823,7 @@ var Cea608Parser = function () {
             var channel = this.channels[this.currChNr - 1];
             channel.insertChars(charsFound);
           } else {
-            cea_608_parser_logger.log('WARNING', 'No channel found yet. TEXT-MODE?');
+            warn('No channel found yet. TEXT-MODE?');
           }
         }
       }
@@ -15752,7 +15833,7 @@ var Cea608Parser = function () {
         this.dataCounters.char += 2;
       } else {
         this.dataCounters.other += 2;
-        cea_608_parser_logger.log('WARNING', 'Couldn\'t parse cleaned data ' + numArrayToHexArray([a, b]) + ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
+        warn('WARNING', 'Couldn\'t parse cleaned data ' + numArrayToHexArray([a, b]) + ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
       }
     }
   };
@@ -15765,29 +15846,21 @@ var Cea608Parser = function () {
 
   Cea608Parser.prototype.parseCmd = function parseCmd(a, b) {
     var chNr = null;
-
-    var cond1 = (a === 0x14 || a === 0x1C) && b >= 0x20 && b <= 0x2F;
+    var cond1 = (a === 0x14 || a === 0x15 || a === 0x1C || a === 0x1D) && b >= 0x20 && b <= 0x2F;
     var cond2 = (a === 0x17 || a === 0x1F) && b >= 0x21 && b <= 0x23;
     if (!(cond1 || cond2)) {
       return false;
     }
 
-    if (a === this.lastCmdA && b === this.lastCmdB) {
-      this.lastCmdA = null;
-      this.lastCmdB = null; // Repeated commands are dropped (once)
-      cea_608_parser_logger.log('DEBUG', 'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
-      return true;
-    }
-
-    if (a === 0x14 || a === 0x17) {
+    if (a === 0x14 || a === 0x15 || a === 0x17) {
       chNr = 1;
     } else {
       chNr = 2;
-    } // (a === 0x1C || a=== 0x1f)
+    } // (a === 0x1C || a === 0x1D || a=== 0x1f)
 
     var channel = this.channels[chNr - 1];
 
-    if (a === 0x14 || a === 0x1C) {
+    if (a === 0x14 || a === 0x15 || a === 0x1C || a === 0x1D) {
       if (b === 0x20) {
         channel.ccRCL();
       } else if (b === 0x21) {
@@ -15848,12 +15921,16 @@ var Cea608Parser = function () {
       }
 
       if (chNr !== this.currChNr) {
-        cea_608_parser_logger.log('ERROR', 'Mismatch channel in midrow parsing');
+        logger["b" /* logger */].error('CEA608 parsing error: Mismatch channel in midrow parsing');
         return false;
       }
       var channel = this.channels[chNr - 1];
+      // cea608 spec says midrow codes should inject a space
+      channel.insertChars([0x20]);
       channel.ccMIDROW(b);
-      cea_608_parser_logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
+      log('CEA Parser: MIDROW (' + numArrayToHexArray([a, b]) + ')');
+      this.lastCmdA = a;
+      this.lastCmdB = b;
       return true;
     }
     return false;
@@ -15872,12 +15949,6 @@ var Cea608Parser = function () {
     var case2 = (a === 0x10 || a === 0x18) && b >= 0x40 && b <= 0x5F;
     if (!(case1 || case2)) {
       return false;
-    }
-
-    if (a === this.lastCmdA && b === this.lastCmdB) {
-      this.lastCmdA = null;
-      this.lastCmdB = null;
-      return true; // Repeated commands are dropped (once)
     }
 
     chNr = a <= 0x17 ? 1 : 2;
@@ -15954,16 +16025,18 @@ var Cea608Parser = function () {
         oneCode = b + 0x90;
       }
 
-      cea_608_parser_logger.log('INFO', 'Special char \'' + getCharForByte(oneCode) + '\' in channel ' + channelNr);
+      log('CEA Parser: Special char \'' + getCharForByte(oneCode) + '\' in channel ' + channelNr);
       charCodes = [oneCode];
+      this.lastCmdA = a;
+      this.lastCmdB = b;
     } else if (a >= 0x20 && a <= 0x7f) {
       charCodes = b === 0 ? [a] : [a, b];
+      this.lastCmdA = null;
+      this.lastCmdB = null;
     }
     if (charCodes) {
       var hexCodes = numArrayToHexArray(charCodes);
-      cea_608_parser_logger.log('DEBUG', 'Char codes =  ' + hexCodes.join(','));
-      this.lastCmdA = null;
-      this.lastCmdB = null;
+      log('CEA Parser: Char codes =  ' + hexCodes.join(','));
     }
     return charCodes;
   };
@@ -16004,8 +16077,8 @@ var Cea608Parser = function () {
     chNr = a < 0x18 ? 1 : 2;
     channel = this.channels[chNr - 1];
     channel.setBkgData(bkgData);
-    this.lastCmdA = null;
-    this.lastCmdB = null;
+    this.lastCmdA = a;
+    this.lastCmdB = b;
     return true;
   };
 
@@ -16040,7 +16113,7 @@ var Cea608Parser = function () {
   return Cea608Parser;
 }();
 
-/* harmony default export */ var cea_608_parser = (Cea608Parser);
+/* harmony default export */ var cea_608_parser = (cea_608_parser_Cea608Parser);
 // CONCATENATED MODULE: ./src/utils/output-filter.js
 function output_filter__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -16055,12 +16128,13 @@ var OutputFilter = function () {
     this.screen = null;
   }
 
-  OutputFilter.prototype.dispatchCue = function dispatchCue() {
+  OutputFilter.prototype.dispatchCue = function dispatchCue(startTime) {
     if (this.startTime === null) {
       return;
     }
-
-    this.timelineController.addCues(this.trackName, this.startTime, this.endTime, this.screen);
+    // fall back to initial cue start time for seek, etc
+    var cueStartTime = startTime - this.startTime > 5 ? startTime : this.startTime;
+    this.timelineController.addCues(this.trackName, cueStartTime, this.endTime, this.screen);
     this.startTime = null;
   };
 
@@ -16296,29 +16370,13 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     _this.initPTS = undefined;
     _this.cueRanges = [];
     _this.captionsTracks = {};
-
-    _this.captionsProperties = {
-      textTrack1: {
-        label: _this.config.captionsTextTrack1Label,
-        languageCode: _this.config.captionsTextTrack1LanguageCode
-      },
-      textTrack2: {
-        label: _this.config.captionsTextTrack2Label,
-        languageCode: _this.config.captionsTextTrack2LanguageCode
-      }
-    };
-
-    if (_this.config.enableCEA708Captions) {
-      var channel1 = new output_filter(_this, 'textTrack1');
-      var channel2 = new output_filter(_this, 'textTrack2');
-
-      _this.cea608Parser = new cea_608_parser(0, channel1, channel2);
-    }
+    _this.captionsProperties = {};
+    _this.embeddedCea608FieldParsers = [];
     return _this;
   }
 
   TimelineController.prototype.addCues = function addCues(trackName, startTime, endTime, screen) {
-    // skip cues which overlap more than 50% with previously parsed time ranges
+    // skip cues which overlap with previously parsed time ranges
     var ranges = this.cueRanges;
     var merged = false;
     for (var i = ranges.length; i--;) {
@@ -16328,7 +16386,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
         cueRange[0] = Math.min(cueRange[0], startTime);
         cueRange[1] = Math.max(cueRange[1], endTime);
         merged = true;
-        if (overlap / (endTime - startTime) > 0.5) {
+        if (overlap / (endTime - startTime) > 1) {
           return;
         }
       }
@@ -16415,11 +16473,17 @@ var timeline_controller_TimelineController = function (_EventHandler) {
   };
 
   TimelineController.prototype.onMediaDetaching = function onMediaDetaching() {
-    var captionsTracks = this.captionsTracks;
+    var _this3 = this;
 
+    var captionsTracks = this.captionsTracks,
+        captionsProperties = this.captionsProperties;
+
+    this.embeddedCea608FieldParsers = [];
     Object.keys(captionsTracks).forEach(function (trackName) {
       clearCurrentCues(captionsTracks[trackName]);
-      delete captionsTracks[trackName];
+      sendRemoveTrackEvent(captionsTracks[trackName], _this3.media);
+      captionsTracks[trackName] = null;
+      captionsProperties[trackName] = null;
     });
   };
 
@@ -16444,7 +16508,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
   };
 
   TimelineController.prototype.onManifestLoaded = function onManifestLoaded(data) {
-    var _this3 = this;
+    var _this4 = this;
 
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
@@ -16465,18 +16529,66 @@ var timeline_controller_TimelineController = function (_EventHandler) {
           }
         }
         if (!textTrack) {
-          textTrack = _this3.createTextTrack('subtitles', track.name, track.lang);
+          textTrack = _this4.createTextTrack('subtitles', track.name, track.lang);
         }
 
         if (track.default) {
-          textTrack.mode = _this3.hls.subtitleDisplay ? 'showing' : 'hidden';
+          textTrack.mode = _this4.hls.subtitleDisplay ? 'showing' : 'hidden';
         } else {
           textTrack.mode = 'disabled';
         }
 
-        _this3.textTracks.push(textTrack);
+        _this4.textTracks.push(textTrack);
       });
     }
+
+    if (this.config.enableCEA708Captions) {
+      if (data.captions && data.captions.length) {
+        this.captionsProperties = {};
+        this.embeddedCea608FieldParsers = this.getParsers(data.captions);
+        data.captions.forEach(function (captionAttributes, i) {
+          var property = 'textTrack' + (i + 1);
+          _this4.captionsProperties[property] = {
+            label: captionAttributes.name,
+            languageCode: captionAttributes.lang
+          };
+          _this4.createCaptionsTrack(property);
+        });
+      } else {
+        this.captionsProperties = {
+          textTrack1: {
+            label: this.config.captionsTextTrack1Label,
+            languageCode: this.config.captionsTextTrack1LanguageCode
+          },
+          textTrack2: {
+            label: this.config.captionsTextTrack2Label,
+            languageCode: this.config.captionsTextTrack2LanguageCode
+          }
+        };
+        var channel1 = new output_filter(this, 'textTrack1');
+        var channel2 = new output_filter(this, 'textTrack2');
+        this.embeddedCea608FieldParsers = [new cea_608_parser(0, channel1, channel2)];
+      }
+    }
+  };
+
+  TimelineController.prototype.getParsers = function getParsers(captionAttrs) {
+    var outputs = [null, null, null, null];
+    for (var i = 0; i < captionAttrs.length; i++) {
+      if (captionAttrs[i].id > -1) {
+        var instreamId = captionAttrs[i].instreamId;
+        if (instreamId && instreamId.slice(0, 2) === 'CC') {
+          var outputNr = Number(instreamId.slice(-1));
+          outputs[outputNr - 1] = new output_filter(this, 'textTrack' + (i + 1));
+        }
+      }
+    }
+    var field1 = new cea_608_parser(1, outputs[0], outputs[1]);
+    var field2 = new cea_608_parser(2, outputs[2], outputs[3]);
+    if (outputs[2]) {
+      return [field1, field2];
+    }
+    return [field1];
   };
 
   TimelineController.prototype.onLevelSwitching = function onLevelSwitching() {
@@ -16490,9 +16602,11 @@ var timeline_controller_TimelineController = function (_EventHandler) {
       var sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
       if (sn !== this.lastSn + 1) {
-        var cea608Parser = this.cea608Parser;
-        if (cea608Parser) {
-          cea608Parser.reset();
+        for (var i = 0; i < this.embeddedCea608FieldParsers.length; i++) {
+          var cea608Parser = this.embeddedCea608FieldParsers[i];
+          if (cea608Parser) {
+            cea608Parser.reset();
+          }
         }
       }
       this.lastSn = sn;
@@ -16578,9 +16692,12 @@ var timeline_controller_TimelineController = function (_EventHandler) {
     // push all of the CEA-708 messages into the interpreter
     // immediately. It will create the proper timestamps based on our PTS value
     if (this.enabled && this.config.enableCEA708Captions) {
-      for (var i = 0; i < data.samples.length; i++) {
-        var ccdatas = this.extractCea608Data(data.samples[i].bytes);
-        this.cea608Parser.addData(data.samples[i].pts, ccdatas);
+      for (var fieldNr = 0; fieldNr < this.embeddedCea608FieldParsers.length; fieldNr++) {
+        var fieldParser = this.embeddedCea608FieldParsers[fieldNr];
+        for (var i = 0; i < data.samples.length; i++) {
+          var ccdatas = this.extractCea608Data(data.samples[i].bytes);
+          fieldParser.addData(data.samples[i].pts, ccdatas[fieldNr]);
+        }
       }
     }
   };
@@ -16593,7 +16710,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
         ccbyte2 = void 0,
         ccValid = void 0,
         ccType = void 0;
-    var actualCCBytes = [];
+    var fieldData = [[], []];
 
     for (var j = 0; j < count; j++) {
       tmpByte = byteArray[position++];
@@ -16608,13 +16725,15 @@ var timeline_controller_TimelineController = function (_EventHandler) {
 
       if (ccValid) {
         if (ccType === 0) {
-          // || ccType === 1
-          actualCCBytes.push(ccbyte1);
-          actualCCBytes.push(ccbyte2);
+          fieldData[0].push(ccbyte1);
+          fieldData[0].push(ccbyte2);
+        } else if (ccType === 1) {
+          fieldData[1].push(ccbyte1);
+          fieldData[1].push(ccbyte2);
         }
       }
     }
-    return actualCCBytes;
+    return fieldData;
   };
 
   return TimelineController;
