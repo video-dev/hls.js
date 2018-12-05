@@ -194,7 +194,6 @@ class MP4Remuxer {
     const outputSamples = [];
     const nbSamples = inputSamples.length;
     const ptsNormalize = this._PTSNormalize;
-    const initDTS = this._initDTS;
     const initPTS = this._initPTS;
 
     // for (let i = 0; i < track.samples.length; i++) {
@@ -228,7 +227,7 @@ class MP4Remuxer {
       //  - less than 200 ms PTS gaps (timeScale/5)
       contiguous |= (inputSamples.length && nextAvcDts &&
                      ((accurateTimeOffset && Math.abs(timeOffset - nextAvcDts / timeScale) < 0.1) ||
-                      Math.abs((inputSamples[0].pts - nextAvcDts - initDTS)) < timeScale / 5)
+                      Math.abs((inputSamples[0].pts - nextAvcDts - initPTS)) < timeScale / 5)
       );
     }
 
