@@ -50,7 +50,7 @@ class MP4Remuxer {
         // if first audio DTS is not aligned with first video DTS then we need to take that into account
         // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
         // drift between audio and video streams
-        let audiovideoDeltaDts = (audioTrack.samples[0].dts - videoTrack.samples[0].dts) / videoTrack.inputTimeScale;
+        let audiovideoDeltaDts = (audioTrack.samples[0].pts - videoTrack.samples[0].pts) / videoTrack.inputTimeScale;
         audioTimeOffset += Math.max(0, audiovideoDeltaDts);
         videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
       }
@@ -180,18 +180,22 @@ class MP4Remuxer {
   }
 
   remuxVideo (track, timeOffset, contiguous, audioTrackLength, accurateTimeOffset) {
-    let offset = 8,
-      timeScale = track.timescale,
-      mp4SampleDuration,
-      mdat, moof,
-      firstPTS, firstDTS,
-      nextDTS,
-      lastPTS, lastDTS,
-      inputSamples = track.samples,
-      outputSamples = [],
-      nbSamples = inputSamples.length,
-      ptsNormalize = this._PTSNormalize,
-      initDTS = this._initDTS;
+    let offset = 8;
+    const timeScale = track.timescale;
+    let mp4SampleDuration;
+    let mdat;
+    let moof;
+    let firstPTS;
+    let firstDTS;
+    let nextDTS;
+    let lastPTS;
+    let lastDTS;
+    const inputSamples = track.samples;
+    const outputSamples = [];
+    const nbSamples = inputSamples.length;
+    const ptsNormalize = this._PTSNormalize;
+    const initDTS = this._initDTS;
+    const initPTS = this._initPTS;
 
     // for (let i = 0; i < track.samples.length; i++) {
     //   let avcSample = track.samples[i];
@@ -236,8 +240,8 @@ class MP4Remuxer {
     // PTS is coded on 33bits, and can loop from -2^32 to 2^32
     // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
     inputSamples.forEach(function (sample) {
-      sample.pts = ptsNormalize(sample.pts - initDTS, nextAvcDts);
-      sample.dts = ptsNormalize(sample.dts - initDTS, nextAvcDts);
+      sample.pts = ptsNormalize(sample.pts - initPTS, nextAvcDts);
+      sample.dts = ptsNormalize(sample.dts - initPTS, nextAvcDts);
     });
 
     // sort video samples by DTS then PTS then demux id order
