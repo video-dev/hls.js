@@ -145,7 +145,6 @@ export default class M3U8Parser {
 
         if (attrs["INSTREAM-ID"]) {
           media.instreamId = attrs["INSTREAM-ID"];
-          console.log("Where?");
         }
 
         if (audioGroups.length) {
