@@ -181,33 +181,19 @@ class MP4Remuxer {
 
   remuxVideo (track, timeOffset, contiguous, audioTrackLength, accurateTimeOffset) {
     let offset = 8;
-    const timeScale = track.timescale;
     let mp4SampleDuration;
     let mdat;
     let moof;
     let firstPTS;
     let firstDTS;
-    let nextDTS;
     let lastPTS;
     let lastDTS;
+    const timeScale = track.timescale;
     const inputSamples = track.samples;
     const outputSamples = [];
     const nbSamples = inputSamples.length;
     const ptsNormalize = this._PTSNormalize;
     const initPTS = this._initPTS;
-
-    // for (let i = 0; i < track.samples.length; i++) {
-    //   let avcSample = track.samples[i];
-    //   let units = avcSample.units;
-    //   let unitsString = '';
-    //   for (let j = 0; j < units.length ; j++) {
-    //     unitsString += units[j].type + ',';
-    //     if (units[j].data.length < 500) {
-    //       unitsString += Hex.hexDump(units[j].data);
-    //     }
-    //   }
-    //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
-    // }
 
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
     let nextAvcDts = this.nextAvcDts;
@@ -284,7 +270,6 @@ class MP4Remuxer {
         logger.log(`Video/PTS/DTS adjusted: ${Math.round(firstPTS / 90)}/${Math.round(firstDTS / 90)},delta:${delta} ms`);
       }
     }
-    nextDTS = firstDTS;
 
     // compute lastPTS/lastDTS
     sample = inputSamples[inputSamples.length - 1];
@@ -440,14 +425,14 @@ class MP4Remuxer {
   }
 
   remuxAudio (track, timeOffset, contiguous, accurateTimeOffset) {
-    const inputTimeScale = track.inputTimeScale,
-      mp4timeScale = track.timescale,
-      scaleFactor = inputTimeScale / mp4timeScale,
-      mp4SampleDuration = track.isAAC ? 1024 : 1152,
-      inputSampleDuration = mp4SampleDuration * scaleFactor,
-      ptsNormalize = this._PTSNormalize,
-      initDTS = this._initDTS,
-      rawMPEG = !track.isAAC && this.typeSupported.mpeg;
+      const inputTimeScale = track.inputTimeScale;
+      const mp4timeScale = track.timescale;
+      const scaleFactor = inputTimeScale / mp4timeScale;
+      const mp4SampleDuration = track.isAAC ? 1024 : 1152;
+      const inputSampleDuration = mp4SampleDuration * scaleFactor;
+      const ptsNormalize = this._PTSNormalize;
+      const initPTS = this._initPTS;
+      const rawMPEG = !track.isAAC && this.typeSupported.mpeg;
 
     let offset,
       mp4Sample,
@@ -468,12 +453,12 @@ class MP4Remuxer {
     // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
     contiguous |= (inputSamples.length && nextAudioPts &&
                    ((accurateTimeOffset && Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1) ||
-                    Math.abs((inputSamples[0].pts - nextAudioPts - initDTS)) < 20 * inputSampleDuration)
+                    Math.abs((inputSamples[0].pts - nextAudioPts - initPTS)) < 20 * inputSampleDuration)
     );
 
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
-      sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, timeOffset * inputTimeScale);
+      sample.pts = sample.dts = ptsNormalize(sample.pts - initPTS, timeOffset * inputTimeScale);
     });
 
     // filter out sample with negative PTS that are not playable anyway
@@ -737,7 +722,7 @@ class MP4Remuxer {
     this.remuxAudio(track, timeOffset, contiguous);
   }
 
-  remuxID3 (track, timeOffset) {
+  remuxID3 (track) {
     let length = track.samples.length, sample;
     const inputTimeScale = track.inputTimeScale;
     const initPTS = this._initPTS;
@@ -757,10 +742,9 @@ class MP4Remuxer {
     }
 
     track.samples = [];
-    timeOffset = timeOffset;
   }
 
-  remuxText (track, timeOffset) {
+  remuxText (track) {
     track.samples.sort(function (a, b) {
       return (a.pts - b.pts);
     });
@@ -782,7 +766,6 @@ class MP4Remuxer {
     }
 
     track.samples = [];
-    timeOffset = timeOffset;
   }
 
   _PTSNormalize (value, reference) {
