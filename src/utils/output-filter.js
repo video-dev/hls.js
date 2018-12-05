@@ -7,12 +7,13 @@ export default class OutputFilter {
     this.screen = null;
   }
 
-  dispatchCue () {
+  dispatchCue (startTime) {
     if (this.startTime === null) {
       return;
     }
-
-    this.timelineController.addCues(this.trackName, this.startTime, this.endTime, this.screen);
+    // fall back to initial cue start time for seek, etc
+    const cueStartTime = startTime - this.startTime > 5 ? startTime : this.startTime;
+    this.timelineController.addCues(this.trackName, cueStartTime, this.endTime, this.screen);
     this.startTime = null;
   }
 
