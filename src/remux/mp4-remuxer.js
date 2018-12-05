@@ -425,14 +425,14 @@ class MP4Remuxer {
   }
 
   remuxAudio (track, timeOffset, contiguous, accurateTimeOffset) {
-      const inputTimeScale = track.inputTimeScale;
-      const mp4timeScale = track.timescale;
-      const scaleFactor = inputTimeScale / mp4timeScale;
-      const mp4SampleDuration = track.isAAC ? 1024 : 1152;
-      const inputSampleDuration = mp4SampleDuration * scaleFactor;
-      const ptsNormalize = this._PTSNormalize;
-      const initPTS = this._initPTS;
-      const rawMPEG = !track.isAAC && this.typeSupported.mpeg;
+    const inputTimeScale = track.inputTimeScale;
+    const mp4timeScale = track.timescale;
+    const scaleFactor = inputTimeScale / mp4timeScale;
+    const mp4SampleDuration = track.isAAC ? 1024 : 1152;
+    const inputSampleDuration = mp4SampleDuration * scaleFactor;
+    const ptsNormalize = this._PTSNormalize;
+    const initPTS = this._initPTS;
+    const rawMPEG = !track.isAAC && this.typeSupported.mpeg;
 
     let offset,
       mp4Sample,
