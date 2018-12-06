@@ -18,7 +18,7 @@ hls.js does not need any player, it works directly on top of a standard HTML```<
 
 hls.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using the [TypeScript compiler].
 
-Modules written in TS and plain JS/ES6 can be interdepent and imported/required by each others.
+Modules written in TS and plain JS/ES6 can be interdependent and imported/required by each other.
 
 To build our distro bundle and serve our development environment we use [Webpack].
 
@@ -255,7 +255,7 @@ Pull requests are welcome. Here is a quick guide on how to start.
  - First, checkout the repository and install required dependencies
 ```sh
 git clone https://github.com/video-dev/hls.js.git
-# setup dev environement
+# setup dev environment
 cd hls.js
 npm install
 # build dist/hls.js, watch file change for rebuild and launch demo page
