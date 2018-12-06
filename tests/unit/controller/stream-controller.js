@@ -246,15 +246,6 @@ describe('StreamController', function () {
       expect(streamController.loadedmetadata).to.not.exist;
     });
 
-    it('should set startPosition to what buffer start reports and seek', function () {
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
-      streamController.startPosition = 6;
-      streamController.loadedmetadata = false;
-      streamController._checkBuffer();
-      expect(seekStub).to.have.been.calledOnce;
-      expect(streamController.startPosition).to.equal(streamController.media.buffered.start());
-    });
-
     it('should complete the immediate switch if signalled', function () {
       const levelSwitchStub = sandbox.stub(streamController, 'immediateLevelSwitchEnd');
       streamController.loadedmetadata = true;

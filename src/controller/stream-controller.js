@@ -1374,12 +1374,6 @@ class StreamController extends TaskLoop {
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
-      // Need to check what the SourceBuffer reports as start time for the first fragment appended.
-      // If within the threshold of maxBufferHole, adjust this.startPosition for _seekToStartPos().
-      var firstbufferedPosition = buffered.start(0);
-      if (Math.abs(this.startPosition - firstbufferedPosition) < this.config.maxBufferHole) {
-        this.startPosition = firstbufferedPosition;
-      }
       this._seekToStartPos();
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
