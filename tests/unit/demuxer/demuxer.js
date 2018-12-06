@@ -89,6 +89,7 @@ describe('Demuxer tests', function () {
       sn: 6,
       level: 1,
       startDTS: 1000,
+      startPTS: 1000,
       start: undefined
     };
     let data = new ArrayBuffer(8),
