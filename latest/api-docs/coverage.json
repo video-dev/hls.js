@@ -1,7 +1,7 @@
 {
-  "coverage": "16.09%",
+  "coverage": "16%",
   "expectCount": 1243,
-  "actualCount": 200,
+  "actualCount": 199,
   "files": {
     "src/config.js": {
       "expectCount": 1,
@@ -340,11 +340,12 @@
     },
     "src/controller/level-helper.js": {
       "expectCount": 4,
-      "actualCount": 1,
+      "actualCount": 0,
       "undocumentLines": [
         12,
         29,
-        168
+        56,
+        112
       ]
     },
     "src/controller/stream-controller.js": {
@@ -433,14 +434,14 @@
         1265,
         1286,
         1342,
-        1379,
-        1390,
-        1405,
+        1383,
+        1394,
         1409,
-        1432,
-        1448,
+        1413,
+        1436,
         1452,
-        1453
+        1456,
+        1457
       ]
     },
     "src/controller/subtitle-stream-controller.js": {

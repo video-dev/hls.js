@@ -1209,14 +1209,13 @@ This function tests the candidate&apos;s program date time values, as represente
           
           
           
-          <span class="code" data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span><span class="code" data-ice="signature">(details: <span>*</span>, frag: <span>*</span>, startPTS: <span>*</span>, endPTS: <span>*</span>, startDTS: <span>*</span>, endDTS: <span>*</span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></span></span>
+          <span class="code" data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span><span class="code" data-ice="signature">(details: <span>*</span>, frag: <span>*</span>, startPTS: <span>*</span>, endPTS: <span>*</span>, startDTS: <span>*</span>, endDTS: <span>*</span>): <span>*</span></span>
         </p>
       </div>
       <div>
         
         
-        <div data-ice="description"><p>Updates the fragment object with the PTS/DTS calculated during muxing.</p>
-</div>
+        
       </div>
     </td>
     <td>
@@ -3384,11 +3383,11 @@ breaking any traps which would cause the same fragment to be continuously select
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/level-helper.js.html#lineNumber168">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/level-helper.js.html#lineNumber112">source</a></span></span>
     </span>
   </h3>
 
-  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import {mergeDetails} from &apos;<span><a href="file/src/controller/level-helper.js.html#lineNumber168">hls.js/src/controller/level-helper.js</a></span>&apos;</code></pre></div>
+  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import {mergeDetails} from &apos;<span><a href="file/src/controller/level-helper.js.html#lineNumber112">hls.js/src/controller/level-helper.js</a></span>&apos;</code></pre></div>
   
   
   
@@ -4004,22 +4003,18 @@ This function tests the candidate&apos;s program date time values, as represente
     
     
     
-    <span class="code" data-ice="name">updateFragPTSDTS</span><span class="code" data-ice="signature">(details: <span>*</span>, frag: <span>*</span>, startPTS: <span>*</span>, endPTS: <span>*</span>, startDTS: <span>*</span>, endDTS: <span>*</span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></span></span>
+    <span class="code" data-ice="name">updateFragPTSDTS</span><span class="code" data-ice="signature">(details: <span>*</span>, frag: <span>*</span>, startPTS: <span>*</span>, endPTS: <span>*</span>, startDTS: <span>*</span>, endDTS: <span>*</span>): <span>*</span></span>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/controller/level-helper.js.html#lineNumber69">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/controller/level-helper.js.html#lineNumber56">source</a></span></span>
     </span>
   </h3>
 
-  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import {updateFragPTSDTS} from &apos;<span><a href="file/src/controller/level-helper.js.html#lineNumber69">hls.js/src/controller/level-helper.js</a></span>&apos;</code></pre></div>
+  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import {updateFragPTSDTS} from &apos;<span><a href="file/src/controller/level-helper.js.html#lineNumber56">hls.js/src/controller/level-helper.js</a></span>&apos;</code></pre></div>
   
   
-  <div data-ice="description"><p>Updates the fragment object with the PTS/DTS calculated during muxing. These values are the true start and duration
-time of the fragment, which can differ from what is stated in the manifest. After updating the fragment, we recompute
-the start times of all other fragments within the level. This function is usually called once for each elementary
-stream - audio and video</p>
-</div>
+  
 
   
 
@@ -4035,43 +4030,37 @@ stream - audio and video</p>
       <td data-ice="name" class="code" data-depth="0">details</td>
       <td data-ice="type" class="code"><span>*</span></td>
       <td data-ice="appendix"></td>
-      <td data-ice="description"><p>The details of the level of which the fragment belongs</p>
-</td>
+      <td data-ice="description"></td>
     </tr>
 <tr data-ice="property" data-depth="0">
       <td data-ice="name" class="code" data-depth="0">frag</td>
       <td data-ice="type" class="code"><span>*</span></td>
       <td data-ice="appendix"></td>
-      <td data-ice="description"><p>The details of the muxed fragment</p>
-</td>
+      <td data-ice="description"></td>
     </tr>
 <tr data-ice="property" data-depth="0">
       <td data-ice="name" class="code" data-depth="0">startPTS</td>
       <td data-ice="type" class="code"><span>*</span></td>
       <td data-ice="appendix"></td>
-      <td data-ice="description"><p>The start PTS (presentation timestamp) of the fragment</p>
-</td>
+      <td data-ice="description"></td>
     </tr>
 <tr data-ice="property" data-depth="0">
       <td data-ice="name" class="code" data-depth="0">endPTS</td>
       <td data-ice="type" class="code"><span>*</span></td>
       <td data-ice="appendix"></td>
-      <td data-ice="description"><p>The end PTS of the fragment</p>
-</td>
+      <td data-ice="description"></td>
     </tr>
 <tr data-ice="property" data-depth="0">
       <td data-ice="name" class="code" data-depth="0">startDTS</td>
       <td data-ice="type" class="code"><span>*</span></td>
       <td data-ice="appendix"></td>
-      <td data-ice="description"><p>The start DTS (decode timestamp) of the fragment</p>
-</td>
+      <td data-ice="description"></td>
     </tr>
 <tr data-ice="property" data-depth="0">
       <td data-ice="name" class="code" data-depth="0">endDTS</td>
       <td data-ice="type" class="code"><span>*</span></td>
       <td data-ice="appendix"></td>
-      <td data-ice="description"><p>The end DTS of the fragment</p>
-</td>
+      <td data-ice="description"></td>
     </tr>
 </tbody>
   </table>
@@ -4083,7 +4072,7 @@ stream - audio and video</p>
     <table>
       <tbody>
         <tr>
-          <td class="return-type code" data-ice="returnType"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">number</a></span></td>
+          <td class="return-type code" data-ice="returnType"><span>*</span></td>
           
         </tr>
       </tbody>
