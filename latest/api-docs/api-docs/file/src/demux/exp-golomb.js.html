@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/demux/exp-golomb.js | hls.js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="JavaScript HLS client using MediaSourceExtension"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="hls.js"><meta property="twitter:description" content="JavaScript HLS client using MediaSourceExtension"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/video-dev/hls.js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/event-handler.js~EventHandler.html">EventHandler</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/hls.js~Hls.html">Hls</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/observer.js~Observer.html">Observer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isSupported">isSupported</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-HlsEvents">HlsEvents</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/buffer-controller.js~BufferController.html">BufferController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/cap-level-controller.js~CapLevelController.html">CapLevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/eme-controller.js~EMEController.html">EMEController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fps-controller.js~FPSController.html">FPSController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fragment-tracker.js~FragmentTracker.html">FragmentTracker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/gap-controller.js~GapController.html">GapController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/id3-track-controller.js~ID3TrackController.html">ID3TrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/level-controller.js~LevelController.html">LevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/stream-controller.js~StreamController.html">StreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPDT">findFragmentByPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragmentByPTS">findFragmentByPTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fragmentWithinToleranceTest">fragmentWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-pdtWithinToleranceTest">pdtWithinToleranceTest</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-addGroupId">addGroupId</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-mergeDetails">mergeDetails</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updatePTS">updatePTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-FragmentState">FragmentState</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-State">State</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-SubtitleStreamControllerState">SubtitleStreamControllerState</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/fast-aes-key.js~FastAESKey.html">FastAESKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-removePadding">removePadding</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#demux">demux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/aacdemuxer.js~AACDemuxer.html">AACDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer-inline.js~DemuxerInline.html">DemuxerInline</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer.js~Demuxer.html">Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/exp-golomb.js~ExpGolomb.html">ExpGolomb</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/id3.js~ID3.html">ID3</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp3demuxer.js~MP3Demuxer.html">MP3Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp4demuxer.js~MP4Demuxer.html">MP4Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/sample-aes.js~SampleAesDecrypter.html">SampleAesDecrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/tsdemuxer.js~TSDemuxer.html">TSDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-appendFrame">appendFrame</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getAudioConfig">getAudioConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFrameDuration">getFrameDuration</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFullFrameLength">getFullFrameLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getHeaderLength">getHeaderLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-initTrackConfig">initTrackConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeader">isHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeaderPattern">isHeaderPattern</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-parseFrameHeader">parseFrameHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-probe">probe</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-DemuxerWorker">DemuxerWorker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-utf8ArrayToStr">utf8ArrayToStr</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-MpegAudio">MpegAudio</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#loader">loader</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment-loader.js~FragmentLoader.html">FragmentLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/key-loader.js~KeyLoader.html">KeyLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level-key.js~LevelKey.html">LevelKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level.js~Level.html">Level</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/m3u8-parser.js~M3U8Parser.html">M3U8Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html">PlaylistLoader</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#polyfills">polyfills</a><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Number">Number</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#remux">remux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/aac-helper.js~AAC.html">AAC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/dummy-remuxer.js~DummyRemuxer.html">DummyRemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-generator.js~MP4.html">MP4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-remuxer.js~MP4Remuxer.html">MP4Remuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/passthrough-remuxer.js~PassThroughRemuxer.html">PassThroughRemuxer</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#utils">utils</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/attr-list.js~AttrList.html">AttrList</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/buffer-helper.js~BufferHelper.html">BufferHelper</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/cea-608-parser.js~Cea608Parser.html">Cea608Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma-bandwidth-estimator.js~EwmaBandWidthEstimator.html">EwmaBandWidthEstimator</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma.js~EWMA.html">EWMA</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/fetch-loader.js~FetchLoader.html">FetchLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/output-filter.js~OutputFilter.html">OutputFilter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/xhr-loader.js~XhrLoader.html">XhrLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecSupportedInMp4">isCodecSupportedInMp4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecType">isCodecType</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-newCue">newCue</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-adjustPts">adjustPts</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignDiscontinuities">alignDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignPDT">alignPDT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignStream">alignStream</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findDiscontinuousReferenceFrag">findDiscontinuousReferenceFrag</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFirstFragWithCC">findFirstFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getSelfScope">getSelfScope</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getMediaSource">getMediaSource</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-clearCurrentCues">clearCurrentCues</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-sendAddTrackEvent">sendAddTrackEvent</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Hex">Hex</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-logger">logger</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-requestMediaKeySystemAccess">requestMediaKeySystemAccess</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-WebVTTParser">WebVTTParser</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/demux/exp-golomb.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/**
+ * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
+*/
+
+import { logger } from &apos;../utils/logger&apos;;
+
+class ExpGolomb {
+  constructor (data) {
+    this.data = data;
+    // the number of bytes left to examine in this.data
+    this.bytesAvailable = data.byteLength;
+    // the current word being examined
+    this.word = 0; // :uint
+    // the number of bits left to examine in the current word
+    this.bitsAvailable = 0; // :uint
+  }
+
+  // ():void
+  loadWord () {
+    let
+      data = this.data,
+      bytesAvailable = this.bytesAvailable,
+      position = data.byteLength - bytesAvailable,
+      workingBytes = new Uint8Array(4),
+      availableBytes = Math.min(4, bytesAvailable);
+    if (availableBytes === 0) {
+      throw new Error(&apos;no bytes available&apos;);
+    }
+
+    workingBytes.set(data.subarray(position, position + availableBytes));
+    this.word = new DataView(workingBytes.buffer).getUint32(0);
+    // track the amount of this.data that has been processed
+    this.bitsAvailable = availableBytes * 8;
+    this.bytesAvailable -= availableBytes;
+  }
+
+  // (count:int):void
+  skipBits (count) {
+    let skipBytes; // :int
+    if (this.bitsAvailable &gt; count) {
+      this.word &lt;&lt;= count;
+      this.bitsAvailable -= count;
+    } else {
+      count -= this.bitsAvailable;
+      skipBytes = count &gt;&gt; 3;
+      count -= (skipBytes &gt;&gt; 3);
+      this.bytesAvailable -= skipBytes;
+      this.loadWord();
+      this.word &lt;&lt;= count;
+      this.bitsAvailable -= count;
+    }
+  }
+
+  // (size:int):uint
+  readBits (size) {
+    let
+      bits = Math.min(this.bitsAvailable, size), // :uint
+      valu = this.word &gt;&gt;&gt; (32 - bits); // :uint
+    if (size &gt; 32) {
+      logger.error(&apos;Cannot read more than 32 bits at a time&apos;);
+    }
+
+    this.bitsAvailable -= bits;
+    if (this.bitsAvailable &gt; 0) {
+      this.word &lt;&lt;= bits;
+    } else if (this.bytesAvailable &gt; 0) {
+      this.loadWord();
+    }
+
+    bits = size - bits;
+    if (bits &gt; 0 &amp;&amp; this.bitsAvailable) {
+      return valu &lt;&lt; bits | this.readBits(bits);
+    } else {
+      return valu;
+    }
+  }
+
+  // ():uint
+  skipLZ () {
+    let leadingZeroCount; // :uint
+    for (leadingZeroCount = 0; leadingZeroCount &lt; this.bitsAvailable; ++leadingZeroCount) {
+      if ((this.word &amp; (0x80000000 &gt;&gt;&gt; leadingZeroCount)) !== 0) {
+        // the first bit of working word is 1
+        this.word &lt;&lt;= leadingZeroCount;
+        this.bitsAvailable -= leadingZeroCount;
+        return leadingZeroCount;
+      }
+    }
+    // we exhausted word and still have not found a 1
+    this.loadWord();
+    return leadingZeroCount + this.skipLZ();
+  }
+
+  // ():void
+  skipUEG () {
+    this.skipBits(1 + this.skipLZ());
+  }
+
+  // ():void
+  skipEG () {
+    this.skipBits(1 + this.skipLZ());
+  }
+
+  // ():uint
+  readUEG () {
+    let clz = this.skipLZ(); // :uint
+    return this.readBits(clz + 1) - 1;
+  }
+
+  // ():int
+  readEG () {
+    let valu = this.readUEG(); // :int
+    if (0x01 &amp; valu) {
+      // the number is odd if the low order bit is set
+      return (1 + valu) &gt;&gt;&gt; 1; // add 1 to make it even, and divide by 2
+    } else {
+      return -1 * (valu &gt;&gt;&gt; 1); // divide by two then make it negative
+    }
+  }
+
+  // Some convenience functions
+  // :Boolean
+  readBoolean () {
+    return this.readBits(1) === 1;
+  }
+
+  // ():int
+  readUByte () {
+    return this.readBits(8);
+  }
+
+  // ():int
+  readUShort () {
+    return this.readBits(16);
+  }
+  // ():int
+  readUInt () {
+    return this.readBits(32);
+  }
+
+  /**
+   * Advance the ExpGolomb decoder past a scaling list. The scaling
+   * list is optionally transmitted as part of a sequence parameter
+   * set and is not relevant to transmuxing.
+   * @param count {number} the number of entries in this scaling list
+   * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
+   */
+  skipScalingList (count) {
+    let
+      lastScale = 8,
+      nextScale = 8,
+      j,
+      deltaScale;
+    for (j = 0; j &lt; count; j++) {
+      if (nextScale !== 0) {
+        deltaScale = this.readEG();
+        nextScale = (lastScale + deltaScale + 256) % 256;
+      }
+      lastScale = (nextScale === 0) ? lastScale : nextScale;
+    }
+  }
+
+  /**
+   * Read a sequence parameter set and return some interesting video
+   * properties. A sequence parameter set is the H264 metadata that
+   * describes the properties of upcoming video frames.
+   * @param data {Uint8Array} the bytes of a sequence parameter set
+   * @return {object} an object with configuration parsed from the
+   * sequence parameter set, including the dimensions of the
+   * associated video frames.
+   */
+  readSPS () {
+    let
+      frameCropLeftOffset = 0,
+      frameCropRightOffset = 0,
+      frameCropTopOffset = 0,
+      frameCropBottomOffset = 0,
+      profileIdc, profileCompat, levelIdc,
+      numRefFramesInPicOrderCntCycle, picWidthInMbsMinus1,
+      picHeightInMapUnitsMinus1,
+      frameMbsOnlyFlag,
+      scalingListCount,
+      i,
+      readUByte = this.readUByte.bind(this),
+      readBits = this.readBits.bind(this),
+      readUEG = this.readUEG.bind(this),
+      readBoolean = this.readBoolean.bind(this),
+      skipBits = this.skipBits.bind(this),
+      skipEG = this.skipEG.bind(this),
+      skipUEG = this.skipUEG.bind(this),
+      skipScalingList = this.skipScalingList.bind(this);
+
+    readUByte();
+    profileIdc = readUByte(); // profile_idc
+    profileCompat = readBits(5); // constraint_set[0-4]_flag, u(5)
+    skipBits(3); // reserved_zero_3bits u(3),
+    levelIdc = readUByte(); // level_idc u(8)
+    skipUEG(); // seq_parameter_set_id
+    // some profiles have more optional data we don&apos;t need
+    if (profileIdc === 100 ||
+        profileIdc === 110 ||
+        profileIdc === 122 ||
+        profileIdc === 244 ||
+        profileIdc === 44 ||
+        profileIdc === 83 ||
+        profileIdc === 86 ||
+        profileIdc === 118 ||
+        profileIdc === 128) {
+      let chromaFormatIdc = readUEG();
+      if (chromaFormatIdc === 3) {
+        skipBits(1);
+      } // separate_colour_plane_flag
+
+      skipUEG(); // bit_depth_luma_minus8
+      skipUEG(); // bit_depth_chroma_minus8
+      skipBits(1); // qpprime_y_zero_transform_bypass_flag
+      if (readBoolean()) { // seq_scaling_matrix_present_flag
+        scalingListCount = (chromaFormatIdc !== 3) ? 8 : 12;
+        for (i = 0; i &lt; scalingListCount; i++) {
+          if (readBoolean()) { // seq_scaling_list_present_flag[ i ]
+            if (i &lt; 6) {
+              skipScalingList(16);
+            } else {
+              skipScalingList(64);
+            }
+          }
+        }
+      }
+    }
+    skipUEG(); // log2_max_frame_num_minus4
+    let picOrderCntType = readUEG();
+    if (picOrderCntType === 0) {
+      readUEG(); // log2_max_pic_order_cnt_lsb_minus4
+    } else if (picOrderCntType === 1) {
+      skipBits(1); // delta_pic_order_always_zero_flag
+      skipEG(); // offset_for_non_ref_pic
+      skipEG(); // offset_for_top_to_bottom_field
+      numRefFramesInPicOrderCntCycle = readUEG();
+      for (i = 0; i &lt; numRefFramesInPicOrderCntCycle; i++) {
+        skipEG();
+      } // offset_for_ref_frame[ i ]
+    }
+    skipUEG(); // max_num_ref_frames
+    skipBits(1); // gaps_in_frame_num_value_allowed_flag
+    picWidthInMbsMinus1 = readUEG();
+    picHeightInMapUnitsMinus1 = readUEG();
+    frameMbsOnlyFlag = readBits(1);
+    if (frameMbsOnlyFlag === 0) {
+      skipBits(1);
+    } // mb_adaptive_frame_field_flag
+
+    skipBits(1); // direct_8x8_inference_flag
+    if (readBoolean()) { // frame_cropping_flag
+      frameCropLeftOffset = readUEG();
+      frameCropRightOffset = readUEG();
+      frameCropTopOffset = readUEG();
+      frameCropBottomOffset = readUEG();
+    }
+    let pixelRatio = [1, 1];
+    if (readBoolean()) {
+      // vui_parameters_present_flag
+      if (readBoolean()) {
+        // aspect_ratio_info_present_flag
+        const aspectRatioIdc = readUByte();
+        switch (aspectRatioIdc) {
+        case 1: pixelRatio = [1, 1]; break;
+        case 2: pixelRatio = [12, 11]; break;
+        case 3: pixelRatio = [10, 11]; break;
+        case 4: pixelRatio = [16, 11]; break;
+        case 5: pixelRatio = [40, 33]; break;
+        case 6: pixelRatio = [24, 11]; break;
+        case 7: pixelRatio = [20, 11]; break;
+        case 8: pixelRatio = [32, 11]; break;
+        case 9: pixelRatio = [80, 33]; break;
+        case 10: pixelRatio = [18, 11]; break;
+        case 11: pixelRatio = [15, 11]; break;
+        case 12: pixelRatio = [64, 33]; break;
+        case 13: pixelRatio = [160, 99]; break;
+        case 14: pixelRatio = [4, 3]; break;
+        case 15: pixelRatio = [3, 2]; break;
+        case 16: pixelRatio = [2, 1]; break;
+        case 255: {
+          pixelRatio = [readUByte() &lt;&lt; 8 | readUByte(), readUByte() &lt;&lt; 8 | readUByte()];
+          break;
+        }
+        }
+      }
+    }
+    return {
+      width: Math.ceil((((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2)),
+      height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
+      pixelRatio: pixelRatio
+    };
+  }
+
+  readSliceType () {
+    // skip NALu type
+    this.readUByte();
+    // discard first_mb_in_slice
+    this.readUEG();
+    // return slice_type
+    return this.readUEG();
+  }
+}
+
+export default ExpGolomb;
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.1.0)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
