@@ -1,4 +1,4 @@
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignPDT } from '../../../src/utils/discontinuities';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities, alignPDT } from '../../../src/utils/discontinuities';
 
 const assert = require('assert');
 
@@ -34,7 +34,7 @@ const mockFrags = [
   }
 ];
 
-describe('discontinuities', function () {
+describe('level-helper', function () {
   it('adjusts level fragments with overlapping CC range using a reference fragment', function () {
     const details = {
       fragments: mockFrags.slice(0),
