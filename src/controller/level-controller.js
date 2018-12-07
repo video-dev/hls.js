@@ -8,10 +8,13 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId } from './level-helper';
-import PlaylistLoader from '../loader/playlist-loader'
+import { LevelType } from '../loader/playlist-loader';
 
 const { performance } = window;
-let chromeOrFirefox;
+
+// FIXME: we should centralizes all usages of userAgent in codebase
+// in a module to do browser model detection (once)
+const chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
 export default class LevelController extends EventHandler {
   constructor (hls) {
@@ -27,8 +30,6 @@ export default class LevelController extends EventHandler {
     this.currentLevelIndex = null;
     this.manualLevelIndex = -1;
     this.timer = null;
-
-    chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
   }
 
   onHandlerDestroying () {
@@ -79,12 +80,8 @@ export default class LevelController extends EventHandler {
     let audioTracks = [];
     let subtitleTracks = [];
 
-    // FIXME: we should centralizes all usages of userAgent in codebase
-    let chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
-
     // regroup redundant levels together
     data.levels.forEach(level => {
-      const attributes = level.attrs;
       level.loadError = 0;
       level.fragmentError = false;
 
@@ -109,11 +106,12 @@ export default class LevelController extends EventHandler {
       }
 
       if (level.attrs && level.attrs.AUDIO) {
-        addGroupId(levelFromSet || level, PlaylistLoader.LevelType.AUDIO, level.attrs.AUDIO);
+        addGroupId(levelFromSet || level, LevelType.AUDIO, level.attrs.AUDIO);
+        audioCodecFound = true;
       }
 
       if (level.attrs && level.attrs.SUBTITLES) {
-        addGroupId(levelFromSet || level, PlaylistLoader.LevelType.SUBTITLE, level.attrs.SUBTITLES);
+        addGroupId(levelFromSet || level, LevelType.SUBTITLE, level.attrs.SUBTITLES);
       }
     });
 
