@@ -294,6 +294,20 @@ class ID3 {
    * This library is free.  You can redistribute it and/or modify it.
    */
   static _utf8ArrayToStr (array, exitOnNull = false) {
+    if (typeof window.TextDecoder !== 'undefined') {
+      const decoder = new window.TextDecoder('utf-8');
+      const decoded = decoder.decode(array);
+
+      if (exitOnNull) {
+        // grab up to the first null
+        const idx = decoded.indexOf('\0');
+        return idx !== -1 ? decoded.substring(0, idx) : decoded;
+      }
+
+      // remove any null characters
+      return decoded.replace(/\0/g, '');
+    }
+
     const len = array.length;
     let c;
     let char2;
