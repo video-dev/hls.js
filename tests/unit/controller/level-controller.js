@@ -107,6 +107,7 @@ describe('LevelController', () => {
       levelController.onManifestLoaded(data);
 
       const { name, payload } = hls.getEventData(0);
+
       assert.strictEqual(name, Event.MANIFEST_PARSED);
       assert.strictEqual(payload.video, false);
       assert.strictEqual(payload.audio, true);
@@ -122,6 +123,7 @@ describe('LevelController', () => {
       levelController.onManifestLoaded(data);
 
       const { name, payload } = hls.getEventData(0);
+
       assert.strictEqual(name, Event.MANIFEST_PARSED);
       assert.strictEqual(payload.video, false);
       assert.strictEqual(payload.audio, true);
