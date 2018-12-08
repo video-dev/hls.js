@@ -11,9 +11,9 @@ import TimeRanges from '../utils/time-ranges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
-import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import Fragment from '../loader/fragment';
+import BaseStreamController from './base-stream-controller';
 
 const { performance } = window;
 
@@ -36,7 +36,7 @@ const State = {
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
-class AudioStreamController extends TaskLoop {
+class AudioStreamController extends BaseStreamController {
   constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
@@ -209,20 +209,10 @@ class AudioStreamController extends TaskLoop {
           break;
         }
 
-        // check if we need to finalize media stream
-        // we just got done loading the final fragment and there is no other buffered range after ...
-        // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
-        // so we should not switch to ENDED in that case, to be able to buffer them
-        if (!audioSwitch && !trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN && !bufferInfo.nextStart) {
-          // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
-          // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
-          // between different renditions. using half frag duration should help cope with these cases.
-          if (!this.media.seeking || (this.media.duration - bufferEnd) < fragPrevious.duration / 2) {
-            // Finalize the media stream
-            this.hls.trigger(Event.BUFFER_EOS, { type: 'audio' });
-            this.state = State.ENDED;
-            break;
-          }
+        if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
+          this.hls.trigger(Event.BUFFER_EOS, { type: 'audio' });
+          this.state = State.ENDED;
+          return;
         }
 
         // find fragment index, contiguous with end of buffer position

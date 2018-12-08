@@ -14,9 +14,9 @@ import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { alignStream } from '../utils/discontinuities';
-import TaskLoop from '../task-loop';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import GapController from './gap-controller';
+import BaseStreamController from './base-stream-controller';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -34,7 +34,7 @@ export const State = {
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
-class StreamController extends TaskLoop {
+class StreamController extends BaseStreamController {
   constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
@@ -239,32 +239,16 @@ class StreamController extends TaskLoop {
       return;
     }
 
-    // we just got done loading the final fragment and there is no other buffered range after ...
-    // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
-    // so we should not switch to ENDED in that case, to be able to buffer them
-    // dont switch to ENDED if we need to backtrack last fragment
-    let fragPrevious = this.fragPrevious;
-    if (!levelDetails.live && fragPrevious && !fragPrevious.backtracked && fragPrevious.sn === levelDetails.endSN && !bufferInfo.nextStart) {
-      // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
-      // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
-      const duration = Math.min(media.duration, fragPrevious.start + fragPrevious.duration);
-      // if everything (almost) til the end is buffered, let's signal eos
-      // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference (audio/video offsets...)
-      // tolerate up to one frag duration to cope with these cases.
-      // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
-      if (duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration)) {
-        // Finalize the media stream
-        let data = {};
-        if (this.altAudio) {
-          data.type = 'video';
-        }
-
-        this.hls.trigger(Event.BUFFER_EOS, data);
-        this.state = State.ENDED;
-        return;
+    if (this._streamEnded(bufferInfo, levelDetails)) {
+      const data = {};
+      if (this.altAudio) {
+        data.type = 'video';
       }
-    }
 
+      this.hls.trigger(Event.BUFFER_EOS, data);
+      this.state = State.ENDED;
+      return;
+    }
     // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
     this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
   }
@@ -1368,7 +1352,7 @@ class StreamController extends TaskLoop {
       this.loadedmetadata = true;
       // Need to check what the SourceBuffer reports as start time for the first fragment appended.
       // If within the threshold of maxBufferHole, adjust this.startPosition for _seekToStartPos().
-      var firstbufferedPosition = buffered.start(0);
+      let firstbufferedPosition = buffered.start(0);
       if (Math.abs(this.startPosition - firstbufferedPosition) < this.config.maxBufferHole) {
         this.startPosition = firstbufferedPosition;
       }
