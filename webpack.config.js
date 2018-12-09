@@ -129,7 +129,8 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
     plugins: mainPlugins,
     devtool: 'source-map'
@@ -144,7 +145,8 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     plugins: mainPlugins,
     devtool: 'source-map'
@@ -160,7 +162,8 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     resolve: {
       alias: getAliasesForLightDist()
@@ -178,7 +181,8 @@ const multiConfig = [
       publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
-      libraryExport: 'default'
+      libraryExport: 'default',
+      globalObject: 'this'
     },
     resolve: {
       alias: getAliasesForLightDist()
