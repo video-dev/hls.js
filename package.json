@@ -39,7 +39,7 @@
     "test": "npm run test:unit && npm run test:func",
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
-    "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000"
+    "test:func": "BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000"
   },
   "dependencies": {
     "eventemitter3": "3.1.0",
@@ -50,6 +50,7 @@
     "@babel/helper-module-imports": "7.0.0",
     "@babel/preset-env": "7.2.0",
     "@babel/preset-typescript": "^7.1.0",
+    "@babel/register": "^7.0.0",
     "arraybuffer-equal": "^1.0.4",
     "babel-loader": "8.0.4",
     "chromedriver": "^2.38.3",
