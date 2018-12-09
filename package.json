@@ -78,14 +78,12 @@
     "selenium-webdriver": "^3.1.0",
     "sinon": "7.1.1",
     "sinon-chai": "3.3.0",
-    "ts-loader": "^4.4.2",
-    "ts-node": "^6.1.0",
     "typescript": "^3.3.1",
     "typescript-eslint-parser": "^21.0.2",
     "webpack": "^4.27.1",
     "webpack-cli": "^3.1.2",
     "webpack-dev-server": "^3.1.4",
     "webpack-merge": "^4.2.1",
-    "webworkify-webpack": "git+ssh://git@github.com:johnBartos/webworkify-webpack.git#refs/heads/master"
+    "webworkify-webpack": "git://git@github.com:johnBartos/webworkify-webpack.git#refs/heads/master"
   }
 }
