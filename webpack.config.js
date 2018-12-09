@@ -22,7 +22,10 @@ const createDefinePlugin = (type) => {
   return new webpack.DefinePlugin(buildConstants);
 };
 
-const basePlugins = [new webpack.optimize.ModuleConcatenationPlugin()];
+const basePlugins = [
+  new webpack.optimize.ModuleConcatenationPlugin(),
+  new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' })// SSR/Node.js guard
+];
 const mainPlugins = [...basePlugins, createDefinePlugin('main')];
 const lightPlugins = [...basePlugins, createDefinePlugin('light')];
 
