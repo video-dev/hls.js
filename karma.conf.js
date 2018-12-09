@@ -4,6 +4,7 @@
 const pkgJson = require('./package.json');
 const webpack = require('webpack');
 const path = require('path');
+const importHelper = require('@babel/helper-module-imports');
 
 module.exports = function (config) {
   config.set({
@@ -24,7 +25,6 @@ module.exports = function (config) {
 
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
-    // node_modules must not be webpacked or else Karma will fail to load frameworks
     preprocessors: {
       'tests/index.js': ['webpack', 'sourcemap']
     },
@@ -44,18 +44,54 @@ module.exports = function (config) {
       devtool: 'inline-source-map',
       resolve: {
         extensions: ['.ts', '.js']
-      },module: {
+      },
+      module: {
         rules: [
           {
             test: /\.(ts|js)$/,
             include: path.resolve(__dirname, 'src'),
             exclude: path.resolve(__dirname, 'node_modules'),
-            loader: 'ts-loader'
-          },// instrument only testing sources with Istanbul
+            loader: 'babel-loader',
+            options: {
+              babelrc: false,
+              presets: [
+                '@babel/preset-typescript',
+                ['@babel/preset-env', {
+                  loose: true,
+                  modules: false,
+                  targets: {
+                    browsers: [
+                      'chrome >= 47',
+                      'firefox >= 51',
+                      'ie >= 11',
+                      'safari >= 8',
+                      'ios >= 8',
+                      'android >= 4'
+                    ]
+                  }
+                }]
+              ],
+              plugins: [
+                ['@babel/plugin-proposal-class-properties', {
+                  loose: true
+                }],
+                '@babel/plugin-proposal-object-rest-spread',
+                {
+                  visitor: {
+                    CallExpression: function (espath) {
+                      if (espath.get('callee').matchesPattern('Number.isFinite')) {
+                        espath.node.callee = importHelper.addNamed(espath, 'isFiniteNumber', path.resolve('src/polyfills/number-isFinite'));
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }, // instrument only testing sources with Istanbul
           {
             test: /\.(ts|js)$/,
-
-            exclude: path.resolve(__dirname, 'node_modules'),enforce: 'post',
+            exclude: path.resolve(__dirname, 'node_modules'),
+            enforce: 'post',
             use: [
               {
                 loader: 'istanbul-instrumenter-loader',
