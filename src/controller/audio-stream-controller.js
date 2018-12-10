@@ -328,8 +328,8 @@ class AudioStreamController extends BaseStreamController {
             logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
             // only load if fragment is not loaded or if in audio switch
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
-            if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
               this.fragCurrent = frag;
+              if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
               this.startFragRequested = true;
               if (Number.isFinite(frag.sn)) {
                 this.nextLoadPosition = frag.start + frag.duration;
