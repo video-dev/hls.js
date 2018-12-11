@@ -17,7 +17,8 @@ export const State = {
   BUFFER_FLUSHING: 'BUFFER_FLUSHING',
   ENDED: 'ENDED',
   ERROR: 'ERROR',
-  WAITING_INIT_PTS: 'WAITING_INIT_PTS'
+  WAITING_INIT_PTS: 'WAITING_INIT_PTS',
+  WAITING_LEVEL: 'WAITING_LEVEL'
 };
 
 export default class BaseStreamController extends TaskLoop {
