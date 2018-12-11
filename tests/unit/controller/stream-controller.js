@@ -1,7 +1,8 @@
 import Hls from '../../../src/hls';
 import Event from '../../../src/events';
 import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
-import StreamController, { State } from '../../../src/controller/stream-controller';
+import StreamController from '../../../src/controller/stream-controller';
+import { State } from '../../../src/controller/base-stream-controller';
 import { mockFragments } from '../../mocks/data';
 import Fragment from '../../../src/loader/fragment';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
