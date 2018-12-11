@@ -16,21 +16,7 @@ import { logger } from '../utils/logger';
 import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import GapController from './gap-controller';
-import BaseStreamController from './base-stream-controller';
-
-export const State = {
-  STOPPED: 'STOPPED',
-  IDLE: 'IDLE',
-  KEY_LOADING: 'KEY_LOADING',
-  FRAG_LOADING: 'FRAG_LOADING',
-  FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
-  WAITING_LEVEL: 'WAITING_LEVEL',
-  PARSING: 'PARSING',
-  PARSED: 'PARSED',
-  BUFFER_FLUSHING: 'BUFFER_FLUSHING',
-  ENDED: 'ENDED',
-  ERROR: 'ERROR'
-};
+import BaseStreamController, { State } from './base-stream-controller';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -734,57 +720,6 @@ class StreamController extends BaseStreamController {
     this.stopLoad();
   }
 
-  onMediaSeeking () {
-    let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
-    if (Number.isFinite(currentTime)) {
-      logger.log(`media seeking to ${currentTime.toFixed(3)}`);
-    }
-
-    let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-    let bufferInfo = BufferHelper.bufferInfo(mediaBuffer, currentTime, this.config.maxBufferHole);
-    if (this.state === State.FRAG_LOADING) {
-      let fragCurrent = this.fragCurrent;
-      // check if we are seeking to a unbuffered area AND if frag loading is in progress
-      if (bufferInfo.len === 0 && fragCurrent) {
-        let tolerance = config.maxFragLookUpTolerance,
-          fragStartOffset = fragCurrent.start - tolerance,
-          fragEndOffset = fragCurrent.start + fragCurrent.duration + tolerance;
-        // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
-        if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
-          if (fragCurrent.loader) {
-            logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
-            fragCurrent.loader.abort();
-          }
-          this.fragCurrent = null;
-          this.fragPrevious = null;
-          // switch to IDLE state to load new fragment
-          this.state = State.IDLE;
-        } else {
-          logger.log('seeking outside of buffer but within currently loaded fragment range');
-        }
-      }
-    } else if (this.state === State.ENDED) {
-      // if seeking to unbuffered area, clean up fragPrevious
-      if (bufferInfo.len === 0) {
-        this.fragPrevious = 0;
-      }
-
-      // switch to IDLE state to check for potential new fragment
-      this.state = State.IDLE;
-    }
-    if (media) {
-      this.lastCurrentTime = currentTime;
-    }
-
-    // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.loadedmetadata) {
-      this.nextLoadPosition = this.startPosition = currentTime;
-    }
-
-    // tick to speed up processing
-    this.tick();
-  }
-
   onMediaSeeked () {
     const media = this.media, currentTime = media ? media.currentTime : undefined;
     if (Number.isFinite(currentTime)) {
@@ -793,12 +728,6 @@ class StreamController extends BaseStreamController {
 
     // tick to speed up FRAGMENT_PLAYING triggering
     this.tick();
-  }
-
-  onMediaEnded () {
-    logger.log('media ended');
-    // reset startPosition and lastCurrentTime to restart playback @ stream beginning
-    this.startPosition = this.lastCurrentTime = 0;
   }
 
   onManifestLoading () {

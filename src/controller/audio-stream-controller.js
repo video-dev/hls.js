@@ -13,26 +13,8 @@ import { logger } from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
 import { FragmentState } from './fragment-tracker';
 import Fragment from '../loader/fragment';
-import BaseStreamController from './base-stream-controller';
-
+import BaseStreamController, { State } from './base-stream-controller';
 const { performance } = window;
-
-const State = {
-  STOPPED: 'STOPPED',
-  STARTING: 'STARTING',
-  IDLE: 'IDLE',
-  PAUSED: 'PAUSED',
-  KEY_LOADING: 'KEY_LOADING',
-  FRAG_LOADING: 'FRAG_LOADING',
-  FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
-  WAITING_TRACK: 'WAITING_TRACK',
-  PARSING: 'PARSING',
-  PARSED: 'PARSED',
-  BUFFER_FLUSHING: 'BUFFER_FLUSHING',
-  ENDED: 'ENDED',
-  ERROR: 'ERROR',
-  WAITING_INIT_PTS: 'WAITING_INIT_PTS'
-};
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -427,24 +409,6 @@ class AudioStreamController extends BaseStreamController {
     this.media = this.mediaBuffer = this.videoBuffer = null;
     this.loadedmetadata = false;
     this.stopLoad();
-  }
-
-  onMediaSeeking () {
-    if (this.state === State.ENDED) {
-      // switch to IDLE state to check for potential new fragment
-      this.state = State.IDLE;
-    }
-    if (this.media) {
-      this.lastCurrentTime = this.media.currentTime;
-    }
-
-    // tick to speed up processing
-    this.tick();
-  }
-
-  onMediaEnded () {
-    // reset startPosition and lastCurrentTime to restart playback @ stream beginning
-    this.startPosition = this.lastCurrentTime = 0;
   }
 
   onAudioTracksUpdated (data) {
