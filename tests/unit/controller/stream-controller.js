@@ -207,9 +207,6 @@ describe('StreamController', function () {
       };
       streamController.media = {
         buffered: {
-          start: function () {
-            return 6.014;
-          },
           length: 1
         }
       };
@@ -245,15 +242,6 @@ describe('StreamController', function () {
       streamController._checkBuffer();
       assert(seekStub.notCalled);
       assert.strictEqual(streamController.loadedmetadata, undefined);
-    });
-
-    it('should set startPosition to what buffer start reports and seek', function () {
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
-      streamController.startPosition = 6;
-      streamController.loadedmetadata = false;
-      streamController._checkBuffer();
-      assert(seekStub.calledOnce);
-      assert.strictEqual(streamController.startPosition, streamController.media.buffered.start());
     });
 
     it('should complete the immediate switch if signalled', function () {
