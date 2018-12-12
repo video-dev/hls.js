@@ -9146,7 +9146,7 @@ var Hls = /** @class */ (function (_super) {
          * @type {string}
          */
         get: function () {
-            return "0.12.0-45436cd";
+            return "0.12.0";
         },
         enumerable: true,
         configurable: true

@@ -1441,13 +1441,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/audio-track-controller.js~audiotrackcontroller#audiotrack",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-set-audioTrack",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-get-audioTrack",
     "src/controller/audio-track-controller.js~AudioTrackController#audioTrack",
     "member"
   ],
   [
     "src/controller/audio-track-controller.js~audiotrackcontroller#audiotrack",
-    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-get-audioTrack",
+    "class/src/controller/audio-track-controller.js~AudioTrackController.html#instance-set-audioTrack",
     "src/controller/audio-track-controller.js~AudioTrackController#audioTrack",
     "member"
   ],
@@ -2659,13 +2659,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#manuallevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-manualLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-manualLevel",
     "src/controller/level-controller.js~LevelController#manualLevel",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#manuallevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-manualLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-manualLevel",
     "src/controller/level-controller.js~LevelController#manualLevel",
     "member"
   ],
@@ -2677,13 +2677,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/level-controller.js~levelcontroller#nextloadlevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-set-nextLoadLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-get-nextLoadLevel",
     "src/controller/level-controller.js~LevelController#nextLoadLevel",
     "member"
   ],
   [
     "src/controller/level-controller.js~levelcontroller#nextloadlevel",
-    "class/src/controller/level-controller.js~LevelController.html#instance-get-nextLoadLevel",
+    "class/src/controller/level-controller.js~LevelController.html#instance-set-nextLoadLevel",
     "src/controller/level-controller.js~LevelController#nextLoadLevel",
     "member"
   ],
@@ -3037,13 +3037,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#livesyncposition",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-set-liveSyncPosition",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-get-liveSyncPosition",
     "src/controller/stream-controller.js~StreamController#liveSyncPosition",
     "member"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#livesyncposition",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-get-liveSyncPosition",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-set-liveSyncPosition",
     "src/controller/stream-controller.js~StreamController#liveSyncPosition",
     "member"
   ],
@@ -3277,13 +3277,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#state",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-get-state",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-set-state",
     "src/controller/stream-controller.js~StreamController#state",
     "member"
   ],
   [
     "src/controller/stream-controller.js~streamcontroller#state",
-    "class/src/controller/stream-controller.js~StreamController.html#instance-set-state",
+    "class/src/controller/stream-controller.js~StreamController.html#instance-get-state",
     "src/controller/stream-controller.js~StreamController#state",
     "member"
   ],
@@ -5179,13 +5179,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#autolevelcapping",
-    "class/src/hls.js~Hls.html#instance-set-autoLevelCapping",
+    "class/src/hls.js~Hls.html#instance-get-autoLevelCapping",
     "src/hls.js~Hls#autoLevelCapping",
     "member"
   ],
   [
     "src/hls.js~hls#autolevelcapping",
-    "class/src/hls.js~Hls.html#instance-get-autoLevelCapping",
+    "class/src/hls.js~Hls.html#instance-set-autoLevelCapping",
     "src/hls.js~Hls#autoLevelCapping",
     "member"
   ],
@@ -5245,13 +5245,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#firstlevel",
-    "class/src/hls.js~Hls.html#instance-set-firstLevel",
+    "class/src/hls.js~Hls.html#instance-get-firstLevel",
     "src/hls.js~Hls#firstLevel",
     "member"
   ],
   [
     "src/hls.js~hls#firstlevel",
-    "class/src/hls.js~Hls.html#instance-get-firstLevel",
+    "class/src/hls.js~Hls.html#instance-set-firstLevel",
     "src/hls.js~Hls#firstLevel",
     "member"
   ],
@@ -5269,13 +5269,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#loadlevel",
-    "class/src/hls.js~Hls.html#instance-set-loadLevel",
+    "class/src/hls.js~Hls.html#instance-get-loadLevel",
     "src/hls.js~Hls#loadLevel",
     "member"
   ],
   [
     "src/hls.js~hls#loadlevel",
-    "class/src/hls.js~Hls.html#instance-get-loadLevel",
+    "class/src/hls.js~Hls.html#instance-set-loadLevel",
     "src/hls.js~Hls#loadLevel",
     "member"
   ],
@@ -5359,13 +5359,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/hls.js~hls#startlevel",
-    "class/src/hls.js~Hls.html#instance-set-startLevel",
+    "class/src/hls.js~Hls.html#instance-get-startLevel",
     "src/hls.js~Hls#startLevel",
     "member"
   ],
   [
     "src/hls.js~hls#startlevel",
-    "class/src/hls.js~Hls.html#instance-get-startLevel",
+    "class/src/hls.js~Hls.html#instance-set-startLevel",
     "src/hls.js~Hls#startLevel",
     "member"
   ],
@@ -5647,13 +5647,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/loader/fragment.js~fragment#url",
-    "class/src/loader/fragment.js~Fragment.html#instance-set-url",
+    "class/src/loader/fragment.js~Fragment.html#instance-get-url",
     "src/loader/fragment.js~Fragment#url",
     "member"
   ],
   [
     "src/loader/fragment.js~fragment#url",
-    "class/src/loader/fragment.js~Fragment.html#instance-get-url",
+    "class/src/loader/fragment.js~Fragment.html#instance-set-url",
     "src/loader/fragment.js~Fragment#url",
     "member"
   ],
