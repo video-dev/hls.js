@@ -9146,7 +9146,7 @@ var Hls = /** @class */ (function (_super) {
          * @type {string}
          */
         get: function () {
-            return "0.12.0";
+            return "0.12.1-bugfix-negative-pts-vtt-SNAPSHOT-315bbb6";
         },
         enumerable: true,
         configurable: true
