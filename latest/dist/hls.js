@@ -11597,7 +11597,7 @@ var Hls = /** @class */ (function (_super) {
          * @type {string}
          */
         get: function () {
-            return "0.11.1-canary.4148";
+            return "0.12.1-canary.4149";
         },
         enumerable: true,
         configurable: true
@@ -17887,27 +17887,6 @@ var calculateOffset = function (vttCCs, cc, presentationTime) {
     }
     vttCCs.presentationOffset = presentationTime;
 };
-var wrapPtsInteger = function (value, reference) {
-    var offset;
-    if (!Number.isFinite(reference)) {
-        return value;
-    }
-    if (reference < value) {
-        // - 2^33
-        offset = -8589934592;
-    }
-    else {
-        // + 2^33
-        offset = 8589934592;
-    }
-    /* PTS is 33bit (from 0 to 2^33 -1)
-      if diff between value and reference is bigger than half of the amplitude (2^32) then it means that
-      PTS looping occured. fill the gap */
-    while (Math.abs(value - reference) > 4294967296) {
-        value += offset;
-    }
-    return value;
-};
 var WebVTTParser = {
     parse: function (vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
@@ -17981,7 +17960,9 @@ var WebVTTParser = {
                     });
                     try {
                         // Calculate subtitle offset in milliseconds.
-                        mpegTs = wrapPtsInteger(mpegTs - syncPTS, vttCCs.ccOffset * 90000);
+                        syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;
+                        // Adjust MPEGTS by sync PTS.
+                        mpegTs -= syncPTS;
                         // Convert cue time to seconds
                         localTime = cueString2millis(cueTime) / 1000;
                         // Convert MPEGTS to seconds from 90kHz.

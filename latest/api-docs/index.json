@@ -28774,7 +28774,7 @@
     "__docId__": 1746,
     "kind": "file",
     "name": "src/utils/webvtt-parser.js",
-    "content": "import VTTParser from './vttparser';\nimport { utf8ArrayToStr } from '../demux/id3';\n\n// String.prototype.startsWith is not supported in IE11\nconst startsWith = function (inputString, searchString, position) {\n  return inputString.substr(position || 0, searchString.length) === searchString;\n};\n\nconst cueString2millis = function (timeString) {\n  let ts = parseInt(timeString.substr(-3));\n  let secs = parseInt(timeString.substr(-6, 2));\n  let mins = parseInt(timeString.substr(-9, 2));\n  let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;\n\n  if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {\n    return -1;\n  }\n\n  ts += 1000 * secs;\n  ts += 60 * 1000 * mins;\n  ts += 60 * 60 * 1000 * hours;\n\n  return ts;\n};\n\n// From https://github.com/darkskyapp/string-hash\nconst hash = function (text) {\n  let hash = 5381;\n  let i = text.length;\n  while (i) {\n    hash = (hash * 33) ^ text.charCodeAt(--i);\n  }\n\n  return (hash >>> 0).toString();\n};\n\nconst calculateOffset = function (vttCCs, cc, presentationTime) {\n  let currCC = vttCCs[cc];\n  let prevCC = vttCCs[currCC.prevCC];\n\n  // This is the first discontinuity or cues have been processed since the last discontinuity\n  // Offset = current discontinuity time\n  if (!prevCC || (!prevCC.new && currCC.new)) {\n    vttCCs.ccOffset = vttCCs.presentationOffset = currCC.start;\n    currCC.new = false;\n    return;\n  }\n\n  // There have been discontinuities since cues were last parsed.\n  // Offset = time elapsed\n  while (prevCC && prevCC.new) {\n    vttCCs.ccOffset += currCC.start - prevCC.start;\n    currCC.new = false;\n    currCC = prevCC;\n    prevCC = vttCCs[currCC.prevCC];\n  }\n\n  vttCCs.presentationOffset = presentationTime;\n};\n\nconst wrapPtsInteger = function (value, reference) {\n  let offset;\n  if (!Number.isFinite(reference)) {\n    return value;\n  }\n\n  if (reference < value) {\n    // - 2^33\n    offset = -8589934592;\n  } else {\n    // + 2^33\n    offset = 8589934592;\n  }\n  /* PTS is 33bit (from 0 to 2^33 -1)\n    if diff between value and reference is bigger than half of the amplitude (2^32) then it means that\n    PTS looping occured. fill the gap */\n  while (Math.abs(value - reference) > 4294967296) {\n    value += offset;\n  }\n\n  return value;\n};\n\nconst WebVTTParser = {\n  parse: function (vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {\n    // Convert byteArray into string, replacing any somewhat exotic linefeeds with \"\\n\", then split on that character.\n    let re = /\\r\\n|\\n\\r|\\n|\\r/g;\n    // Uint8Array.prototype.reduce is not implemented in IE11\n    let vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\\n').split('\\n');\n\n    let cueTime = '00:00.000';\n    let mpegTs = 0;\n    let localTime = 0;\n    let presentationTime = 0;\n    let cues = [];\n    let parsingError;\n    let inHeader = true;\n    // let VTTCue = VTTCue || window.TextTrackCue;\n\n    // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.\n    let parser = new VTTParser();\n\n    parser.oncue = function (cue) {\n      // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.\n      let currCC = vttCCs[cc];\n      let cueOffset = vttCCs.ccOffset;\n\n      // Update offsets for new discontinuities\n      if (currCC && currCC.new) {\n        if (localTime !== undefined) {\n          // When local time is provided, offset = discontinuity start time - local time\n          cueOffset = vttCCs.ccOffset = currCC.start;\n        } else {\n          calculateOffset(vttCCs, cc, presentationTime);\n        }\n      }\n\n      if (presentationTime) {\n        // If we have MPEGTS, offset = presentation time + discontinuity offset\n        cueOffset = presentationTime - vttCCs.presentationOffset;\n      }\n\n      cue.startTime += cueOffset - localTime;\n      cue.endTime += cueOffset - localTime;\n\n      // Create a unique hash id for a cue based on start/end times and text.\n      // This helps timeline-controller to avoid showing repeated captions.\n      cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);\n\n      // Fix encoding of special characters. TODO: Test with all sorts of weird characters.\n      cue.text = decodeURIComponent(encodeURIComponent(cue.text));\n      if (cue.endTime > 0) {\n        cues.push(cue);\n      }\n    };\n\n    parser.onparsingerror = function (e) {\n      parsingError = e;\n    };\n\n    parser.onflush = function () {\n      if (parsingError && errorCallBack) {\n        errorCallBack(parsingError);\n        return;\n      }\n      callBack(cues);\n    };\n\n    // Go through contents line by line.\n    vttLines.forEach(line => {\n      if (inHeader) {\n        // Look for X-TIMESTAMP-MAP in header.\n        if (startsWith(line, 'X-TIMESTAMP-MAP=')) {\n          // Once found, no more are allowed anyway, so stop searching.\n          inHeader = false;\n          // Extract LOCAL and MPEGTS.\n          line.substr(16).split(',').forEach(timestamp => {\n            if (startsWith(timestamp, 'LOCAL:')) {\n              cueTime = timestamp.substr(6);\n            } else if (startsWith(timestamp, 'MPEGTS:')) {\n              mpegTs = parseInt(timestamp.substr(7));\n            }\n          });\n          try {\n            // Calculate subtitle offset in milliseconds.\n            mpegTs = wrapPtsInteger(mpegTs - syncPTS, vttCCs.ccOffset * 90000);\n            // Convert cue time to seconds\n            localTime = cueString2millis(cueTime) / 1000;\n            // Convert MPEGTS to seconds from 90kHz.\n            presentationTime = mpegTs / 90000;\n\n            if (localTime === -1) {\n              parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);\n            }\n          } catch (e) {\n            parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);\n          }\n          // Return without parsing X-TIMESTAMP-MAP line.\n          return;\n        } else if (line === '') {\n          inHeader = false;\n        }\n      }\n      // Parse line by default.\n      parser.parse(line + '\\n');\n    });\n\n    parser.flush();\n  }\n};\n\nexport default WebVTTParser;\n",
+    "content": "import VTTParser from './vttparser';\nimport { utf8ArrayToStr } from '../demux/id3';\n\n// String.prototype.startsWith is not supported in IE11\nconst startsWith = function (inputString, searchString, position) {\n  return inputString.substr(position || 0, searchString.length) === searchString;\n};\n\nconst cueString2millis = function (timeString) {\n  let ts = parseInt(timeString.substr(-3));\n  let secs = parseInt(timeString.substr(-6, 2));\n  let mins = parseInt(timeString.substr(-9, 2));\n  let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;\n\n  if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {\n    return -1;\n  }\n\n  ts += 1000 * secs;\n  ts += 60 * 1000 * mins;\n  ts += 60 * 60 * 1000 * hours;\n\n  return ts;\n};\n\n// From https://github.com/darkskyapp/string-hash\nconst hash = function (text) {\n  let hash = 5381;\n  let i = text.length;\n  while (i) {\n    hash = (hash * 33) ^ text.charCodeAt(--i);\n  }\n\n  return (hash >>> 0).toString();\n};\n\nconst calculateOffset = function (vttCCs, cc, presentationTime) {\n  let currCC = vttCCs[cc];\n  let prevCC = vttCCs[currCC.prevCC];\n\n  // This is the first discontinuity or cues have been processed since the last discontinuity\n  // Offset = current discontinuity time\n  if (!prevCC || (!prevCC.new && currCC.new)) {\n    vttCCs.ccOffset = vttCCs.presentationOffset = currCC.start;\n    currCC.new = false;\n    return;\n  }\n\n  // There have been discontinuities since cues were last parsed.\n  // Offset = time elapsed\n  while (prevCC && prevCC.new) {\n    vttCCs.ccOffset += currCC.start - prevCC.start;\n    currCC.new = false;\n    currCC = prevCC;\n    prevCC = vttCCs[currCC.prevCC];\n  }\n\n  vttCCs.presentationOffset = presentationTime;\n};\n\nconst WebVTTParser = {\n  parse: function (vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {\n    // Convert byteArray into string, replacing any somewhat exotic linefeeds with \"\\n\", then split on that character.\n    let re = /\\r\\n|\\n\\r|\\n|\\r/g;\n    // Uint8Array.prototype.reduce is not implemented in IE11\n    let vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\\n').split('\\n');\n\n    let cueTime = '00:00.000';\n    let mpegTs = 0;\n    let localTime = 0;\n    let presentationTime = 0;\n    let cues = [];\n    let parsingError;\n    let inHeader = true;\n    // let VTTCue = VTTCue || window.TextTrackCue;\n\n    // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.\n    let parser = new VTTParser();\n\n    parser.oncue = function (cue) {\n      // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.\n      let currCC = vttCCs[cc];\n      let cueOffset = vttCCs.ccOffset;\n\n      // Update offsets for new discontinuities\n      if (currCC && currCC.new) {\n        if (localTime !== undefined) {\n          // When local time is provided, offset = discontinuity start time - local time\n          cueOffset = vttCCs.ccOffset = currCC.start;\n        } else {\n          calculateOffset(vttCCs, cc, presentationTime);\n        }\n      }\n\n      if (presentationTime) {\n        // If we have MPEGTS, offset = presentation time + discontinuity offset\n        cueOffset = presentationTime - vttCCs.presentationOffset;\n      }\n\n      cue.startTime += cueOffset - localTime;\n      cue.endTime += cueOffset - localTime;\n\n      // Create a unique hash id for a cue based on start/end times and text.\n      // This helps timeline-controller to avoid showing repeated captions.\n      cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);\n\n      // Fix encoding of special characters. TODO: Test with all sorts of weird characters.\n      cue.text = decodeURIComponent(encodeURIComponent(cue.text));\n      if (cue.endTime > 0) {\n        cues.push(cue);\n      }\n    };\n\n    parser.onparsingerror = function (e) {\n      parsingError = e;\n    };\n\n    parser.onflush = function () {\n      if (parsingError && errorCallBack) {\n        errorCallBack(parsingError);\n        return;\n      }\n      callBack(cues);\n    };\n\n    // Go through contents line by line.\n    vttLines.forEach(line => {\n      if (inHeader) {\n        // Look for X-TIMESTAMP-MAP in header.\n        if (startsWith(line, 'X-TIMESTAMP-MAP=')) {\n          // Once found, no more are allowed anyway, so stop searching.\n          inHeader = false;\n          // Extract LOCAL and MPEGTS.\n          line.substr(16).split(',').forEach(timestamp => {\n            if (startsWith(timestamp, 'LOCAL:')) {\n              cueTime = timestamp.substr(6);\n            } else if (startsWith(timestamp, 'MPEGTS:')) {\n              mpegTs = parseInt(timestamp.substr(7));\n            }\n          });\n          try {\n            // Calculate subtitle offset in milliseconds.\n            syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;\n            // Adjust MPEGTS by sync PTS.\n            mpegTs -= syncPTS;\n            // Convert cue time to seconds\n            localTime = cueString2millis(cueTime) / 1000;\n            // Convert MPEGTS to seconds from 90kHz.\n            presentationTime = mpegTs / 90000;\n\n            if (localTime === -1) {\n              parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);\n            }\n          } catch (e) {\n            parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);\n          }\n          // Return without parsing X-TIMESTAMP-MAP line.\n          return;\n        } else if (line === '') {\n          inHeader = false;\n        }\n      }\n      // Parse line by default.\n      parser.parse(line + '\\n');\n    });\n\n    parser.flush();\n  }\n};\n\nexport default WebVTTParser;\n",
     "static": true,
     "longname": "/home/travis/build/video-dev/hls.js/src/utils/webvtt-parser.js",
     "access": "public",
@@ -28927,43 +28927,6 @@
   },
   {
     "__docId__": 1751,
-    "kind": "function",
-    "name": "wrapPtsInteger",
-    "memberof": "src/utils/webvtt-parser.js",
-    "generator": false,
-    "async": false,
-    "static": true,
-    "longname": "src/utils/webvtt-parser.js~wrapPtsInteger",
-    "access": "public",
-    "export": false,
-    "importPath": "hls.js/src/utils/webvtt-parser.js",
-    "importStyle": null,
-    "description": null,
-    "lineNumber": 61,
-    "undocument": true,
-    "params": [
-      {
-        "name": "value",
-        "types": [
-          "*"
-        ]
-      },
-      {
-        "name": "reference",
-        "types": [
-          "*"
-        ]
-      }
-    ],
-    "return": {
-      "types": [
-        "*"
-      ]
-    },
-    "ignore": true
-  },
-  {
-    "__docId__": 1752,
     "kind": "variable",
     "name": "WebVTTParser",
     "memberof": "src/utils/webvtt-parser.js",
@@ -28974,7 +28937,7 @@
     "importPath": "hls.js/src/utils/webvtt-parser.js",
     "importStyle": "WebVTTParser",
     "description": null,
-    "lineNumber": 84,
+    "lineNumber": 61,
     "undocument": true,
     "type": {
       "types": [
@@ -28983,7 +28946,7 @@
     }
   },
   {
-    "__docId__": 1753,
+    "__docId__": 1752,
     "kind": "file",
     "name": "src/utils/xhr-loader.js",
     "content": "/**\n * XHR based logger\n*/\n\nimport { logger } from '../utils/logger';\n\nconst { performance, XMLHttpRequest } = window;\n\nclass XhrLoader {\n  constructor (config) {\n    if (config && config.xhrSetup) {\n      this.xhrSetup = config.xhrSetup;\n    }\n  }\n\n  destroy () {\n    this.abort();\n    this.loader = null;\n  }\n\n  abort () {\n    let loader = this.loader;\n    if (loader && loader.readyState !== 4) {\n      this.stats.aborted = true;\n      loader.abort();\n    }\n\n    window.clearTimeout(this.requestTimeout);\n    this.requestTimeout = null;\n    window.clearTimeout(this.retryTimeout);\n    this.retryTimeout = null;\n  }\n\n  load (context, config, callbacks) {\n    this.context = context;\n    this.config = config;\n    this.callbacks = callbacks;\n    this.stats = { trequest: performance.now(), retry: 0 };\n    this.retryDelay = config.retryDelay;\n    this.loadInternal();\n  }\n\n  loadInternal () {\n    let xhr, context = this.context;\n    xhr = this.loader = new XMLHttpRequest();\n\n    let stats = this.stats;\n    stats.tfirst = 0;\n    stats.loaded = 0;\n    const xhrSetup = this.xhrSetup;\n\n    try {\n      if (xhrSetup) {\n        try {\n          xhrSetup(xhr, context.url);\n        } catch (e) {\n          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader(\"Content-Language\", \"test\");}\n          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN\n          xhr.open('GET', context.url, true);\n          xhrSetup(xhr, context.url);\n        }\n      }\n      if (!xhr.readyState) {\n        xhr.open('GET', context.url, true);\n      }\n    } catch (e) {\n      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS\n      this.callbacks.onError({ code: xhr.status, text: e.message }, context, xhr);\n      return;\n    }\n\n    if (context.rangeEnd) {\n      xhr.setRequestHeader('Range', 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1));\n    }\n\n    xhr.onreadystatechange = this.readystatechange.bind(this);\n    xhr.onprogress = this.loadprogress.bind(this);\n    xhr.responseType = context.responseType;\n\n    // setup timeout before we perform request\n    this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);\n    xhr.send();\n  }\n\n  readystatechange (event) {\n    let xhr = event.currentTarget,\n      readyState = xhr.readyState,\n      stats = this.stats,\n      context = this.context,\n      config = this.config;\n\n    // don't proceed if xhr has been aborted\n    if (stats.aborted) {\n      return;\n    }\n\n    // >= HEADERS_RECEIVED\n    if (readyState >= 2) {\n      // clear xhr timeout and rearm it if readyState less than 4\n      window.clearTimeout(this.requestTimeout);\n      if (stats.tfirst === 0) {\n        stats.tfirst = Math.max(performance.now(), stats.trequest);\n      }\n\n      if (readyState === 4) {\n        let status = xhr.status;\n        // http status between 200 to 299 are all successful\n        if (status >= 200 && status < 300) {\n          stats.tload = Math.max(stats.tfirst, performance.now());\n          let data, len;\n          if (context.responseType === 'arraybuffer') {\n            data = xhr.response;\n            len = data.byteLength;\n          } else {\n            data = xhr.responseText;\n            len = data.length;\n          }\n          stats.loaded = stats.total = len;\n          let response = { url: xhr.responseURL, data: data };\n          this.callbacks.onSuccess(response, stats, context, xhr);\n        } else {\n          // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error\n          if (stats.retry >= config.maxRetry || (status >= 400 && status < 499)) {\n            logger.error(`${status} while loading ${context.url}`);\n            this.callbacks.onError({ code: status, text: xhr.statusText }, context, xhr);\n          } else {\n            // retry\n            logger.warn(`${status} while loading ${context.url}, retrying in ${this.retryDelay}...`);\n            // aborts and resets internal state\n            this.destroy();\n            // schedule retry\n            this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);\n            // set exponential backoff\n            this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);\n            stats.retry++;\n          }\n        }\n      } else {\n        // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet\n        this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout);\n      }\n    }\n  }\n\n  loadtimeout () {\n    logger.warn(`timeout while loading ${this.context.url}`);\n    this.callbacks.onTimeout(this.stats, this.context, null);\n  }\n\n  loadprogress (event) {\n    let xhr = event.currentTarget,\n      stats = this.stats;\n\n    stats.loaded = event.loaded;\n    if (event.lengthComputable) {\n      stats.total = event.total;\n    }\n\n    let onProgress = this.callbacks.onProgress;\n    if (onProgress) {\n      // third arg is to provide on progress data\n      onProgress(stats, this.context, null, xhr);\n    }\n  }\n}\n\nexport default XhrLoader;\n",
@@ -28994,7 +28957,7 @@
     "lineNumber": 1
   },
   {
-    "__docId__": 1754,
+    "__docId__": 1753,
     "kind": "variable",
     "name": "performance",
     "memberof": "src/utils/xhr-loader.js",
@@ -29015,7 +28978,7 @@
     "ignore": true
   },
   {
-    "__docId__": 1755,
+    "__docId__": 1754,
     "kind": "class",
     "name": "XhrLoader",
     "memberof": "src/utils/xhr-loader.js",
@@ -29031,7 +28994,7 @@
     "interface": false
   },
   {
-    "__docId__": 1756,
+    "__docId__": 1755,
     "kind": "constructor",
     "name": "constructor",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29045,7 +29008,7 @@
     "undocument": true
   },
   {
-    "__docId__": 1757,
+    "__docId__": 1756,
     "kind": "member",
     "name": "xhrSetup",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29062,7 +29025,7 @@
     }
   },
   {
-    "__docId__": 1758,
+    "__docId__": 1757,
     "kind": "method",
     "name": "destroy",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29078,7 +29041,7 @@
     "return": null
   },
   {
-    "__docId__": 1759,
+    "__docId__": 1758,
     "kind": "member",
     "name": "loader",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29095,7 +29058,7 @@
     }
   },
   {
-    "__docId__": 1760,
+    "__docId__": 1759,
     "kind": "method",
     "name": "abort",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29111,7 +29074,7 @@
     "return": null
   },
   {
-    "__docId__": 1761,
+    "__docId__": 1760,
     "kind": "member",
     "name": "requestTimeout",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29128,7 +29091,7 @@
     }
   },
   {
-    "__docId__": 1762,
+    "__docId__": 1761,
     "kind": "member",
     "name": "retryTimeout",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29145,7 +29108,7 @@
     }
   },
   {
-    "__docId__": 1763,
+    "__docId__": 1762,
     "kind": "method",
     "name": "load",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29180,7 +29143,7 @@
     "return": null
   },
   {
-    "__docId__": 1764,
+    "__docId__": 1763,
     "kind": "member",
     "name": "context",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29197,7 +29160,7 @@
     }
   },
   {
-    "__docId__": 1765,
+    "__docId__": 1764,
     "kind": "member",
     "name": "config",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29214,7 +29177,7 @@
     }
   },
   {
-    "__docId__": 1766,
+    "__docId__": 1765,
     "kind": "member",
     "name": "callbacks",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29231,7 +29194,7 @@
     }
   },
   {
-    "__docId__": 1767,
+    "__docId__": 1766,
     "kind": "member",
     "name": "stats",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29248,7 +29211,7 @@
     }
   },
   {
-    "__docId__": 1768,
+    "__docId__": 1767,
     "kind": "member",
     "name": "retryDelay",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29265,7 +29228,7 @@
     }
   },
   {
-    "__docId__": 1769,
+    "__docId__": 1768,
     "kind": "method",
     "name": "loadInternal",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29281,7 +29244,7 @@
     "return": null
   },
   {
-    "__docId__": 1771,
+    "__docId__": 1770,
     "kind": "method",
     "name": "readystatechange",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29304,7 +29267,7 @@
     "return": null
   },
   {
-    "__docId__": 1775,
+    "__docId__": 1774,
     "kind": "method",
     "name": "loadtimeout",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29320,7 +29283,7 @@
     "return": null
   },
   {
-    "__docId__": 1776,
+    "__docId__": 1775,
     "kind": "method",
     "name": "loadprogress",
     "memberof": "src/utils/xhr-loader.js~XhrLoader",
@@ -29352,7 +29315,7 @@
   },
   {
     "kind": "packageJSON",
-    "content": "{\"name\":\"hls.js\",\"license\":\"Apache-2.0\",\"description\":\"JavaScript HLS client using MediaSourceExtension\",\"homepage\":\"https://github.com/video-dev/hls.js\",\"authors\":\"Guillaume du Pontavice <g.du.pontavice@gmail.com>\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/video-dev/hls.js\"},\"bugs\":{\"url\":\"https://github.com/video-dev/hls.js/issues\"},\"main\":\"./dist/hls.js\",\"nyc\":{\"reporter\":[\"lcov\"],\"exclude\":[\"tests\"]},\"publishConfig\":{\"access\":\"public\"},\"scripts\":{\"build\":\"webpack --progress\",\"build:debug\":\"webpack --progress --env.debug\",\"build:watch\":\"webpack --progress --env.debug --watch\",\"build:analyze\":\"ANALYZE=true webpack --progress\",\"dev\":\"webpack-dev-server --progress --env.debug --port 8000\",\"docs\":\"esdoc\",\"lint\":\"./scripts/lint.sh\",\"lint:fix\":\"./scripts/lint.sh --fix\",\"lint:quiet\":\"./scripts/lint.sh --quiet\",\"precommit\":\"./scripts/precommit.sh\",\"pretest\":\"npm run lint\",\"start\":\"npm run dev\",\"test\":\"npm run test:unit && npm run test:func\",\"test:unit\":\"karma start karma.conf.js\",\"test:unit:watch\":\"karma start karma.conf.js --auto-watch --no-single-run\",\"test:func\":\"mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000\"},\"dependencies\":{\"eventemitter3\":\"3.1.0\",\"url-toolkit\":\"^2.1.6\"},\"devDependencies\":{\"arraybuffer-equal\":\"^1.0.4\",\"chromedriver\":\"^2.38.3\",\"deep-strict-equal\":\"^0.2.0\",\"esdoc\":\"^1.1.0\",\"esdoc-standard-plugin\":\"^1.0.0\",\"esdoc-typescript-plugin\":\"^1.0.1\",\"eslint\":\"^4.13.1\",\"eslint-config-standard\":\"^11.0.0\",\"eslint-plugin-import\":\"^2.9.0\",\"eslint-plugin-node\":\"^6.0.1\",\"eslint-plugin-promise\":\"^3.6.0\",\"eslint-plugin-standard\":\"^3.0.1\",\"eslint-plugin-typescript\":\"^0.12.0\",\"git-commit-info\":\"^1.0.0\",\"git-tag-version\":\"^1.2.0\",\"http-server\":\"^0.11.0\",\"husky\":\"^0.14.3\",\"istanbul-instrumenter-loader\":\"^3.0.1\",\"karma\":\"^2.0.0\",\"karma-chrome-launcher\":\"^2.2.0\",\"karma-coverage-istanbul-reporter\":\"^1.3.0\",\"karma-mocha\":\"^1.3.0\",\"karma-mocha-reporter\":\"^2.2.3\",\"karma-should\":\"^1.0.0\",\"karma-sinon\":\"^1.0.5\",\"karma-sourcemap-loader\":\"^0.3.7\",\"karma-webpack\":\"^3.0.0\",\"mocha\":\"^3.0.2\",\"selenium-webdriver\":\"^3.1.0\",\"should\":\"^13.1.3\",\"sinon\":\"^4.1.3\",\"ts-loader\":\"^4.4.2\",\"ts-node\":\"^6.1.0\",\"typescript\":\"^2.9.1\",\"typescript-eslint-parser\":\"^16.0.0\",\"webpack\":\"^4.11.1\",\"webpack-bundle-analyzer\":\"^2.9.1\",\"webpack-cli\":\"^3.0.2\",\"webpack-dev-server\":\"^3.1.4\",\"webworkify-webpack\":\"^2.1.2\"},\"version\":\"0.11.1-canary.4148\"}",
+    "content": "{\"name\":\"hls.js\",\"license\":\"Apache-2.0\",\"description\":\"JavaScript HLS client using MediaSourceExtension\",\"homepage\":\"https://github.com/video-dev/hls.js\",\"authors\":\"Guillaume du Pontavice <g.du.pontavice@gmail.com>\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/video-dev/hls.js\"},\"bugs\":{\"url\":\"https://github.com/video-dev/hls.js/issues\"},\"main\":\"./dist/hls.js\",\"nyc\":{\"reporter\":[\"lcov\"],\"exclude\":[\"tests\"]},\"publishConfig\":{\"access\":\"public\"},\"scripts\":{\"build\":\"webpack --progress\",\"build:debug\":\"webpack --progress --env.debug\",\"build:watch\":\"webpack --progress --env.debug --watch\",\"build:analyze\":\"ANALYZE=true webpack --progress\",\"dev\":\"webpack-dev-server --progress --env.debug --port 8000\",\"docs\":\"esdoc\",\"lint\":\"./scripts/lint.sh\",\"lint:fix\":\"./scripts/lint.sh --fix\",\"lint:quiet\":\"./scripts/lint.sh --quiet\",\"precommit\":\"./scripts/precommit.sh\",\"pretest\":\"npm run lint\",\"start\":\"npm run dev\",\"test\":\"npm run test:unit && npm run test:func\",\"test:unit\":\"karma start karma.conf.js\",\"test:unit:watch\":\"karma start karma.conf.js --auto-watch --no-single-run\",\"test:func\":\"mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000\"},\"dependencies\":{\"eventemitter3\":\"3.1.0\",\"url-toolkit\":\"^2.1.6\"},\"devDependencies\":{\"arraybuffer-equal\":\"^1.0.4\",\"chromedriver\":\"^2.38.3\",\"deep-strict-equal\":\"^0.2.0\",\"esdoc\":\"^1.1.0\",\"esdoc-standard-plugin\":\"^1.0.0\",\"esdoc-typescript-plugin\":\"^1.0.1\",\"eslint\":\"^4.13.1\",\"eslint-config-standard\":\"^11.0.0\",\"eslint-plugin-import\":\"^2.9.0\",\"eslint-plugin-node\":\"^6.0.1\",\"eslint-plugin-promise\":\"^3.6.0\",\"eslint-plugin-standard\":\"^3.0.1\",\"eslint-plugin-typescript\":\"^0.12.0\",\"git-commit-info\":\"^1.0.0\",\"git-tag-version\":\"^1.2.0\",\"http-server\":\"^0.11.0\",\"husky\":\"^0.14.3\",\"istanbul-instrumenter-loader\":\"^3.0.1\",\"karma\":\"^2.0.0\",\"karma-chrome-launcher\":\"^2.2.0\",\"karma-coverage-istanbul-reporter\":\"^1.3.0\",\"karma-mocha\":\"^1.3.0\",\"karma-mocha-reporter\":\"^2.2.3\",\"karma-should\":\"^1.0.0\",\"karma-sinon\":\"^1.0.5\",\"karma-sourcemap-loader\":\"^0.3.7\",\"karma-webpack\":\"^3.0.0\",\"mocha\":\"^3.0.2\",\"selenium-webdriver\":\"^3.1.0\",\"should\":\"^13.1.3\",\"sinon\":\"^4.1.3\",\"ts-loader\":\"^4.4.2\",\"ts-node\":\"^6.1.0\",\"typescript\":\"^2.9.1\",\"typescript-eslint-parser\":\"^16.0.0\",\"webpack\":\"^4.11.1\",\"webpack-bundle-analyzer\":\"^2.9.1\",\"webpack-cli\":\"^3.0.2\",\"webpack-dev-server\":\"^3.1.4\",\"webworkify-webpack\":\"^2.1.2\"},\"version\":\"0.12.1-canary.4149\"}",
     "longname": "/home/travis/build/video-dev/hls.js/package.json",
     "name": "package.json",
     "static": true,

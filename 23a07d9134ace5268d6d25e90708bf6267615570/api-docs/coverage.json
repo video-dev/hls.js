@@ -1,6 +1,6 @@
 {
-  "coverage": "15.93%",
-  "expectCount": 1249,
+  "coverage": "15.94%",
+  "expectCount": 1248,
   "actualCount": 199,
   "files": {
     "src/config.js": {
@@ -1466,15 +1466,14 @@
       ]
     },
     "src/utils/webvtt-parser.js": {
-      "expectCount": 6,
+      "expectCount": 5,
       "actualCount": 0,
       "undocumentLines": [
         5,
         9,
         27,
         37,
-        61,
-        84
+        61
       ]
     },
     "src/utils/xhr-loader.js": {
