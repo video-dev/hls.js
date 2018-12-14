@@ -79,7 +79,10 @@ function getPluginsForConfig(type, minify = false) {
 
   const defineConstants = getConstantsForConfig(type);
 
-  // console.log('DefinePlugin constants:', JSON.stringify(defineConstants, null, 2))
+  console.log(
+    'Created config type:', type,
+    '\nMinify:', minify,
+    '\nCompile-time constants:', JSON.stringify(defineConstants, null, 2), '\n');
 
   const plugins = [
     new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
@@ -250,7 +253,7 @@ module.exports = (envArgs) => {
   }
 
   console.log(
-    `Building configs: ${configs.map(config => config.name).join(', ')}.\n`
+    `Building config names: ${configs.map(config => config.name).join(', ')}.\n`
   );
 
   return configs;
