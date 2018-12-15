@@ -46,7 +46,7 @@ _Note you can access the docs for a particular version using "http://video-dev.g
 [https://hls-js.netlify.com/demo](https://hls-js.netlify.com/demo)
 
 ### Master
-[https://hls-js-latest.netlify.com//demo](https://hls-js-latest.netlify.com//demo)
+[https://hls-js-latest.netlify.com/demo](https://hls-js-latest.netlify.com/demo)
 
 ### Specific Version
 Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md).
