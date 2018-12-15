@@ -57,7 +57,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ];
     echo "Already published."
   fi
   npm run docs
-  ./scripts/build-deploy-gh-pages.sh
+  ./scripts/build-deploy-netlify.sh
 else
 	echo "Unknown travis mode: ${TRAVIS_MODE}" 1>&2
 	exit 1
