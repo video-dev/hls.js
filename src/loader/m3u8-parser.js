@@ -14,9 +14,14 @@ import { isCodecType } from '../utils/codecs';
  */
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
-const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
+const MASTER_PLAYLIST_STREAM_INF_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_SESSION_DATA_REGEX = /#EXT-X-SESSION-DATA:(.*)/g;
+const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
+
+const MASTER_PLAYLIST_PARSE_REGEX = new RegExp([
+  `(${MASTER_PLAYLIST_STREAM_INF_REGEX.source})`,
+  `(${MASTER_PLAYLIST_SESSION_DATA_REGEX.source})`
+].join('|'), 'g');
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
@@ -29,6 +34,23 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)([^:]*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
+
+function setLevelCodecs (level, codecs) {
+  ['video', 'audio'].forEach((type) => {
+    const filtered = codecs.filter((codec) => isCodecType(codec, type));
+    if (filtered.length) {
+      const preferred = filtered.filter((codec) => {
+        return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+      });
+      level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
+
+      // remove from list
+      codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
+    }
+  });
+
+  level.unknownCodecs = codecs;
+}
 
 export default class M3U8Parser {
   static findGroup (groups, mediaGroupId) {
@@ -64,50 +86,59 @@ export default class M3U8Parser {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
+  /**
+   * @param result {RegExpExecArray}
+   * @private
+   */
+  static _parseMasterPlaylistLevel (result, baseurl) {
+    const level = {};
+
+    const attrs = level.attrs = new AttrList(result[1]);
+    level.url = M3U8Parser.resolve(result[2], baseurl);
+
+    const resolution = attrs.decimalResolution('RESOLUTION');
+    if (resolution) {
+      level.width = resolution.width;
+      level.height = resolution.height;
+    }
+    level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
+    level.name = attrs.NAME;
+
+    setLevelCodecs(level, [].concat((attrs.CODECS || '').split(/[ ,]+/)));
+
+    if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+      level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
+    }
+
+    return level;
+  }
+
   static parseMasterPlaylist (string, baseurl) {
-    let levels = [], result;
-    MASTER_PLAYLIST_REGEX.lastIndex = 0;
+    let levels = [];
+    let sessionData = {};
+    let hasSessionData = false;
+    let result, tmp;
 
-    function setCodecs (codecs, level) {
-      ['video', 'audio'].forEach((type) => {
-        const filtered = codecs.filter((codec) => isCodecType(codec, type));
-        if (filtered.length) {
-          const preferred = filtered.filter((codec) => {
-            return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
-          });
-          level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
+    MASTER_PLAYLIST_PARSE_REGEX.lastIndex = 0;
+    MASTER_PLAYLIST_SESSION_DATA_REGEX.lastIndex = 0;
+    MASTER_PLAYLIST_STREAM_INF_REGEX.lastIndex = 0;
 
-          // remove from list
-          codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
+    while ((tmp = MASTER_PLAYLIST_PARSE_REGEX.exec(string)) != null) {
+      if ((result = MASTER_PLAYLIST_STREAM_INF_REGEX.exec(tmp[0])) !== null) {
+        levels.push(this._parseMasterPlaylistLevel(result, baseurl));
+      } else if ((result = MASTER_PLAYLIST_SESSION_DATA_REGEX.exec(tmp))) {
+        let sessionAttrs = new AttrList(result[1]);
+        if (sessionAttrs['DATA-ID']) {
+          hasSessionData = true;
+          sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
         }
-      });
-
-      level.unknownCodecs = codecs;
+      }
     }
 
-    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
-      const level = {};
-
-      const attrs = level.attrs = new AttrList(result[1]);
-      level.url = M3U8Parser.resolve(result[2], baseurl);
-
-      const resolution = attrs.decimalResolution('RESOLUTION');
-      if (resolution) {
-        level.width = resolution.width;
-        level.height = resolution.height;
-      }
-      level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
-      level.name = attrs.NAME;
-
-      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
-
-      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
-        level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
-      }
-
-      levels.push(level);
-    }
-    return levels;
+    return {
+      levels,
+      sessionData: hasSessionData ? sessionData : null
+    };
   }
 
   static parseMasterPlaylistMedia (string, baseurl, type, audioGroups = []) {
@@ -143,23 +174,6 @@ export default class M3U8Parser {
       }
     }
     return medias;
-  }
-
-  static parseMasterPlaylistSessionData (string) {
-    let result;
-    let sessionData = {};
-    let hasSessionData = false;
-    MASTER_PLAYLIST_SESSION_DATA_REGEX.lastIndex = 0;
-
-    while ((result = MASTER_PLAYLIST_SESSION_DATA_REGEX.exec(string)) != null) {
-      let sessionAttrs = new AttrList(result[1]);
-      if (sessionAttrs['DATA-ID']) {
-        hasSessionData = true;
-        sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
-      }
-    }
-
-    return hasSessionData ? sessionData : null;
   }
 
   static parseLevelPlaylist (string, baseurl, id, type, levelUrlId) {

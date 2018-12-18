@@ -284,7 +284,7 @@ class PlaylistLoader extends EventHandler {
 
     const url = PlaylistLoader.getResponseUrl(response, context);
 
-    const levels = M3U8Parser.parseMasterPlaylist(string, url);
+    const { levels, sessionData } = M3U8Parser.parseMasterPlaylist(string, url);
     if (!levels.length) {
       this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
       return;
@@ -329,7 +329,7 @@ class PlaylistLoader extends EventHandler {
       url,
       stats,
       networkDetails,
-      sessionData: M3U8Parser.parseMasterPlaylistSessionData(string)
+      sessionData
     });
   }
 
