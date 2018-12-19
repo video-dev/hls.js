@@ -1,6 +1,6 @@
 import {
   getAudioConfig, isHeaderPattern, getHeaderLength, getFullFrameLength, isHeader, probe,
-  initTrackConfig, getFrameDuration, parseFrameHeader, appendFrame,
+  initTrackConfig, getFrameDuration, parseFrameHeader, appendFrame
 } from '../../../src/demux/adts';
 import { ErrorTypes } from '../../../src/errors';
 
@@ -332,7 +332,7 @@ describe('initTrackConfig', () => {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
-      manifestCodec: 'mp4a.40.29' 
+      manifestCodec: 'mp4a.40.29'
     });
   });
 });
