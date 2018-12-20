@@ -456,21 +456,24 @@ export default class Hls {
   }
 
   /**
-   * Return if the current instance is current capped to Player Size.
-   *
-   * @type {boolean}
-   */
-  get capLevelToPlayerSize () {
-    return this.config.capLevelToPlayerSize;
-  }
-
-  /**
    * set  dynamically set capLevelToPlayerSize against (`CapLevelController`)
    *
    * @type {boolean}
    */
   set capLevelToPlayerSize (shouldStartCapping) {
-    this.capLevelController.toggleCapLevelToPlayerSize(shouldStartCapping);
+    const newCapLevelToPlayerSize = !!shouldStartCapping;
+
+    if (newCapLevelToPlayerSize !== this.config.capLevelToPlayerSize) {
+      if (newCapLevelToPlayerSize) {
+        this.capLevelController.startCapping(); // If capping occurs, nextLevelSwitch will happen based on size.
+      } else {
+        this.capLevelController.stopCapping();
+        this.autoLevelCapping = -1;
+        this.streamController.nextLevelSwitch(); // Now we're uncapped, get the next level asap.
+      }
+
+      this.config.capLevelToPlayerSize = !!newCapLevelToPlayerSize;
+    }
   }
 
   /**
