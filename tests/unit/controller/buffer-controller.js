@@ -2,6 +2,8 @@ import assert from 'assert';
 import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import BufferController from '../../../src/controller/buffer-controller';
+import Event from '../../../src/events';
+import { logger } from '../../../src/utils/logger';
 
 describe('BufferController tests', function () {
   let hls;
@@ -47,6 +49,7 @@ describe('BufferController tests', function () {
     });
 
     it('exits early if not live', function () {
+      bufferController._live = null;
       bufferController.flushLiveBackBuffer();
       assert(removeStub.notCalled);
     });
@@ -187,6 +190,161 @@ describe('BufferController tests', function () {
 
       assert.strictEqual(createSbStub.calledOnce, true);
       assert.strictEqual(createSbStub.calledWith({ audio: {}, video: {} }), true);
+    });
+
+    it('creates sourceBuffers given valid tracks', function () {
+      createSbStub.restore();
+      bufferController.sourceBuffer = {};
+      bufferController.mediaSource = {
+        addSourceBuffer: function () {
+          return {
+            addEventListener: function () {}
+          };
+        }
+      };
+      const hlsTriggerSpy = sandbox.spy(bufferController.hls, 'trigger');
+
+      bufferController.createSourceBuffers({
+        audio: { container: 'audio/mp4', codec: 'mp4a.40.29' },
+        video: { container: 'video/mp2t', levelCodec: 'avc1.640028' }
+      });
+      assert.strictEqual(hlsTriggerSpy.args[0][0], Event.BUFFER_CREATED);
+    });
+
+    it('triggers ERROR event given wrong MIME type in createSourceBuffers', function () {
+      createSbStub.restore();
+      bufferController.sourceBuffer = {};
+      bufferController.mediaSource = {
+        addSourceBuffer: function () {
+          throw new Error('NotSupportedError');
+        }
+      };
+      const hlsTriggerSpy = sandbox.spy(bufferController.hls, 'trigger');
+
+      bufferController.createSourceBuffers({
+        audio: { container: 'audio/xxx', codec: 'mp4a.40.29' }
+      });
+      assert.strictEqual(hlsTriggerSpy.args[0][0], Event.ERROR);
+    });
+  });
+
+  describe('media attaching and detaching', function () {
+    it('does not create media source if media unexists when attaching media', function () {
+      bufferController.onMediaAttaching({});
+      assert.strictEqual(bufferController.mediaSource, undefined);
+    });
+
+    it('assigns media src with object url representation of the media source when attaching media', function () {
+      const mockMedia = {};
+
+      bufferController.onMediaAttaching({
+        media: mockMedia
+      });
+      assert.strictEqual(typeof mockMedia.src === 'undefined', false);
+      assert.strictEqual(mockMedia.src, bufferController._objectUrl);
+    });
+
+    it('triggers MEDIA_ATTACHED event if sourceopen event happens on media source when attaching media', function () {
+      const hlsTriggerSpy = sandbox.spy(bufferController.hls, 'trigger');
+
+      bufferController.onMediaSourceOpen();
+      assert.strictEqual(hlsTriggerSpy.args[0][0], Event.MEDIA_ATTACHED);
+    });
+
+    it('removes sourceopen listener if sourceopen event happens on media source when attaching media', function () {
+      const removeEventListenerSpy = sandbox.spy();
+      bufferController.mediaSource = {
+        removeEventListener: removeEventListenerSpy
+      };
+
+      bufferController.onMediaSourceOpen();
+      assert.strictEqual(removeEventListenerSpy.args[0][0], 'sourceopen');
+    });
+
+    it('simply logs if sourceclose or sourceended events happen on media source when attaching media', function () {
+      const logSpy = sandbox.spy(logger, 'log');
+
+      bufferController.onMediaSourceClose();
+      assert.strictEqual(logSpy.calledOnce, true);
+      bufferController.onMediaSourceEnded();
+      assert.strictEqual(logSpy.calledTwice, true);
+    });
+
+    it('triggers MEDIA_DETACHED event when detaching media', function () {
+      const hlsTriggerSpy = sandbox.spy(bufferController.hls, 'trigger');
+
+      bufferController.onMediaDetaching();
+      assert.strictEqual(hlsTriggerSpy.args[0][0], Event.MEDIA_DETACHED);
+    });
+
+    it('terminates stream and resets media source if media source exists when detaching media', function () {
+      const endOfStreamSpy = sandbox.spy();
+      bufferController.mediaSource = {
+        readyState: 'open',
+        endOfStream: endOfStreamSpy,
+        removeEventListener: function () {}
+      };
+
+      bufferController.onMediaDetaching();
+      assert.strictEqual(endOfStreamSpy.calledOnce, true);
+      assert.strictEqual(bufferController.mediaSource, null);
+    });
+
+    it('does not terminate media stream if media source ready state is not open when detaching media', function () {
+      const endOfStreamSpy = sandbox.spy();
+      bufferController.mediaSource = {
+        readyState: 'closed',
+        endOfStream: endOfStreamSpy,
+        removeEventListener: function () {}
+      };
+
+      bufferController.onMediaDetaching();
+      assert.strictEqual(endOfStreamSpy.called, false);
+    });
+
+    it('continues to clean other things even if terminating media stream fails when detaching media', function () {
+      const endOfStreamSpy = sandbox.spy();
+      bufferController.mediaSource = {
+        readyState: 'open',
+        endOfStream: function () {
+          throw new Error('Some source buffer is in updating');
+        },
+        removeEventListener: function () {}
+      };
+
+      bufferController.onMediaDetaching();
+      assert.strictEqual(bufferController.mediaSource, null);
+    });
+
+    it('cleans up video tag on if it is our own url when detaching media', function () {
+      const Blob = window.Blob;
+      const objectUrl = window.URL.createObjectURL(new Blob(['xxx']));
+      const mockMedia = {
+        src: objectUrl,
+        removeAttribute: sandbox.spy(),
+        load: sandbox.spy()
+      };
+      const mockMediaSource = {
+        readyState: 'open',
+        endOfStream: function () {},
+        removeEventListener: function () {}
+      };
+      bufferController.mediaSource = mockMediaSource;
+      bufferController._objectUrl = window.URL.createObjectURL(new Blob(['yyy']));
+      bufferController.media = mockMedia;
+
+      bufferController.onMediaDetaching();
+      assert.strictEqual(mockMedia.load.called, false);
+
+      bufferController.media = mockMedia;
+      bufferController.mediaSource = mockMediaSource;
+      // make the url to be the same as media src
+      bufferController._objectUrl = objectUrl;
+
+      bufferController.onMediaDetaching();
+      assert.strictEqual(mockMedia.removeAttribute.args[0][0], 'src');
+      assert.strictEqual(mockMedia.load.calledOnce, true);
+      assert.strictEqual(bufferController.media, null);
     });
   });
 });
