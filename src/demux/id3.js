@@ -294,8 +294,8 @@ class ID3 {
    * This library is free.  You can redistribute it and/or modify it.
    */
   static _utf8ArrayToStr (array, exitOnNull = false) {
-    if (typeof window.TextDecoder !== 'undefined') {
-      const decoder = new window.TextDecoder('utf-8');
+    const decoder = getTextDecoder();
+    if (decoder) {
       const decoded = decoder.decode(array);
 
       if (exitOnNull) {
@@ -345,6 +345,16 @@ class ID3 {
     }
     return out;
   }
+}
+
+let decoder;
+
+function getTextDecoder () {
+  if (!decoder && typeof window.TextDecoder !== 'undefined') {
+    decoder = new window.TextDecoder('utf-8');
+  }
+
+  return decoder;
 }
 
 const utf8ArrayToStr = ID3._utf8ArrayToStr;
