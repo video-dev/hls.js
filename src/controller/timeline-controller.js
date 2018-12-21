@@ -213,7 +213,16 @@ class TimelineController extends EventHandler {
   onManifestLoading () {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
-    this.vttCCs = { ccOffset: 0, presentationOffset: 0 }; // Detect discontinuity in subtitle manifests
+    // Detect discontinuity in subtitle manifests
+    // The start time for cc 0 is always 0; initialize it here first so that we don't accidentally set to the currentTime
+    // when captions are enabled.
+    this.vttCCs = {
+      ccOffset: 0,
+      presentationOffset: 0,
+      0: {
+        start: 0, prevCC: -1, new: false
+      }
+    };
     this._cleanTracks();
   }
 
