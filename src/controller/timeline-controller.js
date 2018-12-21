@@ -165,8 +165,9 @@ class TimelineController extends EventHandler {
       ccOffset: 0,
       presentationOffset: 0,
       0: {
-          start: 0, prevCC: -1, new: false,
-      }};
+        start: 0, prevCC: -1, new: false
+      }
+    };
     this._cleanTracks();
   }
 
