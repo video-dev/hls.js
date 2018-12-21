@@ -140,7 +140,9 @@ const WebVTTParser = {
           });
           try {
             // Calculate subtitle offset in milliseconds.
-            syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;
+            if (syncPTS + ((vttCCs[cc].start * 90000) || 0) < 0) {
+              syncPTS += 8589934592;
+            }
             // Adjust MPEGTS by sync PTS.
             mpegTs -= syncPTS;
             // Convert cue time to seconds
