@@ -5,11 +5,8 @@ set -e
 
 id=$(git rev-parse HEAD)
 root="./netlify"
-tag=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "")
-idShort=$(echo "$id" | cut -c 1-8)
-if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
-  idShort="$idShort ($tag)"
-fi
+version=$(jq -r -e '.version' "./package.json")
+idShort="$(echo "$id" | cut -c 1-8) ($version)"
 latestSiteId="642d9ad4-f002-4104-9309-40ed9cd81a1f"
 stableSiteId="deef7ecf-4c3e-4de0-b6bb-676b02e1c20e"
 
@@ -41,8 +38,8 @@ echo "Created site '$commitSiteId'."
 
 deploy "$commitSiteId"
 deploy "$latestSiteId"
-if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
-  echo "Detected tag: $tag"
+if [[ $version != *"-"* ]]; then
+  echo "Detected new version: $version"
   deploy "$stableSiteId"
 fi
 echo "Finished deploying to netlify."
