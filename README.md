@@ -18,7 +18,7 @@ hls.js does not need any player, it works directly on top of a standard HTML```<
 
 hls.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using the [TypeScript compiler].
 
-Modules written in TS and plain JS/ES6 can be interdepent and imported/required by each others.
+Modules written in TS and plain JS/ES6 can be interdependent and imported/required by each other.
 
 To build our distro bundle and serve our development environment we use [Webpack].
 
@@ -35,21 +35,21 @@ To build our distro bundle and serve our development environment we use [Webpack
 
 * [API and usage docs, with code examples](./docs/API.md)
 
-* [Auto-Generated Docs (Latest Release)](http://video-dev.github.io/hls.js/stable/api-docs)
-* [Auto-Generated Docs (Master)](http://video-dev.github.io/hls.js/latest/api-docs)
+* [Auto-Generated Docs (Latest Release)](https://hls-js.netlify.com/api-docs)
+* [Auto-Generated Docs (Master)](https://hls-js-latest.netlify.com/api-docs)
 
-_Note you can access the docs for a particular version using "http://video-dev.github.io/hls.js/v[x.y.z]/api-docs"_
+_Note you can access the docs for a particular version using "[https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md)"_
 
 ## Demo
 
 ### Latest Release
-[https://video-dev.github.io/hls.js/stable/demo](https://video-dev.github.io/hls.js/stable/demo)
+[https://hls-js.netlify.com/demo](https://hls-js.netlify.com/demo)
 
 ### Master
-[https://video-dev.github.io/hls.js/latest/demo](https://video-dev.github.io/hls.js/latest/demo)
+[https://hls-js-latest.netlify.com/demo](https://hls-js-latest.netlify.com/demo)
 
 ### Specific Version
-"http://video-dev.github.io/hls.js/v[x.y.z]/demo"
+Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md).
 
 
 ## Getting Started
@@ -114,6 +114,7 @@ hls.js is (being) integrated in the following players:
  - [Videojs](http://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
  - [Videojs](http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
  - [Fluid Player](https://www.fluidplayer.com)
+ - [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
 
 ## Chrome/Firefox integration
 
@@ -254,7 +255,7 @@ Pull requests are welcome. Here is a quick guide on how to start.
  - First, checkout the repository and install required dependencies
 ```sh
 git clone https://github.com/video-dev/hls.js.git
-# setup dev environement
+# setup dev environment
 cd hls.js
 npm install
 # build dist/hls.js, watch file change for rebuild and launch demo page

@@ -16,5 +16,5 @@ coverage/
 
 # Build
 /dist
-/gh-pages
+/netlify
 /api-docs

@@ -87,9 +87,12 @@ function getPluginsForConfig(type, minify = false) {
 
 function getConstantsForConfig (type) {
 
+  const gitCommitInfo = getGitCommitInfo();
+  const suffix = gitCommitInfo.shortCommit ? ('-' + gitCommitInfo.shortCommit) : '';
+
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
-    __VERSION__: JSON.stringify(pkgJson.version || (getGitVersion() + '-' + getGitCommitInfo().shortCommit)),
+    __VERSION__: JSON.stringify(pkgJson.version || (getGitVersion() + suffix)),
     __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
     __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
