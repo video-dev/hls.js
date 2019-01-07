@@ -206,7 +206,7 @@ class AudioStreamController extends BaseStreamController {
 
           // When switching audio track, reload audio as close as possible to currentTime
         if (audioSwitch) {
-          if (trackDetails.live && !trackDetails.PTSKnown) {
+          if (trackDetails.live && !trackDetails.PTSKnown && bufferLen > 0) {
             logger.log('switching audiotrack, live stream, unknown PTS,load first fragment');
             bufferEnd = 0;
           } else {
@@ -485,7 +485,12 @@ class AudioStreamController extends BaseStreamController {
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
         } else {
-          this.startPosition = 0;
+          if (newDetails.live) {
+            this.startPosition = this.computeLivePosition(sliding, newDetails);
+            logger.log(`compute startPosition for audio-track to ${this.startPosition}`);
+          } else {
+            this.startPosition = 0;
+          }
         }
       }
       this.nextLoadPosition = this.startPosition;
@@ -504,6 +509,11 @@ class AudioStreamController extends BaseStreamController {
       this.state = State.IDLE;
       this.tick();
     }
+  }
+
+  computeLivePosition (sliding, levelDetails) {
+    let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
+    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
   }
 
   onFragLoaded (data) {
