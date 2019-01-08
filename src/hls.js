@@ -472,7 +472,7 @@ export default class Hls {
         this.streamController.nextLevelSwitch(); // Now we're uncapped, get the next level asap.
       }
 
-      this.config.capLevelToPlayerSize = !!newCapLevelToPlayerSize;
+      this.config.capLevelToPlayerSize = newCapLevelToPlayerSize;
     }
   }
 

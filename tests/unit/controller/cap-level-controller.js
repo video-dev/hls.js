@@ -150,19 +150,24 @@ describe('CapLevelController', function () {
         capLevelController.onManifestParsed({ levels, video: {} });
       });
 
-      it('call to toggle when already true, does not call start capping second time', function () {
+      it('continues capping without second timer', function () {
         hls.capLevelToPlayerSize = true;
         assert(startCappingSpy.calledOnce);
       });
 
-      it('call to toggle stop capping calls stop', function () {
+      it('stops the capping timer and resets capping', function () {
         hls.capLevelToPlayerSize = false;
         assert(stopCappingSpy.calledOnce);
       });
 
-      it('Config is inline with state of capping', function () {
+      it('updates config state of capping on change', function () {
         hls.capLevelToPlayerSize = false;
         assert(hls.config.capLevelToPlayerSize === false);
+      });
+
+      it('stops capping when destroyed', function () {
+        capLevelController.destroy();
+        assert(stopCappingSpy.calledOnce);
       });
     });
   });

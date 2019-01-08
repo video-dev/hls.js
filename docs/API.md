@@ -1049,7 +1049,8 @@ Default value is `-1` (no level capping).
 
 ### `hls.capLevelToPlayerSize`
 
-- get/set: If player should enable/display Cap Level Controller to active video.
+- get: Enables or disables level capping. If disabled after previously enabled, `nextLevelSwitch` will be immediately called.
+- set: Whether level capping is enabled.
 
 Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in config.
 
