@@ -123,6 +123,35 @@ const WebVTTParser = {
       callBack(cues);
     };
 
+    let processTimestampMap = (line) => {
+      // Extract LOCAL and MPEGTS.
+      line.substr(16).split(',').forEach(timestamp => {
+        if (startsWith(timestamp, 'LOCAL:')) {
+          cueTime = timestamp.substr(6);
+        } else if (startsWith(timestamp, 'MPEGTS:')) {
+          mpegTs = parseInt(timestamp.substr(7));
+        }
+      });
+      try {
+        // Calculate subtitle offset in milliseconds.
+        if (syncPTS + ((vttCCs[cc].start * 90000) || 0) < 0) {
+          syncPTS += 8589934592;
+        }
+        // Adjust MPEGTS by sync PTS.
+        mpegTs -= syncPTS;
+        // Convert cue time to seconds
+        localTime = cueString2millis(cueTime) / 1000;
+        // Convert MPEGTS to seconds from 90kHz.
+        presentationTime = mpegTs / 90000;
+
+        if (localTime === -1) {
+          parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
+        }
+      } catch (e) {
+        parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
+      }
+    };
+
     // Go through contents line by line.
     vttLines.forEach(line => {
       if (inHeader) {
@@ -130,37 +159,20 @@ const WebVTTParser = {
         if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
           // Once found, no more are allowed anyway, so stop searching.
           inHeader = false;
-          // Extract LOCAL and MPEGTS.
-          line.substr(16).split(',').forEach(timestamp => {
-            if (startsWith(timestamp, 'LOCAL:')) {
-              cueTime = timestamp.substr(6);
-            } else if (startsWith(timestamp, 'MPEGTS:')) {
-              mpegTs = parseInt(timestamp.substr(7));
-            }
-          });
-          try {
-            // Calculate subtitle offset in milliseconds.
-            if (syncPTS + ((vttCCs[cc].start * 90000) || 0) < 0) {
-              syncPTS += 8589934592;
-            }
-            // Adjust MPEGTS by sync PTS.
-            mpegTs -= syncPTS;
-            // Convert cue time to seconds
-            localTime = cueString2millis(cueTime) / 1000;
-            // Convert MPEGTS to seconds from 90kHz.
-            presentationTime = mpegTs / 90000;
-
-            if (localTime === -1) {
-              parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
-            }
-          } catch (e) {
-            parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
-          }
+          processTimestampMap(line);
           // Return without parsing X-TIMESTAMP-MAP line.
           return;
         } else if (line === '') {
           inHeader = false;
         }
+      }
+      if (!inHeader && !presentationTime) {
+        /*
+         * If a WebVTT segment does not have the X-TIMESTAMP-MAP, the client
+         * MUST assume that the WebVTT cue time of 0 maps to an MPEG-2 timestamp
+         * of 0. Ref: part 3.5 of https://tools.ietf.org/html/rfc8216
+         */
+        processTimestampMap('X-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:000000');
       }
       // Parse line by default.
       parser.parse(line + '\n');
