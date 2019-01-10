@@ -9,6 +9,7 @@ import Decrypter from '../crypt/decrypter';
 import TaskLoop from '../task-loop';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS, findFragmentByPDT } from './fragment-finders';
+import BinarySearch from '../utils/binary-search';
 import { FragmentState } from './fragment-tracker';
 
 const { performance } = window;
@@ -80,12 +81,18 @@ export class SubtitleStreamController extends TaskLoop {
     }
 
     if (timeRange) {
-      timeRange.end = frag.start + frag.duration;
+      timeRange.end = frag.end || frag.start + frag.duration;
     } else {
       buffered.push({
         start: frag.start,
-        end: frag.start + frag.duration
+        end: frag.end || frag.start + frag.duration
       });
+    }
+
+    if (frag.startPTS) {
+      logger.warn(`subtitle playlist adjust start by cue PTS [${frag.startPTS}, ${frag.endPTS}] of fragment ${frag.sn}`);
+      let trackDetails = this.tracks[this.currentTrackId].details;
+      LevelHelper.updateFragPTSDTS(trackDetails, frag, frag.startPTS, frag.endPTS, frag.startDTS, frag.endDTS);
     }
   }
 
@@ -149,8 +156,12 @@ export class SubtitleStreamController extends TaskLoop {
         let curDetails = this.tracks[id].details;
         if (curDetails && newDetails.fragments.length > 0) {
           LevelHelper.mergeDetails(curDetails, newDetails); // re-load playlist, merge previous playlist
-          let sliding = newDetails.fragments[0].start;
-          logger.log(`live subtitle playlist sliding:${sliding.toFixed(3)}`);
+          if (!(newDetails.PTSKnown === false)) {
+            let sliding = newDetails.fragments[0].start;
+            logger.log(`live subtitle playlist sliding:${sliding.toFixed(3)}`);
+          } else {
+            logger.warn('live subtitle playlist - outdated PTS, unknown sliding');
+          }
         }
       }
       this.tracks[id].details = newDetails;
@@ -209,7 +220,8 @@ export class SubtitleStreamController extends TaskLoop {
       const config = this.config;
       const maxBufferHole = config.maxBufferHole;
       const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
-      const maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+      // if PTSKnown, start is defined by cues range, increase lookup tolerance by averagetargetduration
+      const maxFragLookUpTolerance = trackDetails.PTSKnown ? config.maxFragLookUpTolerance + trackDetails.averagetargetduration : config.maxFragLookUpTolerance;
 
       const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), this.media.currentTime, maxBufferHole);
       const bufferEnd = bufferedInfo.end;
@@ -226,6 +238,28 @@ export class SubtitleStreamController extends TaskLoop {
         foundFrag = findFragmentByPDT(fragments, this.fragPrevious.endProgramDateTime, maxFragLookUpTolerance);
       }
 
+      if (!foundFrag && trackDetails.PTSKnown === false && !trackDetails.hasProgramDateTime) {
+        // playlist sliding failed (switch playlist/ init with delay/ playlist merge out of range), find fragment by sn or cc
+        const targetSN = this.fragPrevious.sn + 1;
+        if (targetSN >= trackDetails.startSN && targetSN <= trackDetails.endSN) {
+          const fragNext = fragments[targetSN - trackDetails.startSN];
+          if (this.fragPrevious.cc === fragNext.cc) {
+            foundFrag = fragNext;
+            logger.log(`live subtitle playlist / switching playlist, load frag with next SN: ${foundFrag.sn}`);
+          }
+        }
+        // next frag SN not available (or not with same continuity counter)
+        // look for a frag sharing the same CC
+        if (!foundFrag) {
+          foundFrag = BinarySearch.search(fragments, function (frag) {
+            return this.fragPrevious.cc - frag.cc;
+          }.bind(this));
+          if (foundFrag) {
+            logger.log(`live subtitle playlist / switching playlist, load frag with same CC: ${foundFrag.sn}`);
+          }
+        }
+      }
+
       if (foundFrag && foundFrag.encrypted) {
         logger.log(`Loading key for ${foundFrag.sn}`);
         this.state = State.KEY_LOADING;
@@ -236,6 +270,7 @@ export class SubtitleStreamController extends TaskLoop {
         this.fragCurrent = foundFrag;
         this.state = State.FRAG_LOADING;
 
+        logger.debug(`subtitle load frag ${foundFrag.sn}`);
         this.hls.trigger(Event.FRAG_LOADING, { frag: foundFrag });
       }
     }

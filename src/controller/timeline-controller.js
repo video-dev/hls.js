@@ -223,8 +223,8 @@ class TimelineController extends EventHandler {
   }
 
   onFragLoaded (data) {
-    let frag = data.frag,
-      payload = data.payload;
+    let frag = data.frag;
+    let payload = data.payload;
     if (frag.type === 'main') {
       let sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
@@ -296,6 +296,16 @@ class TimelineController extends EventHandler {
         }
       }
       );
+      if (cues[0] && cues[0].startTime - frag.start > frag.duration) {
+        // subtitle start time do not match cue start time. Maybe playlist sliding failed, switch subtitle playlist or init. with delay
+        logger.warn(`Adjust subtitle fragment start time [${frag.start},${frag.end}] to [${cues[0].startTime},${cues[cues.length - 1].endTime}]`);
+        // adjust start and end
+        frag.start = cues[0].startTime;
+        frag.end = cues[cues.length - 1].endTime;
+        // adjust PTS, subtitle-stream-controller update track detail with PTS
+        frag.startPTS = cues[0].startTime;
+        frag.endPTS = cues[cues.length - 1].endTime;
+      }
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     },
     function (e) {
