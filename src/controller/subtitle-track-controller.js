@@ -148,7 +148,10 @@ class SubtitleTrackController extends EventHandler {
   onSubtitleTrackLoaded (data) {
     if (data.id < this.tracks.length) {
       logger.log(`subtitle track ${data.id} loaded`);
-      this.tracks[data.id].details = data.details;
+      if (!this.tracks[data.id].details) {
+        this.tracks[data.id].details = data.details;
+      }
+
       // check if current playlist is a live playlist
       if (data.details.live && !this.timer) {
         // if live playlist we will have to reload it periodically

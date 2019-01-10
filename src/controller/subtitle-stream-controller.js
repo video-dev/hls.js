@@ -3,6 +3,7 @@
  */
 
 import Event from '../events';
+import * as LevelHelper from './level-helper';
 import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import TaskLoop from '../task-loop';
@@ -134,7 +135,8 @@ export class SubtitleStreamController extends TaskLoop {
 
   // Got a new set of subtitle fragments.
   onSubtitleTrackLoaded (data) {
-    const { id, details } = data;
+    const id = data.id;
+    const newDetails = data.details;
 
     if (!this.tracks) {
       logger.warn('Can not update subtitle details, no tracks found');
@@ -143,7 +145,15 @@ export class SubtitleStreamController extends TaskLoop {
 
     if (this.tracks[id]) {
       logger.log('Updating subtitle track details');
-      this.tracks[id].details = details;
+      if (newDetails.live) { // update live playlist
+        let curDetails = this.tracks[id].details;
+        if (curDetails && newDetails.fragments.length > 0) {
+          LevelHelper.mergeDetails(curDetails, newDetails); // re-load playlist, merge previous playlist
+          let sliding = newDetails.fragments[0].start;
+          logger.log(`live subtitle playlist sliding:${sliding.toFixed(3)}`);
+        }
+      }
+      this.tracks[id].details = newDetails;
     }
 
     this.setInterval(TICK_INTERVAL);
