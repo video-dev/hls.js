@@ -181,5 +181,18 @@ describe('checkBuffer', function () {
       gapController.poll(lastCurrentTime, buffered);
       assert(reportStallSpy.calledOnce);
     });
+
+    it('should do nothing if the playback is paused', function () {
+      mockMedia.paused = true;
+      mockMedia.readyState = 4;
+      mockMedia.currentTime = 5;
+      lastCurrentTime = 5;
+      gapController.nudgeRetry = 1;
+      const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
+      gapController.poll(lastCurrentTime, buffered);
+
+      assert.strictEqual(gapController.nudgeRetry, 1);
+      assert(fixStallStub.notCalled);
+    });
   });
 });

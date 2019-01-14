@@ -37,7 +37,7 @@ export default class GapController {
       return;
     }
 
-    if (media.ended || !media.buffered.length || media.readyState > 2) {
+    if (media.ended || !media.buffered.length || media.readyState > 2 || media.paused) {
       return;
     }
 
