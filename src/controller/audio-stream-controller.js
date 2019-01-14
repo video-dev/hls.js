@@ -836,6 +836,23 @@ class AudioStreamController extends BaseStreamController {
       this.state = State.IDLE;
       // reset reference to frag
       this.fragPrevious = null;
+
+      const { fragCurrent } = this;
+      if (fragCurrent) {
+        const { loader } = fragCurrent;
+        if (loader) {
+          // abort current frag to reload it and re-trigger onFragLoaded
+          loader.abort();
+        }
+
+        const state = this.fragmentTracker.getState(fragCurrent);
+        if (state === FragmentState.APPENDING || state === FragmentState.PARTIAL) {
+          // if frag is not loaded, remove it from fragment tracker to prevent loop
+          this.fragmentTracker.removeFragment(fragCurrent);
+          this.fragCurrent = null;
+        }
+      }
+
       this.tick();
     }
   }
