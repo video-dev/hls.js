@@ -1,3 +1,5 @@
+import { getSelfScope } from '../utils/get-self-scope';
+
 /**
  * ID3 parser
  */
@@ -350,8 +352,9 @@ class ID3 {
 let decoder;
 
 function getTextDecoder () {
-  if (!decoder && typeof window.TextDecoder !== 'undefined') {
-    decoder = new window.TextDecoder('utf-8');
+  const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
+  if (!decoder && typeof global.TextDecoder !== 'undefined') {
+    decoder = new global.TextDecoder('utf-8');
   }
 
   return decoder;
