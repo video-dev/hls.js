@@ -90,8 +90,7 @@ describe('Demuxer tests', function () {
       cc: 100,
       sn: 6,
       level: 1,
-      startDTS: 1000,
-      start: undefined
+      startPTS: 1000
     };
     let data = new ArrayBuffer(8),
       initSegment = {},
@@ -108,7 +107,7 @@ describe('Demuxer tests', function () {
       assert.equal(obj1.initSegment, initSegment, 'initSegment');
       assert.equal(obj1.audioCodec, audioCodec, 'audioCodec');
       assert.equal(obj1.videoCodec, videoCodec, 'videoCodec');
-      assert.equal(obj1.timeOffset, newFrag.startDTS, 'timeOffset');
+      assert.equal(obj1.timeOffset, newFrag.startPTS, 'timeOffset');
       assert.equal(obj1.discontinuity, false, 'discontinuity');
       assert.equal(obj1.trackSwitch, false, 'trackSwitch');
       assert.equal(obj1.contiguous, true, 'contiguous');
@@ -143,7 +142,6 @@ describe('Demuxer tests', function () {
       cc: 200,
       sn: 5,
       level: 2,
-      startDTS: undefined,
       start: 1000
     };
     let data = {},

@@ -3,7 +3,8 @@ import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import Event from '../../../src/events';
 import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
-import StreamController, { State } from '../../../src/controller/stream-controller';
+import StreamController from '../../../src/controller/stream-controller';
+import { State } from '../../../src/controller/base-stream-controller';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { mockFragments } from '../../mocks/data';
 import Fragment from '../../../src/loader/fragment';
@@ -207,9 +208,6 @@ describe('StreamController', function () {
       };
       streamController.media = {
         buffered: {
-          start: function () {
-            return 6.014;
-          },
           length: 1
         }
       };
@@ -245,15 +243,6 @@ describe('StreamController', function () {
       streamController._checkBuffer();
       assert(seekStub.notCalled);
       assert.strictEqual(streamController.loadedmetadata, undefined);
-    });
-
-    it('should set startPosition to what buffer start reports and seek', function () {
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
-      streamController.startPosition = 6;
-      streamController.loadedmetadata = false;
-      streamController._checkBuffer();
-      assert(seekStub.calledOnce);
-      assert.strictEqual(streamController.startPosition, streamController.media.buffered.start());
     });
 
     it('should complete the immediate switch if signalled', function () {

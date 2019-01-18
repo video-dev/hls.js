@@ -35,21 +35,21 @@ To build our distro bundle and serve our development environment we use [Webpack
 
 * [API and usage docs, with code examples](./docs/API.md)
 
-* [Auto-Generated Docs (Latest Release)](http://video-dev.github.io/hls.js/stable/api-docs)
-* [Auto-Generated Docs (Master)](http://video-dev.github.io/hls.js/latest/api-docs)
+* [Auto-Generated Docs (Latest Release)](https://hls-js.netlify.com/api-docs)
+* [Auto-Generated Docs (Master)](https://hls-js-latest.netlify.com/api-docs)
 
-_Note you can access the docs for a particular version using "http://video-dev.github.io/hls.js/v[x.y.z]/api-docs"_
+_Note you can access the docs for a particular version using "[https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md)"_
 
 ## Demo
 
 ### Latest Release
-[https://video-dev.github.io/hls.js/stable/demo](https://video-dev.github.io/hls.js/stable/demo)
+[https://hls-js.netlify.com/demo](https://hls-js.netlify.com/demo)
 
 ### Master
-[https://video-dev.github.io/hls.js/latest/demo](https://video-dev.github.io/hls.js/latest/demo)
+[https://hls-js-latest.netlify.com/demo](https://hls-js-latest.netlify.com/demo)
 
 ### Specific Version
-"http://video-dev.github.io/hls.js/v[x.y.z]/demo"
+Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md).
 
 
 ## Getting Started
