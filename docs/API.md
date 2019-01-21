@@ -89,6 +89,7 @@
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
+  - [`hls.bandwidthEstimate`](#bandwidthestimate)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -1052,6 +1053,12 @@ Default value is `hls.firstLevel`.
 - get/set: Capping/max level value that could be used by ABR Controller.
 
 Default value is `-1` (no level capping).
+
+### `hls.bandwidthEstimate`
+
+- get: Return bandwidth estimate.
+  - if estimator is available: current bandwidth
+  - if `NaN`: estimator is not available
 
 ## Version Control
 
