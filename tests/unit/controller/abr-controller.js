@@ -5,6 +5,11 @@ import Hls from '../../../src/hls';
 const assert = require('assert');
 
 describe('AbrController', () => {
+  it('should return correct _bwEstimator', () => {
+    let hls = new Hls();
+    assert.strictEqual(hls.abrController._bwEstimator, null);
+  });
+
   it('should return correct next auto level', () => {
     let hls = new Hls({ maxStarvationDelay: 4 });
     hls.levelController._levels = [
