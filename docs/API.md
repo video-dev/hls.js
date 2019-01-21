@@ -1057,8 +1057,8 @@ Default value is `-1` (no level capping).
 ### `hls.bandwidthEstimate`
 
 - get: Return bandwidth estimate.
-  - if estimator is available: current bandwidth
-  - if `NaN`: estimator is not available
+  - number in Kb/s: current bandwidth if estimator is available
+  - `NaN`: estimator is not available
 
 ## Version Control
 
