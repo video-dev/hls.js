@@ -616,4 +616,14 @@ export default class Hls extends Observer {
       subtitleTrackController.subtitleDisplay = value;
     }
   }
+
+  /**
+   * get bandwidth estimate
+   * @type {number}
+   */
+  get bandwidthEstimate () {
+    const hls = this;
+    const bwEstimator = hls.abrController._bwEstimator;
+    return bwEstimator ? bwEstimator.getEstimate() : NaN;
+  }
 }
