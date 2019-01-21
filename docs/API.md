@@ -89,7 +89,7 @@
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
-  - [`hls.bandwidthEstimate`](#bandwidthestimate)
+  - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
