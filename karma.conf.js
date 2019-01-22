@@ -5,18 +5,18 @@ const pkgJson = require('./package.json');
 const webpack = require('webpack');
 const path = require('path');
 
-module.exports = function(config) {
+module.exports = function (config) {
   config.set({
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
 
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-    frameworks: ['mocha', 'sinon', 'should'],
+    frameworks: ['mocha', 'sinon-chai'],
 
     // list of files / patterns to load in the browser
     files: [
-      'tests/unit/**/*.js'
+      'tests/index.js'
     ],
 
     // list of files to exclude
@@ -24,8 +24,9 @@ module.exports = function(config) {
 
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
+    // node_modules must not be webpacked or else Karma will fail to load frameworks
     preprocessors: {
-      'tests/**/*.js': ['webpack', 'sourcemap']
+      'tests/index.js': ['webpack', 'sourcemap']
     },
 
     // test results reporter to use
@@ -43,20 +44,18 @@ module.exports = function(config) {
       devtool: 'inline-source-map',
       resolve: {
         extensions: ['.ts', '.js']
-      },
-      module: {
+      },module: {
         rules: [
           {
             test: /\.(ts|js)$/,
             include: path.resolve(__dirname, 'src'),
             exclude: path.resolve(__dirname, 'node_modules'),
             loader: 'ts-loader'
-          },
-          // instrument only testing sources with Istanbul
+          },// instrument only testing sources with Istanbul
           {
             test: /\.(ts|js)$/,
-            exclude: path.resolve(__dirname, 'node_modules'),
-            enforce: 'post',
+
+            exclude: path.resolve(__dirname, 'node_modules'),enforce: 'post',
             use: [
               {
                 loader: 'istanbul-instrumenter-loader',
