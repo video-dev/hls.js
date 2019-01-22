@@ -1,115 +1,102 @@
-/*
- * Fragment Loader
-*/
-
-import Event from '../events';
-import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 
-class FragmentLoader extends EventHandler {
-  constructor (hls) {
-    super(hls, Event.FRAG_LOADING);
-    this.loaders = {};
+class FragmentLoader {
+  constructor (config) {
+    this.config = config;
+    this.loader = null;
   }
 
-  destroy () {
-    let loaders = this.loaders;
-    for (let loaderName in loaders) {
-      let loader = loaders[loaderName];
-      if (loader) {
-        loader.destroy();
-      }
-    }
-    this.loaders = {};
-
-    super.destroy();
-  }
-
-  onFragLoading (data) {
-    const frag = data.frag,
-      type = frag.type,
-      loaders = this.loaders,
-      config = this.hls.config,
-      FragmentILoader = config.fLoader,
-      DefaultILoader = config.loader;
+  load (frag) {
+    const config = this.config;
+    const FragmentILoader = config.fLoader;
+    const DefaultILoader = config.loader;
 
     // reset fragment state
     frag.loaded = 0;
 
-    let loader = loaders[type];
+    let loader = this.loader;
     if (loader) {
-      logger.warn(`abort previous fragment loader for type: ${type}`);
+      logger.warn(`Aborting loader for previous ${frag.type} fragment`);
       loader.abort();
     }
 
-    loader = loaders[type] = frag.loader =
+    loader = this.loader = frag.loader =
       config.fLoader ? new FragmentILoader(config) : new DefaultILoader(config);
 
-    let loaderContext, loaderConfig, loaderCallbacks;
+    const loaderContext = {
+      frag,
+      responseType: 'arraybuffer',
+      url: frag.url
+    };
 
-    loaderContext = { url: frag.url, frag: frag, responseType: 'arraybuffer', progressData: false };
-
-    let start = frag.byteRangeStartOffset,
-      end = frag.byteRangeEndOffset;
-
+    const start = frag.byteRangeStartOffset;
+    const end = frag.byteRangeEndOffset;
     if (Number.isFinite(start) && Number.isFinite(end)) {
       loaderContext.rangeStart = start;
       loaderContext.rangeEnd = end;
     }
 
-    loaderConfig = {
+    const loaderConfig = {
       timeout: config.fragLoadingTimeOut,
       maxRetry: 0,
       retryDelay: 0,
       maxRetryDelay: config.fragLoadingMaxRetryTimeout
     };
 
-    loaderCallbacks = {
-      onSuccess: this.loadsuccess.bind(this),
-      onError: this.loaderror.bind(this),
-      onTimeout: this.loadtimeout.bind(this),
-      onProgress: this.loadprogress.bind(this)
-    };
-
-    loader.load(loaderContext, loaderConfig, loaderCallbacks);
+    return new Promise((resolve, reject) => {
+      loader.load(loaderContext, loaderConfig, {
+        onSuccess: (response, stats, context, networkDetails = null) => {
+          this._resetLoader(frag);
+          resolve({
+            payload: response.data,
+            stats,
+            networkDetails
+          });
+        },
+        onError: (response, context, networkDetails = null) => {
+          this._abortLoader(frag);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.FRAG_LOAD_ERROR,
+            fatal: false,
+            frag,
+            response,
+            networkDetails
+          }));
+        },
+        onTimeout: (response, context, networkDetails = null) => {
+          this._abortLoader(frag);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.FRAG_LOAD_TIMEOUT,
+            fatal: false,
+            frag,
+            networkDetails
+          }));
+        }
+      });
+    });
   }
 
-  loadsuccess (response, stats, context, networkDetails = null) {
-    let payload = response.data, frag = context.frag;
-    // detach fragment loader on load success
-    frag.loader = undefined;
-    this.loaders[frag.type] = undefined;
-    this.hls.trigger(Event.FRAG_LOADED, { payload: payload, frag: frag, stats: stats, networkDetails: networkDetails });
-  }
-
-  loaderror (response, context, networkDetails = null) {
-    const frag = context.frag;
-    let loader = frag.loader;
-    if (loader) {
-      loader.abort();
+  _abortLoader (frag) {
+    if (!frag || !frag.loader) {
+      return;
     }
-
-    this.loaders[frag.type] = undefined;
-    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails });
+    frag.loader.abort();
+    this._resetLoader(frag);
   }
 
-  loadtimeout (stats, context, networkDetails = null) {
-    const frag = context.frag;
-    let loader = frag.loader;
-    if (loader) {
-      loader.abort();
-    }
-
-    this.loaders[frag.type] = undefined;
-    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails });
+  _resetLoader (frag) {
+    frag.loader = null;
+    this.loader = null;
   }
+}
 
-  // data will be used for progressive parsing
-  loadprogress (stats, context, data, networkDetails = null) { // jshint ignore:line
-    let frag = context.frag;
-    frag.loaded = stats.loaded;
-    this.hls.trigger(Event.FRAG_LOAD_PROGRESS, { frag: frag, stats: stats, networkDetails: networkDetails });
+export class LoadError extends Error {
+  constructor (data, ...params) {
+    super(...params);
+    this.data = data;
   }
 }
 

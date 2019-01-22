@@ -17,6 +17,7 @@ import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import GapController from './gap-controller';
 import BaseStreamController, { State } from './base-stream-controller';
+import FragmentLoader from '../loader/fragment-loader';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -29,7 +30,6 @@ class StreamController extends BaseStreamController {
       Event.MANIFEST_PARSED,
       Event.LEVEL_LOADED,
       Event.KEY_LOADED,
-      Event.FRAG_LOADED,
       Event.FRAG_LOAD_EMERGENCY_ABORTED,
       Event.FRAG_PARSING_INIT_SEGMENT,
       Event.FRAG_PARSING_DATA,
@@ -42,22 +42,12 @@ class StreamController extends BaseStreamController {
       Event.BUFFER_FLUSHED);
 
     this.fragmentTracker = fragmentTracker;
+    this.fragmentLoader = new FragmentLoader(hls.config);
     this.config = hls.config;
     this.audioCodecSwap = false;
     this._state = State.STOPPED;
     this.stallReported = false;
     this.gapController = null;
-  }
-
-  onHandlerDestroying () {
-    this.stopLoad();
-    super.onHandlerDestroying();
-  }
-
-  onHandlerDestroyed () {
-    this.state = State.STOPPED;
-    this.fragmentTracker = null;
-    super.onHandlerDestroyed();
   }
 
   startLoad (startPosition) {
@@ -452,15 +442,15 @@ class StreamController extends BaseStreamController {
     // Allow backtracked fragments to load
     if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
       frag.autoLevel = this.hls.autoLevelEnabled;
-      frag.bitrateTest = this.bitrateTest;
 
-      this.hls.trigger(Event.FRAG_LOADING, { frag });
-      // lazy demuxer init, as this could take some time ... do it during frag loading
-      if (!this.demuxer) {
-        this.demuxer = new Demuxer(this.hls, 'main');
+      if (frag.sn === 'initSegment') {
+        this._loadInitSegment(frag);
+      } else if (this.bitrateTest) {
+        frag.bitrateTest = true;
+        this._loadBitrateTestFrag(frag);
+      } else {
+        this._loadFragForPlayback(frag);
       }
-
-      this.state = State.FRAG_LOADING;
     } else if (fragState === FragmentState.APPENDING) {
       // Lower the buffer size and try again
       if (this._reduceMaxBufferLength(frag.duration)) {
@@ -844,71 +834,32 @@ class StreamController extends BaseStreamController {
     }
   }
 
-  onFragLoaded (data) {
-    const { fragCurrent, hls, levels, media } = this;
-    const fragLoaded = data.frag;
-    if (this.state === State.FRAG_LOADING &&
-        fragCurrent &&
-        fragLoaded.type === 'main' &&
-        fragLoaded.level === fragCurrent.level &&
-        fragLoaded.sn === fragCurrent.sn) {
-      const stats = data.stats;
-      const currentLevel = levels[fragCurrent.level];
-      const details = currentLevel.details;
-      // reset frag bitrate test in any case after frag loaded event
-      // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
-      // then this means that we should be able to load a fragment at a higher quality level
-      this.bitrateTest = false;
-      this.stats = stats;
+  onFragLoaded (frag, payload, stats) {
+    const { fragCurrent, levels, media } = this;
+    const currentLevel = levels[fragCurrent.level];
+    const details = currentLevel.details;
+    this.stats = stats;
+    this.state = State.PARSING;
+    this.pendingBuffering = true;
+    this.appended = false;
 
-      logger.log(`Loaded ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}`);
-      if (fragLoaded.bitrateTest && hls.nextLoadLevel) {
-        // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
-        this.state = State.IDLE;
-        this.startFragRequested = false;
-        stats.tparsed = stats.tbuffered = window.performance.now();
-        hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
-        this.tick();
-      } else if (fragLoaded.sn === 'initSegment') {
-        this.state = State.IDLE;
-        stats.tparsed = stats.tbuffered = window.performance.now();
-        details.initSegment.data = data.payload;
-        hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
-        this.tick();
-      } else {
-        logger.log(`Parsing ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}, cc ${fragCurrent.cc}`);
-        this.state = State.PARSING;
-        this.pendingBuffering = true;
-        this.appended = false;
+    // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
+    const accurateTimeOffset = !(media && media.seeking) && (details.PTSKnown || !details.live);
+    const initSegmentData = details.initSegment ? details.initSegment.data : [];
+    const audioCodec = this._getAudioCodec(currentLevel);
 
-        // Bitrate test frags are not usually buffered so the fragment tracker ignores them. If Hls.js decides to buffer
-        // it (and therefore ends up at this line), then the fragment tracker needs to be manually informed.
-        if (fragLoaded.bitrateTest) {
-          fragLoaded.bitrateTest = false;
-          this.fragmentTracker.onFragLoaded({
-            frag: fragLoaded
-          });
-        }
-
-        // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
-        const accurateTimeOffset = !(media && media.seeking) && (details.PTSKnown || !details.live);
-        const initSegmentData = details.initSegment ? details.initSegment.data : [];
-        const audioCodec = this._getAudioCodec(currentLevel);
-
-        // transmux the MPEG-TS data to ISO-BMFF segments
-        const demuxer = this.demuxer = this.demuxer || new Demuxer(this.hls, 'main');
-        demuxer.push(
-          data.payload,
-          initSegmentData,
-          audioCodec,
-          currentLevel.videoCodec,
-          fragCurrent,
-          details.totalduration,
-          accurateTimeOffset
-        );
-      }
-    }
-    this.fragLoadError = 0;
+    // transmux the MPEG-TS data to ISO-BMFF segments
+    logger.log(`Parsing ${frag.sn} of [${details.startSN} ,${details.endSN}],level ${frag.level}, cc ${frag.cc}`);
+    const demuxer = this.demuxer = this.demuxer || new Demuxer(this.hls, 'main');
+    demuxer.push(
+      payload,
+      initSegmentData,
+      audioCodec,
+      currentLevel.videoCodec,
+      frag,
+      details.totalduration,
+      accurateTimeOffset
+    );
   }
 
   onFragParsingInitSegment (data) {
@@ -1354,6 +1305,28 @@ class StreamController extends BaseStreamController {
     }
 
     return audioCodec;
+  }
+
+  _loadBitrateTestFrag (frag) {
+    this.fragmentLoader.load(frag)
+      .then((data) => {
+        const { stats } = data;
+        const { hls } = this;
+        if (hls.nextLoadLevel || this._fragLoadAborted(frag)) {
+          return;
+        }
+        this.bitrateTest = false;
+        this.fragLoadError = 0;
+        this.state = State.IDLE;
+        this.startFragRequested = false;
+        frag.bitrateTest = false;
+        stats.tparsed = stats.tbuffered = window.performance.now();
+        hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag, id: 'main' });
+        this.tick();
+      })
+      .catch((e) => {
+        this.hls.trigger(Event.ERROR, e.data);
+      });
   }
 
   get liveSyncPosition () {

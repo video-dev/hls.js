@@ -124,7 +124,7 @@ export default class Hls extends Observer {
     const capLevelController = new config.capLevelController(this);
     const fpsController = new config.fpsController(this);
     const playListLoader = new PlaylistLoader(this);
-    const fragmentLoader = new FragmentLoader(this);
+    // const fragmentLoader = new FragmentLoader(this);
     const keyLoader = new KeyLoader(this);
     const id3TrackController = new ID3TrackController(this);
 
@@ -164,7 +164,7 @@ export default class Hls extends Observer {
      */
     const coreComponents = [
       playListLoader,
-      fragmentLoader,
+      // fragmentLoader,
       keyLoader,
       abrController,
       bufferController,

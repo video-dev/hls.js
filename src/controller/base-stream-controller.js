@@ -2,6 +2,7 @@ import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
+import Event from '../events';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -23,6 +24,7 @@ export const State = {
 
 export default class BaseStreamController extends TaskLoop {
   doTick () {}
+  onFragLoaded (frag, payload, stats) {}
 
   _streamEnded (bufferInfo, levelDetails) {
     const { fragCurrent, fragmentTracker } = this;
@@ -93,5 +95,49 @@ export default class BaseStreamController extends TaskLoop {
   onMediaEnded () {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
+  }
+
+  _loadFragForPlayback (frag) {
+    this.state = State.FRAG_LOADING;
+    this.hls.trigger(Event.FRAG_LOADING, { frag });
+    this.fragmentLoader.load(frag)
+      .then((data) => {
+        this.fragLoadError = 0;
+        if (this._fragLoadAborted(frag)) {
+          return;
+        }
+        const { networkDetails, payload, stats } = data;
+        logger.log(`Loaded ${frag.sn} of level ${frag.level}`);
+        this.hls.trigger(Event.FRAG_LOADED, { frag, stats, networkDetails });
+        this.onFragLoaded(frag, payload, stats);
+      })
+      .catch((e) => {
+        this.hls.trigger(Event.ERROR, e.data);
+      });
+  }
+
+  _loadInitSegment (frag) {
+    this.fragmentLoader.load(frag)
+      .then((data) => {
+        const { stats, payload } = data;
+        const { fragCurrent, hls, levels } = this;
+        if (this._fragLoadAborted(frag)) {
+          return;
+        }
+        this.state = State.IDLE;
+        this.fragLoadError = 0;
+        const levelDetails = levels[this.fragCurrent.level];
+        stats.tparsed = stats.tbuffered = window.performance.now();
+        levelDetails.initSegment.data = payload;
+        hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
+        this.tick();
+      })
+      .catch((e) => {
+        this.hls.trigger(Event.ERROR, e.data);
+      });
+  }
+
+  _fragLoadAborted (frag) {
+    return this.state !== State.FRAG_LOADING || frag !== this.fragCurrent;
   }
 }
