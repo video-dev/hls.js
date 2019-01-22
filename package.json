@@ -29,11 +29,7 @@
     "build:watch": "webpack --progress --env.debug --watch",
     "build:analyze": "ANALYZE=true webpack --progress",
     "dev": "webpack-dev-server --progress --env.debug --port 8000",
-    "docs": "npm run docs:generate",
-    "docs:generate": "esdoc",
-    "docs:clean": "rm -Rf html/docs",
-    "docs:update": "git add docs/html && git commit docs/html -m 'Update docs'",
-    "docs:release": "npm run docs:clean && npm run docs:generate && npm run docs:update",
+    "docs": "esdoc",
     "lint": "./scripts/lint.sh",
     "lint:fix": "./scripts/lint.sh --fix",
     "lint:quiet": "./scripts/lint.sh --quiet",
@@ -46,9 +42,8 @@
     "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000"
   },
   "dependencies": {
-    "events": "^3.0.0",
-    "string.prototype.endswith": "^0.2.0",
-    "url-toolkit": "^2.1.2"
+    "eventemitter3": "3.1.0",
+    "url-toolkit": "^2.1.6"
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
@@ -64,10 +59,11 @@
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
     "eslint-plugin-typescript": "^0.12.0",
+    "git-commit-info": "^1.0.0",
+    "git-tag-version": "^1.2.0",
     "http-server": "^0.11.0",
     "husky": "^0.14.3",
     "istanbul-instrumenter-loader": "^3.0.1",
-    "jshint": "^2.9.4",
     "karma": "^2.0.0",
     "karma-chrome-launcher": "^2.2.0",
     "karma-coverage-istanbul-reporter": "^1.3.0",
@@ -78,19 +74,19 @@
     "karma-sourcemap-loader": "^0.3.7",
     "karma-webpack": "^3.0.0",
     "mocha": "^3.0.2",
-    "mversion": "^1.10.1",
-    "npm-run-all": "^4.1.3",
+    "netlify-cli": "^2.5.1",
     "selenium-webdriver": "^3.1.0",
     "should": "^13.1.3",
     "sinon": "^4.1.3",
     "ts-loader": "^4.4.2",
     "ts-node": "^6.1.0",
     "typescript": "^2.9.1",
-    "typescript-eslint-parser": "^16.0.0",
+    "typescript-eslint-parser": "^21.0.2",
     "webpack": "^4.11.1",
     "webpack-bundle-analyzer": "^2.9.1",
     "webpack-cli": "^3.0.2",
     "webpack-dev-server": "^3.1.4",
+    "webpack-merge": "^4.2.1",
     "webworkify-webpack": "^2.1.2"
   }
 }

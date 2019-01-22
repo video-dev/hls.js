@@ -4,8 +4,13 @@ import Hls from '../../../src/hls';
 
 const assert = require('assert');
 
-describe('AbrController', () => {
-  it('should return correct next auto level', () => {
+describe('AbrController', function () {
+  it('should return null if _bwEstimator is not specified', function () {
+    let hls = new Hls();
+    assert.strictEqual(hls.abrController._bwEstimator, null);
+  });
+
+  it('should return correct next auto level', function () {
     let hls = new Hls({ maxStarvationDelay: 4 });
     hls.levelController._levels = [
       { bitrate: 105000, name: '144', details: { totalduration: 4, fragments: [{}] } },
