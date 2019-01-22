@@ -5,7 +5,7 @@ import Hls from '../../../src/hls';
 const assert = require('assert');
 
 describe('AbrController', () => {
-  it('should return correct _bwEstimator', () => {
+  it('should return null if _bwEstimator is not specified', () => {
     let hls = new Hls();
     assert.strictEqual(hls.abrController._bwEstimator, null);
   });
