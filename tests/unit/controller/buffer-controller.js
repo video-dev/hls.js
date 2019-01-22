@@ -107,12 +107,12 @@ describe('BufferController tests', function () {
 
       sandbox.stub(bufferController, 'doAppending');
 
-      bufferController.onSBUpdateEnd();
+      bufferController._onSBUpdateEnd();
 
       assert(flushSpy.notCalled, 'clear live back buffer was called');
 
       bufferController.segments = [];
-      bufferController.onSBUpdateEnd();
+      bufferController._onSBUpdateEnd();
 
       assert(flushSpy.calledOnce, 'clear live back buffer was not called once');
     });
@@ -129,6 +129,32 @@ describe('BufferController tests', function () {
 
     it('initializes with zero expected BUFFER_CODEC events', function () {
       assert.strictEqual(bufferController.bufferCodecEventsExpected, 0);
+    });
+
+    it('should throw if no media element has been attached', function () {
+      bufferController.createSourceBuffers.restore();
+      bufferController.pendingTracks = { video: {} };
+
+      assert.throws(bufferController.checkPendingTracks);
+    });
+
+    it('exposes tracks from buffer controller through BUFFER_CREATED event', function (done) {
+      bufferController.createSourceBuffers.restore();
+
+      let video = document.createElement('video');
+      bufferController.onMediaAttaching({ media: video });
+
+      hls.on(Hls.Events.BUFFER_CREATED, (_, data) => {
+        const tracks = data.tracks;
+        assert.notStrictEqual(bufferController.pendingTracks, tracks);
+        assert.strictEqual(bufferController.tracks, tracks);
+        done();
+      });
+
+      bufferController.pendingTracks = { video: { codec: 'testing' } };
+      bufferController.checkPendingTracks();
+
+      video = null;
     });
 
     it('expects one bufferCodec event by default', function () {
@@ -158,7 +184,7 @@ describe('BufferController tests', function () {
     });
 
     it('checks pending tracks in onMediaSourceOpen', function () {
-      bufferController.onMediaSourceOpen();
+      bufferController._onMediaSourceOpen();
       assert.strictEqual(checkPendingTracksSpy.calledOnce, true);
     });
 
@@ -181,7 +207,7 @@ describe('BufferController tests', function () {
       bufferController.mediaSource = { readyState: 'open', removeEventListener: sandbox.stub() };
 
       bufferController.onManifestParsed({ altAudio: true });
-      bufferController.onMediaSourceOpen();
+      bufferController._onMediaSourceOpen();
       bufferController.onBufferCodecs({ audio: {} });
       bufferController.onBufferCodecs({ video: {} });
 
