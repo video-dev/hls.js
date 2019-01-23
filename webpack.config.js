@@ -1,13 +1,12 @@
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
+const merge = require('webpack-merge');
 
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const getGitVersion = require('git-tag-version');
 const getGitCommitInfo = require('git-commit-info');
-
-const clone = (...args) => Object.assign({}, ...args);
 
 /* Allow to customise builds through env-vars */
 const env = process.env;
@@ -22,19 +21,22 @@ const baseConfig = {
   entry: './src/hls',
   resolve: {
     // Add `.ts` as a resolvable extension.
-    extensions: [".ts", ".js"]
+    extensions: ['.ts', '.js']
   },
   module: {
     strictExportPresence: true,
     rules: [
       // all files with a `.ts` extension will be handled by `ts-loader`
-      { test: /\.ts?$/, loader: "ts-loader" },
-      { test: /\.js?$/, exclude: [/node_modules/], loader: "ts-loader" },
+      {
+        test: /\.(ts|js)$/,
+        loader: 'ts-loader',
+        exclude: /node_modules/
+      }
     ]
   }
 };
 
-const demoConfig = clone(baseConfig, {
+const demoConfig = merge(baseConfig, {
   name: 'demo',
   mode: 'development',
   entry: './demo/main',
@@ -47,7 +49,7 @@ const demoConfig = clone(baseConfig, {
     library: 'HlsDemo',
     libraryTarget: 'umd',
     libraryExport: 'default',
-    globalObject: 'this'  // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
+    globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
   },
   optimization: {
     minimize: false
@@ -56,7 +58,7 @@ const demoConfig = clone(baseConfig, {
   devtool: 'source-map'
 });
 
-function getPluginsForConfig(type, minify = false) {
+function getPluginsForConfig (type, minify = false) {
   // common plugins.
 
   const defineConstants = getConstantsForConfig(type);
@@ -86,10 +88,12 @@ function getPluginsForConfig(type, minify = false) {
 }
 
 function getConstantsForConfig (type) {
+  const gitCommitInfo = getGitCommitInfo();
+  const suffix = gitCommitInfo.shortCommit ? ('-' + gitCommitInfo.shortCommit) : '';
 
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
-    __VERSION__: JSON.stringify(pkgJson.version || (getGitVersion() + '-' + getGitCommitInfo().shortCommit)),
+    __VERSION__: JSON.stringify(pkgJson.version || (getGitVersion() + suffix)),
     __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
     __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
@@ -106,7 +110,7 @@ function getAliasesForLightDist () {
   }
 
   if (!addSubtitleSupport) {
-    aliases = clone(aliases, {
+    aliases = Object.assign(aliases, {
       './utils/cues': './empty.js',
       './controller/timeline-controller': './empty.js',
       './controller/subtitle-track-controller': './empty.js',
@@ -115,7 +119,7 @@ function getAliasesForLightDist () {
   }
 
   if (!addAltAudioSupport) {
-    aliases = clone(aliases, {
+    aliases = Object.assign(aliases, {
       './controller/audio-track-controller': './empty.js',
       './controller/audio-stream-controller': './empty.js'
     });
@@ -203,13 +207,12 @@ const multiConfig = [
     },
     devtool: 'source-map'
   }
-].map(config => clone(baseConfig, config));
+].map(config => merge(baseConfig, config));
 
 multiConfig.push(demoConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
-
   let configs;
 
   if (!envArgs) {

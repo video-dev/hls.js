@@ -208,12 +208,15 @@ export default class Hls extends Observer {
       coreComponents.push(emeController);
     }
 
-    // optional subtitle controller
-    [config.subtitleStreamController, config.timelineController].forEach(Controller => {
-      if (Controller) {
-        coreComponents.push(new Controller(this));
-      }
-    });
+    // optional subtitle controllers
+    Controller = config.subtitleStreamController;
+    if (Controller) {
+      coreComponents.push(new Controller(this, fragmentTracker));
+    }
+    Controller = config.timelineController;
+    if (Controller) {
+      coreComponents.push(new Controller(this));
+    }
 
     /**
      * @member {ICoreComponent[]}
@@ -448,6 +451,15 @@ export default class Hls extends Observer {
    */
   get autoLevelCapping () {
     return this._autoLevelCapping;
+  }
+
+  /**
+   * get bandwidth estimate
+   * @type {number}
+   */
+  get bandwidthEstimate () {
+    const bwEstimator = this.abrController._bwEstimator;
+    return bwEstimator ? bwEstimator.getEstimate() : NaN;
   }
 
   /**

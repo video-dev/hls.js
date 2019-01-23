@@ -14,25 +14,13 @@ import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { alignStream } from '../utils/discontinuities';
-import TaskLoop from '../task-loop';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import GapController from './gap-controller';
+import BaseStreamController, { State } from './base-stream-controller';
 
-export const State = {
-  STOPPED: 'STOPPED',
-  IDLE: 'IDLE',
-  KEY_LOADING: 'KEY_LOADING',
-  FRAG_LOADING: 'FRAG_LOADING',
-  FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
-  WAITING_LEVEL: 'WAITING_LEVEL',
-  PARSING: 'PARSING',
-  PARSED: 'PARSED',
-  BUFFER_FLUSHING: 'BUFFER_FLUSHING',
-  ENDED: 'ENDED',
-  ERROR: 'ERROR'
-};
+const TICK_INTERVAL = 100; // how often to tick in ms
 
-class StreamController extends TaskLoop {
+class StreamController extends BaseStreamController {
   constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
@@ -76,7 +64,7 @@ class StreamController extends TaskLoop {
     if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
-      this.setInterval(100);
+      this.setInterval(TICK_INTERVAL);
       this.level = -1;
       this.fragLoadError = 0;
       if (!this.startFragRequested) {
@@ -237,32 +225,16 @@ class StreamController extends TaskLoop {
       return;
     }
 
-    // we just got done loading the final fragment and there is no other buffered range after ...
-    // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
-    // so we should not switch to ENDED in that case, to be able to buffer them
-    // dont switch to ENDED if we need to backtrack last fragment
-    let fragPrevious = this.fragPrevious;
-    if (!levelDetails.live && fragPrevious && !fragPrevious.backtracked && fragPrevious.sn === levelDetails.endSN && !bufferInfo.nextStart) {
-      // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
-      // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
-      const duration = Math.min(media.duration, fragPrevious.start + fragPrevious.duration);
-      // if everything (almost) til the end is buffered, let's signal eos
-      // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference (audio/video offsets...)
-      // tolerate up to one frag duration to cope with these cases.
-      // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
-      if (duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration)) {
-        // Finalize the media stream
-        let data = {};
-        if (this.altAudio) {
-          data.type = 'video';
-        }
-
-        this.hls.trigger(Event.BUFFER_EOS, data);
-        this.state = State.ENDED;
-        return;
+    if (this._streamEnded(bufferInfo, levelDetails)) {
+      const data = {};
+      if (this.altAudio) {
+        data.type = 'video';
       }
-    }
 
+      this.hls.trigger(Event.BUFFER_EOS, data);
+      this.state = State.ENDED;
+      return;
+    }
     // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
     this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
   }
@@ -748,57 +720,6 @@ class StreamController extends TaskLoop {
     this.stopLoad();
   }
 
-  onMediaSeeking () {
-    let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
-    if (Number.isFinite(currentTime)) {
-      logger.log(`media seeking to ${currentTime.toFixed(3)}`);
-    }
-
-    let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-    let bufferInfo = BufferHelper.bufferInfo(mediaBuffer, currentTime, this.config.maxBufferHole);
-    if (this.state === State.FRAG_LOADING) {
-      let fragCurrent = this.fragCurrent;
-      // check if we are seeking to a unbuffered area AND if frag loading is in progress
-      if (bufferInfo.len === 0 && fragCurrent) {
-        let tolerance = config.maxFragLookUpTolerance,
-          fragStartOffset = fragCurrent.start - tolerance,
-          fragEndOffset = fragCurrent.start + fragCurrent.duration + tolerance;
-        // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
-        if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
-          if (fragCurrent.loader) {
-            logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
-            fragCurrent.loader.abort();
-          }
-          this.fragCurrent = null;
-          this.fragPrevious = null;
-          // switch to IDLE state to load new fragment
-          this.state = State.IDLE;
-        } else {
-          logger.log('seeking outside of buffer but within currently loaded fragment range');
-        }
-      }
-    } else if (this.state === State.ENDED) {
-      // if seeking to unbuffered area, clean up fragPrevious
-      if (bufferInfo.len === 0) {
-        this.fragPrevious = 0;
-      }
-
-      // switch to IDLE state to check for potential new fragment
-      this.state = State.IDLE;
-    }
-    if (media) {
-      this.lastCurrentTime = currentTime;
-    }
-
-    // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.loadedmetadata) {
-      this.nextLoadPosition = this.startPosition = currentTime;
-    }
-
-    // tick to speed up processing
-    this.tick();
-  }
-
   onMediaSeeked () {
     const media = this.media, currentTime = media ? media.currentTime : undefined;
     if (Number.isFinite(currentTime)) {
@@ -807,12 +728,6 @@ class StreamController extends TaskLoop {
 
     // tick to speed up FRAGMENT_PLAYING triggering
     this.tick();
-  }
-
-  onMediaEnded () {
-    logger.log('media ended');
-    // reset startPosition and lastCurrentTime to restart playback @ stream beginning
-    this.startPosition = this.lastCurrentTime = 0;
   }
 
   onManifestLoading () {
