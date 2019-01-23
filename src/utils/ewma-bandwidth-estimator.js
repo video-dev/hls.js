@@ -23,7 +23,7 @@ class EwmaBandWidthEstimator {
     let numBits = 8 * numBytes,
       // weight is duration in seconds
       durationS = durationMs / 1000,
-      // value is bandwidth in bit/s
+      // value is bandwidth in bits/s
       bandwidthInBps = numBits / durationS;
     this.fast_.sample(durationS, bandwidthInBps);
     this.slow_.sample(durationS, bandwidthInBps);
