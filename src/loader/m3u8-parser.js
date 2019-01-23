@@ -155,7 +155,7 @@ export default class M3U8Parser {
     let result;
     let i;
 
-    const drmInfo = [];
+    let drmInfo = [];
 
     let firstPdtIndex = null;
 
@@ -180,15 +180,17 @@ export default class M3U8Parser {
           frag.cc = cc;
           frag.urlId = levelUrlId;
           frag.baseurl = baseurl;
+          frag.drmInfo = (drmInfo && drmInfo.length > 0) ? drmInfo : (prevFrag ? prevFrag.drmInfo : []);
+          frag.foundKeys = !!drmInfo.length;
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
           assignProgramDateTime(frag, prevFrag);
-
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
-
           frag = new Fragment();
+          // once captured, array needs to be reset and rely on previous fragment until new keys are available
+          drmInfo = [];
         }
       } else if (result[4]) { // X-BYTERANGE
         frag.rawByteRange = (' ' + result[4]).slice(1);

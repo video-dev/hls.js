@@ -104,7 +104,6 @@ class EMEController extends EventHandler {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MANIFEST_PARSED,
-      Event.LEVEL_LOADED,
       Event.FRAG_LOADED
     );
 
@@ -126,7 +125,7 @@ class EMEController extends EventHandler {
     /**
      * @private
      * https://www.w3.org/TR/encrypted-media/#initialization-data
-     * Data used by CDN to generate license request
+     * Data used by CDM to generate license request
      * @member {Uint8Array} _initData
      */
     this._initData = null;
@@ -138,6 +137,28 @@ class EMEController extends EventHandler {
      * @member {string} _initDataType
      */
     this._initDataType = null;
+
+    /**
+     * @private
+     * https://www.w3.org/TR/encrypted-media/#dom-mediakeys
+     * the MediaKeySystemAccess object provides access to a Key System
+     * @member {MediaKeys} _initDataType
+     */
+    this._mediaKeys = null;
+
+    /**
+     * @private
+     * List of required audio codecs to support
+     * @member {Array<string>} audioCodecs
+     */
+    this._audioCodecs = null;
+
+    /**
+     * @private
+     * List of required video codecs to support
+     * @member {Array<string>} videoCodecs
+     */
+    this._videoCodecs = null;
   }
 
   /**
@@ -225,18 +246,32 @@ class EMEController extends EventHandler {
       mediaKeySystemDomain: keySystem
     };
 
-    this._mediaKeysList.push(mediaKeysListItem);
+    // If no MediaKeys exist, create one, otherwise re-use the same one
+    if (this._mediaKeysList.length === 0) {
+      mediaKeySystemAccess.createMediaKeys()
+        .then((mediaKeys) => {
+          this._mediaKeysList.push(mediaKeysListItem);
+          mediaKeysListItem.mediaKeys = mediaKeys;
+          this._mediaKeys = mediaKeys;
+          logger.log(`Media-keys created for key-system "${keySystem}"`);
+          this._onMediaKeysCreated();
+        })
+        .catch((err) => {
+          logger.error('Failed to create media-keys:', err);
+        });
 
-    mediaKeySystemAccess.createMediaKeys()
-      .then((mediaKeys) => {
-        mediaKeysListItem.mediaKeys = mediaKeys;
+      return;
+    }
 
-        logger.log(`Media-keys created for key-system "${keySystem}"`);
-        this._onMediaKeysCreated();
-      })
-      .catch((err) => {
-        logger.error('Failed to create media-keys:', err);
-      });
+    this._mediaKeysList.push({
+      mediaKeys: this._mediaKeys,
+      mediaKeysSession: null,
+      mediaKeysSessionInitialized: false,
+      mediaKeySystemAccess: mediaKeySystemAccess,
+      mediaKeySystemDomain: keySystem
+    });
+
+    this._onMediaKeysCreated();
   }
 
   /**
@@ -262,12 +297,13 @@ class EMEController extends EventHandler {
     logger.log(`New key-system session ${keySession.sessionId}`);
 
     keySession.addEventListener('message', (event) => {
-      this._onKeySessionMessage(keySession, event.message);
+      this._onKeySessionMessage(keySession, event);
     }, false);
   }
 
-  _onKeySessionMessage (keySession, message) {
+  _onKeySessionMessage (keySession, session) {
     logger.log('Got EME message event, creating license request');
+    const message = session.message;
 
     this._requestLicense(message, (data) => {
       logger.log('Received license data, updating key-session');
@@ -288,7 +324,8 @@ class EMEController extends EventHandler {
   _attemptSetMediaKeys () {
     if (!this._hasSetMediaKeys) {
       // FIXME: see if we can/want/need-to really to deal with several potential key-sessions?
-      const keysListItem = this._mediaKeysList[0];
+      const keysListItem = this._getMediaKeys();
+
       if (!keysListItem || !keysListItem.mediaKeys) {
         logger.error('Fatal: Media is encrypted but no CDM access or no keys have been obtained yet');
         this.hls.trigger(Event.ERROR, {
@@ -300,15 +337,20 @@ class EMEController extends EventHandler {
       }
 
       logger.log('Setting keys for encrypted media');
-
       this._media.setMediaKeys(keysListItem.mediaKeys);
       this._hasSetMediaKeys = true;
     }
   }
 
+  _getMediaKeys () {
+    return this._mediaKeysList[this._mediaKeysList.length - 1];
+  }
+
   _generateRequestWithPreferredKeySession () {
     // FIXME: see if we can/want/need-to really to deal with several potential key-sessions?
-    const keysListItem = this._mediaKeysList[0];
+
+    const keysListItem = this._getMediaKeys();
+
     if (!keysListItem) {
       logger.error('Fatal: Media is encrypted but not any key-system access has been obtained yet');
       this.hls.trigger(Event.ERROR, {
@@ -463,7 +505,8 @@ class EMEController extends EventHandler {
   _requestLicense (keyMessage, callback) {
     logger.log('Requesting content license for key-system');
 
-    const keysListItem = this._mediaKeysList[0];
+    const keysListItem = this._getMediaKeys();
+
     if (!keysListItem) {
       logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
       this.hls.trigger(Event.ERROR, {
@@ -502,47 +545,52 @@ class EMEController extends EventHandler {
     // FIXME: also handle detaching media !
     if (!this._hasSetMediaKeys) {
       media.addEventListener('encrypted', (e) => {
-        this._onMediaEncrypted(e.initDataType, e.initData);
+        if (e.initData) {
+          this._onMediaEncrypted(e.initDataType, e.initData);
+        }
       });
     }
   }
 
   onManifestParsed (data) {
-    const audioCodecs = data.levels.map((level) => level.audioCodec);
-    const videoCodecs = data.levels.map((level) => level.videoCodec);
+    this._audioCodecs = data.levels.map((level) => level.audioCodec);
+    this._videoCodecs = data.levels.map((level) => level.videoCodec);
 
-    this._attemptKeySystemAccess(KeySystems[this._selectedDrm], audioCodecs, videoCodecs);
+    this._attemptKeySystemAccess(KeySystems[this._selectedDrm], this._audioCodecs, this._videoCodecs);
   }
 
-  onFragLoaded () {
-    // add initData and type if they are included in playlist
-    if (this._initData && !this._hasSetMediaKeys && this._haveKeySession) {
+  onFragLoaded (data) {
+    const frag = data.frag;
+
+    // If new DRM keys exist, let's try to create MediaKeysObject, let's process initData
+    if (frag.foundKeys) {
+      this._attemptKeySystemAccess(KeySystems[this._selectedDrm], this._audioCodecs, this._videoCodecs);
+      this._processInitData(frag.drmInfo);
+    }
+
+    // add initData and type if they are included in playlist, also wait for keysession
+    if (this._initData && this._haveKeySession) {
       this._onMediaEncrypted(this._initDataType, this._initData);
     }
   }
 
-  /**
-   * @param {object} data
-   */
-  onLevelLoaded (data) {
-    if (data.details && data.details.drmInfo && data.details.drmInfo.length > 0) {
-      const drmIdentifier = DRMIdentifiers[this._selectedDrm];
+  _processInitData (drmInfo) {
+    const drmIdentifier = DRMIdentifiers[this._selectedDrm];
 
-      const selectedDrm = data.details.drmInfo.filter(levelkey => levelkey.format === drmIdentifier);
-      const levelkey = selectedDrm.shift();
+    const selectedDrm = drmInfo.filter(levelkey => levelkey.format === drmIdentifier);
+    const levelkey = selectedDrm.shift();
 
-      const details = levelkey.reluri.split(',');
-      const encoding = details[0];
-      const pssh = details[1];
+    const details = levelkey.reluri.split(',');
+    const encoding = details[0];
+    const pssh = details[1];
 
-      if (drmIdentifier === 'com.microsoft.playready' && encoding.includes('base64')) {
-        this._initData = buildPlayReadyPSSHBox(base64ToUint8Array(pssh)); // Playready is particular about the pssh box, so it needs to be handcrafted.
-      } else if (drmIdentifier === 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed' && encoding.includes('base64')) {
-        this._initData = base64ToUint8Array(pssh); // Widevine pssh box
-      }
-
-      this._initDataType = InitDataTypes.COMMON_ENCRYPTION;
+    if (drmIdentifier === 'com.microsoft.playready' && encoding.includes('base64')) {
+      this._initData = buildPlayReadyPSSHBox(base64ToUint8Array(pssh)); // Playready is particular about the pssh box, so it needs to be handcrafted.
+    } else if (drmIdentifier === 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed' && encoding.includes('base64')) {
+      this._initData = base64ToUint8Array(pssh); // Widevine pssh box
     }
+
+    this._initDataType = InitDataTypes.COMMON_ENCRYPTION;
   }
 }
 

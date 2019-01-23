@@ -80,7 +80,8 @@ describe('EMEController', () => {
     });
 
     const data = {
-      details: {
+      frag: {
+        foundKeys: true,
         drmInfo: [{
           format: 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
           reluri: 'data:text/plain;base64,AAAAPnBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB4iFnNoYWthX2NlYzJmNjRhYTc4OTBhMTFI49yVmwY='
@@ -90,7 +91,7 @@ describe('EMEController', () => {
 
     emeController.onMediaAttached({ media });
     emeController.onManifestParsed({ levels: fakeLevels });
-    emeController.onLevelLoaded(data);
+    emeController.onFragLoaded(data);
 
     media.emit('encrypted', {
       'initDataType': emeController._initDataType,
