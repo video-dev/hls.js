@@ -8,7 +8,6 @@ describe('TimelineController', function () {
   beforeEach(function () {
     hls = new Hls();
     hls.config.enableWebVTT = true;
-    hls.config.renderNatively = true;
     timelineController = new TimelineController(hls);
     timelineController.media = document.createElement('video');
   });
