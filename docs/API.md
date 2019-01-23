@@ -939,7 +939,7 @@ parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
 (default: `500000`)
 
-Default bandwidth estimate in bits/second prior to collecting fragment bandwidth samples.
+Default bandwidth estimate in bit/s prior to collecting fragment bandwidth samples.
 
 parameter should be a float
 
@@ -1056,7 +1056,7 @@ Default value is `-1` (no level capping).
 
 ### `hls.bandwidthEstimate`
 
-get: Returns the current bandwidth estimate, in bps, if available. Otherwise, `NaN` is returned.
+get: Returns the current bandwidth estimate in bit/s, if available. Otherwise, `NaN` is returned.
 
 ## Version Control
 
