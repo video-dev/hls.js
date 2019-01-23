@@ -1,6 +1,6 @@
 import { getSelfScope } from './get-self-scope';
 
-function noop () {}
+function noop (...args) {}
 
 const fakeLogger = {
   trace: noop,
