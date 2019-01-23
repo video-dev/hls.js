@@ -40,6 +40,7 @@
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`liveDurationInfinity`](#livedurationinfinity)
+  - [`liveBackBufferLength`](#livebackbufferlength)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -89,6 +90,7 @@
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
   - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
+  - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -541,6 +543,12 @@ Override current Media Source duration to `Infinity` for a live broadcast.
 Useful, if you are building a player which relies on native UI capabilities in modern browsers.
 If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
 
+### `liveBackBufferLength`
+
+(default: `Infinity`)
+
+Sets the maximum length of the buffer, in seconds, to keep during a live stream. Any video buffered past this time will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted.
+
 ### `enableWorker`
 
 (default: `true`)
@@ -941,14 +949,14 @@ parameter should be a float
 (default: `0.95`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level.
-If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
+If `abrBandWidthFactor * bandwidth average > level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
 
 ### `abrBandWidthUpFactor`
 
 (default: `0.7`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
-If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
+If `abrBandWidthUpFactor * bandwidth average > level.bitrate` then ABR can switch up to that quality level.
 
 ### `abrMaxWithRealBitrate`
 
@@ -1053,6 +1061,10 @@ Default value is `-1` (no level capping).
 - set: Whether level capping is enabled.
 
 Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in config.
+
+### `hls.bandwidthEstimate`
+
+get: Returns the current bandwidth estimate, in Kb/s, if available. Otherwise, `NaN` is returned.
 
 ## Version Control
 

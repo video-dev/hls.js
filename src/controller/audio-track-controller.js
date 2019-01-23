@@ -323,13 +323,14 @@ class AudioTrackController extends TaskLoop {
    * @returns {boolean}
    */
   _needsTrackLoading (audioTrack) {
-    const { details } = audioTrack;
+    const { details, url } = audioTrack;
 
-    if (!details) {
-      return true;
-    } else if (details.live) {
-      return true;
+    if (!details || details.live) {
+      // check if we face an audio track embedded in main playlist (audio track without URI attribute)
+      return !!url;
     }
+
+    return false;
   }
 
   /**
