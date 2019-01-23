@@ -103,6 +103,7 @@ class EMEController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHED,
       Event.MANIFEST_PARSED
     );
 
