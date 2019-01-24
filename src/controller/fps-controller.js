@@ -27,10 +27,10 @@ class FPSController extends EventHandler {
       const video = this.video = data.media instanceof window.HTMLVideoElement ? data.media : null;
       if (typeof video.getVideoPlaybackQuality === 'function') {
         this.isVideoPlaybackQualityAvailable = true;
+      } else {
+        clearInterval(this.timer);
+        this.timer = setInterval(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);
       }
-
-      clearInterval(this.timer);
-      this.timer = setInterval(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);
     }
   }
 
