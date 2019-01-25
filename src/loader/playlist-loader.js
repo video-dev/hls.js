@@ -131,6 +131,7 @@ class PlaylistLoader extends EventHandler {
 
   resetInternalLoader (contextType) {
     if (this.loaders[contextType]) {
+      this.loaders[contextType].destroy();
       delete this.loaders[contextType];
     }
   }

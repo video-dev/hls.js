@@ -79,6 +79,7 @@ class FragmentLoader extends EventHandler {
     let payload = response.data, frag = context.frag;
     // detach fragment loader on load success
     frag.loader = undefined;
+    this.loaders[frag.type].destroy();
     this.loaders[frag.type] = undefined;
     this.hls.trigger(Event.FRAG_LOADED, { payload: payload, frag: frag, stats: stats, networkDetails: networkDetails });
   }
@@ -90,6 +91,7 @@ class FragmentLoader extends EventHandler {
       loader.abort();
     }
 
+    this.loaders[frag.type].destroy();
     this.loaders[frag.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails });
   }
@@ -101,6 +103,7 @@ class FragmentLoader extends EventHandler {
       loader.abort();
     }
 
+    this.loaders[frag.type].destroy();
     this.loaders[frag.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails });
   }
