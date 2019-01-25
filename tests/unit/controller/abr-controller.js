@@ -2,12 +2,10 @@ import AbrController from '../../../src/controller/abr-controller';
 import EwmaBandWidthEstimator from '../../../src/utils/ewma-bandwidth-estimator';
 import Hls from '../../../src/hls';
 
-const assert = require('assert');
-
 describe('AbrController', function () {
   it('should return null if _bwEstimator is not specified', function () {
     let hls = new Hls();
-    assert.strictEqual(hls.abrController._bwEstimator, null);
+    expect(hls.abrController._bwEstimator).to.be.null;
   });
 
   it('should return correct next auto level', function () {
@@ -22,6 +20,6 @@ describe('AbrController', function () {
     ];
     let abrController = new AbrController(hls);
     abrController.bwEstimator = new EwmaBandWidthEstimator(hls, 15, 4, 5e5);
-    assert.equal(abrController.nextAutoLevel, 0);
+    expect(abrController.nextAutoLevel).to.equal(0);
   });
 });
