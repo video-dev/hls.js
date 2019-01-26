@@ -596,7 +596,7 @@ class MP4Remuxer {
           }
           if (!rawMPEG) {
             const view = new DataView(mdat.buffer);
-            view.setUint32(0, mdatSize);
+            view.setUint32(0, mdatSize + offset);
             mdat.set(MP4.types.mdat, 4);
           }
         } else {
