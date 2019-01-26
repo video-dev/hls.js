@@ -34,7 +34,11 @@ try {
     if (!matched) {
       throw new Error('Error calculating version.');
     }
-    newVersion += `-${TRAVIS_MODE === 'netlifyPr' ? 'pr' : 'canary'}.${getCommitNum()}`;
+    if (TRAVIS_MODE === 'netlifyPr') {
+      newVersion += `-pr.${getCommitHash().substr(0, 8)}`;
+    } else {
+      newVersion += `-canary.${getCommitNum()}`;
+    }
   } else {
     throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
   }
@@ -50,6 +54,10 @@ process.exit(0);
 
 function getCommitNum() {
   return parseInt(require('child_process').execSync('git rev-list --count HEAD').toString(), 10);
+}
+
+function getCommitHash() {
+  return require('child_process').execSync('git rev-parse HEAD').toString();
 }
 
 function getLatestVersionTag() {
