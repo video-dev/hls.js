@@ -17,7 +17,7 @@ try {
     }
     // remove v
     newVersion = tag.substring(1);
-  } else if (TRAVIS_MODE === 'releaseCanary') {
+  } else if (TRAVIS_MODE === 'releaseCanary' || TRAVIS_MODE === 'netlifyPr') {
     // bump patch in version from latest git tag
     let currentVersion = getLatestVersionTag();
     if (!VALID_VERSION_REGEX.test(currentVersion)) {
@@ -34,7 +34,7 @@ try {
     if (!matched) {
       throw new Error('Error calculating version.');
     }
-    newVersion += '-canary.' + getCommitNum();
+    newVersion += `-${TRAVIS_MODE === 'netlifyPr' ? 'pr' : 'canary'}.${getCommitNum()}`;
   } else {
     throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
   }
