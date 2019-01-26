@@ -11,25 +11,25 @@ if [ "${TRAVIS_MODE}" = "build" ]; then
   # see https://github.com/video-dev/hls.js/pull/1642
   node -e 'require("./" + require("./package.json").main)'
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
-	npm run test:unit
+  npm run test:unit
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
-	npm run build
-	n=0
-	maxRetries=1
-	until [ $n -ge ${maxRetries} ]
-	do
-		if [ $n -gt 0 ]; then
-			echo "Retrying... Attempt: $((n+1))"
-			delay=$((n*60))
-			echo "Waiting ${delay} seconds..."
-			sleep $delay
-		fi
-		npm run test:func && break
-		n=$[$n+1]
-	done
-	if [ ${n} = ${maxRetries} ]; then
-		exit 1
-	fi
+  npm run build
+  n=0
+  maxRetries=1
+  until [ $n -ge ${maxRetries} ]
+  do
+    if [ $n -gt 0 ]; then
+      echo "Retrying... Attempt: $((n+1))"
+      delay=$((n*60))
+      echo "Waiting ${delay} seconds..."
+      sleep $delay
+    fi
+    npm run test:func && break
+    n=$[$n+1]
+  done
+  if [ ${n} = ${maxRetries} ]; then
+    exit 1
+  fi
 elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ]; then
   # update the version
   if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
@@ -67,6 +67,6 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
     ./scripts/deploy-netlify.sh
   fi
 else
-	echo "Unknown travis mode: ${TRAVIS_MODE}" 1>&2
-	exit 1
+  echo "Unknown travis mode: ${TRAVIS_MODE}" 1>&2
+  exit 1
 fi
