@@ -32,8 +32,10 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 	fi
 elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ]; then
   # update the version
-  # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
-  git fetch --unshallow
+  if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
+    # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
+    git fetch --unshallow
+  fi
   node ./scripts/set-package-version.js
   npm run lint
   npm run build
