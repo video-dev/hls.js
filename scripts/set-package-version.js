@@ -53,13 +53,17 @@ try {
 process.exit(0);
 
 function getCommitNum() {
-  return parseInt(require('child_process').execSync('git rev-list --count HEAD').toString(), 10);
+  return parseInt(exec('git rev-list --count HEAD'), 10);
 }
 
 function getCommitHash() {
-  return require('child_process').execSync('git rev-parse HEAD').toString();
+  return exec('git rev-parse HEAD');
 }
 
 function getLatestVersionTag() {
-  return require('child_process').execSync('git describe --abbrev=0 --match="v*"').toString().trim();
+  return exec('git describe --abbrev=0 --match="v*"');
+}
+
+function exec(cmd) {
+  return require('child_process').execSync(cmd).toString().trim();
 }
