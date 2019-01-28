@@ -588,15 +588,16 @@ class MP4Remuxer {
         // remember first PTS of our audioSamples
         firstPTS = pts;
         if (mdatSize > 0) {
+          mdatSize += offset;
           try {
-            mdat = new Uint8Array(mdatSize + offset);
+            mdat = new Uint8Array(mdatSize);
           } catch (err) {
             this.observer.trigger(Event.ERROR, { type: ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: `fail allocating audio mdat ${mdatSize}` });
             return;
           }
           if (!rawMPEG) {
             const view = new DataView(mdat.buffer);
-            view.setUint32(0, mdatSize + offset);
+            view.setUint32(0, mdatSize);
             mdat.set(MP4.types.mdat, 4);
           }
         } else {
