@@ -12,14 +12,6 @@
     "url": "https://github.com/video-dev/hls.js/issues"
   },
   "main": "./dist/hls.js",
-  "nyc": {
-    "reporter": [
-      "lcov"
-    ],
-    "exclude": [
-      "tests"
-    ]
-  },
   "publishConfig": {
     "access": "public"
   },
@@ -39,22 +31,22 @@
     "test": "npm run test:unit && npm run test:func",
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
-    "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000"
+    "test:func": "mocha --require ts-node/register tests/functional/auto/setup.js --timeout 40000 --exit"
   },
   "dependencies": {
     "eventemitter3": "3.1.0",
     "url-toolkit": "^2.1.6"
   },
   "devDependencies": {
-    "arraybuffer-equal": "^1.0.4",
+    "chai": "4.2.0",
     "chromedriver": "^2.38.3",
-    "deep-strict-equal": "^0.2.0",
     "esdoc": "^1.1.0",
     "esdoc-standard-plugin": "^1.0.0",
     "esdoc-typescript-plugin": "^1.0.1",
     "eslint": "^4.13.1",
     "eslint-config-standard": "^11.0.0",
     "eslint-plugin-import": "^2.9.0",
+    "eslint-plugin-mocha": "^5.2.1",
     "eslint-plugin-node": "^6.0.1",
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
@@ -64,24 +56,24 @@
     "http-server": "^0.11.0",
     "husky": "^0.14.3",
     "istanbul-instrumenter-loader": "^3.0.1",
-    "karma": "^2.0.0",
+    "karma": "3.1.3",
     "karma-chrome-launcher": "^2.2.0",
-    "karma-coverage-istanbul-reporter": "^1.3.0",
-    "karma-mocha": "^1.3.0",
-    "karma-mocha-reporter": "^2.2.3",
-    "karma-should": "^1.0.0",
-    "karma-sinon": "^1.0.5",
+    "karma-coverage-istanbul-reporter": "2.0.4",
+    "karma-mocha": "1.3.0",
+    "karma-mocha-reporter": "2.2.5",
+    "karma-sinon": "1.0.5",
+    "karma-sinon-chai": "2.0.2",
     "karma-sourcemap-loader": "^0.3.7",
-    "karma-webpack": "^3.0.0",
-    "mocha": "^3.0.2",
+    "karma-webpack": "3.0.5",
+    "mocha": "5.2.0",
     "netlify-cli": "^2.5.1",
     "selenium-webdriver": "^3.1.0",
-    "should": "^13.1.3",
-    "sinon": "^4.1.3",
+    "sinon": "7.1.1",
+    "sinon-chai": "3.3.0",
     "ts-loader": "^4.4.2",
     "ts-node": "^6.1.0",
     "typescript": "^2.9.1",
-    "typescript-eslint-parser": "^16.0.0",
+    "typescript-eslint-parser": "^21.0.2",
     "webpack": "^4.11.1",
     "webpack-bundle-analyzer": "^2.9.1",
     "webpack-cli": "^3.0.2",
