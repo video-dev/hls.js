@@ -571,8 +571,6 @@ class EMEController extends EventHandler {
   onManifestParsed (data: any) {
     this._audioCodecs = data.levels.map((level) => level.audioCodec);
     this._videoCodecs = data.levels.map((level) => level.videoCodec);
-
-    this._attemptKeySystemAccess(KeySystems[this._selectedDrm], this._audioCodecs, this._videoCodecs);
   }
 
   onFragLoaded (data) {

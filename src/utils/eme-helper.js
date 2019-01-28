@@ -16,7 +16,7 @@ export function base64ToUint8Array (base64String) {
 
 /**
  * https://www.w3.org/TR/eme-initdata-cenc/
- * @param {ArrayBuffer} binary data from the URI in the manifest
+ * @param {ArrayBuffer | ArrayBufferView} binary data from the URI in the manifest
  * @returns {Uint8Array}
  */
 export function buildPlayReadyPSSHBox (binary) {
