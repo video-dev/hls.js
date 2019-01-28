@@ -1,10 +1,9 @@
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
 
-const assert = require('assert');
 const sinon = require('sinon');
 
-describe('AudioTrackController', () => {
+describe('AudioTrackController', function () {
   const tracks = [{
     groupId: '1',
     id: 0,
@@ -38,29 +37,28 @@ describe('AudioTrackController', () => {
   let hls;
   let audioTrackController;
 
-  beforeEach(() => {
+  beforeEach(function () {
     hls = new Hls();
     audioTrackController = new AudioTrackController(hls);
   });
 
-  afterEach(() => {
+  afterEach(function () {
     hls.destroy();
   });
 
-  describe('onManifestLoading', () => {
-    it('should reset the tracks list and current trackId', () => {
+  describe('onManifestLoading', function () {
+    it('should reset the tracks list and current trackId', function () {
       audioTrackController.tracks = tracks;
       audioTrackController.onManifestLoading();
-      assert.strictEqual(audioTrackController.tracks.length, 0);
+      expect(audioTrackController.tracks).to.be.empty;
     });
   });
 
-  describe('onManifestParsed', () => {
-    it('should set the audioTracks contained in the event data and trigger AUDIO_TRACKS_UPDATED', (done) => {
+  describe('onManifestParsed', function () {
+    it('should set the audioTracks contained in the event data and trigger AUDIO_TRACKS_UPDATED', function (done) {
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
-        assert.strictEqual(data.audioTracks, tracks);
-        assert.strictEqual(audioTrackController.tracks, tracks);
-
+        expect(data.audioTracks).to.equal(tracks);
+        expect(audioTrackController.tracks).to.equal(tracks);
         done();
       });
 
@@ -69,10 +67,10 @@ describe('AudioTrackController', () => {
       });
     });
 
-    it('should set the audioTracks contained in the event data (nullable) to an empty array and trigger AUDIO_TRACKS_UPDATED', (done) => {
+    it('should set the audioTracks contained in the event data (nullable) to an empty array and trigger AUDIO_TRACKS_UPDATED', function (done) {
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
-        assert.strictEqual(data.audioTracks.length, 0);
-        assert.strictEqual(audioTrackController.tracks.length, 0);
+        expect(data.audioTracks).to.be.empty;
+        expect(audioTrackController.tracks).to.be.empty;
         done();
       });
 
@@ -82,20 +80,20 @@ describe('AudioTrackController', () => {
     });
   });
 
-  describe('_needsTrackLoading', () => {
-    it('should not need loading because the audioTrack is embedded in the main playlist', () => {
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true } }), false);
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null }), false);
+  describe('_needsTrackLoading', function () {
+    it('should not need loading because the audioTrack is embedded in the main playlist', function () {
+      expect(audioTrackController._needsTrackLoading({ details: { live: true } })).to.be.false;
+      expect(audioTrackController._needsTrackLoading({ details: null })).to.be.false;
     });
 
-    it('should need loading because the track has not been loaded yet', () => {
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), true);
-      assert.strictEqual(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' }), true);
+    it('should need loading because the track has not been loaded yet', function () {
+      expect(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' })).to.be.true;
+      expect(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' })).to.be.true;
     });
   });
 
-  describe('onAudioTrackLoaded', () => {
-    it('should set the track details from the event data but not set the interval for a non-live track', () => {
+  describe('onAudioTrackLoaded', function () {
+    it('should set the track details from the event data but not set the interval for a non-live track', function () {
       const details = {
         live: false,
         targetduration: 100
@@ -108,11 +106,11 @@ describe('AudioTrackController', () => {
         details
       });
 
-      assert.strictEqual(audioTrackController.tracks[0].details, details);
-      assert.strictEqual(audioTrackController.hasInterval(), false);
+      expect(audioTrackController.tracks[0].details).to.equal(details);
+      expect(audioTrackController.hasInterval()).to.be.false;
     });
 
-    it('should set the track details from the event data and set the interval for a live track', () => {
+    it('should set the track details from the event data and set the interval for a live track', function () {
       const details = {
         live: true,
         targetduration: 100
@@ -125,32 +123,25 @@ describe('AudioTrackController', () => {
         details
       });
 
-      assert.strictEqual(audioTrackController.tracks[0].details, details);
-      assert.strictEqual(audioTrackController.hasInterval(), true);
+      expect(audioTrackController.tracks[0].details).to.equal(details);
+      expect(audioTrackController.hasInterval()).to.be.true;
     });
   });
 
-  describe('onAudioTrackSwitched', () => {
-    it('should update the current audioGroupId', () => {
-      const details = {
-        live: true,
-        targetduration: 100
-      };
-
+  describe('onAudioTrackSwitched', function () {
+    it('should update the current audioGroupId', function () {
       audioTrackController.tracks = tracks;
-
       audioTrackController.audioGroupId = '2';
-
       audioTrackController.onAudioTrackSwitched({
         id: 1
       });
 
-      assert.strictEqual(audioTrackController.audioGroupId, '1');
+      expect(audioTrackController.audioGroupId).to.equal('1');
     });
   });
 
-  describe('onLevelLoaded', () => {
-    it('should reselect the current track and trigger AUDIO_TRACK_SWITCHING eventually', (done) => {
+  describe('onLevelLoaded', function () {
+    it('should reselect the current track and trigger AUDIO_TRACK_SWITCHING eventually', function (done) {
       hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, (event, data) => {
         done();
       });
@@ -183,13 +174,12 @@ describe('AudioTrackController', () => {
       audioTrackController.onLevelLoaded(levelLoadedEvent);
 
       // group has switched
-      assert.strictEqual(audioTrackController.audioGroupId, newGroupId);
-
+      expect(audioTrackController.audioGroupId).to.equal(newGroupId);
       // name is still the same
-      assert.strictEqual(tracks[audioTrackController.audioTrack].name, audioTrackName);
+      expect(tracks[audioTrackController.audioTrack].name).to.equal(audioTrackName);
     });
 
-    it('should load audio tracks with a url', () => {
+    it('should load audio tracks with a url', function () {
       const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithUrl = {
@@ -215,14 +205,13 @@ describe('AudioTrackController', () => {
         level: 0
       });
 
-      sinon.assert.calledOnce(needsTrackLoading);
-      sinon.assert.calledWith(needsTrackLoading, trackWithUrl);
-      assert.strictEqual(needsTrackLoading.firstCall.returnValue, true, 'expected _needsTrackLoading to return true');
-
-      sinon.assert.calledOnce(audioTrackLoadingCallback);
+      expect(needsTrackLoading).to.have.been.calledOnce;
+      expect(needsTrackLoading).to.have.been.calledWith(trackWithUrl);
+      expect(needsTrackLoading.firstCall.returnValue).to.be.true;
+      expect(audioTrackLoadingCallback).to.have.been.calledOnce;
     });
 
-    it('should not attempt to load audio tracks without a url', () => {
+    it('should not attempt to load audio tracks without a url', function () {
       const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithOutUrl = tracks[0];
@@ -242,68 +231,119 @@ describe('AudioTrackController', () => {
         level: 0
       });
 
-      sinon.assert.calledOnce(needsTrackLoading);
-      sinon.assert.calledWith(needsTrackLoading, trackWithOutUrl);
-      assert.strictEqual(needsTrackLoading.firstCall.returnValue, false, 'expected _needsTrackLoading to return false');
+      expect(needsTrackLoading).to.have.been.calledOnce;
+      expect(needsTrackLoading).to.have.been.calledWith(trackWithOutUrl);
+      expect(needsTrackLoading.firstCall.returnValue).to.be.false;
+      expect(audioTrackLoadingCallback).to.not.have.been.called;
+    });
 
-      sinon.assert.notCalled(audioTrackLoadingCallback);
+    it('should load audio tracks with a url', function () {
+      const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
+      const audioTrackLoadingCallback = sinon.spy();
+      const trackWithUrl = {
+        groupId: '1',
+        id: 0,
+        name: 'A',
+        default: true,
+        url: './trackA.m3u8'
+      };
+
+      hls.on(Hls.Events.AUDIO_TRACK_LOADING, audioTrackLoadingCallback);
+
+      hls.levelController = {
+        levels: [{
+          urlId: 0,
+          audioGroupIds: ['1']
+        }]
+      };
+
+      audioTrackController.tracks = [trackWithUrl];
+
+      audioTrackController.onLevelLoaded({
+        level: 0
+      });
+
+      expect(needsTrackLoading).to.have.been.calledOnce;
+      expect(needsTrackLoading).to.have.been.calledWith(trackWithUrl);
+      expect(needsTrackLoading.firstCall.returnValue, true, 'expected _needsTrackLoading to return true');
+
+      expect(audioTrackLoadingCallback).to.have.been.calledOnce;
+    });
+
+    it('should not attempt to load audio tracks without a url', function () {
+      const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
+      const audioTrackLoadingCallback = sinon.spy();
+      const trackWithOutUrl = tracks[0];
+
+      hls.on(Hls.Events.AUDIO_TRACK_LOADING, audioTrackLoadingCallback);
+
+      hls.levelController = {
+        levels: [{
+          urlId: 0,
+          audioGroupIds: ['1']
+        }]
+      };
+
+      audioTrackController.tracks = tracks;
+
+      audioTrackController.onLevelLoaded({
+        level: 0
+      });
+
+      expect(needsTrackLoading).to.have.been.calledOnce;
+      expect(needsTrackLoading).to.have.been.calledWith(trackWithOutUrl);
+      expect(needsTrackLoading.firstCall.returnValue).to.be.false;
+
+      expect(audioTrackLoadingCallback).to.not.have.been.called;
     });
   });
 
-  describe('onError', () => {
-    it('should clear interval (only) on fatal network errors', () => {
+  describe('onError', function () {
+    it('should clear interval (only) on fatal network errors', function () {
       audioTrackController.setInterval(1000);
 
       audioTrackController.onError({
         type: Hls.ErrorTypes.MEDIA_ERROR
       });
 
-      assert.strictEqual(audioTrackController.hasInterval(), true);
-
+      expect(audioTrackController.hasInterval()).to.be.true;
       audioTrackController.onError({
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
 
-      assert.strictEqual(audioTrackController.hasInterval(), true);
-
+      expect(audioTrackController.hasInterval()).to.be.true;
       audioTrackController.onError({
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: false
       });
 
-      assert.strictEqual(audioTrackController.hasInterval(), true);
-
+      expect(audioTrackController.hasInterval()).to.be.true;
       audioTrackController.onError({
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
 
       // fatal network error clears interval
-      assert.strictEqual(audioTrackController.hasInterval(), false);
+      expect(audioTrackController.hasInterval()).to.be.false;
     });
 
-    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', () => {
+    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', function () {
       const currentTrackId = 4;
-
       audioTrackController._trackId = currentTrackId;
-
       audioTrackController.tracks = tracks;
-
       audioTrackController.onError({
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
 
-      assert.strictEqual(!!audioTrackController.trackIdBlacklist[currentTrackId], false);
-
+      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
       audioTrackController.onError({
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
 
-      assert.strictEqual(!!audioTrackController.trackIdBlacklist[currentTrackId], false);
-
+      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
       audioTrackController.onError({
         type: Hls.ErrorTypes.NETWORK_ERROR,
         details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
@@ -313,9 +353,8 @@ describe('AudioTrackController', () => {
         }
       });
 
-      assert.strictEqual(!!audioTrackController.trackIdBlacklist[currentTrackId], true);
-
-      assert.strictEqual(audioTrackController.audioTrack, 1);
+      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.true;
+      expect(audioTrackController.audioTrack).to.equal(1);
     });
   });
 });

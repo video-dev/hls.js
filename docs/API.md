@@ -94,6 +94,7 @@
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
+  - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -656,7 +657,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.tload {number} - performance.now() on load complete
       @param stats.loaded {number} - nb of loaded bytes
-      @param [stats.bw] {number} - download bandwidth in bit/s
+      @param [stats.bw] {number} - download bandwidth in bits/s
       @param stats.total {number} - total nb of bytes
       @param context {object} - loader context
       @param networkDetails {object} - loader network details (the xhr for default loaders)
@@ -667,7 +668,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.loaded {number} - nb of loaded bytes
       @param [stats.total] {number} - total nb of bytes
-      @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
+      @param [stats.bw] {number} - current download bandwidth in bits/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
       @param data {string/arraybuffer/sharedarraybuffer} - onProgress data (should be defined only if context.progressData === true)
       @param networkDetails {object} - loader network details (the xhr for default loaders)
@@ -943,7 +944,7 @@ parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
 (default: `500000`)
 
-Default bandwidth estimate in bits/second prior to collecting fragment bandwidth samples.
+Default bandwidth estimate in bits/s prior to collecting fragment bandwidth samples.
 
 parameter should be a float
 
@@ -952,14 +953,14 @@ parameter should be a float
 (default: `0.95`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level.
-If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
+If `abrBandWidthFactor * bandwidth average > level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
 
 ### `abrBandWidthUpFactor`
 
 (default: `0.7`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
-If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
+If `abrBandWidthUpFactor * bandwidth average > level.bitrate` then ABR can switch up to that quality level.
 
 ### `abrMaxWithRealBitrate`
 
@@ -1098,6 +1099,10 @@ Default value is `hls.firstLevel`.
 - get/set: Capping/max level value that could be used by ABR Controller.
 
 Default value is `-1` (no level capping).
+
+### `hls.bandwidthEstimate`
+
+get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, `NaN` is returned.
 
 ## Version Control
 
