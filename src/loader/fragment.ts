@@ -21,8 +21,7 @@ export default class Fragment {
 
   public rawProgramDateTime: string | null = null;
   public programDateTime: number | null = null;
-
-  public tagList: Array<string[]>;
+  public tagList: Array<string[]> = [];
 
   // TODO: Move at least baseurl to constructor.
   // Currently we do a two-pass construction as use the Fragment class almost like a object for holding parsing state.
@@ -38,11 +37,10 @@ export default class Fragment {
   public duration!: number;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
   public sn: number | 'initSegment' = 0;
+  // levelkey is the EXT-X-KEY that applies to this segment for decryption
+  // core difference from the private field _decryptdata is the lack of the initialized IV
+  // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
-
-  constructor () {
-    this.tagList = [];
-  }
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
@@ -96,7 +94,7 @@ export default class Fragment {
     if (!this._decryptdata && this.levelkey) {
       // TODO look for this warning for 'initSegment' sn getting used in decryption IV
       if (typeof this.sn !== 'number') {
-        logger.warn(`undefined behaviour for sn="${this.sn}"`);
+        logger.warn(`undefined behaviour for sn="${this.sn}" in IV generation`);
       }
       this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn as number);
     }
@@ -140,7 +138,7 @@ export default class Fragment {
    * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
    * @returns {Uint8Array}
    */
-  createInitializationVector (segmentNumber): Uint8Array {
+  createInitializationVector (segmentNumber: number): Uint8Array {
     let uint8View = new Uint8Array(16);
 
     for (let i = 12; i < 16; i++) {
