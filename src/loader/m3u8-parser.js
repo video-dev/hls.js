@@ -191,9 +191,9 @@ export default class M3U8Parser {
       } else if (result[4]) { // X-BYTERANGE
         const data = (' ' + result[4]).slice(1);
         if (prevFrag) {
-          frag.parseByteRange(data, prevFrag);
+          frag.setByteRange(data, prevFrag);
         } else {
-          frag.parseByteRange(data);
+          frag.setByteRange(data);
         }
       } else if (result[5]) { // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
@@ -276,7 +276,7 @@ export default class M3U8Parser {
           let mapAttrs = new AttrList(value1);
           frag.relurl = mapAttrs.URI;
           if (mapAttrs.BYTERANGE) {
-            frag.parseByteRange(mapAttrs.BYTERANGE);
+            frag.setByteRange(mapAttrs.BYTERANGE);
           }
           frag.baseurl = baseurl;
           frag.level = id;

@@ -9,20 +9,20 @@ describe('Fragment class tests', function () {
     frag = new Fragment();
   });
 
-  describe('parseByteRange', function () {
-    it('parses byte range string with length@offset', function () {
+  describe('setByteRange', function () {
+    it('set byte range with length@offset', function () {
       frag.parseByteRange('1000@10000');
       expect(frag.byteRangeStartOffset).to.equal(10000);
       expect(frag.byteRangeEndOffset).to.equal(11000);
     });
 
-    it('parses byte range with no offset and uses 0 as offset', function () {
+    it('set byte range with no offset and uses 0 as offset', function () {
       frag.parseByteRange('5000');
       expect(frag.byteRangeStartOffset).to.equal(0);
       expect(frag.byteRangeEndOffset).to.equal(5000);
     });
 
-    it('parses byte range with no offset and uses 0 as offset', function () {
+    it('set byte range with no offset and uses 0 as offset', function () {
       const prevFrag = new Fragment();
       prevFrag.parseByteRange('1000@10000');
       frag.parseByteRange('5000', prevFrag);

@@ -5,10 +5,9 @@ export default class LevelKey {
 
   public baseuri: string;
   public reluri: string;
-
-  method: string | null = null;
-  key: Uint8Array | null = null;
-  iv: Uint8Array | null = null;
+  public method: string | null = null;
+  public key: Uint8Array | null = null;
+  public iv: Uint8Array | null = null;
 
   constructor (baseURI: string, relativeURI: string) {
     this.baseuri = baseURI;

@@ -44,8 +44,8 @@ export default class Fragment {
     this.tagList = [];
   }
 
-  // parseByteRange converts a EXT-X-BYTERANGE attribute into a two element array
-  parseByteRange (value: string, previousFrag?: Fragment): number[] {
+  // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
+  setByteRange (value: string, previousFrag?: Fragment) {
     const params = value.split('@', 2);
     const byteRange: number[] = [];
     if (params.length === 1) {
@@ -55,7 +55,6 @@ export default class Fragment {
     }
     byteRange[1] = parseInt(params[0]) + byteRange[0];
     this._byteRange = byteRange;
-    return this._byteRange;
   }
 
   get url () {
