@@ -275,7 +275,7 @@ export default class M3U8Parser {
         case 'MAP':
           let mapAttrs = new AttrList(value1);
           frag.relurl = mapAttrs.URI;
-          frag.parseByteRange(mapAttrs.BYTERANGE, prevFrag);
+          frag.parseByteRange(mapAttrs.BYTERANGE);
           frag.baseurl = baseurl;
           frag.level = id;
           frag.type = type;
