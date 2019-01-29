@@ -106,7 +106,7 @@ export default class Fragment {
   }
 
   get endProgramDateTime () {
-    if (!this.programDateTime) {
+    if (this.programDateTime === null) {
       return null;
     }
 
