@@ -1,8 +1,6 @@
 import { stub } from 'sinon';
 import { clearPastCues } from '../../../src/utils/texttrack-utils';
 
-const assert = require('assert');
-
 function getTextTrackStub (cues) {
   const trackStub = {
     cues: cues.concat(),
@@ -12,9 +10,9 @@ function getTextTrackStub (cues) {
   return trackStub;
 }
 
-describe('Texttrack utils', () => {
-  describe('clearPastCues', () => {
-    it('should remove cue past current time', () => {
+describe('Texttrack utils', function () {
+  describe('clearPastCues', function () {
+    it('should remove cue past current time', function () {
       const cues = [
         { startTime: 1, endTime: 5 },
         { startTime: 5, endTime: 7 },
@@ -26,9 +24,9 @@ describe('Texttrack utils', () => {
 
       clearPastCues(trackStub, 8);
 
-      assert(trackStub.removeCue.calledTwice, 'proper cues count not removed');
-      assert(trackStub.removeCue.calledWith(cues[0]));
-      assert(trackStub.removeCue.calledWith(cues[1]));
+      expect(trackStub.removeCue.calledTwice).to.be.true;
+      expect(trackStub.removeCue.calledWith(cues[0])).to.be.true;
+      expect(trackStub.removeCue.calledWith(cues[1])).to.be.true;
     });
   });
 });

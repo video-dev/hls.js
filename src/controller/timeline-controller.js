@@ -168,7 +168,13 @@ class TimelineController extends EventHandler {
   onManifestLoading () {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
-    this.vttCCs = { ccOffset: 0, presentationOffset: 0 }; // Detect discontinuity in subtitle manifests
+    this.vttCCs = { // Detect discontinuity in subtitle manifests
+      ccOffset: 0,
+      presentationOffset: 0,
+      0: {
+        start: 0, prevCC: -1, new: false
+      }
+    };
     this._cleanTracks();
   }
 
@@ -198,7 +204,7 @@ class TimelineController extends EventHandler {
       this.tracks.forEach((track, index) => {
         let textTrack;
         if (index < inUseTracks.length) {
-          const inUseTrack = Object.values(inUseTracks).find(inUseTrack => canReuseVttTextTrack(inUseTrack, track));
+          const inUseTrack = [].slice.call(inUseTracks).find(inUseTrack => canReuseVttTextTrack(inUseTrack, track));
           // Reuse tracks with the same label, but do not reuse 608/708 tracks
           if (inUseTrack) {
             textTrack = inUseTrack;
