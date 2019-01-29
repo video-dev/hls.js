@@ -37,7 +37,7 @@ export default class Fragment {
   // EXTINF has to be present for a m3u8 to be considered valid
   public duration!: number;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
-  public sn: number | string = 0;
+  public sn: number | 'initSegment' = 0;
   public levelkey?: LevelKey;
 
   constructor () {
