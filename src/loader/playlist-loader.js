@@ -141,11 +141,6 @@ class PlaylistLoader extends EventHandler {
    */
   destroyInternalLoaders () {
     for (let contextType in this.loaders) {
-      let loader = this.loaders[contextType];
-      if (loader) {
-        loader.destroy();
-      }
-
       this.resetInternalLoader(contextType);
     }
   }

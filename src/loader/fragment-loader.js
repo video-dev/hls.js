@@ -16,12 +16,8 @@ class FragmentLoader extends EventHandler {
   destroy () {
     let loaders = this.loaders;
     for (let loaderName in loaders) {
-      let loader = loaders[loaderName];
-      if (loader) {
-        loader.destroy();
-      }
+      this.destroyLoader(loaderName);
     }
-    this.loaders = {};
 
     super.destroy();
   }
@@ -79,8 +75,7 @@ class FragmentLoader extends EventHandler {
     let payload = response.data, frag = context.frag;
     // detach fragment loader on load success
     frag.loader = undefined;
-    this.loaders[frag.type].destroy();
-    this.loaders[frag.type] = undefined;
+    this.destroyLoader(frag.type);
     this.hls.trigger(Event.FRAG_LOADED, { payload: payload, frag: frag, stats: stats, networkDetails: networkDetails });
   }
 
@@ -91,8 +86,7 @@ class FragmentLoader extends EventHandler {
       loader.abort();
     }
 
-    this.loaders[frag.type].destroy();
-    this.loaders[frag.type] = undefined;
+    this.destroyLoader(frag.type);
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails });
   }
 
@@ -103,8 +97,7 @@ class FragmentLoader extends EventHandler {
       loader.abort();
     }
 
-    this.loaders[frag.type].destroy();
-    this.loaders[frag.type] = undefined;
+    this.destroyLoader(frag.type);
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails });
   }
 
@@ -113,6 +106,15 @@ class FragmentLoader extends EventHandler {
     let frag = context.frag;
     frag.loaded = stats.loaded;
     this.hls.trigger(Event.FRAG_LOAD_PROGRESS, { frag: frag, stats: stats, networkDetails: networkDetails });
+  }
+
+  destroyLoader (loaderName) {
+    const loaders = this.loaders;
+    const loader = loaders[loaderName];
+    if (loader) {
+      loader.destroy();
+      delete loaders[loaderName];
+    }
   }
 }
 
