@@ -94,12 +94,21 @@ export default class Fragment {
     if (!this._decryptdata && this.levelkey) {
       let sn = this.sn;
       if (typeof sn !== 'number') {
+        // We are fetching decryption data for a initialization segment
+        // If the segment was encrypted with AES-128
+        // It must have an IV defined. We cannot substitute the Segment Number in.
+        if (this.levelkey && this.levelkey.method === 'AES-128') {
+          if (!this.levelkey.iv) {
+            throw new Error(`missing IV for initialization segment with method="${this.levelkey.method}"`);
+          }
+        }
+
         /*
         Be converted to a Number.
         'initSegment' will become NaN.
         NaN, which when converted through ToInt32() -> +0.
         ---
-        Explicitly set sn to expected value for 'initSegment' values for IV generation.
+        Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
         */
         sn = 0;
       }
