@@ -92,11 +92,18 @@ export default class Fragment {
     }
 
     if (!this._decryptdata && this.levelkey) {
-      // TODO look for this warning for 'initSegment' sn getting used in decryption IV
-      if (typeof this.sn !== 'number') {
-        logger.warn(`undefined behaviour for sn="${this.sn}" in IV generation`);
+      let sn = this.sn;
+      if (typeof sn !== 'number') {
+        /*
+        Be converted to a Number.
+        'initSegment' will become NaN.
+        NaN, which when converted through ToInt32() -> +0.
+        ---
+        Explicitly set sn to expected value for 'initSegment' values for IV generation.
+        */
+        sn = 0;
       }
-      this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn as number);
+      this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, sn);
     }
 
     return this._decryptdata;
