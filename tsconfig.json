@@ -2,16 +2,16 @@
   "compilerOptions": {
     "sourceMap": true,
     "allowJs": true,
-    "module": "commonjs",
+    "module": "es6",
     "target": "ES5",
     "strict": false,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
+    "moduleResolution": "node",
     "lib": [
       "dom",
       "es2015",
     ],
-    "outDir": "./dist/",
   },
   "include": [
     "src/**/*"
