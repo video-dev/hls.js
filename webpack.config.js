@@ -33,6 +33,14 @@ const baseConfig = {
         exclude: /node_modules/
       }
     ]
+  },
+  node: {
+    global: false,
+    process: false,
+    __filename: false,
+    __dirname: false,
+    Buffer: false,
+    setImmediate: false
   }
 };
 
