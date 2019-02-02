@@ -4,6 +4,7 @@
 import * as ADTS from './adts';
 import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
+import { isFiniteNumber } from '../ponyfills/number';
 
 class AACDemuxer {
   constructor (observer, remuxer, config) {
@@ -45,7 +46,7 @@ class AACDemuxer {
     let track = this._audioTrack;
     let id3Data = ID3.getID3Data(data, 0) || [];
     let timestamp = ID3.getTimeStamp(id3Data);
-    let pts = Number.isFinite(timestamp) ? timestamp * 90 : timeOffset * 90000;
+    let pts = isFiniteNumber(timestamp) ? timestamp * 90 : timeOffset * 90000;
     let frameIndex = 0;
     let stamp = pts;
     let length = data.length;

@@ -9,6 +9,7 @@ import { getMediaSource } from '../utils/mediasource-helper';
 import { getSelfScope } from '../utils/get-self-scope';
 
 import { Observer } from '../observer';
+import { isFiniteNumber } from '../ponyfills/number';
 
 // see https://stackoverflow.com/a/11237259/589493
 const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
@@ -95,7 +96,7 @@ class Demuxer {
 
   push (data, initSegment, audioCodec, videoCodec, frag, duration, accurateTimeOffset, defaultInitPTS) {
     const w = this.w;
-    const timeOffset = Number.isFinite(frag.startPTS) ? frag.startPTS : frag.start;
+    const timeOffset = isFiniteNumber(frag.startPTS) ? frag.startPTS : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
     const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));

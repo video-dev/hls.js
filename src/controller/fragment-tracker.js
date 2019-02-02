@@ -1,5 +1,6 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
+import { isFiniteNumber } from '../ponyfills/number';
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -234,7 +235,7 @@ export class FragmentTracker extends EventHandler {
     const fragment = e.frag;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
-    if (Number.isFinite(fragment.sn) && !fragment.bitrateTest) {
+    if (isFiniteNumber(fragment.sn) && !fragment.bitrateTest) {
       this.fragments[this.getFragmentKey(fragment)] = {
         body: fragment,
         range: Object.create(null),

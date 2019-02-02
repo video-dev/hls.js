@@ -1,5 +1,6 @@
 import BinarySearch from './binary-search';
 import { logger } from '../utils/logger';
+import { isFiniteNumber } from '../ponyfills/number';
 
 export function findFirstFragWithCC (fragments, cc) {
   let firstFrag = null;
@@ -121,7 +122,7 @@ export function alignPDT (details, lastDetails) {
     let newPDT = details.fragments[0].programDateTime;
     // date diff is in ms. frag.start is in seconds
     let sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
-    if (Number.isFinite(sliding)) {
+    if (isFiniteNumber(sliding)) {
       logger.log(`adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(3)}`);
       adjustPts(sliding, details);
     }

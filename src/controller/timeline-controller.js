@@ -9,6 +9,7 @@ import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import { isFiniteNumber } from '../ponyfills/number';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -240,7 +241,7 @@ class TimelineController extends EventHandler {
     else if (frag.type === 'subtitle') {
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
-        if (!Number.isFinite(this.initPTS[frag.cc])) {
+        if (!isFiniteNumber(this.initPTS[frag.cc])) {
           this.unparsedVttFrags.push(data);
           if (this.initPTS.length) {
             // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
@@ -310,7 +311,7 @@ class TimelineController extends EventHandler {
       frag = data.frag;
 
     if (frag.type === 'subtitle') {
-      if (!Number.isFinite(this.initPTS[frag.cc])) {
+      if (!isFiniteNumber(this.initPTS[frag.cc])) {
         this.unparsedVttFrags.push(data);
         return;
       }

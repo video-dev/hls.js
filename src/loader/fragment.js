@@ -2,6 +2,7 @@
 import * as URLToolkit from 'url-toolkit';
 
 import LevelKey from './level-key';
+import { isFiniteNumber } from '../ponyfills/number';
 
 export default class Fragment {
   constructor () {
@@ -87,11 +88,11 @@ export default class Fragment {
   }
 
   get endProgramDateTime () {
-    if (!Number.isFinite(this.programDateTime)) {
+    if (!isFiniteNumber(this.programDateTime)) {
       return null;
     }
 
-    let duration = !Number.isFinite(this.duration) ? 0 : this.duration;
+    let duration = !isFiniteNumber(this.duration) ? 0 : this.duration;
 
     return this.programDateTime + (duration * 1000);
   }

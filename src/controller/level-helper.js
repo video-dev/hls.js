@@ -8,6 +8,7 @@
  * */
 
 import { logger } from '../utils/logger';
+import { isFiniteNumber } from '../ponyfills/number';
 
 export function addGroupId (level, type, id) {
   switch (type) {
@@ -29,7 +30,7 @@ export function addGroupId (level, type, id) {
 export function updatePTS (fragments, fromIdx, toIdx) {
   let fragFrom = fragments[fromIdx], fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
   // if we know startPTS[toIdx]
-  if (Number.isFinite(fragToPTS)) {
+  if (isFiniteNumber(fragToPTS)) {
     // update fragment duration.
     // it helps to fix drifts between playlist reported duration and fragment real duration
     if (toIdx > fromIdx) {
@@ -56,10 +57,10 @@ export function updatePTS (fragments, fromIdx, toIdx) {
 export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, endDTS) {
   // update frag PTS/DTS
   let maxStartPTS = startPTS;
-  if (Number.isFinite(frag.startPTS)) {
+  if (isFiniteNumber(frag.startPTS)) {
     // delta PTS between audio and video
     let deltaPTS = Math.abs(frag.startPTS - startPTS);
-    if (!Number.isFinite(frag.deltaPTS)) {
+    if (!isFiniteNumber(frag.deltaPTS)) {
       frag.deltaPTS = deltaPTS;
     } else {
       frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
@@ -134,7 +135,7 @@ export function mergeDetails (oldDetails, newDetails) {
       newFrag = newfragments[i];
     if (newFrag && oldFrag) {
       ccOffset = oldFrag.cc - newFrag.cc;
-      if (Number.isFinite(oldFrag.startPTS)) {
+      if (isFiniteNumber(oldFrag.startPTS)) {
         newFrag.start = newFrag.startPTS = oldFrag.startPTS;
         newFrag.endPTS = oldFrag.endPTS;
         newFrag.duration = oldFrag.duration;

@@ -1,4 +1,5 @@
 import BinarySearch from '../utils/binary-search';
+import { isFiniteNumber } from '../ponyfills/number';
 
 /**
  * Returns first fragment whose endPdt value exceeds the given PDT.
@@ -8,7 +9,7 @@ import BinarySearch from '../utils/binary-search';
  * @returns {*|null} fragment - The best matching fragment
  */
 export function findFragmentByPDT (fragments, PDTValue, maxFragLookUpTolerance) {
-  if (!Array.isArray(fragments) || !fragments.length || !Number.isFinite(PDTValue)) {
+  if (!Array.isArray(fragments) || !fragments.length || !isFiniteNumber(PDTValue)) {
     return null;
   }
 

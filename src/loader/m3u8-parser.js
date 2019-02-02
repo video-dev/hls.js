@@ -7,6 +7,7 @@ import LevelKey from './level-key';
 import AttrList from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import { isCodecType } from '../utils/codecs';
+import { isFiniteNumber } from '../ponyfills/number';
 
 /**
  * M3U8 parser
@@ -170,7 +171,7 @@ export default class M3U8Parser {
         frag.title = title || null;
         frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
       } else if (result[3]) { // url
-        if (Number.isFinite(frag.duration)) {
+        if (isFiniteNumber(frag.duration)) {
           const sn = currentSN++;
           frag.type = type;
           frag.start = totalduration;
@@ -271,7 +272,7 @@ export default class M3U8Parser {
           const startAttrs = new AttrList(value1);
           const startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
           // TIME-OFFSET can be 0
-          if (Number.isFinite(startTimeOffset)) {
+          if (isFiniteNumber(startTimeOffset)) {
             level.startTimeOffset = startTimeOffset;
           }
           break;
@@ -359,7 +360,7 @@ function assignProgramDateTime (frag, prevFrag) {
     frag.programDateTime = prevFrag.endProgramDateTime;
   }
 
-  if (!Number.isFinite(frag.programDateTime)) {
+  if (!isFiniteNumber(frag.programDateTime)) {
     frag.programDateTime = null;
     frag.rawProgramDateTime = null;
   }

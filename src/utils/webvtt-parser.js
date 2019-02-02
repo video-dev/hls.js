@@ -1,5 +1,6 @@
 import VTTParser from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
+import { isFiniteNumber } from '../ponyfills/number';
 
 // String.prototype.startsWith is not supported in IE11
 const startsWith = function (inputString, searchString, position) {
@@ -12,7 +13,7 @@ const cueString2millis = function (timeString) {
   let mins = parseInt(timeString.substr(-9, 2));
   let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
-  if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {
+  if (!isFiniteNumber(ts) || !isFiniteNumber(secs) || !isFiniteNumber(mins) || !isFiniteNumber(hours)) {
     return -1;
   }
 

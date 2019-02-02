@@ -14,6 +14,7 @@ import { findFragWithCC } from '../utils/discontinuities';
 import { FragmentState } from './fragment-tracker';
 import Fragment from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
+import { isFiniteNumber } from '../ponyfills/number';
 const { performance } = window;
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -313,7 +314,7 @@ class AudioStreamController extends BaseStreamController {
             this.fragCurrent = frag;
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
               this.startFragRequested = true;
-              if (Number.isFinite(frag.sn)) {
+              if (isFiniteNumber(frag.sn)) {
                 this.nextLoadPosition = frag.start + frag.duration;
               }
 
@@ -481,7 +482,7 @@ class AudioStreamController extends BaseStreamController {
       if (this.startPosition === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
-        if (Number.isFinite(startTimeOffset)) {
+        if (isFiniteNumber(startTimeOffset)) {
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
         } else {
@@ -610,7 +611,7 @@ class AudioStreamController extends BaseStreamController {
         track = this.tracks[trackId],
         hls = this.hls;
 
-      if (!Number.isFinite(data.endPTS)) {
+      if (!isFiniteNumber(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }

@@ -17,6 +17,7 @@ import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import GapController from './gap-controller';
 import BaseStreamController, { State } from './base-stream-controller';
+import { isFiniteNumber } from '../ponyfills/number';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -445,7 +446,7 @@ class StreamController extends BaseStreamController {
     this.fragCurrent = frag;
     this.startFragRequested = true;
     // Don't update nextLoadPosition for fragments which are not buffered
-    if (Number.isFinite(frag.sn) && !frag.bitrateTest) {
+    if (isFiniteNumber(frag.sn) && !frag.bitrateTest) {
       this.nextLoadPosition = frag.start + frag.duration;
     }
 
@@ -722,7 +723,7 @@ class StreamController extends BaseStreamController {
 
   onMediaSeeked () {
     const media = this.media, currentTime = media ? media.currentTime : undefined;
-    if (Number.isFinite(currentTime)) {
+    if (isFiniteNumber(currentTime)) {
       logger.log(`media seeked to ${currentTime.toFixed(3)}`);
     }
 
@@ -784,7 +785,7 @@ class StreamController extends BaseStreamController {
         LevelHelper.mergeDetails(curDetails, newDetails);
         sliding = newDetails.fragments[0].start;
         this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
-        if (newDetails.PTSKnown && Number.isFinite(sliding)) {
+        if (newDetails.PTSKnown && isFiniteNumber(sliding)) {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
         } else {
           logger.log('live playlist - outdated PTS, unknown sliding');
@@ -808,7 +809,7 @@ class StreamController extends BaseStreamController {
       if (this.startPosition === -1 || this.lastCurrentTime === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
-        if (Number.isFinite(startTimeOffset)) {
+        if (isFiniteNumber(startTimeOffset)) {
           if (startTimeOffset < 0) {
             logger.log(`negative start time offset ${startTimeOffset}, count from end of last fragment`);
             startTimeOffset = sliding + duration + startTimeOffset;
@@ -994,7 +995,7 @@ class StreamController extends BaseStreamController {
         this.state === State.PARSING) {
       let level = this.levels[this.level],
         frag = fragCurrent;
-      if (!Number.isFinite(data.endPTS)) {
+      if (!isFiniteNumber(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }

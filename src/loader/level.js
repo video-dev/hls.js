@@ -1,3 +1,5 @@
+import { isFiniteNumber } from '../ponyfills/number';
+
 export default class Level {
   constructor (baseUrl) {
     // Please keep properties in alphabetical order
@@ -18,6 +20,6 @@ export default class Level {
   }
 
   get hasProgramDateTime () {
-    return !!(this.fragments[0] && Number.isFinite(this.fragments[0].programDateTime));
+    return !!(this.fragments[0] && isFiniteNumber(this.fragments[0].programDateTime));
   }
 }

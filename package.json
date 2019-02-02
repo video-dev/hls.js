@@ -45,6 +45,7 @@
     "esdoc-typescript-plugin": "^1.0.1",
     "eslint": "^4.13.1",
     "eslint-config-standard": "^11.0.0",
+    "eslint-plugin-es": "^1.4.0",
     "eslint-plugin-import": "^2.9.0",
     "eslint-plugin-mocha": "^5.2.1",
     "eslint-plugin-node": "^6.0.1",

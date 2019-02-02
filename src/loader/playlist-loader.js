@@ -17,6 +17,7 @@ import { logger } from '../utils/logger';
 
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
+import { isFiniteNumber } from '../ponyfills/number';
 
 const { performance } = window;
 
@@ -339,8 +340,8 @@ class PlaylistLoader extends EventHandler {
 
     const url = PlaylistLoader.getResponseUrl(response, context);
 
-    const levelUrlId = Number.isFinite(id) ? id : 0;
-    const levelId = Number.isFinite(level) ? level : levelUrlId;
+    const levelUrlId = isFiniteNumber(id) ? id : 0;
+    const levelId = isFiniteNumber(level) ? level : levelUrlId;
     const levelType = PlaylistLoader.mapContextToLevelType(context);
 
     const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType, levelUrlId);

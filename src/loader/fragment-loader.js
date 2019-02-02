@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import { isFiniteNumber } from '../ponyfills/number';
 
 class FragmentLoader extends EventHandler {
   constructor (hls) {
@@ -53,7 +54,7 @@ class FragmentLoader extends EventHandler {
     let start = frag.byteRangeStartOffset,
       end = frag.byteRangeEndOffset;
 
-    if (Number.isFinite(start) && Number.isFinite(end)) {
+    if (isFiniteNumber(start) && isFiniteNumber(end)) {
       loaderContext.rangeStart = start;
       loaderContext.rangeEnd = end;
     }

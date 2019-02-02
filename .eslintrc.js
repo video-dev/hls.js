@@ -22,7 +22,8 @@ module.exports = {
   ],
   'parser': 'typescript-eslint-parser',
   'plugins': [
-      'typescript'
+      'typescript',
+      'es',
   ],
   'parserOptions': {
     'sourceType': 'module'
@@ -89,6 +90,10 @@ module.exports = {
     'no-self-assign': 1,
     'new-cap': 1,
     'no-undefined': 1,
-    'no-global-assign': 2
+    'no-global-assign': 2,
+
+    // Number.isFinite is not polyfilled
+    // use isFiniteNumber ponyfill from src/ponyfills/number.ts instead
+    'es/no-number-isfinite': 2,
   }
 };

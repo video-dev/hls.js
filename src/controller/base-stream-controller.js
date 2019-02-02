@@ -2,6 +2,7 @@ import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
+import { isFiniteNumber } from '../ponyfills/number';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -42,7 +43,7 @@ export default class BaseStreamController extends TaskLoop {
     const currentTime = media ? media.currentTime : null;
     const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
 
-    if (Number.isFinite(currentTime)) {
+    if (isFiniteNumber(currentTime)) {
       logger.log(`media seeking to ${currentTime.toFixed(3)}`);
     }
 
