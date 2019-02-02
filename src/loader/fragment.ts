@@ -97,10 +97,8 @@ export default class Fragment {
         // We are fetching decryption data for a initialization segment
         // If the segment was encrypted with AES-128
         // It must have an IV defined. We cannot substitute the Segment Number in.
-        if (this.levelkey && this.levelkey.method === 'AES-128') {
-          if (!this.levelkey.iv) {
-            throw new Error(`missing IV for initialization segment with method="${this.levelkey.method}"`);
-          }
+        if (this.levelkey && this.levelkey.method === 'AES-128' && !this.levelkey.iv) {
+          logger.warn(`missing IV for initialization segment with method="${this.levelkey.method}" - compliance issue`);
         }
 
         /*
@@ -112,7 +110,7 @@ export default class Fragment {
         */
         sn = 0;
       }
-      this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, sn);
+      this._decryptdata = this.setDecryptDataFromLevelKey(this.levelkey, sn);
     }
 
     return this._decryptdata;
@@ -152,6 +150,7 @@ export default class Fragment {
 
   /**
    * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+   * @param {number} segmentNumber - segment number to generate IV with
    * @returns {Uint8Array}
    */
   createInitializationVector (segmentNumber: number): Uint8Array {
@@ -168,9 +167,9 @@ export default class Fragment {
    * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
    * @param levelkey - a playlist's encryption info
    * @param segmentNumber - the fragment's segment number
-   * @returns {*} - an object to be applied as a fragment's decryptdata
+   * @returns {LevelKey} - an object to be applied as a fragment's decryptdata
    */
-  fragmentDecryptdataFromLevelkey (levelkey: LevelKey, segmentNumber: number): LevelKey {
+  setDecryptDataFromLevelKey (levelkey: LevelKey, segmentNumber: number): LevelKey {
     let decryptdata = levelkey;
 
     if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
