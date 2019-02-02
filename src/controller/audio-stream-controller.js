@@ -15,6 +15,7 @@ import { FragmentState } from './fragment-tracker';
 import Fragment from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
 import { isFiniteNumber } from '../ponyfills/number';
+
 const { performance } = window;
 
 const TICK_INTERVAL = 100; // how often to tick in ms
