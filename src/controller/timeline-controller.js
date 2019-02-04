@@ -296,15 +296,11 @@ class TimelineController extends EventHandler {
         }
       }
       );
-      if (cues[0] && cues[0].startTime - frag.start > frag.duration) {
-        // subtitle start time do not match cue start time. Maybe playlist sliding failed, switch subtitle playlist or init. with delay
+      if (cues[0] && (cues[0].startTime - frag.start > frag.duration || cues[0].startTime < frag.start)) {
+        // subtitle start time do not match cue PTS (init. with delay / sliding failed), or new cue PTS is more accurate than pervious estimation
         logger.warn(`Adjust subtitle fragment start time [${frag.start},${frag.end}] to [${cues[0].startTime},${cues[cues.length - 1].endTime}]`);
-        // adjust start and end
-        frag.start = cues[0].startTime;
-        frag.end = cues[cues.length - 1].endTime;
-        // adjust PTS, subtitle-stream-controller update track detail with PTS
         frag.startPTS = cues[0].startTime;
-        frag.endPTS = cues[cues.length - 1].endTime;
+        frag.endPTS = frag.startPTS + frag.duration; // boundary of findPTS shift by lookup tolorance
       }
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     },
