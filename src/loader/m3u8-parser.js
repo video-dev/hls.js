@@ -157,6 +157,8 @@ export default class M3U8Parser {
     let result;
     let i;
 
+    let drmInfo = [];
+
     let firstPdtIndex = null;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
@@ -168,7 +170,7 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const title = (' ' + result[2]).slice(1);
         frag.title = title || null;
-        frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
+        frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
       } else if (result[3]) { // url
         if (Number.isFinite(frag.duration)) {
           const sn = currentSN++;
@@ -180,15 +182,17 @@ export default class M3U8Parser {
           frag.cc = cc;
           frag.urlId = levelUrlId;
           frag.baseurl = baseurl;
+          frag.drmInfo = (drmInfo && drmInfo.length > 0) ? drmInfo : (prevFrag ? prevFrag.drmInfo : []);
+          frag.foundKeys = !!drmInfo.length;
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
           assignProgramDateTime(frag, prevFrag);
-
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
-
           frag = new Fragment();
+          // once captured, array needs to be reset and rely on previous fragment until new keys are available
+          drmInfo = [];
         }
       } else if (result[4]) { // X-BYTERANGE
         const data = (' ' + result[4]).slice(1);
@@ -218,7 +222,7 @@ export default class M3U8Parser {
 
         switch (result[i]) {
         case '#':
-          frag.tagList.push(value2 ? [ value1, value2 ] : [ value1 ]);
+          frag.tagList.push(value2 ? [value1, value2] : [value1]);
           break;
         case 'PLAYLIST-TYPE':
           level.type = value1.toUpperCase();
@@ -254,15 +258,18 @@ export default class M3U8Parser {
 
           if (decryptmethod) {
             levelkey = new LevelKey();
-            if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
+            if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC', 'SAMPLE-AES-CTR'].indexOf(decryptmethod) >= 0)) {
               levelkey.method = decryptmethod;
               // URI to get the key
               levelkey.baseuri = baseurl;
               levelkey.reluri = decrypturi;
               levelkey.key = null;
+              levelkey.format = keyAttrs.KEYFORMAT;
               // Initialization Vector (IV)
               levelkey.iv = decryptiv;
             }
+
+            drmInfo.push(levelkey);
           }
           break;
         }
@@ -307,6 +314,7 @@ export default class M3U8Parser {
     level.endSN = currentSN - 1;
     level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
     level.endCC = cc;
+    level.drmInfo = drmInfo;
 
     if (!level.initSegment && level.fragments.length) {
       // this is a bit lurky but HLS really has no other way to tell us

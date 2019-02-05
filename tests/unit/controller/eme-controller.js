@@ -35,46 +35,6 @@ describe('EMEController', function () {
     setupEach();
   });
 
-  it('should not do anything when `emeEnabled` is false (default)', function () {
-    let reqMediaKsAccessSpy = sinon.spy();
-
-    setupEach({
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
-    });
-
-    emeController.onMediaAttached({ media });
-    emeController.onManifestParsed({ media });
-
-    expect(media.setMediaKeys.callCount).to.equal(0);
-    expect(reqMediaKsAccessSpy.callCount).to.equal(0);
-  });
-
-  it('should request keys when `emeEnabled` is true (but not set them)', function (done) {
-    let reqMediaKsAccessSpy = sinon.spy(function () {
-      return Promise.resolve({
-        // Media-keys mock
-      });
-    });
-
-    setupEach({
-      emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
-    });
-
-    emeController.onMediaAttached({ media });
-
-    expect(media.setMediaKeys.callCount).to.equal(0);
-    expect(reqMediaKsAccessSpy.callCount).to.equal(0);
-
-    emeController.onManifestParsed({ levels: fakeLevels });
-
-    setTimeout(function () {
-      expect(media.setMediaKeys.callCount).to.equal(0);
-      expect(reqMediaKsAccessSpy.callCount).to.equal(1);
-      done();
-    }, 0);
-  });
-
   it('should trigger key system error when bad encrypted data is received', function (done) {
     let reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
@@ -83,8 +43,8 @@ describe('EMEController', function () {
     });
 
     setupEach({
-      emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      drmSystem: 'WIDEVINE'
     });
 
     let badData = {
@@ -102,5 +62,40 @@ describe('EMEController', function () {
       expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
       done();
     }, 0);
+  });
+
+  it('should retrieve PSSH data if it exists in manifest', function () {
+    let reqMediaKsAccessSpy = sinon.spy(() => {
+      return Promise.resolve({
+        // Media-keys mock
+      });
+    });
+
+    setupEach({
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      drmSystem: 'WIDEVINE'
+    });
+
+    const data = {
+      frag: {
+        foundKeys: true,
+        drmInfo: [{
+          format: 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+          reluri: 'data:text/plain;base64,AAAAPnBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB4iFnNoYWthX2NlYzJmNjRhYTc4OTBhMTFI49yVmwY='
+        }]
+      }
+    };
+
+    emeController.onMediaAttached({ media });
+    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onFragLoaded(data);
+
+    media.emit('encrypted', {
+      'initDataType': emeController._initDataType,
+      'initData': emeController._initData
+    });
+
+    expect(emeController._initDataType).to.equal('cenc');
+    expect(62).to.equal(emeController._initData.byteLength);
   });
 });
