@@ -429,10 +429,10 @@ export default class LevelController extends EventHandler {
     if (currentLevel.audioGroupIds) {
       let urlId = -1;
       for (let i = 0; i < currentLevel.audioGroupIds.length; i++) {
-          if (currentLevel.audioGroupIds[i] === audioGroupId) {
-              urlId = i;
-              break;
-          }
+        if (currentLevel.audioGroupIds[i] === audioGroupId) {
+          urlId = i;
+          break;
+        }
       }
 
       if (urlId !== currentLevel.urlId) {
