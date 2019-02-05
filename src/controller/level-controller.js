@@ -10,6 +10,7 @@ import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId } from './level-helper';
 
 const { performance } = window;
+let chromeOrFirefox;
 
 export default class LevelController extends EventHandler {
   constructor (hls) {
@@ -24,6 +25,8 @@ export default class LevelController extends EventHandler {
     this.currentLevelIndex = null;
     this.manualLevelIndex = -1;
     this.timer = null;
+
+    chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
   }
 
   onHandlerDestroying () {
@@ -66,21 +69,21 @@ export default class LevelController extends EventHandler {
 
   onManifestLoaded (data) {
     let levels = [];
+    let audioTracks = [];
     let bitrateStart;
     let levelSet = {};
     let levelFromSet = null;
     let videoCodecFound = false;
     let audioCodecFound = false;
-    let chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
-    let audioTracks = [];
 
     // regroup redundant levels together
     data.levels.forEach(level => {
+      const attributes = level.attrs;
       level.loadError = 0;
       level.fragmentError = false;
 
       videoCodecFound = videoCodecFound || !!level.videoCodec;
-      audioCodecFound = audioCodecFound || !!level.audioCodec || !!(level.attrs && level.attrs.AUDIO);
+      audioCodecFound = audioCodecFound || !!level.audioCodec;
 
       // erase audio codec info if browser does not support mp4a.40.34.
       // demuxer will autodetect codec and fallback to mpeg/audio
@@ -99,12 +102,14 @@ export default class LevelController extends EventHandler {
         levelFromSet.url.push(level.url);
       }
 
-      if (level.attrs && level.attrs.AUDIO) {
-        addGroupId(levelFromSet || level, 'audio', level.attrs.AUDIO);
-      }
-
-      if (level.attrs && level.attrs.SUBTITLES) {
-        addGroupId(levelFromSet || level, 'text', level.attrs.SUBTITLES);
+      if (attributes) {
+        if (attributes.AUDIO) {
+          audioCodecFound = true;
+          addGroupId(levelFromSet || level, 'audio', attributes.AUDIO);
+        }
+        if (attributes.SUBTITLES) {
+          addGroupId(levelFromSet || level, 'text', attributes.SUBTITLES);
+        }
       }
     });
 
@@ -115,7 +120,7 @@ export default class LevelController extends EventHandler {
 
     // only keep levels with supported audio/video codecs
     levels = levels.filter(({ audioCodec, videoCodec }) => {
-      return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
+      return (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) && (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'));
     });
 
     if (data.audioTracks) {
@@ -130,9 +135,7 @@ export default class LevelController extends EventHandler {
       // start bitrate is the first bitrate of the manifest
       bitrateStart = levels[0].bitrate;
       // sort level on bitrate
-      levels.sort(function (a, b) {
-        return a.bitrate - b.bitrate;
-      });
+      levels.sort((a, b) => a.bitrate - b.bitrate);
       this._levels = levels;
       // find index of first level in sorted levels
       for (let i = 0; i < levels.length; i++) {
@@ -142,6 +145,8 @@ export default class LevelController extends EventHandler {
           break;
         }
       }
+
+      // Audio is only alternate if manifest include a URI along with the audio group tag
       this.hls.trigger(Event.MANIFEST_PARSED, {
         levels,
         audioTracks,
@@ -149,7 +154,7 @@ export default class LevelController extends EventHandler {
         stats: data.stats,
         audio: audioCodecFound,
         video: videoCodecFound,
-        altAudio: audioTracks.length > 0 && videoCodecFound
+        altAudio: audioTracks.some(t => !!t.url)
       });
     } else {
       this.hls.trigger(Event.ERROR, {

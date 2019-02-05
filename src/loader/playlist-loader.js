@@ -271,7 +271,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   loaderror (response, context, networkDetails = null) {
-    this._handleNetworkError(context, networkDetails);
+    this._handleNetworkError(context, networkDetails, false, response);
   }
 
   loadtimeout (stats, context, networkDetails = null) {
@@ -396,16 +396,21 @@ class PlaylistLoader extends EventHandler {
 
   _handleSidxRequest (response, context) {
     const sidxInfo = MP4Demuxer.parseSegmentIndex(new Uint8Array(response.data));
-    sidxInfo.references.forEach((segmentRef, index) => {
+    // if provided fragment does not contain sidx, early return
+    if (!sidxInfo) {
+      return;
+    }
+    const sidxReferences = sidxInfo.references;
+    const levelDetails = context.levelDetails;
+    sidxReferences.forEach((segmentRef, index) => {
       const segRefInfo = segmentRef.info;
-      const frag = context.levelDetails.fragments[index];
+      const frag = levelDetails.fragments[index];
 
       if (frag.byteRange.length === 0) {
         frag.rawByteRange = String(1 + segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
       }
     });
-
-    context.levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
+    levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
   }
 
   _handleManifestParsingError (response, context, reason, networkDetails) {
@@ -419,7 +424,7 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handleNetworkError (context, networkDetails, timeout = false) {
+  _handleNetworkError (context, networkDetails, timeout = false, response = null) {
     logger.info(`A network error occured while loading a ${context.type}-type playlist`);
 
     let details;
@@ -450,7 +455,7 @@ class PlaylistLoader extends EventHandler {
       this.resetInternalLoader(context.type);
     }
 
-    this.hls.trigger(Event.ERROR, {
+    let errorData = {
       type: ErrorTypes.NETWORK_ERROR,
       details,
       fatal,
@@ -458,7 +463,13 @@ class PlaylistLoader extends EventHandler {
       loader,
       context,
       networkDetails
-    });
+    };
+
+    if (response) {
+      errorData.response = response;
+    }
+
+    this.hls.trigger(Event.ERROR, errorData);
   }
 
   _handlePlaylistLoaded (response, stats, context, networkDetails) {
