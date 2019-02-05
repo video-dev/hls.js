@@ -1,5 +1,6 @@
 module.exports = {
   'env': {
+    'browser': true,
     'commonjs': true,
     'es6': true
   },
@@ -18,6 +19,10 @@ module.exports = {
   'extends': [
     'eslint:recommended',
     'standard'
+  ],
+  'parser': 'typescript-eslint-parser',
+  'plugins': [
+      'typescript'
   ],
   'parserOptions': {
     'sourceType': 'module'
