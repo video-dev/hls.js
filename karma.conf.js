@@ -1,10 +1,30 @@
 // Karma configuration
 // Generated on Tue Jul 18 2017 12:17:16 GMT-0700 (PDT)
-
-const pkgJson = require('./package.json');
-const webpack = require('webpack');
 const path = require('path');
-const importHelper = require('@babel/helper-module-imports');
+const merge = require('webpack-merge');
+const webpackConfig = require('./webpack.config')({ debug: true })[0];
+delete webpackConfig.entry;
+delete webpackConfig.output;
+const mergeConfig = merge(webpackConfig, {
+  devtool: 'inline-source-map',
+  module: {
+    rules: [
+      {
+        test: /\.(ts|js)$/,
+        exclude: path.resolve(__dirname, 'node_modules'),
+        enforce: 'post',
+        use: [
+          {
+            loader: 'istanbul-instrumenter-loader',
+            options: {
+              esModules: true
+            }
+          }
+        ]
+      }
+    ]
+  }
+});
 
 module.exports = function (config) {
   config.set({
@@ -39,77 +59,7 @@ module.exports = function (config) {
       fixWebpackSourcePaths: true
     },
 
-    webpack: {
-      mode: 'development',
-      devtool: 'inline-source-map',
-      resolve: {
-        extensions: ['.ts', '.js']
-      },
-      module: {
-        rules: [
-          {
-            test: /\.(ts|js)$/,
-            include: path.resolve(__dirname, 'src'),
-            exclude: path.resolve(__dirname, 'node_modules'),
-            loader: 'babel-loader',
-            options: {
-              babelrc: false,
-              presets: [
-                '@babel/preset-typescript',
-                ['@babel/preset-env', {
-                  loose: true,
-                  modules: false,
-                  targets: {
-                    browsers: [
-                      'chrome >= 47',
-                      'firefox >= 51',
-                      'ie >= 11',
-                      'safari >= 8',
-                      'ios >= 8',
-                      'android >= 4'
-                    ]
-                  }
-                }]
-              ],
-              plugins: [
-                ['@babel/plugin-proposal-class-properties', {
-                  loose: true
-                }],
-                '@babel/plugin-proposal-object-rest-spread',
-                {
-                  visitor: {
-                    CallExpression: function (espath) {
-                      if (espath.get('callee').matchesPattern('Number.isFinite')) {
-                        espath.node.callee = importHelper.addNamed(espath, 'isFiniteNumber', path.resolve('src/polyfills/number-isFinite'));
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          }, // instrument only testing sources with Istanbul
-          {
-            test: /\.(ts|js)$/,
-            exclude: path.resolve(__dirname, 'node_modules'),
-            enforce: 'post',
-            use: [
-              {
-                loader: 'istanbul-instrumenter-loader',
-                options: { esModules: true }
-              }
-            ]
-          }
-        ]
-      },
-      plugins: [
-        new webpack.DefinePlugin({
-          __VERSION__: JSON.stringify(pkgJson.version),
-          __USE_SUBTITLES__: JSON.stringify(true),
-          __USE_ALT_AUDIO__: JSON.stringify(true),
-          __USE_EME_DRM__: JSON.stringify(true)
-        })
-      ]
-    },
+    webpack: mergeConfig,
 
     // web server port
     port: 9876,
