@@ -133,17 +133,10 @@ export class SubtitleStreamController extends TaskLoop {
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded (data) {
-    const { id, details } = data;
-
+  onSubtitleTrackLoaded () {
     if (!this.tracks) {
       logger.warn('Can not update subtitle details, no tracks found');
       return;
-    }
-
-    if (this.tracks[id]) {
-      logger.log('Updating subtitle track details');
-      this.tracks[id].details = details;
     }
 
     this.setInterval(TICK_INTERVAL);
