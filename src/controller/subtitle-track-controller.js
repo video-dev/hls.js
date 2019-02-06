@@ -1,22 +1,7 @@
-/*
- * subtitle track controller
-*/
-
 import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
-
-function filterSubtitleTracks (textTrackList) {
-  let tracks = [];
-  for (let i = 0; i < textTrackList.length; i++) {
-    const track = textTrackList[i];
-    // Edge adds a track without a label; we don't want to use it
-    if (track.kind === 'subtitles' && track.label) {
-      tracks.push(textTrackList[i]);
-    }
-  }
-  return tracks;
-}
+import { mergeSubtitlePlaylists } from './level-helper';
 
 class SubtitleTrackController extends EventHandler {
   constructor (hls) {
@@ -103,14 +88,14 @@ class SubtitleTrackController extends EventHandler {
   // Reset subtitle tracks on manifest loading
   onManifestLoading () {
     this.tracks = [];
-    this.trackId = -1;
+    // this.trackId = -1;
   }
 
   // Fired whenever a new manifest is loaded.
   onManifestLoaded (data) {
     let tracks = data.subtitles || [];
     this.tracks = tracks;
-    this.trackId = -1;
+    // this.trackId = -1;
     this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, { subtitleTracks: tracks });
 
     // loop through available subtitle tracks and autoselect default if needed
@@ -130,39 +115,22 @@ class SubtitleTrackController extends EventHandler {
     });
   }
 
-  // Trigger subtitle track playlist reload.
-  onTick () {
-    const trackId = this.trackId;
-    const subtitleTrack = this.tracks[trackId];
-    if (!subtitleTrack) {
+  onSubtitleTrackLoaded (data) {
+    const { id, details } = data;
+    const { trackId, tracks } = this;
+    const currentTrack = tracks[trackId];
+    if (id >= tracks.length || !currentTrack) {
       return;
     }
-
-    const details = subtitleTrack.details;
-    // check if we need to load playlist for this subtitle Track
-    if (!details || details.live) {
-      // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`(re)loading playlist for subtitle track ${trackId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
-    }
-  }
-
-  onSubtitleTrackLoaded (data) {
-    if (data.id < this.tracks.length) {
-      logger.log(`subtitle track ${data.id} loaded`);
-      this.tracks[data.id].details = data.details;
-      // check if current playlist is a live playlist
-      if (data.details.live && !this.timer) {
-        // if live playlist we will have to reload it periodically
-        // set reload period to playlist target duration
-        this.timer = setInterval(() => {
-          this.onTick();
-        }, 1000 * data.details.targetduration, this);
-      }
-      if (!data.details.live && this.timer) {
-        // playlist is not live and timer is armed : stopping it
-        this._stopTimer();
-      }
+    logger.log(`subtitle track ${id} loaded`);
+    const { live, url, targetduration } = details;
+    if (live) {
+      mergeSubtitlePlaylists(currentTrack.details, details);
+      currentTrack.details = details;
+      this._setReloadTimer(id, url, targetduration);
+    } else {
+      currentTrack.details = details;
+      this._stopTimer();
     }
   }
 
@@ -191,7 +159,7 @@ class SubtitleTrackController extends EventHandler {
    */
   setSubtitleTrackInternal (newId) {
     const { hls, tracks } = this;
-    if (typeof newId !== 'number' || newId < -1 || newId >= tracks.length) {
+    if (!Number.isFinite(newId) || newId < -1 || newId >= tracks.length) {
       return;
     }
 
@@ -203,20 +171,13 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    // check if we need to load playlist for this subtitle Track
     const subtitleTrack = tracks[newId];
     const details = subtitleTrack.details;
     if (!details || details.live) {
-      // track not retrieved yet, or live playlist we need to (re)load it
+      // Load the playlist if it hasn't been loaded before. If it has and it's live, kick off loading immediately. The
+      // onSubtitleTrackLoaded handler will kick off the reload interval afterwards.
       logger.log(`(re)loading playlist for subtitle track ${newId}`);
       hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
-    }
-  }
-
-  _stopTimer () {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
     }
   }
 
@@ -250,6 +211,35 @@ class SubtitleTrackController extends EventHandler {
       nextTrack.mode = subtitleDisplay ? 'showing' : 'hidden';
     }
   }
+
+  _stopTimer () {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+  _setReloadTimer (id, url, reloadIntervalSeconds) {
+    const { trackId, hls } = this;
+    if (trackId !== id || !this.timer) {
+      this._stopTimer();
+      this.timer = setInterval(() => {
+        logger.log(`reloading playlist for subtitle track ${id}`);
+        hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url, id });
+      }, 1000 * reloadIntervalSeconds, this);
+    }
+  }
+}
+
+function filterSubtitleTracks (textTrackList) {
+  let tracks = [];
+  for (let i = 0; i < textTrackList.length; i++) {
+    const track = textTrackList[i];
+    // Edge adds a track without a label; we don't want to use it
+    if (track.kind === 'subtitles' && track.label) {
+      tracks.push(textTrackList[i]);
+    }
+  }
+  return tracks;
 }
 
 export default SubtitleTrackController;
