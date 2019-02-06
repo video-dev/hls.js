@@ -1152,7 +1152,7 @@ function onConfigPersistenceChanged(event) {
 
 function getEditorValue(options) {
   options = $.extend({ parse: false }, options || {});
-  const value = configEditor.session.getValue();
+  let value = configEditor.session.getValue();
 
   if (options.parse) {
     try {
