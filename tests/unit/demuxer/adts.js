@@ -4,11 +4,10 @@ import {
 } from '../../../src/demux/adts';
 import { ErrorTypes } from '../../../src/errors';
 
-const assert = require('assert');
 const sinon = require('sinon');
 
-describe('getAudioConfig', () => {
-  it('should trigger a MEDIA_ERROR event if sample index is invalid', () => {
+describe('getAudioConfig', function () {
+  it('should trigger a MEDIA_ERROR event if sample index is invalid', function () {
     const observer = {
       trigger: sinon.spy()
     };
@@ -17,12 +16,12 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x34; // sampling_frequency_index = 14, which is a reserved value
 
-    assert.equal(getAudioConfig(observer, data, 0, 'mp4a.40.29'), undefined);
-    assert.ok(observer.trigger.calledOnce);
-    assert.equal(observer.trigger.args[0][1].type, ErrorTypes.MEDIA_ERROR);
+    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.not.exist;
+    expect(observer.trigger).to.have.been.calledOnce;
+    expect(observer.trigger.args[0][1].type).to.equal(ErrorTypes.MEDIA_ERROR);
   });
 
-  it('should return audio config for firefox if the specified sampling frequency > 24kHz', () => {
+  it('should return audio config for firefox if the specified sampling frequency > 24kHz', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'firefox')
     };
@@ -31,7 +30,7 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x00; // sampling_frequency_index = 0
 
-    assert.deepEqual(getAudioConfig(observer, data, 0, 'mp4a.40.29'), {
+    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.deep.equal({
       config: [16, 0],
       samplerate: 96000,
       channelCount: 0,
@@ -40,7 +39,7 @@ describe('getAudioConfig', () => {
     });
   });
 
-  it('should return audio config with a different extension sampling index for Firefox if sampling freq is low', () => {
+  it('should return audio config with a different extension sampling index for Firefox if sampling freq is low', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'Firefox')
     };
@@ -49,7 +48,7 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x28; // sampling_frequency_index = 10
 
-    assert.deepEqual(getAudioConfig(observer, data, 0, 'mp4a.40.29'), {
+    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.deep.equal({
       config: [45, 3, 136, 0],
       samplerate: 11025,
       channelCount: 0,
@@ -58,7 +57,7 @@ describe('getAudioConfig', () => {
     });
   });
 
-  it('should return audio config for Android', () => {
+  it('should return audio config for Android', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'Android')
     };
@@ -67,7 +66,7 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x28; // sampling_frequency_index = 10
 
-    assert.deepEqual(getAudioConfig(observer, data, 0, 'mp4a.40.29'), {
+    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.deep.equal({
       config: [21, 0],
       samplerate: 11025,
       channelCount: 0,
@@ -76,7 +75,7 @@ describe('getAudioConfig', () => {
     });
   });
 
-  it('should return audio config for Chrome', () => {
+  it('should return audio config for Chrome', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
     };
@@ -85,7 +84,7 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x28; // sampling_frequency_index = 10
 
-    assert.deepEqual(getAudioConfig(observer, data, 0, 'mp4a.40.29'), {
+    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.deep.equal({
       config: [45, 3, 136, 0],
       samplerate: 11025,
       channelCount: 0,
@@ -94,7 +93,7 @@ describe('getAudioConfig', () => {
     });
   });
 
-  it('should return audio config for Chrome if there is no audio codec', () => {
+  it('should return audio config for Chrome if there is no audio codec', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
     };
@@ -103,7 +102,7 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x28; // sampling_frequency_index = 10
 
-    assert.deepEqual(getAudioConfig(observer, data, 0), {
+    expect(getAudioConfig(observer, data, 0)).to.deep.equal({
       config: [45, 3, 136, 0],
       samplerate: 11025,
       channelCount: 0,
@@ -112,7 +111,7 @@ describe('getAudioConfig', () => {
     });
   });
 
-  it('should return audio config for Chrome if there is no audio codec and freq is high enough', () => {
+  it('should return audio config for Chrome if there is no audio codec and freq is high enough', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
     };
@@ -121,7 +120,7 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x08; // sampling_frequency_index = 2
 
-    assert.deepEqual(getAudioConfig(observer, data, 0), {
+    expect(getAudioConfig(observer, data, 0)).to.deep.equal({
       config: [41, 1, 8, 0],
       samplerate: 64000,
       channelCount: 0,
@@ -130,7 +129,7 @@ describe('getAudioConfig', () => {
     });
   });
 
-  it('should return audio config for Chrome if audio codec is "mp4a.40.5"', () => {
+  it('should return audio config for Chrome if audio codec is "mp4a.40.5"', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
     };
@@ -139,7 +138,7 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x28; // sampling_frequency_index = 10
 
-    assert.deepEqual(getAudioConfig(observer, data, 0, 'mp4a.40.5'), {
+    expect(getAudioConfig(observer, data, 0, 'mp4a.40.5')).to.deep.equal({
       config: [45, 3, 136, 0],
       samplerate: 11025,
       channelCount: 0,
@@ -148,7 +147,7 @@ describe('getAudioConfig', () => {
     });
   });
 
-  it('should return audio config for Chrome if audio codec is "mp4a.40.2"', () => {
+  it('should return audio config for Chrome if audio codec is "mp4a.40.2"', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
     };
@@ -158,7 +157,7 @@ describe('getAudioConfig', () => {
     data[2] = 0x28; // sampling_frequency_index = 10
     data[3] = 0x40; // channel = 1
 
-    assert.deepEqual(getAudioConfig(observer, data, 0, 'mp4a.40.2'), {
+    expect(getAudioConfig(observer, data, 0, 'mp4a.40.2')).to.deep.equal({
       config: [21, 8],
       samplerate: 11025,
       channelCount: 1,
@@ -167,7 +166,7 @@ describe('getAudioConfig', () => {
     });
   });
 
-  it('should return audio config for Vivaldi', () => {
+  it('should return audio config for Vivaldi', function () {
     const observer = {
       trigger: sinon.stub(navigator, 'userAgent').get(() => 'Vivaldi')
     };
@@ -176,7 +175,7 @@ describe('getAudioConfig', () => {
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x08; // sampling_frequency_index = 2
 
-    assert.deepEqual(getAudioConfig(observer, data, 0, 'mp4a.40.2'), {
+    expect(getAudioConfig(observer, data, 0, 'mp4a.40.2')).to.deep.equal({
       config: [17, 0],
       samplerate: 64000,
       channelCount: 0,
@@ -186,44 +185,44 @@ describe('getAudioConfig', () => {
   });
 });
 
-describe('isHeaderPattern', () => {
-  it('should return true if the specified data slot is of header pattern', () => {
+describe('isHeaderPattern', function () {
+  it('should return true if the specified data slot is of header pattern', function () {
     const data = new Uint8Array(new ArrayBuffer(16));
     data[0] = 0xff;
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[14] = 0xff;
     data[15] = 0xf9; // ID = 1 (MPEG-2), layer = 00, protection_absent = 1
-    assert.ok(isHeaderPattern(data, 0));
-    assert.ok(isHeaderPattern(data, 14));
+    expect(isHeaderPattern(data, 0)).to.be.true;
+    expect(isHeaderPattern(data, 14)).to.be.true;
   });
 
-  it('should return false if the specific data is not of header pattern', () => {
+  it('should return false if the specific data is not of header pattern', function () {
     const data = new Uint8Array(new ArrayBuffer(4));
     data[1] = 0xff;
     data[2] = 0xff;
-    assert.equal(isHeaderPattern(data, 0), false);
-    assert.equal(isHeaderPattern(data, 2), false);
+    expect(isHeaderPattern(data, 0)).to.be.false;
+    expect(isHeaderPattern(data, 2)).to.be.false;
   });
 });
 
-describe('getHeaderLength', () => {
-  it('should return 7 if there is no CRC', () => {
+describe('getHeaderLength', function () {
+  it('should return 7 if there is no CRC', function () {
     const data = new Uint8Array(new ArrayBuffer(2));
     data[0] = 0xff;
     data[1] = 0xf9; // ID = 1 (MPEG-2), layer = 00, protection_absent = 1
-    assert.equal(getHeaderLength(data, 0), 7);
+    expect(getHeaderLength(data, 0)).to.equal(7);
   });
 
-  it('should return 9 if there is CRC', () => {
+  it('should return 9 if there is CRC', function () {
     const data = new Uint8Array(new ArrayBuffer(2));
     data[0] = 0xff;
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    assert.equal(getHeaderLength(data, 0), 9);
+    expect(getHeaderLength(data, 0)).to.equal(9);
   });
 });
 
-describe('getFullFrameLength', () => {
-  it('should extract frame_length field and return its value', () => {
+describe('getFullFrameLength', function () {
+  it('should extract frame_length field and return its value', function () {
     const data = new Uint8Array(new ArrayBuffer(8));
     data[0] = 0xff;
     data[1] = 0xf9;
@@ -231,44 +230,44 @@ describe('getFullFrameLength', () => {
     data[3] = 0x02; // the last 2 bits belong to frame_length
     data[4] = 0x00; // all 8 bits belong to frame_length
     data[5] = 0xE0; // the first 3 bits belong to frame_length
-    assert.equal(getFullFrameLength(data, 0), 4103);
+    expect(getFullFrameLength(data, 0)).to.equal(4103);
   });
 });
 
-describe('isHeader', () => {
-  it('should return true if there are enough data and it is of header pattern', () => {
+describe('isHeader', function () {
+  it('should return true if there are enough data and it is of header pattern', function () {
     const data = new Uint8Array(new ArrayBuffer(8));
     data[0] = 0xff;
     data[1] = 0xf9;
-    assert.ok(isHeader(data, 0));
+    expect(isHeader(data, 0)).to.be.true;
   });
 
-  it('should return false if there are not enough data', () => {
+  it('should return false if there are not enough data', function () {
     const data = new Uint8Array(new ArrayBuffer(1));
-    assert.equal(isHeader(data, 0), false);
+    expect(isHeader(data, 0)).to.be.false;
   });
 
-  it('should return false if it is not of header pattern', () => {
+  it('should return false if it is not of header pattern', function () {
     const data = new Uint8Array(new ArrayBuffer(8));
-    assert.equal(isHeader(data, 0), false);
+    expect(isHeader(data, 0)).to.be.false;
   });
 });
 
-describe('probe', () => {
-  it('should return false if `isHeader` fails', () => {
+describe('probe', function () {
+  it('should return false if `isHeader` fails', function () {
     const data = new Uint8Array(new ArrayBuffer(8));
-    assert.equal(probe(data, 0), false);
+    expect(probe(data, 0)).to.be.false;
   });
 
-  it('should return true if it contains the entire ADTS frame', () => {
+  it('should return true if it contains the entire ADTS frame', function () {
     const data = new Uint8Array(new ArrayBuffer(16));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
-    assert.ok(probe(data, 0));
+    expect(probe(data, 0)).to.be.true;
   });
 
-  it('should return true if it contains an valid following frame header', () => {
+  it('should return true if it contains an valid following frame header', function () {
     const data = new Uint8Array(new ArrayBuffer(18));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
@@ -276,46 +275,46 @@ describe('probe', () => {
     data[16] = 0xff;
     data[17] = 0xf0;
     console.log('hahah');
-    assert.ok(probe(data, 0));
+    expect(probe(data, 0)).to.be.true;
   });
 
-  it('should return false if it contains the entire ADTS frame with an incomplete following header', () => {
+  it('should return false if it contains the entire ADTS frame with an incomplete following header', function () {
     const data = new Uint8Array(new ArrayBuffer(17));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
-    assert.equal(probe(data, 0), false);
+    expect(probe(data, 0)).to.be.false;
   });
 
-  it('should return false if it contains the entire ADTS frame with an invalid following frame header', () => {
+  it('should return false if it contains the entire ADTS frame with an invalid following frame header', function () {
     const data = new Uint8Array(new ArrayBuffer(18));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
-    assert.equal(probe(data, 0), false);
+    expect(probe(data, 0)).to.be.false;
   });
 
-  it('should return false if it does not contain the entire header', () => {
+  it('should return false if it does not contain the entire header', function () {
     const data = new Uint8Array(new ArrayBuffer(2));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
-    assert.equal(probe(data, 0), false);
+    expect(probe(data, 0)).to.be.false;
   });
 });
 
-describe('initTrackConfig', () => {
-  it('should do nothing with track if track.samplerate is defined', () => {
+describe('initTrackConfig', function () {
+  it('should do nothing with track if track.samplerate is defined', function () {
     const track = {
       samplerate: 64000
     };
     initTrackConfig(track);
 
-    assert.deepEqual(track, {
+    expect(track).to.deep.equal({
       samplerate: 64000
     });
   });
 
-  it('should call `getAudioConfig` and change track if track.samplerate is undefined', () => {
+  it('should call `getAudioConfig` and change track if track.samplerate is undefined', function () {
     const track = {};
     const observer = {
       trigger: sinon.spy()
@@ -327,7 +326,7 @@ describe('initTrackConfig', () => {
 
     initTrackConfig(track, observer, data, 0, 'mp4a.40.29');
 
-    assert.deepEqual(track, {
+    expect(track).to.deep.equal({
       config: [45, 3, 136, 0],
       samplerate: 11025,
       channelCount: 0,
@@ -337,45 +336,45 @@ describe('initTrackConfig', () => {
   });
 });
 
-describe('getFrameDuration', () => {
-  it('should compute frame duration from sample rate', () => {
-    assert.equal(getFrameDuration(64000), 1440);
+describe('getFrameDuration', function () {
+  it('should compute frame duration from sample rate', function () {
+    expect(getFrameDuration(64000)).to.equal(1440);
   });
 });
 
-describe('parseFrameHeader', () => {
-  it('should return parsed result if data contains the entire frame', () => {
+describe('parseFrameHeader', function () {
+  it('should return parsed result if data contains the entire frame', function () {
     const data = new Uint8Array(new ArrayBuffer(16));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
-    assert.deepEqual(parseFrameHeader(data, 0, 0, 0, 0), {
+    expect(parseFrameHeader(data, 0, 0, 0, 0)).to.deep.equal({
       headerLength: 9,
       frameLength: 7,
       stamp: 0
     });
   });
 
-  it('should return undefined if there is only the header part', () => {
+  it('should return undefined if there is only the header part', function () {
     const data = new Uint8Array(new ArrayBuffer(9));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x01;
     data[5] = 0x40; // frame_length is 9
-    assert.equal(parseFrameHeader(data, 0, 0, 0, 0), undefined);
+    expect(parseFrameHeader(data, 0, 0, 0, 0)).to.be.undefined;
   });
 
-  it('should return undefined if data does not contain the entire frame', () => {
+  it('should return undefined if data does not contain the entire frame', function () {
     const data = new Uint8Array(new ArrayBuffer(12));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
-    assert.equal(parseFrameHeader(data, 0, 0, 0, 0), undefined);
+    expect(parseFrameHeader(data, 0, 0, 0, 0)).to.be.undefined;
   });
 });
 
-describe('appendFrame', () => {
-  it('should append the found sample to track and return some useful information', () => {
+describe('appendFrame', function () {
+  it('should append the found sample to track and return some useful information', function () {
     const track = {
       samplerate: 64000,
       samples: [],
@@ -386,7 +385,7 @@ describe('appendFrame', () => {
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
 
-    assert.deepEqual(appendFrame(track, data, 0, 0, 0), {
+    expect(appendFrame(track, data, 0, 0, 0)).to.deep.equal({
       sample: {
         unit: data.subarray(9, 16),
         pts: 0,
@@ -394,11 +393,11 @@ describe('appendFrame', () => {
       },
       length: 16
     });
-    assert.equal(track.samples.length, 1);
-    assert.equal(track.len, 7);
+    expect(track.samples.length).to.equal(1);
+    expect(track.len).to.equal(7);
   });
 
-  it('should not append sample if `parseFrameHeader` fails', () => {
+  it('should not append sample if `parseFrameHeader` fails', function () {
     const track = {
       samplerate: 64000,
       samples: [],
@@ -409,8 +408,8 @@ describe('appendFrame', () => {
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
 
-    assert.equal(appendFrame(track, data, 0, 0, 0), undefined);
-    assert.equal(track.samples.length, 0);
-    assert.equal(track.len, 0);
+    expect(appendFrame(track, data, 0, 0, 0)).to.be.undefined;
+    expect(track.samples.length).to.equal(0);
+    expect(track.len).to.equal(0);
   });
 });

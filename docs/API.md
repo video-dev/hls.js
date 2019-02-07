@@ -653,7 +653,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.tload {number} - performance.now() on load complete
       @param stats.loaded {number} - nb of loaded bytes
-      @param [stats.bw] {number} - download bandwidth in bit/s
+      @param [stats.bw] {number} - download bandwidth in bits/s
       @param stats.total {number} - total nb of bytes
       @param context {object} - loader context
       @param networkDetails {object} - loader network details (the xhr for default loaders)
@@ -664,7 +664,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.loaded {number} - nb of loaded bytes
       @param [stats.total] {number} - total nb of bytes
-      @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
+      @param [stats.bw] {number} - current download bandwidth in bits/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
       @param data {string/arraybuffer/sharedarraybuffer} - onProgress data (should be defined only if context.progressData === true)
       @param networkDetails {object} - loader network details (the xhr for default loaders)
@@ -940,7 +940,7 @@ parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
 (default: `500000`)
 
-Default bandwidth estimate in bits/second prior to collecting fragment bandwidth samples.
+Default bandwidth estimate in bits/s prior to collecting fragment bandwidth samples.
 
 parameter should be a float
 
@@ -1064,7 +1064,7 @@ Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in conf
 
 ### `hls.bandwidthEstimate`
 
-get: Returns the current bandwidth estimate, in Kb/s, if available. Otherwise, `NaN` is returned.
+get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, `NaN` is returned.
 
 ## Version Control
 

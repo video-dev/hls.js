@@ -1,5 +1,10 @@
 import {sortObject, copyTextToClipboard} from './demo-utils'
 
+const STORAGE_KEYS = {
+  Editor_Persistence: 'hlsjs:config-editor-persist',
+  Hls_Config        : 'hlsjs:config'
+};
+
 const testStreams = require('../tests/test-streams');
 const defaultTestStreamUrl = testStreams['bbb'].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl))
@@ -11,13 +16,15 @@ if (demoConfig) {
   demoConfig = {}
 }
 
+const hlsjsDefaults = {
+  debug: true,
+  enableWorker: true
+};
+
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
 let autoRecoverError = getDemoConfigPropOrDefault('autoRecoverError', true);
-let enableWorker = getDemoConfigPropOrDefault('enableWorker', true);
 let levelCapping = getDemoConfigPropOrDefault('levelCapping', -1);
 let limitMetrics = getDemoConfigPropOrDefault('limitMetrics', -1);
-let defaultAudioCodec = getDemoConfigPropOrDefault('defaultAudioCodec', undefined);
-let widevineLicenseUrl = getDemoConfigPropOrDefault('widevineLicenseURL', undefined);
 let dumpfMP4 = getDemoConfigPropOrDefault('dumpfMP4', false);
 
 let bufferingIdx = -1;
@@ -35,8 +42,12 @@ let events;
 let stats;
 let tracks;
 let fmp4Data;
+let configPersistenceEnabled = false;
+let configEditor = null;
 
 $(document).ready(function() {
+  setupConfigEditor();
+
   Object.keys(testStreams).forEach((key) => {
     const stream = testStreams[key];
     const option = new Option(stream.description, key);
@@ -70,11 +81,6 @@ $(document).ready(function() {
     onDemoConfigChanged();
   });
 
-  $('#enableWorker').click(function() {
-    enableWorker = this.checked;
-    onDemoConfigChanged();
-  });
-
   $('#dumpfMP4').click(function() {
     dumpfMP4 = this.checked;
     onDemoConfigChanged();
@@ -90,18 +96,11 @@ $(document).ready(function() {
     onDemoConfigChanged();
   });
 
-  $('#defaultAudioCodec').change(function() {
-    defaultAudioCodec = this.value;
-    onDemoConfigChanged();
-  });
-
   $('#limitMetrics').val(limitMetrics);
   $('#enableStreaming').prop('checked', enableStreaming );
   $('#autoRecoverError').prop('checked', autoRecoverError );
-  $('#enableWorker').prop('checked', enableWorker );
   $('#dumpfMP4').prop('checked', dumpfMP4 );
   $('#levelCapping').val(levelCapping);
-  $('#defaultAudioCodec').val(defaultAudioCodec || 'undefined');
 
   $('h2').append('&nbsp;<a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
   $('#currentVersion').html('Hls version:' + Hls.version);
@@ -146,7 +145,7 @@ function setupGlobals() {
   window.createfMP4 = createfMP4;
   window.goToMetricsPermaLink = goToMetricsPermaLink;
   window.toggleTab = toggleTab;
-  window.onDemoConfigChanged = onDemoConfigChanged;
+  window.applyConfigEditorValue = applyConfigEditorValue;
 }
 
 function trimArray( target, limit ) {
@@ -202,29 +201,14 @@ function loadSelectedStream() {
 
   logStatus('Loading ' + url);
 
-  if (widevineLicenseUrl) {
-    widevineLicenseUrl = unescape(widevineLicenseUrl)
-  }
 
-  const hlsConfig = {
-    debug            : true,
-    enableWorker     : enableWorker,
-    defaultAudioCodec: defaultAudioCodec,
-    widevineLicenseUrl: widevineLicenseUrl
-  };
+  // Extending both a demo-specific config and the user config which can override all
+  const hlsConfig = $.extend({}, hlsjsDefaults, getEditorValue({ parse: true }));
 
   if (selectedTestStream && selectedTestStream.config) {
-    Object.assign(hlsConfig, selectedTestStream.config)
-  }
-
-  if (hlsConfig.widevineLicenseUrl) {
-    $('#widevineLicenseUrl').val(hlsConfig.widevineLicenseUrl);
-  }
-
-  widevineLicenseUrl = hlsConfig.widevineLicenseUrl = $('#widevineLicenseUrl').val();
-
-  if (hlsConfig.widevineLicenseUrl) {
-    hlsConfig.emeEnabled = true;
+    console.info('[loadSelectedStream] extending hls config with stream-specific config: ', selectedTestStream.config);
+    $.extend(hlsConfig, selectedTestStream.config);
+    updateConfigEditorValue(hlsConfig);
   }
 
   onDemoConfigChanged();
@@ -943,7 +927,6 @@ function copyMetricsToClipBoard() {
 function goToMetrics() {
   let url = document.URL;
   url = url.substr(0, url.lastIndexOf('/')+1) + 'metrics.html';
-  // console.log(url);
   window.open(url, '_blank');
 }
 
@@ -951,7 +934,6 @@ function goToMetricsPermaLink() {
   let url = document.URL;
   let b64 = getMetrics();
   url = url.substr(0, url.lastIndexOf('/')+1) + 'metrics.html#data=' + b64;
-  // console.log(url);
   window.open(url, '_blank');
 }
 
@@ -1137,25 +1119,101 @@ function getURLParam(sParam, defaultValue) {
 }
 
 function onDemoConfigChanged() {
-  const url = $('#streamURL').val();
-
   demoConfig = {
     enableStreaming,
     autoRecoverError,
-    enableWorker,
     dumpfMP4,
     levelCapping,
     limitMetrics,
-    defaultAudioCodec,
-    widevineLicenseUrl: escape(widevineLicenseUrl)
+  };
+
+  if (configPersistenceEnabled) {
+    persistEditorValue();
   }
 
-  const serializedDemoConfig = btoa(JSON.stringify(demoConfig))
+  const serializedDemoConfig = btoa(JSON.stringify(demoConfig));
+  const baseURL = document.URL.split('?')[0];
+  const streamURL = $('#streamURL').val();
+  const permalinkURL = `${baseURL}?src=${encodeURIComponent(streamURL)}&demoConfig=${serializedDemoConfig}`;
 
-  const baseURL = document.URL.split('?')[0]
-  const permalinkURL = baseURL + `?src=${encodeURIComponent(url)}&demoConfig=${serializedDemoConfig}`
+  $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
+}
 
-  $('#StreamPermalink').html('<a href="' + permalinkURL + '">' + permalinkURL + '</a>');
+function onConfigPersistenceChanged(event) {
+  configPersistenceEnabled = event.target.checked;
+  localStorage.setItem(STORAGE_KEYS.Editor_Persistence, JSON.stringify(configPersistenceEnabled));
+
+  if (configPersistenceEnabled) {
+    persistEditorValue();
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.Hls_Config);
+  }
+}
+
+function getEditorValue(options) {
+  options = $.extend({ parse: false }, options || {});
+  let value = configEditor.session.getValue();
+
+  if (options.parse) {
+    try {
+      value = JSON.parse(value);
+    } catch (e) {
+      console.warn('[getEditorValue] could not parse editor value', e);
+      value = {};
+    }
+  }
+
+  return value;
+}
+
+function getPersistedHlsConfig() {
+  var value = localStorage.getItem(STORAGE_KEYS.Hls_Config);
+
+  if (value === null) {
+    return value;
+  }
+
+  try {
+    value = JSON.parse(value);
+  } catch (e) {
+    console.warn('[getPersistedHlsConfig] could not hls config json', e);
+    value = {};
+  }
+
+  return value;
+}
+
+function persistEditorValue() {
+  localStorage.setItem(STORAGE_KEYS.Hls_Config, getEditorValue());
+}
+
+function setupConfigEditor() {
+  configEditor = ace.edit('config-editor');
+  configEditor.setTheme('ace/theme/github');
+  configEditor.session.setMode('ace/mode/json');
+
+  const contents = hlsjsDefaults;
+  const shouldRestorePersisted = JSON.parse(localStorage.getItem(STORAGE_KEYS.Editor_Persistence)) === true;
+
+  if (shouldRestorePersisted) {
+    $.extend(contents, getPersistedHlsConfig());
+  }
+
+  const elPersistence = document.querySelector('#configPersistence');
+  elPersistence.addEventListener('change', onConfigPersistenceChanged);
+  elPersistence.checked = shouldRestorePersisted;
+
+  updateConfigEditorValue(contents);
+}
+
+function updateConfigEditorValue(obj) {
+  const json = JSON.stringify(obj, null, 2);
+  configEditor.session.setValue(json);
+}
+
+function applyConfigEditorValue() {
+  onDemoConfigChanged();
+  loadSelectedStream();
 }
 
 function createfMP4(type) {
