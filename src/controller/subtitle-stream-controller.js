@@ -120,6 +120,7 @@ export class SubtitleStreamController extends TaskLoop {
 
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
+    this.fragPrevious = null;
     if (!this.tracks || this.currentTrackId === -1) {
       this.clearInterval();
       return;
@@ -179,34 +180,37 @@ export class SubtitleStreamController extends TaskLoop {
     }
 
     switch (this.state) {
-    case State.IDLE:
-      const tracks = this.tracks;
-      const trackId = this.currentTrackId;
-
+    case State.IDLE: {
+      const { config, currentTrackId: trackId, tracks } = this;
       if (!tracks || !tracks[trackId] || !tracks[trackId].details) {
         break;
       }
 
-      const trackDetails = tracks[trackId].details;
-
-      const config = this.config;
-      const maxBufferHole = config.maxBufferHole;
+      const { maxBufferHole, maxFragLookUpTolerance } = config;
       const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
-      const maxFragLookUpTolerance = config.maxFragLookUpTolerance;
 
       const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), this.media.currentTime, maxBufferHole);
-      const bufferEnd = bufferedInfo.end;
-      const bufferLen = bufferedInfo.len;
+      const { end: bufferEnd, len: bufferLen } = bufferedInfo;
 
+      const trackDetails = tracks[trackId].details;
       const fragments = trackDetails.fragments;
       const fragLen = fragments.length;
       const end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
+      const fragPrevious = this.fragPrevious;
+
+      if (bufferLen > maxConfigBuffer) {
+        return;
+      }
 
       let foundFrag;
-      if (bufferLen < maxConfigBuffer && bufferEnd < end) {
-        foundFrag = findFragmentByPTS(this.fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
-      } else if (trackDetails.hasProgramDateTime && this.fragPrevious) {
-        foundFrag = findFragmentByPDT(fragments, this.fragPrevious.endProgramDateTime, maxFragLookUpTolerance);
+      if (bufferEnd < end) {
+        if (fragPrevious) {
+          foundFrag = fragments[fragPrevious.sn - fragments[0].sn + 1];
+        } else {
+          foundFrag = findFragmentByPTS(null, fragments, bufferEnd, maxFragLookUpTolerance);
+        }
+      } else {
+        foundFrag = fragments[fragLen - 1];
       }
 
       if (foundFrag && foundFrag.encrypted) {
@@ -218,9 +222,9 @@ export class SubtitleStreamController extends TaskLoop {
         foundFrag.trackId = trackId; // Frags don't know their subtitle track ID, so let's just add that...
         this.fragCurrent = foundFrag;
         this.state = State.FRAG_LOADING;
-
         this.hls.trigger(Event.FRAG_LOADING, { frag: foundFrag });
       }
+    }
     }
   }
 
