@@ -126,7 +126,7 @@ class SubtitleTrackController extends EventHandler {
     logger.log(`subtitle track ${id} loaded`);
     const { live, url, targetduration } = details;
     if (live) {
-      mergeSubtitlePlaylists(currentTrack, details, this.lastAVStart);
+      mergeSubtitlePlaylists(currentTrack.details, details, this.lastAVStart);
       currentTrack.details = details;
       this._setReloadTimer(id, url, targetduration);
     } else {

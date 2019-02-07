@@ -173,6 +173,7 @@ export function mergeSubtitlePlaylists (oldPlaylist, newPlaylist, referenceStart
     });
     return;
   }
+
   for (let i = lastIndex + 1; i < frags.length; i++) {
     frags[i].start = (frags[i - 1].start + frags[i - 1].duration);
   }

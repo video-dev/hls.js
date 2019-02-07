@@ -359,7 +359,7 @@ class TimelineController extends EventHandler {
 
     // Parse the WebVTT file contents.
     WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
-      const currentTrack = tracks[frag.trackId];
+      const currentTrack = tracks[frag.level];
 
       if (this.config.renderNatively) {
         cues.filter(cue => !currentTrack.cues.getCueById(cue.id))
@@ -367,7 +367,7 @@ class TimelineController extends EventHandler {
             currentTrack.addCue(cue);
           });
       } else {
-        let trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
+        let trackId = currentTrack.default ? 'default' : 'subtitles' + frag.level;
         hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
       }
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
