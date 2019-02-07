@@ -85,8 +85,9 @@ describe('SubtitleStreamController', function () {
       });
     });
 
-    it('should add details to track object in list', function () {
-      expect(streamController.tracks[1].details).to.equal(detailsMock);
+    // Details are in subtitle-track-controller.js' onSubtitleTrackLoaded handler
+    it('should not add details to track object in list', function () {
+      expect(streamController.tracks[1].details).to.not.exist;
     });
 
     it('should call setInterval', function () {

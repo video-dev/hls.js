@@ -159,16 +159,20 @@ export function mergeDetails (oldDetails, newDetails) {
   newDetails.PTSKnown = oldDetails.PTSKnown;
 }
 
-export function mergeSubtitlePlaylists (oldPlaylist, newPlaylist) {
+export function mergeSubtitlePlaylists (oldPlaylist, newPlaylist, referenceStart = 0) {
   let lastIndex = -1;
   mapFragmentIntersection(oldPlaylist, newPlaylist, (oldFrag, newFrag, index) => {
     newFrag.start = oldFrag.start;
     lastIndex = index;
   });
+
+  const frags = newPlaylist.fragments;
   if (lastIndex < 0) {
+    frags.forEach(frag => {
+      frag.start += referenceStart;
+    });
     return;
   }
-  const frags = newPlaylist.fragments;
   for (let i = lastIndex + 1; i < frags.length; i++) {
     frags[i].start = (frags[i - 1].start + frags[i - 1].duration);
   }

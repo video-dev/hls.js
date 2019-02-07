@@ -10,7 +10,8 @@ class SubtitleTrackController extends EventHandler {
       Event.MEDIA_DETACHING,
       Event.MANIFEST_LOADING,
       Event.MANIFEST_LOADED,
-      Event.SUBTITLE_TRACK_LOADED);
+      Event.SUBTITLE_TRACK_LOADED,
+      Event.LEVEL_UPDATED);
     this.tracks = [];
     this.trackId = -1;
     this.media = null;
@@ -125,13 +126,18 @@ class SubtitleTrackController extends EventHandler {
     logger.log(`subtitle track ${id} loaded`);
     const { live, url, targetduration } = details;
     if (live) {
-      mergeSubtitlePlaylists(currentTrack.details, details);
+      mergeSubtitlePlaylists(currentTrack, details, this.lastAVStart);
       currentTrack.details = details;
       this._setReloadTimer(id, url, targetduration);
     } else {
       currentTrack.details = details;
       this._stopTimer();
     }
+  }
+
+  onLevelUpdated ({ details }) {
+    const frags = details.fragments;
+    this.lastAVStart = frags.length ? frags[0].start : 0;
   }
 
   /** get alternate subtitle tracks list from playlist **/

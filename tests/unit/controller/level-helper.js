@@ -44,6 +44,13 @@ describe('Level-Helper Tests', function () {
       expect(actual).to.deep.equal([5]);
     });
 
+    it('can iterate over the entire segment array', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3]);
+      const newPlaylist = generatePlaylist([1, 2, 3]);
+      const actual = getIteratedSequence(oldPlaylist, newPlaylist);
+      expect(actual).to.deep.equal([1, 2, 3]);
+    });
+
     it('can iterate when overlapping happens at the start of the old playlist', function () {
       const oldPlaylist = generatePlaylist([5, 6, 7, 8]);
       const newPlaylist = generatePlaylist([3, 4, 5, 6]);
@@ -102,6 +109,14 @@ describe('Level-Helper Tests', function () {
       LevelHelper.mergeSubtitlePlaylists(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
+    });
+
+    it('adjusts sliding using the reference start if there is no segment overlap', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3]);
+      const newPlaylist = generatePlaylist([5, 6, 7]);
+      LevelHelper.mergeSubtitlePlaylists(oldPlaylist, newPlaylist, 30);
+      const actual = newPlaylist.fragments.map(f => f.start);
+      expect(actual).to.deep.equal([30, 35, 40]);
     });
 
     it('does not extrapolate if the new playlist starts before the old', function () {
