@@ -70,9 +70,12 @@ class ID3TrackController extends EventHandler {
         const startTime = samples[i].pts;
         let endTime = i < samples.length - 1 ? samples[i + 1].pts : fragment.endPTS;
 
-        // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
         if (startTime === endTime) {
+          // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
           endTime += 0.0001;
+        } else if (startTime > endTime) {
+          // Ignore samples with startTime > endTime to avoid SyntaxErrors on IE and Edge
+          continue;
         }
 
         for (let j = 0; j < frames.length; j++) {
