@@ -5,25 +5,15 @@
 import Event from '../events';
 import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
-import TaskLoop from '../task-loop';
 import { BufferHelper } from '../utils/buffer-helper';
-import { findFragmentByPTS, findFragmentByPDT } from './fragment-finders';
+import { findFragmentByPTS } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
+import BaseStreamController, { State } from './base-stream-controller';
 
 const { performance } = window;
-
-export const SubtitleStreamControllerState = {
-  STOPPED: 'STOPPED',
-  IDLE: 'IDLE',
-  KEY_LOADING: 'KEY_LOADING',
-  FRAG_LOADING: 'FRAG_LOADING'
-};
-
-const State = SubtitleStreamControllerState;
-
 const TICK_INTERVAL = 500; // how often to tick in ms
 
-export class SubtitleStreamController extends TaskLoop {
+export class SubtitleStreamController extends BaseStreamController {
   constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
@@ -52,24 +42,20 @@ export class SubtitleStreamController extends TaskLoop {
   }
 
   onSubtitleFragProcessed (data) {
+    const { frag, success } = data;
+    this.fragPrevious = frag;
     this.state = State.IDLE;
-
-    if (!data.success) {
+    if (!success) {
       return;
     }
 
     const buffered = this.tracksBuffered[this.currentTrackId];
-    const frag = data.frag;
-
-    this.fragPrevious = frag;
-
     if (!buffered) {
       return;
     }
 
     // Create/update a buffered array matching the interface used by BufferHelper.bufferedInfo
     // so we can re-use the logic used to detect how much have been buffered
-    // FIXME: put this in a utility function or proper object for time-ranges manipulation?
     let timeRange;
     for (let i = 0; i < buffered.length; i++) {
       if (frag.start >= buffered[i].start && frag.start <= buffered[i].end) {
@@ -81,10 +67,11 @@ export class SubtitleStreamController extends TaskLoop {
     if (timeRange) {
       timeRange.end = frag.start + frag.duration;
     } else {
-      buffered.push({
+      timeRange = {
         start: frag.start,
         end: frag.start + frag.duration
-      });
+      };
+      buffered.push(timeRange);
     }
   }
 
@@ -98,7 +85,7 @@ export class SubtitleStreamController extends TaskLoop {
     this.state = State.STOPPED;
   }
 
-  // If something goes wrong, procede to next frag, if we were processing one.
+  // If something goes wrong, proceed to next frag, if we were processing one.
   onError (data) {
     let frag = data.frag;
     // don't handle error not related to subtitle fragment
@@ -120,7 +107,7 @@ export class SubtitleStreamController extends TaskLoop {
 
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
-    this.fragPrevious = null;
+
     if (!this.tracks || this.currentTrackId === -1) {
       this.clearInterval();
       return;
@@ -166,7 +153,6 @@ export class SubtitleStreamController extends TaskLoop {
         // decrypt the subtitles
         this.decrypter.decrypt(data.payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {
           let endTime = performance.now();
-
           hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload: decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
         });
       }
@@ -181,22 +167,20 @@ export class SubtitleStreamController extends TaskLoop {
 
     switch (this.state) {
     case State.IDLE: {
-      const { config, currentTrackId: trackId, tracks } = this;
+      const { config, currentTrackId: trackId, fragmentTracker, media, tracks } = this;
       if (!tracks || !tracks[trackId] || !tracks[trackId].details) {
         break;
       }
 
       const { maxBufferHole, maxFragLookUpTolerance } = config;
       const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
-
-      const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), this.media.currentTime, maxBufferHole);
+      const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), media.currentTime, maxBufferHole);
       const { end: bufferEnd, len: bufferLen } = bufferedInfo;
 
       const trackDetails = tracks[trackId].details;
       const fragments = trackDetails.fragments;
       const fragLen = fragments.length;
       const end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
-      const fragPrevious = this.fragPrevious;
 
       if (bufferLen > maxConfigBuffer) {
         return;
@@ -204,11 +188,7 @@ export class SubtitleStreamController extends TaskLoop {
 
       let foundFrag;
       if (bufferEnd < end) {
-        if (fragPrevious) {
-          foundFrag = fragments[fragPrevious.sn - fragments[0].sn + 1];
-        } else {
-          foundFrag = findFragmentByPTS(null, fragments, bufferEnd, maxFragLookUpTolerance);
-        }
+        foundFrag = findFragmentByPTS(this.fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
       } else {
         foundFrag = fragments[fragLen - 1];
       }
@@ -217,9 +197,8 @@ export class SubtitleStreamController extends TaskLoop {
         logger.log(`Loading key for ${foundFrag.sn}`);
         this.state = State.KEY_LOADING;
         this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });
-      } else if (foundFrag && this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
+      } else if (foundFrag && fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
         // only load if fragment is not loaded
-        foundFrag.trackId = trackId; // Frags don't know their subtitle track ID, so let's just add that...
         this.fragCurrent = foundFrag;
         this.state = State.FRAG_LOADING;
         this.hls.trigger(Event.FRAG_LOADING, { frag: foundFrag });
