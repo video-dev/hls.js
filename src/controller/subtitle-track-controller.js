@@ -66,7 +66,6 @@ class SubtitleTrackController extends EventHandler {
   onManifestLoaded (data) {
     let tracks = data.subtitles || [];
     this.tracks = tracks;
-    // this.trackId = -1;
     this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, { subtitleTracks: tracks });
 
     // loop through available subtitle tracks and autoselect default if needed
