@@ -296,9 +296,9 @@ class TimelineController extends EventHandler {
         }
       }
       );
-      if (cues[0] && (cues[0].startTime - frag.start > frag.duration || cues[0].startTime < frag.start)) {
+      if (cues.length > 0 && (cues[0].startTime - frag.start > frag.duration || cues[0].startTime < frag.start)) {
         // subtitle start time do not match cue PTS (init. with delay / sliding failed), or new cue PTS is more accurate than pervious estimation
-        logger.warn(`Adjust subtitle fragment start time [${frag.start},${frag.end}] to [${cues[0].startTime},${cues[cues.length - 1].endTime}]`);
+        logger.warn(`Adjust subtitle fragment start time [${frag.start},${frag.end}] to [${cues[0].startTime},${frag.startPTS + frag.duration}]`);
         frag.startPTS = cues[0].startTime;
         frag.endPTS = frag.startPTS + frag.duration; // boundary of findPTS shift by lookup tolorance
       }

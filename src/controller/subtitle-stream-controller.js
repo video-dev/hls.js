@@ -220,8 +220,7 @@ export class SubtitleStreamController extends TaskLoop {
       const config = this.config;
       const maxBufferHole = config.maxBufferHole;
       const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
-      // if PTSKnown, start is defined by cues range, shift lookup tolerance to front
-      const maxFragLookUpTolerance = !trackDetails.PTSKnown ? config.maxFragLookUpTolerance : config.maxFragLookUpTolerance + (trackDetails.averagetargetduration - this.fragPrevious.duration ? this.fragPrevious.duration : 0);
+      const maxFragLookUpTolerance = config.maxFragLookUpTolerance;
 
       const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), this.media.currentTime, maxBufferHole);
       const bufferEnd = bufferedInfo.end;
