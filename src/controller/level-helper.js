@@ -221,7 +221,7 @@ export function computeReloadInterval (currentPlaylist, newPlaylist, lastRequest
   }
   // decrement reloadInterval with level loading delay
   if (lastRequestTime) {
-    reloadInterval -= window.performance.now() - lastRequestTime;
+    reloadInterval -= (window.performance.now() - lastRequestTime);
   }
   // in any case, don't reload more than half of target duration
   reloadInterval = Math.max(reloadInterval / 2, Math.round(reloadInterval));
