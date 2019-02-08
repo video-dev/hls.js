@@ -6,7 +6,7 @@ import Event from '../events';
 import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import { BufferHelper } from '../utils/buffer-helper';
-import { findFragmentByPTS } from './fragment-finders';
+import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { mergeSubtitlePlaylists } from './level-helper';
@@ -195,8 +195,14 @@ export class SubtitleStreamController extends BaseStreamController {
       }
 
       let foundFrag;
+      const fragPrevious = this.fragPrevious;
       if (bufferEnd < end) {
-        foundFrag = findFragmentByPTS(this.fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
+        if (fragPrevious && trackDetails.hasProgramDateTime) {
+          foundFrag = findFragmentByPDT(fragments, fragPrevious.endProgramDateTime, maxFragLookUpTolerance);
+        }
+        if (!foundFrag) {
+          foundFrag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
+        }
       } else {
         foundFrag = fragments[fragLen - 1];
       }
