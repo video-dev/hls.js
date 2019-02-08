@@ -9,6 +9,7 @@ import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
+import { mergeSubtitlePlaylists } from './level-helper';
 
 const { performance } = window;
 const TICK_INTERVAL = 500; // how often to tick in ms
@@ -24,7 +25,8 @@ export class SubtitleStreamController extends BaseStreamController {
       Event.SUBTITLE_TRACKS_UPDATED,
       Event.SUBTITLE_TRACK_SWITCH,
       Event.SUBTITLE_TRACK_LOADED,
-      Event.SUBTITLE_FRAG_PROCESSED);
+      Event.SUBTITLE_FRAG_PROCESSED,
+      Event.LEVEL_UPDATED);
 
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
@@ -33,6 +35,7 @@ export class SubtitleStreamController extends BaseStreamController {
     this.tracksBuffered = [];
     this.currentTrackId = -1;
     this.decrypter = new Decrypter(hls, hls.config);
+    this.lastAVStart = 0;
   }
 
   onSubtitleFragProcessed (data) {
@@ -115,12 +118,18 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded () {
-    if (!this.tracks) {
-      logger.warn('Can not update subtitle details, no tracks found');
+  onSubtitleTrackLoaded (data) {
+    const { id, details } = data;
+    const { currentTrackId, tracks } = this;
+    const currentTrack = tracks[currentTrackId];
+    if (id >= tracks.length || id !== currentTrackId || !currentTrack) {
       return;
     }
 
+    if (details.live) {
+      mergeSubtitlePlaylists(currentTrack.details, details, this.lastAVStart);
+    }
+    currentTrack.details = details;
     this.setInterval(TICK_INTERVAL);
   }
 
@@ -153,6 +162,11 @@ export class SubtitleStreamController extends BaseStreamController {
     }
   }
 
+  onLevelUpdated ({ details }) {
+    const frags = details.fragments;
+    this.lastAVStart = frags.length ? frags[0].start : 0;
+  }
+
   doTick () {
     if (!this.media) {
       this.state = State.IDLE;
@@ -161,8 +175,8 @@ export class SubtitleStreamController extends BaseStreamController {
 
     switch (this.state) {
     case State.IDLE: {
-      const { config, currentTrackId: trackId, fragmentTracker, media, tracks } = this;
-      if (!tracks || !tracks[trackId] || !tracks[trackId].details) {
+      const { config, currentTrackId, fragmentTracker, media, tracks } = this;
+      if (!tracks || !tracks[currentTrackId] || !tracks[currentTrackId].details) {
         break;
       }
 
@@ -171,7 +185,7 @@ export class SubtitleStreamController extends BaseStreamController {
       const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), media.currentTime, maxBufferHole);
       const { end: bufferEnd, len: bufferLen } = bufferedInfo;
 
-      const trackDetails = tracks[trackId].details;
+      const trackDetails = tracks[currentTrackId].details;
       const fragments = trackDetails.fragments;
       const fragLen = fragments.length;
       const end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
@@ -199,6 +213,11 @@ export class SubtitleStreamController extends BaseStreamController {
       }
     }
     }
+  }
+
+  stopLoad () {
+    this.lastAVStart = 0;
+    super.stopLoad();
   }
 
   _getBuffered () {

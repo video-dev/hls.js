@@ -1,17 +1,15 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
-import { computeReloadInterval, mergeSubtitlePlaylists } from './level-helper';
+import { computeReloadInterval } from './level-helper';
 
 class SubtitleTrackController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
-      Event.MANIFEST_LOADING,
       Event.MANIFEST_LOADED,
-      Event.SUBTITLE_TRACK_LOADED,
-      Event.LEVEL_UPDATED);
+      Event.SUBTITLE_TRACK_LOADED);
     this.tracks = [];
     this.trackId = -1;
     this.media = null;
@@ -64,12 +62,6 @@ class SubtitleTrackController extends EventHandler {
     this.media = null;
   }
 
-  // Reset subtitle tracks on manifest loading
-  onManifestLoading () {
-    this.tracks = [];
-    // this.trackId = -1;
-  }
-
   // Fired whenever a new manifest is loaded.
   onManifestLoaded (data) {
     let tracks = data.subtitles || [];
@@ -102,10 +94,9 @@ class SubtitleTrackController extends EventHandler {
       this.stopLoad();
       return;
     }
+
     logger.log(`subtitle track ${id} loaded`);
-    const { live } = details;
-    if (live) {
-      mergeSubtitlePlaylists(currentTrack.details, details, this.lastAVStart);
+    if (details.live) {
       const reloadInterval = computeReloadInterval(currentTrack.details, details, data.stats.trequest);
       logger.log(`Reloading live subtitle playlist in ${reloadInterval}ms`);
       this.timer = setTimeout(() => {
@@ -114,12 +105,6 @@ class SubtitleTrackController extends EventHandler {
     } else {
       this.stopLoad();
     }
-    currentTrack.details = details;
-  }
-
-  onLevelUpdated ({ details }) {
-    const frags = details.fragments;
-    this.lastAVStart = frags.length ? frags[0].start : 0;
   }
 
   startLoad () {
