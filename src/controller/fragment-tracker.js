@@ -234,7 +234,7 @@ export class FragmentTracker extends EventHandler {
     const fragment = e.frag;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
-    if (!Number.isFinite(fragment.sn) || fragment.bitrateTest || fragment.type === 'subtitle') {
+    if (!Number.isFinite(fragment.sn) || fragment.bitrateTest) {
       return;
     }
 
