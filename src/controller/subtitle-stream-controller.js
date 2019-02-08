@@ -35,12 +35,6 @@ export class SubtitleStreamController extends BaseStreamController {
     this.decrypter = new Decrypter(hls, hls.config);
   }
 
-  onHandlerDestroyed () {
-    this.fragmentTracker = null;
-    this.state = State.STOPPED;
-    super.onHandlerDestroyed();
-  }
-
   onSubtitleFragProcessed (data) {
     const { frag, success } = data;
     this.fragPrevious = frag;
