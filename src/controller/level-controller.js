@@ -7,7 +7,7 @@ import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
-import { addGroupId } from './level-helper';
+import { addGroupId, computeReloadInterval } from './level-helper';
 
 const { performance } = window;
 let chromeOrFirefox;
@@ -382,35 +382,21 @@ export default class LevelController extends EventHandler {
   }
 
   onLevelLoaded (data) {
-    const levelId = data.level;
+    const { level, details } = data;
     // only process level loaded events matching with expected level
-    if (levelId !== this.currentLevelIndex) {
+    if (level !== this.currentLevelIndex) {
       return;
     }
 
-    const curLevel = this._levels[levelId];
+    const curLevel = this._levels[level];
     // reset level load error counter on successful level loaded only if there is no issues with fragments
     if (!curLevel.fragmentError) {
       curLevel.loadError = 0;
       this.levelRetryCount = 0;
     }
-    let newDetails = data.details;
     // if current playlist is a live playlist, arm a timer to reload it
-    if (newDetails.live) {
-      const targetdurationMs = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration);
-      let reloadInterval = targetdurationMs,
-        curDetails = curLevel.details;
-      if (curDetails && newDetails.endSN === curDetails.endSN) {
-        // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
-        // changed then it MUST wait for a period of one-half the target
-        // duration before retrying.
-        reloadInterval /= 2;
-        logger.log('same live playlist, reload twice faster');
-      }
-      // decrement reloadInterval with level loading delay
-      reloadInterval -= performance.now() - data.stats.trequest;
-      // in any case, don't reload more than half of target duration
-      reloadInterval = Math.max(targetdurationMs / 2, Math.round(reloadInterval));
+    if (details.live) {
+      const reloadInterval = computeReloadInterval(curLevel.details, details, data.stats.trequest);
       logger.log(`live playlist, reload in ${Math.round(reloadInterval)} ms`);
       this.timer = setTimeout(() => this.loadLevel(), reloadInterval);
     } else {
