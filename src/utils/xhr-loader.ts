@@ -1,24 +1,40 @@
-/**
- * XHR based logger
-*/
-
 import { logger } from '../utils/logger';
+import { LoaderCallbacks, LoaderContext, LoaderStats, LoaderInterface } from '../types/loader';
 
-const { performance, XMLHttpRequest } = window;
+class XhrLoader implements LoaderInterface {
+  private xhrSetup: Function | null;
+  private requestTimeout?: number;
+  private retryTimeout?: number | undefined;
+  private retryDelay: number;
+  private config: any;
+  private callbacks!: LoaderCallbacks;
+  private context!: LoaderContext;
 
-class XhrLoader {
+  public loader: XMLHttpRequest | null;
+  public stats: LoaderStats;
+
   constructor (config) {
-    if (config && config.xhrSetup) {
-      this.xhrSetup = config.xhrSetup;
-    }
+    this.config = config;
+    this.xhrSetup = config ? config.xhrSetup : null;
+    this.loader = null;
+    this.stats = {
+      tfirst: 0,
+      trequest: 0,
+      tload: 0,
+      loaded: 0,
+      total: 0,
+      retry: 0,
+      aborted: false
+    };
+    this.retryDelay = 0;
   }
 
-  destroy () {
+  destroy (): void {
     this.abort();
     this.loader = null;
   }
 
-  abort () {
+  abort (): void {
     let loader = this.loader;
     if (loader && loader.readyState !== 4) {
       this.stats.aborted = true;
@@ -26,21 +42,22 @@ class XhrLoader {
     }
 
     window.clearTimeout(this.requestTimeout);
-    this.requestTimeout = null;
+    this.requestTimeout = -1;
     window.clearTimeout(this.retryTimeout);
-    this.retryTimeout = null;
+    this.retryTimeout = -1;
   }
 
-  load (context, config, callbacks) {
+  load (context: LoaderContext, config: any, callbacks: LoaderCallbacks): void {
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
-    this.stats = { trequest: performance.now(), retry: 0 };
+    this.stats.trequest = window.performance.now();
+    this.stats.retry = 0;
     this.retryDelay = config.retryDelay;
     this.loadInternal();
   }
 
-  loadInternal () {
+  loadInternal (): void {
     let xhr, context = this.context;
     xhr = this.loader = new XMLHttpRequest();
 
@@ -82,7 +99,7 @@ class XhrLoader {
     xhr.send();
   }
 
-  readystatechange (event) {
+  readystatechange (event): void {
     let xhr = event.currentTarget,
       readyState = xhr.readyState,
       stats = this.stats,
@@ -99,14 +116,14 @@ class XhrLoader {
       // clear xhr timeout and rearm it if readyState less than 4
       window.clearTimeout(this.requestTimeout);
       if (stats.tfirst === 0) {
-        stats.tfirst = Math.max(performance.now(), stats.trequest);
+        stats.tfirst = Math.max(window.performance.now(), stats.trequest);
       }
 
       if (readyState === 4) {
         let status = xhr.status;
         // http status between 200 to 299 are all successful
         if (status >= 200 && status < 300) {
-          stats.tload = Math.max(stats.tfirst, performance.now());
+          stats.tload = Math.max(stats.tfirst, window.performance.now());
           let data, len;
           if (context.responseType === 'arraybuffer') {
             data = xhr.response;
@@ -142,12 +159,12 @@ class XhrLoader {
     }
   }
 
-  loadtimeout () {
+  loadtimeout (): void {
     logger.warn(`timeout while loading ${this.context.url}`);
     this.callbacks.onTimeout(this.stats, this.context, null);
   }
 
-  loadprogress (event) {
+  loadprogress (event): void {
     let xhr = event.currentTarget,
       stats = this.stats;
 

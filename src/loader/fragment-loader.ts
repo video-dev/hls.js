@@ -1,19 +1,23 @@
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import Fragment from './fragment';
+import { LoaderInterface, LoaderStats } from '../types/loader';
 
 class FragmentLoader {
+  private config: any;
+  private loader: LoaderInterface | null = null;
   constructor (config) {
     this.config = config;
-    this.loader = null;
   }
 
-  load (frag) {
+  load (frag: Fragment): Promise<FragLoadSuccessResult | FragLoadFailResult> {
+    if (!frag.url) {
+      return Promise.reject(new LoadError(null, 'Fragment does not have a url'));
+    }
+
     const config = this.config;
     const FragmentILoader = config.fLoader;
     const DefaultILoader = config.loader;
-
-    // reset fragment state
-    frag.loaded = 0;
 
     let loader = this.loader;
     if (loader) {
@@ -27,7 +31,9 @@ class FragmentLoader {
     const loaderContext = {
       frag,
       responseType: 'arraybuffer',
-      url: frag.url
+      url: frag.url,
+      rangeStart: 0,
+      rangeEnd: 0
     };
 
     const start = frag.byteRangeStartOffset;
@@ -45,11 +51,14 @@ class FragmentLoader {
     };
 
     return new Promise((resolve, reject) => {
+      if (!loader) {
+        return Promise.reject(new LoadError(null, 'Loader was destroyed after fragment request'));
+      }
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails = null) => {
           this._resetLoader(frag);
           resolve({
-            payload: response.data,
+            payload: response.data as ArrayBuffer,
             stats,
             networkDetails
           });
@@ -94,10 +103,25 @@ class FragmentLoader {
 }
 
 export class LoadError extends Error {
+  private data: FragLoadFailResult | null;
   constructor (data, ...params) {
     super(...params);
     this.data = data;
   }
+}
+
+export interface FragLoadSuccessResult {
+  payload: ArrayBuffer
+  stats: LoaderStats
+  networkDetails: XMLHttpRequest | null
+}
+
+export interface FragLoadFailResult {
+  type: string
+  details: string
+  fatal: boolean
+  frag: Fragment
+  networkDetails: XMLHttpRequest
 }
 
 export default FragmentLoader;

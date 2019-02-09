@@ -8,6 +8,12 @@ export enum ElementaryStreamTypes {
   VIDEO = 'video',
 }
 
+export enum FragmentTypes {
+  MAIN = 'main',
+  AUDIO = 'audio',
+  SUBTITLE = 'subtitle'
+}
+
 export default class Fragment {
   private _url: string | null = null;
   private _byteRange: number[] | null = null;
@@ -41,6 +47,10 @@ export default class Fragment {
   // core difference from the private field _decryptdata is the lack of the initialized IV
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
+  //
+  public type!: FragmentTypes;
+  //
+  public loader!: any;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {

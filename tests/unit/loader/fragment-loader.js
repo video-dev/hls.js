@@ -20,7 +20,7 @@ describe('FragmentLoader tests', function () {
   let stats;
   let networkDetails;
   beforeEach(function () {
-    fragmentLoader = new FragmentLoader({loader: MockXhr});
+    fragmentLoader = new FragmentLoader({ loader: MockXhr });
     frag = new Fragment();
     response = {};
     context = {};
