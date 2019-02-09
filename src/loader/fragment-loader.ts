@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 import Fragment from './fragment';
 import { LoaderInterface, LoaderStats } from '../types/loader';
 
-class FragmentLoader {
+export default class FragmentLoader {
   private config: any;
   private loader: LoaderInterface | null = null;
   constructor (config) {
@@ -123,5 +123,3 @@ export interface FragLoadFailResult {
   frag: Fragment
   networkDetails: XMLHttpRequest
 }
-
-export default FragmentLoader;
