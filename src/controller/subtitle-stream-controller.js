@@ -9,6 +9,7 @@ import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS, findFragmentByPDT } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
+import FragmentLoader from '../loader/fragment-loader';
 
 const { performance } = window;
 
@@ -34,8 +35,9 @@ export class SubtitleStreamController extends BaseStreamController {
     this.fragPrevious = null;
     this.media = null;
     this.state = State.STOPPED;
-    this.tracks = [];
+    this.levels = [];
     this.tracksBuffered = [];
+    this.fragmentLoader = new FragmentLoader(hls.config);
   }
 
   onHandlerDestroyed () {
@@ -101,25 +103,25 @@ export class SubtitleStreamController extends BaseStreamController {
     this.state = State.IDLE;
   }
 
-  // Got all new subtitle tracks.
+  // Got all new subtitle levels.
   onSubtitleTracksUpdated (data) {
-    logger.log('subtitle tracks updated');
+    logger.log('subtitle levels updated');
     this.tracksBuffered = [];
-    this.tracks = data.subtitleTracks;
-    this.tracks.forEach((track) => {
+    this.levels = data.subtitleTracks;
+    this.levels.forEach((track) => {
       this.tracksBuffered[track.id] = [];
     });
   }
 
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
-    if (!this.tracks || this.currentTrackId === -1) {
+    if (!this.levels || this.currentTrackId === -1) {
       this.clearInterval();
       return;
     }
 
     // Check if track has the necessary details to load fragments
-    const currentTrack = this.tracks[this.currentTrackId];
+    const currentTrack = this.levels[this.currentTrackId];
     if (currentTrack && currentTrack.details) {
       this.setInterval(TICK_INTERVAL);
     }
@@ -129,14 +131,14 @@ export class SubtitleStreamController extends BaseStreamController {
   onSubtitleTrackLoaded (data) {
     const { id, details } = data;
 
-    if (!this.tracks) {
-      logger.warn('Can not update subtitle details, no tracks found');
+    if (!this.levels) {
+      logger.warn('Can not update subtitle details, no levels found');
       return;
     }
 
-    if (this.tracks[id]) {
+    if (this.levels[id]) {
       logger.log('Updating subtitle track details');
-      this.tracks[id].details = details;
+      this.levels[id].details = details;
     }
 
     this.setInterval(TICK_INTERVAL);
@@ -181,14 +183,14 @@ export class SubtitleStreamController extends BaseStreamController {
 
     switch (this.state) {
     case State.IDLE:
-      const tracks = this.tracks;
+      const levels = this.levels;
       const trackId = this.currentTrackId;
 
-      if (!tracks || !tracks[trackId] || !tracks[trackId].details) {
+      if (!levels || !levels[trackId] || !levels[trackId].details) {
         break;
       }
 
-      const trackDetails = tracks[trackId].details;
+      const trackDetails = levels[trackId].details;
 
       const config = this.config;
       const maxBufferHole = config.maxBufferHole;

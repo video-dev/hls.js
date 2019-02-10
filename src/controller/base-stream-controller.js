@@ -98,17 +98,17 @@ export default class BaseStreamController extends TaskLoop {
   }
 
   _loadFragForPlayback (frag) {
-    this.state = State.FRAG_LOADING;
-    this.hls.trigger(Event.FRAG_LOADING, { frag });
-    this.fragmentLoader.load(frag)
+    this._doFragLoad(frag)
       .then((data) => {
         this.fragLoadError = 0;
         if (this._fragLoadAborted(frag)) {
           return;
         }
-        const { networkDetails, payload, stats } = data;
+        const { payload, stats } = data;
         logger.log(`Loaded ${frag.sn} of level ${frag.level}`);
-        this.hls.trigger(Event.FRAG_LOADED, { frag, stats, networkDetails });
+        // For compatibility, emit the FRAG_LOADED with the same signature
+        data.frag = frag;
+        this.hls.trigger(Event.FRAG_LOADED, data);
         this.onFragLoaded(frag, payload, stats);
       })
       .catch((e) => {
@@ -117,7 +117,7 @@ export default class BaseStreamController extends TaskLoop {
   }
 
   _loadInitSegment (frag) {
-    this.fragmentLoader.load(frag)
+    this._doFragLoad(frag)
       .then((data) => {
         const { stats, payload } = data;
         const { fragCurrent, hls, levels } = this;
@@ -126,9 +126,8 @@ export default class BaseStreamController extends TaskLoop {
         }
         this.state = State.IDLE;
         this.fragLoadError = 0;
-        const levelDetails = levels[this.fragCurrent.level];
+        levels[frag.level].details.initSegment.data = payload;
         stats.tparsed = stats.tbuffered = window.performance.now();
-        levelDetails.initSegment.data = payload;
         hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
         this.tick();
       })
@@ -139,5 +138,11 @@ export default class BaseStreamController extends TaskLoop {
 
   _fragLoadAborted (frag) {
     return this.state !== State.FRAG_LOADING || frag !== this.fragCurrent;
+  }
+
+  _doFragLoad (frag) {
+    this.state = State.FRAG_LOADING;
+    this.hls.trigger(Event.FRAG_LOADING, { frag });
+    return this.fragmentLoader.load(frag);
   }
 }

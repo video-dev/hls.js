@@ -39,13 +39,13 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should update tracks list', function () {
-      expect(streamController.tracks).to.equal(tracksMock);
+      expect(streamController.levels).to.equal(tracksMock);
     });
   });
 
   describe('onSubtitleTrackSwitch', function () {
     beforeEach(function () {
-      streamController.tracks = tracksMock;
+      streamController.levels = tracksMock;
       streamController.clearInterval = sinon.spy();
       streamController.setInterval = sinon.spy();
 
@@ -59,7 +59,7 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should call clearInterval if no tracks present', function () {
-      streamController.tracks = null;
+      streamController.levels = null;
       hls.trigger(Event.SUBTITLE_TRACK_SWITCH, {
         id: 0
       });
@@ -79,14 +79,14 @@ describe('SubtitleStreamController', function () {
 
     beforeEach(function () {
       streamController.setInterval = sinon.spy();
-      streamController.tracks = tracksMock;
+      streamController.levels = tracksMock;
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
         id: 1, details: detailsMock
       });
     });
 
     it('should add details to track object in list', function () {
-      expect(streamController.tracks[1].details).to.equal(detailsMock);
+      expect(streamController.levels[1].details).to.equal(detailsMock);
     });
 
     it('should call setInterval', function () {
@@ -94,14 +94,14 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should not crash when no tracks present', function () {
-      streamController.tracks = null;
+      streamController.levels = null;
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
         id: 0, details: {}
       });
     });
 
     it('should not crash when no track id does not exist', function () {
-      streamController.tracks = null;
+      streamController.levels = null;
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
         id: 5, details: {}
       });

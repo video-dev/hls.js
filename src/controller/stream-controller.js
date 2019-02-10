@@ -1308,7 +1308,7 @@ class StreamController extends BaseStreamController {
   }
 
   _loadBitrateTestFrag (frag) {
-    this.fragmentLoader.load(frag)
+    this._doFragLoad(frag)
       .then((data) => {
         const { stats } = data;
         const { hls } = this;
