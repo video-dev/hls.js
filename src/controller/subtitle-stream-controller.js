@@ -54,19 +54,21 @@ export class SubtitleStreamController extends BaseStreamController {
     // Create/update a buffered array matching the interface used by BufferHelper.bufferedInfo
     // so we can re-use the logic used to detect how much have been buffered
     let timeRange;
+    const fragStart = frag.start;
     for (let i = 0; i < buffered.length; i++) {
-      if (frag.start >= buffered[i].start && frag.start <= buffered[i].end) {
+      if (fragStart >= buffered[i].start && fragStart <= buffered[i].end) {
         timeRange = buffered[i];
         break;
       }
     }
 
+    const fragEnd = frag.start + frag.duration;
     if (timeRange) {
-      timeRange.end = frag.start + frag.duration;
+      timeRange.end = fragEnd;
     } else {
       timeRange = {
-        start: frag.start,
-        end: frag.start + frag.duration
+        start: fragStart,
+        end: fragEnd
       };
       buffered.push(timeRange);
     }

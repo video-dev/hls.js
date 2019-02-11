@@ -13,6 +13,7 @@ class SubtitleTrackController extends EventHandler {
     this.tracks = [];
     this.trackId = -1;
     this.media = null;
+    this.stopped = true;
 
     /**
      * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
@@ -89,8 +90,8 @@ class SubtitleTrackController extends EventHandler {
     const { id, details } = data;
     const { trackId, tracks } = this;
     const currentTrack = tracks[trackId];
-    if (id >= tracks.length || id !== trackId || !currentTrack) {
-      this.stopLoad();
+    if (id >= tracks.length || id !== trackId || !currentTrack || this.stopped) {
+      this._clearReloadTimer();
       return;
     }
 
@@ -102,19 +103,18 @@ class SubtitleTrackController extends EventHandler {
         this._loadCurrentTrack();
       }, reloadInterval);
     } else {
-      this.stopLoad();
+      this._clearReloadTimer();
     }
   }
 
   startLoad () {
+    this.stopped = false;
     this._loadCurrentTrack();
   }
 
   stopLoad () {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
+    this.stopped = true;
+    this._clearReloadTimer();
   }
 
   /** get alternate subtitle tracks list from playlist **/
@@ -132,6 +132,13 @@ class SubtitleTrackController extends EventHandler {
     if (this.trackId !== subtitleTrackId) {
       this._toggleTrackModes(subtitleTrackId);
       this._setSubtitleTrackInternal(subtitleTrackId);
+    }
+  }
+
+  _clearReloadTimer () {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
     }
   }
 

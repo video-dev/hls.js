@@ -14,7 +14,6 @@ describe('SubtitleTrackController', function () {
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
-
     subtitleTrackController.media = videoElement;
     subtitleTrackController.tracks = [{ id: 0, url: 'baz', details: { live: false } }, { id: 1, url: 'bar' }, { id: 2, details: { live: true }, url: 'foo' }];
 
@@ -28,6 +27,12 @@ describe('SubtitleTrackController', function () {
 
   afterEach(function () {
     sandbox.restore();
+  });
+
+  describe('constructor', function () {
+    it('defaults stopped to true', function () {
+      expect(subtitleTrackController.stopped).to.be.true;
+    });
   });
 
   describe('onTextTrackChanged', function () {
@@ -131,11 +136,11 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should do nothing if called with out of bound indices', function () {
-      const stopLoadSpy = sandbox.spy(subtitleTrackController, 'stopLoad');
+      const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
 
-      expect(stopLoadSpy).to.have.not.been.called;
+      expect(clearReloadSpy).to.have.not.been.called;
     });
 
     it('should do nothing if called with a non-number', function () {
@@ -169,27 +174,35 @@ describe('SubtitleTrackController', function () {
     describe('onSubtitleTrackLoaded', function () {
       it('exits early if the loaded track does not match the requested track', function () {
         const tracks = subtitleTrackController.tracks;
-        const stopLoadSpy = sandbox.spy(subtitleTrackController, 'stopLoad');
+        const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
         subtitleTrackController.trackId = 1;
 
         let mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
         subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
         expect(subtitleTrackController.timer).to.not.exist;
-        expect(stopLoadSpy).to.have.been.calledOnce;
+        expect(clearReloadSpy).to.have.been.calledOnce;
 
         mockLoadedEvent.id = 0;
         subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
         expect(subtitleTrackController.timer).to.not.exist;
-        expect(stopLoadSpy).to.have.been.calledTwice;
+        expect(clearReloadSpy).to.have.been.calledTwice;
 
         mockLoadedEvent.id = 1;
         subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
         tracks[1] = null;
         expect(subtitleTrackController.timer).to.not.exist;
-        expect(stopLoadSpy).to.have.been.calledThrice;
+        expect(clearReloadSpy).to.have.been.calledThrice;
+      });
+
+      it('does not set the reload timer if the stopped flag is set', function () {
+        subtitleTrackController.stopped = true;
+        subtitleTrackController.trackId = 1;
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
+        expect(subtitleTrackController.timer).to.not.exist;
       });
 
       it('sets the live reload timer if the level is live', function () {
+        subtitleTrackController.stopped = false;
         subtitleTrackController.trackId = 1;
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
         expect(subtitleTrackController.timer).to.exist;
@@ -200,6 +213,24 @@ describe('SubtitleTrackController', function () {
         subtitleTrackController.timer = setTimeout(() => {}, 0);
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: {} });
         expect(subtitleTrackController.timer).to.not.exist;
+      });
+    });
+
+    describe('stopLoad', function () {
+      it('stops loading', function () {
+        const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
+        subtitleTrackController.stopLoad();
+        expect(subtitleTrackController.stopped).to.be.true;
+        expect(clearReloadSpy).to.have.been.calledOnce;
+      });
+    });
+
+    describe('startLoad', function () {
+      it('stops loading', function () {
+        const loadCurrentTrackSpy = sandbox.spy(subtitleTrackController, '_loadCurrentTrack');
+        subtitleTrackController.startLoad();
+        expect(subtitleTrackController.stopped).to.be.false;
+        expect(loadCurrentTrackSpy).to.have.been.calledOnce;
       });
     });
   });
