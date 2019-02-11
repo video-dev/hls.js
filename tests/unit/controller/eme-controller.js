@@ -1,6 +1,6 @@
 import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
-import EventEmitter from 'events';
+import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
 
 const sinon = require('sinon');

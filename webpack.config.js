@@ -86,6 +86,14 @@ const baseConfig = {
         }
       }
     ]
+  },
+  node: {
+    global: false,
+    process: false,
+    __filename: false,
+    __dirname: false,
+    Buffer: false,
+    setImmediate: false
   }
 };
 
