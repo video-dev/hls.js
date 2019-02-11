@@ -41,6 +41,7 @@ export default class BaseStreamController extends TaskLoop {
     this.fragCurrent = null;
     this.fragPrevious = null;
     this.clearInterval();
+    this.clearNextTick();
     this.state = State.STOPPED;
   }
 
@@ -123,6 +124,5 @@ export default class BaseStreamController extends TaskLoop {
   onHandlerDestroyed () {
     this.state = State.STOPPED;
     this.fragmentTracker = null;
-    super.onHandlerDestroyed();
   }
 }
