@@ -22,6 +22,7 @@ describe('FragmentLoader tests', function () {
   beforeEach(function () {
     fragmentLoader = new FragmentLoader({ loader: MockXhr });
     frag = new Fragment();
+    frag.url = 'foo';
     response = {};
     context = {};
     stats = {};
@@ -46,11 +47,25 @@ describe('FragmentLoader tests', function () {
           expect(frag.loader).to.not.exist;
           resolve();
         })
-        .catch(() => {
-          reject(new Error('Fragment loader should not have rejected'));
+        .catch((e) => {
+          reject(e);
         });
+      expect(fragmentLoader.loader).to.exist;
       expect(fragmentLoader.loader).to.be.instanceOf(MockXhr);
       fragmentLoader.loader.callbacks.onSuccess(response, context, stats, networkDetails);
+    });
+  });
+
+  it('should reject with a LoadError if the fragment does not have a url', function () {
+    return new Promise((resolve, reject) => {
+      frag.url = null;
+      fragmentLoader.load(frag)
+        .then(() => {
+          reject(new Error('Fragment loader should not have resolved'));
+        })
+        .catch(() => {
+          resolve();
+        });
     });
   });
 
