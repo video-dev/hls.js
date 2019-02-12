@@ -2,11 +2,7 @@ const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
 const merge = require('webpack-merge');
-
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-
-const getGitVersion = require('git-tag-version');
-const getGitCommitInfo = require('git-commit-info');
+const importHelper = require('@babel/helper-module-imports');
 
 /* Allow to customise builds through env-vars */
 const env = process.env;
@@ -14,11 +10,32 @@ const env = process.env;
 const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES;
 const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
 const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
-const runAnalyzer = !!env.ANALYZE;
+
+const createDefinePlugin = (type) => {
+  const buildConstants = {
+    __VERSION__: JSON.stringify(pkgJson.version),
+    __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
+    __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
+    __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
+  };
+  return new webpack.DefinePlugin(buildConstants);
+};
+
+const basePlugins = [
+  new webpack.optimize.ModuleConcatenationPlugin(),
+  new webpack.optimize.OccurrenceOrderPlugin(),
+  new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }) // SSR/Node.js guard
+];
+const mainPlugins = [...basePlugins, createDefinePlugin('main')];
+const lightPlugins = [...basePlugins, createDefinePlugin('light')];
 
 const baseConfig = {
   mode: 'development',
   entry: './src/hls',
+  node: false,
+  optimization: {
+    splitChunks: false
+  },
   resolve: {
     // Add `.ts` as a resolvable extension.
     extensions: ['.ts', '.js']
@@ -26,79 +43,59 @@ const baseConfig = {
   module: {
     strictExportPresence: true,
     rules: [
-      // all files with a `.ts` extension will be handled by `ts-loader`
       {
         test: /\.(ts|js)$/,
-        loader: 'ts-loader',
-        exclude: /node_modules/
+        exclude: [
+          path.resolve(__dirname, 'node_modules')
+        ],
+        loader: 'babel-loader',
+        options: {
+          babelrc: false,
+          presets: [
+            '@babel/preset-typescript',
+            ['@babel/preset-env', {
+              loose: true,
+              modules: false,
+              targets: {
+                browsers: [
+                  'chrome >= 47',
+                  'firefox >= 51',
+                  'ie >= 11',
+                  'safari >= 8',
+                  'ios >= 8',
+                  'android >= 4'
+                ]
+              }
+            }]
+          ],
+          plugins: [
+            ['@babel/plugin-proposal-class-properties', {
+              loose: true
+            }],
+            '@babel/plugin-proposal-object-rest-spread',
+            {
+              visitor: {
+                CallExpression: function (espath) {
+                  if (espath.get('callee').matchesPattern('Number.isFinite')) {
+                    espath.node.callee = importHelper.addNamed(espath, 'isFiniteNumber', path.resolve('src/polyfills/number-isFinite'));
+                  }
+                }
+              }
+            }
+          ]
+        }
       }
     ]
+  },
+  node: {
+    global: false,
+    process: false,
+    __filename: false,
+    __dirname: false,
+    Buffer: false,
+    setImmediate: false
   }
 };
-
-const demoConfig = merge(baseConfig, {
-  name: 'demo',
-  mode: 'development',
-  entry: './demo/main',
-  output: {
-    filename: 'hls-demo.js',
-    chunkFilename: '[name].js',
-    sourceMapFilename: 'hls-demo.js.map',
-    path: path.resolve(__dirname, 'dist'),
-    publicPath: '/dist/',
-    library: 'HlsDemo',
-    libraryTarget: 'umd',
-    libraryExport: 'default',
-    globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
-  },
-  optimization: {
-    minimize: false
-  },
-  plugins: [],
-  devtool: 'source-map'
-});
-
-function getPluginsForConfig (type, minify = false) {
-  // common plugins.
-
-  const defineConstants = getConstantsForConfig(type);
-
-  // console.log('DefinePlugin constants:', JSON.stringify(defineConstants, null, 2))
-
-  const plugins = [
-    new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
-    new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.DefinePlugin(defineConstants),
-    new webpack.ProvidePlugin({
-      Number: [path.resolve('./src/polyfills/number'), 'Number']
-    })
-  ];
-
-  if (runAnalyzer && !minify) {
-    plugins.push(new BundleAnalyzerPlugin({
-      analyzerMode: 'static',
-      reportFilename: `bundle-analyzer-report.${type}.html`
-    }));
-  } else {
-    // https://github.com/webpack-contrib/webpack-bundle-analyzer/issues/115
-    plugins.push(new webpack.optimize.ModuleConcatenationPlugin());
-  }
-
-  return plugins;
-}
-
-function getConstantsForConfig (type) {
-  const gitCommitInfo = getGitCommitInfo();
-  const suffix = gitCommitInfo.shortCommit ? ('-' + gitCommitInfo.shortCommit) : '';
-
-  // By default the "main" dists (hls.js & hls.min.js) are full-featured.
-  return {
-    __VERSION__: JSON.stringify(pkgJson.version || (getGitVersion() + suffix)),
-    __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
-    __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
-    __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
-  };
-}
 
 function getAliasesForLightDist () {
   let aliases = {};
@@ -141,9 +138,9 @@ const multiConfig = [
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default',
-      globalObject: 'this'
+      globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
-    plugins: getPluginsForConfig('main'),
+    plugins: mainPlugins,
     devtool: 'source-map'
   },
   {
@@ -159,10 +156,7 @@ const multiConfig = [
       libraryExport: 'default',
       globalObject: 'this'
     },
-    plugins: getPluginsForConfig('main', true),
-    optimization: {
-      minimize: true
-    },
+    plugins: mainPlugins,
     devtool: 'source-map'
   },
   {
@@ -182,7 +176,7 @@ const multiConfig = [
     resolve: {
       alias: getAliasesForLightDist()
     },
-    plugins: getPluginsForConfig('light'),
+    plugins: lightPlugins,
     devtool: 'source-map'
   },
   {
@@ -201,42 +195,47 @@ const multiConfig = [
     resolve: {
       alias: getAliasesForLightDist()
     },
-    plugins: getPluginsForConfig('light', true),
-    optimization: {
-      minimize: true
+    plugins: lightPlugins,
+    devtool: 'source-map'
+  },
+  {
+    name: 'demo',
+    entry: './demo/main',
+    mode: 'development',
+    output: {
+      filename: 'hls-demo.js',
+      chunkFilename: '[name].js',
+      sourceMapFilename: 'hls-demo.js.map',
+      path: path.resolve(__dirname, 'dist'),
+      publicPath: '/dist/',
+      library: 'HlsDemo',
+      libraryTarget: 'umd',
+      libraryExport: 'default',
+      globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
+    plugins: mainPlugins,
     devtool: 'source-map'
   }
 ].map(config => merge(baseConfig, config));
 
-multiConfig.push(demoConfig);
-
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
   let configs;
-
   if (!envArgs) {
     // If no arguments are specified, return every configuration
     configs = multiConfig;
   } else {
     // Find the first enabled config within the arguments array
     const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
-
     // Filter out config with name
     const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
-
     if (!enabledConfig) {
-      console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
-
-      throw new Error('Hls.js webpack config: Invalid environment parameters');
+      throw new Error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
     }
 
-    configs = [enabledConfig, demoConfig];
+    configs = [enabledConfig];
   }
 
-  console.log(
-    `Building configs: ${configs.map(config => config.name).join(', ')}.\n`
-  );
-
+  console.log(`Building configs: ${configs.map(config => config.name).join(', ')}.\n`);
   return configs;
 };
