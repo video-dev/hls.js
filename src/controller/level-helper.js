@@ -213,17 +213,17 @@ export function adjustSliding (oldPlaylist, newPlaylist) {
 
 export function computeReloadInterval (currentPlaylist, newPlaylist, lastRequestTime) {
   let reloadInterval = 1000 * (newPlaylist.averagetargetduration ? newPlaylist.averagetargetduration : newPlaylist.targetduration);
+  const minReloadInterval = reloadInterval / 2;
   if (currentPlaylist && newPlaylist.endSN === currentPlaylist.endSN) {
     // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
     // changed then it MUST wait for a period of one-half the target
     // duration before retrying.
-    reloadInterval /= 2;
+    reloadInterval = minReloadInterval;
   }
-  // decrement reloadInterval with level loading delay
+
   if (lastRequestTime) {
-    reloadInterval -= (window.performance.now() - lastRequestTime);
+    reloadInterval = Math.max(minReloadInterval, reloadInterval - (window.performance.now() - lastRequestTime));
   }
   // in any case, don't reload more than half of target duration
-  reloadInterval = Math.max(reloadInterval / 2, Math.round(reloadInterval), 0);
-  return reloadInterval;
+  return Math.round(reloadInterval);
 }
