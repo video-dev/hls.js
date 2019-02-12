@@ -191,7 +191,7 @@ export default class Hls extends Observer {
        * @member {SubtitleTrackController} subtitleTrackController
        */
       this.subtitleTrackController = subtitleTrackController;
-      coreComponents.push(subtitleTrackController);
+      networkControllers.push(subtitleTrackController);
     }
 
     Controller = config.emeController;
@@ -208,7 +208,7 @@ export default class Hls extends Observer {
     // optional subtitle controllers
     Controller = config.subtitleStreamController;
     if (Controller) {
-      coreComponents.push(new Controller(this, fragmentTracker));
+      networkControllers.push(new Controller(this, fragmentTracker));
     }
     Controller = config.timelineController;
     if (Controller) {
