@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'eventemitter3';
 import * as work from 'webworkify-webpack';
 
 import Event from '../events';
