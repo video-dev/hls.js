@@ -1,9 +1,11 @@
+import assert from 'assert';
+import sinon from 'sinon';
 import { findFragmentByPDT, findFragmentByPTS, fragmentWithinToleranceTest, pdtWithinToleranceTest } from '../../../src/controller/fragment-finders';
 import { mockFragments } from '../../mocks/data';
 import BinarySearch from '../../../src/utils/binary-search';
 
 describe('Fragment finders', function () {
-  const sandbox = sinon.createSandbox();
+  const sandbox = sinon.sandbox.create();
   afterEach(function () {
     sandbox.restore();
   });
@@ -27,22 +29,22 @@ describe('Fragment finders', function () {
     });
 
     it('finds a fragment with SN sequential to the previous fragment', function () {
-      const actual = findFragmentByPTS(fragPrevious, mockFragments, bufferEnd, tolerance);
-      const resultSN = actual ? actual.sn : -1;
-      expect(actual).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
-      expect(binarySearchSpy).to.have.not.been.called;
+      const foundFragment = findFragmentByPTS(fragPrevious, mockFragments, bufferEnd, tolerance);
+      const resultSN = foundFragment ? foundFragment.sn : -1;
+      assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
+      assert(binarySearchSpy.notCalled);
     });
 
     it('chooses the fragment with the next SN if its contiguous with the end of the buffer', function () {
       const actual = findFragmentByPTS(mockFragments[0], mockFragments, mockFragments[0].duration, tolerance);
-      expect(actual).to.equal(mockFragments[1], `expected sn ${mockFragments[1].sn}, but got sn ${actual ? actual.sn : null}`);
-      expect(binarySearchSpy).to.have.not.been.called;
+      assert.strictEqual(mockFragments[1], actual, `expected sn ${mockFragments[1].sn}, but got sn ${actual ? actual.sn : null}`);
+      assert(binarySearchSpy.notCalled);
     });
 
     it('uses BinarySearch to find a fragment if the subsequent one is not within tolerance', function () {
       const fragments = [mockFragments[0], mockFragments[(mockFragments.length - 1)]];
       findFragmentByPTS(fragments[0], fragments, bufferEnd, tolerance);
-      expect(binarySearchSpy).to.have.been.calledOnce;
+      assert(binarySearchSpy.calledOnce);
     });
   });
 
@@ -54,7 +56,7 @@ describe('Fragment finders', function () {
         duration: 5 - tolerance
       };
       const actual = fragmentWithinToleranceTest(5, tolerance, frag);
-      expect(actual).to.equal(0);
+      assert.strictEqual(0, actual);
     });
 
     it('returns 0 if the fragment range is greater than end of the buffer', function () {
@@ -63,7 +65,7 @@ describe('Fragment finders', function () {
         duration: 5
       };
       const actual = fragmentWithinToleranceTest(5, tolerance, frag);
-      expect(actual).to.equal(0);
+      assert.strictEqual(0, actual);
     });
 
     it('returns 1 if the fragment range is less than the end of the buffer', function () {
@@ -72,7 +74,7 @@ describe('Fragment finders', function () {
         duration: 5
       };
       const actual = fragmentWithinToleranceTest(5, tolerance, frag);
-      expect(actual).to.equal(1);
+      assert.strictEqual(1, actual);
     });
 
     it('returns -1 if the fragment range is greater than the end of the buffer', function () {
@@ -81,7 +83,7 @@ describe('Fragment finders', function () {
         duration: 5
       };
       const actual = fragmentWithinToleranceTest(5, tolerance, frag);
-      expect(actual).to.equal(-1);
+      assert.strictEqual(-1, actual);
     });
 
     it('does not skip very small fragments', function () {
@@ -91,34 +93,37 @@ describe('Fragment finders', function () {
         deltaPTS: 0.1
       };
       const actual = fragmentWithinToleranceTest(0, tolerance, frag);
-      expect(actual).to.equal(0);
+      assert.strictEqual(0, actual);
     });
   });
 
   describe('findFragmentByPDT', function () {
     it('finds a fragment with endProgramDateTime greater than the reference PDT', function () {
       const foundFragment = findFragmentByPDT(mockFragments, fragPrevious.endProgramDateTime + 1);
-      expect(foundFragment).to.equal(mockFragments[2]);
+      const resultSN = foundFragment ? foundFragment.sn : -1;
+      assert.strictEqual(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
     });
 
     it('returns null when the reference pdt is outside of the pdt range of the fragment array', function () {
       let foundFragment = findFragmentByPDT(mockFragments, mockFragments[0].programDateTime - 1);
-      expect(foundFragment).to.not.exist;
+      let resultSN = foundFragment ? foundFragment.sn : -1;
+      assert.strictEqual(foundFragment, null, 'Expected sn -1, found sn segment ' + resultSN);
 
       foundFragment = findFragmentByPDT(mockFragments, mockFragments[mockFragments.length - 1].endProgramDateTime + 1);
-      expect(foundFragment).to.not.exist;
+      resultSN = foundFragment ? foundFragment.sn : -1;
+      assert.strictEqual(foundFragment, null, 'Expected sn -1, found sn segment ' + resultSN);
     });
 
     it('is able to find the first fragment', function () {
       const foundFragment = findFragmentByPDT(mockFragments, mockFragments[0].programDateTime);
       const resultSN = foundFragment ? foundFragment.sn : -1;
-      expect(foundFragment).to.equal(mockFragments[0], 'Expected sn 0, found sn segment ' + resultSN);
+      assert.strictEqual(foundFragment, mockFragments[0], 'Expected sn 0, found sn segment ' + resultSN);
     });
 
     it('is able to find the last fragment', function () {
       const foundFragment = findFragmentByPDT(mockFragments, mockFragments[mockFragments.length - 1].programDateTime);
       const resultSN = foundFragment ? foundFragment.sn : -1;
-      expect(foundFragment).to.equal(mockFragments[4], 'Expected sn 4, found sn segment ' + resultSN);
+      assert.strictEqual(foundFragment, mockFragments[4], 'Expected sn 4, found sn segment ' + resultSN);
     });
 
     it('is able to find a fragment if the PDT value is 0', function () {
@@ -135,17 +140,17 @@ describe('Fragment finders', function () {
         }
       ];
       const actual = findFragmentByPDT(fragments, 0);
-      expect(actual).to.equal(fragments[0]);
+      assert.strictEqual(fragments[0], actual);
     });
 
     it('returns null when passed undefined arguments', function () {
-      expect(findFragmentByPDT(mockFragments)).to.not.exist;
-      expect(findFragmentByPDT(undefined, 9001)).to.not.exist;
-      expect(findFragmentByPDT()).to.not.exist;
+      assert.strictEqual(findFragmentByPDT(mockFragments), null);
+      assert.strictEqual(findFragmentByPDT(undefined, 9001), null);
+      assert.strictEqual(findFragmentByPDT(), null);
     });
 
     it('returns null when passed an empty frag array', function () {
-      expect(findFragmentByPDT([], 9001)).to.not.exist;
+      assert.strictEqual(findFragmentByPDT([], 9001), null);
     });
   });
 
@@ -159,7 +164,7 @@ describe('Fragment finders', function () {
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      expect(actual).to.be.true;
+      assert.strictEqual(true, actual);
     });
 
     it('returns false if the fragment range is less than the end of the buffer', function () {
@@ -169,7 +174,7 @@ describe('Fragment finders', function () {
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      expect(actual).to.be.false;
+      assert.strictEqual(false, actual);
     });
 
     it('does not skip very small fragments', function () {
@@ -180,7 +185,7 @@ describe('Fragment finders', function () {
         deltaPTS: 0.1
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      expect(actual).to.be.true;
+      assert.strictEqual(true, actual);
     });
 
     it('accounts for tolerance when checking the endProgramDateTime of the fragment', function () {
@@ -190,7 +195,7 @@ describe('Fragment finders', function () {
         duration: 5
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
-      expect(actual).to.be.false;
+      assert.strictEqual(false, actual);
     });
   });
 });

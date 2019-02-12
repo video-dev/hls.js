@@ -1,4 +1,5 @@
 import Events from '../../src/events';
+let assert = require('assert');
 
 function getAllCapsSnakeCaseToCamelCase (eventType) {
   let eventValue = '';
@@ -26,7 +27,7 @@ describe('Events tests', function () {
       it('should have a value matching generics convention for event type: ' + event, function () {
         let value = Events[event];
         let expected = 'hls' + getAllCapsSnakeCaseToCamelCase(event);
-        expect(value).to.equal(expected);
+        assert.equal(value, expected);
       });
     });
   });

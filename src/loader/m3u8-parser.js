@@ -48,8 +48,7 @@ export default class M3U8Parser {
   }
 
   static convertAVC1ToAVCOTI (codec) {
-    let avcdata = codec.split('.');
-    let result;
+    let result, avcdata = codec.split('.');
     if (avcdata.length > 2) {
       result = avcdata.shift() + '.';
       result += parseInt(avcdata.shift()).toString(16);
@@ -65,7 +64,7 @@ export default class M3U8Parser {
   }
 
   static parseMasterPlaylist (string, baseurl) {
-    let levels = [];
+    let levels = [], result;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
     function setCodecs (codecs, level) {
@@ -85,7 +84,6 @@ export default class M3U8Parser {
       level.unknownCodecs = codecs;
     }
 
-    let result;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
 
@@ -191,11 +189,12 @@ export default class M3U8Parser {
           frag = new Fragment();
         }
       } else if (result[4]) { // X-BYTERANGE
-        const data = (' ' + result[4]).slice(1);
+        frag.rawByteRange = (' ' + result[4]).slice(1);
         if (prevFrag) {
-          frag.setByteRange(data, prevFrag);
-        } else {
-          frag.setByteRange(data);
+          const lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
+          if (lastByteRangeEndOffset) {
+            frag.lastByteRangeEndOffset = lastByteRangeEndOffset;
+          }
         }
       } else if (result[5]) { // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
@@ -207,7 +206,7 @@ export default class M3U8Parser {
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
-          if (typeof result[i] !== 'undefined') {
+          if (result[i] !== undefined) {
             break;
           }
         }
@@ -244,14 +243,13 @@ export default class M3U8Parser {
         case 'DISCONTINUITY-SEQ':
           cc = parseInt(value1);
           break;
-        case 'KEY': {
+        case 'KEY':
           // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-          const decryptparams = value1;
-          const keyAttrs = new AttrList(decryptparams);
-          const decryptmethod = keyAttrs.enumeratedString('METHOD');
-          const decrypturi = keyAttrs.URI;
-          const decryptiv = keyAttrs.hexadecimalInteger('IV');
-
+          var decryptparams = value1;
+          var keyAttrs = new AttrList(decryptparams);
+          var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+            decrypturi = keyAttrs.URI,
+            decryptiv = keyAttrs.hexadecimalInteger('IV');
           if (decryptmethod) {
             levelkey = new LevelKey();
             if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
@@ -265,22 +263,20 @@ export default class M3U8Parser {
             }
           }
           break;
-        }
-        case 'START': {
-          const startAttrs = new AttrList(value1);
-          const startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+        case 'START':
+          let startParams = value1;
+          let startAttrs = new AttrList(startParams);
+          let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
           // TIME-OFFSET can be 0
           if (Number.isFinite(startTimeOffset)) {
             level.startTimeOffset = startTimeOffset;
           }
+
           break;
-        }
-        case 'MAP': {
-          const mapAttrs = new AttrList(value1);
+        case 'MAP':
+          let mapAttrs = new AttrList(value1);
           frag.relurl = mapAttrs.URI;
-          if (mapAttrs.BYTERANGE) {
-            frag.setByteRange(mapAttrs.BYTERANGE);
-          }
+          frag.rawByteRange = mapAttrs.BYTERANGE;
           frag.baseurl = baseurl;
           frag.level = id;
           frag.type = type;
@@ -289,7 +285,6 @@ export default class M3U8Parser {
           frag = new Fragment();
           frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
           break;
-        }
         default:
           logger.warn(`line parsed but not handled: ${result}`);
           break;

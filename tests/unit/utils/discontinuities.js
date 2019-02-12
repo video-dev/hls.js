@@ -1,5 +1,7 @@
 import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities, alignPDT } from '../../../src/utils/discontinuities';
 
+const assert = require('assert');
+
 const mockReferenceFrag = {
   start: 20,
   startPTS: 20,
@@ -63,8 +65,8 @@ describe('level-helper', function () {
     ];
 
     adjustPts(mockReferenceFrag.start, details);
-    expect(expected).to.deep.equal(details.fragments);
-    expect(details.PTSKnown).to.be.true;
+    assert.deepEqual(expected, details.fragments);
+    assert.equal(true, details.PTSKnown);
   });
 
   it('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
@@ -161,7 +163,7 @@ describe('level-helper', function () {
       hasProgramDateTime: true
     };
     alignPDT(details, lastLevel.details);
-    expect(detailsExpected).to.deep.equal(details);
+    assert.deepEqual(detailsExpected, details);
   });
 
   it('finds the first fragment in an array which matches the CC of the first fragment in another array', function () {
@@ -173,25 +175,25 @@ describe('level-helper', function () {
     };
     const expected = mockReferenceFrag;
     const actual = findDiscontinuousReferenceFrag(prevDetails, curDetails);
-    expect(actual).to.equal(expected);
+    assert.equal(expected, actual);
   });
 
   it('returns undefined if there are no frags in the previous level', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag({ fragments: [] }, { fragments: mockFrags });
-    expect(actual).to.equal(expected);
+    assert.equal(expected, actual);
   });
 
   it('returns undefined if there are no matching frags in the previous level', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag({ fragments: [{ cc: 10 }] }, { fragments: mockFrags });
-    expect(actual).to.equal(expected);
+    assert.equal(expected, actual);
   });
 
   it('returns undefined if there are no frags in the current level', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag({ fragments: [{ cc: 0 }] }, { fragments: [] });
-    expect(actual).to.equal(expected);
+    assert.equal(expected, actual);
   });
 
   it('should align current level when CC increases within the level', function () {
@@ -204,7 +206,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(null, lastLevel, curDetails);
-    expect(actual).to.be.true;
+    assert.equal(true, actual);
   });
 
   it('should align current level when CC increases from last frag to current level', function () {
@@ -220,7 +222,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
-    expect(actual).to.be.true;
+    assert.equal(true, actual);
   });
 
   it('should not align when there is no CC increase', function () {
@@ -236,7 +238,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
-    expect(actual).to.be.false;
+    assert.equal(false, actual);
   });
 
   it('should not align when there is no previous level', function () {
@@ -249,7 +251,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, null, curDetails);
-    expect(actual).to.be.false;
+    assert.equal(false, actual);
   });
 
   it('should not align when there are no previous level details', function () {
@@ -264,7 +266,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
-    expect(actual).to.be.false;
+    assert.equal(false, actual);
   });
 
   it('should not align when there are no current level details', function () {
@@ -276,6 +278,6 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, null);
-    expect(actual).to.be.false;
+    assert.equal(false, actual);
   });
 });

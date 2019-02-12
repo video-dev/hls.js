@@ -1,6 +1,7 @@
 import BaseStreamController from '../../../src/controller/stream-controller';
 import Hls from '../../../src/hls';
 import { FragmentState } from '../../../src/controller/fragment-tracker';
+const assert = require('assert');
 
 describe('BaseStreamController', function () {
   let baseStreamController;
@@ -34,30 +35,30 @@ describe('BaseStreamController', function () {
   describe('_streamEnded', function () {
     it('returns false if the stream is live', function () {
       levelDetails.live = true;
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be.false;
+      assert.strictEqual(baseStreamController._streamEnded(bufferInfo, levelDetails), false);
     });
 
     it('returns false if fragCurrent does not exist', function () {
       baseStreamController.fragCurrent = null;
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be.false;
+      assert.strictEqual(baseStreamController._streamEnded(bufferInfo, levelDetails), false);
     });
 
     it('returns false if fragCurrent has backtracked set to true', function () {
       baseStreamController.fragCurrent = { backtracked: true };
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be.false;
+      assert.strictEqual(baseStreamController._streamEnded(bufferInfo, levelDetails), false);
     });
 
     it('returns false if fragCurrent is not the last fragment', function () {
       baseStreamController.fragCurrent = { sn: 9 };
       levelDetails.endSN = 10;
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be.false;
+      assert.strictEqual(baseStreamController._streamEnded(bufferInfo, levelDetails), false);
     });
 
     it('returns false if there is subsequently buffered range', function () {
       baseStreamController.fragCurrent = { sn: 10 };
       levelDetails.endSN = 10;
       bufferInfo.nextStart = 100;
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be.false;
+      assert.strictEqual(baseStreamController._streamEnded(bufferInfo, levelDetails), false);
     });
 
     it('returns true if fragCurrent is PARTIAL or OK', function () {
@@ -65,10 +66,10 @@ describe('BaseStreamController', function () {
       levelDetails.endSN = 10;
 
       fragmentTracker.state = FragmentState.PARTIAL;
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails), `fragState is ${fragmentTracker.getState()}, expecting PARTIAL`).to.be.true;
+      assert.strictEqual(baseStreamController._streamEnded(bufferInfo, levelDetails), true, `fragState is ${fragmentTracker.getState()}, expecting PARTIAL`);
 
       fragmentTracker.state = FragmentState.OK;
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails), `fragState is ${fragmentTracker.getState()}, expecting OK`).to.be.true;
+      assert.strictEqual(baseStreamController._streamEnded(bufferInfo, levelDetails), true, `fragState is ${fragmentTracker.getState()}, expecting OK`);
     });
   });
 });

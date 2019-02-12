@@ -1,24 +1,18 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "commonjs",
-    "declaration": true,
     "sourceMap": true,
-    "strict": false,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "lib": [
-      "dom",
-      "es2015",
-    ],
-    "outDir": "./dist/",
+    "allowJs": true,
+    "module": "commonjs",
+    "target": "ES5",
+    "strict": false
   },
   "include": [
-    "src/**/*"
+    "demo/**/*",
+    "src/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist/**/*",
     "**/*.spec.*"
   ]
 }

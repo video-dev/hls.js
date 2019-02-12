@@ -7,7 +7,7 @@ import { BufferHelper } from '../utils/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { FragmentState } from './fragment-tracker';
-import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
+import Fragment from '../loader/fragment';
 import PlaylistLoader from '../loader/playlist-loader';
 import * as LevelHelper from './level-helper';
 import TimeRanges from '../utils/time-ranges';
@@ -1000,11 +1000,11 @@ class StreamController extends BaseStreamController {
       }
 
       if (data.hasAudio === true) {
-        frag.addElementaryStream(ElementaryStreamTypes.AUDIO);
+        frag.addElementaryStream(Fragment.ElementaryStreamTypes.AUDIO);
       }
 
       if (data.hasVideo === true) {
-        frag.addElementaryStream(ElementaryStreamTypes.VIDEO);
+        frag.addElementaryStream(Fragment.ElementaryStreamTypes.VIDEO);
       }
 
       logger.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
@@ -1305,7 +1305,7 @@ class StreamController extends BaseStreamController {
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
     if (media) {
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      this.fragmentTracker.detectEvictedFragments(ElementaryStreamTypes.VIDEO, media.buffered);
+      this.fragmentTracker.detectEvictedFragments(Fragment.ElementaryStreamTypes.VIDEO, media.buffered);
     }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;

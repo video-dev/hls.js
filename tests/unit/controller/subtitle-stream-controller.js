@@ -1,9 +1,15 @@
+import assert from 'assert';
 import sinon from 'sinon';
 
 import Hls from '../../../src/hls';
 import Event from '../../../src/events';
-import { FragmentTracker } from '../../../src/controller/fragment-tracker';
-import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
+import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
+import { SubtitleStreamController, SubtitleStreamControllerState } from '../../../src/controller/subtitle-stream-controller';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { mockFragments } from '../../mocks/data';
+import Fragment from '../../../src/loader/fragment';
+
+const State = SubtitleStreamControllerState;
 
 const mediaMock = {
   currentTime: 0
@@ -19,7 +25,7 @@ describe('SubtitleStreamController', function () {
   let fragmentTracker;
   let streamController;
 
-  beforeEach(function () {
+  beforeEach(() => {
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
     streamController = new SubtitleStreamController(hls, fragmentTracker);
@@ -27,24 +33,24 @@ describe('SubtitleStreamController', function () {
     streamController.onMediaAttached(mediaMock);
   });
 
-  afterEach(function () {
+  afterEach(() => {
     streamController.onMediaDetaching(mediaMock);
   });
 
-  describe('onSubtitleTracksUpdate', function () {
-    beforeEach(function () {
+  describe('onSubtitleTracksUpdate', () => {
+    beforeEach(() => {
       hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, {
         subtitleTracks: tracksMock
       });
     });
 
-    it('should update tracks list', function () {
-      expect(streamController.tracks).to.equal(tracksMock);
+    it('should update tracks list', () => {
+      assert(streamController.tracks === tracksMock);
     });
   });
 
-  describe('onSubtitleTrackSwitch', function () {
-    beforeEach(function () {
+  describe('onSubtitleTrackSwitch', () => {
+    beforeEach(() => {
       streamController.tracks = tracksMock;
       streamController.clearInterval = sinon.spy();
       streamController.setInterval = sinon.spy();
@@ -54,30 +60,30 @@ describe('SubtitleStreamController', function () {
       });
     });
 
-    it('should call setInterval if details available', function () {
-      expect(streamController.setInterval).to.have.been.calledOnce;
+    it('should call setInterval if details available', () => {
+      assert(streamController.setInterval.calledOnce);
     });
 
-    it('should call clearInterval if no tracks present', function () {
+    it('should call clearInterval if no tracks present', () => {
       streamController.tracks = null;
       hls.trigger(Event.SUBTITLE_TRACK_SWITCH, {
         id: 0
       });
-      expect(streamController.clearInterval).to.have.been.calledOnce;
+      assert(streamController.clearInterval.calledOnce);
     });
 
-    it('should call clearInterval if new track id === -1', function () {
+    it('should call clearInterval if new track id === -1', () => {
       hls.trigger(Event.SUBTITLE_TRACK_SWITCH, {
         id: -1
       });
-      expect(streamController.clearInterval).to.have.been.calledOnce;
+      assert(streamController.clearInterval.calledOnce);
     });
   });
 
-  describe('onSubtitleTrackLoaded', function () {
+  describe('onSubtitleTrackLoaded', () => {
     let detailsMock = {};
 
-    beforeEach(function () {
+    beforeEach(() => {
       streamController.setInterval = sinon.spy();
       streamController.tracks = tracksMock;
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
@@ -85,22 +91,22 @@ describe('SubtitleStreamController', function () {
       });
     });
 
-    it('should add details to track object in list', function () {
-      expect(streamController.tracks[1].details).to.equal(detailsMock);
+    it('should add details to track object in list', () => {
+      assert(streamController.tracks[1].details === detailsMock);
     });
 
-    it('should call setInterval', function () {
-      expect(streamController.setInterval).to.have.been.calledOnce;
+    it('should call setInterval', () => {
+      assert(streamController.setInterval.calledOnce);
     });
 
-    it('should not crash when no tracks present', function () {
+    it('should not crash when no tracks present', () => {
       streamController.tracks = null;
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
         id: 0, details: {}
       });
     });
 
-    it('should not crash when no track id does not exist', function () {
+    it('should not crash when no track id does not exist', () => {
       streamController.tracks = null;
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
         id: 5, details: {}

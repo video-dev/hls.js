@@ -407,10 +407,10 @@ class PlaylistLoader extends EventHandler {
       const frag = levelDetails.fragments[index];
 
       if (frag.byteRange.length === 0) {
-        frag.setByteRange(String(1 + segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start));
+        frag.rawByteRange = String(1 + segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
       }
     });
-    levelDetails.initSegment.setByteRange(String(sidxInfo.moovEndOffset) + '@0');
+    levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
   }
 
   _handleManifestParsingError (response, context, reason, networkDetails) {

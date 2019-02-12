@@ -1,12 +1,22 @@
 import OutputFilter from '../../../src/utils/output-filter';
+const assert = require('assert');
 
-describe('OutputFilter', function () {
-  const sandbox = sinon.createSandbox();
-
-  let createMockTimelineController = function () {
+describe('OutputFilter', () => {
+  let createMockTimelineController = () => {
+    let callCount = 0;
+    let lastCueArguments = null;
+    let captionsTrackCalled = false;
     return {
-      addCues: sandbox.spy(),
-      createCaptionsTrack: sandbox.spy()
+      addCues: (trackName, startTime, endTime, screen) => {
+        lastCueArguments = { trackName, startTime, endTime, screen };
+        callCount++;
+      },
+      createCaptionsTrack: (track) => {
+        captionsTrackCalled = true;
+      },
+      getCallCount: () => callCount,
+      getLastCueAdded: () => lastCueArguments,
+      didCaptionsTrackInvoke: () => captionsTrackCalled
     };
   };
 
@@ -17,36 +27,42 @@ describe('OutputFilter', function () {
     outputFilter = new OutputFilter(timelineController, 1);
   });
 
-  it('handles new cue without dispatching', function () {
+  it('handles new cue without dispatching', () => {
     outputFilter.newCue(0, 1, {});
-    expect(timelineController.addCues).to.not.have.been.called;
-    expect(timelineController.createCaptionsTrack).to.have.been.called;
+    let lastCueAdded = timelineController.getLastCueAdded();
+    assert.strictEqual(lastCueAdded, null);
+    assert.strictEqual(timelineController.getCallCount(), 0);
+    assert.strictEqual(timelineController.didCaptionsTrackInvoke(), true);
   });
 
-  it('handles single cue and dispatch', function () {
+  it('handles single cue and dispatch', () => {
     let lastScreen = {};
     outputFilter.newCue(0, 1, lastScreen);
     outputFilter.dispatchCue();
-    expect(timelineController.addCues).to.have.been.calledOnce;
-    expect(timelineController.addCues).to.have.been.calledWith(1, 0, 1, lastScreen);
+    let lastCueAdded = timelineController.getLastCueAdded();
+    assert.strictEqual(lastCueAdded.screen, lastScreen);
+    assert.strictEqual(timelineController.getCallCount(), 1);
   });
 
-  it('handles multiple cues and dispatch', function () {
+  it('handles multiple cues and dispatch', () => {
     outputFilter.newCue(0, 1, {});
     outputFilter.newCue(1, 2, {});
     let lastScreen = {};
     outputFilter.newCue(3, 4, lastScreen);
     outputFilter.dispatchCue();
-    expect(timelineController.addCues).to.have.been.calledOnce;
-    expect(timelineController.addCues).to.have.been.calledWith(1, 0, 4, lastScreen);
+    let lastCueAdded = timelineController.getLastCueAdded();
+    assert.strictEqual(timelineController.getCallCount(), 1);
+    assert.strictEqual(lastCueAdded.startTime, 0);
+    assert.strictEqual(lastCueAdded.endTime, 4);
+    assert.strictEqual(lastCueAdded.screen, lastScreen);
   });
 
-  it('does not dispatch empty cues', function () {
+  it('does not dispatch empty cues', () => {
     outputFilter.newCue(0, 1, {});
-    expect(timelineController.addCues).to.not.have.been.called;
+    assert.strictEqual(timelineController.getCallCount(), 0);
     outputFilter.dispatchCue();
-    expect(timelineController.addCues).to.have.been.calledOnce;
+    assert.strictEqual(timelineController.getCallCount(), 1);
     outputFilter.dispatchCue();
-    expect(timelineController.addCues).to.have.been.calledOnce;
+    assert.strictEqual(timelineController.getCallCount(), 1);
   });
 });
