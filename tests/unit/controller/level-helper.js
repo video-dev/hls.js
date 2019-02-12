@@ -189,7 +189,7 @@ describe('LevelHelper Tests', function () {
       expect(actual).to.equal(4000);
     });
 
-    it('returns 0 if request time causes the interval to be negative', function () {
+    it('returns a minimum of half the target duration', function () {
       const oldPlaylist = generatePlaylist([1, 2]);
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5;
@@ -197,7 +197,7 @@ describe('LevelHelper Tests', function () {
       const clock = sandbox.useFakeTimers();
       clock.tick(9000);
       const actual = LevelHelper.computeReloadInterval(oldPlaylist, newPlaylist, 1000);
-      expect(actual).to.equal(0);
+      expect(actual).to.equal(2500);
     });
   });
 });
