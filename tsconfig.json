@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "sourceMap": true,
-    "allowJs": true,
+    "target": "esnext",
     "module": "commonjs",
-    "target": "ES5",
+    "declaration": true,
+    "sourceMap": true,
     "strict": false,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
