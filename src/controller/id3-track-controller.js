@@ -5,6 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
+import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
@@ -74,8 +75,8 @@ class ID3TrackController extends EventHandler {
           // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
           endTime += 0.0001;
         } else if (startTime > endTime) {
-          // Ignore samples with startTime > endTime to avoid SyntaxErrors on IE and Edge
-          continue;
+          logger.warn("detected an id3 sample with endTime < startTime, adjusting endTime to (startTime + 0.25)");
+          endTime = startTime + 0.25;
         }
 
         for (let j = 0; j < frames.length; j++) {
