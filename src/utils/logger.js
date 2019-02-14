@@ -49,7 +49,7 @@ function exportLoggerFunctions (debugConfig, ...functions) {
   });
 }
 
-export var enableLogs = function (debugConfig) {
+export const enableLogs = function (debugConfig) {
   // check that console is available
   if ((global.console && debugConfig === true) || typeof debugConfig === 'object') {
     exportLoggerFunctions(debugConfig,
@@ -73,4 +73,4 @@ export var enableLogs = function (debugConfig) {
   }
 };
 
-export var logger = exportedLogger;
+export const logger = exportedLogger;
