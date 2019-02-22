@@ -18,7 +18,7 @@ hls.js does not need any player, it works directly on top of a standard HTML```<
 
 hls.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using the [TypeScript compiler].
 
-Modules written in TS and plain JS/ES6 can be interdepent and imported/required by each others.
+Modules written in TS and plain JS/ES6 can be interdependent and imported/required by each other.
 
 To build our distro bundle and serve our development environment we use [Webpack].
 
@@ -35,21 +35,21 @@ To build our distro bundle and serve our development environment we use [Webpack
 
 * [API and usage docs, with code examples](./docs/API.md)
 
-* [Auto-Generated Docs (Latest Release)](http://video-dev.github.io/hls.js/stable/api-docs)
-* [Auto-Generated Docs (Master)](http://video-dev.github.io/hls.js/latest/api-docs)
+* [Auto-Generated Docs (Latest Release)](https://hls-js.netlify.com/api-docs)
+* [Auto-Generated Docs (Master)](https://hls-js-latest.netlify.com/api-docs)
 
-_Note you can access the docs for a particular version using "http://video-dev.github.io/hls.js/v[x.y.z]/api-docs"_
+_Note you can access the docs for a particular version using "[https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md)"_
 
 ## Demo
 
 ### Latest Release
-[https://video-dev.github.io/hls.js/stable/demo](https://video-dev.github.io/hls.js/stable/demo)
+[https://hls-js.netlify.com/demo](https://hls-js.netlify.com/demo)
 
 ### Master
-[https://video-dev.github.io/hls.js/latest/demo](https://video-dev.github.io/hls.js/latest/demo)
+[https://hls-js-latest.netlify.com/demo](https://hls-js-latest.netlify.com/demo)
 
 ### Specific Version
-"http://video-dev.github.io/hls.js/v[x.y.z]/demo"
+Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md).
 
 
 ## Getting Started
@@ -89,7 +89,7 @@ Video is controlled through HTML ```<video>``` element.
 
 HTMLVideoElement control and events could be used seamlessly.
 
-## they use hls.js in production !
+## They use hls.js in production!
 
 |[<img src="http://i.cdn.turner.com/adultswim/big/img/global/adultswim.jpg" width="120">](http://www.adultswim.com/videos/streams)|[<img src="https://www.akamai.com/fr/fr/multimedia/images/logo/akamai-logo.png" width="120">](https://www.akamai.com)|[<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Canal%2B.svg/2000px-Canal%2B.svg.png" width="120">](https://www.canalplus.fr)|[<img src="https://avatars2.githubusercontent.com/u/115313" width="120">](http://www.dailymotion.com)|
 |---|---|---|---|
@@ -98,7 +98,7 @@ HTMLVideoElement control and events could be used seamlessly.
 |[<img src="https://cloud.githubusercontent.com/assets/1798553/20356424/ba158574-ac24-11e6-95e1-1ae591b11a0a.png" width="120">](https://www.peer5.com/)|[<img src="https://cloud.githubusercontent.com/assets/4909096/20925062/e26e6fc8-bbb4-11e6-99a5-d4762274a342.png" width="120">](http://qbrick.com/)|[<img src="https://www.radiantmediaplayer.com/images/radiantmediaplayer-new-logo-640.jpg" width="120">](https://www.radiantmediaplayer.com/)|[<img src="https://www.rts.ch/hummingbird-static/images/logos/logo_marts.svg" width="120">](http://www.rts.ch/)|
 |[<img src="https://cloud.githubusercontent.com/assets/12702747/19316434/0a3601de-9067-11e6-85e2-936b1cb099a0.png" width="120">](https://www.snapstream.com/)|[<img src="https://www.streamamg.com/wp-content/themes/barebones/_assets/images/streamamg-logo.png" width="120">](https://www.streamamg.com/)|[<img src="https://streamsharkio.sa.metacdn.com/wp-content/uploads/2015/10/streamshark-dark.svg" width="120">](https://streamshark.io/)|[<img src="https://camo.githubusercontent.com/9580f10e9bfa8aa7fba52c5cb447bee0757e33da/68747470733a2f2f7777772e7461626c6f74762e636f6d2f7374617469632f696d616765732f7461626c6f5f6c6f676f2e706e67" width="120">](http://my.tablotv.com/)|
 |[<img src="https://user-images.githubusercontent.com/2803310/34083705-349c8fd0-e375-11e7-92a6-5c38509f4936.png" width="120">](https://www.streamroot.io/)|[<img src="http://vignette1.wikia.nocookie.net/tedtalks/images/c/c0/TED_logo.png/revision/20150915192527" width="120">](https://www.ted.com/)|[<img src="https://www.seeklogo.net/wp-content/uploads/2014/12/twitter-logo-vector-download.jpg" width="120">](https://twitter.com/)|[<img src="https://cloud.githubusercontent.com/assets/8201317/20566816/bc33f51c-b196-11e6-9bd3-afb71a06460b.png" width="120">](http://vwflow.com)|
-|[<img src="http://media.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)|[<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)|[<img src="https://s3.amazonaws.com/uploads.hipchat.com/87223/4876411/7Rybnl26ReFzlt3/jw-logo-red.png" width="120">](https://www.jwplayer.com)|[<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)|
+|[<img src="https://player.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)|[<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)|[<img src="https://s3.amazonaws.com/uploads.hipchat.com/87223/4876411/7Rybnl26ReFzlt3/jw-logo-red.png" width="120">](https://www.jwplayer.com)|[<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)|
 |[<img src="http://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)|[<img src="https://static3.1tv.ru/assets/web/logo-ac67852f1625b338f9d1fb96be089d03557d50bfc5790d5f48dc56799f59dec6.svg" width="120" height="120">](https://www.1tv.ru/) | [<img src="https://user-images.githubusercontent.com/1480052/40482633-c013ebce-5f55-11e8-96d5-b776415de0ce.png" width="120">](https://www.zdf.de) | [<img src="https://github.com/cdnbye/hlsjs-p2p-engine/blob/master/figs/cdnbye.png" width="120">](https://github.com/cdnbye/hlsjs-p2p-engine)| |
 |[<img src="https://streaming.cdn77.com/live-streaming-logo-dark.png" width="120">](https://streaming.cdn77.com/)| [<img src="https://avatars0.githubusercontent.com/u/7442371?s=200&v=4" width="120">](https://r7.com/)|[<img src="https://raw.githubusercontent.com/Novage/p2p-media-loader/gh-pages/images/p2pml-logo.png" width="120">](https://github.com/Novage/p2p-media-loader)
 
@@ -114,6 +114,7 @@ hls.js is (being) integrated in the following players:
  - [Videojs](http://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
  - [Videojs](http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
  - [Fluid Player](https://www.fluidplayer.com)
+ - [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
 
 ## Chrome/Firefox integration
 
@@ -254,7 +255,7 @@ Pull requests are welcome. Here is a quick guide on how to start.
  - First, checkout the repository and install required dependencies
 ```sh
 git clone https://github.com/video-dev/hls.js.git
-# setup dev environement
+# setup dev environment
 cd hls.js
 npm install
 # build dist/hls.js, watch file change for rebuild and launch demo page

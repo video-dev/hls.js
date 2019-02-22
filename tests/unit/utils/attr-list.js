@@ -2,9 +2,9 @@ import AttrList from '../../../src/utils/attr-list';
 
 describe('AttrList', function () {
   it('constructor() supports empty arguments', function () {
-    expect(new AttrList()).to.deep.equal({});
-    expect(new AttrList({})).to.deep.equal({});
-    expect(new AttrList(undefined)).to.deep.equal({});
+    expect(Object.keys(new AttrList())).to.deep.equal([]);
+    expect(Object.keys(new AttrList({}))).to.deep.equal([]);
+    expect(Object.keys(new AttrList(undefined))).to.deep.equal([]);
   });
   it('constructor() supports object argument', function () {
     const obj = { VALUE: '42' };

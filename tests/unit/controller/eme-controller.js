@@ -1,6 +1,6 @@
 import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
-import EventEmitter from 'events';
+import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
 
 const sinon = require('sinon');
@@ -49,7 +49,7 @@ describe('EMEController', function () {
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
   });
 
-  it('should request keys when `emeEnabled` is true (but not set them)', (done) => {
+  it('should request keys when `emeEnabled` is true (but not set them)', function (done) {
     let reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
@@ -75,7 +75,7 @@ describe('EMEController', function () {
     }, 0);
   });
 
-  it('should trigger key system error when bad encrypted data is received', (done) => {
+  it('should trigger key system error when bad encrypted data is received', function (done) {
     let reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
