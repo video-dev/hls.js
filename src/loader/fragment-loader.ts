@@ -1,11 +1,11 @@
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import Fragment from './fragment';
-import { LoaderInterface, LoaderStats } from '../types/loader';
+import { Loader, LoaderStats, LoaderConfiguration, FragmentLoaderContext } from '../types/loader';
 
 export default class FragmentLoader {
   private config: any;
-  private loader: LoaderInterface | null = null;
+  private loader: Loader<FragmentLoaderContext> | null = null;
   constructor (config) {
     this.config = config;
   }
@@ -48,11 +48,12 @@ export default class FragmentLoader {
       maxRetry: 0,
       retryDelay: 0,
       maxRetryDelay: config.fragLoadingMaxRetryTimeout
-    };
+    } as LoaderConfiguration;
 
     return new Promise((resolve, reject) => {
       if (!loader) {
-        return Promise.reject(new LoadError(null, 'Loader was destroyed after fragment request'));
+        reject(new LoadError(null, 'Loader was destroyed after fragment request'));
+        return;
       }
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails = null) => {
