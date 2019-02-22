@@ -1,22 +1,16 @@
 <!DOCTYPE html>
 <html>
-
   <head>
-
-    <meta charset="utf-8"/>
-
+    <meta charset="utf-8">
     <title>hls.js demo</title>
-
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
-
     <link rel="stylesheet" href="style.css">
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/ace.js"></script>
   </head>
-
   <body>
     <div class="header-container">
       <header class="wrapper clearfix">
@@ -49,86 +43,77 @@
         </p>
       </header>
       <div id="controls">
-
-        <div id="customButtons"></div>
-
-        <select id="streamSelect" class="innerControls">
-          <option value="" selected>Select a test-stream from drop-down menu. Or enter custom URL below</option>
-        </select>
-
-        <input id="streamURL" class="innerControls" type=text value=""/>
-
-        <label class="innerControls">
-          Enable streaming:
-          <input id="enableStreaming" type=checkbox checked/>
-        </label>
-
-        <label class="innerControls">
-          Auto-recover media-errors:
-          <input id="autoRecoverError" type=checkbox checked/>
-        </label>
-
-        <label class="innerControls">
-          Enable worker for transmuxing:
-          <input id="enableWorker" type=checkbox checked/>
-        </label>
-
-        <label class="innerControls">
-          Dump transmuxed fMP4 data:
-          <input id="dumpfMP4" type=checkbox unchecked/>
-        </label>
-
-        <label class="innerControls">
-          Widevine DRM license-server URL:
-          <input id="widevineLicenseUrl" style="width: 50%"/>
-        </label>
-
-        <label class="innerControls">
-          Level-cap'ing (max limit):
-          <input id="levelCapping" style="width: 8em" type=number/>
-        </label>
-
-        <label class="innerControls">
-          Default audio-codec:
-          <input style="width: 8em" id="defaultAudioCodec"/>
-        </label>
-
-        <label class="innerControls">
-          Metrics history (max limit, -1 is unlimited):
-          <input id="limitMetrics" style="width: 8em" type=number/>
-        </label>
-
-        <label class="innerControls">
-          Player size:
-          <select id="videoSize" style="float:right;">
-            <option value="240">Tiny (240p)</option>
-            <option value="384">Small (384p)</option>
-            <option value="480">Medium (480p)</option>
-            <option value="720" selected>Large (720p)</option>
-            <option value="1080">Huge (1080p)</option>
+        <div class="demo-controls-wrapper">
+          <select id="streamSelect" class="innerControls">
+            <option value="" selected>Select a test-stream from drop-down menu. Or enter custom URL below</option>
           </select>
-        </label>
 
-        <label class="innerControls">
-          Current video-resolution:
-          <span id="currentResolution">/</span>
-        </label>
+          <input id="streamURL" class="innerControls" type=text value=""/>
 
-        <label class="innerControls">
-          Permalink:&nbsp;
-          <span id="StreamPermalink" style="width: 50%"></span>
-        </label>
+          <label class="innerControls">
+            Enable streaming:
+            <input id="enableStreaming" type=checkbox checked/>
+          </label>
+
+          <label class="innerControls">
+            Auto-recover media-errors:
+            <input id="autoRecoverError" type=checkbox checked/>
+          </label>
+
+          <label class="innerControls">
+            Dump transmuxed fMP4 data:
+            <input id="dumpfMP4" type=checkbox unchecked/>
+          </label>
+
+          <label class="innerControls">
+            Metrics history (max limit, -1 is unlimited):
+            <input id="limitMetrics" style="width: 8em" type=number/>
+          </label>
+
+          <label class="innerControls">
+            Player size:
+            <select id="videoSize" style="float:right;">
+              <option value="240">Tiny (240p)</option>
+              <option value="384">Small (384p)</option>
+              <option value="480">Medium (480p)</option>
+              <option value="720" selected>Large (720p)</option>
+              <option value="1080">Huge (1080p)</option>
+            </select>
+          </label>
+
+          <label class="innerControls">
+            Current video-resolution:
+            <span id="currentResolution">/</span>
+          </label>
+
+          <label class="innerControls">
+            Permalink:
+            <span id="StreamPermalink"></span>
+          </label>
+        </div>
+
+        <div class="config-editor-wrapper">
+          <div class="config-editor-container">
+              <div id="config-editor">
+                Loading...
+              </div>
+          </div>
+          <div class="config-editor-commands">
+            <label for="config-persistence">
+                Persist
+                <input name="config-persistence" id="configPersistence" type="checkbox">
+            </label>
+            <button name="config-apply" onclick="applyConfigEditorValue()">Apply</button>
+          </div>
+        </div>
 
       </div>
 
       <video id="video" controls autoplay class="videoCentered"></video>
-
       <br>
-
       <canvas id="bufferedCanvas" height="15" class="videoCentered" onclick="onClickBufferedRange(event);"></canvas>
-
-      <br><br>
-
+      <br>
+      <br>
       <label class="center">Status:</label>
       <pre id="statusOut" class="center" style="white-space: pre-wrap;"></pre>
 

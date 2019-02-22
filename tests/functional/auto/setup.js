@@ -1,5 +1,8 @@
+/* eslint-disable no-console */
+
 const webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
+// eslint-disable-next-line
 const chromedriver = require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
