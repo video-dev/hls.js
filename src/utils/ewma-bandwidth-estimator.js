@@ -20,12 +20,13 @@ class EwmaBandWidthEstimator {
 
   sample (durationMs, numBytes) {
     durationMs = Math.max(durationMs, this.minDelayMs_);
-    let bandwidth = 8000 * numBytes / durationMs,
-      // console.log('instant bw:'+ Math.round(bandwidth));
-      // we weight sample using loading duration....
-      weight = durationMs / 1000;
-    this.fast_.sample(weight, bandwidth);
-    this.slow_.sample(weight, bandwidth);
+    let numBits = 8 * numBytes,
+      // weight is duration in seconds
+      durationS = durationMs / 1000,
+      // value is bandwidth in bits/s
+      bandwidthInBps = numBits / durationS;
+    this.fast_.sample(durationS, bandwidthInBps);
+    this.slow_.sample(durationS, bandwidthInBps);
   }
 
   canEstimate () {

@@ -1,14 +1,17 @@
+/* eslint-disable no-console */
+
 const webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
+// eslint-disable-next-line
 const chromedriver = require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
-
 const browserConfig = { version: 'latest' };
 const onTravis = !!process.env.TRAVIS;
+const chai = require('chai');
+const expect = chai.expect;
 
 let browserDescription;
-
 let stream;
 
 // Setup browser config data from env vars

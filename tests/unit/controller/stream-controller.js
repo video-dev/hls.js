@@ -58,7 +58,7 @@ describe('StreamController', function () {
       expect(spy.called).to.be.false;
     });
 
-    it('should not start when controller have not levels data', function () {
+    it('should not start when controller does not have level data', function () {
       streamController.startLoad(1);
       assertStreamControllerStopped(streamController);
     });
@@ -207,9 +207,6 @@ describe('StreamController', function () {
       };
       streamController.media = {
         buffered: {
-          start: function () {
-            return 6.014;
-          },
           length: 1
         }
       };
@@ -275,13 +272,13 @@ describe('StreamController', function () {
         streamController.levels = [];
         streamController.media = null;
       });
-      it('should not start when controller have not levels data', function () {
+      it('should not start when controller does not have level data', function () {
         streamController.levels = null;
         streamController.startLoad();
         assertStreamControllerStopped(streamController);
       });
 
-      it('should start when controller have levels data', function () {
+      it('should start when controller has level data', function () {
         streamController.startLoad(5);
         assertStreamControllerStarted(streamController);
         expect(streamController.nextLoadPosition).to.equal(5);
@@ -305,17 +302,6 @@ describe('StreamController', function () {
         streamController.startLoad();
         expect(streamController.level).to.equal(0);
         expect(streamController.bitrateTest).to.be.true;
-      });
-
-      it('should not signal a bandwidth test if config.testBandwidth is false', function () {
-        streamController.startFragRequested = false;
-        hls.startLevel = -1;
-        hls.nextAutoLevel = 3;
-        hls.config.testBandwidth = false;
-
-        streamController.startLoad();
-        expect(streamController.level).to.equal(hls.nextAutoLevel);
-        expect(streamController.bitrateTest).to.be.false;
       });
     });
   });

@@ -17,7 +17,7 @@ try {
     }
     // remove v
     newVersion = tag.substring(1);
-  } else if (TRAVIS_MODE === 'releaseCanary') {
+  } else if (TRAVIS_MODE === 'releaseCanary' || TRAVIS_MODE === 'netlifyPr') {
     // bump patch in version from latest git tag
     let currentVersion = getLatestVersionTag();
     if (!VALID_VERSION_REGEX.test(currentVersion)) {
@@ -34,7 +34,11 @@ try {
     if (!matched) {
       throw new Error('Error calculating version.');
     }
-    newVersion += '-canary.' + getCommitNum();
+    if (TRAVIS_MODE === 'netlifyPr') {
+      newVersion += `-pr.${getCommitHash().substr(0, 8)}`;
+    } else {
+      newVersion += `-canary.${getCommitNum()}`;
+    }
   } else {
     throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
   }
@@ -49,9 +53,17 @@ try {
 process.exit(0);
 
 function getCommitNum() {
-  return parseInt(require('child_process').execSync('git rev-list --count HEAD').toString(), 10);
+  return parseInt(exec('git rev-list --count HEAD'), 10);
+}
+
+function getCommitHash() {
+  return exec('git rev-parse HEAD');
 }
 
 function getLatestVersionTag() {
-  return require('child_process').execSync('git describe --abbrev=0 --match="v*"').toString().trim();
+  return exec('git describe --abbrev=0 --match="v*"');
+}
+
+function exec(cmd) {
+  return require('child_process').execSync(cmd).toString().trim();
 }
