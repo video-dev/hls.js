@@ -13,7 +13,11 @@ describe('SubtitleTrackController', function () {
     subtitleTrackController = new SubtitleTrackController(hls);
 
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = [{ id: 0, url: 'baz', details: { live: false } }, { id: 1, url: 'bar' }, { id: 2, details: { live: true }, url: 'foo' }];
+    subtitleTrackController.tracks = [
+      { id: 0, name: 'English', url: 'baz', details: { live: false } },
+      { id: 1, name: 'Swedish', url: 'bar' },
+      { id: 2, name: 'Spanish', details: { live: true }, url: 'foo' }
+    ];
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');

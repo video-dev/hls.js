@@ -6,10 +6,14 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 
-function filterSubtitleTracks (textTrackList) {
+function filterUsedSubtitleTracks (manifestTrackList, textTrackList) {
+  let tracksNames = {};
+  for (let i = 0; i < manifestTrackList.length; i++) {
+    tracksNames[manifestTrackList[i].name] = true;
+  }
   let tracks = [];
   for (let i = 0; i < textTrackList.length; i++) {
-    if (textTrackList[i].kind === 'subtitles') {
+    if (textTrackList[i].kind === 'subtitles' && tracksNames[textTrackList[i].label]) {
       tracks.push(textTrackList[i]);
     }
   }
@@ -41,7 +45,7 @@ class SubtitleTrackController extends EventHandler {
     }
 
     let trackId = -1;
-    let tracks = filterSubtitleTracks(this.media.textTracks);
+    let tracks = filterUsedSubtitleTracks(this.tracks, this.media.textTracks);
     for (let id = 0; id < tracks.length; id++) {
       if (tracks[id].mode === 'hidden') {
         // Do not break in case there is a following track with showing.
@@ -226,12 +230,12 @@ class SubtitleTrackController extends EventHandler {
    * @private
    */
   _toggleTrackModes (newId) {
-    const { media, subtitleDisplay, trackId } = this;
+    const { media, subtitleDisplay, trackId, tracks } = this;
     if (!media) {
       return;
     }
 
-    const textTracks = filterSubtitleTracks(media.textTracks);
+    const textTracks = filterUsedSubtitleTracks(tracks, media.textTracks);
     if (newId === -1) {
       [].slice.call(textTracks).forEach(track => {
         track.mode = 'disabled';

@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
-  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
+  return inUseTrack && inUseTrack.label === manifestTrack.name && inUseTrack.kind === 'subtitles' && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
 }
 
 function intersection (x1, x2, y1, y2) {
