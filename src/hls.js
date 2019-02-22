@@ -408,13 +408,6 @@ export default class Hls extends Observer {
     return Math.max(this.levelController.firstLevel, this.minAutoLevel);
   }
 
-  /** Return Estimated Bandwidth
-   **/
-  get bandwidthEstimate () {
-    const bwEstimator = this.abrController._bwEstimator;
-    return bwEstimator ? bwEstimator.getEstimate() : NaN;
-  }
-
   /**
    * Sets "first-level", see getter.
    * @type {number}
