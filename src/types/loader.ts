@@ -84,7 +84,6 @@ export interface LoaderCallbacks<T extends LoaderContext>{
   onProgress?: LoaderOnProgress<T>,
 }
 
-// TODO: define callbacks - see https://github.com/video-dev/hls.js/blob/master/docs/API.md#loader
 export interface Loader<T extends LoaderContext> {
   destory(): void
   abort(): void
