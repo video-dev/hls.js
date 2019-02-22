@@ -24,6 +24,27 @@ export const State = {
 export default class BaseStreamController extends TaskLoop {
   doTick () {}
 
+  startLoad () {}
+
+  stopLoad () {
+    let frag = this.fragCurrent;
+    if (frag) {
+      if (frag.loader) {
+        frag.loader.abort();
+      }
+      this.fragmentTracker.removeFragment(frag);
+    }
+    if (this.demuxer) {
+      this.demuxer.destroy();
+      this.demuxer = null;
+    }
+    this.fragCurrent = null;
+    this.fragPrevious = null;
+    this.clearInterval();
+    this.clearNextTick();
+    this.state = State.STOPPED;
+  }
+
   _streamEnded (bufferInfo, levelDetails) {
     const { fragCurrent, fragmentTracker } = this;
     // we just got done loading the final fragment and there is no other buffered range after ...
@@ -93,5 +114,15 @@ export default class BaseStreamController extends TaskLoop {
   onMediaEnded () {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
+  }
+
+  onHandlerDestroying () {
+    this.stopLoad();
+    super.onHandlerDestroying();
+  }
+
+  onHandlerDestroyed () {
+    this.state = State.STOPPED;
+    this.fragmentTracker = null;
   }
 }
