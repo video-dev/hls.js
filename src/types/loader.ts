@@ -85,7 +85,7 @@ export interface LoaderCallbacks<T extends LoaderContext>{
 }
 
 export interface Loader<T extends LoaderContext> {
-  destory(): void
+  destroy(): void
   abort(): void
   load(
     context: LoaderContext,
