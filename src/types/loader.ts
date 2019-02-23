@@ -4,7 +4,7 @@ export interface LoaderContext {
   // target URL
   url: string
   // loader response type (arraybuffer or default response type for playlist)
-  responseType: XMLHttpRequestResponseType
+  responseType: string
   // start byte range offset
   rangeStart?: number
   // end byte range offset
