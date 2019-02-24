@@ -394,7 +394,6 @@ describe('appendFrame', function () {
       length: 16
     });
     expect(track.samples.length).to.equal(1);
-    expect(track.len).to.equal(7);
   });
 
   it('should not append sample if `parseFrameHeader` fails', function () {
@@ -410,6 +409,5 @@ describe('appendFrame', function () {
 
     expect(appendFrame(track, data, 0, 0, 0)).to.be.undefined;
     expect(track.samples.length).to.equal(0);
-    expect(track.len).to.equal(0);
   });
 });
