@@ -10,19 +10,6 @@ idShort="$(echo "$id" | cut -c 1-8) ($version)"
 latestSiteId="642d9ad4-f002-4104-9309-40ed9cd81a1f"
 stableSiteId="deef7ecf-4c3e-4de0-b6bb-676b02e1c20e"
 
-rm -rf "$root"
-mkdir "$root"
-
-echo "Building netlify for $id"
-
-# redirect / to /demo
-echo "/ /demo" > "$root/_redirects"
-cp -r "./dist" "$root/dist"
-cp -r "./demo" "$root/demo"
-cp -r "./api-docs" "$root/api-docs"
-
-echo "Built netlify."
-
 deploy () {
   siteId=$1
   echo "Deploying netlify to '$siteId'."
@@ -30,7 +17,7 @@ deploy () {
   echo "Deployed netlify to '$siteId'."
 }
 
-echo "Creating site for current commit."
+echo "Creating site for current commit ($id)."
 uuid=$(uuidgen)
 commitSiteName="hls-js-$uuid"
 commitSiteId=$(curl --fail -d "{\"name\":\"$commitSiteName\"}" -H "Content-Type: application/json" -X POST "https://api.netlify.com/api/v1/sites?access_token=$NETLIFY_ACCESS_TOKEN" | jq -r '.site_id')

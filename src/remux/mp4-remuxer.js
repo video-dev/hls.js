@@ -393,7 +393,6 @@ class MP4Remuxer {
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     this.nextAvcDts = lastDTS + mp4SampleDuration;
     let dropped = track.dropped;
-    track.len = 0;
     track.nbNalu = 0;
     track.dropped = 0;
     if (outputSamples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
@@ -434,11 +433,11 @@ class MP4Remuxer {
     const initPTS = this._initPTS;
     const rawMPEG = !track.isAAC && this.typeSupported.mpeg;
 
-    let offset,
-      mp4Sample,
+    let mp4Sample,
       fillFrame,
       mdat, moof,
       firstPTS, lastPTS,
+      offset = (rawMPEG ? 0 : 8),
       inputSamples = track.samples,
       outputSamples = [],
       nextAudioPts = this.nextAudioPts;
@@ -503,7 +502,6 @@ class MP4Remuxer {
         if (delta <= -maxAudioFramesDrift * inputSampleDuration) {
           logger.warn(`Dropping 1 audio frame @ ${(nextPts / inputTimeScale).toFixed(3)}s due to ${Math.round(duration)} ms overlap.`);
           inputSamples.splice(i, 1);
-          track.len -= sample.unit.length;
           // Don't touch nextPtsNorm or i
         } // eslint-disable-line brace-style
 
@@ -522,7 +520,6 @@ class MP4Remuxer {
               fillFrame = sample.unit.subarray();
             }
             inputSamples.splice(i, 0, { unit: fillFrame, pts: newStamp, dts: newStamp });
-            track.len += fillFrame.length;
             nextPts += inputSampleDuration;
             i++;
           }
@@ -541,6 +538,13 @@ class MP4Remuxer {
           i++;
         }
       }
+    }
+
+    // compute mdat size, as we eventually filtered/added some samples
+    let nbSamples = inputSamples.length;
+    let mdatSize = 0;
+    while (nbSamples--) {
+      mdatSize += inputSamples[nbSamples].unit.byteLength;
     }
 
     for (let j = 0, nbSamples = inputSamples.length; j < nbSamples; j++) {
@@ -568,13 +572,13 @@ class MP4Remuxer {
                   fillFrame = unit.subarray();
                 }
 
-                track.len += numMissingFrames * fillFrame.length;
+                mdatSize += numMissingFrames * fillFrame.length;
               }
               // if we have frame overlap, overlapping for more than half a frame duraion
             } else if (delta < -12) {
               // drop overlapping audio frames... browser will deal with it
               logger.log(`drop overlapping AAC sample, expected/parsed/delta:${(nextAudioPts / inputTimeScale).toFixed(3)}s/${(pts / inputTimeScale).toFixed(3)}s/${(-delta)}ms`);
-              track.len -= unit.byteLength;
+              mdatSize -= unit.byteLength;
               continue;
             }
             // set PTS/DTS to expected PTS/DTS
@@ -583,11 +587,8 @@ class MP4Remuxer {
         }
         // remember first PTS of our audioSamples
         firstPTS = pts;
-        if (track.len > 0) {
-          /* concatenate the audio data and construct the mdat in place
-            (need 8 more bytes to fill length and mdat type) */
-          let mdatSize = rawMPEG ? track.len : track.len + 8;
-          offset = rawMPEG ? 0 : 8;
+        if (mdatSize > 0) {
+          mdatSize += offset;
           try {
             mdat = new Uint8Array(mdatSize);
           } catch (err) {
@@ -646,7 +647,7 @@ class MP4Remuxer {
       lastPTS = pts;
     }
     let lastSampleDuration = 0;
-    let nbSamples = outputSamples.length;
+    nbSamples = outputSamples.length;
     // set last sample duration as being identical to previous sample
     if (nbSamples >= 2) {
       lastSampleDuration = outputSamples[nbSamples - 2].duration;
@@ -656,7 +657,6 @@ class MP4Remuxer {
       // next audio sample PTS should be equal to last sample PTS + duration
       this.nextAudioPts = nextAudioPts = lastPTS + scaleFactor * lastSampleDuration;
       // logger.log('Audio/PTS/PTSend:' + audioSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
-      track.len = 0;
       track.samples = outputSamples;
       if (rawMPEG) {
         moof = new Uint8Array();
@@ -715,7 +715,6 @@ class MP4Remuxer {
     for (let i = 0; i < nbSamples; i++) {
       let stamp = startDTS + i * frameDuration;
       samples.push({ unit: silentFrame, pts: stamp, dts: stamp });
-      track.len += silentFrame.length;
     }
     track.samples = samples;
 

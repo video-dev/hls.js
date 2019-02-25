@@ -15,7 +15,11 @@ const FORBIDDEN_EVENT_NAMES = {
 };
 
 class EventHandler {
-  constructor (hls, ...events) {
+  hls: any;
+  handledEvents: any[];
+  useGenericHandler: boolean;
+
+  constructor (hls: any, ...events: any[]) {
     this.hls = hls;
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
@@ -60,12 +64,12 @@ class EventHandler {
   /**
    * arguments: event (string), data (any)
    */
-  onEvent (event, data) {
+  onEvent (event: string, data: any) {
     this.onEventGeneric(event, data);
   }
 
-  onEventGeneric (event, data) {
-    let eventToFunction = function (event, data) {
+  onEventGeneric (event: string, data: any) {
+    let eventToFunction = function (event: string, data: any) {
       let funcName = 'on' + event.replace('hls', '');
       if (typeof this[funcName] !== 'function') {
         throw new Error(`Event ${event} has no generic handler in this ${this.constructor.name} class (tried ${funcName})`);
