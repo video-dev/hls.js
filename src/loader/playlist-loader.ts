@@ -236,7 +236,7 @@ class PlaylistLoader extends EventHandler {
     return true;
   }
 
-  loadsuccess (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any = null) {
+  loadsuccess (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: unknown = null) {
     if (context.isSidxRequest) {
       this._handleSidxRequest(response, context);
       this._handlePlaylistLoaded(response, stats, context, networkDetails);
@@ -277,7 +277,7 @@ class PlaylistLoader extends EventHandler {
 
   // TODO(typescript-config): networkDetails can currently be a XHR or Fetch impl,
   // but with custom loaders it could be generic investigate this further when config is typed
-  _handleMasterPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any) {
+  _handleMasterPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: unknown) {
     const hls = this.hls;
     const string = response.data;
 
@@ -331,7 +331,7 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handleTrackOrLevelPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any) {
+  _handleTrackOrLevelPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: unknown) {
     const hls = this.hls;
 
     const { id, level, type } = context;
@@ -424,7 +424,7 @@ class PlaylistLoader extends EventHandler {
     }
   }
 
-  _handleManifestParsingError (response: LoaderResponse, context: PlaylistLoaderContext, reason: string, networkDetails: any) {
+  _handleManifestParsingError (response: LoaderResponse, context: PlaylistLoaderContext, reason: string, networkDetails: unknown) {
     this.hls.trigger(Event.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
@@ -435,7 +435,7 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handleNetworkError (context: PlaylistLoaderContext, networkDetails: any, timeout: boolean = false, response: LoaderResponse | null = null) {
+  _handleNetworkError (context: PlaylistLoaderContext, networkDetails: unknown, timeout: boolean = false, response: LoaderResponse | null = null) {
     logger.info(`A network error occured while loading a ${context.type}-type playlist`);
 
     let details;
@@ -484,7 +484,7 @@ class PlaylistLoader extends EventHandler {
     this.hls.trigger(Event.ERROR, errorData);
   }
 
-  _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any) {
+  _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: unknown) {
     const { type, level, id, levelDetails } = context;
 
     if (!levelDetails || !levelDetails.targetduration) {
