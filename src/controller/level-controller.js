@@ -427,7 +427,15 @@ export default class LevelController extends EventHandler {
     }
 
     if (currentLevel.audioGroupIds) {
-      const urlId = currentLevel.audioGroupIds.findIndex((groupId) => groupId === audioGroupId);
+      let urlId = -1;
+
+      for (let i = 0; i < currentLevel.audioGroupIds.length; i++) {
+        if (currentLevel.audioGroupIds[i] === audioGroupId) {
+          urlId = i;
+          break;
+        }
+      }
+
       if (urlId !== currentLevel.urlId) {
         currentLevel.urlId = urlId;
         this.startLoad();

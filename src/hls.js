@@ -101,11 +101,11 @@ export default class Hls extends Observer {
       config[prop] = defaultConfig[prop];
     }
 
-    if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
+    if (config.liveMaxLatencyDurationCount !== void 0 && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
     }
 
-    if (config.liveMaxLatencyDuration !== undefined && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === undefined)) {
+    if (config.liveMaxLatencyDuration !== void 0 && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === void 0)) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"');
     }
 
@@ -118,11 +118,11 @@ export default class Hls extends Observer {
     /**
      * @member {AbrController} abrController
      */
-    const abrController = this.abrController = new config.abrController(this);
+    const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap
 
-    const bufferController = new config.bufferController(this);
-    const capLevelController = new config.capLevelController(this);
-    const fpsController = new config.fpsController(this);
+    const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
+    const capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
+    const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
     const playListLoader = new PlaylistLoader(this);
     const fragmentLoader = new FragmentLoader(this);
     const keyLoader = new KeyLoader(this);
@@ -454,6 +454,15 @@ export default class Hls extends Observer {
   }
 
   /**
+   * get bandwidth estimate
+   * @type {number}
+   */
+  get bandwidthEstimate () {
+    const bwEstimator = this.abrController._bwEstimator;
+    return bwEstimator ? bwEstimator.getEstimate() : NaN;
+  }
+
+  /**
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
    * @type {number}
    */
@@ -483,7 +492,10 @@ export default class Hls extends Observer {
    * @type {number}
    */
   get minAutoLevel () {
-    let hls = this, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate, len = levels ? levels.length : 0;
+    const hls = this;
+    const levels = hls.levels;
+    const minAutoBitrate = hls.config.minAutoBitrate;
+    const len = levels ? levels.length : 0;
     for (let i = 0; i < len; i++) {
       const levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate;
       if (levelNextBitrate > minAutoBitrate) {

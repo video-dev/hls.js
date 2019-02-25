@@ -94,7 +94,6 @@ class TSDemuxer {
       inputTimeScale: 90000,
       sequenceNumber: 0,
       samples: [],
-      len: 0,
       dropped: type === 'video' ? 0 : undefined,
       isAAC: type === 'audio' ? true : undefined,
       duration: type === 'audio' ? duration : undefined
