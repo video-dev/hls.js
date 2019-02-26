@@ -7,8 +7,8 @@ import { BufferHelper } from '../utils/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { FragmentState } from './fragment-tracker';
-import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
-import PlaylistLoader from '../loader/playlist-loader';
+import { ElementaryStreamTypes } from '../loader/fragment';
+import { PlaylistLevelType } from '../types/loader';
 import * as LevelHelper from './level-helper';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
@@ -483,7 +483,7 @@ class StreamController extends BaseStreamController {
   }
 
   getBufferedFrag (position) {
-    return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
+    return this.fragmentTracker.getBufferedFrag(position, PlaylistLevelType.MAIN);
   }
 
   get currentLevel () {
