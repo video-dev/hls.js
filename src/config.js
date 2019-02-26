@@ -7,7 +7,7 @@ import BufferController from './controller/buffer-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
 import XhrLoader from './utils/xhr-loader';
-// import FetchLoader from './utils/fetch-loader';
+import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 
 import AudioTrackController from './controller/audio-track-controller';
 import AudioStreamController from './controller/audio-stream-controller';
@@ -19,6 +19,8 @@ import { SubtitleStreamController } from './controller/subtitle-stream-controlle
 import EMEController from './controller/eme-controller';
 
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
+
+const loader = fetchSupported() ? FetchLoader : XhrLoader;
 
 export const hlsDefaultConfig = {
   autoStartLoad: true, // used by stream-controller
@@ -63,8 +65,7 @@ export const hlsDefaultConfig = {
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
   appendErrorMaxRetry: 3, // used by buffer-controller
-  loader: XhrLoader,
-  // loader: FetchLoader,
+  loader,
   fLoader: void 0, // used by fragment-loader
   pLoader: void 0, // used by playlist-loader
   xhrSetup: void 0, // used by xhr-loader

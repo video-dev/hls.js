@@ -50,7 +50,11 @@ class KeyLoader extends EventHandler {
       // key-loader will trigger an error and rely on stream-controller to handle retry logic.
       // this will also align retry logic with fragment-loader
       loaderConfig = { timeout: config.fragLoadingTimeOut, maxRetry: 0, retryDelay: config.fragLoadingRetryDelay, maxRetryDelay: config.fragLoadingMaxRetryTimeout };
-      loaderCallbacks = { onSuccess: this.loadsuccess.bind(this), onError: this.loaderror.bind(this), onTimeout: this.loadtimeout.bind(this) };
+      loaderCallbacks = {
+        onSuccess: this.loadsuccess.bind(this),
+        onError: this.loaderror.bind(this),
+        onTimeout: this.loadtimeout.bind(this)
+      };
       frag.loader.load(loaderContext, loaderConfig, loaderCallbacks);
     } else if (this.decryptkey) {
       // we already loaded this key, return it
@@ -69,22 +73,14 @@ class KeyLoader extends EventHandler {
   }
 
   loaderror (response, context) {
-    let frag = context.frag,
-      loader = frag.loader;
-    if (loader) {
-      loader.abort();
-    }
+    let frag = context.frag;
 
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: response });
   }
 
   loadtimeout (stats, context) {
-    let frag = context.frag,
-      loader = frag.loader;
-    if (loader) {
-      loader.abort();
-    }
+    const frag = context.frag;
 
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag: frag });
