@@ -13,6 +13,7 @@ import { findFragWithCC } from '../utils/discontinuities';
 import { FragmentState } from './fragment-tracker';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
+import FragmentLoader from '../loader/fragment-loader';
 import { findFragmentByPTS } from './fragment-finders';
 const { performance } = window;
 
@@ -27,7 +28,6 @@ class AudioStreamController extends BaseStreamController {
       Event.AUDIO_TRACK_SWITCHING,
       Event.AUDIO_TRACK_LOADED,
       Event.KEY_LOADED,
-      Event.FRAG_LOADED,
       Event.FRAG_PARSING_INIT_SEGMENT,
       Event.FRAG_PARSING_DATA,
       Event.FRAG_PARSED,
@@ -44,6 +44,8 @@ class AudioStreamController extends BaseStreamController {
     this.initPTS = [];
     this.waitingFragment = null;
     this.videoTrackCC = null;
+    this.fragmentLoader = new FragmentLoader(hls.config);
+    this.levels = [];
   }
 
   // Signal that video PTS was found
@@ -65,7 +67,7 @@ class AudioStreamController extends BaseStreamController {
   }
 
   startLoad (startPosition) {
-    if (this.tracks) {
+    if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
       this.setInterval(TICK_INTERVAL);
@@ -112,9 +114,9 @@ class AudioStreamController extends BaseStreamController {
       this.loadedmetadata = false;
       break;
     case State.IDLE:
-      const tracks = this.tracks;
+      const levels = this.levels;
       // audio tracks not received => exit loop
-      if (!tracks) {
+      if (!levels) {
         break;
       }
 
@@ -154,8 +156,8 @@ class AudioStreamController extends BaseStreamController {
         trackId = this.trackId;
 
         // if buffer length is less than maxBufLen try to load a new fragment
-      if ((bufferLen < maxBufLen || audioSwitch) && trackId < tracks.length) {
-        trackDetails = tracks[trackId].details;
+      if ((bufferLen < maxBufLen || audioSwitch) && trackId < levels.length) {
+        trackDetails = levels[trackId].details;
         // if track info not retrieved yet, switch state and wait for track retrieval
         if (typeof trackDetails === 'undefined') {
           this.state = State.WAITING_TRACK;
@@ -248,22 +250,25 @@ class AudioStreamController extends BaseStreamController {
             logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
             // only load if fragment is not loaded or if in audio switch
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+            const fragState = this.fragmentTracker.getState(frag);
             this.fragCurrent = frag;
-            if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-              this.startFragRequested = true;
-              if (Number.isFinite(frag.sn)) {
-                this.nextLoadPosition = frag.start + frag.duration;
+            this.startFragRequested = true;
+            if (Number.isFinite(frag.sn)) {
+              this.nextLoadPosition = frag.start + frag.duration;
+            }
+            if (audioSwitch || fragState === FragmentState.NOT_LOADED) {
+              if (frag.sn === 'initSegment') {
+                this._loadInitSegment(frag);
+              } else {
+                this._loadFragForPlayback(frag);
               }
-
-              hls.trigger(Event.FRAG_LOADING, { frag });
-              this.state = State.FRAG_LOADING;
             }
           }
         }
       }
       break;
     case State.WAITING_TRACK:
-      track = this.tracks[this.trackId];
+      track = this.levels[this.trackId];
       // check if playlist is already loaded
       if (track && track.details) {
         this.state = State.IDLE;
@@ -292,7 +297,7 @@ class AudioStreamController extends BaseStreamController {
       if (waitingFrag) {
         const waitingFragCC = waitingFrag.frag.cc;
         if (videoTrackCC !== waitingFragCC) {
-          track = this.tracks[this.trackId];
+          track = this.levels[this.trackId];
           if (track.details && track.details.live) {
             logger.warn(`Waiting fragment CC (${waitingFragCC}) does not match video track CC (${videoTrackCC})`);
             this.waitingFragment = null;
@@ -300,7 +305,7 @@ class AudioStreamController extends BaseStreamController {
           }
         } else {
           this.state = State.FRAG_LOADING;
-          this.onFragLoaded(this.waitingFragment);
+          this._handleFragmentLoad(waitingFrag.frag, waitingFrag.payload, waitingFrag.stats);
           this.waitingFragment = null;
         }
       } else {
@@ -326,7 +331,7 @@ class AudioStreamController extends BaseStreamController {
     media.addEventListener('seeking', this.onvseeking);
     media.addEventListener('ended', this.onvended);
     let config = this.config;
-    if (this.tracks && config.autoStartLoad) {
+    if (this.levels && config.autoStartLoad) {
       this.startLoad(config.startPosition);
     }
   }
@@ -351,7 +356,7 @@ class AudioStreamController extends BaseStreamController {
 
   onAudioTracksUpdated (data) {
     logger.log('audio tracks updated');
-    this.tracks = data.audioTracks;
+    this.levels = data.audioTracks;
   }
 
   onAudioTrackSwitching (data) {
@@ -385,7 +390,7 @@ class AudioStreamController extends BaseStreamController {
   onAudioTrackLoaded (data) {
     let newDetails = data.details,
       trackId = data.id,
-      track = this.tracks[trackId],
+      track = this.levels[trackId],
       duration = newDetails.totalduration,
       sliding = 0;
 
@@ -444,55 +449,35 @@ class AudioStreamController extends BaseStreamController {
     }
   }
 
-  onFragLoaded (data) {
-    let fragCurrent = this.fragCurrent,
-      fragLoaded = data.frag;
-    if (this.state === State.FRAG_LOADING &&
-        fragCurrent &&
-        fragLoaded.type === 'audio' &&
-        fragLoaded.level === fragCurrent.level &&
-        fragLoaded.sn === fragCurrent.sn) {
-      let track = this.tracks[this.trackId],
-        details = track.details,
-        duration = details.totalduration,
-        trackId = fragCurrent.level,
-        sn = fragCurrent.sn,
-        cc = fragCurrent.cc,
-        audioCodec = this.config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2',
-        stats = this.stats = data.stats;
-      if (sn === 'initSegment') {
-        this.state = State.IDLE;
-
-        stats.tparsed = stats.tbuffered = performance.now();
-        details.initSegment.data = data.payload;
-        this.hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'audio' });
-        this.tick();
-      } else {
-        this.state = State.PARSING;
-        // transmux the MPEG-TS data to ISO-BMFF segments
-        this.appended = false;
-        if (!this.demuxer) {
-          this.demuxer = new Demuxer(this.hls, 'audio');
-        }
-
-        // Check if we have video initPTS
-        // If not we need to wait for it
-        let initPTS = this.initPTS[cc];
-        let initSegmentData = details.initSegment ? details.initSegment.data : [];
-        if (details.initSegment || initPTS !== undefined) {
-          this.pendingBuffering = true;
-          logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
-          // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
-          let accurateTimeOffset = false; // details.PTSKnown || !details.live;
-          this.demuxer.push(data.payload, initSegmentData, audioCodec, null, fragCurrent, duration, accurateTimeOffset, initPTS);
-        } else {
-          logger.log(`unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
-          this.waitingFragment = data;
-          this.state = State.WAITING_INIT_PTS;
-        }
-      }
+  _handleFragmentLoad (frag, payload, stats) {
+    const { config, trackId, levels } = this;
+    const { cc, sn } = frag;
+    const track = levels[trackId];
+    const details = track.details;
+    const audioCodec = config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2';
+    this.stats = stats;
+    this.state = State.PARSING;
+    // transmux the MPEG-TS data to ISO-BMFF segments
+    this.appended = false;
+    if (!this.demuxer) {
+      this.demuxer = new Demuxer(this.hls, 'audio');
     }
-    this.fragLoadError = 0;
+
+    // Check if we have video initPTS
+    // If not we need to wait for it
+    const initPTS = this.initPTS[cc];
+    const initSegmentData = details.initSegment ? details.initSegment.data : [];
+    if (details.initSegment || Number.isFinite(initPTS)) {
+      this.pendingBuffering = true;
+      logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
+      // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+      let accurateTimeOffset = false; // details.PTSKnown || !details.live;
+      this.demuxer.push(payload, initSegmentData, audioCodec, null, frag, details.totalduration, accurateTimeOffset, initPTS);
+    } else {
+      logger.log(`unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
+      this.waitingFragment = { frag, payload, stats };
+      this.state = State.WAITING_INIT_PTS;
+    }
   }
 
   onFragParsingInitSegment (data) {
@@ -551,12 +536,9 @@ class AudioStreamController extends BaseStreamController {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
-
-      fragCurrent.addElementaryStream(ElementaryStreamTypes.AUDIO);
-
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
 
-      const track = this.tracks[trackId];
+      const track = this.levels[trackId];
       LevelHelper.updateFragPTSDTS(track.details, fragCurrent, data.startPTS, data.endPTS);
 
       let appendOnBufferFlush = false;

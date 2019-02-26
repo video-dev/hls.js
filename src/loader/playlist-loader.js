@@ -440,7 +440,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   _handleNetworkError (context, networkDetails, timeout = false, response = null) {
-    logger.info(`A network error occured while loading a ${context.type}-type playlist`);
+    logger.info(`A network error occurred while loading a ${context.type}-type playlist`);
     let details;
     let fatal;
 
@@ -465,7 +465,6 @@ class PlaylistLoader extends EventHandler {
     }
 
     if (loader) {
-      loader.abort();
       this.resetInternalLoader(context.type);
     }
 

@@ -2,6 +2,8 @@ import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
+import Event from '../events';
+import { ErrorDetails } from '../errors';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -125,4 +127,61 @@ export default class BaseStreamController extends TaskLoop {
     this.state = State.STOPPED;
     this.fragmentTracker = null;
   }
+
+  _loadFragForPlayback (frag) {
+    this._doFragLoad(frag)
+      .then((data) => {
+        this.fragLoadError = 0;
+        if (this._fragLoadAborted(frag)) {
+          return;
+        }
+        const { payload, stats } = data;
+        logger.log(`Loaded ${frag.sn} of level ${frag.level}`);
+        // For compatibility, emit the FRAG_LOADED with the same signature
+        data.frag = frag;
+        this.hls.trigger(Event.FRAG_LOADED, data);
+        this._handleFragmentLoad(frag, payload, stats);
+      })
+      .catch((e) => {
+        if (e.data.details === ErrorDetails.INTERNAL_ABORTED) {
+          return;
+        }
+        this.hls.trigger(Event.ERROR, e.data);
+      });
+  }
+
+  _loadInitSegment (frag) {
+    this._doFragLoad(frag)
+      .then((data) => {
+        const { stats, payload } = data;
+        const { fragCurrent, hls, levels } = this;
+        if (this._fragLoadAborted(frag)) {
+          return;
+        }
+        this.state = State.IDLE;
+        this.fragLoadError = 0;
+        levels[frag.level].details.initSegment.data = payload;
+        stats.tparsed = stats.tbuffered = window.performance.now();
+        hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
+        this.tick();
+      })
+      .catch((e) => {
+        if (e.data.details === ErrorDetails.INTERNAL_ABORTED) {
+          return;
+        }
+        this.hls.trigger(Event.ERROR, e.data);
+      });
+  }
+
+  _fragLoadAborted (frag) {
+    return this.state !== State.FRAG_LOADING || frag !== this.fragCurrent;
+  }
+
+  _doFragLoad (frag) {
+    this.state = State.FRAG_LOADING;
+    this.hls.trigger(Event.FRAG_LOADING, { frag });
+    return this.fragmentLoader.load(frag);
+  }
+
+  _handleFragmentLoad (frag, payload, stats) {}
 }

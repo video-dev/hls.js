@@ -317,8 +317,7 @@ class TimelineController extends EventHandler {
   }
 
   onFragLoaded (data) {
-    let frag = data.frag;
-    let payload = data.payload;
+    const frag = data.frag;
     if (frag.type === 'main') {
       let sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
@@ -332,6 +331,7 @@ class TimelineController extends EventHandler {
     } // eslint-disable-line brace-style
     // If fragment is subtitle type, parse as WebVTT.
     else if (frag.type === 'subtitle') {
+      const payload = data.payload;
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
         if (!Number.isFinite(this.initPTS[frag.cc])) {
