@@ -25,7 +25,7 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /|#.*/.source // All other non-segment oriented tags will match with all groups empty
 ].join(''), 'g');
 
-const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)([^:]*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE: *(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PREFETCH-DIS)CONTINUITY)|(?:#EXT-X-(PREFETCH):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)([^:]*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
@@ -165,6 +165,7 @@ export default class M3U8Parser {
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       const duration = result[1];
       if (duration) { // INF
+        frag.prefetch = false;
         frag.duration = parseFloat(duration);
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const title = (' ' + result[2]).slice(1);
@@ -244,6 +245,31 @@ export default class M3U8Parser {
           break;
         case 'DISCONTINUITY-SEQ':
           cc = parseInt(value1);
+          break;
+        case 'PREFETCH':
+          frag.prefetch = true;
+          frag.duration = level.targetduration;
+          frag.title = null;
+          frag.type = type;
+          frag.start = totalduration;
+          frag.levelkey = levelkey;
+          frag.sn = currentSN++;
+          frag.level = id;
+          frag.cc = cc;
+          frag.urlId = levelUrlId;
+          frag.baseurl = baseurl;
+          frag.relurl = value1;
+          assignProgramDateTime(frag, prevFrag);
+
+          level.fragments.push(frag);
+          prevFrag = frag;
+          totalduration += frag.duration;
+
+          frag = new Fragment();
+          break;
+        case 'PREFETCH-DIS':
+          cc++;
+          frag.tagList.push(['PREFETCH-DIS']);
           break;
         case 'KEY': {
           // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
