@@ -51,6 +51,8 @@ export default class Fragment {
   public type!: FragmentTypes;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
   public loader!: any;
+  // LHLS prefetch flag
+  public prefetch?: boolean;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
