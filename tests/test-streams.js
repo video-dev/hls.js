@@ -146,10 +146,45 @@ module.exports = {
     blacklist_ua: ['firefox', 'safari', 'internet explorer']
   },
   {
-    widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
-    emeEnabled: true
-  }
-  ),
+    emeEnabled: true,
+    requestMediaKeySystemAccessFunc: function (supportedConfigurations) {
+      const keySystem = 'com.widevine.alpha';
+
+      return window.navigator.requestMediaKeySystemAccess(keySystem, supportedConfigurations);
+    },
+    getEMEInitializationDataFunc: function (levelOrAudioTrack, initDataType, initData) {
+      return Promise.resolve({
+        initDataType,
+        initData
+      });
+    },
+    getEMELicenseFunc: function (levelOrAudioTrack, event) {
+      const licenseServerUrl = 'https://cwip-shaka-proxy.appspot.com/no_auth';
+
+      const licenseXhr = new XMLHttpRequest();
+
+      const licensePromise = new Promise((resolve, reject) => {
+        licenseXhr.onload = function () {
+          resolve(this.response);
+        };
+
+        licenseXhr.onerror = function (err) {
+          if (err) {
+            reject(new Error('License request failed'));
+          }
+        };
+      });
+
+      licenseXhr.responseType = 'arraybuffer';
+
+      licenseXhr.open('POST', licenseServerUrl);
+
+      licenseXhr.send(event.message);
+
+      return licensePromise;
+    },
+    NOTE: 'Configuring EME requires the user to implement EME hooks. See API docs for more information'
+  }),
   audioOnlyMultipleLevels: {
     'url': 'https://s3.amazonaws.com/bob.jwplayer.com/~alex/121628/new_master.m3u8',
     'description': 'Multiple non-alternate audio levels',

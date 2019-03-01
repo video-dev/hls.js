@@ -213,7 +213,7 @@ export class SubtitleStreamController extends BaseStreamController {
         foundFrag = fragments[fragLen - 1];
       }
 
-      if (foundFrag && foundFrag.encrypted) {
+      if (foundFrag && foundFrag.encrypted && !this.hls.config.emeEnabled) {
         logger.log(`Loading key for ${foundFrag.sn}`);
         this.state = State.KEY_LOADING;
         this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });

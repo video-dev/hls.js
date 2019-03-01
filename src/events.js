@@ -104,7 +104,11 @@ const HlsEvents = {
   // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length } }
   KEY_LOADED: 'hlsKeyLoaded',
   // fired upon stream controller state transitions - data: { previousState, nextState }
-  STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
+  STREAM_STATE_TRANSITION: 'hlsStreamStateTransition',
+  // fired when EME is being configured
+  EME_CONFIGURING: 'hlsEMEConfiguring',
+  // fired when EME has been configured
+  EME_CONFIGURED: 'hlsEMEConfigured'
 };
 
 export default HlsEvents;

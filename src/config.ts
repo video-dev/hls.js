@@ -17,7 +17,6 @@ import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
-import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
@@ -43,11 +42,17 @@ type CapLevelControllerConfig = {
 };
 
 type EMEControllerConfig = {
-  licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
-  widevineLicenseUrl?: string,
-  requestMediaKeySystemAccessFunc: Function, // TODO(typescript-mediakeys-helper) Type once file is done
+  emeInitDataInFrag: boolean,
+  requestMediaKeySystemAccessFunc: ((supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>) | undefined,
+  getEMEInitializationDataFunc: ((levelOrAudioTrack, initDataType: string | null, initData: ArrayBuffer | null) => Promise<EMEInitDataInfo>) | undefined,
+  getEMELicenseFunc: ((levelOrAudioTrack, event: MediaKeyMessageEvent) => Promise<ArrayBuffer>) | undefined,
 };
+
+export interface EMEInitDataInfo {
+  initDataType: string,
+  initData: ArrayBuffer
+}
 
 type FragmentLoaderConfig = {
   fLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
@@ -209,7 +214,6 @@ export const hlsDefaultConfig: HlsConfig = {
   fLoader: void 0, // used by fragment-loader
   pLoader: void 0, // used by playlist-loader
   xhrSetup: void 0, // used by xhr-loader
-  licenseXhrSetup: void 0, // used by eme-controller
   // fetchSetup: void 0,
   abrController: AbrController,
   bufferController: BufferController,
@@ -230,8 +234,10 @@ export const hlsDefaultConfig: HlsConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
-  widevineLicenseUrl: void 0, // used by eme-controller
-  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
+  emeInitDataInFrag: true, // used by eme-controller
+  requestMediaKeySystemAccessFunc: undefined, // used by eme-controller
+  getEMEInitializationDataFunc: undefined, // used by eme-controller
+  getEMELicenseFunc: undefined, // used by eme-controllers
 
   // Dynamic Modules
   ...timelineConfig(),
