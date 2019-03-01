@@ -21,6 +21,8 @@ export class SubtitleStreamController extends BaseStreamController {
       Event.MEDIA_DETACHING,
       Event.ERROR,
       Event.KEY_LOADED,
+      Event.EME_CONFIGURING,
+      Event.EME_CONFIGURED,
       Event.FRAG_LOADED,
       Event.SUBTITLE_TRACKS_UPDATED,
       Event.SUBTITLE_TRACK_SWITCH,
@@ -145,6 +147,17 @@ export class SubtitleStreamController extends BaseStreamController {
     }
   }
 
+  onEMEConfiguring() {
+    this.state = State.EME_CONFIGURING;
+  }
+
+  onEMEConfigured() {
+    if (this.state === State.EME_CONFIGURING) {
+      this.state = State.IDLE;
+      this.tick();
+    }
+  }
+
   onFragLoaded (data) {
     const fragCurrent = this.fragCurrent;
     const decryptData = data.frag.decryptdata;
@@ -213,7 +226,7 @@ export class SubtitleStreamController extends BaseStreamController {
         foundFrag = fragments[fragLen - 1];
       }
 
-      if (foundFrag && foundFrag.encrypted) {
+      if (foundFrag && foundFrag.encrypted && !this.hls.config.emeEnabled) {
         logger.log(`Loading key for ${foundFrag.sn}`);
         this.state = State.KEY_LOADING;
         this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });

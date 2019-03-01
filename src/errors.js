@@ -16,10 +16,16 @@ export const ErrorTypes = {
  * @typedef {string} ErrorDetail
  */
 export const ErrorDetails = {
+  // Identifier for not being able to set keys on media - data: {}
   KEY_SYSTEM_NO_KEYS: 'keySystemNoKeys',
+  // Identifier for not being able to access media keys system - data: {}
   KEY_SYSTEM_NO_ACCESS: 'keySystemNoAccess',
+  // Identifier for not being able to crate a key session - data: {}
   KEY_SYSTEM_NO_SESSION: 'keySystemNoSession',
+  // Identifier for a license request failure - data: {}
   KEY_SYSTEM_LICENSE_REQUEST_FAILED: 'keySystemLicenseRequestFailed',
+  // idenitifer for keys already being set on media - data: {}
+  KEY_SYSTEM_KEYS_SET: 'keySystemKeysSet',
   // Identifier for a manifest load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_ERROR: 'manifestLoadError',
   // Identifier for a manifest load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}

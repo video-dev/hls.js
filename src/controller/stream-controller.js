@@ -29,6 +29,8 @@ class StreamController extends BaseStreamController {
       Event.MANIFEST_PARSED,
       Event.LEVEL_LOADED,
       Event.KEY_LOADED,
+      Event.EME_CONFIGURING,
+      Event.EME_CONFIGURED,
       Event.FRAG_LOADED,
       Event.FRAG_LOAD_EMERGENCY_ABORTED,
       Event.FRAG_PARSING_INIT_SEGMENT,
@@ -114,6 +116,7 @@ class StreamController extends BaseStreamController {
         this.state = State.IDLE;
       }
       break;
+    case State.EME_CONFIGURING:
     case State.ERROR:
     case State.STOPPED:
     case State.FRAG_LOADING:
@@ -258,7 +261,7 @@ class StreamController extends BaseStreamController {
     }
 
     if (frag) {
-      if (frag.encrypted) {
+      if (frag.encrypted && !this.hls.config.emeEnabled) {
         logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
       } else {
@@ -815,6 +818,17 @@ class StreamController extends BaseStreamController {
 
   onKeyLoaded () {
     if (this.state === State.KEY_LOADING) {
+      this.state = State.IDLE;
+      this.tick();
+    }
+  }
+
+  onEMEConfiguring() {
+    this.state = State.EME_CONFIGURING;
+  }
+
+  onEMEConfigured() {
+    if (this.state === State.EME_CONFIGURING) {
       this.state = State.IDLE;
       this.tick();
     }

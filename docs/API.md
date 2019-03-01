@@ -75,6 +75,10 @@
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
+  - [`emeEnabled`](#emeEnabled)
+  - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
+  - [`getEMEInitializationDataFunc`](#getEMEInitializationDataFunc)
+  - [`getEMELicenseFunc`](#getEMELicenseFunc)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -358,8 +362,9 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxLoadingDelay: 4,
       minAutoBitrate: 0,
       emeEnabled: false,
-      widevineLicenseUrl: undefined,
-      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess
+      requestMediaKeySystemAccessFunc: undefined,
+      getEMEInitializationDataFunc: undefined,
+      getEMELicenseFunc: undefined
   };
 
   var hls = new Hls(config);
@@ -974,7 +979,7 @@ If `abrBandWidthUpFactor * bandwidth average > level.bitrate` then ABR can switc
 
 (default: `false`)
 
-max bitrate used in ABR by avg measured bitrate
+Max bitrate used in ABR by avg measured bitrate
 i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s,
 then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
 
@@ -985,6 +990,117 @@ then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality le
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
 Useful when browser or tab of the browser is not in the focus and bandwidth drops
 
+## Encypted Media Extensions (EME)
+
+hls.js can congfigure EME in the browser using the following configuration. EME support has currently been tested with Widevine DRM on Chrome using a CBCS CMAF stream, and on Firefox using a CTR CMAF stream.
+
+hls.js supports multiple licenses for a stream by creating MediaKeySessions for each level and audioTrack. The configuration hooks will be called for each level and audioTrack found in the manifest so that the Initialization Data used to generate a license request, and the license request itself can be configured for each level and audioTrack.
+
+Note: EME is only available when served over HTTPS. Setting `emeEnabled` for a stream served over HTTP will trigger the `KEY_SYSTEM_NO_ACCESS` error.
+
+### `emeEnabled`
+
+(default: `false`)
+
+Whether to configure EME for the stream, using the `requestMediaKeySystemAccessFunc`, `getEMEInitializationDataFunc`, and `getEMELicenseFunc` hooks. If set, all three hooks must be implemented.
+
+### `requestMediaKeySystemAccessFunc`
+
+(default: `undefined`)
+
+Signature: `(supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>`
+
+The function EME controller will use to get the [MediaKeySystemAccess](https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess) object. This allows the user to set the the Key System EME should be configured for (currently, only tested with Widevine DRM). The function is passed a [MediaKeySystemConfiguration](https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration) array determined from parsing the manifest. The function should return a Promise that resolves to a MediaKeySystemAccess object (by calling `window.navigator.`[requestMediaKeySystemAccess](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess)). 
+
+See example below.
+
+```js
+  var config = {
+    requestMediaKeySystemAccessFunc: function(supportedConfigurations) {
+      var keySystem = 'com.widevine.alpha'; // User may also try experimental support for Playready
+
+      return window.navigator.requestMediaKeySystemAccess(keySystem, supportedConfigurations);
+    }
+  }
+
+```
+
+### `getEMEInitializationDataFunc`
+
+(default: `undefined`)
+
+Signature: `(levelOrAudioTrack: ` [Level](#Level) `| AudioTrack) => Promise<{ initDataType: string; initData: ArrayBuffer }>`
+
+The function EME controller will use to get the [Initialization Data Type](https://w3c.github.io/encrypted-media/format-registry/initdata/index.html#registry) and Intialization Data used to call [generateRequest](https://w3c.github.io/encrypted-media/#dom-mediakeysession-generaterequest) on the [MediaKeySession](https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySession) object. This allows the user to configure the data used to generate the request (e.g. by parsing a PSSH box provided in a level). The level or audioTrack object for the MediaKeySession on which the request will be generated is passed as a parameter so that the user can provide specific Initialization Data Types and Initialization Data for each level and audioTrack if necessary (using the level or audioTrack `url` property). The function should return a Promise that resolves to the following object:
+
+```js
+  {
+    initDataType: string, // See the Initialization Data Type registry above for possible values
+    initData: ArrayBuffer
+  }
+```
+
+See example below.
+
+```js
+  var config = {
+    getEMEInitializationDataFunc: function(levelOrAudioTrack) {
+      var initDataType = '';
+      var initData;
+
+      // Determine the Initialization Data Type and create the initData ArrayBuffer
+
+      return Promise.resolve({
+        initDataType,
+        initData
+      });
+    }
+  }
+
+```
+
+### `getEMELicenseFunc`
+
+(default: `undefined`)
+
+Signature: `(levelOrAudioTrack: ` [Level](#Level) ` | AudioTrack, event: MediaKeyMessageEvent) => Promise<ArrayBuffer>`
+
+The function EME controller will use to get the license to update the MediaKeySession with. The level or audioTrack object for the MediaKeySession that will be updated with the license is passed as a parameter so that the user can provide a specific license for each level and audioTrack if necessary (using the level or audioTrack `url` property). The [MediaKeyMessageEvent](https://developer.mozilla.org/en-US/docs/Web/API/MediaKeyMessageEvent) is also passed so the user can access the license request `message` property generated by the MediaKeySession. The function should return a Promise that resolves to an ArrayBuffer representing the license.
+
+See example below.
+
+```js
+  var config = {
+    getEMELicenseFunc: function(levelOrAudioTrack, event) {
+      var licenseServerUrl = ''; // Must be set by user
+
+      var licenseXhr = new XMLHttpRequest();
+
+      var licensePromise = new Promise((resolve, reject) => {
+        licenseXhr.onload = function (licenseResponse) {
+          if (licenseResponse.status === 200) {
+            resolve(licenseResponse.response);
+          } else {
+            reject();
+          }
+        };
+
+        licenseXhr.onerror = function (err) {
+          reject();
+        };
+      })
+      
+      licenseXhr.responseType = 'arraybuffer';
+
+      licenseXhr.open('POST', licenseServerUrl);
+
+      licenseXhr.send(event.message); // Use the message generated by the MediaKeySession to request the license
+
+      return licensePromise;
+    }
+  }
+
+```
 
 ## Video Binding/Unbinding API
 
@@ -1252,6 +1368,10 @@ Full list of Events is available below:
     -  data: { frag : fragment object }
   - `Hls.Events.STREAM_STATE_TRANSITION`  - fired upon stream controller state transitions
     -  data: { previousState, nextState }
+  - `Hls.Events.EME_CONFIGURING`  - fired when EME configuration begins
+    -  data: { }
+  - `Hls.Events.EME_CONFIGURED`  - fired when EME has been successfully configured
+    -  data: { }
 
 ## Loader Composition
 
@@ -1332,6 +1452,19 @@ Full list of errors is described below:
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE`, fatal : `false`, hole : hole duration }
   - `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL` - raised when playback is stuck although currentTime is in a buffered area
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `true` }
+
+### Key System Errors
+
+  - `Hls.ErrorDetails.KEY_SYSTEM_NO_ACCESS` - raised when getting MediaKeySystemAccess fails
+    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_ACCESS`, fatal : `true` }
+  - `Hls.ErrorDetails.KEY_SYSTEM_NO_KEYS` - raised when setting MediaKeys on the media fails
+    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_KEYS`, fatal : `true` }
+  - `Hls.ErrorDetails.KEY_SYSTEM_NO_SESSION` - raised when creating a MediaKeySession fails
+    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_SESSION`, fatal : `true` }
+  - `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED` - raised when a request for a license fails
+    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED`, fatal : `true` }
+  - `Hls.ErrorDetails.KEY_SYSTEM_KEYS_SET` - raised when MediaKeys have already been set on the media
+    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_KEYS_SET`, fatal : `false` }
 
 ### Mux Errors
 
