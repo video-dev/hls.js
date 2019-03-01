@@ -15,7 +15,7 @@ const mergeConfig = merge(webpackConfig, {
         enforce: 'post',
         use: [
           {
-            loader: 'istanbul-instrumenter-loader',
+            loader: 'coverage-istanbul-loader',
             options: {
               esModules: true
             }
@@ -28,17 +28,13 @@ const mergeConfig = merge(webpackConfig, {
 
 module.exports = function (config) {
   config.set({
-    // base path that will be used to resolve all patterns (eg. files, exclude)
-    basePath: '',
-
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
     frameworks: ['mocha', 'sinon-chai'],
 
     // list of files / patterns to load in the browser
-    files: [
-      'tests/index.js'
-    ],
+    // https://github.com/webpack-contrib/karma-webpack#alternative-usage
+    files: ['tests/index.js'],
 
     // list of files to exclude
     exclude: [],
@@ -46,7 +42,7 @@ module.exports = function (config) {
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
-      'tests/index.js': ['webpack', 'sourcemap']
+      'tests/index.js': ['webpack']
     },
 
     // test results reporter to use
