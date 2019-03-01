@@ -1,5 +1,4 @@
 // Karma configuration
-// Generated on Tue Jul 18 2017 12:17:16 GMT-0700 (PDT)
 const path = require('path');
 const merge = require('webpack-merge');
 const webpackConfig = require('./webpack.config')({ debug: true })[0];
@@ -26,8 +25,13 @@ const mergeConfig = merge(webpackConfig, {
   }
 });
 
+const patterns = [
+  "tests/unit/**/*.ts",
+  "tests/unit/**/*.js"
+];
+
 module.exports = function (config) {
-  config.set({
+  const configObj = {
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
 
@@ -36,18 +40,11 @@ module.exports = function (config) {
     frameworks: ['mocha', 'sinon-chai'],
 
     // list of files / patterns to load in the browser
-    files: [
-      'tests/index.js'
-    ],
+    // set later
+    files: [],
 
     // list of files to exclude
     exclude: [],
-
-    // preprocess matching files before serving them to the browser
-    // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
-    preprocessors: {
-      'tests/index.js': ['webpack', 'sourcemap']
-    },
 
     // test results reporter to use
     // possible values: 'dots', 'progress'
@@ -85,5 +82,15 @@ module.exports = function (config) {
     // Concurrency level
     // how many browser should be started simultaneous
     concurrency: Infinity
+  };
+
+  patterns.forEach((pattern) => {
+    configObj.files.push({
+      pattern: pattern,
+      watched: true
+    });
+    config.preprocessors[pattern] = [ 'webpack' ];
   });
+
+  config.set(configObj);
 };
