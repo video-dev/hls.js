@@ -8,7 +8,7 @@ import { SubtitleStreamController } from '../../../src/controller/subtitle-strea
 const mediaMock = {
   currentTime: 0,
   addEventListener () {},
-  removeEventListener() {}
+  removeEventListener () {}
 };
 
 const tracksMock = [
