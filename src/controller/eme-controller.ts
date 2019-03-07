@@ -231,7 +231,7 @@ class EMEController extends EventHandler {
 
     const initDataInfo = this.getWidevineInitializationData();
 
-    keySession.generateRequest(initDataInfo.initDataType, initDataInfo.initData);
+    this._generateRequestWithPreferredKeySession(initDataInfo.initDataType, initDataInfo.initData);
   }
 
   /**
