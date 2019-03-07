@@ -76,9 +76,9 @@ export class SubtitleStreamController extends BaseStreamController {
     }
   }
 
-  onMediaAttached (data) {
-    this.media = data.media;
-    this.media.addEventListener('seeking', this._onMediaSeeking);
+  onMediaAttached ({ media }) {
+    this.media = media;
+    media.addEventListener('seeking', this._onMediaSeeking);
     this.state = State.IDLE;
   }
 

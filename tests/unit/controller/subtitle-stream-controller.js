@@ -6,7 +6,9 @@ import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
 
 const mediaMock = {
-  currentTime: 0
+  currentTime: 0,
+  addEventListener () {},
+  removeEventListener() {}
 };
 
 const tracksMock = [
@@ -24,11 +26,11 @@ describe('SubtitleStreamController', function () {
     fragmentTracker = new FragmentTracker(hls);
     subtitleStreamController = new SubtitleStreamController(hls, fragmentTracker);
 
-    subtitleStreamController.onMediaAttached(mediaMock);
+    subtitleStreamController.onMediaAttached({ media: mediaMock });
   });
 
   afterEach(function () {
-    subtitleStreamController.onMediaDetaching(mediaMock);
+    subtitleStreamController.onMediaDetaching({ media: mediaMock });
   });
 
   describe('onSubtitleTracksUpdate', function () {
@@ -124,6 +126,14 @@ describe('SubtitleStreamController', function () {
         details: { fragments: [] }
       });
       expect(subtitleStreamController.lastAVStart).to.equal(0);
+    });
+  });
+
+  describe('onMediaSeeking', function () {
+    it('nulls fragPrevious', function () {
+      subtitleStreamController.fragPrevious = {};
+      subtitleStreamController.onMediaSeeking();
+      expect(subtitleStreamController.fragPrevious).to.not.exist;
     });
   });
 });
