@@ -87,9 +87,10 @@ interface MediaKeysListItem {
  */
 class EMEController extends EventHandler {
   private _widevineLicenseUrl: string;
-  private _licenseXhrSetup: (xhr: XMLHttpRequest, url: string) => void;
+  private _licenseXhrSetup: (xhr: XMLHttpRequest, url: string) => Promise<XMLHttpRequest>;
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: (keySystem: KeySystems, supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>
+  private _getWidevineInitializationData: () => { initDataType: string, initData: ArrayBuffer};
 
   private _mediaKeysList: MediaKeysListItem[] = []
   private _media: HTMLMediaElement | null = null;
@@ -111,6 +112,7 @@ class EMEController extends EventHandler {
     this._licenseXhrSetup = hls.config.licenseXhrSetup;
     this._emeEnabled = hls.config.emeEnabled;
     this._requestMediaKeySystemAccess = hls.config.requestMediaKeySystemAccessFunc;
+    this._getWidevineInitializationData = hls.config.getWidevineInitializationDataFunc;
   }
 
   /**
@@ -159,6 +161,14 @@ class EMEController extends EventHandler {
     }
 
     return this._requestMediaKeySystemAccess;
+  }
+
+  get getWidevineInitializationData () {
+    if (!this._getWidevineInitializationData) {
+      throw new Error('No getWidevineInitializationData function configured');
+    }
+
+    return this._getWidevineInitializationData;
   }
 
   /**
@@ -218,6 +228,10 @@ class EMEController extends EventHandler {
     keySession.addEventListener('message', (event: MediaKeyMessageEvent) => {
       this._onKeySessionMessage(keySession, event.message);
     }, false);
+
+    const initDataInfo = this.getWidevineInitializationData();
+
+    keySession.generateRequest(initDataInfo.initDataType, initDataInfo.initData);
   }
 
   /**
@@ -328,37 +342,30 @@ class EMEController extends EventHandler {
    * @param {string} url License server URL
    * @param {ArrayBuffer} keyMessage Message data issued by key-system
    * @param {function} callback Called when XHR has succeeded
-   * @returns {XMLHttpRequest} Unsent (but opened state) XHR object
+   * @returns {Promise<XMLHttpRequest>} Unsent (but opened state) XHR object
    * @throws if XMLHttpRequest construction failed
    */
-  private _createLicenseXhr (url: string, keyMessage: ArrayBuffer, callback: (data: ArrayBuffer) => void): XMLHttpRequest {
-    const xhr = new XMLHttpRequest();
+  private _createLicenseXhr (url: string, keyMessage: ArrayBuffer, callback: (data: ArrayBuffer) => void): Promise<XMLHttpRequest> {
+    let xhr = new XMLHttpRequest();
     const licenseXhrSetup = this._licenseXhrSetup;
 
-    try {
-      if (licenseXhrSetup) {
-        try {
-          licenseXhrSetup(xhr, url);
-        } catch (e) {
-          // let's try to open before running setup
-          xhr.open('POST', url, true);
-          licenseXhrSetup(xhr, url);
-        }
-      }
-      // if licenseXhrSetup did not yet call open, let's do it now
-      if (!xhr.readyState) {
-        xhr.open('POST', url, true);
-      }
-    } catch (e) {
-      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      throw new Error(`issue setting up KeySystem license XHR ${e}`);
-    }
+    return licenseXhrSetup(xhr, url).then(xhrRepsonse => {
+      xhr = xhrRepsonse;
 
-    // Because we set responseType to ArrayBuffer here, callback is typed as handling only array buffers
-    xhr.responseType = 'arraybuffer';
-    xhr.onreadystatechange =
-        this._onLicenseRequestReadyStageChange.bind(this, xhr, url, keyMessage, callback);
-    return xhr;
+      xhr.responseType = 'arraybuffer';
+
+      xhr.onreadystatechange = this._onLicenseRequestReadyStageChange.bind(this, xhr, url, keyMessage, callback);
+
+      return Promise.resolve(xhr);
+    }).catch(() => {
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+        fatal: true
+      });
+
+      throw new Error('license request failed');
+    });
   }
 
   /**
@@ -457,20 +464,23 @@ class EMEController extends EventHandler {
       return;
     }
 
-    try {
-      const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
-      const xhr = this._createLicenseXhr(url, keyMessage, callback);
-      logger.log(`Sending license request to URL: ${url}`);
-      const challenge = this._generateLicenseRequestChallenge(keysListItem, keyMessage);
-      xhr.send(challenge);
-    } catch (e) {
-      logger.error(`Failure requesting DRM license: ${e}`);
-      this.hls.trigger(Event.ERROR, {
-        type: ErrorTypes.KEY_SYSTEM_ERROR,
-        details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
-        fatal: true
+    const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
+
+    this._createLicenseXhr(url, keyMessage, callback)
+      .then(xhr => {
+        logger.log('Sending license request');
+
+        xhr.send(this._generateLicenseRequestChallenge(keysListItem, keyMessage));
+      })
+      .catch(() => {
+        this.hls.trigger(Event.ERROR, {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+          fatal: true
+        });
+
+        throw new Error('license request failed');
       });
-    }
   }
 
   onMediaAttached (data: { media: HTMLMediaElement; }) {
