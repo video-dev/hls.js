@@ -35,6 +35,7 @@ export class SubtitleStreamController extends BaseStreamController {
     this.tracksBuffered = [];
     this.currentTrackId = -1;
     this.decrypter = new Decrypter(hls, hls.config);
+    // lastAVStart stores the time in seconds for the start time of a level load
     this.lastAVStart = 0;
     this._onMediaSeeking = this.onMediaSeeking.bind(this);
   }
