@@ -352,6 +352,10 @@ class EMEController extends EventHandler {
     return licenseXhrSetup(xhr, url).then(xhrRepsonse => {
       xhr = xhrRepsonse;
 
+      if (!xhr.readyState) {
+        xhr.open('POST', url, true);
+      }
+
       xhr.responseType = 'arraybuffer';
 
       xhr.onreadystatechange = this._onLicenseRequestReadyStageChange.bind(this, xhr, url, keyMessage, callback);
