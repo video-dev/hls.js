@@ -134,7 +134,7 @@ Invoke the following static method: `Hls.isSupported()` to check whether your br
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     if (Hls.isSupported()) {
- 	    console.log("hello hls.js!");
+      console.log("hello hls.js!");
     }
   </script>
 ```
@@ -159,7 +159,7 @@ Let's
       hls.attachMedia(video);
       // MEDIA_ATTACHED event is fired by hls object once MediaSource is ready
       hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-		    console.log("video and hls.js are now bound together !");
+        console.log("video and hls.js are now bound together !");
       });
     }
   </script>
@@ -227,7 +227,7 @@ See sample code below to listen to errors:
     var errorFatal = data.fatal;
 
     switch(data.details) {
-      case hls.ErrorDetails.FRAG_LOAD_ERROR:
+      case Hls.ErrorDetails.FRAG_LOAD_ERROR:
         // ....
         break;
       default:
@@ -238,7 +238,7 @@ See sample code below to listen to errors:
 
 #### Fatal Error Recovery
 
-Hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
+hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
 
 ##### `hls.startLoad()`
 
@@ -294,7 +294,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
 ```js
    var config = {
       autoStartLoad: true,
-  	  startPosition : -1,
+      startPosition: -1,
       capLevelToPlayerSize: false,
       debug: false,
       defaultAudioCodec: undefined,
@@ -306,7 +306,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       lowBufferWatchdogPeriod: 0.5,
       highBufferWatchdogPeriod: 3,
       nudgeOffset: 0.1,
-      nudgeMaxRetry : 3,
+      nudgeMaxRetry: 3,
       maxFragLookUpTolerance: 0.2,
       liveSyncDurationCount: 3,
       liveMaxLatencyDurationCount: 10,
@@ -315,7 +315,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       manifestLoadingTimeOut: 10000,
       manifestLoadingMaxRetry: 1,
       manifestLoadingRetryDelay: 500,
-      manifestLoadingMaxRetryTimeout : 64000,
+      manifestLoadingMaxRetryTimeout: 64000,
       startLevel: undefined,
       levelLoadingTimeOut: 10000,
       levelLoadingMaxRetry: 4,
@@ -337,7 +337,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       enableWebVTT: true,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
-      maxAudioFramesDrift : 1,
+      maxAudioFramesDrift: 1,
       forceKeyFrameOnDiscontinuity: true,
       abrEwmaFastLive: 5.0,
       abrEwmaSlowLive: 9.0,
@@ -743,7 +743,7 @@ class pLoader extends Hls.DefaultConfig.loader {
 }
 
   var hls = new Hls({
-    pLoader : pLoader,
+    pLoader: pLoader,
   });
 
 ```
@@ -1115,7 +1115,7 @@ get : position of live sync point (ie edge of live position minus safety delay d
 
 ## Runtime Events
 
-Hls.js fires a bunch of events, that could be registered and unregistered as below:
+hls.js fires a bunch of events, that could be registered and unregistered as below:
 
 ```js
 function onLevelLoaded (event, data) {
