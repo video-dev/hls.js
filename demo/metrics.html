@@ -61,8 +61,11 @@ function updateMetrics() {
   var hlsLink = document.URL.substr(0,document.URL.lastIndexOf("/")+1) + 'index.html?src=' + encodeURIComponent(events.url);
   var playlistLink = document.createElement("a");
   playlistLink.setAttribute("href", events.url);
+  playlistLink.textContent = events.url;
+  
   var replayLink = document.createElement("a");
   replayLink.setAttribute("href", hlsLink);
+  replayLink.textContent = hlsLink;
   
   var fragment = document.createDocumentFragment();
   fragment.appendChild(document.createTextNode('playlist: '));
