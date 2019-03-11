@@ -1,6 +1,7 @@
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import Hls from '../../../src/hls';
 import sinon from 'sinon';
+const assert = require('assert');
 
 describe('SubtitleTrackController', function () {
   let subtitleTrackController;
@@ -29,36 +30,36 @@ describe('SubtitleTrackController', function () {
 
   describe('constructor', function () {
     it('defaults stopped to true', function () {
-      expect(subtitleTrackController.stopped).to.be.true;
+      assert.strictEqual(subtitleTrackController.stopped, true);
     });
   });
 
   describe('onTextTrackChanged', function () {
     it('should set subtitleTrack to -1 if disabled', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+      assert.strictEqual(subtitleTrackController.subtitleTrack, -1);
 
       videoElement.textTracks[0].mode = 'disabled';
       subtitleTrackController._onTextTracksChanged();
 
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+      assert.strictEqual(subtitleTrackController.subtitleTrack, -1);
     });
 
     it('should set subtitleTrack to 0 if hidden', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+      assert.strictEqual(subtitleTrackController.subtitleTrack, -1);
 
       videoElement.textTracks[0].mode = 'hidden';
       subtitleTrackController._onTextTracksChanged();
 
-      expect(subtitleTrackController.subtitleTrack).to.equal(0);
+      assert.strictEqual(subtitleTrackController.subtitleTrack, 0);
     });
 
     it('should set subtitleTrack to 0 if showing', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+      assert.strictEqual(subtitleTrackController.subtitleTrack, -1);
 
       videoElement.textTracks[0].mode = 'showing';
       subtitleTrackController._onTextTracksChanged();
 
-      expect(subtitleTrackController.subtitleTrack).to.equal(0);
+      assert.strictEqual(subtitleTrackController.subtitleTrack, 0);
     });
   });
 
@@ -69,7 +70,7 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleDisplay = true;
       subtitleTrackController.subtitleTrack = 0;
 
-      expect(videoElement.textTracks[0].mode).to.equal('showing');
+      assert.strictEqual(videoElement.textTracks[0].mode, 'showing');
     });
 
     it('should set active text track mode to hidden', function () {
@@ -77,7 +78,7 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleDisplay = false;
       subtitleTrackController.subtitleTrack = 0;
 
-      expect(videoElement.textTracks[0].mode).to.equal('hidden');
+      assert.strictEqual(videoElement.textTracks[0].mode, 'hidden');
     });
 
     it('should disable previous track', function () {
@@ -86,7 +87,7 @@ describe('SubtitleTrackController', function () {
       // Change active track and trigger setSubtitleTrackInternal
       subtitleTrackController.subtitleTrack = 1;
 
-      expect(videoElement.textTracks[0].mode).to.equal('disabled');
+      assert.strictEqual(videoElement.textTracks[0].mode, 'disabled');
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH', function () {
@@ -94,8 +95,8 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
 
-      expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: 1 });
+      assert.strictEqual(triggerSpy.callCount, 2);
+      assert.deepEqual(triggerSpy.firstCall.args[1], { id: 1 });
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track has no details', function () {
@@ -103,8 +104,8 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
 
-      expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', { url: 'bar', id: 1 });
+      assert.strictEqual(triggerSpy.callCount, 2);
+      assert.deepEqual(triggerSpy.secondCall.args[1], { url: 'bar', id: 1 });
     });
 
     it('should not trigger SUBTITLE_TRACK_LOADING if the track has details and is not live', function () {
@@ -112,8 +113,8 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.trackId = 1;
       subtitleTrackController.subtitleTrack = 0;
 
-      expect(triggerSpy).to.have.been.calledOnce;
-      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: 0 });
+      assert.strictEqual(triggerSpy.callCount, 1);
+      assert.deepEqual(triggerSpy.firstCall.args[1], { id: 0 });
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
@@ -121,7 +122,7 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
 
-      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: -1 });
+      assert.deepEqual(triggerSpy.firstCall.args[1], { id: -1 });
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {
@@ -129,8 +130,8 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 2;
 
-      expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', { url: 'foo', id: 2 });
+      assert.strictEqual(triggerSpy.callCount, 2);
+      assert.deepEqual(triggerSpy.secondCall.args[1], { url: 'foo', id: 2 });
     });
 
     it('should do nothing if called with out of bound indices', function () {
@@ -138,7 +139,7 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
 
-      expect(clearReloadSpy).to.have.not.been.called;
+      assert.strictEqual(clearReloadSpy.callCount, 0);
     });
 
     it('should do nothing if called with a non-number', function () {
@@ -159,7 +160,7 @@ describe('SubtitleTrackController', function () {
         });
         subtitleTrackController._toggleTrackModes(-1);
         [].slice.call(videoElement.textTracks).forEach(t => {
-          expect(t.mode).to.equal('disabled');
+          assert.strictEqual(t.mode, 'disabled');
         });
       });
 
@@ -177,40 +178,40 @@ describe('SubtitleTrackController', function () {
 
         let mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
         subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
-        expect(subtitleTrackController.timer).to.not.exist;
-        expect(clearReloadSpy).to.have.been.calledOnce;
+        assert.strictEqual(!!subtitleTrackController.timer, false);
+        assert.strictEqual(clearReloadSpy.callCount, 1);
 
         mockLoadedEvent.id = 0;
         subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
-        expect(subtitleTrackController.timer).to.not.exist;
-        expect(clearReloadSpy).to.have.been.calledTwice;
+        assert.strictEqual(!!subtitleTrackController.timer, false);
+        assert.strictEqual(clearReloadSpy.callCount, 2);
 
         mockLoadedEvent.id = 1;
         subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
         tracks[1] = null;
-        expect(subtitleTrackController.timer).to.not.exist;
-        expect(clearReloadSpy).to.have.been.calledThrice;
+        assert.strictEqual(!!subtitleTrackController.timer, false);
+        assert.strictEqual(clearReloadSpy.callCount, 3);
       });
 
       it('does not set the reload timer if the stopped flag is set', function () {
         subtitleTrackController.stopped = true;
         subtitleTrackController.trackId = 1;
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
-        expect(subtitleTrackController.timer).to.not.exist;
+        assert.strictEqual(subtitleTrackController.timer, undefined);
       });
 
       it('sets the live reload timer if the level is live', function () {
         subtitleTrackController.stopped = false;
         subtitleTrackController.trackId = 1;
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
-        expect(subtitleTrackController.timer).to.exist;
+        assert.strictEqual(!!subtitleTrackController.timer, true);
       });
 
       it('stops the live reload timer if the level is not live', function () {
         subtitleTrackController.trackId = 1;
         subtitleTrackController.timer = setTimeout(() => {}, 0);
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: {} });
-        expect(subtitleTrackController.timer).to.not.exist;
+        assert.strictEqual(subtitleTrackController.timer, null);
       });
     });
 
@@ -218,8 +219,8 @@ describe('SubtitleTrackController', function () {
       it('stops loading', function () {
         const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
         subtitleTrackController.stopLoad();
-        expect(subtitleTrackController.stopped).to.be.true;
-        expect(clearReloadSpy).to.have.been.calledOnce;
+        assert.strictEqual(subtitleTrackController.stopped, true);
+        assert.strictEqual(clearReloadSpy.callCount, 1);
       });
     });
 
@@ -227,8 +228,8 @@ describe('SubtitleTrackController', function () {
       it('stops loading', function () {
         const loadCurrentTrackSpy = sandbox.spy(subtitleTrackController, '_loadCurrentTrack');
         subtitleTrackController.startLoad();
-        expect(subtitleTrackController.stopped).to.be.false;
-        expect(loadCurrentTrackSpy).to.have.been.calledOnce;
+        assert.strictEqual(subtitleTrackController.stopped, false);
+        assert.strictEqual(loadCurrentTrackSpy.callCount, 1);
       });
     });
   });
