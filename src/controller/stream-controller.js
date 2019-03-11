@@ -49,17 +49,6 @@ class StreamController extends BaseStreamController {
     this.gapController = null;
   }
 
-  onHandlerDestroying () {
-    this.stopLoad();
-    super.onHandlerDestroying();
-  }
-
-  onHandlerDestroyed () {
-    this.state = State.STOPPED;
-    this.fragmentTracker = null;
-    super.onHandlerDestroyed();
-  }
-
   startLoad (startPosition) {
     if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
@@ -95,23 +84,8 @@ class StreamController extends BaseStreamController {
   }
 
   stopLoad () {
-    let frag = this.fragCurrent;
-    if (frag) {
-      if (frag.loader) {
-        frag.loader.abort();
-      }
-
-      this.fragmentTracker.removeFragment(frag);
-      this.fragCurrent = null;
-    }
-    this.fragPrevious = null;
-    if (this.demuxer) {
-      this.demuxer.destroy();
-      this.demuxer = null;
-    }
-    this.clearInterval();
-    this.state = State.STOPPED;
     this.forceStartLoad = false;
+    super.stopLoad();
   }
 
   doTick () {

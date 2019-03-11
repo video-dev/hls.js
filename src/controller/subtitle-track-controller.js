@@ -1,59 +1,24 @@
-/*
- * subtitle track controller
-*/
-
 import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
-
-function filterSubtitleTracks (textTrackList) {
-  let tracks = [];
-  for (let i = 0; i < textTrackList.length; i++) {
-    if (textTrackList[i].kind === 'subtitles') {
-      tracks.push(textTrackList[i]);
-    }
-  }
-  return tracks;
-}
+import { computeReloadInterval } from './level-helper';
 
 class SubtitleTrackController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
-      Event.MANIFEST_LOADING,
       Event.MANIFEST_LOADED,
       Event.SUBTITLE_TRACK_LOADED);
     this.tracks = [];
     this.trackId = -1;
     this.media = null;
+    this.stopped = true;
 
     /**
      * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
      */
     this.subtitleDisplay = true;
-  }
-
-  _onTextTracksChanged () {
-    // Media is undefined when switching streams via loadSource()
-    if (!this.media) {
-      return;
-    }
-
-    let trackId = -1;
-    let tracks = filterSubtitleTracks(this.media.textTracks);
-    for (let id = 0; id < tracks.length; id++) {
-      if (tracks[id].mode === 'hidden') {
-        // Do not break in case there is a following track with showing.
-        trackId = id;
-      } else if (tracks[id].mode === 'showing') {
-        trackId = id;
-        break;
-      }
-    }
-
-    // Setting current subtitleTrack will invoke code.
-    this.subtitleTrack = trackId;
   }
 
   destroy () {
@@ -98,17 +63,10 @@ class SubtitleTrackController extends EventHandler {
     this.media = null;
   }
 
-  // Reset subtitle tracks on manifest loading
-  onManifestLoading () {
-    this.tracks = [];
-    this.trackId = -1;
-  }
-
   // Fired whenever a new manifest is loaded.
   onManifestLoaded (data) {
     let tracks = data.subtitles || [];
     this.tracks = tracks;
-    this.trackId = -1;
     this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, { subtitleTracks: tracks });
 
     // loop through available subtitle tracks and autoselect default if needed
@@ -128,40 +86,35 @@ class SubtitleTrackController extends EventHandler {
     });
   }
 
-  // Trigger subtitle track playlist reload.
-  onTick () {
-    const trackId = this.trackId;
-    const subtitleTrack = this.tracks[trackId];
-    if (!subtitleTrack) {
+  onSubtitleTrackLoaded (data) {
+    const { id, details } = data;
+    const { trackId, tracks } = this;
+    const currentTrack = tracks[trackId];
+    if (id >= tracks.length || id !== trackId || !currentTrack || this.stopped) {
+      this._clearReloadTimer();
       return;
     }
 
-    const details = subtitleTrack.details;
-    // check if we need to load playlist for this subtitle Track
-    if (!details || details.live) {
-      // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`(re)loading playlist for subtitle track ${trackId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
+    logger.log(`subtitle track ${id} loaded`);
+    if (details.live) {
+      const reloadInterval = computeReloadInterval(currentTrack.details, details, data.stats.trequest);
+      logger.log(`Reloading live subtitle playlist in ${reloadInterval}ms`);
+      this.timer = setTimeout(() => {
+        this._loadCurrentTrack();
+      }, reloadInterval);
+    } else {
+      this._clearReloadTimer();
     }
   }
 
-  onSubtitleTrackLoaded (data) {
-    if (data.id < this.tracks.length) {
-      logger.log(`subtitle track ${data.id} loaded`);
-      this.tracks[data.id].details = data.details;
-      // check if current playlist is a live playlist
-      if (data.details.live && !this.timer) {
-        // if live playlist we will have to reload it periodically
-        // set reload period to playlist target duration
-        this.timer = setInterval(() => {
-          this.onTick();
-        }, 1000 * data.details.targetduration, this);
-      }
-      if (!data.details.live && this.timer) {
-        // playlist is not live and timer is armed : stopping it
-        this._stopTimer();
-      }
-    }
+  startLoad () {
+    this.stopped = false;
+    this._loadCurrentTrack();
+  }
+
+  stopLoad () {
+    this.stopped = true;
+    this._clearReloadTimer();
   }
 
   /** get alternate subtitle tracks list from playlist **/
@@ -178,44 +131,25 @@ class SubtitleTrackController extends EventHandler {
   set subtitleTrack (subtitleTrackId) {
     if (this.trackId !== subtitleTrackId) {
       this._toggleTrackModes(subtitleTrackId);
-      this.setSubtitleTrackInternal(subtitleTrackId);
+      this._setSubtitleTrackInternal(subtitleTrackId);
     }
   }
 
-  /**
-   * This method is responsible for validating the subtitle index and periodically reloading if live.
-   * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
-   * @param newId - The id of the subtitle track to activate.
-   */
-  setSubtitleTrackInternal (newId) {
-    const { hls, tracks } = this;
-    if (typeof newId !== 'number' || newId < -1 || newId >= tracks.length) {
-      return;
-    }
-
-    this._stopTimer();
-    this.trackId = newId;
-    logger.log(`switching to subtitle track ${newId}`);
-    hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
-    if (newId === -1) {
-      return;
-    }
-
-    // check if we need to load playlist for this subtitle Track
-    const subtitleTrack = tracks[newId];
-    const details = subtitleTrack.details;
-    if (!details || details.live) {
-      // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`(re)loading playlist for subtitle track ${newId}`);
-      hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
-    }
-  }
-
-  _stopTimer () {
+  _clearReloadTimer () {
     if (this.timer) {
-      clearInterval(this.timer);
+      clearTimeout(this.timer);
       this.timer = null;
     }
+  }
+
+  _loadCurrentTrack () {
+    const { trackId, tracks, hls } = this;
+    const currentTrack = tracks[trackId];
+    if (trackId < 0 || !currentTrack || (currentTrack.details && !currentTrack.details.live)) {
+      return;
+    }
+    logger.log(`Loading subtitle track ${trackId}`);
+    hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
   }
 
   /**
@@ -248,6 +182,57 @@ class SubtitleTrackController extends EventHandler {
       nextTrack.mode = subtitleDisplay ? 'showing' : 'hidden';
     }
   }
+
+  /**
+     * This method is responsible for validating the subtitle index and periodically reloading if live.
+     * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
+     * @param newId - The id of the subtitle track to activate.
+     */
+  _setSubtitleTrackInternal (newId) {
+    const { hls, tracks } = this;
+    if (!Number.isFinite(newId) || newId < -1 || newId >= tracks.length) {
+      return;
+    }
+
+    this.trackId = newId;
+    logger.log(`Switching to subtitle track ${newId}`);
+    hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
+    this._loadCurrentTrack();
+  }
+
+  _onTextTracksChanged () {
+    // Media is undefined when switching streams via loadSource()
+    if (!this.media) {
+      return;
+    }
+
+    let trackId = -1;
+    let tracks = filterSubtitleTracks(this.media.textTracks);
+    for (let id = 0; id < tracks.length; id++) {
+      if (tracks[id].mode === 'hidden') {
+        // Do not break in case there is a following track with showing.
+        trackId = id;
+      } else if (tracks[id].mode === 'showing') {
+        trackId = id;
+        break;
+      }
+    }
+
+    // Setting current subtitleTrack will invoke code.
+    this.subtitleTrack = trackId;
+  }
+}
+
+function filterSubtitleTracks (textTrackList) {
+  let tracks = [];
+  for (let i = 0; i < textTrackList.length; i++) {
+    const track = textTrackList[i];
+    // Edge adds a track without a label; we don't want to use it
+    if (track.kind === 'subtitles' && track.label) {
+      tracks.push(textTrackList[i]);
+    }
+  }
+  return tracks;
 }
 
 export default SubtitleTrackController;
