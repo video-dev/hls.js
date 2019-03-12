@@ -148,6 +148,7 @@ class TimelineController extends EventHandler {
   onMediaAttaching (data) {
     this.media = data.media;
     this._cleanTracks();
+    this.createTextTracks();
   }
 
   onMediaDetaching () {
@@ -190,40 +191,55 @@ class TimelineController extends EventHandler {
     this.initPTS = [];
     this.cueRanges = [];
 
-    if (this.config.enableWebVTT) {
-      this.tracks = data.subtitles || [];
-      const inUseTracks = this.media ? this.media.textTracks : [];
-
-      this.tracks.forEach((track, index) => {
-        let textTrack;
-        if (index < inUseTracks.length) {
-          let inUseTrack = null;
-
-          for (let i = 0; i < inUseTracks.length; i++) {
-            if (canReuseVttTextTrack(inUseTracks[i], track)) {
-              inUseTrack = inUseTracks[i];
-              break;
-            }
-          }
-
-          // Reuse tracks with the same label, but do not reuse 608/708 tracks
-          if (inUseTrack) {
-            textTrack = inUseTrack;
-          }
-        }
-        if (!textTrack) {
-          textTrack = this.createTextTrack('subtitles', track.name, track.lang);
-        }
-
-        if (track.default) {
-          textTrack.mode = this.hls.subtitleDisplay ? 'showing' : 'hidden';
-        } else {
-          textTrack.mode = 'disabled';
-        }
-
-        this.textTracks.push(textTrack);
-      });
+    if (!this.config.enableWebVTT) {
+      return;
     }
+    this.tracks = data.subtitles || [];
+
+    if (this.media) {
+      this.createTextTracks();
+    }
+  }
+
+  createTextTracks () {
+    if (this.textTracks.length > 0) {
+      return;
+    }
+    const inUseTracks = this.media ? this.media.textTracks : [];
+
+    this.tracks.forEach((track, index) => {
+      let textTrack;
+      if (index < inUseTracks.length) {
+        let inUseTrack = null;
+
+        for (let i = 0; i < inUseTracks.length; i++) {
+          if (canReuseVttTextTrack(inUseTracks[i], track)) {
+            inUseTrack = inUseTracks[i];
+            break;
+          }
+        }
+
+        // Reuse tracks with the same label, but do not reuse 608/708 tracks
+        if (inUseTrack) {
+          textTrack = inUseTrack;
+        }
+      }
+      if (!textTrack) {
+        textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+      }
+
+      if (!textTrack) {
+        return;
+      }
+
+      if (track.default) {
+        textTrack.mode = this.hls.subtitleDisplay ? 'showing' : 'hidden';
+      } else {
+        textTrack.mode = 'disabled';
+      }
+
+      this.textTracks.push(textTrack);
+    });
   }
 
   onLevelSwitching () {
