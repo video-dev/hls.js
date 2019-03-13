@@ -6,7 +6,7 @@ set -e
 currentCommit=$(git rev-parse HEAD)
 masterLatestCommit=$(git rev-parse master)
 
-id = currentCommit
+id=$currentCommit
 root="./netlify"
 version=$(jq -r -e '.version' "./package.json")
 idShort="$(echo "$id" | cut -c 1-8) ($version)"
