@@ -3,7 +3,10 @@ set -e
 
 # GITHUB_TOKEN and NETLIFY_ACCESS_TOKEN set in travis
 
-id=$(git rev-parse HEAD)
+currentCommit=$(git rev-parse HEAD)
+masterLatestCommit=$(git rev-parse master)
+
+id = currentCommit
 root="./netlify"
 version=$(jq -r -e '.version' "./package.json")
 idShort="$(echo "$id" | cut -c 1-8) ($version)"
@@ -24,7 +27,12 @@ commitSiteId=$(curl --fail -d "{\"name\":\"$commitSiteName\"}" -H "Content-Type:
 echo "Created site '$commitSiteId'."
 
 deploy "$commitSiteId"
-deploy "$latestSiteId"
+
+if [ $currentCommit = $masterLatestCommit ]; then
+  echo "On latest master commit."
+  deploy "$latestSiteId"
+fi
+
 if [[ $version != *"-"* ]]; then
   echo "Detected new version: $version"
   deploy "$stableSiteId"
