@@ -25,8 +25,8 @@ export class FragmentTracker extends EventHandler {
   }
 
   destroy () {
-    this.fragments = null;
-    this.timeRanges = null;
+    this.fragments = Object.create(null);
+    this.timeRanges = Object.create(null);
     this.config = null;
     EventHandler.prototype.destroy.call(this);
     super.destroy();
