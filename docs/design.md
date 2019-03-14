@@ -14,7 +14,7 @@ design idea is pretty simple :
     - definition of default Hls Config. entry point for conditional compilation (altaudio/subtitle)
   - [src/errors.js][]
     - definition of Hls.ErrorTypes and Hls.ErrorDetails
-  - [src/event-handler.js][]
+  - [src/event-handler.ts][]
     - helper class simplifying Hls event handling, event error catching
   - [src/events.js][]
     - definition of Hls.Events
