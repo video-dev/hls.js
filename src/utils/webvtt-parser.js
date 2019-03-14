@@ -72,6 +72,7 @@ const WebVTTParser = {
     let cues = [];
     let parsingError;
     let inHeader = true;
+    let timestampMap = false;
     // let VTTCue = VTTCue || window.TextTrackCue;
 
     // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
@@ -97,8 +98,10 @@ const WebVTTParser = {
         cueOffset = presentationTime - vttCCs.presentationOffset;
       }
 
-      cue.startTime += cueOffset - localTime;
-      cue.endTime += cueOffset - localTime;
+      if (timestampMap) {
+        cue.startTime += cueOffset - localTime;
+        cue.endTime += cueOffset - localTime;
+      }
 
       // Create a unique hash id for a cue based on start/end times and text.
       // This helps timeline-controller to avoid showing repeated captions.
@@ -130,6 +133,7 @@ const WebVTTParser = {
         if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
           // Once found, no more are allowed anyway, so stop searching.
           inHeader = false;
+          timestampMap = true;
           // Extract LOCAL and MPEGTS.
           line.substr(16).split(',').forEach(timestamp => {
             if (startsWith(timestamp, 'LOCAL:')) {
