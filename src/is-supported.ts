@@ -2,7 +2,7 @@ import { getMediaSource } from './utils/mediasource-helper';
 
 export function isSupported () {
   const mediaSource = getMediaSource();
-  const sourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+  const sourceBuffer = SourceBuffer || (window as any).WebKitSourceBuffer;
   const isTypeSupported = mediaSource &&
     typeof mediaSource.isTypeSupported === 'function' &&
     mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');

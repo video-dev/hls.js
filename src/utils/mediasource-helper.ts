@@ -2,8 +2,6 @@
  * MediaSource helper
  */
 
-export function getMediaSource () {
-  if (typeof window !== 'undefined') {
-    return window.MediaSource || window.WebKitMediaSource;
-  }
+export function getMediaSource (): typeof MediaSource {
+  return MediaSource || (window as any).WebKitMediaSource;
 }
