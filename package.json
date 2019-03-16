@@ -85,6 +85,6 @@
     "webpack-cli": "^3.1.2",
     "webpack-dev-server": "^3.1.4",
     "webpack-merge": "^4.2.1",
-    "webworkify-webpack": "johnBartos/webworkify-webpack#refs/heads/master"
+    "webworkify-webpack": "^2.1.5"
   }
 }
