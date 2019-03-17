@@ -72,10 +72,10 @@ export class BufferHelper {
     pos: number,
     maxHoleDuration: number
   ): {
-    len: number;
-    start: number;
-    end: number;
-    nextStart?: number;
+    len: number,
+    start: number,
+    end: number,
+    nextStart?: number,
   } {
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
     buffered.sort(function (a, b) {
