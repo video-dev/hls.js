@@ -1,6 +1,6 @@
 import { getMediaSource } from './utils/mediasource-helper';
 
-export function isSupported () {
+export function isSupported (): boolean {
   const mediaSource = getMediaSource();
   const sourceBuffer = SourceBuffer || (window as any).WebKitSourceBuffer;
   const isTypeSupported = mediaSource &&
