@@ -8,7 +8,7 @@
  * Also @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/buffered
 */
 
-interface BufferTimeRange {
+type BufferTimeRange = {
   start: number
   end: number
 }
