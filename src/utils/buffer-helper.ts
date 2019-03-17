@@ -13,14 +13,18 @@ type BufferTimeRange = {
   end: number
 }
 
+type Bufferable = {
+  buffered: TimeRanges
+}
+
 export class BufferHelper {
   /**
    * Return true if `media`'s buffered include `position`
-   * @param {HTMLMediaElement|SourceBuffer} media
+   * @param {Bufferable} media
    * @param {number} position
    * @returns {boolean}
    */
-  static isBuffered (media: HTMLMediaElement | SourceBuffer, position: number): boolean {
+  static isBuffered (media: Bufferable, position: number): boolean {
     try {
       if (media) {
         let buffered = media.buffered;
@@ -39,7 +43,7 @@ export class BufferHelper {
   }
 
   static bufferInfo (
-    media: HTMLMediaElement | SourceBuffer,
+    media: Bufferable,
     pos: number,
     maxHoleDuration: number
   ): {
