@@ -25,130 +25,130 @@ declare const __USE_ALT_AUDIO__: boolean;
 declare const __USE_EME_DRM__: boolean;
 declare const __USE_SUBTITLES__: boolean;
 
-interface ABRControllerConfig {
-  abrEwmaFastLive: number
-  abrEwmaSlowLive: number
-  abrEwmaFastVoD: number
-  abrEwmaSlowVoD: number
-  abrEwmaDefaultEstimate: number
-  abrBandWidthFactor: number
-  abrBandWidthUpFactor: number
-  abrMaxWithRealBitrate: boolean
-  maxStarvationDelay: number
-  maxLoadingDelay: number
+type ABRControllerConfig = {
+  abrEwmaFastLive: number,
+  abrEwmaSlowLive: number,
+  abrEwmaFastVoD: number,
+  abrEwmaSlowVoD: number,
+  abrEwmaDefaultEstimate: number,
+  abrBandWidthFactor: number,
+  abrBandWidthUpFactor: number,
+  abrMaxWithRealBitrate: boolean,
+  maxStarvationDelay: number,
+  maxLoadingDelay: number,
 }
 
-interface BufferControllerConfig {
-  appendErrorMaxRetry: number
-  liveDurationInfinity: boolean
-  liveBackBufferLength: number
+type BufferControllerConfig = {
+  appendErrorMaxRetry: number,
+  liveDurationInfinity: boolean,
+  liveBackBufferLength: number,
 }
 
-interface CapLevelControllerConfig {
+type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean
 }
 
-interface EMEControllerConfig {
-  licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void
-  emeEnabled: boolean
-  widevineLicenseUrl?: string
-  requestMediaKeySystemAccessFunc: Function // TODO(typescript-mediakeys-helper) Type once file is done
+type EMEControllerConfig = {
+  licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
+  emeEnabled: boolean,
+  widevineLicenseUrl?: string,
+  requestMediaKeySystemAccessFunc: Function, // TODO(typescript-mediakeys-helper) Type once file is done
 }
 
-interface FragmentLoaderConfig {
-  fLoader: any // TODO(typescript-loader): Once Loader is typed fill this in
+type FragmentLoaderConfig = {
+  fLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
 
-  fragLoadingTimeOut: number
-  fragLoadingMaxRetry: number
-  fragLoadingRetryDelay: number
-  fragLoadingMaxRetryTimeout: number
+  fragLoadingTimeOut: number,
+  fragLoadingMaxRetry: number,
+  fragLoadingRetryDelay: number,
+  fragLoadingMaxRetryTimeout: number,
 }
 
-interface FPSControllerConfig {
-  capLevelOnFPSDrop: boolean
-  fpsDroppedMonitoringPeriod: number
-  fpsDroppedMonitoringThreshold: number
+type FPSControllerConfig = {
+  capLevelOnFPSDrop: boolean,
+  fpsDroppedMonitoringPeriod: number,
+  fpsDroppedMonitoringThreshold: number,
 }
 
-interface LevelControllerConfig {
+type LevelControllerConfig = {
   startLevel?: number
 }
 
-interface MP4RemuxerConfig {
-  stretchShortVideoTrack: boolean
-  maxAudioFramesDrift: number
+type MP4RemuxerConfig = {
+  stretchShortVideoTrack: boolean,
+  maxAudioFramesDrift: number,
 }
 
-interface PlaylistLoaderConfig {
-  pLoader: any // TODO(typescript-loader): Once Loader is typed fill this in
+type PlaylistLoaderConfig = {
+  pLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
 
-  manifestLoadingTimeOut: number
-  manifestLoadingMaxRetry: number
-  manifestLoadingRetryDelay: number
-  manifestLoadingMaxRetryTimeout: number
+  manifestLoadingTimeOut: number,
+  manifestLoadingMaxRetry: number,
+  manifestLoadingRetryDelay: number,
+  manifestLoadingMaxRetryTimeout: number,
 
-  levelLoadingTimeOut: number
-  levelLoadingMaxRetry: number
-  levelLoadingRetryDelay: number
-  levelLoadingMaxRetryTimeout: number
+  levelLoadingTimeOut: number,
+  levelLoadingMaxRetry: number,
+  levelLoadingRetryDelay: number,
+  levelLoadingMaxRetryTimeout: number,
 }
 
-interface StreamControllerConfig {
-  autoStartLoad: boolean
-  startPosition: number
-  defaultAudioCodec?: string
-  initialLiveManifestSize: number
-  maxBufferLength: number
-  maxBufferSize: number
-  maxBufferHole: number
+type StreamControllerConfig = {
+  autoStartLoad: boolean,
+  startPosition: number,
+  defaultAudioCodec?: string,
+  initialLiveManifestSize: number,
+  maxBufferLength: number,
+  maxBufferSize: number,
+  maxBufferHole: number,
 
-  lowBufferWatchdogPeriod: number
-  highBufferWatchdogPeriod: number
-  nudgeOffset: number
-  nudgeMaxRetry: number
-  maxFragLookUpTolerance: number
-  liveSyncDurationCount: number
-  liveMaxLatencyDurationCount: number
-  liveSyncDuration?: number
-  liveMaxLatencyDuration?: number
-  maxMaxBufferLength: number
+  lowBufferWatchdogPeriod: number,
+  highBufferWatchdogPeriod: number,
+  nudgeOffset: number,
+  nudgeMaxRetry: number,
+  maxFragLookUpTolerance: number,
+  liveSyncDurationCount: number,
+  liveMaxLatencyDurationCount: number,
+  liveSyncDuration?: number,
+  liveMaxLatencyDuration?: number,
+  maxMaxBufferLength: number,
 
-  startFragPrefetch: boolean
+  startFragPrefetch: boolean,
 }
 
-interface TimelineControllerConfig {
-  cueHandler: any // TODO(typescript-cues): Type once file is done
-  enableCEA708Captions: boolean
-  enableWebVTT: boolean
-  captionsTextTrack1Label: string
-  captionsTextTrack1LanguageCode: string
-  captionsTextTrack2Label: string
-  captionsTextTrack2LanguageCode: string
+type TimelineControllerConfig = {
+  cueHandler: any, // TODO(typescript-cues): Type once file is done
+  enableCEA708Captions: boolean,
+  enableWebVTT: boolean,
+  captionsTextTrack1Label: string,
+  captionsTextTrack1LanguageCode: string,
+  captionsTextTrack2Label: string,
+  captionsTextTrack2LanguageCode: string,
 }
 
-interface TSDemuxerConfig {
-  forceKeyFrameOnDiscontinuity: boolean
+type TSDemuxerConfig = {
+  forceKeyFrameOnDiscontinuity: boolean,
 }
 
 type HlsConfig =
   {
-    debug: boolean
-    enableWorker: boolean
-    enableSoftwareAES: boolean
-    minAutoBitrate: number
-    loader: any // TODO(typescript-xhrloader): Type once XHR is done
-    xhrSetup?: (xhr: XMLHttpRequest, url: string) => void
+    debug: boolean,
+    enableWorker: boolean,
+    enableSoftwareAES: boolean,
+    minAutoBitrate: number,
+    loader: any, // TODO(typescript-xhrloader): Type once XHR is done
+    xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
 
-    abrController: any // TODO(typescript-abrcontroller): Type once file is done
-    audioStreamController: any // TODO(typescript-audiostreamcontroller): Type once file is done
-    audioTrackController: any // TODO(typescript-audiotrackcontroller): Type once file is done
-    bufferController: typeof BufferController
-    capLevelController: any // TODO(typescript-caplevelcontroller): Type once file is done
-    fpsController: any // TODO(typescript-fpscontroller): Type once file is done
-    emeController: typeof EMEController
-    subtitleStreamController: any // TODO(typescript-subtitlestreamcontroller): Type once file is done
-    subtitleTrackController: any // TODO(typescript-subtitletrackcontroller): Type once file is done
-    timelineController: any // TODO(typescript-timelinecontroller): Type once file is done
+    abrController: any, // TODO(typescript-abrcontroller): Type once file is done
+    audioStreamController: any, // TODO(typescript-audiostreamcontroller): Type once file is done
+    audioTrackController: any, // TODO(typescript-audiotrackcontroller): Type once file is done
+    bufferController: typeof BufferController,
+    capLevelController: any, // TODO(typescript-caplevelcontroller): Type once file is done
+    fpsController: any, // TODO(typescript-fpscontroller): Type once file is done
+    emeController: typeof EMEController,
+    subtitleStreamController: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
+    subtitleTrackController: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
+    timelineController: any, // TODO(typescript-timelinecontroller): Type once file is done
   } &
   ABRControllerConfig &
   BufferControllerConfig &
