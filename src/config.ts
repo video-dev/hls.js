@@ -38,6 +38,11 @@ type ABRControllerConfig = {
   maxLoadingDelay: number,
 }
 
+type SubtitleConfig = {
+  subtitleStreamController: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
+  subtitleTrackController: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
+}
+
 type BufferControllerConfig = {
   appendErrorMaxRetry: number,
   liveDurationInfinity: boolean,
@@ -49,6 +54,7 @@ type CapLevelControllerConfig = {
 }
 
 type EMEControllerConfig = {
+  emeController: typeof EMEController,
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
   widevineLicenseUrl?: string,
@@ -94,6 +100,9 @@ type PlaylistLoaderConfig = {
 }
 
 type StreamControllerConfig = {
+  audioStreamController: any, // TODO(typescript-audiostreamcontroller): Type once file is done
+  audioTrackController: any, // TODO(typescript-audiotrackcontroller): Type once file is done
+
   autoStartLoad: boolean,
   startPosition: number,
   defaultAudioCodec?: string,
@@ -117,6 +126,7 @@ type StreamControllerConfig = {
 }
 
 type TimelineControllerConfig = {
+  timelineController: any, // TODO(typescript-timelinecontroller): Type once file is done
   cueHandler: any, // TODO(typescript-cues): Type once file is done
   enableCEA708Captions: boolean,
   enableWebVTT: boolean,
@@ -140,16 +150,11 @@ type HlsConfig =
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
 
     abrController: any, // TODO(typescript-abrcontroller): Type once file is done
-    audioStreamController: any, // TODO(typescript-audiostreamcontroller): Type once file is done
-    audioTrackController: any, // TODO(typescript-audiotrackcontroller): Type once file is done
     bufferController: typeof BufferController,
     capLevelController: any, // TODO(typescript-caplevelcontroller): Type once file is done
     fpsController: any, // TODO(typescript-fpscontroller): Type once file is done
-    emeController: typeof EMEController,
-    subtitleStreamController: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
-    subtitleTrackController: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
-    timelineController: any, // TODO(typescript-timelinecontroller): Type once file is done
   } &
+  SubtitleConfig &
   ABRControllerConfig &
   BufferControllerConfig &
   CapLevelControllerConfig &
@@ -163,7 +168,35 @@ type HlsConfig =
   TimelineControllerConfig &
   TSDemuxerConfig;
 
-export const hlsDefaultConfig = {
+
+
+function getSubtitlesConfig(): SubtitleConfig {
+  if (!__USE_SUBTITLES__) {
+    return <any> {};
+  }
+  return {
+    subtitleStreamController: SubtitleStreamController,
+    subtitleTrackController: SubtitleTrackController
+  };
+}
+
+function getTimelineControllerConfig(): TimelineControllerConfig {
+  if (!__USE_SUBTITLES__) {
+    return <any> {};
+  }
+  return {
+    timelineController: TimelineController,
+    cueHandler: Cues,
+    enableCEA708Captions: true,
+    enableWebVTT: true,
+    captionsTextTrack1Label: 'English',
+    captionsTextTrack1LanguageCode: 'en',
+    captionsTextTrack2Label: 'Spanish',
+    captionsTextTrack2LanguageCode: 'es'
+  };
+}
+
+export const hlsDefaultConfig: HlsConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
   defaultAudioCodec: void 0, // used by stream-controller
@@ -233,27 +266,10 @@ export const hlsDefaultConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: void 0, // used by eme-controller
-  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess // used by eme-controller
-} as HlsConfig;
-
-if (__USE_SUBTITLES__) {
-  hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
-  hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
-  hlsDefaultConfig.timelineController = TimelineController;
-  hlsDefaultConfig.cueHandler = Cues; // used by timeline-controller
-  hlsDefaultConfig.enableCEA708Captions = true; // used by timeline-controller
-  hlsDefaultConfig.enableWebVTT = true; // used by timeline-controller
-  hlsDefaultConfig.captionsTextTrack1Label = 'English'; // used by timeline-controller
-  hlsDefaultConfig.captionsTextTrack1LanguageCode = 'en'; // used by timeline-controller
-  hlsDefaultConfig.captionsTextTrack2Label = 'Spanish'; // used by timeline-controller
-  hlsDefaultConfig.captionsTextTrack2LanguageCode = 'es'; // used by timeline-controller
-}
-
-if (__USE_ALT_AUDIO__) {
-  hlsDefaultConfig.audioStreamController = AudioStreamController;
-  hlsDefaultConfig.audioTrackController = AudioTrackController;
-}
-
-if (__USE_EME_DRM__) {
-  hlsDefaultConfig.emeController = EMEController;
-}
+  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
+  audioStreamController: __USE_ALT_AUDIO__ ? AudioStreamController : <any> undefined,
+  audioTrackController: __USE_ALT_AUDIO__ ? AudioTrackController : <any> undefined,
+  emeController: __USE_EME_DRM__ ? EMEController : <any> undefined,
+  ...getSubtitlesConfig(),
+  ...getTimelineControllerConfig()
+};
