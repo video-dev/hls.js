@@ -35,12 +35,19 @@ const createWidevineMediaKeySystemConfigurations = function (audioCodecs: string
     // persistentState: "not-allowed", // or "required" ?
     // distinctiveIdentifier: "not-allowed", // or "required" ?
     // sessionTypes: ['temporary'],
+    audioCapabilities: [],
     videoCapabilities: [] // { contentType: 'video/mp4; codecs="avc1.42E01E"' }
   };
 
   videoCodecs.forEach((codec) => {
     baseConfig.videoCapabilities!.push({
       contentType: `video/mp4; codecs="${codec}"`
+    });
+  });
+
+  audioCodecs.forEach((codec) => {
+    baseConfig.audioCapabilities!.push({
+      contentType: `audio/mp4; codecs="${codec}"`
     });
   });
 
@@ -90,7 +97,7 @@ class EMEController extends EventHandler {
   private _licenseXhrSetup: (xhr: XMLHttpRequest, url: string) => Promise<XMLHttpRequest>;
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: (keySystem: KeySystems, supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>
-  private _getWidevineInitializationData: () => { initDataType: string, initData: ArrayBuffer};
+  private _getWidevineInitializationData: () => Promise<{ initDataType: string, initData: ArrayBuffer}>;
 
   private _mediaKeysList: MediaKeysListItem[] = []
   private _media: HTMLMediaElement | null = null;
@@ -210,8 +217,9 @@ class EMEController extends EventHandler {
   private _onMediaKeysCreated () {
     // check for all key-list items if a session exists, otherwise, create one
     this._mediaKeysList.forEach((mediaKeysListItem) => {
-      if (!mediaKeysListItem.mediaKeysSession) {
+      if (!mediaKeysListItem.mediaKeysSession && mediaKeysListItem.mediaKeys) {
         // mediaKeys is definitely initialized here
+        this._attemptSetMediaKeys();
         mediaKeysListItem.mediaKeysSession = mediaKeysListItem.mediaKeys!.createSession();
         this._onNewMediaKeySession(mediaKeysListItem.mediaKeysSession);
       }
@@ -229,9 +237,9 @@ class EMEController extends EventHandler {
       this._onKeySessionMessage(keySession, event.message);
     }, false);
 
-    const initDataInfo = this.getWidevineInitializationData();
-
-    this._generateRequestWithPreferredKeySession(initDataInfo.initDataType, initDataInfo.initData);
+    this.getWidevineInitializationData().then((initDataInfo) => {
+      this._generateRequestWithPreferredKeySession(initDataInfo.initDataType, initDataInfo.initData);
+    });
   }
 
   /**
@@ -244,7 +252,14 @@ class EMEController extends EventHandler {
 
     this._requestLicense(message, (data: ArrayBuffer) => {
       logger.log('Received license data, updating key-session');
-      keySession.update(data);
+
+      keySession.update(data).then((value) => {
+        this._hasSetMediaKeys = true;
+
+        this.hls.trigger(Event.KEY_LOADED, {
+          data: {}
+        });
+      });
     });
   }
 
