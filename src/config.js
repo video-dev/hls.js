@@ -20,10 +20,10 @@ import EMEController from './controller/eme-controller';
 
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 
-export var hlsDefaultConfig = {
+export const hlsDefaultConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
-  defaultAudioCodec: undefined, // used by stream-controller
+  defaultAudioCodec: void 0, // used by stream-controller
   debug: false, // used by logger
   capLevelOnFPSDrop: false, // used by fps-controller
   capLevelToPlayerSize: false, // used by cap-level-controller
@@ -39,8 +39,8 @@ export var hlsDefaultConfig = {
   maxFragLookUpTolerance: 0.25, // used by stream-controller
   liveSyncDurationCount: 3, // used by stream-controller
   liveMaxLatencyDurationCount: Infinity, // used by stream-controller
-  liveSyncDuration: undefined, // used by stream-controller
-  liveMaxLatencyDuration: undefined, // used by stream-controller
+  liveSyncDuration: void 0, // used by stream-controller
+  liveMaxLatencyDuration: void 0, // used by stream-controller
   liveDurationInfinity: false, // used by buffer-controller
   liveBackBufferLength: Infinity, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
@@ -50,7 +50,7 @@ export var hlsDefaultConfig = {
   manifestLoadingMaxRetry: 1, // used by playlist-loader
   manifestLoadingRetryDelay: 1000, // used by playlist-loader
   manifestLoadingMaxRetryTimeout: 64000, // used by playlist-loader
-  startLevel: undefined, // used by level-controller
+  startLevel: void 0, // used by level-controller
   levelLoadingTimeOut: 10000, // used by playlist-loader
   levelLoadingMaxRetry: 4, // used by playlist-loader
   levelLoadingRetryDelay: 1000, // used by playlist-loader
@@ -65,11 +65,11 @@ export var hlsDefaultConfig = {
   appendErrorMaxRetry: 3, // used by buffer-controller
   loader: XhrLoader,
   // loader: FetchLoader,
-  fLoader: undefined, // used by fragment-loader
-  pLoader: undefined, // used by playlist-loader
-  xhrSetup: undefined, // used by xhr-loader
-  licenseXhrSetup: undefined, // used by eme-controller
-  // fetchSetup: undefined,
+  fLoader: void 0, // used by fragment-loader
+  pLoader: void 0, // used by playlist-loader
+  xhrSetup: void 0, // used by xhr-loader
+  licenseXhrSetup: void 0, // used by eme-controller
+  // fetchSetup: void 0,
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,
@@ -89,7 +89,7 @@ export var hlsDefaultConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
-  widevineLicenseUrl: undefined, // used by eme-controller
+  widevineLicenseUrl: void 0, // used by eme-controller
   requestMediaKeySystemAccessFunc:
             requestMediaKeySystemAccess // used by eme-controller
 };

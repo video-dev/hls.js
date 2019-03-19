@@ -65,20 +65,9 @@ export default (function () {
 
   function VTTCue (startTime, endTime, text) {
     let cue = this;
-    let isIE8 = (function () {
-      if (typeof navigator === 'undefined') {
-        return;
-      }
-
-      return (/MSIE\s8\.0/).test(navigator.userAgent);
-    })();
     let baseObj = {};
 
-    if (isIE8) {
-      cue = document.createElement('custom');
-    } else {
-      baseObj.enumerable = true;
-    }
+    baseObj.enumerable = true;
 
     /**
      * Shim implementation specific properties. These properties are not in
@@ -294,11 +283,7 @@ export default (function () {
      */
 
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-video-element.html#text-track-cue-display-state
-    cue.displayState = undefined;
-
-    if (isIE8) {
-      return cue;
-    }
+    cue.displayState = void 0;
   }
 
   /**

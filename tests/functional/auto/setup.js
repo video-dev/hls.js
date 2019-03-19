@@ -1,15 +1,17 @@
-const assert = require('assert');
+/* eslint-disable no-console */
+
 const webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
+// eslint-disable-next-line
 const chromedriver = require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
-
 const browserConfig = { version: 'latest' };
 const onTravis = !!process.env.TRAVIS;
+const chai = require('chai');
+const expect = chai.expect;
 
 let browserDescription;
-
 let stream;
 
 // Setup browser config data from env vars
@@ -164,7 +166,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           callback({ code: 'loadeddata', logs: window.logString });
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'loadeddata');
+        expect(result.code).to.equal('loadeddata');
       });
     };
   };
@@ -190,7 +192,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           }
         });
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, true);
+        expect(result.code).to.be.true;
       });
     };
   };
@@ -210,7 +212,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           callback({ code: 'seeked', logs: window.logString });
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'seeked');
+        expect(result.code).to.equal('seeked');
       });
     };
   };
@@ -230,7 +232,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           callback({ code: 'ended', logs: window.logString });
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'ended');
+        expect(result.code).to.equal('ended');
       });
     };
   };
@@ -250,7 +252,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           callback({ code: 'ended', logs: window.logString });
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.code, 'ended');
+        expect(result.code).to.equal('ended');
       });
     };
   };
@@ -277,7 +279,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           }
         };
       }, url, config).then(function (result) {
-        assert.strictEqual(result.playing, true);
+        expect(result.playing).to.be.true;
       });
     };
   };

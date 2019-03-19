@@ -1,6 +1,6 @@
 import { getSelfScope } from './get-self-scope';
 
-function noop () {}
+function noop (...args) {}
 
 const fakeLogger = {
   trace: noop,
@@ -49,8 +49,9 @@ function exportLoggerFunctions (debugConfig, ...functions) {
   });
 }
 
-export var enableLogs = function (debugConfig) {
-  if (debugConfig === true || typeof debugConfig === 'object') {
+export const enableLogs = function (debugConfig) {
+  // check that console is available
+  if ((global.console && debugConfig === true) || typeof debugConfig === 'object') {
     exportLoggerFunctions(debugConfig,
       // Remove out from list here to hard-disable a log-level
       // 'trace',
@@ -72,4 +73,4 @@ export var enableLogs = function (debugConfig) {
   }
 };
 
-export var logger = exportedLogger;
+export const logger = exportedLogger;

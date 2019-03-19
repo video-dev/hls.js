@@ -89,6 +89,8 @@
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
+  - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
+  - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -133,7 +135,7 @@ Invoke the following static method: `Hls.isSupported()` to check whether your br
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     if (Hls.isSupported()) {
- 	    console.log("hello hls.js!");
+      console.log("hello hls.js!");
     }
   </script>
 ```
@@ -158,7 +160,7 @@ Let's
       hls.attachMedia(video);
       // MEDIA_ATTACHED event is fired by hls object once MediaSource is ready
       hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-		    console.log("video and hls.js are now bound together !");
+        console.log("video and hls.js are now bound together !");
       });
     }
   </script>
@@ -226,7 +228,7 @@ See sample code below to listen to errors:
     var errorFatal = data.fatal;
 
     switch(data.details) {
-      case hls.ErrorDetails.FRAG_LOAD_ERROR:
+      case Hls.ErrorDetails.FRAG_LOAD_ERROR:
         // ....
         break;
       default:
@@ -237,7 +239,7 @@ See sample code below to listen to errors:
 
 #### Fatal Error Recovery
 
-Hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
+hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
 
 ##### `hls.startLoad()`
 
@@ -293,7 +295,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
 ```js
    var config = {
       autoStartLoad: true,
-  	  startPosition : -1,
+      startPosition: -1,
       capLevelToPlayerSize: false,
       debug: false,
       defaultAudioCodec: undefined,
@@ -305,7 +307,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       lowBufferWatchdogPeriod: 0.5,
       highBufferWatchdogPeriod: 3,
       nudgeOffset: 0.1,
-      nudgeMaxRetry : 3,
+      nudgeMaxRetry: 3,
       maxFragLookUpTolerance: 0.2,
       liveSyncDurationCount: 3,
       liveMaxLatencyDurationCount: 10,
@@ -314,7 +316,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       manifestLoadingTimeOut: 10000,
       manifestLoadingMaxRetry: 1,
       manifestLoadingRetryDelay: 500,
-      manifestLoadingMaxRetryTimeout : 64000,
+      manifestLoadingMaxRetryTimeout: 64000,
       startLevel: undefined,
       levelLoadingTimeOut: 10000,
       levelLoadingMaxRetry: 4,
@@ -336,7 +338,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       enableWebVTT: true,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
-      maxAudioFramesDrift : 1,
+      maxAudioFramesDrift: 1,
       forceKeyFrameOnDiscontinuity: true,
       abrEwmaFastLive: 5.0,
       abrEwmaSlowLive: 9.0,
@@ -651,7 +653,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.tload {number} - performance.now() on load complete
       @param stats.loaded {number} - nb of loaded bytes
-      @param [stats.bw] {number} - download bandwidth in bit/s
+      @param [stats.bw] {number} - download bandwidth in bits/s
       @param stats.total {number} - total nb of bytes
       @param context {object} - loader context
       @param networkDetails {object} - loader network details (the xhr for default loaders)
@@ -662,7 +664,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.loaded {number} - nb of loaded bytes
       @param [stats.total] {number} - total nb of bytes
-      @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
+      @param [stats.bw] {number} - current download bandwidth in bits/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
       @param data {string/arraybuffer/sharedarraybuffer} - onProgress data (should be defined only if context.progressData === true)
       @param networkDetails {object} - loader network details (the xhr for default loaders)
@@ -742,7 +744,7 @@ class pLoader extends Hls.DefaultConfig.loader {
 }
 
   var hls = new Hls({
-    pLoader : pLoader,
+    pLoader: pLoader,
   });
 
 ```
@@ -938,7 +940,7 @@ parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
 (default: `500000`)
 
-Default bandwidth estimate in bits/second prior to collecting fragment bandwidth samples.
+Default bandwidth estimate in bits/s prior to collecting fragment bandwidth samples.
 
 parameter should be a float
 
@@ -947,14 +949,14 @@ parameter should be a float
 (default: `0.95`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level.
-If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
+If `abrBandWidthFactor * bandwidth average > level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
 
 ### `abrBandWidthUpFactor`
 
 (default: `0.7`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
-If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
+If `abrBandWidthUpFactor * bandwidth average > level.bitrate` then ABR can switch up to that quality level.
 
 ### `abrMaxWithRealBitrate`
 
@@ -1053,6 +1055,17 @@ Default value is `hls.firstLevel`.
 
 Default value is `-1` (no level capping).
 
+### `hls.capLevelToPlayerSize`
+
+- get: Enables or disables level capping. If disabled after previously enabled, `nextLevelSwitch` will be immediately called.
+- set: Whether level capping is enabled.
+
+Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in config.
+
+### `hls.bandwidthEstimate`
+
+get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, `NaN` is returned.
+
 ## Version Control
 
 ### `Hls.version`
@@ -1110,7 +1123,7 @@ get : position of live sync point (ie edge of live position minus safety delay d
 
 ## Runtime Events
 
-Hls.js fires a bunch of events, that could be registered and unregistered as below:
+hls.js fires a bunch of events, that could be registered and unregistered as below:
 
 ```js
 function onLevelLoaded (event, data) {

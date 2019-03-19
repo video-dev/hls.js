@@ -5,7 +5,7 @@ design idea is pretty simple :
    - main functionalities are split into several subsystems
    - all subsystems are instantiated by the Hls instance.
    - each subsystem heavily relies on events for internal/external communications.
-   - Events are handled using [EventEmitter](https://nodejs.org/api/events.html)
+   - Events are handled using [EventEmitter3](https://github.com/primus/eventemitter3)
    - bundled for the browser by [webpack](https://webpack.js.org/)
 
 ## Code structure
@@ -14,7 +14,7 @@ design idea is pretty simple :
     - definition of default Hls Config. entry point for conditional compilation (altaudio/subtitle)
   - [src/errors.js][]
     - definition of Hls.ErrorTypes and Hls.ErrorDetails
-  - [src/event-handler.js][]
+  - [src/event-handler.ts][]
     - helper class simplifying Hls event handling, event error catching
   - [src/events.js][]
     - definition of Hls.Events
