@@ -2,11 +2,17 @@
 # https://docs.travis-ci.com/user/customizing-the-build/#Implementing-Complex-Build-Steps
 set -ev
 
+echo "travis_fold:start:npm_install"
 npm install
+echo "travis_fold:end:npm_install"
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
+  echo "travis_fold:start:lint"
   npm run lint
+  echo "travis_fold:end:lint"
+  echo "travis_fold:start:build"
   npm run build
+  echo "travis_fold:end:lint"
   # check that hls.js doesn't error if requiring in node
   # see https://github.com/video-dev/hls.js/pull/1642
   node -e 'require("./" + require("./package.json").main)'
