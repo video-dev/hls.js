@@ -139,16 +139,20 @@ type HlsConfig =
     loader: any, // TODO(typescript-xhrloader): Type once XHR is done
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
 
+    // Alt Audio
+    audioStreamController?: any, // TODO(typescript-audiostreamcontroller): Type once file is done
+    audioTrackController?: any, // TODO(typescript-audiotrackcontroller): Type once file is done
+    // Subtitle
+    subtitleStreamController?: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
+    subtitleTrackController?: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
+    timelineController?: any, // TODO(typescript-timelinecontroller): Type once file is done
+    // EME
+    emeController?: typeof EMEController,
+
     abrController: any, // TODO(typescript-abrcontroller): Type once file is done
-    audioStreamController: any, // TODO(typescript-audiostreamcontroller): Type once file is done
-    audioTrackController: any, // TODO(typescript-audiotrackcontroller): Type once file is done
     bufferController: typeof BufferController,
     capLevelController: any, // TODO(typescript-caplevelcontroller): Type once file is done
     fpsController: any, // TODO(typescript-fpscontroller): Type once file is done
-    emeController: typeof EMEController,
-    subtitleStreamController: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
-    subtitleTrackController: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
-    timelineController: any, // TODO(typescript-timelinecontroller): Type once file is done
   } &
   ABRControllerConfig &
   BufferControllerConfig &
@@ -163,7 +167,7 @@ type HlsConfig =
   TimelineControllerConfig &
   TSDemuxerConfig;
 
-export const hlsDefaultConfig = {
+export const hlsDefaultConfig: HlsConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
   defaultAudioCodec: void 0, // used by stream-controller
@@ -233,27 +237,29 @@ export const hlsDefaultConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: void 0, // used by eme-controller
-  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess // used by eme-controller
-} as HlsConfig;
+  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
 
-if (__USE_SUBTITLES__) {
-  hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
-  hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
-  hlsDefaultConfig.timelineController = TimelineController;
-  hlsDefaultConfig.cueHandler = Cues; // used by timeline-controller
-  hlsDefaultConfig.enableCEA708Captions = true; // used by timeline-controller
-  hlsDefaultConfig.enableWebVTT = true; // used by timeline-controller
-  hlsDefaultConfig.captionsTextTrack1Label = 'English'; // used by timeline-controller
-  hlsDefaultConfig.captionsTextTrack1LanguageCode = 'en'; // used by timeline-controller
-  hlsDefaultConfig.captionsTextTrack2Label = 'Spanish'; // used by timeline-controller
-  hlsDefaultConfig.captionsTextTrack2LanguageCode = 'es'; // used by timeline-controller
-}
+  // Dynamic Modules
+  ...timelineConfig(),
+  subtitleStreamController: (__USE_SUBTITLES__) ? SubtitleStreamController : void 0,
+  subtitleTrackController: (__USE_SUBTITLES__) ? SubtitleTrackController : void 0,
+  timelineController: (__USE_SUBTITLES__) ? TimelineController : void 0,
+  audioStreamController: (__USE_ALT_AUDIO__) ? AudioStreamController : void 0,
+  audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : void 0,
+  emeController: (__USE_EME_DRM__) ? EMEController : void 0
+};
 
-if (__USE_ALT_AUDIO__) {
-  hlsDefaultConfig.audioStreamController = AudioStreamController;
-  hlsDefaultConfig.audioTrackController = AudioTrackController;
-}
-
-if (__USE_EME_DRM__) {
-  hlsDefaultConfig.emeController = EMEController;
+function timelineConfig (): TimelineControllerConfig {
+  if (!__USE_SUBTITLES__) {
+    return {} as any;
+  }
+  return {
+    cueHandler: Cues, // used by timeline-controller
+    enableCEA708Captions: true, // used by timeline-controller
+    enableWebVTT: true, // used by timeline-controller
+    captionsTextTrack1Label: 'English', // used by timeline-controller
+    captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
+    captionsTextTrack2Label: 'Spanish', // used by timeline-controller
+    captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
+  };
 }
