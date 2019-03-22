@@ -253,7 +253,7 @@ function timelineConfig (): TimelineControllerConfig | {} {
   if (!__USE_SUBTITLES__) {
     return {};
   }
-  return {
+  const config: TimelineControllerConfig = {
     cueHandler: Cues, // used by timeline-controller
     enableCEA708Captions: true, // used by timeline-controller
     enableWebVTT: true, // used by timeline-controller
@@ -262,4 +262,5 @@ function timelineConfig (): TimelineControllerConfig | {} {
     captionsTextTrack2Label: 'Spanish', // used by timeline-controller
     captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
   };
+  return config;
 }
