@@ -36,24 +36,24 @@ type ABRControllerConfig = {
   abrMaxWithRealBitrate: boolean,
   maxStarvationDelay: number,
   maxLoadingDelay: number,
-}
+};
 
-type BufferControllerConfig = {
+export type BufferControllerConfig = {
   appendErrorMaxRetry: number,
   liveDurationInfinity: boolean,
   liveBackBufferLength: number,
-}
+};
 
 type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean
-}
+};
 
 type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
   widevineLicenseUrl?: string,
   requestMediaKeySystemAccessFunc: Function, // TODO(typescript-mediakeys-helper) Type once file is done
-}
+};
 
 type FragmentLoaderConfig = {
   fLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
@@ -62,22 +62,22 @@ type FragmentLoaderConfig = {
   fragLoadingMaxRetry: number,
   fragLoadingRetryDelay: number,
   fragLoadingMaxRetryTimeout: number,
-}
+};
 
 type FPSControllerConfig = {
   capLevelOnFPSDrop: boolean,
   fpsDroppedMonitoringPeriod: number,
   fpsDroppedMonitoringThreshold: number,
-}
+};
 
 type LevelControllerConfig = {
   startLevel?: number
-}
+};
 
 type MP4RemuxerConfig = {
   stretchShortVideoTrack: boolean,
   maxAudioFramesDrift: number,
-}
+};
 
 type PlaylistLoaderConfig = {
   pLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
@@ -91,7 +91,7 @@ type PlaylistLoaderConfig = {
   levelLoadingMaxRetry: number,
   levelLoadingRetryDelay: number,
   levelLoadingMaxRetryTimeout: number,
-}
+};
 
 type StreamControllerConfig = {
   autoStartLoad: boolean,
@@ -114,7 +114,7 @@ type StreamControllerConfig = {
   maxMaxBufferLength: number,
 
   startFragPrefetch: boolean,
-}
+};
 
 type TimelineControllerConfig = {
   cueHandler: any, // TODO(typescript-cues): Type once file is done
@@ -124,11 +124,11 @@ type TimelineControllerConfig = {
   captionsTextTrack1LanguageCode: string,
   captionsTextTrack2Label: string,
   captionsTextTrack2LanguageCode: string,
-}
+};
 
 type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean,
-}
+};
 
 type HlsConfig =
   {

@@ -10,6 +10,7 @@ import { getMediaSource } from '../utils/mediasource-helper';
 
 import { TrackSet } from '../types/track';
 import { Segment } from '../types/segment';
+import { BufferControllerConfig } from '../config';
 
 // Add extension properties to SourceBuffers from the DOM API.
 type ExtendedSourceBuffer = SourceBuffer & {
@@ -45,6 +46,8 @@ class BufferController extends EventHandler {
 
   // signals that mediaSource should have endOfStream called
   private _needsEos: boolean = false;
+
+  private config: BufferControllerConfig;
 
   // this is optional because this property is removed from the class sometimes
   public audioTimestampOffset?: number;
@@ -88,6 +91,8 @@ class BufferController extends EventHandler {
       Events.BUFFER_FLUSHING,
       Events.LEVEL_PTS_UPDATED,
       Events.LEVEL_UPDATED);
+
+    this.config = hls.config;
   }
 
   destroy () {
@@ -451,7 +456,7 @@ class BufferController extends EventHandler {
       return;
     }
 
-    const liveBackBufferLength = this.hls.config.liveBackBufferLength;
+    const liveBackBufferLength = this.config.liveBackBufferLength;
     if (!isFinite(liveBackBufferLength) || liveBackBufferLength < 0) {
       return;
     }
@@ -492,7 +497,7 @@ class BufferController extends EventHandler {
    * More details: https://github.com/video-dev/hls.js/issues/355
    */
   updateMediaElementDuration () {
-    let { config } = this.hls;
+    let { config } = this;
     let duration: number;
 
     if (this._levelDuration === null ||
@@ -572,7 +577,7 @@ class BufferController extends EventHandler {
   }
 
   doAppending () {
-    let { hls, segments, sourceBuffer, media } = this;
+    let { config, hls, segments, sourceBuffer } = this;
     if (!Object.keys(sourceBuffer).length) {
       // early exit if no source buffers have been initialized yet
       return;
@@ -634,8 +639,8 @@ class BufferController extends EventHandler {
         /* with UHD content, we could get loop of quota exceeded error until
           browser is able to evict some data from sourcebuffer. retrying help recovering this
         */
-        if (this.appendError > hls.config.appendErrorMaxRetry) {
-          logger.log(`fail ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
+        if (this.appendError > config.appendErrorMaxRetry) {
+          logger.log(`fail ${config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
           this.segments = [];
           event.fatal = true;
         }
