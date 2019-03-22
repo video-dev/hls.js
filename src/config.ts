@@ -251,7 +251,7 @@ export const hlsDefaultConfig: HlsConfig = {
 
 function timelineConfig (): Partial<TimelineControllerConfig> {
   if (!__USE_SUBTITLES__) {
-    return {} as any;
+    return {};
   }
   return {
     cueHandler: Cues, // used by timeline-controller
