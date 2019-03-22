@@ -249,9 +249,9 @@ export const hlsDefaultConfig: HlsConfig = {
   emeController: (__USE_EME_DRM__) ? EMEController : void 0
 };
 
-function timelineConfig (): Partial<TimelineControllerConfig> {
+function timelineConfig (): TimelineControllerConfig {
   if (!__USE_SUBTITLES__) {
-    return {};
+    return {} as any; // intentional
   }
   return {
     cueHandler: Cues, // used by timeline-controller
