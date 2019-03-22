@@ -245,7 +245,9 @@ export const hlsDefaultConfig: HlsConfig = {
 
 function timelineConfig (): TimelineControllerConfig {
   if (!__USE_SUBTITLES__) {
-    return {} as any; // intentional
+    // intentionally doing this over returning Partial<TimelineControllerConfig> above
+    // this has the added nice property of still requiring the object below to completely define all props.
+    return {} as any;
   }
   return {
     cueHandler: Cues, // used by timeline-controller
