@@ -17,13 +17,7 @@ import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
-
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
-
-// Dynamic Modules
-declare const __USE_ALT_AUDIO__: boolean;
-declare const __USE_EME_DRM__: boolean;
-declare const __USE_SUBTITLES__: boolean;
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
