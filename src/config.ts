@@ -164,7 +164,7 @@ type HlsConfig =
   MP4RemuxerConfig &
   PlaylistLoaderConfig &
   StreamControllerConfig &
-  Partial<TimelineControllerConfig> &
+  (TimelineControllerConfig | {}) &
   TSDemuxerConfig;
 
 export const hlsDefaultConfig: HlsConfig = {
@@ -249,9 +249,9 @@ export const hlsDefaultConfig: HlsConfig = {
   emeController: (__USE_EME_DRM__) ? EMEController : void 0
 };
 
-function timelineConfig (): Partial<TimelineControllerConfig> {
+function timelineConfig (): TimelineControllerConfig | {} {
   if (!__USE_SUBTITLES__) {
-    return {} as any;
+    return {};
   }
   return {
     cueHandler: Cues, // used by timeline-controller
