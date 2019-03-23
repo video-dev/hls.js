@@ -20,6 +20,21 @@ describe('BufferController tests', function () {
     sandbox.restore();
   });
 
+  describe('onBufferFlushing', function () {
+    it('flushes a specific type when provided a type', function () {
+      const spy = sandbox.spy(bufferController, 'flushBuffer');
+      bufferController.onBufferFlushing({ startOffset: 0, endOffset: 10, type: 'video' });
+      expect(spy).to.have.been.calledOnce;
+    });
+
+    it('flushes all source buffers when buffer flush event type is undefined', function () {
+      const spy = sandbox.spy(bufferController, 'flushBuffer');
+
+      bufferController.onBufferFlushing({ startOffset: 0, endOffset: 10 });
+      expect(spy).to.have.been.calledTwice;
+    });
+  });
+
   describe('Live back buffer enforcement', function () {
     let mockMedia;
     let mockSourceBuffer;
