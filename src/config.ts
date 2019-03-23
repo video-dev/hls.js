@@ -84,7 +84,7 @@ type PlaylistLoaderConfig = {
   levelLoadingTimeOut: number,
   levelLoadingMaxRetry: number,
   levelLoadingRetryDelay: number,
-  levelLoadingMaxRetryTimeout: number,
+  levelLoadingMaxRetryTimeout: number
 };
 
 type StreamControllerConfig = {
