@@ -65,6 +65,7 @@ export default class LevelController extends EventHandler {
 
   stopLoad () {
     this.canload = false;
+    this.clearTimer();
   }
 
   onManifestLoaded (data) {
@@ -396,8 +397,11 @@ export default class LevelController extends EventHandler {
     }
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
-      const reloadInterval = computeReloadInterval(curLevel.details, details, data.stats.trequest);
-      logger.log(`live playlist, reload in ${Math.round(reloadInterval)} ms`);
+      const curDetails = curLevel.details;
+      details.updated = (!curDetails || details.endSN !== curDetails.endSN || details.url !== curDetails.url);
+      details.availabilityDelay = curDetails && curDetails.availabilityDelay;
+      const reloadInterval = computeReloadInterval(details, data.stats);
+      logger.log(`live playlist ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
       this.timer = setTimeout(() => this.loadLevel(), reloadInterval);
     } else {
       this.clearTimer();
@@ -430,13 +434,12 @@ export default class LevelController extends EventHandler {
   }
 
   loadLevel () {
-    logger.debug('call to loadLevel');
+    logger.debug(`call to loadLevel (canload ${this.canload})`);
 
     if (this.currentLevelIndex !== null && this.canload) {
       const levelObject = this._levels[this.currentLevelIndex];
 
-      if (typeof levelObject === 'object' &&
-        levelObject.url.length > 0) {
+      if (typeof levelObject === 'object' && levelObject.url.length > 0) {
         const level = this.currentLevelIndex;
         const id = levelObject.urlId;
         const url = levelObject.url[id];

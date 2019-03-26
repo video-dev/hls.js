@@ -142,6 +142,9 @@ export class SubtitleStreamController extends BaseStreamController {
     }
 
     if (details.live) {
+      const curDetails = currentTrack.details;
+      details.updated = (!curDetails || details.endSN !== curDetails.endSN || details.url !== curDetails.url);
+      details.availabilityDelay = curDetails && curDetails.availabilityDelay;
       mergeSubtitlePlaylists(currentTrack.details, details, this.lastAVStart);
     }
     currentTrack.details = details;

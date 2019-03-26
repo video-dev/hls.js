@@ -17,6 +17,7 @@ import { logger } from '../utils/logger';
 
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
+import { getProgramDateTimeAtEndOfLastEncodedFragment } from '../controller/level-helper';
 
 const { performance } = window;
 
@@ -189,10 +190,10 @@ class PlaylistLoader extends EventHandler {
       }
     }
 
-    let maxRetry,
-      timeout,
-      retryDelay,
-      maxRetryDelay;
+    let maxRetry;
+    let timeout;
+    let retryDelay;
+    let maxRetryDelay;
 
     // apply different configs for retries depending on
     // context (manifest, level, audio/subs playlist)
@@ -252,9 +253,6 @@ class PlaylistLoader extends EventHandler {
     this.resetInternalLoader(context.type);
 
     const string = response.data;
-
-    stats.tload = performance.now();
-    // stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
 
     // Validate if it is an M3U8 at all
     if (string.indexOf('#EXTM3U') !== 0) {
@@ -337,7 +335,7 @@ class PlaylistLoader extends EventHandler {
   _handleTrackOrLevelPlaylist (response, stats, context, networkDetails) {
     const hls = this.hls;
 
-    const { id, level, type } = context;
+    const { id, level, type, loader } = context;
 
     const url = PlaylistLoader.getResponseUrl(response, context);
 
@@ -346,8 +344,24 @@ class PlaylistLoader extends EventHandler {
     const levelType = PlaylistLoader.mapContextToLevelType(context);
 
     const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType, levelUrlId);
+
     // set stats on level structure
+    const toDate = (value) => value ? new Date(value) : null;
+
+    // Last-Modified or PDT after last encoded segment provides an approximation of the last manifest write
+    stats.mtime = toDate(loader.getResponseHeader('Last-Modified'));
+    stats.encoded = toDate(getProgramDateTimeAtEndOfLastEncodedFragment(levelDetails));
+
+    // The response date of expires header provides us with a date we can use to sync the client clock to the server
+    stats.expires = toDate(loader.getResponseHeader('Expires'));
+    stats.date = toDate(loader.getResponseHeader('Date'));
+
+    const sinceFirstByte = Math.max(performance.now() - stats.tfirst, 0);
+    const firstByteDate = new Date();
+    firstByteDate.setTime(firstByteDate.getTime() - sinceFirstByte);
+
     levelDetails.tload = stats.tload;
+    levelDetails.lastModified = Math.max(stats.mtime, stats.encoded);
 
     if (!levelDetails.fragments.length) {
       hls.trigger(Event.ERROR, {

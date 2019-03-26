@@ -58,7 +58,7 @@ class XhrLoader implements Loader<LoaderContext> {
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
-    this.stats.trequest = window.performance.now();
+    this.stats.trequest = performance.now();
     this.retryDelay = config.retryDelay;
     this.loadInternal();
   }
@@ -121,14 +121,14 @@ class XhrLoader implements Loader<LoaderContext> {
       // clear xhr timeout and rearm it if readyState less than 4
       window.clearTimeout(this.requestTimeout);
       if (stats.tfirst === 0) {
-        stats.tfirst = Math.max(window.performance.now(), stats.trequest);
+        stats.tfirst = Math.max(performance.now(), stats.trequest);
       }
 
       if (readyState === 4) {
         const status = xhr.status;
         // http status between 200 to 299 are all successful
         if (status >= 200 && status < 300) {
-          stats.tload = Math.max(stats.tfirst, window.performance.now());
+          stats.tload = Math.max(performance.now(), stats.tfirst);
           let data;
           let len : number;
           if (context.responseType === 'arraybuffer') {
@@ -145,7 +145,11 @@ class XhrLoader implements Loader<LoaderContext> {
             onProgress(stats, context, data, xhr);
           }
 
-          const response = { url: xhr.responseURL, data: data };
+          const response = {
+            url: xhr.responseURL,
+            data: data
+          };
+
           this.callbacks.onSuccess(response, stats, context, xhr);
         } else {
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
@@ -188,6 +192,15 @@ class XhrLoader implements Loader<LoaderContext> {
     }
     const onProgress = this.callbacks.onProgress as Function;
     onProgress(stats, this.context, data, xhr);
+  }
+
+  getResponseHeader(name: string): string | null {
+      if (this.loader) {
+          try {
+            return this.loader.getResponseHeader(name);
+          } catch (error) {/* Could not get headers */}
+      }
+      return null;
   }
 }
 

@@ -2,6 +2,8 @@ import Event from '../events';
 import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import {computeReloadInterval} from "./level-helper";
+import EventHandler from "../event-handler";
 
 /**
  * @class AudioTrackController
@@ -24,7 +26,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
  * @fires ERROR
  *
  */
-class AudioTrackController extends TaskLoop {
+class AudioTrackController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MANIFEST_LOADING,
@@ -70,6 +72,13 @@ class AudioTrackController extends TaskLoop {
      * @member {string}
      */
     this.audioGroupId = null;
+
+    this.canload = false;
+    this.timer = null;
+  }
+
+  onHandlerDestroying () {
+    this.clearTimer();
   }
 
   /**
@@ -101,28 +110,48 @@ class AudioTrackController extends TaskLoop {
    * @param {} data
    */
   onAudioTrackLoaded (data) {
-    if (data.id >= this.tracks.length) {
-      logger.warn('Invalid audio track id:', data.id);
+    const { id, details, previousDetails } = data;
+
+    if (id >= this.tracks.length) {
+      logger.warn('Invalid audio track id:', id);
       return;
     }
 
-    logger.log(`audioTrack ${data.id} loaded`);
+    logger.log(`audioTrack ${id} loaded`);
 
-    this.tracks[data.id].details = data.details;
+    this.tracks[id].details = details;
 
-    // check if current playlist is a live playlist
-    // and if we have already our reload interval setup
-    if (data.details.live && !this.hasInterval()) {
-      // if live playlist we will have to reload it periodically
-      // set reload period to playlist target duration
-      const updatePeriodMs = data.details.targetduration * 1000;
-      this.setInterval(updatePeriodMs);
-    }
-
-    if (!data.details.live && this.hasInterval()) {
+    // if current playlist is a live playlist, arm a timer to reload it
+    if (details.live) {
+      const reloadInterval = computeReloadInterval(details, data.stats, 'audio track');
+      logger.log(`live audio track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
+      // Stop reloading if the timer was cleared
+      if (this.canload) {
+        this.timer = setTimeout(() => this._updateTrack(this._trackId), reloadInterval);
+      }
+    } else {
       // playlist is not live and timer is scheduled: cancel it
-      this.clearInterval();
+      this.clearTimer();
     }
+  }
+
+  clearTimer () {
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+
+  startLoad () {
+    this.canload = true;
+    if (this.timer === null) {
+      this._updateTrack(this._trackId);
+    }
+  }
+
+  stopLoad () {
+    this.canload = false;
+    this.clearTimer();
   }
 
   /**
@@ -180,7 +209,7 @@ class AudioTrackController extends TaskLoop {
 
     // If fatal network error, cancel update task
     if (data.fatal) {
-      this.clearInterval();
+      this.clearTimer();
     }
 
     // If not an audio-track loading error don't handle further
@@ -237,19 +266,12 @@ class AudioTrackController extends TaskLoop {
     logger.log(`Now switching to audio-track index ${newId}`);
 
     // stopping live reloading timer if any
-    this.clearInterval();
+    this.clearTimer();
     this._trackId = newId;
 
     const { url, type, id } = audioTrack;
     this.hls.trigger(Event.AUDIO_TRACK_SWITCHING, { id, type, url });
     this._loadTrackDetailsIfNeeded(audioTrack);
-  }
-
-  /**
-   * @override
-   */
-  doTick () {
-    this._updateTrack(this._trackId);
   }
 
   /**
@@ -352,7 +374,7 @@ class AudioTrackController extends TaskLoop {
     }
 
     // stopping live reloading timer if any
-    this.clearInterval();
+    this.clearTimer();
     this._trackId = newId;
     logger.log(`trying to update audio-track ${newId}`);
     const audioTrack = this.tracks[newId];
