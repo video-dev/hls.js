@@ -13,17 +13,14 @@ import { logger } from '../utils/logger';
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
-/**
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
- */
-enum KeySystems {
-  WIDEVINE = 'com.widevine.alpha',
-  PLAYREADY = 'com.microsoft.playready',
-}
-
 interface InitDataInfo {
   initDataType: string,
   initData: ArrayBuffer
+}
+
+interface EMEError {
+  fatal: boolean,
+  message: string
 }
 
 /**
@@ -43,7 +40,7 @@ class EMEController extends EventHandler {
    */
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: (supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>
-  private _getInitializationData: () => Promise<InitDataInfo>;
+  private _getInitializationData: (track) => Promise<InitDataInfo>;
   private _licenseXhrSetup: (xhr: XMLHttpRequest) => Promise<XMLHttpRequest>;
 
   /**
@@ -143,12 +140,12 @@ class EMEController extends EventHandler {
    * @private
    * @param {MediaKeys} session Media Keys Session created on the Media Keys object https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySession
    */
-  private _onMediaKeySessionCreated(session: MediaKeySession): Promise<void> {
+  private _onMediaKeySessionCreated(session: MediaKeySession, track: any): Promise<void> {
     logger.log('Generating license request');
 
     session.addEventListener('message', this._onKeySessionMessage.bind(this));
 
-    return this.getInitializationData().then((initDataInfo) => {
+    return this.getInitializationData(track).then((initDataInfo) => {
       return session.generateRequest(initDataInfo.initDataType, initDataInfo.initData)
     });
   }
@@ -159,12 +156,12 @@ class EMEController extends EventHandler {
    * @param {MediaKeys} mediaKeys Media Keys created on the Media Key System access object https://developer.mozilla.org/en-US/docs/Web/API/MediaKeys
    * @returns {Promise<MediaKeySession>} Promise that resolves to the Media Key Session created on the Media Keys https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySession
    */
-  private _onMediaKeysSet(mediaKeys: MediaKeys): Promise<MediaKeySession> {
+  private _onMediaKeysSet(mediaKeys: MediaKeys, track: any): Promise<any> {
     logger.log('Creating session on media keys');
 
     const session = mediaKeys.createSession();
 
-    return Promise.resolve(session);
+    return Promise.resolve({session, track});
   }
 
   /**
@@ -280,12 +277,24 @@ class EMEController extends EventHandler {
     }).then((mediaKeys) => {
       logger.log('Set media keys on media');
 
-      return this._onMediaKeysSet(mediaKeys);
-    }).then((session) => {
-      logger.log('Created media key session');
+      const levelRequests = data.levels.map((level) => {
+        return this._onMediaKeysSet(mediaKeys, level);
+      })
 
-      return this._onMediaKeySessionCreated(session);
-    }).catch((err: any) => {
+      const audioRequests = data.audioTracks.map((audioTrack) => {
+        return this._onMediaKeysSet(mediaKeys, audioTrack);
+      })
+
+      const requests = levelRequests.concat(audioRequests);
+
+      return Promise.all(requests);
+    }).then((response: any[]) => {
+      logger.log('Created media key sessions');
+
+      response.forEach((sessions) => {
+        this._onMediaKeySessionCreated(sessions.session, sessions.track);
+      })
+    }).catch((err: EMEError) => {
       logger.error('DRM Configuration failed')
 
       this.hls.trigger(Event.ERROR, {
