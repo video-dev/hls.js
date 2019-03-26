@@ -124,7 +124,7 @@ type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean,
 };
 
-type HlsConfig =
+export type HlsConfig =
   {
     debug: boolean,
     enableWorker: boolean,

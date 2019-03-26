@@ -12,6 +12,7 @@
     "url": "https://github.com/video-dev/hls.js/issues"
   },
   "main": "./dist/hls.js",
+  "types": "./dist/declarations/hls.d.ts",
   "publishConfig": {
     "access": "public"
   },
