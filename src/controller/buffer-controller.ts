@@ -88,6 +88,7 @@ class BufferController extends EventHandler {
       Events.BUFFER_FLUSHING,
       Events.LEVEL_PTS_UPDATED,
       Events.LEVEL_UPDATED);
+    this.hls = hls;
   }
 
   destroy () {

@@ -1,10 +1,6 @@
 /**
  * @module LevelHelper
- *
  * Providing methods dealing with playlist sliding and drift
- *
- * TODO: Create an actual `Level` class/model that deals with all this logic in an object-oriented-manner.
- *
  * */
 
 import { logger } from '../utils/logger';
@@ -226,4 +222,12 @@ export function computeReloadInterval (currentPlaylist, newPlaylist, lastRequest
   }
   // in any case, don't reload more than half of target duration
   return Math.round(reloadInterval);
+}
+
+export function getFragmentWithSN (level, sn) {
+  if (!level || !level.details) {
+    return null;
+  }
+  const levelDetails = level.details;
+  return levelDetails.fragments[sn - levelDetails.startSN];
 }

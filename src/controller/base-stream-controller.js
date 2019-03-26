@@ -36,9 +36,9 @@ export default class BaseStreamController extends TaskLoop {
       }
       this.fragmentTracker.removeFragment(frag);
     }
-    if (this.demuxer) {
-      this.demuxer.destroy();
-      this.demuxer = null;
+    if (this.transmuxer) {
+      this.transmuxer.destroy();
+      this.transmuxer = null;
     }
     this.fragCurrent = null;
     this.fragPrevious = null;
@@ -141,12 +141,6 @@ export default class BaseStreamController extends TaskLoop {
         data.frag = frag;
         this.hls.trigger(Event.FRAG_LOADED, data);
         this._handleFragmentLoad(frag, payload, stats);
-      })
-      .catch((e) => {
-        if (e.data.details === ErrorDetails.INTERNAL_ABORTED) {
-          return;
-        }
-        this.hls.trigger(Event.ERROR, e.data);
       });
   }
 
@@ -164,12 +158,6 @@ export default class BaseStreamController extends TaskLoop {
         stats.tparsed = stats.tbuffered = window.performance.now();
         hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
         this.tick();
-      })
-      .catch((e) => {
-        if (e.data.details === ErrorDetails.INTERNAL_ABORTED) {
-          return;
-        }
-        this.hls.trigger(Event.ERROR, e.data);
       });
   }
 
@@ -180,8 +168,25 @@ export default class BaseStreamController extends TaskLoop {
   _doFragLoad (frag) {
     this.state = State.FRAG_LOADING;
     this.hls.trigger(Event.FRAG_LOADING, { frag });
-    return this.fragmentLoader.load(frag);
+    return this.fragmentLoader.load(frag)
+      .catch((e) => {
+        const errorData = e ? e.data : null;
+        if (errorData && errorData.details === ErrorDetails.INTERNAL_ABORTED) {
+          const fragPrev = this.fragPrevious;
+          if (fragPrev) {
+            this.nextLoadPosition = fragPrev.start + fragPrev.duration;
+          } else {
+            this.nextLoadPosition = this.lastCurrentTime;
+          }
+          logger.log(`Frag load aborted, resetting nextLoadPosition to ${this.nextLoadPosition}`);
+          return;
+        }
+        this.hls.trigger(Event.ERROR, errorData);
+      });
   }
 
-  _handleFragmentLoad (frag, payload, stats) {}
+  _handleFragmentLoadComplete (frag, stats) {
+    const transmuxIdentifier = { level: frag.level, sn: frag.sn };
+    this.transmuxer.flush(transmuxIdentifier);
+  }
 }

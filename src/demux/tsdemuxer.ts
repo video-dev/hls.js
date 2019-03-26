@@ -14,9 +14,10 @@ import MpegAudio from './mpegaudio';
 import Event from '../events';
 import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
-// import Hex from '../utils/hex';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { DemuxedAvcTrack, DemuxedAudioTrack, DemuxedTrack, Demuxer, DemuxerResult } from '../types/demuxer';
+import NonProgressiveDemuxer from './non-progressive-demuxer';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -33,21 +34,34 @@ const RemuxerTrackIdConfig = {
   text: 4
 };
 
-class TSDemuxer {
-  constructor (observer, remuxer, config, typeSupported) {
+class TSDemuxer extends NonProgressiveDemuxer {
+  private observer: any;
+  private config: any;
+  private typeSupported: any;
+
+  private sampleAes: any = null;
+  private pmtParsed: boolean = false;
+  private contiguous: boolean = false;
+  private audioCodec!: string;
+  private videoCodec!: string;
+  private _duration: number = 0;
+  private aacLastPTS: number | null = null;
+  private _initPTS: number | null = null;
+  private _initDTS?: number | null = null;
+  private _pmtId: number = -1;
+
+  private _avcTrack!: DemuxedAvcTrack;
+  private _audioTrack!: DemuxedAudioTrack;
+  private _id3Track!: DemuxedTrack;
+  private _txtTrack!: DemuxedTrack;
+  private aacOverFlow: any;
+  private avcSample: any;
+
+  constructor (observer, config, typeSupported) {
+    super();
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
-    this.remuxer = remuxer;
-    this.sampleAes = null;
-  }
-
-  setDecryptData (decryptdata) {
-    if ((decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'SAMPLE-AES')) {
-      this.sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptdata, this.discardEPB);
-    } else {
-      this.sampleAes = null;
-    }
   }
 
   static probe (data) {
@@ -85,7 +99,7 @@ class TSDemuxer {
    * @param {number} duration
    * @return {object} TSDemuxer's internal track model
    */
-  static createTrack (type, duration) {
+  static createTrack (type, duration) : DemuxedTrack {
     return {
       container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined,
       type,
@@ -96,7 +110,6 @@ class TSDemuxer {
       samples: [],
       len: 0,
       dropped: type === 'video' ? 0 : undefined,
-      isAAC: type === 'audio' ? true : undefined,
       duration: type === 'audio' ? duration : undefined
     };
   }
@@ -106,12 +119,14 @@ class TSDemuxer {
    * Resets all internal track instances of the demuxer.
    *
    * @override Implements generic demuxing/remuxing interface (see DemuxerInline)
-   * @param {object} initSegment
+   * @param {Uint8Array} initSegment
    * @param {string} audioCodec
    * @param {string} videoCodec
    * @param {number} duration (in TS timescale = 90kHz)
    */
   resetInitSegment (initSegment, audioCodec, videoCodec, duration) {
+    super.resetInitSegment(initSegment, audioCodec, videoCodec, duration);
+
     this.pmtParsed = false;
     this._pmtId = -1;
 
@@ -119,6 +134,7 @@ class TSDemuxer {
     this._audioTrack = TSDemuxer.createTrack('audio', duration);
     this._id3Track = TSDemuxer.createTrack('id3', duration);
     this._txtTrack = TSDemuxer.createTrack('text', duration);
+    this._audioTrack.isAAC = true;
 
     // flush any partial content
     this.aacOverFlow = null;
@@ -136,30 +152,40 @@ class TSDemuxer {
   resetTimeStamp () {}
 
   // feed incoming data to the front of the parsing pipeline
-  append (data, timeOffset, contiguous, accurateTimeOffset) {
-    let start, len = data.length, stt, pid, atf, offset, pes,
-      unknownPIDs = false;
+  demuxInternal (data, contiguous, timeOffset, isSampleAes = false): DemuxerResult {
+    if (!isSampleAes) {
+      this.sampleAes = null;
+    }
     this.contiguous = contiguous;
-    let pmtParsed = this.pmtParsed,
-      avcTrack = this._avcTrack,
-      audioTrack = this._audioTrack,
-      id3Track = this._id3Track,
-      avcId = avcTrack.pid,
-      audioId = audioTrack.pid,
-      id3Id = id3Track.pid,
-      pmtId = this._pmtId,
-      avcData = avcTrack.pesData,
-      audioData = audioTrack.pesData,
-      id3Data = id3Track.pesData,
-      parsePAT = this._parsePAT,
-      parsePMT = this._parsePMT,
-      parsePES = this._parsePES,
-      parseAVCPES = this._parseAVCPES.bind(this),
-      parseAACPES = this._parseAACPES.bind(this),
-      parseMPEGPES = this._parseMPEGPES.bind(this),
-      parseID3PES = this._parseID3PES.bind(this);
+    let start;
+    let stt;
+    let pid;
+    let atf;
+    let offset;
+    let pes;
 
+    const avcTrack = this._avcTrack;
+    const audioTrack = this._audioTrack;
+    const id3Track = this._id3Track;
+    const parsePAT = this._parsePAT;
+    const parsePMT = this._parsePMT;
+    const parsePES = this._parsePES;
+    const parseAVCPES = this._parseAVCPES.bind(this);
+    const parseAACPES = this._parseAACPES.bind(this);
+    const parseMPEGPES = this._parseMPEGPES.bind(this);
+    const parseID3PES = this._parseID3PES.bind(this);
     const syncOffset = TSDemuxer._syncOffset(data);
+
+    let avcId = avcTrack.pid;
+    let avcData = avcTrack.pesData;
+    let audioId = audioTrack.pid;
+    let id3Id = id3Track.pid;
+    let audioData = audioTrack.pesData;
+    let id3Data = id3Track.pesData;
+    let len = data.length;
+    let unknownPIDs = false;
+    let pmtParsed = this.pmtParsed;
+    let pmtId = this._pmtId;
 
     // don't parse last TS packet if incomplete
     len -= (len + syncOffset) % 188;
@@ -236,7 +262,7 @@ class TSDemuxer {
             offset += data[offset] + 1;
           }
 
-          let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true, this.sampleAes != null);
+          let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true, isSampleAes);
 
           // only update track id if track PID found while parsing PMT
           // this is to avoid resetting the PID to -1 in case
@@ -312,37 +338,47 @@ class TSDemuxer {
       id3Track.pesData = id3Data;
     }
 
-    if (this.sampleAes == null) {
-      this.remuxer.remux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
-    } else {
-      this.decryptAndRemux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
-    }
+    return {
+      audioTrack,
+      avcTrack,
+      id3Track,
+      textTrack: this._txtTrack
+    };
   }
 
-  decryptAndRemux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
-    if (audioTrack.samples && audioTrack.isAAC) {
-      let localthis = this;
-      this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function () {
-        localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
-      });
-    } else {
-      this.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
-    }
+  demuxSampleAes (data, decryptData, timeOffset, contiguous): Promise <DemuxerResult> {
+    const demuxResult = this.demux(data, contiguous, timeOffset, true);
+    const sampleAes = this.sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptData, this.discardEPB);
+    return new Promise((resolve, reject) => {
+      this.decrypt(demuxResult.audioTrack, demuxResult.avcTrack, sampleAes)
+        .then(() => {
+          resolve(demuxResult);
+        });
+    });
   }
 
-  decryptAndRemuxAvc (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
-    if (videoTrack.samples) {
-      let localthis = this;
-      this.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
-        localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
-      });
-    } else {
-      this.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
-    }
+  decrypt (audioTrack, videoTrack, sampleAes): Promise<void> {
+    return new Promise((resolve) => {
+      if (audioTrack.samples && audioTrack.isAAC) {
+        sampleAes.decryptAacSamples(audioTrack.samples, 0, () => {
+          if (videoTrack.samples) {
+            sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, () => {
+              resolve();
+            });
+          } else {
+            resolve();
+          }
+        });
+      } else if (videoTrack.samples) {
+        sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, () => {
+          resolve();
+        });
+      }
+    });
   }
 
   destroy () {
-    this._initPTS = this._initDTS = undefined;
+    this._initPTS = this._initDTS = null;
     this._duration = 0;
   }
 
@@ -366,7 +402,7 @@ class TSDemuxer {
       switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
-          logger.log('unkown stream type:' + data[offset]);
+          logger.log('unknown stream type:' + data[offset]);
           break;
         }
         /* falls through */
@@ -391,7 +427,7 @@ class TSDemuxer {
 
       case 0xdb: // SAMPLE-AES AVC
         if (!isSampleAes) {
-          logger.log('unkown stream type:' + data[offset]);
+          logger.log('unknown stream type:' + data[offset]);
           break;
         }
         /* falls through */
@@ -423,7 +459,7 @@ class TSDemuxer {
         break;
 
       default:
-        logger.log('unkown stream type:' + data[offset]);
+        logger.log('unknown stream type:' + data[offset]);
         break;
       }
       // move to the next table entry
@@ -556,7 +592,7 @@ class TSDemuxer {
   _parseAVCPES (pes, last) {
     // logger.log('parse new PES');
     let track = this._avcTrack,
-      units = this._parseAVCNALu(pes.data),
+      units = this._parseAVCNALu(pes.data) as Array<any>,
       debug = false,
       expGolombDecoder,
       avcSample = this.avcSample,
@@ -804,7 +840,7 @@ class TSDemuxer {
 
   _parseAVCNALu (array) {
     let i = 0, len = array.byteLength, value, overflow, track = this._avcTrack, state = track.naluState || 0, lastState = state;
-    let units = [], unit, unitType, lastUnitStart = -1, lastUnitType;
+    let units = [] as Array<any>, unit, unitType, lastUnitStart = -1, lastUnitType;
     // logger.log('PES:' + Hex.hexDump(array));
 
     if (state === -1) {
@@ -902,7 +938,7 @@ class TSDemuxer {
    */
   discardEPB (data) {
     let length = data.byteLength,
-      EPBPositions = [],
+      EPBPositions = [] as Array<number>,
       i = 1,
       newLength, newData;
 

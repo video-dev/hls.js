@@ -4,12 +4,18 @@
 import * as ADTS from './adts';
 import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
+import { DemuxerResult } from '../types/demuxer';
+import NonProgressiveDemuxer from './non-progressive-demuxer';
+import { dummyTrack } from './dummy-demuxed-track';
 
-class AACDemuxer {
-  constructor (observer, remuxer, config) {
+class AACDemuxer extends NonProgressiveDemuxer {
+  private observer: any;
+  private config: any;
+  private _audioTrack!: any;
+  constructor (observer, config) {
+    super();
     this.observer = observer;
     this.config = config;
-    this.remuxer = remuxer;
   }
 
   resetInitSegment (initSegment, audioCodec, videoCodec, duration) {
@@ -42,7 +48,7 @@ class AACDemuxer {
   }
 
   // feed incoming data to the front of the parsing pipeline
-  append (data, timeOffset, contiguous, accurateTimeOffset) {
+  demuxInternal (data, timeOffset, contiguous, accurateTimeOffset): DemuxerResult {
     let track = this._audioTrack;
     let id3Data = ID3.getID3Data(data, 0) || [];
     let timestamp = ID3.getTimeStamp(id3Data);
@@ -76,13 +82,16 @@ class AACDemuxer {
       }
     }
 
-    this.remuxer.remux(track,
-      { samples: [] },
-      { samples: id3Samples, inputTimeScale: 90000 },
-      { samples: [] },
-      timeOffset,
-      contiguous,
-      accurateTimeOffset);
+    return {
+      audioTrack: track,
+      avcTrack: dummyTrack(),
+      id3Track: dummyTrack(),
+      textTrack: dummyTrack()
+    };
+  }
+
+  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number, contiguous: boolean): Promise<DemuxerResult> {
+    return Promise.reject(new Error('The AAC demuxer does not support Sample-AES decryption'));
   }
 
   destroy () {

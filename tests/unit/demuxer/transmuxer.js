@@ -1,87 +1,86 @@
-import Event from '../../../src/events.js';
-import Demuxer from '../../../src/demux/demuxer.js';
+import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
 
 const sinon = require('sinon');
 
-describe('Demuxer tests', function () {
-  it('Demuxer constructor no worker', function () {
+describe('TransmuxerInterface tests', function () {
+  it('can construct without a worker', function () {
     let config = { enableWorker: false }; // Option debug : true crashes mocha
     let hls = {
       trigger: function () {},
       config: config
     };
     let id = 'main';
-    let demux = new Demuxer(hls, id);
+    let transmuxerInterface = new TransmuxerInterface(hls, id);
 
-    expect(demux.hls).to.equal(hls, 'Hls object created');
-    expect(demux.id).to.equal(id, 'Id has been set up');
-    expect(demux.observer.trigger).to.exist;
-    expect(demux.observer.off).to.exist;
-    expect(demux.demuxer).to.exist;
+    expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
+    expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
+    expect(transmuxerInterface.observer.trigger).to.exist;
+    expect(transmuxerInterface.observer.off).to.exist;
+    expect(transmuxerInterface.transmuxer).to.exist;
   });
 
-  it('Demuxer constructor with worker', function () {
+  it('can construct with a worker', function () {
     let config = { enableWorker: true }; // Option debug : true crashes mocha
     let hls = {
       trigger: function () {},
       config: config
     };
     let id = 'main';
-    let demux = new Demuxer(hls, id);
+    let transmuxerInterface = new TransmuxerInterface(hls, id);
 
-    expect(demux.hls).to.equal(hls, 'Hls object created');
-    expect(demux.id).to.equal(id, 'Id has been set up');
+    expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
+    expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
 
-    expect(demux.observer.trigger).to.exist;
-    expect(demux.observer.off).to.exist;
-    expect(demux.w).to.exist;
+    expect(transmuxerInterface.observer.trigger, 'trigger exists').to.exist;
+    expect(transmuxerInterface.observer.off, 'off exists').to.exist;
+    expect(transmuxerInterface.worker, 'worker exists').to.exist;
   });
 
-  it('Destroy demuxer worker', function () {
+  it('can destroy a transmuxer worker', function () {
     let config = { enableWorker: true }; // Option debug : true crashes mocha
     let hls = {
       trigger: function () {},
       config: config
     };
     let id = 'main';
-    let demux = new Demuxer(hls, id);
-    demux.destroy();
+    let transmuxerInterface = new TransmuxerInterface(hls, id);
+    transmuxerInterface.destroy();
 
-    expect(demux.observer).to.not.exist;
-    expect(demux.demuxer).to.not.exist;
-    expect(demux.w).to.not.exist;
+    expect(transmuxerInterface.observer).to.not.exist;
+    expect(transmuxerInterface.transmuxer).to.not.exist;
+    expect(transmuxerInterface.w).to.not.exist;
   });
 
-  it('Destroy demuxer no worker', function () {
+  it('can destroy an inline transmuxer', function () {
     let config = { enableWorker: false }; // Option debug : true crashes mocha
     let hls = {
       trigger: function () {},
       config: config
     };
     let id = 'main';
-    let demux = new Demuxer(hls, id);
-    demux.destroy();
+    let transmuxerInterface = new TransmuxerInterface(hls, id);
+    transmuxerInterface.destroy();
 
-    expect(demux.observer).to.not.exist;
-    expect(demux.demuxer).to.not.exist;
-    expect(demux.w).to.not.exist;
+    expect(transmuxerInterface.observer).to.not.exist;
+    expect(transmuxerInterface.transmuxer).to.not.exist;
+    expect(transmuxerInterface.w).to.not.exist;
   });
 
-  it('Push data to demuxer with worker', function () {
+  it('pushes data to a transmuxer worker', function () {
     let config = { enableWorker: true }; // Option debug : true crashes mocha
     let hls = {
       trigger: function () {},
       config: config
     };
     let id = 'main';
-    let demux = new Demuxer(hls, id);
+    let transmuxerInterface = new TransmuxerInterface(hls, id);
     let currentFrag = {
       cc: 100,
       sn: 5,
       level: 1
     };
     // Config for push
-    demux.frag = currentFrag;
+    transmuxerInterface.frag = currentFrag;
 
     let newFrag = {
       decryptdata: {},
@@ -98,7 +97,7 @@ describe('Demuxer tests', function () {
       accurateTimeOffset = {},
       defaultInitPTS = {};
 
-    let stub = sinon.stub(demux.w, 'postMessage').callsFake(function (obj1, obj2) {
+    let stub = sinon.stub(transmuxerInterface.worker, 'postMessage').callsFake(function (obj1, obj2) {
       expect(obj1.cmd).to.equal('demux', 'cmd');
       expect(obj1.data).to.equal(data, 'data');
       expect(obj1.decryptdata).to.equal(newFrag.decryptdata, 'decryptdata');
@@ -114,26 +113,26 @@ describe('Demuxer tests', function () {
       expect(obj2[0]).to.equal(data, 'ArrayBuffer');
     });
 
-    demux.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);
+    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);
 
     expect(stub).to.have.been.calledOnce;
   });
 
-  it('Push data to demuxer with no worker', function () {
+  it('pushes data to demuxer with no worker', function () {
     let config = { enableWorker: false }; // Option debug : true crashes mocha
     let hls = {
       trigger: function () {},
       config: config
     };
     let id = 'main';
-    let demux = new Demuxer(hls, id);
+    let transmuxerInterface = new TransmuxerInterface(hls, id);
     let currentFrag = {
       cc: 100,
       sn: 5,
       level: 1
     };
     // Config for push
-    demux.frag = currentFrag;
+    transmuxerInterface.frag = currentFrag;
 
     let newFrag = {
       decryptdata: {},
@@ -150,7 +149,7 @@ describe('Demuxer tests', function () {
       accurateTimeOffset = {},
       defaultInitPTS = {};
 
-    let stub = sinon.stub(demux.demuxer, 'push').callsFake(function (obj1, obj2, obj3, obj4, obj5, obj6, obj7, obj8, obj9, obj10, obj11, obj12) {
+    let stub = sinon.stub(transmuxerInterface.transmuxer, 'push').callsFake(function (obj1, obj2, obj3, obj4, obj5, obj6, obj7, obj8, obj9, obj10, obj11, obj12) {
       expect(obj1).to.equal(data);
       expect(obj2).to.equal(newFrag.decryptdata);
       expect(obj3).to.equal(initSegment);
@@ -165,21 +164,20 @@ describe('Demuxer tests', function () {
       expect(obj12).to.equal(defaultInitPTS);
     });
 
-    demux.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);
+    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);
     expect(stub).to.have.been.calledWith(data, newFrag.decryptdata, initSegment, audioCodec, videoCodec, newFrag.start, true, true, false, duration, accurateTimeOffset, defaultInitPTS);
   });
 
-  it('Sent worker generic message', function () {
-    let config = { enableWorker: true }; // Option debug : true crashes mocha
-    let hls = {
+  it('sends worker generic message', function () {
+    const config = { enableWorker: true }; // Option debug : true crashes mocha
+    const hls = {
       trigger: function (event, data) {},
       config: config
     };
-    let id = 'main';
-    let demux = new Demuxer(hls, id);
-    demux.frag = {};
+    const transmuxerInterface = new TransmuxerInterface(hls, 'main');
+    transmuxerInterface.frag = {};
 
-    let evt = {
+    const evt = {
       data: {
         event: {},
         data: {}
@@ -189,57 +187,29 @@ describe('Demuxer tests', function () {
     hls.trigger = function (event, data) {
       expect(event).to.equal(evt.data.event);
       expect(data).to.equal(evt.data.data);
-      expect(demux.frag).to.equal(evt.data.data.frag);
-      expect(id).to.equal(evt.data.data.id);
+      expect(transmuxerInterface.frag).to.equal(evt.data.data.frag);
+      expect(evt.data.data.id).to.equal('main');
     };
 
-    demux.onWorkerMessage(evt);
+    transmuxerInterface.onWorkerMessage(evt);
   });
 
-  it('Sent worker message type main', function () {
-    let config = { enableWorker: true }; // Option debug : true crashes mocha
-    let hls = {
+  it('Handles the init event', function () {
+    const config = { enableWorker: true }; // Option debug : true crashes mocha
+    const hls = {
       trigger: function (event, data) {},
       config: config
     };
-    let id = 'main';
-    let demux = new Demuxer(hls, id);
-
-    let evt = {
+    const transmuxerInterface = new TransmuxerInterface(hls, 'main');
+    const evt = {
       data: {
         event: 'init',
         data: {}
       }
     };
 
-    let spy = sinon.spy(window.URL, 'revokeObjectURL');
-
-    demux.onWorkerMessage(evt);
-
+    const spy = sinon.spy(window.URL, 'revokeObjectURL');
+    transmuxerInterface.onWorkerMessage(evt);
     expect(spy).to.have.been.calledOnce;
-  });
-
-  it('Sent worker message FRAG_PARSING_DATA', function () {
-    let config = { enableWorker: true }; // Option debug : true crashes mocha
-    let hls = {
-      trigger: function () {},
-      config: config
-    };
-    let id = 'main';
-    let demux = new Demuxer(hls, id);
-
-    let evt = {
-      data: {
-        event: Event.FRAG_PARSING_DATA,
-        data: {},
-        data1: {},
-        data2: {}
-      }
-    };
-
-    demux.onWorkerMessage(evt);
-
-    expect(evt.data.data.data1).to.exist;
-    expect(evt.data.data.data2).to.exist;
   });
 });

@@ -51,6 +51,14 @@ export default class Fragment {
   public type!: FragmentTypes;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
   public loader!: any;
+  // The level index to which the fragment belongs
+  public level: number = -1;
+  // The continuity counter of the fragment
+  public cc: number = 0;
+  // The starting Presentation Time Stamp(PTS) of the fragment. Updated after transmuxing.
+  public startPTS!: number;
+  // The start time of the fragment, as listed in the manifest. Updated after transmuxing.
+  public start: number = 0;
   // LHLS prefetch flag
   public prefetch?: boolean;
 
