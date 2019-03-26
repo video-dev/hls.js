@@ -5,13 +5,13 @@ import sinon from 'sinon';
 describe('SubtitleTrackController', function () {
   let subtitleTrackController;
   let videoElement;
+  let sandbox;
 
   beforeEach(function () {
     const hls = new Hls({});
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
-
     subtitleTrackController.media = videoElement;
     subtitleTrackController.tracks = [{ id: 0, url: 'baz', details: { live: false } }, { id: 1, url: 'bar' }, { id: 2, details: { live: true }, url: 'foo' }];
 
@@ -20,6 +20,17 @@ describe('SubtitleTrackController', function () {
 
     textTrack1.mode = 'disabled';
     textTrack2.mode = 'disabled';
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  describe('constructor', function () {
+    it('defaults stopped to true', function () {
+      expect(subtitleTrackController.stopped).to.be.true;
+    });
   });
 
   describe('onTextTrackChanged', function () {
@@ -79,7 +90,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH', function () {
-      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
 
@@ -88,7 +99,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track has no details', function () {
-      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
 
@@ -97,7 +108,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should not trigger SUBTITLE_TRACK_LOADING if the track has details and is not live', function () {
-      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 1;
       subtitleTrackController.subtitleTrack = 0;
 
@@ -106,17 +117,15 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
-      const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
-      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
 
-      expect(stopTimerSpy).to.have.been.calledOnce;
       expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: -1 });
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {
-      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 2;
 
@@ -124,12 +133,12 @@ describe('SubtitleTrackController', function () {
       expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', { url: 'foo', id: 2 });
     });
 
-    it('should do nothing if called with out of bound indicies', function () {
-      const stopTimerSpy = sinon.spy(subtitleTrackController, '_stopTimer');
+    it('should do nothing if called with out of bound indices', function () {
+      const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
 
-      expect(stopTimerSpy).to.have.not.been.called;
+      expect(clearReloadSpy).to.have.not.been.called;
     });
 
     it('should do nothing if called with a non-number', function () {
@@ -157,6 +166,69 @@ describe('SubtitleTrackController', function () {
       it('should not throw an exception if the mediaElement does not exist', function () {
         subtitleTrackController.media = null;
         subtitleTrackController._toggleTrackModes(1);
+      });
+    });
+
+    describe('onSubtitleTrackLoaded', function () {
+      it('exits early if the loaded track does not match the requested track', function () {
+        const tracks = subtitleTrackController.tracks;
+        const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
+        subtitleTrackController.trackId = 1;
+
+        let mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
+        subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
+        expect(subtitleTrackController.timer).to.not.exist;
+        expect(clearReloadSpy).to.have.been.calledOnce;
+
+        mockLoadedEvent.id = 0;
+        subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
+        expect(subtitleTrackController.timer).to.not.exist;
+        expect(clearReloadSpy).to.have.been.calledTwice;
+
+        mockLoadedEvent.id = 1;
+        subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
+        tracks[1] = null;
+        expect(subtitleTrackController.timer).to.not.exist;
+        expect(clearReloadSpy).to.have.been.calledThrice;
+      });
+
+      it('does not set the reload timer if the stopped flag is set', function () {
+        subtitleTrackController.stopped = true;
+        subtitleTrackController.trackId = 1;
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
+        expect(subtitleTrackController.timer).to.not.exist;
+      });
+
+      it('sets the live reload timer if the level is live', function () {
+        subtitleTrackController.stopped = false;
+        subtitleTrackController.trackId = 1;
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
+        expect(subtitleTrackController.timer).to.exist;
+      });
+
+      it('stops the live reload timer if the level is not live', function () {
+        subtitleTrackController.trackId = 1;
+        subtitleTrackController.timer = setTimeout(() => {}, 0);
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: {} });
+        expect(subtitleTrackController.timer).to.not.exist;
+      });
+    });
+
+    describe('stopLoad', function () {
+      it('stops loading', function () {
+        const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
+        subtitleTrackController.stopLoad();
+        expect(subtitleTrackController.stopped).to.be.true;
+        expect(clearReloadSpy).to.have.been.calledOnce;
+      });
+    });
+
+    describe('startLoad', function () {
+      it('stops loading', function () {
+        const loadCurrentTrackSpy = sandbox.spy(subtitleTrackController, '_loadCurrentTrack');
+        subtitleTrackController.startLoad();
+        expect(subtitleTrackController.stopped).to.be.false;
+        expect(loadCurrentTrackSpy).to.have.been.calledOnce;
       });
     });
   });
