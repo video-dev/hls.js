@@ -121,7 +121,7 @@ export default class Hls extends Observer {
     const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap
 
     const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
-    const capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
+    const capLevelController = this.capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
     const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
     const playListLoader = new PlaylistLoader(this);
     const fragmentLoader = new FragmentLoader(this);
@@ -194,7 +194,7 @@ export default class Hls extends Observer {
        * @member {SubtitleTrackController} subtitleTrackController
        */
       this.subtitleTrackController = subtitleTrackController;
-      coreComponents.push(subtitleTrackController);
+      networkControllers.push(subtitleTrackController);
     }
 
     Controller = config.emeController;
@@ -211,7 +211,7 @@ export default class Hls extends Observer {
     // optional subtitle controllers
     Controller = config.subtitleStreamController;
     if (Controller) {
-      coreComponents.push(new Controller(this, fragmentTracker));
+      networkControllers.push(new Controller(this, fragmentTracker));
     }
     Controller = config.timelineController;
     if (Controller) {
@@ -443,6 +443,27 @@ export default class Hls extends Observer {
     }
 
     hls.levelController.startLevel = newLevel;
+  }
+
+  /**
+   * set  dynamically set capLevelToPlayerSize against (`CapLevelController`)
+   *
+   * @type {boolean}
+   */
+  set capLevelToPlayerSize (shouldStartCapping) {
+    const newCapLevelToPlayerSize = !!shouldStartCapping;
+
+    if (newCapLevelToPlayerSize !== this.config.capLevelToPlayerSize) {
+      if (newCapLevelToPlayerSize) {
+        this.capLevelController.startCapping(); // If capping occurs, nextLevelSwitch will happen based on size.
+      } else {
+        this.capLevelController.stopCapping();
+        this.autoLevelCapping = -1;
+        this.streamController.nextLevelSwitch(); // Now we're uncapped, get the next level asap.
+      }
+
+      this.config.capLevelToPlayerSize = newCapLevelToPlayerSize;
+    }
   }
 
   /**
