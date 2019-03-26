@@ -110,6 +110,6 @@ export interface Loader<T extends LoaderContext> {
     config: LoaderConfiguration,
     callbacks: LoaderCallbacks<T>,
   ): void
-
+  getResponseHeader(name:string): string | null
   context: T
 }
