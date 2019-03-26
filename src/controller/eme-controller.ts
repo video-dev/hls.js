@@ -34,6 +34,7 @@ class EMEController extends EventHandler {
   private _media: HTMLMediaElement | null = null;
   private _requestLicenseFailureCount: number = 0;
   private _hasSetMediaKeys = false;
+  private _keySessions: MediaKeySession[] = [];
 
   /**
    * User configurations
@@ -115,21 +116,18 @@ class EMEController extends EventHandler {
    * @private
    * @param {Event<MediaKeyMessageEvent>} event Message event created by license request generation
    */
-  private _onKeySessionMessage = (event: MediaKeyMessageEvent) => {
+  private _onKeySessionMessage = (resolve, reject, event: MediaKeyMessageEvent) => {
     logger.log('Received key session message');
 
     this._requestLicense(event.message).then((data: ArrayBuffer) => {
       logger.log('Received license data, updating key-session');
 
       return (event.target! as MediaKeySession).update(data).then((value) => {
-        this.hls.trigger(Event.KEY_LOADED, {});
+        resolve();
       });
     }).catch((err) => {
-      logger.error('DRM Configuration failed')
-
-      this.hls.trigger(Event.ERROR, {
-        type: ErrorTypes.KEY_SYSTEM_ERROR,
-        details: err,
+      reject({
+        message: ErrorTypes.KEY_SYSTEM_ERROR,
         fatal: true
       });
     });;
@@ -140,14 +138,18 @@ class EMEController extends EventHandler {
    * @private
    * @param {MediaKeys} session Media Keys Session created on the Media Keys object https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySession
    */
-  private _onMediaKeySessionCreated(session: MediaKeySession, track: any): Promise<void> {
+  private _onMediaKeySessionCreated(session: MediaKeySession, track: any): Promise<any> {
     logger.log('Generating license request');
 
-    session.addEventListener('message', this._onKeySessionMessage.bind(this));
+    const messagePromise = new Promise((resolve, reject) => {
+      session.addEventListener('message', this._onKeySessionMessage.bind(this, resolve, reject))
+    });;
 
-    return this.getInitializationData(track).then((initDataInfo) => {
+    this.getInitializationData(track).then((initDataInfo) => {
       return session.generateRequest(initDataInfo.initDataType, initDataInfo.initData)
     });
+
+    return messagePromise;
   }
 
   /**
@@ -160,6 +162,8 @@ class EMEController extends EventHandler {
     logger.log('Creating session on media keys');
 
     const session = mediaKeys.createSession();
+
+    this._keySessions.push(session);
 
     return Promise.resolve({session, track});
   }
@@ -264,6 +268,8 @@ class EMEController extends EventHandler {
       return;
     }
 
+    let entry;
+
     const mediaKeySystemConfigs = this._getSupportedMediaKeySystemConfigurations(data.levels);
 
     this._getKeySystemAccess(mediaKeySystemConfigs).then((mediaKeySystemAccess) => {
@@ -285,15 +291,21 @@ class EMEController extends EventHandler {
         return this._onMediaKeysSet(mediaKeys, audioTrack);
       })
 
-      const requests = levelRequests.concat(audioRequests);
+      const keySessionRequests = levelRequests.concat(audioRequests);
 
-      return Promise.all(requests);
-    }).then((response: any[]) => {
+      return Promise.all(keySessionRequests);
+    }).then((keySessionResponses: any[]) => {
       logger.log('Created media key sessions');
 
-      response.forEach((sessions) => {
-        this._onMediaKeySessionCreated(sessions.session, sessions.track);
+      const licenseRequests = keySessionResponses.map((keySessionResponse) => {
+        return this._onMediaKeySessionCreated(keySessionResponse.session, keySessionResponse.track);
       })
+
+      return Promise.all(licenseRequests);
+    }).then(() => {
+      logger.log('EME sucessfully configured');
+
+      this.hls.trigger(Event.KEY_LOADED, {});
     }).catch((err: EMEError) => {
       logger.error('DRM Configuration failed')
 
@@ -314,8 +326,14 @@ class EMEController extends EventHandler {
   }
 
   onMediaDetached() {
+    this._keySessions.forEach((keySession) => {
+      keySession.close();
+    })
+
     if (this._media) {
-      this._media = null; // release media reference
+      this._media.setMediaKeys(null).then(() => {
+        this._media = null; // release media reference
+      })
     }
   }
 
@@ -335,6 +353,14 @@ class EMEController extends EventHandler {
 
   set hasSetMediaKeys(value) {
     this._hasSetMediaKeys = value;
+  }
+
+  get keySessions() {
+    return this._keySessions;
+  }
+
+  set keySessions(value) {
+    this._keySessions = value;
   }
 
   // Getters for user configurations
