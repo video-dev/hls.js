@@ -141,15 +141,15 @@ class EMEController extends EventHandler {
   private _onMediaKeySessionCreated(session: MediaKeySession, track: any): Promise<any> {
     logger.log('Generating license request');
 
-    const messagePromise = new Promise((resolve, reject) => {
-      session.addEventListener('message', this._onKeySessionMessage.bind(this, resolve, reject))
-    });;
+    return this.getInitializationData(track).then((initDataInfo) => {
+      const messagePromise = new Promise((resolve, reject) => {
+        session.addEventListener('message', this._onKeySessionMessage.bind(this, resolve, reject))
+      });
 
-    this.getInitializationData(track).then((initDataInfo) => {
-      return session.generateRequest(initDataInfo.initDataType, initDataInfo.initData)
+      session.generateRequest(initDataInfo.initDataType, initDataInfo.initData)
+
+      return messagePromise;
     });
-
-    return messagePromise;
   }
 
   /**
