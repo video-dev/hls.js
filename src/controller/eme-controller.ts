@@ -78,6 +78,16 @@ class EMEController extends EventHandler {
     this._requestLicense(message);
   }
 
+  private _onLicenseRequestSuccess = (xhrResponse, xhr, message, resolve, reject) => {
+    if (xhrResponse.status === 200) {
+      this._requestLicenseFailureCount = 0;
+
+      resolve(xhr.response as ArrayBuffer);
+    } else {
+      this._onLicenseRequestError(message, reject);
+    }
+  }
+
   /**
    * Requests the license to be used in the key session
    * @private
@@ -88,26 +98,20 @@ class EMEController extends EventHandler {
 
     let xhr = new XMLHttpRequest();
 
-    return this.licenseXhrSetup(xhr).then(xhrRepsonse => {
+    return this.licenseXhrSetup(xhr).then(xhrResponse => {
       return new Promise((resolve, reject) => {
-        xhrRepsonse.responseType = 'arraybuffer';
+        xhrResponse.responseType = 'arraybuffer';
 
-        xhrRepsonse.onload = () => {
-          if (xhrRepsonse.status === 200) {
-            this._requestLicenseFailureCount = 0;
+        xhrResponse.onload = this._onLicenseRequestSuccess.bind(this, xhrResponse, xhr, message, resolve, reject);
 
-            resolve(xhr.response as ArrayBuffer);
-          } else {
-            this._onLicenseRequestError(message, reject.bind(this));
-          }
-        }
+        xhrResponse.onerror = this._onLicenseRequestError.bind(this, message, reject);
 
-        xhrRepsonse.onerror = this._onLicenseRequestError.bind(this, message, reject);
-
-        xhrRepsonse.send(message);
+        xhrResponse.send(message);
       });
     }).then((license: ArrayBuffer) => {
       return Promise.resolve(license);
+    }).catch(() => {
+      return Promise.reject();
     });
   }
 
@@ -122,7 +126,7 @@ class EMEController extends EventHandler {
     this._requestLicense(event.message).then((data: ArrayBuffer) => {
       logger.log('Received license data, updating key-session');
 
-      return (event.target! as MediaKeySession).update(data).then((value) => {
+      return (event.target! as MediaKeySession).update(data).then(() => {
         resolve();
       });
     }).catch((err) => {
@@ -265,10 +269,12 @@ class EMEController extends EventHandler {
 
   onManifestParsed(data: any) {
     if (!this._emeEnabled) {
+      this.hls.trigger(Event.KEY_LOADED);
+
       return;
     }
 
-    let entry;
+    this.hls.trigger(Event.KEY_LOADING);
 
     const mediaKeySystemConfigs = this._getSupportedMediaKeySystemConfigurations(data.levels);
 
@@ -305,7 +311,7 @@ class EMEController extends EventHandler {
     }).then(() => {
       logger.log('EME sucessfully configured');
 
-      this.hls.trigger(Event.KEY_LOADED, {});
+      this.hls.trigger(Event.KEY_LOADED);
     }).catch((err: EMEError) => {
       logger.error('DRM Configuration failed')
 
