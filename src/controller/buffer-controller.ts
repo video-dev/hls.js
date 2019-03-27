@@ -439,8 +439,14 @@ class BufferController extends EventHandler {
     this._needsEos = false;
   }
 
-  onBufferFlushing (data: { startOffset: number, endOffset: number, type: SourceBufferName }) {
-    this.flushRange.push({ start: data.startOffset, end: data.endOffset, type: data.type });
+  onBufferFlushing (data: { startOffset: number, endOffset: number, type?: SourceBufferName }) {
+    if (data.type) {
+      this.flushRange.push({ start: data.startOffset, end: data.endOffset, type: data.type });
+    } else {
+      this.flushRange.push({ start: data.startOffset, end: data.endOffset, type: 'video' });
+      this.flushRange.push({ start: data.startOffset, end: data.endOffset, type: 'audio' });
+    }
+
     // attempt flush immediately
     this.flushBufferCounter = 0;
     this.doFlush();
