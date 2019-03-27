@@ -131,7 +131,7 @@ export default class Hls extends Observer {
     }
 
     enableLogs(config.debug);
-    
+
     this._autoLevelCapping = -1;
 
     // core controllers and network loaders
