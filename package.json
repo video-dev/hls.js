@@ -53,6 +53,7 @@
     "chromedriver": "^2.38.3",
     "coverage-istanbul-loader": "^1.0.0",
     "esdoc": "^1.1.0",
+    "esdoc-ecmascript-proposal-plugin": "^1.0.0",
     "esdoc-standard-plugin": "^1.0.0",
     "esdoc-typescript-plugin": "^1.0.1",
     "eslint": "^4.13.1",
@@ -85,6 +86,6 @@
     "webpack-cli": "^3.1.2",
     "webpack-dev-server": "^3.1.4",
     "webpack-merge": "^4.2.1",
-    "webworkify-webpack": "johnBartos/webworkify-webpack#refs/heads/master"
+    "webworkify-webpack": "^2.1.5"
   }
 }

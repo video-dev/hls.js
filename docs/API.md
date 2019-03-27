@@ -89,6 +89,7 @@
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
+  - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
   - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
@@ -1053,6 +1054,13 @@ Default value is `hls.firstLevel`.
 - get/set: Capping/max level value that could be used by ABR Controller.
 
 Default value is `-1` (no level capping).
+
+### `hls.capLevelToPlayerSize`
+
+- get: Enables or disables level capping. If disabled after previously enabled, `nextLevelSwitch` will be immediately called.
+- set: Whether level capping is enabled.
+
+Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in config.
 
 ### `hls.bandwidthEstimate`
 
