@@ -29,7 +29,6 @@ import { Observer } from './observer';
  */
 export default class Hls extends Observer {
   public static defaultConfig?: HlsConfig;
-  
   public config: HlsConfig;
 
   private _autoLevelCapping: number;
@@ -38,15 +37,13 @@ export default class Hls extends Observer {
   private levelController: any;
   private streamController: any;
   private networkControllers: any[];
-  
   private audioTrackController: any;
   private subtitleTrackController: any;
   private emeController: any;
   private coreComponents: any[];
-  
   private media: HTMLMediaElement | null | undefined;
   private url: string | null | undefined;
-  
+
   /**
    * @type {string}
    */
@@ -540,12 +537,12 @@ export default class Hls extends Observer {
   get minAutoLevel (): number {
     const { levels, config: { minAutoBitrate } } = this;
     const len = levels ? levels.length : 0;
-    
+
     for (let i = 0; i < len; i++) {
-      const levelNextBitrate = levels[i].realBitrate ? 
-        Math.max(levels[i].realBitrate, levels[i].bitrate) : 
-        levels[i].bitrate;
-      
+      const levelNextBitrate = levels[i].realBitrate
+        ? Math.max(levels[i].realBitrate, levels[i].bitrate)
+        : levels[i].bitrate;
+
       if (levelNextBitrate > minAutoBitrate) {
         return i;
       }
@@ -595,7 +592,7 @@ export default class Hls extends Observer {
   /**
    * @type {AudioTrack[]}
    */
-  //todo(typescript-audioTrackController)
+  // todo(typescript-audioTrackController)
   get audioTracks (): any[] {
     const audioTrackController = this.audioTrackController;
     return audioTrackController ? audioTrackController.audioTracks : [];
@@ -632,8 +629,8 @@ export default class Hls extends Observer {
    * get alternate subtitle tracks list from playlist
    * @type {SubtitleTrack[]}
    */
-  //todo(typescript-subtitleTrackController)
-  get subtitleTracks (): any[]  {
+  // todo(typescript-subtitleTrackController)
+  get subtitleTracks (): any[] {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
