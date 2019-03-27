@@ -417,7 +417,9 @@ class StreamController extends BaseStreamController {
     let fragState = this.fragmentTracker.getState(frag);
 
     this.fragCurrent = frag;
-    this.startFragRequested = true;
+    if (frag.sn !== 'initSegment') {
+      this.startFragRequested = true;
+    }
     // Don't update nextLoadPosition for fragments which are not buffered
     if (Number.isFinite(frag.sn) && !frag.bitrateTest) {
       this.nextLoadPosition = frag.start + frag.duration;
