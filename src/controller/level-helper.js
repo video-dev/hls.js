@@ -207,26 +207,32 @@ export function adjustSliding (oldPlaylist, newPlaylist) {
   }
 }
 
-export function computeReloadInterval (newDetails, { trequest: lastRequestTime = 0 } = {}) {
+export function computeReloadInterval (newDetails, stats = {}) {
   const reloadInterval = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration);
-  const minReloadInterval = 50; // TODO: set a better minimum based on stats
+  const reloadIntervalAfterMiss = reloadInterval / 2;
   const timeSinceLastModified = newDetails.lastModified ? new Date() - newDetails.lastModified : 0;
-  const timeSinceLastRequested = performance.now() - lastRequestTime;
+  const useLastModified = timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;
+  const roundTrip = stats.tload - stats.trequest;
 
   let estimatedTimeUntilUpdate = reloadInterval;
   let availabilityDelay = newDetails.availabilityDelay;
+  // let estimate = 'average';
 
   if (newDetails.updated === false) {
-    // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
-    // changed then it MUST wait for a period of one-half the target
-    // duration before retrying.
-    estimatedTimeUntilUpdate = reloadInterval / 2;
-
-    if (lastRequestTime) {
-      // Reload faster when the time since the last request is closer to the reload interval
-      estimatedTimeUntilUpdate = Math.min(reloadInterval - timeSinceLastRequested, estimatedTimeUntilUpdate);
+    if (useLastModified) {
+      // estimate = 'miss round trip';
+      // We should have had a hit so try again in the time it takes to get a response, but no less than 100ms
+      const minRetry = 100;
+      estimatedTimeUntilUpdate = Math.max(Math.min(reloadIntervalAfterMiss, roundTrip), minRetry);
+    } else {
+      // estimate = 'miss half average - round trip';
+      // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
+      // changed then it MUST wait for a period of one-half the target
+      // duration before retrying.
+      estimatedTimeUntilUpdate = reloadIntervalAfterMiss - roundTrip;
     }
-  } else if (timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval) {
+  } else if (useLastModified) {
+    // estimate = 'next modified date';
     // Get the closest we've been to timeSinceLastModified on update
     availabilityDelay = Math.min(availabilityDelay || reloadInterval / 2, timeSinceLastModified);
     // TODO: Network controllers should maintain this and other stats, rather than passing it from one level details to then next after each response
@@ -236,14 +242,15 @@ export function computeReloadInterval (newDetails, { trequest: lastRequestTime =
     estimatedTimeUntilUpdate = Math.max(availabilityDelay / 2, minAvailabilityDelay) + reloadInterval - timeSinceLastModified;
   }
 
-  // console.log(`[computeReloadInterval] live last requested ${newDetails.updated ? 'REFRESHED' : 'MISSED'}`,
-  //   '\n  average target duration', reloadInterval,
+  // console.log(`[computeReloadInterval] live reload ${newDetails.updated ? 'REFRESHED' : 'MISSED'}`,
+  //   '\n  method', estimate,
   //   '\n  estimated time until update =>', estimatedTimeUntilUpdate,
+  //   '\n  average target duration', reloadInterval,
   //   '\n  time since modified', timeSinceLastModified,
-  //   '\n  time since request', timeSinceLastRequested,
+  //   '\n  time round trip', roundTrip,
   //   '\n  availability delay', availabilityDelay);
 
-  return Math.round(Math.max(minReloadInterval, estimatedTimeUntilUpdate));
+  return Math.round(estimatedTimeUntilUpdate);
 }
 
 export function getProgramDateTimeAtEndOfLastEncodedFragment (levelDetails) {
