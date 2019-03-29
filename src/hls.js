@@ -179,7 +179,7 @@ export default class Hls extends Observer {
        * @member {AudioTrackController} audioTrackController
        */
       this.audioTrackController = audioTrackController;
-      coreComponents.push(audioTrackController);
+      networkControllers.push(audioTrackController);
     }
 
     Controller = config.subtitleTrackController;
@@ -278,10 +278,6 @@ export default class Hls extends Observer {
     this.networkControllers.forEach(controller => {
       controller.startLoad(startPosition);
     });
-    const audioTrackController = this.audioTrackController;
-    if (audioTrackController) {
-      audioTrackController.startLoad();
-    }
   }
 
   /**
@@ -292,10 +288,6 @@ export default class Hls extends Observer {
     this.networkControllers.forEach(controller => {
       controller.stopLoad();
     });
-    const audioTrackController = this.audioTrackController;
-    if (audioTrackController) {
-      audioTrackController.stopLoad();
-    }
   }
 
   /**
