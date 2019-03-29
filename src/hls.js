@@ -169,7 +169,6 @@ export default class Hls extends Observer {
     this.audioTrackController = this.createController(config.audioTrackController, null, networkControllers);
     this.createController(config.audioStreamController, fragmentTracker, networkControllers);
 
-
     // subtitleTrackController must be defined before  because the order of event handling is important
     /**
      * @member {SubtitleTrackController} subtitleTrackController
@@ -190,7 +189,7 @@ export default class Hls extends Observer {
     this.coreComponents = coreComponents;
   }
 
-  createController(ControllerClass, fragmentTracker, components) {
+  createController (ControllerClass, fragmentTracker, components) {
     if (ControllerClass) {
       const controllerInstance = fragmentTracker ? new ControllerClass(this, fragmentTracker) : new ControllerClass(this);
       if (components) {

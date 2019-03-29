@@ -1,9 +1,8 @@
 import Event from '../events';
-import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import {computeReloadInterval} from "./level-helper";
-import EventHandler from "../event-handler";
+import { computeReloadInterval } from './level-helper';
+import EventHandler from '../event-handler';
 
 /**
  * @class AudioTrackController
@@ -110,19 +109,20 @@ class AudioTrackController extends EventHandler {
    * @param {} data
    */
   onAudioTrackLoaded (data) {
-    const { id, details, previousDetails } = data;
+    const { id, details } = data;
 
     if (id >= this.tracks.length) {
       logger.warn('Invalid audio track id:', id);
       return;
     }
 
-    logger.log(`audioTrack ${id} loaded`);
-
-    this.tracks[id].details = details;
+    logger.log(`audioTrack ${id} loaded [${details.startSN},${details.endSN}]`);
 
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
+      const curDetails = this.tracks[id].details;
+      details.updated = (!curDetails || details.endSN !== curDetails.endSN || details.url !== curDetails.url);
+      details.availabilityDelay = curDetails && curDetails.availabilityDelay;
       const reloadInterval = computeReloadInterval(details, data.stats, 'audio track');
       logger.log(`live audio track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
       // Stop reloading if the timer was cleared

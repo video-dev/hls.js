@@ -233,7 +233,7 @@ export function computeReloadInterval (newDetails, { trequest: lastRequestTime =
     newDetails.availabilityDelay = availabilityDelay;
     // TODO: Back off from reloading too close to the time the server is expected to update,  rather than using this hardcoded value
     const minAvailabilityDelay = 1000;
-    estimatedTimeUntilUpdate = Math.max( availabilityDelay / 2, minAvailabilityDelay) + reloadInterval - timeSinceLastModified;
+    estimatedTimeUntilUpdate = Math.max(availabilityDelay / 2, minAvailabilityDelay) + reloadInterval - timeSinceLastModified;
   }
 
   // console.log(`[computeReloadInterval] live last requested ${newDetails.updated ? 'REFRESHED' : 'MISSED'}`,
@@ -246,7 +246,7 @@ export function computeReloadInterval (newDetails, { trequest: lastRequestTime =
   return Math.round(Math.max(minReloadInterval, estimatedTimeUntilUpdate));
 }
 
-export function getProgramDateTimeAtEndOfLastEncodedFragment(levelDetails) {
+export function getProgramDateTimeAtEndOfLastEncodedFragment (levelDetails) {
   if (levelDetails.hasProgramDateTime) {
     const encodedFragments = levelDetails.fragments.filter((fragment) => !fragment.prefetch);
     const lastEncodedFrag = encodedFragments[encodedFragments.length - 1];
