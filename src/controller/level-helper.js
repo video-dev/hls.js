@@ -207,12 +207,12 @@ export function adjustSliding (oldPlaylist, newPlaylist) {
   }
 }
 
-export function computeReloadInterval (newDetails, stats = {}) {
+export function computeReloadInterval (newDetails, stats) {
   const reloadInterval = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration);
   const reloadIntervalAfterMiss = reloadInterval / 2;
   const timeSinceLastModified = newDetails.lastModified ? new Date() - newDetails.lastModified : 0;
   const useLastModified = timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;
-  const roundTrip = stats.tload - stats.trequest;
+  const roundTrip = stats ? stats.tload - stats.trequest : 0;
 
   let estimatedTimeUntilUpdate = reloadInterval;
   let availabilityDelay = newDetails.availabilityDelay;
@@ -226,11 +226,11 @@ export function computeReloadInterval (newDetails, stats = {}) {
       const minRetry = 283;
       estimatedTimeUntilUpdate = Math.max(Math.min(reloadIntervalAfterMiss, roundTrip), minRetry);
     } else {
-      // estimate = 'miss half average - round trip';
+      // estimate = 'miss half average';
       // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
       // changed then it MUST wait for a period of one-half the target
       // duration before retrying.
-      estimatedTimeUntilUpdate = reloadIntervalAfterMiss - roundTrip;
+      estimatedTimeUntilUpdate = reloadIntervalAfterMiss;
     }
   } else if (useLastModified) {
     // estimate = 'next modified date';
@@ -241,6 +241,8 @@ export function computeReloadInterval (newDetails, stats = {}) {
     // TODO: Back off from reloading too close to the time the server is expected to update,  rather than using this hardcoded value
     const minAvailabilityDelay = 1000;
     estimatedTimeUntilUpdate = Math.max(availabilityDelay / 2, minAvailabilityDelay) + reloadInterval - timeSinceLastModified;
+  } else {
+    estimatedTimeUntilUpdate = reloadInterval - roundTrip;
   }
 
   // console.log(`[computeReloadInterval] live reload ${newDetails.updated ? 'REFRESHED' : 'MISSED'}`,
