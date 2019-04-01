@@ -221,8 +221,9 @@ export function computeReloadInterval (newDetails, stats = {}) {
   if (newDetails.updated === false) {
     if (useLastModified) {
       // estimate = 'miss round trip';
-      // We should have had a hit so try again in the time it takes to get a response, but no less than 100ms
-      const minRetry = 100;
+      // We should have had a hit so try again in the time it takes to get a response,
+      // but no less than ~1/4 second. After 4 retries, at least 1.1 seconds will have gone by.
+      const minRetry = 283;
       estimatedTimeUntilUpdate = Math.max(Math.min(reloadIntervalAfterMiss, roundTrip), minRetry);
     } else {
       // estimate = 'miss half average - round trip';
