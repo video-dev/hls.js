@@ -115,7 +115,7 @@ export default class Hls extends Observer {
     // Shallow clone
     this.config = {
       ...defaultConfig,
-      ...userConfig,
+      ...userConfig
     };
 
     const { config } = this;
