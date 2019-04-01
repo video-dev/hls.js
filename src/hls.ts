@@ -41,8 +41,8 @@ export default class Hls extends Observer {
   private subtitleTrackController: any;
   private emeController: any;
   private coreComponents: any[];
-  private media: HTMLMediaElement | null | undefined;
-  private url: string | null | undefined;
+  private media: HTMLMediaElement | null = null;
+  private url: string | null = null;
 
   /**
    * @type {string}
@@ -112,13 +112,11 @@ export default class Hls extends Observer {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
     }
 
-    for (let prop in defaultConfig) {
-      if (prop in userConfig) continue;
-      userConfig[prop] = defaultConfig[prop];
-    }
-
-    // After expanding props onto config, it will no longer be Partial but all properties that should populated will be.
-    this.config = userConfig as HlsConfig;
+    // Shallow clone
+    this.config = {
+      ...defaultConfig,
+      ...userConfig,
+    };
 
     const { config } = this;
 
