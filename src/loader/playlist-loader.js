@@ -356,10 +356,6 @@ class PlaylistLoader extends EventHandler {
     stats.expires = toDate(loader.getResponseHeader('Expires'));
     stats.date = toDate(loader.getResponseHeader('Date'));
 
-    const sinceFirstByte = Math.max(performance.now() - stats.tfirst, 0);
-    const firstByteDate = new Date();
-    firstByteDate.setTime(firstByteDate.getTime() - sinceFirstByte);
-
     levelDetails.tload = stats.tload;
     levelDetails.lastModified = Math.max(stats.mtime, stats.encoded);
 
