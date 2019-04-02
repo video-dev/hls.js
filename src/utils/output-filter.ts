@@ -1,5 +1,14 @@
+import { CaptionScreen } from './cea-608-parser';
+
 export default class OutputFilter {
-  constructor (timelineController, trackName) {
+  timelineController: any;
+  trackName: string;
+  startTime: number | null;
+  endTime: number | null;
+  screen: CaptionScreen | null;
+
+  // TODO(typescript-timelineController)
+  constructor (timelineController: any, trackName: string) {
     this.timelineController = timelineController;
     this.trackName = trackName;
     this.startTime = null;
@@ -16,8 +25,8 @@ export default class OutputFilter {
     this.startTime = null;
   }
 
-  newCue (startTime, endTime, screen) {
-    if (this.startTime === null || this.startTime > startTime) {
+  newCue (startTime: number | null, endTime: number, screen: CaptionScreen) {
+    if (startTime === null || this.startTime === null || this.startTime > startTime) {
       this.startTime = startTime;
     }
 

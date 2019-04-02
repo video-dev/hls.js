@@ -1,3 +1,5 @@
+import OutputFilter from './output-filter';
+
 /**
  *
  * This code was ported from the dash.js project at:
@@ -653,18 +655,13 @@ export class CaptionScreen {
   }
 }
 
-interface IOutputFilter {
-  newCue(startTime: number | null, endTime: number, screen: CaptionScreen): void
-  dispatchCue(): void
-}
-
 // var modes = ['MODE_ROLL-UP', 'MODE_POP-ON', 'MODE_PAINT-ON', 'MODE_TEXT'];
 
 type CaptionModes = 'MODE_ROLL-UP' | 'MODE_POP-ON' | 'MODE_PAINT-ON' | 'MODE_TEXT' | null;
 
 class Cea608Channel {
   chNr: number;
-  outputFilter: IOutputFilter;
+  outputFilter: OutputFilter;
   mode: CaptionModes;
   verbose: number;
   displayedMemory: CaptionScreen;
@@ -674,7 +671,7 @@ class Cea608Channel {
   writeScreen: CaptionScreen;
   cueStartTime: number | null;
   lastCueEndTime: null;
-  constructor (channelNumber: number, outputFilter: IOutputFilter) {
+  constructor (channelNumber: number, outputFilter: OutputFilter) {
     this.chNr = channelNumber;
     this.outputFilter = outputFilter;
     this.mode = null;
@@ -700,11 +697,11 @@ class Cea608Channel {
     this.lastCueEndTime = null;
   }
 
-  getHandler (): IOutputFilter {
+  getHandler (): OutputFilter {
     return this.outputFilter;
   }
 
-  setHandler (newHandler: IOutputFilter) {
+  setHandler (newHandler: OutputFilter) {
     this.outputFilter = newHandler;
   }
 
@@ -903,7 +900,7 @@ interface PACData {
 
 class Cea608Parser {
   field: number;
-  outputs: IOutputFilter[];
+  outputs: OutputFilter[];
   channels: Cea608Channel[];
   currChNr: number;
   lastCmdA: number | null;
@@ -912,7 +909,7 @@ class Cea608Parser {
   startTime: null;
   lastTime: number | null;
   dataCounters: { 'padding': number; 'char': number; 'cmd': number; 'other': number; };
-  constructor (field: number, out1: IOutputFilter, out2: IOutputFilter) {
+  constructor (field: number, out1: OutputFilter, out2: OutputFilter) {
     this.field = field || 1;
     this.outputs = [out1, out2];
     this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2)];
@@ -929,7 +926,7 @@ class Cea608Parser {
     return this.channels[index].getHandler();
   }
 
-  setHandler (index: number, newHandler: IOutputFilter) {
+  setHandler (index: number, newHandler: OutputFilter) {
     this.channels[index].setHandler(newHandler);
   }
 
