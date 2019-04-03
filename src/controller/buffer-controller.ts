@@ -223,6 +223,7 @@ class BufferController extends EventHandler {
 
   onKeyLoaded() {
     this.emeConfigured = true;
+    this.doAppending();
   }
 
   checkPendingTracks () {

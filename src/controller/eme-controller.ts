@@ -8,15 +8,9 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { EMEInitDataInfo } from '../config';
 
 import { logger } from '../utils/logger';
-
-const MAX_LICENSE_REQUEST_FAILURES = 3;
-
-interface InitDataInfo {
-  initDataType: string,
-  initData: ArrayBuffer
-}
 
 interface EMEError {
   fatal: boolean,
@@ -32,7 +26,6 @@ interface EMEError {
  */
 class EMEController extends EventHandler {
   private _media: HTMLMediaElement | null = null;
-  private _requestLicenseFailureCount: number = 0;
   private _hasSetMediaKeys = false;
   private _keySessions: MediaKeySession[] = [];
 
@@ -41,8 +34,8 @@ class EMEController extends EventHandler {
    */
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: (supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>
-  private _getInitializationData: (track) => Promise<InitDataInfo>;
-  private _licenseXhrSetup: (xhr: XMLHttpRequest) => Promise<XMLHttpRequest>;
+  private _getEMEInitializationData: (track) => Promise<EMEInitDataInfo>;
+  private _getEMELicense: (event: MediaKeyMessageEvent) => Promise<ArrayBuffer>;
 
   /**
    * @constructs
@@ -50,83 +43,29 @@ class EMEController extends EventHandler {
    */
   constructor(hls) {
     super(hls,
-      Event.MEDIA_ATTACHED,
+      Event.MEDIA_ATTACHING,
       Event.MEDIA_DETACHED,
       Event.MANIFEST_PARSED
     );
 
     this._emeEnabled = hls.config.emeEnabled;
     this._requestMediaKeySystemAccess = hls.config.requestMediaKeySystemAccessFunc;
-    this._getInitializationData = hls.config.getInitializationDataFunc;
-    this._licenseXhrSetup = hls.config.licenseXhrSetup;
-  }
-
-  private _onLicenseRequestError = (message, reject) => {
-    if (this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES) {
-      return reject({
-        fatal: true,
-        message: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED
-      })
-    }
-
-    this._requestLicenseFailureCount++;
-
-    const attemptsLeft = MAX_LICENSE_REQUEST_FAILURES - this._requestLicenseFailureCount + 1;
-
-    logger.warn(`Retrying license request, ${attemptsLeft} attempts left`);
-
-    this._requestLicense(message);
-  }
-
-  private _onLicenseRequestSuccess = (xhrResponse, xhr, message, resolve, reject) => {
-    if (xhrResponse.status === 200) {
-      this._requestLicenseFailureCount = 0;
-
-      resolve(xhr.response as ArrayBuffer);
-    } else {
-      this._onLicenseRequestError(message, reject);
-    }
+    this._getEMEInitializationData = hls.config.getEMEInitializationDataFunc;
+    this._getEMELicense = hls.config.getEMELicenseFunc;
   }
 
   /**
-   * Requests the license to be used in the key session
-   * @private
-   * @param {MediaKeyMessageEvent} message Message created by generating request on key session https://developer.mozilla.org/en-US/docs/Web/API/MediaKeyMessageEvent
-   */
-  private _requestLicense = (message: ArrayBuffer): Promise<ArrayBuffer> => {
-    logger.log('Requesting content license');
-
-    let xhr = new XMLHttpRequest();
-
-    return this.licenseXhrSetup(xhr).then(xhrResponse => {
-      return new Promise((resolve, reject) => {
-        xhrResponse.responseType = 'arraybuffer';
-
-        xhrResponse.onload = this._onLicenseRequestSuccess.bind(this, xhrResponse, xhr, message, resolve, reject);
-
-        xhrResponse.onerror = this._onLicenseRequestError.bind(this, message, reject);
-
-        xhrResponse.send(message);
-      });
-    }).then((license: ArrayBuffer) => {
-      return Promise.resolve(license);
-    }).catch(() => {
-      return Promise.reject();
-    });
-  }
-
-  /**
-   * Handles key session messages
+   * Handles key session messages and requests licenses
    * @private
    * @param {Event<MediaKeyMessageEvent>} event Message event created by license request generation
    */
   private _onKeySessionMessage = (resolve, reject, event: MediaKeyMessageEvent) => {
-    logger.log('Received key session message');
+    logger.log('Received key session message, requesting license');
 
-    this._requestLicense(event.message).then((data: ArrayBuffer) => {
+    this.getEMELicense(event).then((license: ArrayBuffer) => {
       logger.log('Received license data, updating key-session');
 
-      return (event.target! as MediaKeySession).update(data).then(() => {
+      return (event.target! as MediaKeySession).update(license).then(() => {
         resolve();
       });
     }).catch((err) => {
@@ -134,7 +73,7 @@ class EMEController extends EventHandler {
         message: ErrorTypes.KEY_SYSTEM_ERROR,
         fatal: true
       });
-    });;
+    });
   }
 
   /**
@@ -145,7 +84,7 @@ class EMEController extends EventHandler {
   private _onMediaKeySessionCreated(session: MediaKeySession, track: any): Promise<any> {
     logger.log('Generating license request');
 
-    return this.getInitializationData(track).then((initDataInfo) => {
+    return this.getEMEInitializationData(track).then((initDataInfo) => {
       const messagePromise = new Promise((resolve, reject) => {
         session.addEventListener('message', this._onKeySessionMessage.bind(this, resolve, reject))
       });
@@ -169,7 +108,7 @@ class EMEController extends EventHandler {
 
     this._keySessions.push(session);
 
-    return Promise.resolve({session, track});
+    return Promise.resolve({ session, track });
   }
 
   /**
@@ -323,12 +262,12 @@ class EMEController extends EventHandler {
     })
   }
 
-  onMediaAttached(data: { media: HTMLMediaElement; }) {
-    if (!this._emeEnabled) {
-      return;
-    }
+  onMediaAttaching(data: { media: HTMLMediaElement }) {
+    let media = data.media;
 
-    this._media = data.media; // keep reference of media
+    if (media) {
+      this._media = media; // keep reference of media
+    }
   }
 
   onMediaDetached() {
@@ -379,20 +318,20 @@ class EMEController extends EventHandler {
     return this._requestMediaKeySystemAccess;
   }
 
-  get getInitializationData() {
-    if (!this._getInitializationData) {
+  get getEMEInitializationData() {
+    if (!this._getEMEInitializationData) {
       throw new Error('No getInitializationData function configured');
     }
 
-    return this._getInitializationData;
+    return this._getEMEInitializationData;
   }
 
-  get licenseXhrSetup() {
-    if (!this._licenseXhrSetup) {
-      throw new Error('No licenseXhrSetup function configured');
+  get getEMELicense() {
+    if (!this._getEMELicense) {
+      throw new Error('No getEMELicense function configured');
     }
 
-    return this._licenseXhrSetup;
+    return this._getEMELicense;
   }
 }
 
