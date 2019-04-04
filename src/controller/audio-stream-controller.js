@@ -46,17 +46,6 @@ class AudioStreamController extends BaseStreamController {
     this.videoTrackCC = null;
   }
 
-  onHandlerDestroying () {
-    this.stopLoad();
-    super.onHandlerDestroying();
-  }
-
-  onHandlerDestroyed () {
-    this.state = State.STOPPED;
-    this.fragmentTracker = null;
-    super.onHandlerDestroyed();
-  }
-
   // Signal that video PTS was found
   onInitPtsFound (data) {
     let demuxerId = data.id, cc = data.frag.cc, initPTS = data.initPTS;
@@ -94,24 +83,6 @@ class AudioStreamController extends BaseStreamController {
       this.startPosition = startPosition;
       this.state = State.STOPPED;
     }
-  }
-
-  stopLoad () {
-    let frag = this.fragCurrent;
-    if (frag) {
-      if (frag.loader) {
-        frag.loader.abort();
-      }
-
-      this.fragmentTracker.removeFragment(frag);
-      this.fragCurrent = null;
-    }
-    this.fragPrevious = null;
-    if (this.demuxer) {
-      this.demuxer.destroy();
-      this.demuxer = null;
-    }
-    this.state = State.STOPPED;
   }
 
   set state (nextState) {
@@ -312,7 +283,9 @@ class AudioStreamController extends BaseStreamController {
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
             this.fragCurrent = frag;
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-              this.startFragRequested = true;
+              if (frag.sn !== 'initSegment') {
+                this.startFragRequested = true;
+              }
               if (Number.isFinite(frag.sn)) {
                 this.nextLoadPosition = frag.start + frag.duration;
               }
