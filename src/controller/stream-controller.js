@@ -1316,12 +1316,6 @@ class StreamController extends BaseStreamController {
   swapAudioCodec () {
     this.audioCodecSwap = !this.audioCodecSwap;
   }
-
-  computeLivePosition (sliding, levelDetails) {
-    let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
-    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
-  }
-
   /**
    * Seeks to the set startPosition if not equal to the mediaElement's current time.
    * @private

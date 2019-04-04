@@ -94,4 +94,9 @@ export default class BaseStreamController extends TaskLoop {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
   }
+
+  computeLivePosition (sliding, levelDetails) {
+    let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
+    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
+  }
 }

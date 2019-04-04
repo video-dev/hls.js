@@ -206,7 +206,7 @@ class AudioStreamController extends BaseStreamController {
 
           // When switching audio track, reload audio as close as possible to currentTime
         if (audioSwitch) {
-          if (trackDetails.live && !trackDetails.PTSKnown && bufferLen > 0) {
+          if (trackDetails.live && !trackDetails.PTSKnown) {
             logger.log('switching audiotrack, live stream, unknown PTS,load first fragment');
             bufferEnd = 0;
           } else {
@@ -509,11 +509,6 @@ class AudioStreamController extends BaseStreamController {
       this.state = State.IDLE;
       this.tick();
     }
-  }
-
-  computeLivePosition (sliding, levelDetails) {
-    let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
-    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
   }
 
   onFragLoaded (data) {
