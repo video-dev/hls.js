@@ -1,13 +1,13 @@
-import assert from 'assert';
-import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import Event from '../../../src/events';
 import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
 import StreamController from '../../../src/controller/stream-controller';
 import { State } from '../../../src/controller/base-stream-controller';
-import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { mockFragments } from '../../mocks/data';
 import Fragment from '../../../src/loader/fragment';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+
+import sinon from 'sinon';
 
 describe('StreamController', function () {
   let hls;
@@ -25,8 +25,8 @@ describe('StreamController', function () {
    * @param {StreamController} streamController
    */
   const assertStreamControllerStarted = (streamController) => {
-    assert.equal(streamController.hasInterval(), true, 'StreamController should start interval');
-    assert.notDeepEqual(streamController.state, State.STOPPED, 'StreamController\'s state should not be STOPPED');
+    expect(streamController.hasInterval()).to.be.true;
+    expect(streamController.state).to.equal(State.IDLE, 'StreamController\'s state should not be STOPPED');
   };
 
   /**
@@ -34,8 +34,8 @@ describe('StreamController', function () {
    * @param {StreamController} streamController
    */
   const assertStreamControllerStopped = (streamController) => {
-    assert.equal(streamController.hasInterval(), false, 'StreamController should stop interval');
-    assert.equal(streamController.state, State.STOPPED, 'StreamController\'s state should be STOPPED');
+    expect(streamController.hasInterval()).to.be.false;
+    expect(streamController.state).to.equal(State.STOPPED, 'StreamController\'s state should be STOPPED');
   };
 
   describe('StreamController', function () {
@@ -47,7 +47,7 @@ describe('StreamController', function () {
       const spy = sinon.spy();
       hls.on(Event.STREAM_STATE_TRANSITION, spy);
       streamController.state = State.ENDED;
-      assert.deepEqual(spy.args[0][1], { previousState: State.STOPPED, nextState: State.ENDED });
+      expect(spy.args[0][1]).to.deep.equal({ previousState: State.STOPPED, nextState: State.ENDED });
     });
 
     it('should not trigger STREAM_STATE_TRANSITION when state is not updated', function () {
@@ -55,10 +55,10 @@ describe('StreamController', function () {
       hls.on(Event.STREAM_STATE_TRANSITION, spy);
       // no update
       streamController.state = State.STOPPED;
-      assert.equal(spy.called, false);
+      expect(spy.called).to.be.false;
     });
 
-    it('should not start when controller have not levels data', function () {
+    it('should not start when controller does not have level data', function () {
       streamController.startLoad(1);
       assertStreamControllerStopped(streamController);
     });
@@ -105,19 +105,19 @@ describe('StreamController', function () {
     it('PTS search choosing wrong fragment (3 instead of 2) after level loaded', function () {
       let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
-      assert.equal(foundFragment, mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
+      expect(foundFragment).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     // TODO: This test fails if using a real instance of Hls
     it('PTS search choosing the right segment if fragPrevious is not available', function () {
       let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, bufferEnd, end, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
-      assert.equal(foundFragment, mockFragments[3], 'Expected sn 2, found sn segment ' + resultSN);
+      expect(foundFragment).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     it('returns the last fragment if the stream is fully buffered', function () {
       const actual = streamController._findFragment(0, null, mockFragments.length, mockFragments, end, end, levelDetails);
-      assert.strictEqual(actual, mockFragments[mockFragments.length - 1]);
+      expect(actual).to.equal(mockFragments[mockFragments.length - 1]);
     });
 
     describe('PDT Searching during a live stream', function () {
@@ -131,7 +131,7 @@ describe('StreamController', function () {
 
         let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, bufferEnd, 0, end, fragPrevious, mockFragments, mockFragments.length);
         let resultSN = foundFragment ? foundFragment.sn : -1;
-        assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
+        expect(foundFragment).to.equal(mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
       });
 
       it('PDT search hitting empty discontinuity', function () {
@@ -139,7 +139,7 @@ describe('StreamController', function () {
 
         let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, discontinuityPDTHit, 0, end, fragPrevious, mockFragments, mockFragments.length);
         let resultSN = foundFragment ? foundFragment.sn : -1;
-        assert.equal(foundFragment, mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
+        expect(foundFragment).to.equal(mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
       });
     });
   });
@@ -157,14 +157,13 @@ describe('StreamController', function () {
     });
 
     function assertLoadingState (frag) {
-      assert(triggerSpy.calledWith(Event.FRAG_LOADING, { frag }),
-        `Was expecting trigger to be called with FRAG_LOADING, but received ${triggerSpy.notCalled ? 'no calls' : triggerSpy.getCalls()}`);
-      assert.strictEqual(streamController.state, State.FRAG_LOADING);
+      expect(triggerSpy).to.have.been.calledWith(Event.FRAG_LOADING, { frag });
+      expect(streamController.state).to.equal(State.FRAG_LOADING);
     }
 
     function assertNotLoadingState () {
-      assert(triggerSpy.notCalled);
-      assert(hls.state !== State.FRAG_LOADING);
+      expect(triggerSpy).to.not.have.been.called;
+      expect(hls.state).to.not.equal(State.FRAG_LOADING);
     }
 
     it('should load a complete fragment which has not been previously appended', function () {
@@ -200,11 +199,11 @@ describe('StreamController', function () {
   });
 
   describe('checkBuffer', function () {
-    let sandbox;
+    const sandbox = sinon.createSandbox();
+
     beforeEach(function () {
-      sandbox = sinon.sandbox.create();
       streamController.gapController = {
-        poll: () => {}
+        poll: function () {}
       };
       streamController.media = {
         buffered: {
@@ -225,24 +224,24 @@ describe('StreamController', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.loadedmetadata = false;
       streamController._checkBuffer();
-      assert(seekStub.calledOnce);
-      assert(streamController.loadedmetadata);
+      expect(seekStub).to.have.been.calledOnce;
+      expect(streamController.loadedmetadata).to.be.true;
     });
 
     it('should not seek to start pos when metadata has been loaded', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.loadedmetadata = true;
       streamController._checkBuffer();
-      assert(seekStub.notCalled);
-      assert(streamController.loadedmetadata);
+      expect(seekStub).to.have.not.been.called;
+      expect(streamController.loadedmetadata).to.be.true;
     });
 
     it('should not seek to start pos when nothing has been buffered', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.media.buffered.length = 0;
       streamController._checkBuffer();
-      assert(seekStub.notCalled);
-      assert.strictEqual(streamController.loadedmetadata, undefined);
+      expect(seekStub).to.have.not.been.called;
+      expect(streamController.loadedmetadata).to.not.exist;
     });
 
     it('should complete the immediate switch if signalled', function () {
@@ -250,21 +249,59 @@ describe('StreamController', function () {
       streamController.loadedmetadata = true;
       streamController.immediateSwitch = true;
       streamController._checkBuffer();
-      assert(levelSwitchStub.called);
+      expect(levelSwitchStub).to.have.been.calledOnce;
     });
 
     describe('_seekToStartPos', function () {
       it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
         streamController.startPosition = 5;
         streamController._seekToStartPos();
-        assert.strictEqual(5, streamController.media.currentTime);
+        expect(streamController.media.currentTime).to.equal(5);
       });
 
       it('should not seek to startPosition when it is buffered', function () {
         streamController.startPosition = 5;
         streamController.media.currentTime = 5;
         streamController._seekToStartPos();
-        assert.strictEqual(5, streamController.media.currentTime);
+        expect(streamController.media.currentTime).to.equal(5);
+      });
+    });
+
+    describe('startLoad', function () {
+      beforeEach(function () {
+        streamController.levels = [];
+        streamController.media = null;
+      });
+      it('should not start when controller does not have level data', function () {
+        streamController.levels = null;
+        streamController.startLoad();
+        assertStreamControllerStopped(streamController);
+      });
+
+      it('should start when controller has level data', function () {
+        streamController.startLoad(5);
+        assertStreamControllerStarted(streamController);
+        expect(streamController.nextLoadPosition).to.equal(5);
+        expect(streamController.startPosition).to.equal(5);
+        expect(streamController.lastCurrentTime).to.equal(5);
+      });
+
+      it('should set startPosition to lastCurrentTime if unset', function () {
+        streamController.lastCurrentTime = 5;
+        streamController.startLoad(-1);
+        assertStreamControllerStarted(streamController);
+        expect(streamController.nextLoadPosition).to.equal(5);
+        expect(streamController.startPosition).to.equal(5);
+        expect(streamController.lastCurrentTime).to.equal(5);
+      });
+
+      it('sets up for a bandwidth test if starting at auto', function () {
+        streamController.startFragRequested = false;
+        hls.startLevel = -1;
+
+        streamController.startLoad();
+        expect(streamController.level).to.equal(0);
+        expect(streamController.bitrateTest).to.be.true;
       });
     });
   });

@@ -197,7 +197,15 @@ class TimelineController extends EventHandler {
       this.tracks.forEach((track, index) => {
         let textTrack;
         if (index < inUseTracks.length) {
-          const inUseTrack = [].slice.call(inUseTracks).find(inUseTrack => canReuseVttTextTrack(inUseTrack, track));
+          let inUseTrack = null;
+
+          for (let i = 0; i < inUseTracks.length; i++) {
+            if (canReuseVttTextTrack(inUseTracks[i], track)) {
+              inUseTrack = inUseTracks[i];
+              break;
+            }
+          }
+
           // Reuse tracks with the same label, but do not reuse 608/708 tracks
           if (inUseTrack) {
             textTrack = inUseTrack;
