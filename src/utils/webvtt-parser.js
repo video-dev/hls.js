@@ -13,7 +13,7 @@ const cueString2millis = function (timeString) {
   let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
   if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {
-    return -1;
+    throw Error(`Malformed X-TIMESTAMP-MAP: Local:${timeString}`);
   }
 
   ts += 1000 * secs;
@@ -153,11 +153,8 @@ const WebVTTParser = {
             localTime = cueString2millis(cueTime) / 1000;
             // Convert MPEGTS to seconds from 90kHz.
             presentationTime = mpegTs / 90000;
-
-            if (localTime === -1) {
-              parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
-            }
           } catch (e) {
+            timestampMap = false;
             parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
           }
           // Return without parsing X-TIMESTAMP-MAP line.
