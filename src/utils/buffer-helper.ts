@@ -11,11 +11,11 @@
 type BufferTimeRange = {
   start: number
   end: number
-}
+};
 
 type Bufferable = {
   buffered: TimeRanges
-}
+};
 
 export class BufferHelper {
   /**
