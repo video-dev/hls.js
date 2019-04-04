@@ -116,10 +116,6 @@ export default class BaseStreamController extends TaskLoop {
     this.startPosition = this.lastCurrentTime = 0;
   }
 
-  computeLivePosition (sliding, levelDetails) {
-    let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
-    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
-
   onHandlerDestroying () {
     this.stopLoad();
     super.onHandlerDestroying();
@@ -128,5 +124,10 @@ export default class BaseStreamController extends TaskLoop {
   onHandlerDestroyed () {
     this.state = State.STOPPED;
     this.fragmentTracker = null;
+  }
+
+  computeLivePosition (sliding, levelDetails) {
+    let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
+    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
   }
 }
