@@ -49,8 +49,6 @@ class BufferController extends EventHandler {
 
   private config: BufferControllerConfig;
 
-  public emeConfigured: boolean = false;
-
   // this is optional because this property is removed from the class sometimes
   public audioTimestampOffset?: number;
 
@@ -92,9 +90,7 @@ class BufferController extends EventHandler {
       Events.BUFFER_EOS,
       Events.BUFFER_FLUSHING,
       Events.LEVEL_PTS_UPDATED,
-      Events.LEVEL_UPDATED,
-      Events.KEY_LOADING,
-      Events.KEY_LOADED);
+      Events.LEVEL_UPDATED);
 
     this.config = hls.config;
   }
@@ -215,15 +211,6 @@ class BufferController extends EventHandler {
     }
 
     this.hls.trigger(Events.MEDIA_DETACHED);
-  }
-
-  onKeyLoading() {
-    this.emeConfigured = false;
-  }
-
-  onKeyLoaded() {
-    this.emeConfigured = true;
-    this.doAppending();
   }
 
   checkPendingTracks () {
@@ -596,12 +583,7 @@ class BufferController extends EventHandler {
   }
 
   doAppending () {
-    let { config, hls, segments, sourceBuffer, emeConfigured } = this;
-
-    if (!emeConfigured) {
-      // early exit if EME is not yet configured for an encrypted stream
-      return;
-    }
+    let { config, hls, segments, sourceBuffer } = this;
 
     if (!Object.keys(sourceBuffer).length) {
       // early exit if no source buffers have been initialized yet

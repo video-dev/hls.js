@@ -133,6 +133,8 @@ class EMEController extends EventHandler {
         });
       });
     } else {
+      this.hls.trigger(Event.KEY_LOADED);
+      
       return Promise.reject({
         fatal: false,
         message: ErrorDetails.KEY_SYSTEM_KEYS_SET
@@ -208,8 +210,6 @@ class EMEController extends EventHandler {
 
   onManifestParsed(data: any) {
     if (!this._emeEnabled) {
-      this.hls.trigger(Event.KEY_LOADED);
-
       return;
     }
 
