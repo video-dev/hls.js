@@ -155,7 +155,7 @@ const WebVTTParser = {
             presentationTime = mpegTs / 90000;
           } catch (e) {
             timestampMap = false;
-            parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
+            parsingError = e;
           }
           // Return without parsing X-TIMESTAMP-MAP line.
           return;
