@@ -30,19 +30,20 @@ import EventHandler from './event-handler';
  */
 
 export default class TaskLoop extends EventHandler {
+  private _tickInterval: any | null = null;
+  private _tickTimer: any | null = null;
+  private _tickCallCount: number = 0;
+  private readonly _boundTick: Function;
+
   constructor (hls, ...events) {
     super(hls, ...events);
-
-    this._tickInterval = null;
-    this._tickTimer = null;
-    this._tickCallCount = 0;
     this._boundTick = this.tick.bind(this);
   }
 
   /**
    * @override
    */
-  onHandlerDestroying () {
+  protected onHandlerDestroying () {
     // clear all timers before unregistering from event bus
     this.clearNextTick();
     this.clearInterval();
@@ -51,22 +52,15 @@ export default class TaskLoop extends EventHandler {
   /**
    * @returns {boolean}
    */
-  hasInterval () {
+  protected hasInterval () {
     return !!this._tickInterval;
-  }
-
-  /**
-   * @returns {boolean}
-   */
-  hasNextTick () {
-    return !!this._tickTimer;
   }
 
   /**
    * @param {number} millis Interval time (ms)
    * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
    */
-  setInterval (millis) {
+  protected setInterval (millis) {
     if (!this._tickInterval) {
       this._tickInterval = setInterval(this._boundTick, millis);
       return true;
@@ -77,7 +71,7 @@ export default class TaskLoop extends EventHandler {
   /**
    * @returns {boolean} True when interval was cleared, false when none was set (no effect)
    */
-  clearInterval () {
+  protected clearInterval () {
     if (this._tickInterval) {
       clearInterval(this._tickInterval);
       this._tickInterval = null;
@@ -89,7 +83,7 @@ export default class TaskLoop extends EventHandler {
   /**
    * @returns {boolean} True when timeout was cleared, false when none was set (no effect)
    */
-  clearNextTick () {
+  protected clearNextTick () {
     if (this._tickTimer) {
       clearTimeout(this._tickTimer);
       this._tickTimer = null;
@@ -103,7 +97,7 @@ export default class TaskLoop extends EventHandler {
    * or in the next one (via setTimeout(,0)) in case it has already been called
    * in this tick (in case this is a re-entrant call).
    */
-  tick () {
+  protected tick () {
     this._tickCallCount++;
     if (this._tickCallCount === 1) {
       this.doTick();
@@ -122,5 +116,5 @@ export default class TaskLoop extends EventHandler {
    * For subclass to implement task logic
    * @abstract
    */
-  doTick () {}
+  protected doTick (): void {}
 }

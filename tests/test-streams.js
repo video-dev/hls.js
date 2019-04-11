@@ -183,5 +183,10 @@ module.exports = {
   altAudioAndTracks: {
     url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
     description: 'Alternate audio tracks, and multiple VTT tracks'
+  },
+  akamaiLhlsCmaf: {
+    url: 'https://cmafref.akamaized.net/cmaf/live/2003074/akamai/master.m3u8',
+    description: 'Akamai LHLS stream via LL-CMAF',
+    live: true
   }
 };

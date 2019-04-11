@@ -1,6 +1,7 @@
 import { InitSegmentData, RemuxedTrack, Remuxer, RemuxerResult } from '../types/remuxer';
 import { getDuration, getStartDTS, offsetStartDTS, parseInitSegment } from '../utils/mp4-tools';
 import { TrackSet } from '../types/track';
+import { logger } from '../utils/logger';
 
 class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
@@ -9,12 +10,18 @@ class PassThroughRemuxer implements Remuxer {
   private initData?: any;
   private initPTS?: number;
   private initTracks?: TrackSet;
+  private lastEndDTS: number | null = null;
 
   destroy () {
   }
 
   resetTimeStamp (defaultInitPTS) {
     this.initPTS = defaultInitPTS;
+    this.lastEndDTS = null;
+  }
+
+  resetNextTimestamp () {
+    this.lastEndDTS = null;
   }
 
   resetInitSegment (initSegment, audioCodec, videoCodec) {
@@ -62,42 +69,56 @@ class PassThroughRemuxer implements Remuxer {
     this.initTracks = tracks;
   }
 
-  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset): RemuxerResult {
+  // TODO: utilize accurateTimeOffset
+  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, accurateTimeOffset): RemuxerResult {
+    let { initPTS, lastEndDTS } = this;
+    const result: RemuxerResult =  {
+      audio: undefined,
+      video: undefined,
+      text: textTrack,
+      id3: id3Track,
+      initSegment: undefined
+    };
+
+    // If we haven't yet set a lastEndDTS, or it was reset, set it to the provided timeOffset. We want to use the
+    // lastEndDTS over timeOffset whenever possible; during progressive playback, the media source will not update
+    // the media duration (which is what timeOffset is provided as) before we need to process the next chunk.
+    if (!Number.isFinite(lastEndDTS!)) {
+      lastEndDTS = this.lastEndDTS = timeOffset || 0;
+    }
+
     // The binary segment data is added to the videoTrack in the mp4demuxer. We don't check to see if the data is only
     // audio or video (or both); adding it to video was an arbitrary choice.
     const data = videoTrack.samples;
     if (!data || !data.length) {
-      return {
-          audio: undefined,
-          video: undefined,
-          text: textTrack,
-          id3: id3Track,
-          initSegment: undefined
-      };
+      return result;
     }
 
     const initSegment: InitSegmentData = {};
     let initData = this.initData;
-    if (!initData) {
+    if (!initData || !initData.length) {
         this.generateInitSegment(data);
         initData = this.initData;
+    }
+    if (!initData.length) {
+      // We can't remux if the initSegment could not be generated
+      logger.warn('[passthrough-remuxer.ts]: Failed to generate initSegment.');
+      return result;
     }
     if (this.emitInitSegment) {
         initSegment.tracks = this.initTracks;
         this.emitInitSegment = false;
     }
 
-    let startDTS = timeOffset;
-    let initPTS = this.initPTS;
     if (!Number.isFinite(initPTS as number)) {
-        let startDTS = getStartDTS(initData, data);
-        this.initPTS = initPTS = startDTS - timeOffset;
-        initSegment.initPTS = initPTS;
+        this.initPTS = initSegment.initPTS = initPTS = computeInitPTS(initData, data, timeOffset);
     }
-    offsetStartDTS(initData, data, initPTS);
 
     const duration = getDuration(data, initData);
+    const startDTS = lastEndDTS as number;
     const endDTS = duration + startDTS;
+    offsetStartDTS(initData, data, initPTS);
+    this.lastEndDTS = endDTS;
 
     const track: RemuxedTrack = {
         data1: data,
@@ -120,14 +141,16 @@ class PassThroughRemuxer implements Remuxer {
         track.type += 'video';
     }
 
-    return {
-      audio: track.type === 'audio' ? track : undefined,
-      video: track.type !== 'audio' ? track : undefined,
-      text: textTrack,
-      id3: id3Track,
-      initSegment
-    };
+    result.audio = track.type === 'audio' ? track : undefined;
+    result.video = track.type !== 'audio' ? track : undefined;
+    result.text = textTrack;
+    result.id3 = id3Track;
+    result.initSegment = initSegment;
+
+    return result;
   }
 }
+
+const computeInitPTS = (initData, data, timeOffset) => getStartDTS(initData, data) - timeOffset;
 
 export default PassThroughRemuxer;

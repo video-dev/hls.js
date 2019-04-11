@@ -43,21 +43,6 @@ describe('StreamController', function () {
       assertStreamControllerStopped(streamController);
     });
 
-    it('should trigger STREAM_STATE_TRANSITION when state is updated', function () {
-      const spy = sinon.spy();
-      hls.on(Event.STREAM_STATE_TRANSITION, spy);
-      streamController.state = State.ENDED;
-      expect(spy.args[0][1]).to.deep.equal({ previousState: State.STOPPED, nextState: State.ENDED });
-    });
-
-    it('should not trigger STREAM_STATE_TRANSITION when state is not updated', function () {
-      const spy = sinon.spy();
-      hls.on(Event.STREAM_STATE_TRANSITION, spy);
-      // no update
-      streamController.state = State.STOPPED;
-      expect(spy.called).to.be.false;
-    });
-
     it('should not start when controller does not have level data', function () {
       streamController.startLoad(1);
       assertStreamControllerStopped(streamController);
@@ -241,7 +226,7 @@ describe('StreamController', function () {
       streamController.media.buffered.length = 0;
       streamController._checkBuffer();
       expect(seekStub).to.have.not.been.called;
-      expect(streamController.loadedmetadata).to.not.exist;
+      expect(streamController.loadedmetadata).to.be.false;
     });
 
     it('should complete the immediate switch if signalled', function () {

@@ -18,7 +18,7 @@ class AACDemuxer extends NonProgressiveDemuxer {
     this.config = config;
   }
 
-  resetInitSegment (initSegment, audioCodec, videoCodec, duration) {
+  resetInitSegment (audioCodec, videoCodec, duration) {
     this._audioTrack = { container: 'audio/adts', type: 'audio', id: 0, sequenceNumber: 0, isAAC: true, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
   }
 
@@ -48,7 +48,7 @@ class AACDemuxer extends NonProgressiveDemuxer {
   }
 
   // feed incoming data to the front of the parsing pipeline
-  demuxInternal (data, timeOffset, contiguous, accurateTimeOffset): DemuxerResult {
+  demuxInternal (data, timeOffset): DemuxerResult {
     let track = this._audioTrack;
     let id3Data = ID3.getID3Data(data, 0) || [];
     let timestamp = ID3.getTimeStamp(id3Data);
@@ -90,7 +90,7 @@ class AACDemuxer extends NonProgressiveDemuxer {
     };
   }
 
-  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number, contiguous: boolean): Promise<DemuxerResult> {
+  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
     return Promise.reject(new Error('The AAC demuxer does not support Sample-AES decryption'));
   }
 

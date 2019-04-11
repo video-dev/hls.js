@@ -7,11 +7,11 @@ export interface Remuxer {
         id3Track: DemuxedTrack,
         textTrack: DemuxedTrack,
         timeOffset: number,
-        contiguous: boolean,
         accurateTimeOffset: boolean
   ): RemuxerResult
   resetInitSegment(initSegment: Uint8Array, audioCodec: string, videoCodec: string): void
   resetTimeStamp(defaultInitPTS): void
+  resetNextTimestamp() : void
   destroy() : void
 }
 
