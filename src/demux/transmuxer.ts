@@ -17,7 +17,7 @@ import { Demuxer } from '../types/demuxer';
 import { Remuxer } from '../types/remuxer';
 import { TransmuxerResult, TransmuxIdentifier } from '../types/transmuxer';
 import ChunkCache from './chunk-cache';
-import { prependUint8Array } from '../utils/mp4-tools';
+import { appendUint8Array } from '../utils/mp4-tools';
 
 import { getSelfScope } from '../utils/get-self-scope';
 import { logger } from '../utils/logger';
@@ -57,7 +57,6 @@ class Transmuxer {
   private probe!: Function;
   private decryptionPromise: Promise<TransmuxerResult> | null = null;
 
-  private contiguous: boolean = false;
   private timeOffset: number = 0;
   private accurateTimeOffset: boolean = false;
 
@@ -81,10 +80,11 @@ class Transmuxer {
     contiguous: boolean,
     duration: number,
     accurateTimeOffset: boolean,
-    defaultInitPTS: number,
+    defaultInitPTS: number | null,
     transmuxIdentifier: TransmuxIdentifier
   ): TransmuxerResult | Promise<TransmuxerResult> {
     let uintData = new Uint8Array(data);
+    const uintInitSegment = new Uint8Array(initSegment);
     const cache = this.cache;
     const encryptionType = getEncryptionType(uintData, decryptdata);
 
@@ -111,13 +111,12 @@ class Transmuxer {
       return this.decryptionPromise;
     }
 
-    this.contiguous = contiguous;
     this.timeOffset = timeOffset;
     this.accurateTimeOffset = accurateTimeOffset;
 
     const needsProbing = this.needsProbing(uintData, discontinuity, trackSwitch);
     if (needsProbing && (uintData.length + cache.dataLength < minProbeByteLength)) {
-      logger.log(`The transmuxer received ${uintData.length} bytes, but at least ${minProbeByteLength} are required to probe for demuxer types\n` +
+      logger.log(`[transmuxer.ts]: Received ${uintData.length} bytes, but at least ${minProbeByteLength} are required to probe for demuxer types\n` +
         'This data will be cached until the minimum amount is met.');
       cache.push(uintData);
       return {
@@ -125,10 +124,10 @@ class Transmuxer {
         transmuxIdentifier
       };
     } else if (cache.dataLength) {
-      uintData = prependUint8Array(uintData, cache.flush());
+      logger.log(`[transmuxer.ts]: Cache now has enough data to probe.`);
+      uintData = appendUint8Array(cache.flush(), uintData);
     }
 
-    const uintInitSegment = new Uint8Array(initSegment);
     let { demuxer, remuxer } = this;
     if (needsProbing) {
       ({ demuxer, remuxer } = this.configureTransmuxer(uintData, uintInitSegment, audioCodec, videoCodec, duration));
@@ -143,19 +142,22 @@ class Transmuxer {
     }
 
     if (discontinuity || trackSwitch) {
-      demuxer.resetInitSegment(uintInitSegment, audioCodec, videoCodec, duration);
-      remuxer.resetInitSegment(uintInitSegment, audioCodec, videoCodec);
+      this.resetInitSegment(uintInitSegment, audioCodec, videoCodec, duration);
     }
+
     if (discontinuity) {
-      demuxer.resetTimeStamp(defaultInitPTS);
-      remuxer.resetTimeStamp(defaultInitPTS);
+      this.resetInitialTimestamp(defaultInitPTS);
+    }
+
+    if (!contiguous) {
+      this.resetNextTimestamp();
     }
 
    let result;
    if (encryptionType === 'SAMPLE-AES') {
-      result = this.transmuxSampleAes(uintData, decryptdata, timeOffset, contiguous, accurateTimeOffset, transmuxIdentifier);
+      result = this.transmuxSampleAes(uintData, decryptdata, timeOffset, accurateTimeOffset, transmuxIdentifier);
     } else {
-      result = this.transmux(uintData, timeOffset, contiguous, accurateTimeOffset, transmuxIdentifier);
+      result = this.transmux(uintData, timeOffset, accurateTimeOffset, transmuxIdentifier);
     }
     return result;
   }
@@ -175,12 +177,38 @@ class Transmuxer {
         transmuxIdentifier
       }
     }
-    const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.flush(this.timeOffset, this.contiguous);
+    const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.flush(this.timeOffset);
     // TODO: ensure that remuxers use last DTS as the timeOffset when passed null
     return {
-        remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, this.timeOffset, this.contiguous, this.accurateTimeOffset),
+        remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, this.timeOffset, this.accurateTimeOffset),
         transmuxIdentifier
     }
+  }
+
+  resetInitialTimestamp (defaultInitPTS) {
+    const { demuxer, remuxer } = this;
+    if (!demuxer || !remuxer) {
+      return;
+    }
+    demuxer.resetTimeStamp(defaultInitPTS);
+    remuxer.resetTimeStamp(defaultInitPTS);
+  }
+
+  resetNextTimestamp () {
+    const { demuxer, remuxer } = this;
+    if (!demuxer || !remuxer) {
+      return;
+    }
+    remuxer.resetNextTimestamp();
+  }
+
+  resetInitSegment (initSegment: Uint8Array, audioCodec: string, videoCodec: string, duration: number) {
+    const { demuxer, remuxer } = this;
+    if (!demuxer || !remuxer) {
+      return;
+    }
+    demuxer.resetInitSegment(audioCodec, videoCodec, duration);
+    remuxer.resetInitSegment(initSegment, audioCodec, videoCodec);
   }
 
   destroy (): void {
@@ -194,19 +222,19 @@ class Transmuxer {
     }
   }
 
-  private transmux (data: Uint8Array, timeOffset: number, contiguous: boolean, accurateTimeOffset: boolean, transmuxIdentifier: TransmuxIdentifier): TransmuxerResult {
-    const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(data, timeOffset, contiguous, false);
+  private transmux (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, transmuxIdentifier: TransmuxIdentifier): TransmuxerResult {
+    const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(data, timeOffset,false);
     return {
-        remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset),
+        remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
         transmuxIdentifier
     }
   }
 
   // TODO: Handle flush with Sample-AES
-  private transmuxSampleAes (data: Uint8Array, decryptData: any, timeOffset: number, contiguous: boolean, accurateTimeOffset: boolean, transmuxIdentifier: TransmuxIdentifier) : Promise<TransmuxerResult> {
-    return this.demuxer!.demuxSampleAes(data, decryptData, timeOffset, contiguous)
+  private transmuxSampleAes (data: Uint8Array, decryptData: any, timeOffset: number, accurateTimeOffset: boolean, transmuxIdentifier: TransmuxIdentifier) : Promise<TransmuxerResult> {
+    return this.demuxer!.demuxSampleAes(data, decryptData, timeOffset)
       .then(demuxResult => ({
-              remuxResult: this.remuxer!.remux(demuxResult.audioTrack, demuxResult.avcTrack, demuxResult.id3Track, demuxResult.textTrack, timeOffset, contiguous, accurateTimeOffset),
+              remuxResult: this.remuxer!.remux(demuxResult.audioTrack, demuxResult.avcTrack, demuxResult.id3Track, demuxResult.textTrack, timeOffset,  accurateTimeOffset),
               transmuxIdentifier
           })
       );
@@ -239,8 +267,9 @@ class Transmuxer {
         demuxer = this.demuxer = new mux.demux(observer, config, typeSupported);
 
         // Ensure that muxers are always initialized with an initSegment
-        demuxer.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
+        demuxer.resetInitSegment(audioCodec, videoCodec, duration);
         remuxer.resetInitSegment(initSegmentData, audioCodec, videoCodec);
+        logger.log(`[transmuxer.ts]: Probe succeeded with a data length of ${data.length}.`);
         this.probe = probe;
         break;
       }

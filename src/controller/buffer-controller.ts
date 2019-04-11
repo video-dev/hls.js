@@ -91,10 +91,6 @@ class BufferController extends EventHandler {
     this.hls = hls;
   }
 
-  destroy () {
-    EventHandler.prototype.destroy.call(this);
-  }
-
   onLevelPtsUpdated (data: { type: SourceBufferName, start: number }) {
     let type = data.type;
     let audioTrack = this.tracks.audio;

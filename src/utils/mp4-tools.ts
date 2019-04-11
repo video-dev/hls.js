@@ -356,12 +356,10 @@ export function segmentValidRange (data: Uint8Array): SegmentedRange {
     segmentedRange.remainder = data;
     return segmentedRange;
   }
-  // debugger;
-  const first = moofs[0];
   const last = moofs[moofs.length - 1];
-  const lastLast = moofs[moofs.length - 2];
-  segmentedRange.valid = data.slice(0, lastLast.end);
-  segmentedRange.remainder = data.slice(lastLast.end);
+  // Offset by 8 bytes; findBox offsets the start by as much
+  segmentedRange.valid = data.slice(0, last.start - 8);
+  segmentedRange.remainder = data.slice(last.start - 8);
   return segmentedRange;
 }
 
@@ -370,9 +368,9 @@ export interface SegmentedRange {
   remainder: Uint8Array,
 }
 
-export function prependUint8Array (data: Uint8Array, remainderData: Uint8Array) : Uint8Array {
-    const temp = new Uint8Array(data.length + remainderData.length);
-    temp.set(remainderData);
-    temp.set(data, remainderData.length);
+export function appendUint8Array (data1: Uint8Array, data2: Uint8Array) : Uint8Array {
+    const temp = new Uint8Array(data1.length + data2.length);
+    temp.set(data1);
+    temp.set(data2, data1.length);
     return temp;
 }

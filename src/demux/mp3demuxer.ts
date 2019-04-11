@@ -18,7 +18,7 @@ class MP3Demuxer extends NonProgressiveDemuxer {
     this.config = config;
   }
 
-  resetInitSegment (initSegment, audioCodec, videoCodec, duration) {
+  resetInitSegment (audioCodec, videoCodec, duration) {
     this._audioTrack = { container: 'audio/mpeg', type: 'audio', id: -1, sequenceNumber: 0, isAAC: false, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
   }
 
@@ -44,7 +44,7 @@ class MP3Demuxer extends NonProgressiveDemuxer {
   }
 
   // feed incoming data to the front of the parsing pipeline
-  demux (data, timeOffset, contiguous, accurateTimeOffset) {
+  demux (data, timeOffset) {
     let id3Data = ID3.getID3Data(data, 0);
     let timestamp = ID3.getTimeStamp(id3Data);
     let pts = timestamp ? 90 * timestamp : timeOffset * 90000;
@@ -84,7 +84,7 @@ class MP3Demuxer extends NonProgressiveDemuxer {
     };
   }
 
-  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number, contiguous: boolean): Promise<DemuxerResult> {
+  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
     return Promise.reject(new Error('The MP3 demuxer does not support SAMPLE-AES decryption'));
   }
 

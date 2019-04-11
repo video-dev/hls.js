@@ -55,10 +55,18 @@ export default class Fragment {
   public level: number = -1;
   // The continuity counter of the fragment
   public cc: number = 0;
-  // The starting Presentation Time Stamp(PTS) of the fragment. Updated after transmuxing.
+  // The starting Presentation Time Stamp (PTS) of the fragment. Updated after transmuxing.
   public startPTS!: number;
+  // The ending Presentation Time Stamp (PTS) of the fragment. Updated after transmuxing.
+  public endPTS!: number;
+  // The starting Decode Time Stamp (DTS) of the fragment. Updated after transmuxing.
+  public startDTS!: number;
+  // The ending Decode Time Stamp (DTS) of the fragment. Updated after transmuxing.
+  public endDTS!: number;
   // The start time of the fragment, as listed in the manifest. Updated after transmuxing.
   public start: number = 0;
+  // Set when the fragment was loaded and transmuxed, but was stopped from buffering due to dropped frames.
+  public backtracked: boolean = false;
   // LHLS prefetch flag
   public prefetch?: boolean;
 

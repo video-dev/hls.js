@@ -15,9 +15,9 @@ const FORBIDDEN_EVENT_NAMES = {
 };
 
 class EventHandler {
-  hls: any;
-  handledEvents: any[];
-  useGenericHandler: boolean;
+  protected hls: any;
+  private handledEvents: any[];
+  private useGenericHandler: boolean;
 
   constructor (hls: any, ...events: any[]) {
     this.hls = hls;
@@ -28,20 +28,20 @@ class EventHandler {
     this.registerListeners();
   }
 
-  destroy () {
+  protected destroy () {
     this.onHandlerDestroying();
     this.unregisterListeners();
     this.onHandlerDestroyed();
   }
 
-  onHandlerDestroying () {}
-  onHandlerDestroyed () {}
+  protected onHandlerDestroying () {}
+  protected onHandlerDestroyed () {}
 
-  isEventHandler () {
+  private isEventHandler () {
     return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
   }
 
-  registerListeners () {
+  private registerListeners () {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function (event) {
         if (FORBIDDEN_EVENT_NAMES[event]) {
@@ -53,7 +53,7 @@ class EventHandler {
     }
   }
 
-  unregisterListeners () {
+  private unregisterListeners () {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function (event) {
         this.hls.off(event, this.onEvent);
@@ -64,11 +64,11 @@ class EventHandler {
   /**
    * arguments: event (string), data (any)
    */
-  onEvent (event: string, data: any) {
+  private onEvent (event: string, data: any) {
     this.onEventGeneric(event, data);
   }
 
-  onEventGeneric (event: string, data: any) {
+  private onEventGeneric (event: string, data: any) {
     let eventToFunction = function (event: string, data: any) {
       let funcName = 'on' + event.replace('hls', '');
       if (typeof this[funcName] !== 'function') {

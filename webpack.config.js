@@ -32,7 +32,6 @@ const lightPlugins = [...basePlugins, createDefinePlugin('light')];
 const baseConfig = {
   mode: 'development',
   entry: './src/hls',
-  node: false,
   optimization: {
     splitChunks: false
   },

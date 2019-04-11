@@ -22,6 +22,7 @@ class XhrLoader implements Loader<LoaderContext> {
       tload: 0,
       loaded: 0,
       tparsed: 0,
+      tbuffered: 0,
       total: 0,
       retry: 0,
       aborted: false
