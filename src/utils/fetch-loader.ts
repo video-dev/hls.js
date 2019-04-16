@@ -57,7 +57,7 @@ class FetchLoader implements Loader<LoaderContext> {
 
   load (context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void {
     const stats = this.stats;
-    stats.trequest = window.performance.now();
+    stats.trequest = performance.now();
 
     const initParams = getRequestParameters(context, this.controller.signal);
     const onProgress = callbacks.onProgress;
@@ -80,7 +80,7 @@ class FetchLoader implements Loader<LoaderContext> {
         const { status, statusText } = response;
         throw new FetchError(statusText || 'fetch, bad network response', status, response);
       }
-      stats.tfirst = Math.max(window.performance.now(), stats.trequest);
+      stats.tfirst = Math.max(performance.now(), stats.trequest);
       stats.total = parseInt(response.headers.get('Content-Length') || '0');
 
       if (onProgress) {
@@ -107,12 +107,17 @@ class FetchLoader implements Loader<LoaderContext> {
       }
       return response.text();
     }).then((responseData: string | ArrayBuffer) => {
+      const { response } = this;
       clearTimeout(this.requestTimeout);
-      stats.tload = Math.max(stats.tfirst, performance.now());
+      stats.tload = Math.max(performance.now(), stats.tfirst);
       stats.loaded = stats.total = responseData[LENGTH];
 
-      const response = { url: this.response.url, data: responseData };
-      callbacks.onSuccess(response, stats, context, this.response);
+      const loaderResponse = {
+        url: response.url,
+        data: responseData
+      };
+
+      callbacks.onSuccess(loaderResponse, stats, context, response);
     }).catch((error) => {
       clearTimeout(this.requestTimeout);
       if (stats.aborted) {
@@ -120,6 +125,15 @@ class FetchLoader implements Loader<LoaderContext> {
       }
       callbacks.onError({ code: error.code, text: error.message }, context, error.details);
     });
+  }
+
+  getResponseHeader(name: string): string | null {
+    if (this.response) {
+      try {
+        return this.response.headers.get(name);
+      } catch (error) {/* Could not get header */}
+    }
+    return null;
   }
 }
 
