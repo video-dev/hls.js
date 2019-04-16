@@ -133,7 +133,7 @@ class EMEController extends EventHandler {
         });
       });
     } else {
-      this.hls.trigger(Event.KEY_LOADED);
+      this.hls.trigger(Event.EME_CONFIGURED);
       
       return Promise.reject({
         fatal: false,
@@ -213,7 +213,7 @@ class EMEController extends EventHandler {
       return;
     }
 
-    this.hls.trigger(Event.KEY_LOADING);
+    this.hls.trigger(Event.EME_CONFIGURING);
 
     const mediaKeySystemConfigs = this._getSupportedMediaKeySystemConfigurations(data.levels);
 
@@ -250,7 +250,7 @@ class EMEController extends EventHandler {
     }).then(() => {
       logger.log('EME sucessfully configured');
 
-      this.hls.trigger(Event.KEY_LOADED);
+      this.hls.trigger(Event.EME_CONFIGURED);
     }).catch((err: EMEError) => {
       logger.error('DRM Configuration failed')
 

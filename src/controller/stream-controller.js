@@ -258,7 +258,7 @@ class StreamController extends BaseStreamController {
     }
 
     if (frag) {
-      if (frag.encrypted) {
+      if (frag.encrypted && !this.hls.config.emeEnabled) {
         logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
       } else {
