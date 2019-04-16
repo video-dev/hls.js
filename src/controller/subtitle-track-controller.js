@@ -95,10 +95,14 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    logger.log(`subtitle track ${id} loaded`);
+    logger.log(`subtitle track ${id} loaded [${details.startSN},${details.endSN}]`);
+
     if (details.live) {
-      const reloadInterval = computeReloadInterval(currentTrack.details, details, data.stats.trequest);
-      logger.log(`Reloading live subtitle playlist in ${reloadInterval}ms`);
+      const curDetails = currentTrack.details;
+      details.updated = (!curDetails || details.endSN !== curDetails.endSN || details.url !== curDetails.url);
+      details.availabilityDelay = curDetails && curDetails.availabilityDelay;
+      const reloadInterval = computeReloadInterval(details, data.stats);
+      logger.log(`live subtitle track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
       this.timer = setTimeout(() => {
         this._loadCurrentTrack();
       }, reloadInterval);
