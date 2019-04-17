@@ -122,11 +122,11 @@ export default class Hls extends Observer {
     const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
     const capLevelController = this.capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
     const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
-    const emeController = new config.emeController(this);
     const playListLoader = new PlaylistLoader(this);
     const fragmentLoader = new FragmentLoader(this);
     const keyLoader = new KeyLoader(this);
     const id3TrackController = new ID3TrackController(this);
+    const emeController = new config.emeController(this);
 
     // network controllers
 
@@ -197,17 +197,6 @@ export default class Hls extends Observer {
       this.subtitleTrackController = subtitleTrackController;
       networkControllers.push(subtitleTrackController);
     }
-
-    // Controller = config.emeController;
-    // if (Controller) {
-    //   const emeController = new Controller(this);
-
-    //   /**
-    //    * @member {EMEController} emeController
-    //    */
-    //   this.emeController = emeController;
-    //   coreComponents.push(emeController);
-    // }
 
     // optional subtitle controllers
     Controller = config.subtitleStreamController;

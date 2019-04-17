@@ -121,11 +121,14 @@ class EMEController extends EventHandler {
     if (!this.hasSetMediaKeys) {
       logger.log('Settings media keys on media');
 
+      this.hasSetMediaKeys = true;
+
       return this.media.setMediaKeys(mediaKeys).then(() => {
-        this.hasSetMediaKeys = true;
         return Promise.resolve(mediaKeys);
       }).catch((err) => {
         logger.error('Failed to set media keys on media:', err);
+
+        this.hasSetMediaKeys = false;
 
         return Promise.reject({
           fatal: true,
@@ -133,8 +136,6 @@ class EMEController extends EventHandler {
         });
       });
     } else {
-      this.hls.trigger(Event.EME_CONFIGURED);
-      
       return Promise.reject({
         fatal: false,
         message: ErrorDetails.KEY_SYSTEM_KEYS_SET
@@ -277,6 +278,8 @@ class EMEController extends EventHandler {
 
     if (this._media) {
       this._media.setMediaKeys(null).then(() => {
+        this.hasSetMediaKeys = false;
+
         this._media = null; // release media reference
       })
     }
