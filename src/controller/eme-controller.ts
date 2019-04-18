@@ -43,7 +43,7 @@ class EMEController extends EventHandler {
    */
   constructor(hls) {
     super(hls,
-      Event.MEDIA_ATTACHING,
+      Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHED,
       Event.MANIFEST_PARSED
     );
@@ -263,7 +263,7 @@ class EMEController extends EventHandler {
     })
   }
 
-  onMediaAttaching(data: { media: HTMLMediaElement }) {
+  onMediaAttached(data: { media: HTMLMediaElement }) {
     let media = data.media;
 
     if (media) {
