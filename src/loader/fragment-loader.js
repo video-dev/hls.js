@@ -53,7 +53,7 @@ class FragmentLoader extends EventHandler {
     let start = frag.byteRangeStartOffset,
       end = frag.byteRangeEndOffset;
 
-    if (!isNaN(start) && !isNaN(end)) {
+    if (Number.isFinite(start) && Number.isFinite(end)) {
       loaderContext.rangeStart = start;
       loaderContext.rangeEnd = end;
     }

@@ -1,6 +1,4 @@
-const assert = require('assert');
-
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities } from '../../../src/utils/discontinuities';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities, alignPDT } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,
@@ -65,23 +63,23 @@ describe('level-helper', function () {
     ];
 
     adjustPts(mockReferenceFrag.start, details);
-    assert.deepEqual(expected, details.fragments);
-    assert.equal(true, details.PTSKnown);
+    expect(expected).to.deep.equal(details.fragments);
+    expect(details.PTSKnown).to.be.true;
   });
 
   it('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
-    const lastFrag = { cc: 0 };
     const lastLevel = {
       details: {
         PTSKnown: true,
-        programDateTime: new Date('2017-08-28 00:00:00'),
+        hasProgramDateTime: true,
         fragments: [
           {
             start: 20,
             startPTS: 20,
             endPTS: 24,
             duration: 4,
-            cc: 0
+            cc: 0,
+            programDateTime: 1503892800000
           },
           {
             start: 24,
@@ -108,7 +106,8 @@ describe('level-helper', function () {
           startPTS: 0,
           endPTS: 4,
           duration: 4,
-          cc: 2
+          cc: 2,
+          programDateTime: 1503892850000
         },
         {
           start: 4,
@@ -126,9 +125,9 @@ describe('level-helper', function () {
         }
       ],
       PTSKnown: false,
-      programDateTime: new Date('2017-08-28 00:00:50'),
       startCC: 2,
-      endCC: 3
+      endCC: 3,
+      hasProgramDateTime: true
     };
 
     let detailsExpected = {
@@ -138,7 +137,8 @@ describe('level-helper', function () {
           startPTS: 70,
           endPTS: 74,
           duration: 4,
-          cc: 2
+          cc: 2,
+          programDateTime: 1503892850000
         },
         {
           start: 74,
@@ -156,12 +156,12 @@ describe('level-helper', function () {
         }
       ],
       PTSKnown: true,
-      programDateTime: new Date('2017-08-28 00:00:50'),
       startCC: 2,
-      endCC: 3
+      endCC: 3,
+      hasProgramDateTime: true
     };
-    alignDiscontinuities(lastFrag, lastLevel, details);
-    assert.deepEqual(detailsExpected, details);
+    alignPDT(details, lastLevel.details);
+    expect(detailsExpected).to.deep.equal(details);
   });
 
   it('finds the first fragment in an array which matches the CC of the first fragment in another array', function () {
@@ -173,25 +173,25 @@ describe('level-helper', function () {
     };
     const expected = mockReferenceFrag;
     const actual = findDiscontinuousReferenceFrag(prevDetails, curDetails);
-    assert.equal(expected, actual);
+    expect(actual).to.equal(expected);
   });
 
   it('returns undefined if there are no frags in the previous level', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag({ fragments: [] }, { fragments: mockFrags });
-    assert.equal(expected, actual);
+    expect(actual).to.equal(expected);
   });
 
   it('returns undefined if there are no matching frags in the previous level', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag({ fragments: [{ cc: 10 }] }, { fragments: mockFrags });
-    assert.equal(expected, actual);
+    expect(actual).to.equal(expected);
   });
 
   it('returns undefined if there are no frags in the current level', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag({ fragments: [{ cc: 0 }] }, { fragments: [] });
-    assert.equal(expected, actual);
+    expect(actual).to.equal(expected);
   });
 
   it('should align current level when CC increases within the level', function () {
@@ -204,7 +204,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(null, lastLevel, curDetails);
-    assert.equal(true, actual);
+    expect(actual).to.be.true;
   });
 
   it('should align current level when CC increases from last frag to current level', function () {
@@ -220,7 +220,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
-    assert.equal(true, actual);
+    expect(actual).to.be.true;
   });
 
   it('should not align when there is no CC increase', function () {
@@ -236,7 +236,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
-    assert.equal(false, actual);
+    expect(actual).to.be.false;
   });
 
   it('should not align when there is no previous level', function () {
@@ -249,7 +249,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, null, curDetails);
-    assert.equal(false, actual);
+    expect(actual).to.be.false;
   });
 
   it('should not align when there are no previous level details', function () {
@@ -264,7 +264,7 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
-    assert.equal(false, actual);
+    expect(actual).to.be.false;
   });
 
   it('should not align when there are no current level details', function () {
@@ -276,6 +276,6 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, null);
-    assert.equal(false, actual);
+    expect(actual).to.be.false;
   });
 });

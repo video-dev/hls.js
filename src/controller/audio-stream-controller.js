@@ -11,30 +11,14 @@ import TimeRanges from '../utils/time-ranges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
-import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
-import Fragment from '../loader/fragment';
-
+import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
+import BaseStreamController, { State } from './base-stream-controller';
 const { performance } = window;
 
-const State = {
-  STOPPED: 'STOPPED',
-  STARTING: 'STARTING',
-  IDLE: 'IDLE',
-  PAUSED: 'PAUSED',
-  KEY_LOADING: 'KEY_LOADING',
-  FRAG_LOADING: 'FRAG_LOADING',
-  FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
-  WAITING_TRACK: 'WAITING_TRACK',
-  PARSING: 'PARSING',
-  PARSED: 'PARSED',
-  BUFFER_FLUSHING: 'BUFFER_FLUSHING',
-  ENDED: 'ENDED',
-  ERROR: 'ERROR',
-  WAITING_INIT_PTS: 'WAITING_INIT_PTS'
-};
+const TICK_INTERVAL = 100; // how often to tick in ms
 
-class AudioStreamController extends TaskLoop {
+class AudioStreamController extends BaseStreamController {
   constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
@@ -62,17 +46,6 @@ class AudioStreamController extends TaskLoop {
     this.videoTrackCC = null;
   }
 
-  onHandlerDestroying () {
-    this.stopLoad();
-    super.onHandlerDestroying();
-  }
-
-  onHandlerDestroyed () {
-    this.state = State.STOPPED;
-    this.fragmentTracker = null;
-    super.onHandlerDestroyed();
-  }
-
   // Signal that video PTS was found
   onInitPtsFound (data) {
     let demuxerId = data.id, cc = data.frag.cc, initPTS = data.initPTS;
@@ -95,7 +68,7 @@ class AudioStreamController extends TaskLoop {
     if (this.tracks) {
       let lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
-      this.setInterval(100);
+      this.setInterval(TICK_INTERVAL);
       this.fragLoadError = 0;
       if (lastCurrentTime > 0 && startPosition === -1) {
         logger.log(`audio:override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
@@ -110,24 +83,6 @@ class AudioStreamController extends TaskLoop {
       this.startPosition = startPosition;
       this.state = State.STOPPED;
     }
-  }
-
-  stopLoad () {
-    let frag = this.fragCurrent;
-    if (frag) {
-      if (frag.loader) {
-        frag.loader.abort();
-      }
-
-      this.fragmentTracker.removeFragment(frag);
-      this.fragCurrent = null;
-    }
-    this.fragPrevious = null;
-    if (this.demuxer) {
-      this.demuxer.destroy();
-      this.demuxer = null;
-    }
-    this.state = State.STOPPED;
   }
 
   set state (nextState) {
@@ -207,20 +162,10 @@ class AudioStreamController extends TaskLoop {
           break;
         }
 
-        // check if we need to finalize media stream
-        // we just got done loading the final fragment and there is no other buffered range after ...
-        // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
-        // so we should not switch to ENDED in that case, to be able to buffer them
-        if (!audioSwitch && !trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN && !bufferInfo.nextStart) {
-          // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
-          // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
-          // between different renditions. using half frag duration should help cope with these cases.
-          if (!this.media.seeking || (this.media.duration - bufferEnd) < fragPrevious.duration / 2) {
-            // Finalize the media stream
-            this.hls.trigger(Event.BUFFER_EOS, { type: 'audio' });
-            this.state = State.ENDED;
-            break;
-          }
+        if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
+          this.hls.trigger(Event.BUFFER_EOS, { type: 'audio' });
+          this.state = State.ENDED;
+          return;
         }
 
         // find fragment index, contiguous with end of buffer position
@@ -336,10 +281,12 @@ class AudioStreamController extends TaskLoop {
             logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
             // only load if fragment is not loaded or if in audio switch
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+            this.fragCurrent = frag;
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-              this.fragCurrent = frag;
-              this.startFragRequested = true;
-              if (!isNaN(frag.sn)) {
+              if (frag.sn !== 'initSegment') {
+                this.startFragRequested = true;
+              }
+              if (Number.isFinite(frag.sn)) {
                 this.nextLoadPosition = frag.start + frag.duration;
               }
 
@@ -437,24 +384,6 @@ class AudioStreamController extends TaskLoop {
     this.stopLoad();
   }
 
-  onMediaSeeking () {
-    if (this.state === State.ENDED) {
-      // switch to IDLE state to check for potential new fragment
-      this.state = State.IDLE;
-    }
-    if (this.media) {
-      this.lastCurrentTime = this.media.currentTime;
-    }
-
-    // tick to speed up processing
-    this.tick();
-  }
-
-  onMediaEnded () {
-    // reset startPosition and lastCurrentTime to restart playback @ stream beginning
-    this.startPosition = this.lastCurrentTime = 0;
-  }
-
   onAudioTracksUpdated (data) {
     logger.log('audio tracks updated');
     this.tracks = data.audioTracks;
@@ -476,7 +405,7 @@ class AudioStreamController extends TaskLoop {
       }
     } else {
       // switching to audio track, start timer if not already started
-      this.setInterval(100);
+      this.setInterval(TICK_INTERVAL);
     }
 
     // should we switch tracks ?
@@ -525,7 +454,7 @@ class AudioStreamController extends TaskLoop {
       if (this.startPosition === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
-        if (!isNaN(startTimeOffset)) {
+        if (Number.isFinite(startTimeOffset)) {
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
         } else {
@@ -654,12 +583,12 @@ class AudioStreamController extends TaskLoop {
         track = this.tracks[trackId],
         hls = this.hls;
 
-      if (isNaN(data.endPTS)) {
+      if (!Number.isFinite(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      fragCurrent.addElementaryStream(Fragment.ElementaryStreamTypes.AUDIO);
+      fragCurrent.addElementaryStream(ElementaryStreamTypes.AUDIO);
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       LevelHelper.updateFragPTSDTS(track.details, fragCurrent, data.startPTS, data.endPTS);

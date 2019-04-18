@@ -1,5 +1,6 @@
 module.exports = {
   'env': {
+    'browser': true,
     'commonjs': true,
     'es6': true
   },
@@ -18,6 +19,10 @@ module.exports = {
   'extends': [
     'eslint:recommended',
     'standard'
+  ],
+  'parser': 'typescript-eslint-parser',
+  'plugins': [
+      'typescript'
   ],
   'parserOptions': {
     'sourceType': 'module'
@@ -69,6 +74,11 @@ module.exports = {
     'one-var': [
       1,
       'never'
+    ],
+
+    'no-restricted-properties': [2,
+      { 'property': 'findIndex' },  // Intended to block usage of Array.prototype.findIndex
+      { 'property': 'find' }        // Intended to block usage of Array.prototype.find
     ],
 
     'standard/no-callback-literal': 1,

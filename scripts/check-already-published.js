@@ -1,4 +1,6 @@
-const package = require('../package.json');
+'use strict';
+
+const packageJson = require('../package.json');
 
 try {
   if (versionPublished()) {
@@ -14,5 +16,5 @@ process.exit(0);
 
 function versionPublished() {
   // npm view returns empty string if package doesn't exist
-  return !!require('child_process').execSync('npm view ' + package.name + '@' + package.version + ' --json').toString().trim();
+  return !!require('child_process').execSync('npm view ' + packageJson.name + '@' + packageJson.version + ' --json').toString().trim();
 }

@@ -1,213 +1,242 @@
-/*
- * Subtitle Stream Controller
-*/
+/**
+ * @class SubtitleStreamController
+ */
 
 import Event from '../events';
 import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
-import TaskLoop from '../task-loop';
+import { BufferHelper } from '../utils/buffer-helper';
+import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
+import { FragmentState } from './fragment-tracker';
+import BaseStreamController, { State } from './base-stream-controller';
+import { mergeSubtitlePlaylists } from './level-helper';
 
 const { performance } = window;
+const TICK_INTERVAL = 500; // how often to tick in ms
 
-const State = {
-  STOPPED: 'STOPPED',
-  IDLE: 'IDLE',
-  KEY_LOADING: 'KEY_LOADING',
-  FRAG_LOADING: 'FRAG_LOADING'
-};
-
-class SubtitleStreamController extends TaskLoop {
-  constructor (hls) {
+export class SubtitleStreamController extends BaseStreamController {
+  constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
+      Event.MEDIA_DETACHING,
       Event.ERROR,
       Event.KEY_LOADED,
       Event.FRAG_LOADED,
       Event.SUBTITLE_TRACKS_UPDATED,
       Event.SUBTITLE_TRACK_SWITCH,
       Event.SUBTITLE_TRACK_LOADED,
-      Event.SUBTITLE_FRAG_PROCESSED);
+      Event.SUBTITLE_FRAG_PROCESSED,
+      Event.LEVEL_UPDATED);
 
+    this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
-    this.vttFragSNsProcessed = {};
-    this.vttFragQueues = undefined;
-    this.currentlyProcessing = null;
     this.state = State.STOPPED;
+    this.tracks = [];
+    this.tracksBuffered = [];
     this.currentTrackId = -1;
-    this.decrypter = new Decrypter(hls.observer, hls.config);
+    this.decrypter = new Decrypter(hls, hls.config);
+    // lastAVStart stores the time in seconds for the start time of a level load
+    this.lastAVStart = 0;
+    this._onMediaSeeking = this.onMediaSeeking.bind(this);
   }
 
-  onHandlerDestroyed () {
-    this.state = State.STOPPED;
-  }
-
-  // Remove all queued items and create a new, empty queue for each track.
-  clearVttFragQueues () {
-    this.vttFragQueues = {};
-    this.tracks.forEach(track => {
-      this.vttFragQueues[track.id] = [];
-    });
-  }
-
-  // If no frag is being processed and queue isn't empty, initiate processing of next frag in line.
-  nextFrag () {
-    if (this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
-      let frag = this.currentlyProcessing = this.vttFragQueues[this.currentTrackId].shift();
-      this.fragCurrent = frag;
-      this.hls.trigger(Event.FRAG_LOADING, { frag: frag });
-      this.state = State.FRAG_LOADING;
-    }
-  }
-
-  // When fragment has finished processing, add sn to list of completed if successful.
   onSubtitleFragProcessed (data) {
-    if (data.success) {
-      this.vttFragSNsProcessed[data.frag.trackId].push(data.frag.sn);
-    }
-
-    this.currentlyProcessing = null;
+    const { frag, success } = data;
+    this.fragPrevious = frag;
     this.state = State.IDLE;
-    this.nextFrag();
-  }
-
-  onMediaAttached () {
-    this.state = State.IDLE;
-  }
-
-  // If something goes wrong, procede to next frag, if we were processing one.
-  onError (data) {
-    let frag = data.frag;
-    // don't handle frag error not related to subtitle fragment
-    if (frag && frag.type !== 'subtitle') {
+    if (!success) {
       return;
     }
 
-    if (this.currentlyProcessing) {
-      this.currentlyProcessing = null;
-      this.nextFrag();
+    const buffered = this.tracksBuffered[this.currentTrackId];
+    if (!buffered) {
+      return;
+    }
+
+    // Create/update a buffered array matching the interface used by BufferHelper.bufferedInfo
+    // so we can re-use the logic used to detect how much have been buffered
+    let timeRange;
+    const fragStart = frag.start;
+    for (let i = 0; i < buffered.length; i++) {
+      if (fragStart >= buffered[i].start && fragStart <= buffered[i].end) {
+        timeRange = buffered[i];
+        break;
+      }
+    }
+
+    const fragEnd = frag.start + frag.duration;
+    if (timeRange) {
+      timeRange.end = fragEnd;
+    } else {
+      timeRange = {
+        start: fragStart,
+        end: fragEnd
+      };
+      buffered.push(timeRange);
     }
   }
 
-  doTick () {
-    switch (this.state) {
-    case State.IDLE:
-      const tracks = this.tracks;
-      let trackId = this.currentTrackId;
+  onMediaAttached ({ media }) {
+    this.media = media;
+    media.addEventListener('seeking', this._onMediaSeeking);
+    this.state = State.IDLE;
+  }
 
-      const processedFragSNs = this.vttFragSNsProcessed[trackId],
-        fragQueue = this.vttFragQueues[trackId],
-        currentFragSN = this.currentlyProcessing ? this.currentlyProcessing.sn : -1;
+  onMediaDetaching () {
+    this.media.removeEventListener('seeking', this._onMediaSeeking);
+    this.media = null;
+    this.state = State.STOPPED;
+  }
 
-      const alreadyProcessed = function (frag) {
-        return processedFragSNs.indexOf(frag.sn) > -1;
-      };
-
-      const alreadyInQueue = function (frag) {
-        return fragQueue.some(fragInQueue => {
-          return fragInQueue.sn === frag.sn;
-        });
-      };
-
-        // exit if tracks don't exist
-      if (!tracks) {
-        break;
-      }
-
-      var trackDetails;
-
-      if (trackId < tracks.length) {
-        trackDetails = tracks[trackId].details;
-      }
-
-      if (typeof trackDetails === 'undefined') {
-        break;
-      }
-
-      // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
-      trackDetails.fragments.forEach(frag => {
-        if (!(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag))) {
-          // Load key if subtitles are encrypted
-          if (frag.encrypted) {
-            logger.log(`Loading key for ${frag.sn}`);
-            this.state = State.KEY_LOADING;
-            this.hls.trigger(Event.KEY_LOADING, { frag: frag });
-          } else {
-            // Frags don't know their subtitle track ID, so let's just add that...
-            frag.trackId = trackId;
-            fragQueue.push(frag);
-            this.nextFrag();
-          }
-        }
-      });
+  // If something goes wrong, proceed to next frag, if we were processing one.
+  onError (data) {
+    let frag = data.frag;
+    // don't handle error not related to subtitle fragment
+    if (!frag || frag.type !== 'subtitle') {
+      return;
     }
+    this.state = State.IDLE;
   }
 
   // Got all new subtitle tracks.
   onSubtitleTracksUpdated (data) {
     logger.log('subtitle tracks updated');
+    this.tracksBuffered = [];
     this.tracks = data.subtitleTracks;
-    this.clearVttFragQueues();
-    this.vttFragSNsProcessed = {};
-    this.tracks.forEach(track => {
-      this.vttFragSNsProcessed[track.id] = [];
+    this.tracks.forEach((track) => {
+      this.tracksBuffered[track.id] = [];
     });
   }
 
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
+
     if (!this.tracks || this.currentTrackId === -1) {
+      this.clearInterval();
       return;
     }
 
-    // Check if track was already loaded and if so make sure we finish
-    // downloading its frags, if not all have been downloaded yet
+    // Check if track has the necessary details to load fragments
     const currentTrack = this.tracks[this.currentTrackId];
     if (currentTrack && currentTrack.details) {
-      this.tick();
+      this.setInterval(TICK_INTERVAL);
     }
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded () {
-    this.tick();
+  onSubtitleTrackLoaded (data) {
+    const { id, details } = data;
+    const { currentTrackId, tracks } = this;
+    const currentTrack = tracks[currentTrackId];
+    if (id >= tracks.length || id !== currentTrackId || !currentTrack) {
+      return;
+    }
+
+    if (details.live) {
+      mergeSubtitlePlaylists(currentTrack.details, details, this.lastAVStart);
+    }
+    currentTrack.details = details;
+    this.setInterval(TICK_INTERVAL);
   }
 
   onKeyLoaded () {
     if (this.state === State.KEY_LOADING) {
       this.state = State.IDLE;
-      this.tick();
     }
   }
 
   onFragLoaded (data) {
-    let fragCurrent = this.fragCurrent,
-      decryptData = data.frag.decryptdata;
-    let fragLoaded = data.frag,
-      hls = this.hls;
+    const fragCurrent = this.fragCurrent;
+    const decryptData = data.frag.decryptdata;
+    const fragLoaded = data.frag;
+    const hls = this.hls;
+
     if (this.state === State.FRAG_LOADING &&
         fragCurrent &&
         data.frag.type === 'subtitle' &&
         fragCurrent.sn === data.frag.sn) {
       // check to see if the payload needs to be decrypted
-      if ((data.payload.byteLength > 0) && (decryptData != null) && (decryptData.key != null) && (decryptData.method === 'AES-128')) {
-        let startTime;
-        try {
-          startTime = performance.now();
-        } catch (error) {
-          startTime = Date.now();
-        }
+      if (data.payload.byteLength > 0 && (decryptData && decryptData.key && decryptData.method === 'AES-128')) {
+        let startTime = performance.now();
+
         // decrypt the subtitles
         this.decrypter.decrypt(data.payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {
-          let endTime;
-          try {
-            endTime = performance.now();
-          } catch (error) {
-            endTime = Date.now();
-          }
+          let endTime = performance.now();
           hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload: decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
         });
       }
     }
   }
+
+  onLevelUpdated ({ details }) {
+    const frags = details.fragments;
+    this.lastAVStart = frags.length ? frags[0].start : 0;
+  }
+
+  doTick () {
+    if (!this.media) {
+      this.state = State.IDLE;
+      return;
+    }
+
+    switch (this.state) {
+    case State.IDLE: {
+      const { config, currentTrackId, fragmentTracker, media, tracks } = this;
+      if (!tracks || !tracks[currentTrackId] || !tracks[currentTrackId].details) {
+        break;
+      }
+
+      const { maxBufferHole, maxFragLookUpTolerance } = config;
+      const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
+      const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), media.currentTime, maxBufferHole);
+      const { end: bufferEnd, len: bufferLen } = bufferedInfo;
+
+      const trackDetails = tracks[currentTrackId].details;
+      const fragments = trackDetails.fragments;
+      const fragLen = fragments.length;
+      const end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
+
+      if (bufferLen > maxConfigBuffer) {
+        return;
+      }
+
+      let foundFrag;
+      const fragPrevious = this.fragPrevious;
+      if (bufferEnd < end) {
+        if (fragPrevious && trackDetails.hasProgramDateTime) {
+          foundFrag = findFragmentByPDT(fragments, fragPrevious.endProgramDateTime, maxFragLookUpTolerance);
+        }
+        if (!foundFrag) {
+          foundFrag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
+        }
+      } else {
+        foundFrag = fragments[fragLen - 1];
+      }
+
+      if (foundFrag && foundFrag.encrypted) {
+        logger.log(`Loading key for ${foundFrag.sn}`);
+        this.state = State.KEY_LOADING;
+        this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });
+      } else if (foundFrag && fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
+        // only load if fragment is not loaded
+        this.fragCurrent = foundFrag;
+        this.state = State.FRAG_LOADING;
+        this.hls.trigger(Event.FRAG_LOADING, { frag: foundFrag });
+      }
+    }
+    }
+  }
+
+  stopLoad () {
+    this.lastAVStart = 0;
+    super.stopLoad();
+  }
+
+  _getBuffered () {
+    return this.tracksBuffered[this.currentTrackId] || [];
+  }
+
+  onMediaSeeking () {
+    this.fragPrevious = null;
+  }
 }
-export default SubtitleStreamController;

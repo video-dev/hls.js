@@ -1,7 +1,7 @@
 export const mockFragments = [
   {
-    pdt: 1505502661523,
-    endPdt: 1505502666523,
+    programDateTime: 1505502661523,
+    endProgramDateTime: 1505502666523,
     level: 2,
     duration: 5.000,
     start: 0,
@@ -10,8 +10,8 @@ export const mockFragments = [
   },
   // Discontinuity with PDT 1505502671523 which does not exist in level 1 as per fragPrevious
   {
-    pdt: 1505502671523,
-    endPdt: 1505502676523,
+    programDateTime: 1505502671523,
+    endProgramDateTime: 1505502676523,
     level: 2,
     duration: 5.000,
     start: 5.000,
@@ -19,8 +19,8 @@ export const mockFragments = [
     cc: 1
   },
   {
-    pdt: 1505502676523,
-    endPdt: 1505502681523,
+    programDateTime: 1505502676523,
+    endProgramDateTime: 1505502681523,
     level: 2,
     duration: 5.000,
     start: 10.000,
@@ -28,8 +28,8 @@ export const mockFragments = [
     cc: 1
   },
   {
-    pdt: 1505502681523,
-    endPdt: 1505502686523,
+    programDateTime: 1505502681523,
+    endProgramDateTime: 1505502686523,
     level: 2,
     duration: 5.000,
     start: 15.000,
@@ -37,8 +37,8 @@ export const mockFragments = [
     cc: 1
   },
   {
-    pdt: 1505502686523,
-    endPdt: 1505502691523,
+    programDateTime: 1505502686523,
+    endProgramDateTime: 1505502691523,
     level: 2,
     duration: 5.000,
     start: 20.000,

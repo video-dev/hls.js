@@ -1,4 +1,4 @@
-import URLToolkit from 'url-toolkit';
+import * as URLToolkit from 'url-toolkit';
 
 import {
   ErrorTypes,
@@ -19,17 +19,15 @@ import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig } from './config';
 
 import HlsEvents from './events';
-import EventEmitter from 'events';
 
-// polyfill for IE11
-require('string.prototype.endswith');
+import { Observer } from './observer';
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls {
+export default class Hls extends Observer {
   /**
    * @type {string}
    */
@@ -90,7 +88,9 @@ export default class Hls {
    * @param {HlsConfig} config
    */
   constructor (config = {}) {
-    let defaultConfig = Hls.DefaultConfig;
+    super();
+
+    const defaultConfig = Hls.DefaultConfig;
 
     if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
@@ -101,41 +101,28 @@ export default class Hls {
       config[prop] = defaultConfig[prop];
     }
 
-    if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
+    if (config.liveMaxLatencyDurationCount !== void 0 && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
     }
 
-    if (config.liveMaxLatencyDuration !== undefined && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === undefined)) {
+    if (config.liveMaxLatencyDuration !== void 0 && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === void 0)) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"');
     }
 
     enableLogs(config.debug);
     this.config = config;
     this._autoLevelCapping = -1;
-    // observer setup
-    let observer = this.observer = new EventEmitter();
-    observer.trigger = function trigger (event, ...data) {
-      observer.emit(event, event, ...data);
-    };
-
-    observer.off = function off (event, ...data) {
-      observer.removeListener(event, ...data);
-    };
-    this.on = observer.on.bind(observer);
-    this.off = observer.off.bind(observer);
-    this.once = observer.once.bind(observer);
-    this.trigger = observer.trigger.bind(observer);
 
     // core controllers and network loaders
 
     /**
      * @member {AbrController} abrController
      */
-    const abrController = this.abrController = new config.abrController(this);
+    const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap
 
-    const bufferController = new config.bufferController(this);
-    const capLevelController = new config.capLevelController(this);
-    const fpsController = new config.fpsController(this);
+    const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
+    const capLevelController = this.capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
+    const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
     const playListLoader = new PlaylistLoader(this);
     const fragmentLoader = new FragmentLoader(this);
     const keyLoader = new KeyLoader(this);
@@ -207,7 +194,7 @@ export default class Hls {
        * @member {SubtitleTrackController} subtitleTrackController
        */
       this.subtitleTrackController = subtitleTrackController;
-      coreComponents.push(subtitleTrackController);
+      networkControllers.push(subtitleTrackController);
     }
 
     Controller = config.emeController;
@@ -221,12 +208,15 @@ export default class Hls {
       coreComponents.push(emeController);
     }
 
-    // optional subtitle controller
-    [config.subtitleStreamController, config.timelineController].forEach(Controller => {
-      if (Controller) {
-        coreComponents.push(new Controller(this));
-      }
-    });
+    // optional subtitle controllers
+    Controller = config.subtitleStreamController;
+    if (Controller) {
+      networkControllers.push(new Controller(this, fragmentTracker));
+    }
+    Controller = config.timelineController;
+    if (Controller) {
+      coreComponents.push(new Controller(this));
+    }
 
     /**
      * @member {ICoreComponent[]}
@@ -245,7 +235,7 @@ export default class Hls {
       component.destroy();
     });
     this.url = null;
-    this.observer.removeAllListeners();
+    this.removeAllListeners();
     this._autoLevelCapping = -1;
   }
 
@@ -456,11 +446,41 @@ export default class Hls {
   }
 
   /**
+   * set  dynamically set capLevelToPlayerSize against (`CapLevelController`)
+   *
+   * @type {boolean}
+   */
+  set capLevelToPlayerSize (shouldStartCapping) {
+    const newCapLevelToPlayerSize = !!shouldStartCapping;
+
+    if (newCapLevelToPlayerSize !== this.config.capLevelToPlayerSize) {
+      if (newCapLevelToPlayerSize) {
+        this.capLevelController.startCapping(); // If capping occurs, nextLevelSwitch will happen based on size.
+      } else {
+        this.capLevelController.stopCapping();
+        this.autoLevelCapping = -1;
+        this.streamController.nextLevelSwitch(); // Now we're uncapped, get the next level asap.
+      }
+
+      this.config.capLevelToPlayerSize = newCapLevelToPlayerSize;
+    }
+  }
+
+  /**
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
    * @type {number}
    */
   get autoLevelCapping () {
     return this._autoLevelCapping;
+  }
+
+  /**
+   * get bandwidth estimate
+   * @type {number}
+   */
+  get bandwidthEstimate () {
+    const bwEstimator = this.abrController._bwEstimator;
+    return bwEstimator ? bwEstimator.getEstimate() : NaN;
   }
 
   /**
@@ -493,7 +513,10 @@ export default class Hls {
    * @type {number}
    */
   get minAutoLevel () {
-    let hls = this, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate, len = levels ? levels.length : 0;
+    const hls = this;
+    const levels = hls.levels;
+    const minAutoBitrate = hls.config.minAutoBitrate;
+    const len = levels ? levels.length : 0;
     for (let i = 0; i < len; i++) {
       const levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate;
       if (levelNextBitrate > minAutoBitrate) {

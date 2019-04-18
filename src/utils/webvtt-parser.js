@@ -12,7 +12,7 @@ const cueString2millis = function (timeString) {
   let mins = parseInt(timeString.substr(-9, 2));
   let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
-  if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) {
+  if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {
     return -1;
   }
 
@@ -94,7 +94,7 @@ const WebVTTParser = {
 
       if (presentationTime) {
         // If we have MPEGTS, offset = presentation time + discontinuity offset
-        cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
+        cueOffset = presentationTime - vttCCs.presentationOffset;
       }
 
       cue.startTime += cueOffset - localTime;
@@ -140,8 +140,9 @@ const WebVTTParser = {
           });
           try {
             // Calculate subtitle offset in milliseconds.
-            // If sync PTS is less than zero, we have a 33-bit wraparound, which is fixed by adding 2^33 = 8589934592.
-            syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;
+            if (syncPTS + ((vttCCs[cc].start * 90000) || 0) < 0) {
+              syncPTS += 8589934592;
+            }
             // Adjust MPEGTS by sync PTS.
             mpegTs -= syncPTS;
             // Convert cue time to seconds
