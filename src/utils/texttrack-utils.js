@@ -12,6 +12,12 @@ export function sendAddTrackEvent (track, videoEl) {
   videoEl.dispatchEvent(event);
 }
 
+export function sendRemoveTrackEvent (track, videoEl) {
+  // As of 05/2018 there is no working browser removetrack event
+  // Disabling the track doesn't remove it but does signify it isn't in use
+  track.mode = 'disabled';
+}
+
 export function clearCurrentCues (track) {
   if (track && track.cues) {
     while (track.cues.length > 0) {
