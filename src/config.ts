@@ -17,7 +17,6 @@ import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
-import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
@@ -45,8 +44,8 @@ type CapLevelControllerConfig = {
 type EMEControllerConfig = {
   emeEnabled: boolean,
   requestMediaKeySystemAccessFunc: ((supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>) | undefined,
-  getEMEInitializationDataFunc: ((track) => Promise<EMEInitDataInfo>) | undefined,
-  getEMELicenseFunc: ((xhr: XMLHttpRequest) => void) | undefined,
+  getEMEInitializationDataFunc: ((levelOrAudioTrack) => Promise<EMEInitDataInfo>) | undefined,
+  getEMELicenseFunc: ((event: MediaKeyMessageEvent) => Promise<ArrayBuffer>) | undefined,
 }
 
 export interface EMEInitDataInfo {
