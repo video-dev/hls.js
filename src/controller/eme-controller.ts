@@ -253,7 +253,7 @@ class EMEController extends EventHandler {
 
       this.hls.trigger(Event.EME_CONFIGURED);
     }).catch((err: EMEError) => {
-      logger.error('DRM Configuration failed')
+      logger.error('EME Configuration failed')
 
       this.hls.trigger(Event.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
@@ -276,7 +276,7 @@ class EMEController extends EventHandler {
       keySession.close();
     })
 
-    if (this._media) {
+    if (this._media && this._media.setMediaKeys) {
       this._media.setMediaKeys(null).then(() => {
         this.hasSetMediaKeys = false;
 
