@@ -241,7 +241,7 @@ class ID3 {
       [1-?] = {Description}\0{Value}
       */
       let index = 1;
-      const description = ID3._utf8ArrayToStr(frame.data.subarray(index));
+      const description = ID3._utf8ArrayToStr(frame.data.subarray(index), true);
 
       index += description.length + 1;
       const value = ID3._utf8ArrayToStr(frame.data.subarray(index));
