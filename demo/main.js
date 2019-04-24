@@ -16,9 +16,26 @@ if (demoConfig) {
   demoConfig = {}
 }
 
+class fLoader extends Hls.DefaultConfig.loader {
+  constructor(config) {
+    super(config);
+
+    const load = this.load.bind(this);
+
+    this.load = (context, config, callbacks) => {
+      if (/\?start=\d+&end=\d+/.test(context.url)) {
+        context.frag.backtracked = true;
+      }
+
+      load(context, config, callbacks);
+    };
+  }
+}
+
 const hlsjsDefaults = {
   debug: true,
-  enableWorker: true
+  enableWorker: true,
+  fLoader
 };
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
