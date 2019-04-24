@@ -39,8 +39,8 @@ class EMEController extends EventHandler {
    */
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: (supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>
-  private _getEMEInitializationData: (track) => Promise<EMEInitDataInfo>;
-  private _getEMELicense: (event: MediaKeyMessageEvent) => Promise<ArrayBuffer>;
+  private _getEMEInitializationData: (levelOrAudioTrack: any) => Promise<EMEInitDataInfo>;
+  private _getEMELicense: (levelOrAudioTrack: any, event: MediaKeyMessageEvent) => Promise<ArrayBuffer>;
 
   /**
    * @constructs
@@ -66,10 +66,10 @@ class EMEController extends EventHandler {
    * @param {Promise.resolve} reject Reject method to be called on unsuccessful license update on MediaKeySession
    * @param {Event<MediaKeyMessageEvent>} event Message event created by license request generation
    */
-  private _onKeySessionMessage = (resolve, reject, event: MediaKeyMessageEvent) => {
+  private _onKeySessionMessage = (levelOrAudioTrack: any, resolve, reject, event: MediaKeyMessageEvent) => {
     logger.log('Received key session message, requesting license');
 
-    this.getEMELicense(event).then((license: ArrayBuffer) => {
+    this.getEMELicense(levelOrAudioTrack, event).then((license: ArrayBuffer) => {
       logger.log('Received license data, updating key-session');
 
       return (event.target! as MediaKeySession).update(license).then(() => {
@@ -96,7 +96,7 @@ class EMEController extends EventHandler {
 
     return this.getEMEInitializationData(levelOrAudioTrack).then((initDataInfo) => {
       const messagePromise = new Promise((resolve, reject) => {
-        session.addEventListener('message', this._onKeySessionMessage.bind(this, resolve, reject))
+        session.addEventListener('message', this._onKeySessionMessage.bind(this, levelOrAudioTrack, resolve, reject))
       });
 
       session.generateRequest(initDataInfo.initDataType, initDataInfo.initData)
