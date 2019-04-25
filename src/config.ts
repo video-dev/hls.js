@@ -46,7 +46,7 @@ type EMEControllerConfig = {
   requestMediaKeySystemAccessFunc: ((supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>) | undefined,
   getEMEInitializationDataFunc: ((levelOrAudioTrack) => Promise<EMEInitDataInfo>) | undefined,
   getEMELicenseFunc: ((levelOrAudioTrack, event: MediaKeyMessageEvent) => Promise<ArrayBuffer>) | undefined,
-}
+};
 
 export interface EMEInitDataInfo {
   initDataType: string,

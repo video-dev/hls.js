@@ -483,11 +483,11 @@ class AudioStreamController extends BaseStreamController {
     }
   }
 
-  onEMEConfiguring() {
+  onEMEConfiguring () {
     this.state = State.EME_CONFIGURING;
   }
 
-  onEMEConfigured() {
+  onEMEConfigured () {
     if (this.state === State.EME_CONFIGURING) {
       this.state = State.IDLE;
       this.tick();
