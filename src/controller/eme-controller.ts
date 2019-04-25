@@ -350,7 +350,7 @@ class EMEController extends EventHandler {
 
     return this._requestMediaKeySystemAccess;
   }
-
+  
   get getEMEInitializationData () {
     if (!this._getEMEInitializationData) {
       throw new Error('No getInitializationData function configured');

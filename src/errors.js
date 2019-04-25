@@ -24,7 +24,7 @@ export const ErrorDetails = {
   KEY_SYSTEM_KEYS_SET: 'keySystemKeysSet',
   // Identifier for a license request failure - data: {}
   KEY_SYSTEM_LICENSE_REQUEST_FAILED: 'keySystemLicenseRequestFailed',
-  // Identifier for a license request failure - data: {}
+  // Identifier for a license update failure - data: {}
   KEY_SYSTEM_LICENSE_UPDATE_FAILED: 'keySystemLicenseUpdateFailed',
   // Identifier for a manifest load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_ERROR: 'manifestLoadError',
