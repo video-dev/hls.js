@@ -74,10 +74,15 @@ class EMEController extends EventHandler {
 
       return (event.target! as MediaKeySession).update(license).then(() => {
         resolve();
+      }).catch((err) => {
+        reject({
+          message: ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED,
+          fatal: true
+        });
       });
     }).catch((err) => {
       reject({
-        message: ErrorTypes.KEY_SYSTEM_ERROR,
+        message: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
         fatal: true
       });
     });
