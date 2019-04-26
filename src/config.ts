@@ -249,7 +249,7 @@ export const hlsDefaultConfig: HlsConfig = {
   emeController: (__USE_EME_DRM__) ? EMEController : void 0
 };
 
-function timelineConfig (): TimelineControllerConfig {
+function timelineConfig(): TimelineControllerConfig {
   if (!__USE_SUBTITLES__) {
     // intentionally doing this over returning Partial<TimelineControllerConfig> above
     // this has the added nice property of still requiring the object below to completely define all props.

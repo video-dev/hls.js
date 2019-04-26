@@ -76,7 +76,6 @@ class EMEController extends EventHandler {
 
     this.getEMELicense(levelOrAudioTrack, event).then((license: ArrayBuffer) => {
       logger.log('Received license data, updating key-session');
-
       return (event.target! as MediaKeySession).update(license).then(() => {
         resolve();
       }).catch((err) => {
