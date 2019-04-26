@@ -27,8 +27,6 @@ class AudioStreamController extends BaseStreamController {
       Event.AUDIO_TRACK_SWITCHING,
       Event.AUDIO_TRACK_LOADED,
       Event.KEY_LOADED,
-      Event.EME_CONFIGURING,
-      Event.EME_CONFIGURED,
       Event.FRAG_LOADED,
       Event.FRAG_PARSING_INIT_SEGMENT,
       Event.FRAG_PARSING_DATA,
@@ -103,8 +101,6 @@ class AudioStreamController extends BaseStreamController {
     let pos, track, trackDetails, hls = this.hls, config = hls.config;
     // logger.log('audioStream:' + this.state);
     switch (this.state) {
-    case State.EME_CONFIGURING:
-      // don't do anything while EME is being configured
     case State.ERROR:
       // don't do anything in error state to avoid breaking further ...
     case State.PAUSED:
@@ -478,17 +474,6 @@ class AudioStreamController extends BaseStreamController {
 
   onKeyLoaded () {
     if (this.state === State.KEY_LOADING) {
-      this.state = State.IDLE;
-      this.tick();
-    }
-  }
-
-  onEMEConfiguring () {
-    this.state = State.EME_CONFIGURING;
-  }
-
-  onEMEConfigured () {
-    if (this.state === State.EME_CONFIGURING) {
       this.state = State.IDLE;
       this.tick();
     }

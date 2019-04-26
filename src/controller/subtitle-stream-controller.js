@@ -21,8 +21,6 @@ export class SubtitleStreamController extends BaseStreamController {
       Event.MEDIA_DETACHING,
       Event.ERROR,
       Event.KEY_LOADED,
-      Event.EME_CONFIGURING,
-      Event.EME_CONFIGURED,
       Event.FRAG_LOADED,
       Event.SUBTITLE_TRACKS_UPDATED,
       Event.SUBTITLE_TRACK_SWITCH,
@@ -144,17 +142,6 @@ export class SubtitleStreamController extends BaseStreamController {
   onKeyLoaded () {
     if (this.state === State.KEY_LOADING) {
       this.state = State.IDLE;
-    }
-  }
-
-  onEMEConfiguring () {
-    this.state = State.EME_CONFIGURING;
-  }
-
-  onEMEConfigured () {
-    if (this.state === State.EME_CONFIGURING) {
-      this.state = State.IDLE;
-      this.tick();
     }
   }
 
