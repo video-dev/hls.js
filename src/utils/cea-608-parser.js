@@ -36,8 +36,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
- */
+     *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
+     */
 
 let specialCea608CharsCodes = {
   0x2a: 0xe1, // lowercase a, acute accent
@@ -222,10 +222,10 @@ class PenState {
 
   equals (other) {
     return ((this.foreground === other.foreground) &&
-                  (this.underline === other.underline) &&
-                  (this.italics === other.italics) &&
-                  (this.background === other.background) &&
-                  (this.flash === other.flash));
+                 (this.underline === other.underline) &&
+                 (this.italics === other.italics) &&
+                 (this.background === other.background) &&
+                 (this.flash === other.flash));
   }
 
   copy (newPenState) {
@@ -546,8 +546,8 @@ class CaptionScreen {
   }
 
   /**
-      * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
-      */
+     * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
+     */
   setBkgData (bkgData) {
     logger.log('INFO', 'bkgData = ' + JSON.stringify(bkgData));
     this.backSpace();
@@ -852,8 +852,8 @@ class Cea608Parser {
   }
 
   /**
-      * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
-      */
+     * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
+     */
   addData (t, byteList) {
     let cmdFound, a, b,
       charsFound = false;
@@ -907,9 +907,9 @@ class Cea608Parser {
   }
 
   /**
-      * Parse Command.
-      * @returns {Boolean} Tells if a command was found
-      */
+     * Parse Command.
+     * @returns {Boolean} Tells if a command was found
+     */
   parseCmd (a, b) {
     let chNr = null;
 
@@ -978,9 +978,9 @@ class Cea608Parser {
   }
 
   /**
-      * Parse midrow styling command
-      * @returns {Boolean}
-      */
+     * Parse midrow styling command
+     * @returns {Boolean}
+     */
   parseMidrow (a, b) {
     let chNr = null;
 
@@ -1003,9 +1003,9 @@ class Cea608Parser {
     return false;
   }
   /**
-      * Parse Preable Access Codes (Table 53).
-      * @returns {Boolean} Tells if PAC found
-      */
+     * Parse Preable Access Codes (Table 53).
+     * @returns {Boolean} Tells if PAC found
+     */
   parsePAC (a, b) {
     let chNr = null;
     let row = null;
@@ -1039,9 +1039,9 @@ class Cea608Parser {
   }
 
   /**
-      * Interpret the second byte of the pac, and return the information.
-      * @returns {Object} pacData with style parameters.
-      */
+     * Interpret the second byte of the pac, and return the information.
+     * @returns {Object} pacData with style parameters.
+     */
   interpretPAC (row, byte) {
     let pacIndex = byte;
     let pacData = { color: null, italics: false, indent: null, underline: false, row: row };
@@ -1065,9 +1065,9 @@ class Cea608Parser {
   }
 
   /**
-      * Parse characters.
-      * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
-      */
+     * Parse characters.
+     * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
+     */
   parseChars (a, b) {
     let channelNr = null,
       charCodes = null,
@@ -1145,8 +1145,8 @@ class Cea608Parser {
   }
 
   /**
-      * Reset state of parser and its channels.
-      */
+     * Reset state of parser and its channels.
+     */
   reset () {
     for (let i = 0; i < this.channels.length; i++) {
       if (this.channels[i]) {
@@ -1158,8 +1158,8 @@ class Cea608Parser {
   }
 
   /**
-      * Trigger the generation of a cue, and the start of a new one if displayScreens are not empty.
-      */
+     * Trigger the generation of a cue, and the start of a new one if displayScreens are not empty.
+     */
   cueSplitAtTime (t) {
     for (let i = 0; i < this.channels.length; i++) {
       if (this.channels[i]) {
