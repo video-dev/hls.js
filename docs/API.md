@@ -76,6 +76,7 @@
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
   - [`emeEnabled`](#emeEnabled)
+  - [`emeInitDataInFrag`](#emeInitDataInFrag)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
   - [`getEMEInitializationDataFunc`](#getEMEInitializationDataFunc)
   - [`getEMELicenseFunc`](#getEMELicenseFunc)
@@ -362,6 +363,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxLoadingDelay: 4,
       minAutoBitrate: 0,
       emeEnabled: false,
+      emeInitDataInFrag: true,
       requestMediaKeySystemAccessFunc: undefined,
       getEMEInitializationDataFunc: undefined,
       getEMELicenseFunc: undefined
@@ -996,6 +998,8 @@ hls.js can congfigure EME in the browser using the following configuration. EME 
 
 hls.js supports multiple licenses for a stream by creating MediaKeySessions for each level and audioTrack. The configuration hooks will be called for each level and audioTrack found in the manifest so that the Initialization Data used to generate a license request, and the license request itself can be configured for each level and audioTrack.
 
+hls.js also supports EME streams where Initialization Data is not in the fragments. If the user knows their stream does not include Initialization Data in the fragments, the user can set `emeInitDataInFrag` to false, and hls.js will configure EME on the assumption that the user will provide the Initialization Data by other means when their `getEMEInitializationDataFunc` is called.
+
 Note: EME is only available when served over HTTPS. Setting `emeEnabled` for a stream served over HTTP will trigger the `KEY_SYSTEM_NO_ACCESS` error.
 
 ### `emeEnabled`
@@ -1003,6 +1007,12 @@ Note: EME is only available when served over HTTPS. Setting `emeEnabled` for a s
 (default: `false`)
 
 Whether to configure EME for the stream, using the `requestMediaKeySystemAccessFunc`, `getEMEInitializationDataFunc`, and `getEMELicenseFunc` hooks. If set, all three hooks must be implemented.
+
+### `emeInitDataInFrag`
+
+(default: `true`)
+
+Whether the stream contains EME Initialization Data in the fragments (likely for most streams). If false, the user will need to have prior knowledge of the Initialization Data to provide when their `getEMEInitializationDataFunc` is called (e.g. by parsing a PSSH box that has been removed from the fragments and provided to the user by other means).
 
 ### `requestMediaKeySystemAccessFunc`
 
@@ -1029,9 +1039,9 @@ See example below.
 
 (default: `undefined`)
 
-Signature: `(levelOrAudioTrack: ` [Level](#Level) `| AudioTrack) => Promise<{ initDataType: string; initData: ArrayBuffer }>`
+Signature: `(levelOrAudioTrack: ` [Level](#Level) `| AudioTrack, initDataType: string | null, initData: ArrayBuffer | null) => Promise<{ initDataType: string; initData: ArrayBuffer }>`
 
-The function EME controller will use to get the [Initialization Data Type](https://w3c.github.io/encrypted-media/format-registry/initdata/index.html#registry) and Intialization Data used to call [generateRequest](https://w3c.github.io/encrypted-media/#dom-mediakeysession-generaterequest) on the [MediaKeySession](https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySession) object. This allows the user to configure the data used to generate the request (e.g. by parsing a PSSH box provided in a level). The level or audioTrack object for the MediaKeySession on which the request will be generated is passed as a parameter so that the user can provide specific Initialization Data Types and Initialization Data for each level and audioTrack if necessary (using the level or audioTrack `url` property). The function should return a Promise that resolves to the following object:
+The function EME controller will use to get the [Initialization Data Type](https://w3c.github.io/encrypted-media/format-registry/initdata/index.html#registry) and Intialization Data used to call [generateRequest](https://w3c.github.io/encrypted-media/#dom-mediakeysession-generaterequest) on the [MediaKeySession](https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySession) object. This allows the user to configure the data used to generate the request (e.g. by parsing a PSSH box provided in a level). If the initDataType and initData are discovered in a fragment, they will be passed to this function as well. The level or audioTrack object for the MediaKeySession on which the request will be generated is passed as a parameter so that the user can provide specific Initialization Data Types and Initialization Data for each level and audioTrack if necessary (using the level or audioTrack `url` property). The function should return a Promise that resolves to the following object:
 
 ```js
   {
@@ -1044,11 +1054,9 @@ See example below.
 
 ```js
   var config = {
-    getEMEInitializationDataFunc: function(levelOrAudioTrack) {
-      var initDataType = '';
-      var initData;
+    getEMEInitializationDataFunc: function(levelOrAudioTrack, initDataType, initData) {
 
-      // Determine the Initialization Data Type and create the initData ArrayBuffer
+      // If modifying the initDataType and initData, the user can do that here
 
       return Promise.resolve({
         initDataType,
@@ -1077,24 +1085,22 @@ See example below.
       var licenseXhr = new XMLHttpRequest();
 
       var licensePromise = new Promise((resolve, reject) => {
-        licenseXhr.onload = function (licenseResponse) {
-          if (licenseResponse.status === 200) {
-            resolve(licenseResponse.response);
-          } else {
-            reject();
-          }
+        licenseXhr.onload = function () {
+          resolve(this.response);
         };
 
         licenseXhr.onerror = function (err) {
-          reject();
+          if (err) {
+            reject(new Error('License request failed'));
+          }
         };
-      })
-      
+      });
+
       licenseXhr.responseType = 'arraybuffer';
 
       licenseXhr.open('POST', licenseServerUrl);
 
-      licenseXhr.send(event.message); // Use the message generated by the MediaKeySession to request the license
+      licenseXhr.send(event.message);
 
       return licensePromise;
     }
@@ -1459,18 +1465,10 @@ Full list of errors is described below:
     - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_ACCESS`, fatal : `true` }
   - `Hls.ErrorDetails.KEY_SYSTEM_NO_KEYS` - raised when setting MediaKeys on the media fails
     - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_KEYS`, fatal : `true` }
-  - `Hls.ErrorDetails.KEY_SYSTEM_KEYS_SET` - raised when MediaKeys have already been set on the media
-    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_KEYS_SET`, fatal : `false` }
   - `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED` - raised when a request for a license fails
     - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED`, fatal : `true` }
   - `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED` - raised when updating a MediaKeySession with a license fails
     - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED`, fatal : `true` }
-  - `Hls.ErrorDetails.KEY_SYSTEM_NO_SESSION` - raised when creating a MediaKeySession fails
-    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_SESSION`, fatal : `true` }
-  - `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED` - raised when a request for a license fails
-    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED`, fatal : `true` }
-  - `Hls.ErrorDetails.KEY_SYSTEM_KEYS_SET` - raised when MediaKeys have already been set on the media
-    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_KEYS_SET`, fatal : `false` }
 
 ### Mux Errors
 

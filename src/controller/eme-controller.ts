@@ -31,6 +31,9 @@ interface EMEKeySessionResponse {
  */
 class EMEController extends EventHandler {
   private _media: HTMLMediaElement | null = null;
+  private _manifestData: any = null;
+  private _initDataType: string | null = null;
+  private _initData: ArrayBuffer | null = null;
   private _hasSetMediaKeys = false;
   private _keySessions: MediaKeySession[] = [];
 
@@ -38,8 +41,9 @@ class EMEController extends EventHandler {
    * User configurations
    */
   private _emeEnabled: boolean;
+  private _emeInitDataInFrag: boolean;
   private _requestMediaKeySystemAccess: (supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>
-  private _getEMEInitializationData: (levelOrAudioTrack: any) => Promise<EMEInitDataInfo>;
+  private _getEMEInitializationData: (levelOrAudioTrack: any, initDataType: string | null, initData: ArrayBuffer | null) => Promise<EMEInitDataInfo>;
   private _getEMELicense: (levelOrAudioTrack: any, event: MediaKeyMessageEvent) => Promise<ArrayBuffer>;
 
   /**
@@ -49,11 +53,12 @@ class EMEController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHING,
+      Event.MANIFEST_PARSED,
       Event.MEDIA_DETACHED,
-      Event.MANIFEST_PARSED
     );
 
     this._emeEnabled = hls.config.emeEnabled;
+    this._emeInitDataInFrag = hls.config.emeInitDataInFrag;
     this._requestMediaKeySystemAccess = hls.config.requestMediaKeySystemAccessFunc;
     this._getEMEInitializationData = hls.config.getEMEInitializationDataFunc;
     this._getEMELicense = hls.config.getEMELicenseFunc;
@@ -71,7 +76,6 @@ class EMEController extends EventHandler {
 
     this.getEMELicense(levelOrAudioTrack, event).then((license: ArrayBuffer) => {
       logger.log('Received license data, updating key-session');
-
       return (event.target! as MediaKeySession).update(license).then(() => {
         resolve();
       }).catch((err) => {
@@ -99,7 +103,7 @@ class EMEController extends EventHandler {
   private _onMediaKeySessionCreated (session: MediaKeySession, levelOrAudioTrack: any): Promise<any> {
     logger.log('Generating license request');
 
-    return this.getEMEInitializationData(levelOrAudioTrack).then((initDataInfo) => {
+    return this.getEMEInitializationData(levelOrAudioTrack, this.initDataType, this.initData).then((initDataInfo) => {
       const messagePromise = new Promise((resolve, reject) => {
         session.addEventListener('message', this._onKeySessionMessage.bind(this, levelOrAudioTrack, resolve, reject));
       });
@@ -124,7 +128,7 @@ class EMEController extends EventHandler {
 
     const session = mediaKeys.createSession();
 
-    this._keySessions.push(session);
+    this.keySessions.push(session);
 
     const keySessionResponse: EMEKeySessionResponse = {
       session,
@@ -159,10 +163,9 @@ class EMEController extends EventHandler {
         });
       });
     } else {
-      return Promise.reject({
-        fatal: false,
-        message: ErrorDetails.KEY_SYSTEM_KEYS_SET
-      });
+      logger.log('Media keys have already been set on media');
+
+      return Promise.resolve(mediaKeys);
     }
   }
 
@@ -239,14 +242,10 @@ class EMEController extends EventHandler {
     ];
   }
 
-  onManifestParsed (data: any) {
-    if (!this._emeEnabled) {
-      return;
-    }
-
+  private _configureEME () {
     this.hls.trigger(Event.EME_CONFIGURING, {});
 
-    const mediaKeySystemConfigs = this._getSupportedMediaKeySystemConfigurations(data.levels);
+    const mediaKeySystemConfigs = this._getSupportedMediaKeySystemConfigurations(this.manifestData.levels);
 
     this._getKeySystemAccess(mediaKeySystemConfigs).then((mediaKeySystemAccess) => {
       logger.log('Obtained encrypted media key system access');
@@ -259,11 +258,11 @@ class EMEController extends EventHandler {
     }).then((mediaKeys) => {
       logger.log('Set media keys on media');
 
-      const levelRequests = data.levels.map((level) => {
+      const levelRequests = this.manifestData.levels.map((level) => {
         return this._onMediaKeysSet(mediaKeys, level);
       });
 
-      const audioRequests = data.audioTracks.map((audioTrack) => {
+      const audioRequests = this.manifestData.audioTracks.map((audioTrack) => {
         return this._onMediaKeysSet(mediaKeys, audioTrack);
       });
 
@@ -298,6 +297,22 @@ class EMEController extends EventHandler {
 
     if (media) {
       this._media = media; // keep reference of media
+
+      this.media.onencrypted = (event) => {
+        this.initDataType = event.initDataType;
+
+        this.initData = event.initData;
+
+        this._configureEME();
+      };
+    }
+  }
+
+  onManifestParsed (data: any) {
+    this.manifestData = data;
+
+    if (this.emeEnabled && !this.emeInitDataInFrag) {
+      this._configureEME();
     }
   }
 
@@ -325,6 +340,30 @@ class EMEController extends EventHandler {
     return this._media;
   }
 
+  get manifestData () {
+    return this._manifestData;
+  }
+
+  set manifestData (value) {
+    this._manifestData = value;
+  }
+
+  get initDataType () {
+    return this._initDataType;
+  }
+
+  set initDataType (value) {
+    this._initDataType = value;
+  }
+
+  get initData () {
+    return this._initData;
+  }
+
+  set initData (value) {
+    this._initData = value;
+  }
+
   get hasSetMediaKeys () {
     return this._hasSetMediaKeys;
   }
@@ -343,6 +382,14 @@ class EMEController extends EventHandler {
 
   // Getters for user configurations
 
+  get emeEnabled () {
+    return this._emeEnabled;
+  }
+
+  get emeInitDataInFrag () {
+    return this._emeInitDataInFrag;
+  }
+
   get requestMediaKeySystemAccess () {
     if (!this._requestMediaKeySystemAccess) {
       throw new Error('No requestMediaKeySystemAccess function configured');
@@ -350,7 +397,7 @@ class EMEController extends EventHandler {
 
     return this._requestMediaKeySystemAccess;
   }
-  
+
   get getEMEInitializationData () {
     if (!this._getEMEInitializationData) {
       throw new Error('No getInitializationData function configured');

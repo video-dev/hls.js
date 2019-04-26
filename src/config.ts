@@ -43,8 +43,9 @@ type CapLevelControllerConfig = {
 
 type EMEControllerConfig = {
   emeEnabled: boolean,
+  emeInitDataInFrag: boolean,
   requestMediaKeySystemAccessFunc: ((supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>) | undefined,
-  getEMEInitializationDataFunc: ((levelOrAudioTrack) => Promise<EMEInitDataInfo>) | undefined,
+  getEMEInitializationDataFunc: ((levelOrAudioTrack, initDataType: string | null, initData: ArrayBuffer | null) => Promise<EMEInitDataInfo>) | undefined,
   getEMELicenseFunc: ((levelOrAudioTrack, event: MediaKeyMessageEvent) => Promise<ArrayBuffer>) | undefined,
 };
 
@@ -233,6 +234,7 @@ export const hlsDefaultConfig: HlsConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
+  emeInitDataInFrag: true, // used by eme-controller
   requestMediaKeySystemAccessFunc: undefined, // used by eme-controller
   getEMEInitializationDataFunc: undefined, // used by eme-controller
   getEMELicenseFunc: undefined, // used by eme-controllers
