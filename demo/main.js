@@ -16,9 +16,52 @@ if (demoConfig) {
   demoConfig = {}
 }
 
+const customFragmentLoader = function() {
+  this.load = (context, config, callbacks) => {
+    this.context = context;
+    this.config = config;
+    this.callbacks = callbacks;
+
+    this.xhr = new XMLHttpRequest();
+
+    this.xhr.open('GET', this.context.url, true);
+    this.xhr.responseType = 'arraybuffer';
+    this.xhr.send();
+
+    this.xhr.timeout = this.config.timeout;
+
+    this.xhr.onload = () => {
+      const response = {
+        url : this.xhr.responseURL,
+        data: this.xhr.response
+      };
+
+      this.context.frag.backtracked = true;
+
+      this.callbacks.onSuccess(response, {}, this.context, this.xhr);
+    };
+
+    this.xhr.onerror = (e) => {
+      this.callbacks.onError({ code: this.xhr.status, text: e.message }, this.context, this.xhr);
+    };
+  };
+
+  this.abort = () => {
+    if (this.xhr && (this.xhr.readyState !== 4)) {
+      this.xhr.abort();
+    }
+  };
+
+  this.destroy = () => {
+    this.abort();
+    this.xhr = null;
+  };
+};
+
 const hlsjsDefaults = {
   debug: true,
-  enableWorker: true
+  enableWorker: true,
+  fLoader: customFragmentLoader
 };
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
