@@ -30,7 +30,7 @@ const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
 export default class M3U8Parser {
-  static findGroup(groups, mediaGroupId) {
+  static findGroup (groups, mediaGroupId) {
     if (!groups) {
       return null;
     }
@@ -51,16 +51,16 @@ export default class M3U8Parser {
     let avcdata = codec.split('.');
     let result;
     if (avcdata.length > 2) {
-      result = avcdata.shift() + ".";
+      result = avcdata.shift() + '.';
       result += parseInt(avcdata.shift()).toString(16);
-      result += ("000" + parseInt(avcdata.shift()).toString(16)).substr(-4);
+      result += ('000' + parseInt(avcdata.shift()).toString(16)).substr(-4);
     } else {
       result = codec;
     }
     return result;
   }
 
-  static resolve(url, baseUrl) {
+  static resolve (url, baseUrl) {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
@@ -68,21 +68,17 @@ export default class M3U8Parser {
     let levels = [];
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
-    function setCodecs(codecs, level) {
-      ["video", "audio"].forEach(type => {
-        const filtered = codecs.filter(codec => isCodecType(codec, type));
+    function setCodecs (codecs, level) {
+      ['video', 'audio'].forEach((type) => {
+        const filtered = codecs.filter((codec) => isCodecType(codec, type));
         if (filtered.length) {
-          const preferred = filtered.filter(codec => {
-            return (
-              codec.lastIndexOf("avc1", 0) === 0 ||
-              codec.lastIndexOf("mp4a", 0) === 0
-            );
+          const preferred = filtered.filter((codec) => {
+            return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
           });
-          level[`${type}Codec`] =
-            preferred.length > 0 ? preferred[0] : filtered[0];
+          level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
 
           // remove from list
-          codecs = codecs.filter(codec => filtered.indexOf(codec) === -1);
+          codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
         }
       });
 
@@ -93,22 +89,20 @@ export default class M3U8Parser {
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
 
-      const attrs = (level.attrs = new AttrList(result[1]));
+      const attrs = level.attrs = new AttrList(result[1]);
       level.url = M3U8Parser.resolve(result[2], baseurl);
 
-      const resolution = attrs.decimalResolution("RESOLUTION");
+      const resolution = attrs.decimalResolution('RESOLUTION');
       if (resolution) {
         level.width = resolution.width;
         level.height = resolution.height;
       }
-      level.bitrate =
-        attrs.decimalInteger("AVERAGE-BANDWIDTH") ||
-        attrs.decimalInteger("BANDWIDTH");
+      level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
       level.name = attrs.NAME;
 
-      setCodecs([].concat((attrs.CODECS || "").split(/[ ,]+/)), level);
+      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
 
-      if (level.videoCodec && level.videoCodec.indexOf("avc1") !== -1) {
+      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
         level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
       }
 
@@ -117,7 +111,7 @@ export default class M3U8Parser {
     return levels;
   }
 
-  static parseMasterPlaylistMedia(string, baseurl, type, audioGroups = []) {
+  static parseMasterPlaylistMedia (string, baseurl, type, audioGroups = []) {
     let result;
     let medias = [];
     let id = 0;
@@ -126,12 +120,12 @@ export default class M3U8Parser {
       const media = {};
       const attrs = new AttrList(result[1]);
       if (attrs.TYPE === type) {
-        media.groupId = attrs["GROUP-ID"];
+        media.groupId = attrs['GROUP-ID'];
         media.name = attrs.NAME;
         media.type = type;
-        media.default = attrs.DEFAULT === "YES";
-        media.autoselect = attrs.AUTOSELECT === "YES";
-        media.forced = attrs.FORCED === "YES";
+        media.default = (attrs.DEFAULT === 'YES');
+        media.autoselect = (attrs.AUTOSELECT === 'YES');
+        media.forced = (attrs.FORCED === 'YES');
         if (attrs.URI) {
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
         }
@@ -141,15 +135,9 @@ export default class M3U8Parser {
           media.name = media.lang;
         }
 
-        if (attrs["INSTREAM-ID"]) {
-          media.instreamId = attrs["INSTREAM-ID"];
-        }
-
         if (audioGroups.length) {
           const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
-          media.audioCodec = groupCodec
-            ? groupCodec.codec
-            : audioGroups[0].codec;
+          media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
         }
         media.id = id++;
         medias.push(media);
@@ -175,11 +163,10 @@ export default class M3U8Parser {
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       const duration = result[1];
-      if (duration) {
-        // INF
+      if (duration) { // INF
         frag.duration = parseFloat(duration);
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-        const title = (" " + result[2]).slice(1);
+        const title = (' ' + result[2]).slice(1);
         frag.title = title || null;
         frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
       } else if (result[3]) { // url
@@ -210,8 +197,7 @@ export default class M3U8Parser {
         } else {
           frag.setByteRange(data);
         }
-      } else if (result[5]) {
-        // PROGRAM-DATE-TIME
+      } else if (result[5]) { // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
@@ -227,8 +213,8 @@ export default class M3U8Parser {
         }
 
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-        const value1 = (" " + result[i + 1]).slice(1);
-        const value2 = (" " + result[i + 2]).slice(1);
+        const value1 = (' ' + result[i + 1]).slice(1);
+        const value2 = (' ' + result[i + 2]).slice(1);
 
         switch (result[i]) {
         case '#':
@@ -326,17 +312,15 @@ export default class M3U8Parser {
       // this is a bit lurky but HLS really has no other way to tell us
       // if the fragments are TS or MP4, except if we download them :/
       // but this is to be able to handle SIDX.
-      if (level.fragments.every(frag => MP4_REGEX_SUFFIX.test(frag.relurl))) {
-        logger.warn(
-          "MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX"
-        );
+      if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl))) {
+        logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
         frag = new Fragment();
         frag.relurl = level.fragments[0].relurl;
         frag.baseurl = baseurl;
         frag.level = id;
         frag.type = type;
-        frag.sn = "initSegment";
+        frag.sn = 'initSegment';
 
         level.initSegment = frag;
         level.needSidxRanges = true;

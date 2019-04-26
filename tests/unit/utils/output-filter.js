@@ -10,8 +10,7 @@ describe('OutputFilter', function () {
     };
   };
 
-  let timelineController;
-  let outputFilter;
+  let timelineController, outputFilter;
 
   beforeEach(function () {
     timelineController = createMockTimelineController();
