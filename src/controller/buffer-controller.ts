@@ -47,6 +47,8 @@ class BufferController extends EventHandler {
   // signals that mediaSource should have endOfStream called
   private _needsEos: boolean = false;
 
+  private _didRecover: boolean = false;
+
   private config: BufferControllerConfig;
 
   // this is optional because this property is removed from the class sometimes
@@ -213,7 +215,7 @@ class BufferController extends EventHandler {
     this.hls.trigger(Events.MEDIA_DETACHED);
   }
 
-  checkPendingTracks () {
+  checkPendingTracks (backtracked: boolean | undefined) {
     let { bufferCodecEventsExpected, pendingTracks } = this;
 
     // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
@@ -223,7 +225,7 @@ class BufferController extends EventHandler {
     const pendingTracksCount = Object.keys(pendingTracks).length;
     if ((pendingTracksCount && !bufferCodecEventsExpected) || pendingTracksCount === 2) {
       // ok, let's create them now !
-      this.createSourceBuffers(pendingTracks);
+      this.createSourceBuffers(pendingTracks, backtracked);
       this.pendingTracks = {};
       // append any pending segments now !
       this.doAppending();
@@ -327,24 +329,28 @@ class BufferController extends EventHandler {
     this.appended = 0;
   }
 
-  onBufferCodecs (tracks: TrackSet) {
+  onBufferCodecs (data: { tracks: TrackSet, backtracked: boolean | undefined }) {
+    const { tracks, backtracked } = data;
+
     // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
     // if sourcebuffers already created, do nothing ...
     if (Object.keys(this.sourceBuffer).length) {
       return;
     }
 
-    Object.keys(tracks).forEach(trackName => {
-      this.pendingTracks[trackName] = tracks[trackName];
-    });
+    if (tracks != null) {
+      Object.keys(tracks).forEach(trackName => {
+        this.pendingTracks[trackName] = tracks[trackName];
+      });
+    }
 
     this.bufferCodecEventsExpected = Math.max(this.bufferCodecEventsExpected - 1, 0);
     if (this.mediaSource && this.mediaSource.readyState === 'open') {
-      this.checkPendingTracks();
+      this.checkPendingTracks(backtracked);
     }
   }
 
-  createSourceBuffers (tracks: TrackSet) {
+  createSourceBuffers (tracks: TrackSet, backtracked: boolean | undefined) {
     const { sourceBuffer, mediaSource } = this;
     if (!mediaSource) {
       throw Error('createSourceBuffers called when mediaSource was null');
@@ -376,7 +382,13 @@ class BufferController extends EventHandler {
         }
       }
     }
+
     this.hls.trigger(Events.BUFFER_CREATED, { tracks: this.tracks });
+
+    if (!this._didRecover && backtracked && Object.keys(tracks).length !== 2) {
+      this.hls.recoverMediaError();
+      this._didRecover = true;
+    }
   }
 
   onBufferAppending (data: Segment) {

@@ -47,6 +47,7 @@ class StreamController extends BaseStreamController {
     this._state = State.STOPPED;
     this.stallReported = false;
     this.gapController = null;
+    this.tracks = {};
   }
 
   startLoad (startPosition) {
@@ -935,16 +936,26 @@ class StreamController extends BaseStreamController {
         }
         track.levelCodec = audioCodec;
         track.id = data.id;
+
+        if (fragNew.backtracked) {
+          this.tracks.audio = track;
+        }
       }
       track = tracks.video;
       if (track) {
         track.levelCodec = this.levels[this.level].videoCodec;
         track.id = data.id;
+
+        if (fragNew.backtracked) {
+          this.tracks.video = track;
+        }
       }
-      this.hls.trigger(Event.BUFFER_CODECS, tracks);
+
+      this.hls.trigger(Event.BUFFER_CODECS, { tracks: fragNew.backtracked ? this.tracks : tracks, backtracked: fragNew.backtracked });
+
       // loop through tracks that are going to be provided to bufferController
-      for (trackName in tracks) {
-        track = tracks[trackName];
+      for (trackName in (fragNew.backtracked ? this.tracks : tracks)) {
+        track = fragNew.backtracked ? this.tracks[trackName] : tracks[trackName];
         logger.log(`main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
@@ -954,6 +965,7 @@ class StreamController extends BaseStreamController {
           this.hls.trigger(Event.BUFFER_APPENDING, { type: trackName, data: initSegment, parent: 'main', content: 'initSegment' });
         }
       }
+
       // trigger handler right now
       this.tick();
     }
