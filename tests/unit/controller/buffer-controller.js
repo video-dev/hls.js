@@ -230,8 +230,8 @@ describe('BufferController tests', function () {
 
       bufferController.onManifestParsed({ altAudio: true });
       bufferController._onMediaSourceOpen();
-      bufferController.onBufferCodecs({ audio: {} });
-      bufferController.onBufferCodecs({ video: {} });
+      bufferController.onBufferCodecs({ tracks: { audio: {} } });
+      bufferController.onBufferCodecs({ tracks: { video: {} } });
 
       expect(createSbStub).to.have.been.calledOnce;
       expect(createSbStub).to.have.been.calledWith({ audio: {}, video: {} });
