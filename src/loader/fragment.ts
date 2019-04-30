@@ -69,6 +69,9 @@ export default class Fragment {
   public backtracked: boolean = false;
   // LHLS prefetch flag
   public prefetch?: boolean;
+  // Set by `updateFragPTSDTS` in level-helper
+  public deltaPTS?: number;
+  public maxStartPTS?: number;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {

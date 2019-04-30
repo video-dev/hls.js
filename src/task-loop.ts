@@ -31,7 +31,7 @@ import EventHandler from './event-handler';
 
 export default class TaskLoop extends EventHandler {
   private _tickInterval: any | null = null;
-  private _tickTimer: any | null = null;
+  private _tickTimer: number | null = null;
   private _tickCallCount: number = 0;
   private readonly _boundTick: Function;
 
@@ -106,7 +106,7 @@ export default class TaskLoop extends EventHandler {
       if (this._tickCallCount > 1) {
         // make sure only one timer exists at any time at max
         this.clearNextTick();
-        this._tickTimer = setTimeout(this._boundTick, 0);
+        this._tickTimer = window.setTimeout(this._boundTick, 0);
       }
       this._tickCallCount = 0;
     }

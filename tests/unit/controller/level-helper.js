@@ -1,9 +1,9 @@
 import * as LevelHelper from '../../../src/controller/level-helper';
-import Level from '../../../src/loader/level';
+import LevelDetails from '../../../src/loader/level-details';
 import Fragment from '../../../src/loader/fragment';
 
 const generatePlaylist = (sequenceNumbers) => {
-  const playlist = new Level('');
+  const playlist = new LevelDetails('');
   playlist.startSN = sequenceNumbers[0];
   playlist.endSN = sequenceNumbers[sequenceNumbers.length - 1];
   playlist.fragments = sequenceNumbers.map((n, i) => {

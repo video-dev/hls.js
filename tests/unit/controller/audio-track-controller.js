@@ -118,7 +118,7 @@ describe('AudioTrackController', function () {
       };
 
       audioTrackController.tracks = tracks;
-      audioTrackController.canload = true;
+      audioTrackController.canLoad = true;
 
       audioTrackController.onAudioTrackLoaded({
         id: 0,

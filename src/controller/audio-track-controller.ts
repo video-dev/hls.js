@@ -3,6 +3,8 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { computeReloadInterval } from './level-helper';
 import EventHandler from '../event-handler';
+import { PlaylistMedia } from '../types/level';
+import { AudioTrackSwitchedData, TrackLoadedData, ManifestParsedData, LevelLoadedData, ErrorData } from '../types/events';
 
 /**
  * @class AudioTrackController
@@ -26,6 +28,36 @@ import EventHandler from '../event-handler';
  *
  */
 class AudioTrackController extends EventHandler {
+  /**
+   * @private
+   * If should select tracks according to default track attribute
+   * @member {boolean} _selectDefaultTrack
+   */
+  private _selectDefaultTrack: boolean = true;
+
+  private _trackId: number = -1;
+
+  private canLoad: boolean = false;
+
+  private timer: number | null = null;
+
+  private readonly trackIdBlacklist: { [key: number]: boolean };
+
+  /**
+   * @public
+   * All tracks available
+   * @member {AudioTrack[]}
+   */
+  public tracks: PlaylistMedia[];
+
+  /**
+   * @public
+   * The currently running group ID for audio
+   * (we grab this on manifest-parsed and new level-loaded)
+   * @member {string}
+   */
+  public audioGroupId: string | null = null;
+
   constructor (hls) {
     super(hls,
       Event.MANIFEST_LOADING,
@@ -36,54 +68,18 @@ class AudioTrackController extends EventHandler {
       Event.ERROR
     );
 
-    /**
-     * @private
-     * Currently selected index in `tracks`
-     * @member {number} trackId
-     */
-    this._trackId = -1;
-
-    /**
-     * @private
-     * If should select tracks according to default track attribute
-     * @member {boolean} _selectDefaultTrack
-     */
-    this._selectDefaultTrack = true;
-
-    /**
-     * @public
-     * All tracks available
-     * @member {AudioTrack[]}
-     */
     this.tracks = [];
-
-    /**
-     * @public
-     * List of blacklisted audio track IDs (that have caused failure)
-     * @member {number[]}
-     */
     this.trackIdBlacklist = Object.create(null);
-
-    /**
-     * @public
-     * The currently running group ID for audio
-     * (we grab this on manifest-parsed and new level-loaded)
-     * @member {string}
-     */
-    this.audioGroupId = null;
-
-    this.canload = false;
-    this.timer = null;
   }
 
-  onHandlerDestroying () {
+  protected onHandlerDestroying (): void {
     this.clearTimer();
   }
 
   /**
    * Reset audio tracks on new manifest loading.
    */
-  onManifestLoading () {
+  protected onManifestLoading (): void {
     this.tracks = [];
     this._trackId = -1;
     this._selectDefaultTrack = true;
@@ -93,10 +89,8 @@ class AudioTrackController extends EventHandler {
    * Store tracks data from manifest parsed data.
    *
    * Trigger AUDIO_TRACKS_UPDATED event.
-   *
-   * @param {*} data
    */
-  onManifestParsed (data) {
+  protected onManifestParsed (data: ManifestParsedData): void {
     const tracks = this.tracks = data.audioTracks || [];
     this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
   }
@@ -105,29 +99,27 @@ class AudioTrackController extends EventHandler {
    * Store track details of loaded track in our data-model.
    *
    * Set-up metadata update interval task for live-mode streams.
-   *
-   * @param {} data
    */
-  onAudioTrackLoaded (data) {
+  protected onAudioTrackLoaded (data: TrackLoadedData): void {
     const { id, details } = data;
 
     if (id >= this.tracks.length) {
-      logger.warn('Invalid audio track id:', id);
+      logger.warn('[audio-track-controller]: Invalid audio track id:', id);
       return;
     }
 
-    logger.log(`audioTrack ${id} loaded [${details.startSN},${details.endSN}]`);
+    logger.log(`[audio-track-controller]: audioTrack ${id} loaded [${details.startSN},${details.endSN}]`);
 
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
       const curDetails = this.tracks[id].details;
       details.updated = (!curDetails || details.endSN !== curDetails.endSN || details.url !== curDetails.url);
       details.availabilityDelay = curDetails && curDetails.availabilityDelay;
-      const reloadInterval = computeReloadInterval(details, data.stats, 'audio track');
-      logger.log(`live audio track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
+      const reloadInterval = computeReloadInterval(details, data.stats);
+      logger.log(`[audio-track-controller]: live audio track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
       // Stop reloading if the timer was cleared
-      if (this.canload) {
-        this.timer = setTimeout(() => this._updateTrack(this._trackId), reloadInterval);
+      if (this.canLoad) {
+        this.timer = window.setTimeout(() => this._updateTrack(this._trackId), reloadInterval);
       }
     } else {
       // playlist is not live and timer is scheduled: cancel it
@@ -135,22 +127,22 @@ class AudioTrackController extends EventHandler {
     }
   }
 
-  clearTimer () {
+  private clearTimer (): void {
     if (this.timer !== null) {
       clearTimeout(this.timer);
       this.timer = null;
     }
   }
 
-  startLoad () {
-    this.canload = true;
+  public startLoad (): void {
+    this.canLoad = true;
     if (this.timer === null) {
       this._updateTrack(this._trackId);
     }
   }
 
-  stopLoad () {
-    this.canload = false;
+  public stopLoad (): void {
+    this.canLoad = false;
     this.clearTimer();
   }
 
@@ -159,10 +151,8 @@ class AudioTrackController extends EventHandler {
    * or because of a failure-handling fallback.
    *
    * Quality-levels should update to that group ID in this case.
-   *
-   * @param {*} data
    */
-  onAudioTrackSwitched (data) {
+  protected onAudioTrackSwitched (data: AudioTrackSwitchedData): void {
     const audioGroupId = this.tracks[data.id].groupId;
     if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
       this.audioGroupId = audioGroupId;
@@ -175,13 +165,8 @@ class AudioTrackController extends EventHandler {
    *
    * If group-ID got update, we re-select the appropriate audio-track with this group-ID matching the currently
    * selected one (based on NAME property).
-   *
-   * @param {*} data
    */
-  onLevelLoaded (data) {
-    // FIXME: crashes because currentLevel is undefined
-    // const levelInfo = this.hls.levels[this.hls.currentLevel];
-
+  protected onLevelLoaded (data: LevelLoadedData): void {
     const levelInfo = this.hls.levels[data.level];
 
     if (!levelInfo.audioGroupIds) {
@@ -195,13 +180,7 @@ class AudioTrackController extends EventHandler {
     }
   }
 
-  /**
-   * Handle network errors loading audio track manifests
-   * and also pausing on any netwok errors.
-   *
-   * @param {ErrorEventData} data
-   */
-  onError (data) {
+  protected onError (data: ErrorData): void {
     // Only handle network errors
     if (data.type !== ErrorTypes.NETWORK_ERROR) {
       return;
@@ -217,53 +196,40 @@ class AudioTrackController extends EventHandler {
       return;
     }
 
-    logger.warn('Network failure on audio-track id:', data.context.id);
+    logger.warn('[audio-track-controller]: Network failure on audio-track id:', data.context.id);
     this._handleLoadError();
   }
 
-  /**
-   * @type {AudioTrack[]} Audio-track list we own
-   */
-  get audioTracks () {
+  get audioTracks (): PlaylistMedia[] {
     return this.tracks;
   }
 
-  /**
-   * @type {number} Index into audio-tracks list of currently selected track.
-   */
-  get audioTrack () {
+  get audioTrack (): number {
     return this._trackId;
   }
 
-  /**
-   * Select current track by index
-   */
-  set audioTrack (newId) {
+  set audioTrack (newId: number) {
     this._setAudioTrack(newId);
     // If audio track is selected from API then don't choose from the manifest default track
     this._selectDefaultTrack = false;
   }
 
-  /**
-   * @private
-   * @param {number} newId
-   */
-  _setAudioTrack (newId) {
+  private _setAudioTrack (newId: number): void {
     // noop on same audio track id as already set
     if (this._trackId === newId && this.tracks[this._trackId].details) {
-      logger.debug('Same id as current audio-track passed, and track details available -> no-op');
+      logger.debug('[audio-track-controller]: Same id as current audio-track passed, and track details available -> no-op');
       return;
     }
 
     // check if level idx is valid
     if (newId < 0 || newId >= this.tracks.length) {
-      logger.warn('Invalid id passed to audio-track controller');
+      logger.warn('[audio-track-controller]: Invalid id passed to audio-track controller');
       return;
     }
 
     const audioTrack = this.tracks[newId];
 
-    logger.log(`Now switching to audio-track index ${newId}`);
+    logger.log(`[audio-track-controller]: Now switching to audio-track index ${newId}`);
 
     // stopping live reloading timer if any
     this.clearTimer();
@@ -274,11 +240,7 @@ class AudioTrackController extends EventHandler {
     this._loadTrackDetailsIfNeeded(audioTrack);
   }
 
-  /**
-   * Select initial track
-   * @private
-   */
-  _selectInitialAudioTrack () {
+  private _selectInitialAudioTrack (): void {
     let tracks = this.tracks;
     if (!tracks.length) {
       return;
@@ -286,9 +248,9 @@ class AudioTrackController extends EventHandler {
 
     const currentAudioTrack = this.tracks[this._trackId];
 
-    let name = null;
+    let name: string | null = null;
     if (currentAudioTrack) {
-      name = currentAudioTrack.name;
+      name = currentAudioTrack.name || null;
     }
 
     // Pre-select default tracks if there are any
@@ -297,7 +259,7 @@ class AudioTrackController extends EventHandler {
       if (defaultTracks.length) {
         tracks = defaultTracks;
       } else {
-        logger.warn('No default audio tracks defined');
+        logger.warn('[audio-track-controller]: No default audio tracks defined');
       }
     }
 
@@ -305,10 +267,7 @@ class AudioTrackController extends EventHandler {
 
     const traverseTracks = () => {
       // Select track with right group ID
-      tracks.forEach((track) => {
-        if (trackFound) {
-          return;
-        }
+      tracks.some((track): boolean => {
         // We need to match the (pre-)selected group ID
         // and the NAME of the current track.
         if ((!this.audioGroupId || track.groupId === this.audioGroupId) &&
@@ -316,8 +275,9 @@ class AudioTrackController extends EventHandler {
           // If there was a previous track try to stay with the same `NAME`.
           // It should be unique across tracks of same group, and consistent through redundant track groups.
           this._setAudioTrack(track.id);
-          trackFound = true;
+          return (trackFound = true);
         }
+        return false;
       });
     };
 
@@ -329,7 +289,7 @@ class AudioTrackController extends EventHandler {
     }
 
     if (!trackFound) {
-      logger.error(`No track found for running audio group-ID: ${this.audioGroupId}`);
+      logger.error(`[audio-track-controller]: No track found for running audio group-ID: ${this.audioGroupId}`);
 
       this.hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
@@ -339,35 +299,22 @@ class AudioTrackController extends EventHandler {
     }
   }
 
-  /**
-   * @private
-   * @param {AudioTrack} audioTrack
-   * @returns {boolean}
-   */
-  _needsTrackLoading (audioTrack) {
+  private _needsTrackLoading (audioTrack: PlaylistMedia): boolean {
     const { details, url } = audioTrack;
 
-    return !!url && (!details || details.live === true);
+    return !!url && (!details || details.live);
   }
 
-  /**
-   * @private
-   * @param {AudioTrack} audioTrack
-   */
-  _loadTrackDetailsIfNeeded (audioTrack) {
+  private _loadTrackDetailsIfNeeded (audioTrack: PlaylistMedia): void {
     if (this._needsTrackLoading(audioTrack)) {
       const { url, id } = audioTrack;
       // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`loading audio-track playlist for id: ${id}`);
+      logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
       this.hls.trigger(Event.AUDIO_TRACK_LOADING, { url, id });
     }
   }
 
-  /**
-   * @private
-   * @param {number} newId
-   */
-  _updateTrack (newId) {
+  private _updateTrack (newId: number): void {
     // check if level idx is valid
     if (newId < 0 || newId >= this.tracks.length) {
       return;
@@ -376,44 +323,38 @@ class AudioTrackController extends EventHandler {
     // stopping live reloading timer if any
     this.clearTimer();
     this._trackId = newId;
-    logger.log(`trying to update audio-track ${newId}`);
+    logger.log(`[audio-track-controller]: trying to update audio-track ${newId}`);
     const audioTrack = this.tracks[newId];
     this._loadTrackDetailsIfNeeded(audioTrack);
   }
 
-  /**
-   * @private
-   */
-  _handleLoadError () {
+  private _handleLoadError (): void {
+    const previousId = this._trackId;
+
     // First, let's black list current track id
-    this.trackIdBlacklist[this._trackId] = true;
+    this.trackIdBlacklist[previousId] = true;
 
     // Let's try to fall back on a functional audio-track with the same group ID
-    const previousId = this._trackId;
-    const { name, language, groupId } = this.tracks[previousId];
+    const { name, lang, groupId } = this.tracks[previousId];
 
-    logger.warn(`Loading failed on audio track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${language}"`);
+    logger.warn(`[audio-track-controller]: Loading failed on audio track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${lang}"`);
 
     // Find a non-blacklisted track ID with the same NAME
     // At least a track that is not blacklisted, thus on another group-ID.
     let newId = previousId;
     for (let i = 0; i < this.tracks.length; i++) {
-      if (this.trackIdBlacklist[i]) {
-        continue;
-      }
-      const newTrack = this.tracks[i];
-      if (newTrack.name === name) {
+      if (!this.trackIdBlacklist[i] && this.tracks[i].name === name) {
         newId = i;
         break;
       }
     }
 
     if (newId === previousId) {
-      logger.warn(`No fallback audio-track found for name/language: "${name}" / "${language}"`);
+      logger.warn(`[audio-track-controller]: No fallback audio-track found for name/language: "${name}" / "${lang}"`);
       return;
     }
 
-    logger.log('Attempting audio-track fallback id:', newId, 'group-id:', this.tracks[newId].groupId);
+    logger.log('[audio-track-controller]: Attempting audio-track fallback id:', newId, 'group-id:', this.tracks[newId].groupId);
 
     this._setAudioTrack(newId);
   }
