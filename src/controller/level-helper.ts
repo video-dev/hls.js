@@ -4,8 +4,12 @@
  * */
 
 import { logger } from '../utils/logger';
+import Fragment from '../loader/fragment';
+import LevelDetails from '../loader/level-details';
+import { Level } from '../types/level';
+import { LoaderStats } from '../types/loader';
 
-export function addGroupId (level, type, id) {
+export function addGroupId (level: Level, type: string, id: string): void {
   switch (type) {
   case 'audio':
     if (!level.audioGroupIds) {
@@ -22,7 +26,7 @@ export function addGroupId (level, type, id) {
   }
 }
 
-export function updatePTS (fragments, fromIdx, toIdx) {
+export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number): void {
   let fragFrom = fragments[fromIdx], fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
   // if we know startPTS[toIdx]
   if (Number.isFinite(fragToPTS)) {
@@ -49,16 +53,16 @@ export function updatePTS (fragments, fromIdx, toIdx) {
   }
 }
 
-export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, endDTS) {
+export function updateFragPTSDTS (details: LevelDetails, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
   // update frag PTS/DTS
   let maxStartPTS = startPTS;
   if (Number.isFinite(frag.startPTS)) {
     // delta PTS between audio and video
     let deltaPTS = Math.abs(frag.startPTS - startPTS);
-    if (!Number.isFinite(frag.deltaPTS)) {
+    if (!Number.isFinite(<number>frag.deltaPTS)) {
       frag.deltaPTS = deltaPTS;
     } else {
-      frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
+      frag.deltaPTS = Math.max(deltaPTS, <number>frag.deltaPTS);
     }
 
     maxStartPTS = Math.max(startPTS, frag.startPTS);
@@ -76,7 +80,7 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   frag.endDTS = endDTS;
   frag.duration = endPTS - startPTS;
 
-  const sn = frag.sn;
+  const sn = <number>frag.sn; // 'initSegment'
   // exit if sn out of range
   if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
@@ -105,7 +109,7 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   return drift;
 }
 
-export function mergeDetails (oldDetails, newDetails) {
+export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails): void {
   // potentially retrieve cached initsegment
   if (newDetails.initSegment && oldDetails.initSegment) {
     newDetails.initSegment = oldDetails.initSegment;
@@ -155,7 +159,7 @@ export function mergeDetails (oldDetails, newDetails) {
   newDetails.PTSKnown = oldDetails.PTSKnown;
 }
 
-export function mergeSubtitlePlaylists (oldPlaylist, newPlaylist, referenceStart = 0) {
+export function mergeSubtitlePlaylists (oldPlaylist: LevelDetails, newPlaylist: LevelDetails, referenceStart = 0): void {
   let lastIndex = -1;
   mapFragmentIntersection(oldPlaylist, newPlaylist, (oldFrag, newFrag, index) => {
     newFrag.start = oldFrag.start;
@@ -175,7 +179,7 @@ export function mergeSubtitlePlaylists (oldPlaylist, newPlaylist, referenceStart
   }
 }
 
-export function mapFragmentIntersection (oldPlaylist, newPlaylist, intersectionFn) {
+export function mapFragmentIntersection (oldPlaylist: LevelDetails, newPlaylist: LevelDetails, intersectionFn): void {
   if (!oldPlaylist || !newPlaylist) {
     return;
   }
@@ -194,7 +198,7 @@ export function mapFragmentIntersection (oldPlaylist, newPlaylist, intersectionF
   }
 }
 
-export function adjustSliding (oldPlaylist, newPlaylist) {
+export function adjustSliding (oldPlaylist: LevelDetails, newPlaylist: LevelDetails): void {
   const delta = newPlaylist.startSN - oldPlaylist.startSN;
   const oldFragments = oldPlaylist.fragments;
   const newFragments = newPlaylist.fragments;
@@ -207,10 +211,10 @@ export function adjustSliding (oldPlaylist, newPlaylist) {
   }
 }
 
-export function computeReloadInterval (newDetails, stats) {
+export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderStats): number {
   const reloadInterval = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration);
   const reloadIntervalAfterMiss = reloadInterval / 2;
-  const timeSinceLastModified = newDetails.lastModified ? new Date() - newDetails.lastModified : 0;
+  const timeSinceLastModified = newDetails.lastModified ? +new Date() - newDetails.lastModified : 0;
   const useLastModified = timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;
   const roundTrip = stats ? stats.tload - stats.trequest : 0;
 
@@ -256,16 +260,18 @@ export function computeReloadInterval (newDetails, stats) {
   return Math.round(estimatedTimeUntilUpdate);
 }
 
-export function getProgramDateTimeAtEndOfLastEncodedFragment (levelDetails) {
+export function getProgramDateTimeAtEndOfLastEncodedFragment (levelDetails: LevelDetails): number | null {
   if (levelDetails.hasProgramDateTime) {
     const encodedFragments = levelDetails.fragments.filter((fragment) => !fragment.prefetch);
     const lastEncodedFrag = encodedFragments[encodedFragments.length - 1];
-    return lastEncodedFrag.programDateTime + lastEncodedFrag.duration * 1000;
+    if (Number.isFinite(<number>lastEncodedFrag.programDateTime)) {
+      return <number>lastEncodedFrag.programDateTime + lastEncodedFrag.duration * 1000;
+    }
   }
   return null;
 }
 
-export function getFragmentWithSN (level, sn) {
+export function getFragmentWithSN (level: Level, sn: number): Fragment | null {
   if (!level || !level.details) {
     return null;
   }

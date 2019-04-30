@@ -1,7 +1,7 @@
 import * as URLToolkit from 'url-toolkit';
 
 import Fragment from './fragment';
-import Level from './level';
+import LevelDetails from './level-details';
 import LevelKey from './level-key';
 
 import AttrList from '../utils/attr-list';
@@ -150,7 +150,7 @@ export default class M3U8Parser {
   static parseLevelPlaylist (string, baseurl, id, type, levelUrlId) {
     let currentSN = 0;
     let totalduration = 0;
-    let level = new Level(baseurl);
+    let level = new LevelDetails(baseurl);
     let levelkey = new LevelKey();
     let cc = 0;
     let prevFrag = null;
