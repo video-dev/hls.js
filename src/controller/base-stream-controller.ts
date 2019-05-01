@@ -280,7 +280,7 @@ export default class BaseStreamController extends TaskLoop {
     }
     // Assign fragCurrent. References to fragments in the level details change between playlist refreshes.
     // TODO: Preserve frag references between live playlist refreshes
-    frag = fragCurrent;
+    frag = fragCurrent!;
     return { frag, level: currentLevel };
   }
 
