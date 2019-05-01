@@ -9,6 +9,7 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import FragmentLoader, { FragLoadSuccessResult, FragmentLoadProgressCallback } from '../loader/fragment-loader';
 import * as LevelHelper from './level-helper';
 import { LoaderStats } from '../types/loader';
+import { TransmuxIdentifier } from '../types/transmuxer';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -44,7 +45,6 @@ export default class BaseStreamController extends TaskLoop {
   protected fragLoadError: number = 0;
   protected levels: Array<any> | null = null;
   protected fragmentLoader!: FragmentLoader;
-  protected stats!: LoaderStats;
   protected readonly logPrefix: string = '';
 
   protected doTick () {}
@@ -152,12 +152,12 @@ export default class BaseStreamController extends TaskLoop {
   }
 
   protected _loadFragForPlayback (frag) {
-    const progressCallback: FragmentLoadProgressCallback = ({ stats, payload }) => {
+    const progressCallback: FragmentLoadProgressCallback = ({ payload }) => {
       if (this._fragLoadAborted(frag)) {
         logger.warn(`Fragment ${frag.sn} of level ${frag.level} was aborted during progressive download.`);
         return;
       }
-      this._handleFragmentLoadProgress(frag, payload, stats);
+      this._handleFragmentLoadProgress(frag, payload);
     };
 
     this._doFragLoad(frag, progressCallback)
@@ -179,15 +179,17 @@ export default class BaseStreamController extends TaskLoop {
   protected _loadInitSegment (frag) {
     this._doFragLoad(frag)
       .then((data: FragLoadSuccessResult) => {
-        const { stats, payload } = data;
+        const { payload } = data;
         const { fragCurrent, hls, levels } = this;
         if (!data || this._fragLoadAborted(frag) || !levels) {
           return;
         }
         this.state = State.IDLE;
         this.fragLoadError = 0;
+        const stats = frag.stats;
         levels[frag.level].details.initSegment.data = payload;
         stats.tparsed = stats.tbuffered = window.performance.now();
+        // TODO: set id from calling class
         hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
         this.tick();
       });
@@ -209,7 +211,7 @@ export default class BaseStreamController extends TaskLoop {
     transmuxer.flush({ level: frag.level, sn: frag.sn });
   }
 
-  protected _handleFragmentLoadProgress (frag, payload, stats) {}
+  protected _handleFragmentLoadProgress (frag, payload) {}
 
   protected _doFragLoad (frag, progressCallback?: FragmentLoadProgressCallback) {
     this.state = State.FRAG_LOADING;
@@ -244,35 +246,50 @@ export default class BaseStreamController extends TaskLoop {
     }
   }
 
+  protected _handleTransmuxerFlush (identifier: TransmuxIdentifier) {
+    if (this.state !== State.PARSING) {
+      this.warn(`State is expected to be PARSING on transmuxer flush, but is ${this.state}.`);
+      return;
+    }
+
+    const context = this.getCurrentContext(identifier);
+    if (!context) {
+      return;
+    }
+    const { frag } = context;
+    frag.stats.tparsed = window.performance.now();
+
+    this.state = State.PARSED;
+    this.hls.trigger(Event.FRAG_PARSED, { frag });
+  }
+
+  protected getCurrentContext (identifier: TransmuxIdentifier) : { frag: Fragment, level: any } | null {
+    const { fragCurrent, levels } = this;
+    const { level, sn } = identifier;
+    if (!levels || !levels[level]) {
+      this.warn(`Levels object was unset while buffering fragment ${sn} of level ${level}. The current chunk will not be buffered.`);
+      return null;
+    }
+    const currentLevel = levels[level];
+
+    // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
+    // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
+    let frag = LevelHelper.getFragmentWithSN(currentLevel, sn);
+    if (this._fragLoadAborted(frag)) {
+      return null;
+    }
+    // Assign fragCurrent. References to fragments in the level details change between playlist refreshes.
+    // TODO: Preserve frag references between live playlist refreshes
+    frag = fragCurrent;
+    return { frag, level: currentLevel };
+  }
+
   protected log (msg) {
     logger.log(`${this.logPrefix}: ${msg}`);
   }
 
   protected warn (msg) {
     logger.warn(`${this.logPrefix}: ${msg}`);
-  }
-
-  protected _handleTransmuxerFlush ({ sn, level }) {
-    if (this.state !== State.PARSING) {
-      this.warn(`State is expected to be PARSING on transmuxer flush, but is ${this.state}.`);
-      return;
-    }
-    this.state = State.PARSED;
-
-    const { levels } = this;
-    if (!levels) {
-      return;
-    }
-    const currentLevel = levels[level];
-
-    if (this.stats) {
-      this.stats.tparsed = window.performance.now();
-    } else {
-      this.warn(`Stats object was unset after fragment finished parsing. tparsed will not be recorded for ${this.fragCurrent}`);
-    }
-
-    const frag = LevelHelper.getFragmentWithSN(currentLevel, sn);
-    this.hls.trigger(Event.FRAG_PARSED, { frag });
   }
 
   set state (nextState) {

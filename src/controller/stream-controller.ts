@@ -17,7 +17,7 @@ import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import GapController from './gap-controller';
 import BaseStreamController, { State } from './base-stream-controller';
-import FragmentLoader, { FragLoadSuccessResult } from '../loader/fragment-loader';
+import FragmentLoader from '../loader/fragment-loader';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -848,7 +848,7 @@ export default class StreamController extends BaseStreamController {
     }
   }
 
-  _handleFragmentLoadProgress (frag, payload, stats) {
+  _handleFragmentLoadProgress (frag, payload) {
     const { levels, media } = this;
     if (!levels) {
       this.warn(`Levels were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
@@ -856,7 +856,6 @@ export default class StreamController extends BaseStreamController {
     }
     const currentLevel = levels[frag.level];
     const details = currentLevel.details;
-    this.stats = stats;
 
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
     const accurateTimeOffset = !(media && media.seeking) && (details.PTSKnown || !details.live);
@@ -971,17 +970,15 @@ export default class StreamController extends BaseStreamController {
       const frag = this.fragCurrent;
       if (frag) {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+        this.fragPrevious = frag;
+
         this.log(`Parsed fragment ${frag.sn} of level ${frag.level}, PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}]`);
         this.log(`Buffered : ${TimeRanges.toString(media.buffered)}`);
-        this.fragPrevious = frag;
-        const stats = this.stats;
-        if (!stats) {
-          this.warn(`Stats object was unset after fragment was buffered. tbuffered will not be recorded for ${this.fragCurrent}`);
-        } else {
-          stats.tbuffered = window.performance.now();
-          // we should get rid of this.fragLastKbps
-          this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
-        }
+
+        const stats = frag.stats;
+        stats.tbuffered = window.performance.now();
+        // TODO: Remove fragLastKbps
+        this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, { stats, frag: frag, id: 'main' });
         this.state = State.IDLE;
       }
@@ -1181,12 +1178,12 @@ export default class StreamController extends BaseStreamController {
         if (!data || hls.nextLoadLevel || this._fragLoadAborted(frag)) {
           return;
         }
-        const { stats } = data as FragLoadSuccessResult;
         this.fragLoadError = 0;
         this.state = State.IDLE;
         this.startFragRequested = false;
         this.bitrateTest = false;
         frag.bitrateTest = false;
+        const stats = frag.stats;
         stats.tparsed = stats.tbuffered = window.performance.now();
         hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag, id: 'main' });
         this.tick();
@@ -1195,25 +1192,15 @@ export default class StreamController extends BaseStreamController {
 
   private _handleTransmuxComplete (transmuxResult) {
     const id = 'main';
-    const { hls, fragCurrent, levels } = this;
-    const { remuxResult, transmuxIdentifier: { level, sn } } = transmuxResult;
+    const { hls } = this;
+    const { remuxResult, transmuxIdentifier } = transmuxResult;
 
-    // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
-    // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
-    // If nothing has changed by this point, allow the segment to be buffered.
-    if (!levels || !levels[level]) {
-      this.warn(`Levels object was unset while buffering fragment ${sn} of level ${level}. The current chunk will not be buffered.`);
+    const context = this.getCurrentContext(transmuxIdentifier);
+    if (!context) {
+      this.warn(`The loading context changed while buffering fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}. This chunk will not be buffered.`);
       return;
     }
-    const currentLevel = levels[level];
-
-    let frag = LevelHelper.getFragmentWithSN(currentLevel, sn);
-    if (this._fragLoadAborted(frag)) {
-      return;
-    }
-    // Assign fragCurrent. References to fragments in the level details change between playlist refreshes.
-    // TODO: Preserve frag references between live playlist refreshes
-    frag = fragCurrent;
+    const { frag, level } = context;
 
     let { audio, video, text, id3, initSegment } = remuxResult;
     // The audio-stream-controller handles audio buffering if Hls.js is playing an alternate audio track
@@ -1222,8 +1209,8 @@ export default class StreamController extends BaseStreamController {
     }
 
     // Update timing before a potential backtrack
-    this._updateTiming(frag, currentLevel, audio);
-    this._updateTiming(frag, currentLevel, video);
+    this._updateTiming(frag, level, audio);
+    this._updateTiming(frag, level, video);
 
     this.state = State.PARSING;
     this.pendingBuffering = true;
@@ -1231,7 +1218,7 @@ export default class StreamController extends BaseStreamController {
 
     if (initSegment) {
       if (initSegment.tracks) {
-        this._bufferInitSegment(currentLevel,initSegment.tracks);
+        this._bufferInitSegment(level,initSegment.tracks);
         hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
       }
       if (Number.isFinite(initSegment.initPTS)) {
@@ -1241,7 +1228,7 @@ export default class StreamController extends BaseStreamController {
 
     // Avoid buffering if backtracking this fragment
     if (video) {
-      if (_hasDroppedFrames(frag, video.dropped, currentLevel.details.startSN)) {
+      if (_hasDroppedFrames(frag, video.dropped, level.details.startSN)) {
         this._backtrack(frag, video.startPTS);
         return;
       } else {

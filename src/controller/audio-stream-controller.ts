@@ -412,7 +412,7 @@ class AudioStreamController extends BaseStreamController {
     }
   }
 
-  _handleFragmentLoadProgress (frag, payload, stats) {
+  _handleFragmentLoadProgress (frag, payload) {
     const { config, trackId, levels } = this;
     if (!levels) {
       this.warn(`Audio tracks were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
@@ -422,7 +422,6 @@ class AudioStreamController extends BaseStreamController {
     const track = levels[trackId];
     const details = track.details;
     const audioCodec = config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2';
-    this.stats = stats;
 
     let transmuxer = this.transmuxer;
     if (!transmuxer) {
@@ -474,11 +473,12 @@ class AudioStreamController extends BaseStreamController {
   _checkAppendedParsed () {
     // trigger handler right now
     if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
-      const { fragCurrent: frag, hls, stats} = this;
+      const { fragCurrent: frag, hls } = this;
       if (frag) {
         this.fragPrevious = frag;
+        const stats = frag.stats;
         stats.tbuffered = performance.now();
-        hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'audio' });
+        hls.trigger(Event.FRAG_BUFFERED, { stats, frag, id: 'audio' });
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
         this.log(`Parsed fragment ${frag.sn} of level ${frag.level}, PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}]`);
         this.log(`Buffered : ${TimeRanges.toString(media.buffered)}`);
@@ -597,25 +597,15 @@ class AudioStreamController extends BaseStreamController {
 
   private _handleTransmuxComplete (transmuxResult) {
     const id = 'audio';
-    const { hls, fragCurrent, levels } = this;
-    const { remuxResult, transmuxIdentifier: { level, sn } } = transmuxResult;
+    const { hls } = this;
+    const { remuxResult, transmuxIdentifier } = transmuxResult;
 
-    // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
-    // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
-    // If nothing has changed by this point, allow the segment to be buffered.
-    if (!levels || !levels[level]) {
-      this.warn(`Levels object was unset while buffering fragment ${sn} of level ${level}. The current chunk will not be buffered.`);
+    const context = this.getCurrentContext(transmuxIdentifier);
+    if (!context) {
+      this.warn(`The loading context changed while buffering fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}. This chunk will not be buffered.`);
       return;
     }
-    const currentLevel = levels[level];
-
-    let frag = LevelHelper.getFragmentWithSN(levels[level], sn);
-    if (this._fragLoadAborted(frag)) {
-      return;
-    }
-    // Assign fragCurrent. References to fragments in the level details change between playlist refreshes.
-    // TODO: Preserve frag references between live playlist refreshes
-    frag = fragCurrent;
+    const { frag, level } = context;
 
     this.state = State.PARSING;
     this.pendingBuffering = true;
@@ -627,7 +617,7 @@ class AudioStreamController extends BaseStreamController {
       hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
     }
     if (audio) {
-      this._bufferFragmentData(frag, currentLevel, audio);
+      this._bufferFragmentData(frag, level, audio);
     }
     if (id3) {
       id3.frag = frag;
