@@ -7,6 +7,8 @@ import { ErrorDetails } from '../errors';
 import Fragment from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import FragmentLoader, { FragLoadSuccessResult, FragmentLoadProgressCallback } from '../loader/fragment-loader';
+import * as LevelHelper from './level-helper';
+import { LoaderStats } from '../types/loader';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -42,6 +44,7 @@ export default class BaseStreamController extends TaskLoop {
   protected fragLoadError: number = 0;
   protected levels: Array<any> | null = null;
   protected fragmentLoader!: FragmentLoader;
+  protected stats!: LoaderStats;
   protected readonly logPrefix: string = '';
 
   protected doTick () {}
@@ -247,6 +250,29 @@ export default class BaseStreamController extends TaskLoop {
 
   protected warn (msg) {
     logger.warn(`${this.logPrefix}: ${msg}`);
+  }
+
+  protected _handleTransmuxerFlush ({ sn, level }) {
+    if (this.state !== State.PARSING) {
+      this.warn(`State is expected to be PARSING on transmuxer flush, but is ${this.state}.`);
+      return;
+    }
+    this.state = State.PARSED;
+
+    const { levels } = this;
+    if (!levels) {
+      return;
+    }
+    const currentLevel = levels[level];
+
+    if (this.stats) {
+      this.stats.tparsed = window.performance.now();
+    } else {
+      this.warn(`Stats object was unset after fragment finished parsing. tparsed will not be recorded for ${this.fragCurrent}`);
+    }
+
+    const frag = LevelHelper.getFragmentWithSN(currentLevel, sn);
+    this.hls.trigger(Event.FRAG_PARSED, { frag });
   }
 
   set state (nextState) {

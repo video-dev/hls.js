@@ -16,7 +16,6 @@ import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { findFragmentByPTS } from './fragment-finders';
 import Fragment from '../loader/fragment';
-import { LoaderStats } from '../types/loader';
 
 const { performance } = window;
 
@@ -28,7 +27,6 @@ class AudioStreamController extends BaseStreamController {
   private onvseeking: Function | null = null;
   private onvseeked: Function | null = null;
   private onvended: Function | null = null;
-  private stats!: LoaderStats;
   private videoBuffer: any | null = null;
   private initPTS: any = [];
   private waitingFragment: Fragment | null = null;
@@ -641,19 +639,6 @@ class AudioStreamController extends BaseStreamController {
       text.id = id;
       hls.trigger(Event.FRAG_PARSING_USERDATA, text);
     }
-  }
-
-  private _handleTransmuxerFlush () {
-    this._endParsing();
-  }
-
-  private _endParsing () {
-    if (this.state !== State.PARSING) {
-      return;
-    }
-    this.stats.tparsed = window.performance.now();
-    this.state = State.PARSED;
-    this._checkAppendedParsed();
   }
 
   private _bufferInitSegment (tracks) {
