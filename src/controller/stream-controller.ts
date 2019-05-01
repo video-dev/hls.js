@@ -18,7 +18,6 @@ import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import GapController from './gap-controller';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader, { FragLoadSuccessResult } from '../loader/fragment-loader';
-import { LoaderStats } from '../types/loader';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -42,7 +41,6 @@ export default class StreamController extends BaseStreamController {
   private fragLastKbps: number = 0;
   private stalled: boolean = false;
   private audioCodecSwitch: boolean = false;
-  private stats!: LoaderStats;
   private pendingBuffering: boolean = false;
   private appended: boolean = false;
   private videoBuffer: any | null = null;
@@ -1263,23 +1261,6 @@ export default class StreamController extends BaseStreamController {
       text.id = id;
       hls.trigger(Event.FRAG_PARSING_USERDATA, text);
     }
-  }
-
-  private _handleTransmuxerFlush ({ sn, level }) {
-    this._endParsing();
-  }
-
-  private _endParsing () {
-    if (this.state !== State.PARSING) {
-      return;
-    }
-    if (this.stats) {
-      this.stats.tparsed = window.performance.now();
-    } else {
-      this.warn(`Stats object was unset after fragment finished parsing. tparsed will not be recorded for ${this.fragCurrent}`);
-    }
-    this.state = State.PARSED;
-    this._checkAppendedParsed();
   }
 
   private _bufferInitSegment (currentLevel, tracks) {
