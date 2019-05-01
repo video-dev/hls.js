@@ -40,9 +40,9 @@ describe('FragmentLoader tests', function () {
         .then(data => {
           expect(data).to.deep.equal({
             payload: response.data,
-            stats,
             networkDetails
           });
+          expect(frag.stats).to.exist;
           expect(fragmentLoader.loader).to.not.exist;
           expect(frag.loader).to.not.exist;
           resolve();
