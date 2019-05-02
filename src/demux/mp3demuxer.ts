@@ -20,9 +20,11 @@ class MP3Demuxer extends NonProgressiveDemuxer {
 
   resetInitSegment (audioCodec, videoCodec, duration) {
     this._audioTrack = { container: 'audio/mpeg', type: 'audio', id: -1, sequenceNumber: 0, isAAC: false, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
+    super.resetInitSegment(audioCodec, videoCodec, duration);
   }
 
   resetTimeStamp () {
+    super.resetTimeStamp()
   }
 
   static probe (data) {
