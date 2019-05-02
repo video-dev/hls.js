@@ -3,7 +3,6 @@ import { logger } from '../utils/logger';
 import Fragment from './fragment';
 import {
     Loader,
-    LoaderStats,
     LoaderConfiguration,
     FragmentLoaderContext,
     LoaderContext,
@@ -64,7 +63,6 @@ export default class FragmentLoader {
       }
       const callbacks: LoaderCallbacks<FragmentLoaderContext> = {
           onSuccess: (response, stats, context, networkDetails) => {
-              this.setStats(frag, stats);
               this._resetLoader(frag);
               resolve({
                   payload: response.data as ArrayBuffer,
@@ -83,7 +81,6 @@ export default class FragmentLoader {
               }));
           },
           onAbort: (stats, context, networkDetails) => {
-            this.setStats(frag, stats);
             this._resetLoader(frag);
               reject(new LoadError({
                   type: ErrorTypes.NETWORK_ERROR,
@@ -104,7 +101,6 @@ export default class FragmentLoader {
               }));
           },
           onProgress: (stats, context, data, networkDetails) => {
-            this.setStats(frag, stats);
             if (onProgress) {
               onProgress({
                 payload: data as ArrayBuffer,
@@ -113,6 +109,10 @@ export default class FragmentLoader {
             }
           }
       };
+      // Assign frag stats to the loader's stats reference
+      frag.stats = loader.stats;
+      // Loaders are used once per fragment and should be reset at this point
+      console.assert(frag.stats.trequest !== 0, 'Frag stats should be unset before loading');
       loader.load(loaderContext, loaderConfig, callbacks);
     });
   }
@@ -120,12 +120,6 @@ export default class FragmentLoader {
   _resetLoader (frag: Fragment) {
     frag.loader = null;
     this.loader = null;
-  }
-
-  private setStats (frag: Fragment, stats: LoaderStats) {
-    if (!frag.stats) {
-      frag.stats = stats;
-    }
   }
 }
 

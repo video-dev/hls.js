@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger';
 import { LoaderCallbacks, LoaderContext, LoaderStats, Loader, LoaderConfiguration } from '../types/loader';
+import LoadStats from '../loader/load-stats';
 
 class XhrLoader implements Loader<LoaderContext> {
   private xhrSetup: Function | null;
@@ -16,17 +17,7 @@ class XhrLoader implements Loader<LoaderContext> {
   constructor (config /* HlsConfig */) {
     this.xhrSetup = config ? config.xhrSetup : null;
     this.loader = null;
-    this.stats = {
-      tfirst: 0,
-      trequest: 0,
-      tload: 0,
-      loaded: 0,
-      tparsed: 0,
-      tbuffered: 0,
-      total: 0,
-      retry: 0,
-      aborted: false
-    };
+    this.stats = new LoadStats();
     this.retryDelay = 0;
   }
 
