@@ -1465,6 +1465,8 @@ Full list of errors is described below:
     - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_ACCESS`, fatal : `true` }
   - `Hls.ErrorDetails.KEY_SYSTEM_NO_KEYS` - raised when setting MediaKeys on the media fails
     - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_KEYS`, fatal : `true` }
+  - `Hls.ErrorDetails.KEY_SYSTEM_GENERATE_REQUEST_FAILED` - raised when generating a license request from a MediaKeySession fails
+    - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_GENERATE_REQUEST_FAILED`, fatal : `true` }
   - `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED` - raised when a request for a license fails
     - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED`, fatal : `true` }
   - `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED` - raised when updating a MediaKeySession with a license fails

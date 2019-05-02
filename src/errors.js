@@ -20,6 +20,8 @@ export const ErrorDetails = {
   KEY_SYSTEM_NO_ACCESS: 'keySystemNoAccess',
   // Identifier for not being able to set keys on media - data: {}
   KEY_SYSTEM_NO_KEYS: 'keySystemNoKeys',
+  // Identifier for generating a license request failure - data: {}
+  KEY_SYSTEM_GENERATE_REQUEST_FAILED: 'keySystemGenerateRequestFailed',
   // Identifier for a license request failure - data: {}
   KEY_SYSTEM_LICENSE_REQUEST_FAILED: 'keySystemLicenseRequestFailed',
   // Identifier for a license update failure - data: {}

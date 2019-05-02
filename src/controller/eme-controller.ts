@@ -12,11 +12,6 @@ import { EMEInitDataInfo } from '../config';
 
 import { logger } from '../utils/logger';
 
-interface EMEError {
-  fatal: boolean,
-  message: string
-}
-
 interface EMEKeySessionResponse {
   session: MediaKeySession,
   levelOrAudioTrack: any
@@ -54,7 +49,7 @@ class EMEController extends EventHandler {
     super(hls,
       Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED,
-      Event.MEDIA_DETACHED,
+      Event.MEDIA_DETACHING,
     );
 
     this._emeEnabled = hls.config.emeEnabled;
@@ -67,11 +62,14 @@ class EMEController extends EventHandler {
   /**
    * Handles key session messages and requests licenses
    * @private
+   * @param {MediaKeyMessageEvent} event The event resulting from generating a license request on a MediaKeySession
+   * @param {Level | AudioTrack} levelOrAudioTrack Either a level or audio track mapped from manifestParsed data, used by client should different licenses be
+   * requred for different levels or audio tracks
    * @param {Promise.resolve} resolve Resolve method to be called on successful license update on MediaKeySession
    * @param {Promise.resolve} reject Reject method to be called on unsuccessful license update on MediaKeySession
    * @param {Event<MediaKeyMessageEvent>} event Message event created by license request generation
    */
-  private _onKeySessionMessage = (levelOrAudioTrack: any, resolve, reject, event: MediaKeyMessageEvent) => {
+  private _onKeySessionMessage = (event: MediaKeyMessageEvent, levelOrAudioTrack: any, resolve, reject) => {
     logger.log('Received key session message, requesting license');
 
     this.getEMELicense(levelOrAudioTrack, event).then((license: ArrayBuffer) => {
@@ -79,16 +77,10 @@ class EMEController extends EventHandler {
       return (event.target! as MediaKeySession).update(license).then(() => {
         resolve();
       }).catch((err) => {
-        reject({
-          message: ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED,
-          fatal: true
-        });
+        reject(ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED);
       });
     }).catch((err) => {
-      reject({
-        message: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
-        fatal: true
-      });
+      reject(ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED);
     });
   }
 
@@ -100,17 +92,23 @@ class EMEController extends EventHandler {
    * requred for different levels or audio tracks
    * @returns {Promise<any>} Promise resolved or rejected by _onKeySessionMessage
    */
-  private _onMediaKeySessionCreated (session: MediaKeySession, levelOrAudioTrack: any): Promise<any> {
+  private _onMediaKeySessionCreated(session: MediaKeySession, levelOrAudioTrack: any): Promise<any> {
     logger.log('Generating license request');
 
     return this.getEMEInitializationData(levelOrAudioTrack, this.initDataType, this.initData).then((initDataInfo) => {
       const messagePromise = new Promise((resolve, reject) => {
-        session.addEventListener('message', this._onKeySessionMessage.bind(this, levelOrAudioTrack, resolve, reject));
+        session.addEventListener('message', (event: MediaKeyMessageEvent) => {
+          this._onKeySessionMessage(event, levelOrAudioTrack, resolve, reject)
+        });
       });
 
-      session.generateRequest(initDataInfo.initDataType, initDataInfo.initData);
+      return session.generateRequest(initDataInfo.initDataType, initDataInfo.initData).catch((err) => {
+        logger.error('Failed to generate license request:', err);
 
-      return messagePromise;
+        return Promise.reject(ErrorDetails.KEY_SYSTEM_GENERATE_REQUEST_FAILED)
+      }).then(() => {
+        return messagePromise;
+      });
     });
   }
 
@@ -146,7 +144,7 @@ class EMEController extends EventHandler {
    */
   private _onMediaKeysCreated (mediaKeys): Promise<MediaKeys> {
     if (!this.hasSetMediaKeys) {
-      logger.log('Settings media keys on media');
+      logger.log('Setting media keys on media');
 
       this.hasSetMediaKeys = true;
 
@@ -157,10 +155,7 @@ class EMEController extends EventHandler {
 
         this.hasSetMediaKeys = false;
 
-        return Promise.reject({
-          fatal: true,
-          message: ErrorDetails.KEY_SYSTEM_NO_KEYS
-        });
+        return Promise.reject(ErrorDetails.KEY_SYSTEM_NO_KEYS);
       });
     } else {
       logger.log('Media keys have already been set on media');
@@ -181,10 +176,7 @@ class EMEController extends EventHandler {
     return mediaKeySystemAccess.createMediaKeys().catch((err) => {
       logger.error('Failed to create media-keys:', err);
 
-      return Promise.reject({
-        fatal: true,
-        message: ErrorDetails.KEY_SYSTEM_NO_KEYS
-      });
+      return Promise.reject(ErrorDetails.KEY_SYSTEM_NO_KEYS);
     });
   }
 
@@ -199,19 +191,13 @@ class EMEController extends EventHandler {
     logger.log('Requesting encrypted media key system access');
 
     if (!window.navigator.requestMediaKeySystemAccess) {
-      return Promise.reject({
-        fatal: true,
-        message: ErrorDetails.KEY_SYSTEM_NO_ACCESS
-      });
+      return Promise.reject(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
     }
 
     return this.requestMediaKeySystemAccess(mediaKeySystemConfigs).catch((err) => {
       logger.error('Failed to obtain media key system access:', err);
 
-      return Promise.reject({
-        fatal: true,
-        message: ErrorDetails.KEY_SYSTEM_NO_ACCESS
-      });
+      return Promise.reject(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
     });
   }
 
@@ -281,13 +267,13 @@ class EMEController extends EventHandler {
       logger.log('EME sucessfully configured');
 
       this.hls.trigger(Event.EME_CONFIGURED, {});
-    }).catch((err: EMEError) => {
+    }).catch((err: string) => {
       logger.error('EME Configuration failed');
 
       this.hls.trigger(Event.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
-        details: err.message,
-        fatal: err.fatal
+        details: err,
+        fatal: true
       });
     });
   }
@@ -316,18 +302,22 @@ class EMEController extends EventHandler {
     }
   }
 
-  onMediaDetached () {
-    this._keySessions.forEach((keySession) => {
-      keySession.close();
+  onMediaDetaching () {
+    const keySessionClosePromises: Promise<void>[] = this._keySessions.map((keySession) => {
+      return keySession.close();
     });
 
-    if (this._media && this._media.setMediaKeys) {
-      this._media.setMediaKeys(null).then(() => {
-        this.hasSetMediaKeys = false;
+    Promise.all(keySessionClosePromises).then(() => {
+      if (this._media && this._media.setMediaKeys) {
+        return this._media.setMediaKeys(null)
+      } else {
+        return Promise.resolve();
+      }
+    }).then(() => {
+      this.hasSetMediaKeys = false;
 
-        this._media = null; // release media reference
-      });
-    }
+      this._media = null; // release media reference
+    });
   }
 
   // Getters for EME Controller
