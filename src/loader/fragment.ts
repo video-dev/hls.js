@@ -3,6 +3,7 @@ import { buildAbsoluteURL } from 'url-toolkit';
 import { logger } from '../utils/logger';
 import LevelKey from './level-key';
 import { LoaderStats } from '../types/loader';
+import FragmentStats from './fragment-stats';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
@@ -73,8 +74,8 @@ export default class Fragment {
   // Set by `updateFragPTSDTS` in level-helper
   public deltaPTS?: number;
   public maxStartPTS?: number;
-  // Timing information
-  public stats!: LoaderStats;
+  // Load/parse timing information
+  public stats: LoaderStats = new FragmentStats();
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
