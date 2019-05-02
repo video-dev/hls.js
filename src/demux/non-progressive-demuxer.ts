@@ -30,7 +30,7 @@ export default class NonProgressiveDemuxer implements Demuxer {
     return Promise.resolve(dummyDemuxResult());
   }
 
-  resetTimeStamp (defaultInitPTS): void {}
+  resetTimeStamp (defaultInitPTS?): void {}
 
   destroy (): void {}
 

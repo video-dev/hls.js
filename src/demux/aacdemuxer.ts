@@ -20,9 +20,11 @@ class AACDemuxer extends NonProgressiveDemuxer {
 
   resetInitSegment (audioCodec, videoCodec, duration) {
     this._audioTrack = { container: 'audio/adts', type: 'audio', id: 0, sequenceNumber: 0, isAAC: true, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
+    super.resetInitSegment(audioCodec, videoCodec, duration);
   }
 
   resetTimeStamp () {
+    super.resetTimeStamp()
   }
 
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS

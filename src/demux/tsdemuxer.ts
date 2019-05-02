@@ -142,13 +142,16 @@ class TSDemuxer extends NonProgressiveDemuxer {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this._duration = duration;
+    super.resetInitSegment(audioCodec, videoCodec, duration);
   }
 
   /**
    *
    * @override
    */
-  resetTimeStamp () {}
+  resetTimeStamp () {
+    super.resetTimeStamp()
+  }
 
   // feed incoming data to the front of the parsing pipeline
   demuxInternal (data, timeOffset, isSampleAes = false): DemuxerResult {
