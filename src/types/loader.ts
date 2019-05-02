@@ -112,4 +112,5 @@ export interface Loader<T extends LoaderContext> {
   ): void
   getResponseHeader(name:string): string | null
   context: T
+  stats: LoaderStats
 }

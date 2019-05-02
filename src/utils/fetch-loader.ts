@@ -1,4 +1,5 @@
 import { LoaderCallbacks, LoaderContext, Loader, LoaderStats, LoaderConfiguration } from '../types/loader';
+import LoadStats from '../loader/load-stats';
 
 const { fetch, AbortController, ReadableStream, Request, Headers, performance } = window as any;
 
@@ -26,17 +27,7 @@ class FetchLoader implements Loader<LoaderContext> {
   constructor (config /* HlsConfig */) {
     this.fetchSetup = config.fetchSetup || getRequest;
     this.controller = new AbortController();
-    this.stats = {
-      tfirst: 0,
-      trequest: 0,
-      tload: 0,
-      loaded: 0,
-      tparsed: 0,
-      tbuffered: 0,
-      total: 0,
-      retry: 0,
-      aborted: false
-    };
+    this.stats = new LoadStats();
   }
 
   destroy (): void {
