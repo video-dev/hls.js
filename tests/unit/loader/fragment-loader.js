@@ -4,10 +4,12 @@ import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import sinon from 'sinon';
 
 class MockXhr {
+  constructor () {
+    this.stats = {};
+  }
   load (context, config, callbacks) {
     this.callbacks = callbacks;
   }
-
   abort () {}
 }
 
