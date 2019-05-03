@@ -53,7 +53,7 @@ export interface LoaderStats {
   total: number,
   // number of retries attempted
   retry: number,
-  // the request was cancelled or timedzout
+  // the request was cancelled or timed out
   aborted: boolean
 }
 
@@ -112,4 +112,5 @@ export interface Loader<T extends LoaderContext> {
   ): void
   getResponseHeader(name:string): string | null
   context: T
+  stats: LoaderStats
 }

@@ -4,10 +4,12 @@ import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import sinon from 'sinon';
 
 class MockXhr {
+  constructor () {
+    this.stats = {};
+  }
   load (context, config, callbacks) {
     this.callbacks = callbacks;
   }
-
   abort () {}
 }
 
@@ -40,9 +42,9 @@ describe('FragmentLoader tests', function () {
         .then(data => {
           expect(data).to.deep.equal({
             payload: response.data,
-            stats,
             networkDetails
           });
+          expect(frag.stats).to.exist;
           expect(fragmentLoader.loader).to.not.exist;
           expect(frag.loader).to.not.exist;
           resolve();
