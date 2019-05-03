@@ -3,7 +3,6 @@ import { logger } from '../utils/logger';
 import Fragment from './fragment';
 import {
     Loader,
-    LoaderStats,
     LoaderConfiguration,
     FragmentLoaderContext,
     LoaderContext,
@@ -67,7 +66,6 @@ export default class FragmentLoader {
               this._resetLoader(frag);
               resolve({
                   payload: response.data as ArrayBuffer,
-                  stats,
                   networkDetails
               });
           },
@@ -83,7 +81,7 @@ export default class FragmentLoader {
               }));
           },
           onAbort: (stats, context, networkDetails) => {
-              this._resetLoader(frag);
+            this._resetLoader(frag);
               reject(new LoadError({
                   type: ErrorTypes.NETWORK_ERROR,
                   details: ErrorDetails.INTERNAL_ABORTED,
@@ -106,12 +104,15 @@ export default class FragmentLoader {
             if (onProgress) {
               onProgress({
                 payload: data as ArrayBuffer,
-                stats,
                 networkDetails
               });
             }
           }
       };
+      // Assign frag stats to the loader's stats reference
+      frag.stats = loader.stats;
+      // Loaders are used once per fragment and should be reset at this point
+      console.assert(!frag.stats.trequest, 'Frag stats should be unset before loading');
       loader.load(loaderContext, loaderConfig, callbacks);
     });
   }
@@ -132,7 +133,6 @@ export class LoadError extends Error {
 
 export interface FragLoadSuccessResult {
   payload: ArrayBuffer
-  stats: LoaderStats
   networkDetails: XMLHttpRequest | null
 }
 
