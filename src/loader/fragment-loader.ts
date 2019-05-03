@@ -112,7 +112,7 @@ export default class FragmentLoader {
       // Assign frag stats to the loader's stats reference
       frag.stats = loader.stats;
       // Loaders are used once per fragment and should be reset at this point
-      console.assert(frag.stats.trequest !== 0, 'Frag stats should be unset before loading');
+      console.assert(!frag.stats.trequest, 'Frag stats should be unset before loading');
       loader.load(loaderContext, loaderConfig, callbacks);
     });
   }
