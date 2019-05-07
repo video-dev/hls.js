@@ -27,7 +27,7 @@ export default class FragmentLoader {
 
     let loader = this.loader;
     if (loader) {
-      logger.warn(`Aborting loader for previous ${frag.type} fragment`);
+      // Abort the loader for current fragment. Only one may load at any given time
       loader.abort();
     }
 

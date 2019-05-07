@@ -179,8 +179,9 @@ export default class Fragment {
    * @param {ElementaryStreamTypes} type
    */
   hasElementaryStream (type: ElementaryStreamTypes) {
-    return this._elementaryStreams[type] === true;
+    return this._elementaryStreams[type];
   }
+
 
   /**
    * Utility method for parseLevelPlaylist to create an initialization vector for a given segment

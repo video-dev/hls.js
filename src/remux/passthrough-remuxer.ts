@@ -115,11 +115,15 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     const duration = getDuration(data, initData);
+    console.assert(duration > 0, 'Duration parsed from mp4 should be greater than zero');
+
     const startDTS = lastEndDTS as number;
     const endDTS = duration + startDTS;
     offsetStartDTS(initData, data, initPTS);
     this.lastEndDTS = endDTS;
 
+    const hasAudio = !!initData.audio;
+    const hasVideo = !!initData.video;
     const track: RemuxedTrack = {
         data1: data,
         startPTS: startDTS,
@@ -127,17 +131,17 @@ class PassThroughRemuxer implements Remuxer {
         endPTS: endDTS,
         endDTS,
         type: '',
-        hasAudio: !!audioTrack.data,
-        hasVideo: !!videoTrack.data,
+        hasAudio,
+        hasVideo,
         nb: 1,
         dropped: 0
     };
 
-    if (initData.audio) {
+    if (hasAudio) {
         track.type += 'audio';
     }
 
-    if (initData.video) {
+    if (hasVideo) {
         track.type += 'video';
     }
 

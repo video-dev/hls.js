@@ -179,6 +179,7 @@ class Transmuxer {
       }
     }
     const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.flush(this.timeOffset);
+    logger.log(`[transmuxer.ts]: Flushed fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}`);
     // TODO: ensure that remuxers use last DTS as the timeOffset when passed null
     return {
         remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, this.timeOffset, this.accurateTimeOffset),

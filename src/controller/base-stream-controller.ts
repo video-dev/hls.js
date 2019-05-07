@@ -8,8 +8,8 @@ import Fragment from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import FragmentLoader, { FragLoadSuccessResult, FragmentLoadProgressCallback } from '../loader/fragment-loader';
 import * as LevelHelper from './level-helper';
-import { LoaderStats } from '../types/loader';
 import { TransmuxIdentifier } from '../types/transmuxer';
+import { appendUint8Array } from '../utils/mp4-tools';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -22,7 +22,6 @@ export const State = {
   WAITING_TRACK: 'WAITING_TRACK',
   PARSING: 'PARSING',
   PARSED: 'PARSED',
-  BUFFER_FLUSHING: 'BUFFER_FLUSHING',
   ENDED: 'ENDED',
   ERROR: 'ERROR',
   WAITING_INIT_PTS: 'WAITING_INIT_PTS',
@@ -45,6 +44,7 @@ export default class BaseStreamController extends TaskLoop {
   protected fragLoadError: number = 0;
   protected levels: Array<any> | null = null;
   protected fragmentLoader!: FragmentLoader;
+
   protected readonly logPrefix: string = '';
 
   protected doTick () {}
@@ -154,7 +154,8 @@ export default class BaseStreamController extends TaskLoop {
   protected _loadFragForPlayback (frag) {
     const progressCallback: FragmentLoadProgressCallback = ({ payload }) => {
       if (this._fragLoadAborted(frag)) {
-        logger.warn(`Fragment ${frag.sn} of level ${frag.level} was aborted during progressive download.`);
+        this.warn(`Fragment ${frag.sn} of level ${frag.level} was aborted during progressive download.`);
+        this.fragmentTracker.removeFragment(frag);
         return;
       }
       this._handleFragmentLoadProgress(frag, payload);
@@ -179,18 +180,18 @@ export default class BaseStreamController extends TaskLoop {
   protected _loadInitSegment (frag) {
     this._doFragLoad(frag)
       .then((data: FragLoadSuccessResult) => {
-        const { payload } = data;
         const { fragCurrent, hls, levels } = this;
         if (!data || this._fragLoadAborted(frag) || !levels) {
           return;
         }
+        const { payload } = data;
+        const stats = frag.stats;
         this.state = State.IDLE;
         this.fragLoadError = 0;
-        const stats = frag.stats;
         levels[frag.level].details.initSegment.data = payload;
         stats.tparsed = stats.tbuffered = window.performance.now();
         // TODO: set id from calling class
-        hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
+        hls.trigger(Event.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
         this.tick();
       });
   }
@@ -220,13 +221,7 @@ export default class BaseStreamController extends TaskLoop {
     const errorHandler = (e) => {
       const errorData = e ? e.data : null;
       if (errorData && errorData.details === ErrorDetails.INTERNAL_ABORTED) {
-        const fragPrev = this.fragPrevious;
-        if (fragPrev) {
-          this.nextLoadPosition = fragPrev.start + fragPrev.duration;
-        } else {
-          this.nextLoadPosition = this.lastCurrentTime;
-        }
-        this.log(`Frag load aborted, resetting nextLoadPosition to ${this.nextLoadPosition}`);
+        this.handleFragLoadAborted(frag);
         return;
       }
       this.hls.trigger(Event.ERROR, errorData);
@@ -284,12 +279,35 @@ export default class BaseStreamController extends TaskLoop {
     return { frag, level: currentLevel };
   }
 
+  protected combineFragmentData (data1?: Uint8Array, data2?: Uint8Array) {
+    let buffer = data1;
+    if (data1 && data2) {
+      // Combine the moof + mdat so that we buffer with a single append
+      buffer = appendUint8Array(data1, data2);
+    }
+    return buffer;
+  }
+
   protected log (msg) {
     logger.log(`${this.logPrefix}: ${msg}`);
   }
 
   protected warn (msg) {
     logger.warn(`${this.logPrefix}: ${msg}`);
+  }
+
+  private handleFragLoadAborted (frag: Fragment) {
+    const { fragPrevious, transmuxer } = this;
+    // TODO: nextLoadPos should only be set on successful frag load
+    if (fragPrevious) {
+      this.nextLoadPosition = fragPrevious.start + fragPrevious.duration;
+    } else {
+      this.nextLoadPosition = this.lastCurrentTime;
+    }
+    if (transmuxer && frag.sn !== 'initSegment') {
+      transmuxer.flush({ sn: frag.sn, level: frag.level });
+    }
+    this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer & resetting nextLoadPosition to ${this.nextLoadPosition}`);
   }
 
   set state (nextState) {
