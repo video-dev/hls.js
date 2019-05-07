@@ -905,8 +905,6 @@ class Cea608Parser {
   currChNr: number;
   lastCmdA: number | null;
   lastCmdB: number | null;
-  bufferedData: never[];
-  startTime: null;
   lastTime: number | null;
   dataCounters: { 'padding': number; 'char': number; 'cmd': number; 'other': number; };
   constructor (field: number, out1: OutputFilter, out2: OutputFilter) {
@@ -916,8 +914,6 @@ class Cea608Parser {
     this.currChNr = -1; // Will be 1 or 2
     this.lastCmdA = null; // First byte of last command
     this.lastCmdB = null; // Second byte of last command
-    this.bufferedData = [];
-    this.startTime = null;
     this.lastTime = null;
     this.dataCounters = { 'padding': 0, 'char': 0, 'cmd': 0, 'other': 0 };
   }
