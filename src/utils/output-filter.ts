@@ -26,7 +26,7 @@ export default class OutputFilter {
   }
 
   newCue (startTime: number, endTime: number, screen: CaptionScreen) {
-    if (this.startTime === null || this.startTime > startTime) {
+    if (this.startTime === -1 || this.startTime > startTime) {
       this.startTime = startTime;
     }
 
