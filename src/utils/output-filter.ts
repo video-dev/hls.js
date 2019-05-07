@@ -3,7 +3,7 @@ import { CaptionScreen } from './cea-608-parser';
 export default class OutputFilter {
   timelineController: any;
   trackName: string;
-  startTime: number | null;
+  startTime: number;
   endTime: number | null;
   screen: CaptionScreen | null;
 
@@ -11,22 +11,22 @@ export default class OutputFilter {
   constructor (timelineController: any, trackName: string) {
     this.timelineController = timelineController;
     this.trackName = trackName;
-    this.startTime = null;
+    this.startTime = -1;
     this.endTime = null;
     this.screen = null;
   }
 
   dispatchCue () {
-    if (this.startTime === null) {
+    if (this.startTime === -1) {
       return;
     }
 
     this.timelineController.addCues(this.trackName, this.startTime, this.endTime, this.screen);
-    this.startTime = null;
+    this.startTime = -1;
   }
 
-  newCue (startTime: number | null, endTime: number, screen: CaptionScreen) {
-    if (startTime === null || this.startTime === null || this.startTime > startTime) {
+  newCue (startTime: number, endTime: number, screen: CaptionScreen) {
+    if (this.startTime === null || this.startTime > startTime) {
       this.startTime = startTime;
     }
 

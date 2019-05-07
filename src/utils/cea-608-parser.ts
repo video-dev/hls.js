@@ -669,7 +669,7 @@ class Cea608Channel {
   lastOutputScreen: CaptionScreen;
   currRollUpRow: Row;
   writeScreen: CaptionScreen;
-  cueStartTime: number | null;
+  cueStartTime: number;
   lastCueEndTime: null;
   constructor (channelNumber: number, outputFilter: OutputFilter) {
     this.chNr = channelNumber;
@@ -682,7 +682,7 @@ class Cea608Channel {
     this.currRollUpRow = this.displayedMemory.rows[NR_ROWS - 1];
     this.writeScreen = this.displayedMemory;
     this.mode = null;
-    this.cueStartTime = null; // Keeps track of where a cue started.
+    this.cueStartTime = -1; // Keeps track of where a cue started.
   }
 
   reset () {
@@ -693,8 +693,7 @@ class Cea608Channel {
     this.currRollUpRow = this.displayedMemory.rows[NR_ROWS - 1];
     this.writeScreen = this.displayedMemory;
     this.mode = null;
-    this.cueStartTime = null;
-    this.lastCueEndTime = null;
+    this.cueStartTime = -1;
   }
 
   getHandler (): OutputFilter {
@@ -860,7 +859,7 @@ class Cea608Channel {
     }
 
     if (this.outputFilter) {
-      if (this.cueStartTime === null && !this.displayedMemory.isEmpty()) { // Start of a new cue
+      if (this.cueStartTime === -1 && !this.displayedMemory.isEmpty()) { // Start of a new cue
         this.cueStartTime = t;
       } else {
         if (!this.displayedMemory.equals(this.lastOutputScreen)) {
@@ -870,7 +869,7 @@ class Cea608Channel {
               this.outputFilter.dispatchCue();
             }
           }
-          this.cueStartTime = this.displayedMemory.isEmpty() ? null : t;
+          this.cueStartTime = this.displayedMemory.isEmpty() ? -1 : t;
         }
       }
       this.lastOutputScreen.copy(this.displayedMemory);
