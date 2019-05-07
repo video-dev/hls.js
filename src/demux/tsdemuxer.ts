@@ -142,7 +142,6 @@ class TSDemuxer extends NonProgressiveDemuxer {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this._duration = duration;
-    super.resetInitSegment(audioCodec, videoCodec, duration);
   }
 
   /**

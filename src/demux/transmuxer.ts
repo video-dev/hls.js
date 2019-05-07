@@ -114,6 +114,19 @@ class Transmuxer {
     this.timeOffset = timeOffset;
     this.accurateTimeOffset = accurateTimeOffset;
 
+    // Reset muxers before probing to ensure that their state is clean, even if flushing occurs before a successful probe
+    if (discontinuity || trackSwitch) {
+      this.resetInitSegment(uintInitSegment, audioCodec, videoCodec, duration);
+    }
+
+    if (discontinuity) {
+      this.resetInitialTimestamp(defaultInitPTS);
+    }
+
+    if (!contiguous) {
+      this.resetNextTimestamp();
+    }
+
     const needsProbing = this.needsProbing(uintData, discontinuity, trackSwitch);
     if (needsProbing && (uintData.length + cache.dataLength < minProbeByteLength)) {
       logger.log(`[transmuxer.ts]: Received ${uintData.length} bytes, but at least ${minProbeByteLength} are required to probe for demuxer types\n` +
@@ -139,18 +152,6 @@ class Transmuxer {
         remuxResult: {},
         transmuxIdentifier
       };
-    }
-
-    if (discontinuity || trackSwitch) {
-      this.resetInitSegment(uintInitSegment, audioCodec, videoCodec, duration);
-    }
-
-    if (discontinuity) {
-      this.resetInitialTimestamp(defaultInitPTS);
-    }
-
-    if (!contiguous) {
-      this.resetNextTimestamp();
     }
 
    let result;
