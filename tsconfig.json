@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "commonjs",
-    "emitDeclarationOnly": true,
     "declaration": true,
     "sourceMap": true,
     "strict": false,
@@ -12,7 +11,7 @@
       "dom",
       "es2015",
     ],
-    "outDir": "./dist/declarations",
+    "outDir": "./dist/",
   },
   "include": [
     "src/**/*"
