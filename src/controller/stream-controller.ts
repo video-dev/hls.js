@@ -1,7 +1,3 @@
-/*
- * Stream Controller
-*/
-
 import BinarySearch from '../utils/binary-search';
 import { BufferHelper } from '../utils/buffer-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
@@ -41,8 +37,6 @@ export default class StreamController extends BaseStreamController {
   private fragLastKbps: number = 0;
   private stalled: boolean = false;
   private audioCodecSwitch: boolean = false;
-  private pendingBuffering: boolean = false;
-  private appended: boolean = false;
   private videoBuffer: any | null = null;
   private _liveSyncPosition: number | null = null;
 
@@ -61,9 +55,9 @@ export default class StreamController extends BaseStreamController {
       Event.AUDIO_TRACK_SWITCHING,
       Event.AUDIO_TRACK_SWITCHED,
       Event.BUFFER_CREATED,
-      Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED,
-      Event.LEVELS_UPDATED
+      Event.LEVELS_UPDATED,
+      Event.FRAG_BUFFERED
     );
 
     this.audioCodecSwap = false;
@@ -123,10 +117,6 @@ export default class StreamController extends BaseStreamController {
 
   doTick () {
     switch (this.state) {
-    case State.BUFFER_FLUSHING:
-      // in buffer flushing state, reset fragLoadError counter
-      this.fragLoadError = 0;
-      break;
     case State.IDLE:
       this._doTickIdle();
       break;
@@ -528,9 +518,6 @@ export default class StreamController extends BaseStreamController {
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-      if (currentTime > this.lastCurrentTime) {
-        this.lastCurrentTime = currentTime;
-      }
 
       if (BufferHelper.isBuffered(video, currentTime)) {
         fragPlayingCurrent = this.getBufferedFrag(currentTime);
@@ -658,13 +645,11 @@ export default class StreamController extends BaseStreamController {
   }
 
   flushMainBuffer (startOffset, endOffset) {
-    this.state = State.BUFFER_FLUSHING;
-    let flushScope: any = { startOffset: startOffset, endOffset: endOffset };
-    // if alternate audio tracks are used, only flush video, otherwise flush everything
-    if (this.altAudio) {
-      flushScope.type = 'video';
-    }
-
+    // When alternate audio is playing, the audio-stream-controller is responsible for the audio buffer. Otherwise,
+    // passing a null type flushes both buffers
+    const flushScope: any = { startOffset: startOffset, endOffset: endOffset, type: this.altAudio ? 'video' : null };
+    // Reset load errors on flush
+    this.fragLoadError = 0;
     this.hls.trigger(Event.BUFFER_FLUSHING, flushScope);
   }
 
@@ -953,37 +938,25 @@ export default class StreamController extends BaseStreamController {
     }
   }
 
-  onBufferAppended (data) {
-    if (data.parent === 'main') {
-      const state = this.state;
-      if (state === State.PARSING || state === State.PARSED) {
-        // check if all buffers have been appended
-        this.pendingBuffering = (data.pending > 0);
-        this._checkAppendedParsed();
-      }
+  onFragBuffered (data) {
+    const { frag } = data;
+    if (frag && frag.type !== 'main') {
+      return;
     }
-  }
-
-  _checkAppendedParsed () {
-    // trigger handler right now
-    if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
-      const frag = this.fragCurrent;
-      if (frag) {
-        const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        this.fragPrevious = frag;
-
-        this.log(`Parsed fragment ${frag.sn} of level ${frag.level}, PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}]`);
-        this.log(`Buffered : ${TimeRanges.toString(media.buffered)}`);
-
-        const stats = frag.stats;
-        stats.tbuffered = window.performance.now();
-        // TODO: Remove fragLastKbps
-        this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
-        this.hls.trigger(Event.FRAG_BUFFERED, { stats, frag: frag, id: 'main' });
-        this.state = State.IDLE;
-      }
-      this.tick();
+    if (this._fragLoadAborted(frag)) {
+      // If a level switch was requested while a fragment was buffering, it will emit the FRAG_BUFFERED event upon completion
+      // Avoid setting state back to IDLE, since that will interfere with a level switch
+      this.warn(`Fragment ${frag.sn} of level ${frag.level} finished buffering, but was aborted. state: ${this.state}`);
+      return;
     }
+    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const stats = frag.stats;
+    this.fragPrevious = frag;
+    this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
+
+    this.log(`Buffered fragment ${frag.sn} of level ${frag.level}. PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}], Buffered: ${TimeRanges.toString(media.buffered)}`);
+    this.state = State.IDLE;
+    this.tick();
   }
 
   onError (data) {
@@ -1185,7 +1158,7 @@ export default class StreamController extends BaseStreamController {
         frag.bitrateTest = false;
         const stats = frag.stats;
         stats.tparsed = stats.tbuffered = window.performance.now();
-        hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag, id: 'main' });
+        hls.trigger(Event.FRAG_BUFFERED, { stats, frag, id: 'main' });
         this.tick();
       });
   }
@@ -1213,8 +1186,6 @@ export default class StreamController extends BaseStreamController {
     this._updateTiming(frag, level, video);
 
     this.state = State.PARSING;
-    this.pendingBuffering = true;
-    this.appended = false;
 
     if (initSegment) {
       if (initSegment.tracks) {
@@ -1298,9 +1269,6 @@ export default class StreamController extends BaseStreamController {
       const initSegment = track.initSegment;
       this.log(`Main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
       if (initSegment) {
-        this.appended = true;
-        // arm pending Buffering flag before appending a segment
-        this.pendingBuffering = true;
         this.hls.trigger(Event.BUFFER_APPENDING, { type: trackName, data: initSegment, parent: 'main', content: 'initSegment' });
       }
     });
@@ -1312,18 +1280,13 @@ export default class StreamController extends BaseStreamController {
     if (!data || this.state !== State.PARSING) {
       return;
     }
-    // has remuxer dropped video frames located before first keyframe ?
-    [data.data1, data.data2].forEach(buffer => {
-      // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
-      // in that case it is useless to append following segments
-      if (buffer && buffer.length && this.state === State.PARSING) {
-        this.appended = true;
-        // arm pending Buffering flag before appending a segment
-        this.pendingBuffering = true;
-        this.hls.trigger(Event.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
-      }
-    });
-    // trigger handler right now
+
+    const buffer = this.combineFragmentData(data.data1, data.data2);
+    if (!buffer || !buffer.length) {
+      return;
+    }
+
+    this.hls.trigger(Event.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
     this.tick();
   }
 

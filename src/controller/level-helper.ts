@@ -79,6 +79,7 @@ export function updateFragPTSDTS (details: LevelDetails, frag: Fragment, startPT
   frag.startDTS = startDTS;
   frag.endDTS = endDTS;
   frag.duration = endPTS - startPTS;
+  console.assert(frag.duration > 0, 'Fragment should have a positive duration', frag);
 
   const sn = <number>frag.sn; // 'initSegment'
   // exit if sn out of range

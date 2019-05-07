@@ -187,6 +187,15 @@ class TSDemuxer extends NonProgressiveDemuxer {
     let pmtParsed = this.pmtParsed;
     let pmtId = this._pmtId;
 
+    if (!len) {
+      return {
+        audioTrack,
+        avcTrack,
+        id3Track,
+        textTrack: this._txtTrack
+      };
+    }
+
     // don't parse last TS packet if incomplete
     len -= (len + syncOffset) % 188;
 

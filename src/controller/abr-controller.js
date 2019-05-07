@@ -149,6 +149,7 @@ class AbrController extends EventHandler {
 
   onFragLoaded (data) {
     const frag = data.frag;
+    const stats = frag.stats;
     if (frag.type === 'main' && Number.isFinite(frag.sn)) {
       // stop monitoring bw once frag loaded
       this.clearTimer();
@@ -160,23 +161,21 @@ class AbrController extends EventHandler {
       // compute level average bitrate
       if (this.hls.config.abrMaxWithRealBitrate) {
         const level = this.hls.levels[frag.level];
-        let loadedBytes = (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
-        let loadedDuration = (level.loaded ? level.loaded.duration : 0) + data.frag.duration;
+        let loadedBytes = (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
+        let loadedDuration = (level.loaded ? level.loaded.duration : 0) + frag.duration;
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
         level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
       }
       // if fragment has been loaded to perform a bitrate test,
-      if (data.frag.bitrateTest) {
-        let stats = data.stats;
+      if (frag.bitrateTest) {
         stats.tparsed = stats.tbuffered = stats.tload;
         this.onFragBuffered(data);
       }
     }
   }
 
-  onFragBuffered (data) {
-    const stats = data.stats;
-    const frag = data.frag;
+  onFragBuffered ({ frag }) {
+    const stats = frag.stats;
     // only update stats on first frag buffering
     // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
     // and leading to wrong bw estimation

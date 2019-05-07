@@ -1,5 +1,7 @@
+import { SourceBufferName } from './buffer';
+
 export interface Segment {
-  type: string;
+  type: SourceBufferName;
   data: ArrayBuffer;
   parent: string;
   content: string;
