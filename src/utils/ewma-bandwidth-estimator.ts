@@ -11,14 +11,14 @@ import EWMA from '../utils/ewma';
 class EwmaBandWidthEstimator {
   hls: any;
 
-  private defaultEstimate_: any;
+  private defaultEstimate_: number;
   private minWeight_: number;
   private minDelayMs_: number;
   private slow_: EWMA;
   private fast_: EWMA;
 
   // TODO(typescript-hls)
-  constructor (hls: any, slow: number, fast: number, defaultEstimate: any) {
+  constructor (hls: any, slow: number, fast: number, defaultEstimate: number) {
     this.hls = hls;
     this.defaultEstimate_ = defaultEstimate;
     this.minWeight_ = 0.001;
