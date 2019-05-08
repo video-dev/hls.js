@@ -29,7 +29,6 @@ class EMEController extends EventHandler {
   private _manifestData: any = null;
   private _initDataType: string | null = null;
   private _initData: ArrayBuffer | null = null;
-  private _hasSetMediaKeys = false;
   private _keySessions: MediaKeySession[] = [];
 
   /**
@@ -143,24 +142,20 @@ class EMEController extends EventHandler {
    * @returns {Promise<MediaKeys>} Promise that resvoles to the created media keys  https://developer.mozilla.org/en-US/docs/Web/API/MediaKeys
    */
   private _onMediaKeysCreated (mediaKeys): Promise<MediaKeys> {
-    if (!this.hasSetMediaKeys) {
-      logger.log('Setting media keys on media');
+    if (this.media.mediaKeys) {
+      logger.log('Media keys have already been set on media');
 
-      this.hasSetMediaKeys = true;
+      return Promise.resolve(this.media.mediaKeys);
+    } else {
+      logger.log('Setting media keys on media');
 
       return this.media.setMediaKeys(mediaKeys).then(() => {
         return Promise.resolve(mediaKeys);
       }).catch((err) => {
         logger.error('Failed to set media keys on media:', err);
 
-        this.hasSetMediaKeys = false;
-
         return Promise.reject(ErrorDetails.KEY_SYSTEM_NO_KEYS);
       });
-    } else {
-      logger.log('Media keys have already been set on media');
-
-      return Promise.resolve(mediaKeys);
     }
   }
 
@@ -171,13 +166,20 @@ class EMEController extends EventHandler {
    * @returns {Promise<MediaKeys>} Promise that resolves to the created media keys https://developer.mozilla.org/en-US/docs/Web/API/MediaKeys
    */
   private _onMediaKeySystemAccessObtained (mediaKeySystemAccess: MediaKeySystemAccess): Promise<MediaKeys> {
-    logger.log('Creating media keys');
+    if (this.media.mediaKeys) {
+      logger.log('Media keys have already been created');
 
-    return mediaKeySystemAccess.createMediaKeys().catch((err) => {
-      logger.error('Failed to create media-keys:', err);
+      return Promise.resolve(this.media.mediaKeys);
+    } else {
+      logger.log('Creating media keys');
 
-      return Promise.reject(ErrorDetails.KEY_SYSTEM_NO_KEYS);
-    });
+      return mediaKeySystemAccess.createMediaKeys().catch((err) => {
+        logger.error('Failed to create media-keys:', err);
+
+        return Promise.reject(ErrorDetails.KEY_SYSTEM_NO_KEYS);
+      });
+    }
+    
   }
 
   /**
@@ -295,29 +297,25 @@ class EMEController extends EventHandler {
   }
 
   onManifestParsed (data: any) {
-    this.manifestData = data;
+    if (this.emeEnabled) {
+      this.manifestData = data;
 
-    if (this.emeEnabled && !this.emeInitDataInFrag) {
-      this._configureEME();
+      if (!this.emeInitDataInFrag) {
+        this._configureEME();
+      }
     }
   }
 
   onMediaDetaching () {
-    const keySessionClosePromises: Promise<void>[] = this._keySessions.map((keySession) => {
-      return keySession.close();
-    });
+    if (this.emeEnabled) {
+      const keySessionClosePromises: Promise<void>[] = this._keySessions.map((keySession) => {
+        return keySession.close();
+      });
 
-    Promise.all(keySessionClosePromises).then(() => {
-      if (this._media && this._media.setMediaKeys) {
-        return this._media.setMediaKeys(null)
-      } else {
-        return Promise.resolve();
-      }
-    }).then(() => {
-      this.hasSetMediaKeys = false;
-
-      this._media = null; // release media reference
-    });
+      Promise.all(keySessionClosePromises).then(() => {
+        this._media = null; // release media reference
+      });
+    }
   }
 
   // Getters for EME Controller
@@ -352,14 +350,6 @@ class EMEController extends EventHandler {
 
   set initData (value) {
     this._initData = value;
-  }
-
-  get hasSetMediaKeys () {
-    return this._hasSetMediaKeys;
-  }
-
-  set hasSetMediaKeys (value) {
-    this._hasSetMediaKeys = value;
   }
 
   get keySessions () {
