@@ -1,9 +1,9 @@
-import { CaptionScreen, UNSET_CEA_START_TIME } from './cea-608-parser';
+import { CaptionScreen } from './cea-608-parser';
 
 export default class OutputFilter {
   timelineController: any;
   trackName: string;
-  startTime: number;
+  startTime: number | null;
   endTime: number | null;
   screen: CaptionScreen | null;
 
@@ -11,22 +11,22 @@ export default class OutputFilter {
   constructor (timelineController: any, trackName: string) {
     this.timelineController = timelineController;
     this.trackName = trackName;
-    this.startTime = UNSET_CEA_START_TIME;
+    this.startTime = null;
     this.endTime = null;
     this.screen = null;
   }
 
   dispatchCue () {
-    if (this.startTime === UNSET_CEA_START_TIME) {
+    if (this.startTime === null) {
       return;
     }
 
     this.timelineController.addCues(this.trackName, this.startTime, this.endTime, this.screen);
-    this.startTime = UNSET_CEA_START_TIME;
+    this.startTime = null;
   }
 
   newCue (startTime: number, endTime: number, screen: CaptionScreen) {
-    if (this.startTime === UNSET_CEA_START_TIME || this.startTime > startTime) {
+    if (this.startTime === null || this.startTime > startTime) {
       this.startTime = startTime;
     }
 

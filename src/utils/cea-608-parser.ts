@@ -203,8 +203,6 @@ let logger: {
   }
 };
 
-export const UNSET_CEA_START_TIME = -9999;
-
 let numArrayToHexArray = function (numArray: number[]): string[] {
   let hexArray: string[] = [];
   for (let j = 0; j < numArray.length; j++) {
@@ -671,7 +669,7 @@ class Cea608Channel {
   lastOutputScreen: CaptionScreen;
   currRollUpRow: Row;
   writeScreen: CaptionScreen;
-  cueStartTime: number;
+  cueStartTime: number | null;
   lastCueEndTime: null;
   constructor (channelNumber: number, outputFilter: OutputFilter) {
     this.chNr = channelNumber;
@@ -684,7 +682,7 @@ class Cea608Channel {
     this.currRollUpRow = this.displayedMemory.rows[NR_ROWS - 1];
     this.writeScreen = this.displayedMemory;
     this.mode = null;
-    this.cueStartTime = UNSET_CEA_START_TIME; // Keeps track of where a cue started.
+    this.cueStartTime = null; // Keeps track of where a cue started.
   }
 
   reset () {
@@ -695,7 +693,7 @@ class Cea608Channel {
     this.currRollUpRow = this.displayedMemory.rows[NR_ROWS - 1];
     this.writeScreen = this.displayedMemory;
     this.mode = null;
-    this.cueStartTime = UNSET_CEA_START_TIME;
+    this.cueStartTime = null;
   }
 
   getHandler (): OutputFilter {
@@ -861,7 +859,7 @@ class Cea608Channel {
     }
 
     if (this.outputFilter) {
-      if (this.cueStartTime === UNSET_CEA_START_TIME && !this.displayedMemory.isEmpty()) { // Start of a new cue
+      if (this.cueStartTime === null && !this.displayedMemory.isEmpty()) { // Start of a new cue
         this.cueStartTime = t;
       } else {
         if (!this.displayedMemory.equals(this.lastOutputScreen)) {
@@ -870,7 +868,7 @@ class Cea608Channel {
             this.outputFilter.dispatchCue();
           }
 
-          this.cueStartTime = this.displayedMemory.isEmpty() ? UNSET_CEA_START_TIME : t;
+          this.cueStartTime = this.displayedMemory.isEmpty() ? null : t;
         }
       }
       this.lastOutputScreen.copy(this.displayedMemory);
