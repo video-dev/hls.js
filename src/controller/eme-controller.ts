@@ -189,7 +189,7 @@ class EMEController extends EventHandler {
    * @param {MediaKeySystemConfiguration[]} mediaKeySystemConfigs Configurations to request Media Key System access with https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration
    * @returns {Promise<MediaKeySystemAccess} Promise that resolves to the Media Key System Access object https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess
    */
-  private _getKeySystemAccess (mediaKeySystemConfigs: MediaKeySystemConfiguration[]): Promise<MediaKeySystemAccess> {
+  private _getMediaKeySystemAccess (mediaKeySystemConfigs: MediaKeySystemConfiguration[]): Promise<MediaKeySystemAccess> {
     logger.log('Requesting encrypted media key system access');
 
     if (!window.navigator.requestMediaKeySystemAccess) {
@@ -235,7 +235,7 @@ class EMEController extends EventHandler {
 
     const mediaKeySystemConfigs = this._getSupportedMediaKeySystemConfigurations(this.manifestData.levels);
 
-    this._getKeySystemAccess(mediaKeySystemConfigs).then((mediaKeySystemAccess) => {
+    this._getMediaKeySystemAccess(mediaKeySystemConfigs).then((mediaKeySystemAccess) => {
       logger.log('Obtained encrypted media key system access');
 
       return this._onMediaKeySystemAccessObtained(mediaKeySystemAccess);

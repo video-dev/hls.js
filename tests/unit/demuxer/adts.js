@@ -274,7 +274,6 @@ describe('probe', function () {
     data[4] = 0x02; // frame_length is 16
     data[16] = 0xff;
     data[17] = 0xf0;
-    console.log('hahah');
     expect(probe(data, 0)).to.be.true;
   });
 

@@ -1,6 +1,7 @@
 // Karma configuration
 // Generated on Tue Jul 18 2017 12:17:16 GMT-0700 (PDT)
 const path = require('path');
+const fs = require('fs');
 const merge = require('webpack-merge');
 const webpackConfig = require('./webpack.config')({ debug: true })[0];
 delete webpackConfig.entry;
@@ -72,7 +73,15 @@ module.exports = function (config) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['ChromeHeadless'],
+    browsers: ['ChromeOptionalSSL'],
+
+    // configure Chrome to allow localhost SSL (used to test EME) or use Chrome Headless
+    customLaunchers: {
+      ChromeOptionalSSL: {
+        base: process.env.KARMA_SSL ? 'Chrome' : 'ChromeHeadless',
+        flags: process.env.KARMA_SSL ? ['--ignore-certificate-errors', '--allow-running-insecure-content '] : []
+      }
+    },
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
@@ -80,6 +89,17 @@ module.exports = function (config) {
 
     // Concurrency level
     // how many browser should be started simultaneous
-    concurrency: Infinity
+    concurrency: Infinity,
+
+    // Test Server protocol
+    // needed to test EME, only set if env has KARMA_SSL=true
+    protocol: process.env.KARMA_SSL ? 'https' : 'http',
+
+    // HTTP Server options
+    // allows tester to pass certs and keys for testing EME over https
+    httpsServerOptions: process.env.KARMA_SSL ? {
+      key: fs.readFileSync('server.key', 'utf8'), // user must set the path to their SSL key
+      cert: fs.readFileSync('server.cert', 'utf8') // user must set the path to their SSL cert
+    } : {}
   });
 };

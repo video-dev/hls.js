@@ -106,9 +106,9 @@ const HlsEvents = {
   // fired upon stream controller state transitions - data: { previousState, nextState }
   STREAM_STATE_TRANSITION: 'hlsStreamStateTransition',
   // fired when EME is being configured
-  EME_CONFIGURING: 'hlsEMEConfiguring',
+  EME_CONFIGURING: 'hlsEmeConfiguring',
   // fired when EME has been configured
-  EME_CONFIGURED: 'hlsEMEConfigured'
+  EME_CONFIGURED: 'hlsEmeConfigured'
 };
 
 export default HlsEvents;
