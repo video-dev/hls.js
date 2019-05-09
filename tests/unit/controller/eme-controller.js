@@ -1,24 +1,44 @@
 import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
-import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
 
 const sinon = require('sinon');
 
 const MediaMock = function () {
-  let media = new EventEmitter();
-  media.addEventListener = media.addListener.bind(media);
-  return media;
+  return document.createElement('video');
 };
+
+let emeController;
+let media;
+let _initDataType;
+let _initData;
+let _keySessions;
+
+let keySystemMock = 'com.widevine.alpha';
+
+const levelsMock = [{
+  videoCodec: 'avc1.42c01e',
+  audioCodec: 'mp4a.40.2'
+}, {
+  videoCodec: 'avc1.4d401f',
+  audioCodec: 'mp4a.40.2'
+}];
+
+const supportedConfigurationsMock = [{
+  audioCapabilities: [
+    { contentType: 'audio/mp4; codecs="mp4a.40.2"' },
+    { contentType: 'audio/mp4; codecs="mp4a.40.2"' }
+  ],
+  videoCapabilities: [
+    { contentType: 'video/mp4; codecs="avc1.42c01e"' },
+    { contentType: 'video/mp4; codecs="avc1.4d401f"' }
+  ]
+}];
 
 const emeConfig = {
   emeEnabled: true,
   requestMediaKeySystemAccessFunc: function (supportedConfigurations) {
-    const keySystem = 'com.widevine.alpha';
-
-    console.log(supportedConfigurations)
-
-    return window.navigator.requestMediaKeySystemAccess(keySystem, supportedConfigurations);
+    return window.navigator.requestMediaKeySystemAccess(keySystemMock, supportedConfigurations);
   },
   getEMEInitializationDataFunc: function (levelOrAudioTrack, initDataType, initData) {
     return Promise.resolve({
@@ -53,50 +73,11 @@ const emeConfig = {
   }
 };
 
-let emeController;
-let media;
-let _initDataType;
-let _initData;
-let _keySessions;
+const requestMediaKeySystemAccessSpy = sinon.spy(emeConfig.requestMediaKeySystemAccessFunc);
 
-const levelsMock = [{
-  videoCodec: 'avc1.42c01e',
-  audioCodec: 'mp4a.40.2'
-}, {
-  videoCodec: 'avc1.4d401f',
-  audioCodec: 'mp4a.40.2'
-}];
+const getEMEInitializationDataSpy = sinon.spy(emeConfig.getEMEInitializationDataFunc);
 
-const supportedConfigurationsMock = {
-  valid: [{
-    audioCapabilities: [
-      { contentType: 'audio/mp4; codecs="mp4a.40.2"' },
-      { contentType: 'audio/mp4; codecs="mp4a.40.2"' }
-    ],
-    videoCapabilities: [
-      { contentType: 'video/mp4; codecs="avc1.42c01e"' },
-      { contentType: 'video/mp4; codecs="avc1.4d401f"' }
-    ]
-  }],
-  invalid: [{
-    audioCapabilities: [{ contentType: 'invalid' }],
-    videoCapabilities: [{ contentType: 'invalid' }]
-  }]
-};
-
-const requestMediaKeySystemAccessSpy = function (mockType) {
-  return sinon.spy(function () {
-    return Promise.resolve(emeConfig.requestMediaKeySystemAccessFunc(supportedConfigurationsMock[mockType]));
-  });
-};
-
-const getEMEInitializationDataSpy = sinon.spy(function () {
-  return Promise.resolve(emeConfig.getEMEInitializationDataFunc);
-});
-
-const getEMELicenseSpy = sinon.spy(function () {
-  return Promise.resolve(emeConfig.getEMELicenseFunc);
-});
+const getEMELicenseSpy = sinon.spy(emeConfig.getEMELicenseFunc);
 
 const setupEach = function (config) {
   media = new MediaMock();
@@ -110,10 +91,6 @@ describe('EMEController', function () {
   });
 
   it('should not do anything when `emeEnabled` is false (default)', function () {
-    let requestMediaKeySystemAccessSpy = sinon.spy();
-    let getEMEInitializationDataSpy = sinon.spy();
-    let getEMELicenseSpy = sinon.spy();
-
     setupEach({
       requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy,
       getEMEInitializationDataFunc: getEMEInitializationDataSpy,
@@ -127,23 +104,41 @@ describe('EMEController', function () {
     expect(getEMELicenseSpy.callCount).to.equal(0);
   });
 
+  it('should require all config functions when EME is enabled', function () {
+    setupEach({
+      emeEnabled: true
+    });
+
+    expect(function () {
+      emeController.requestMediaKeySystemAccess;
+    }).to.throw();
+
+    expect(function () {
+      emeController.getEMEInitializationData;
+    }).to.throw();
+
+    expect(function () {
+      emeController.getEMELicense;
+    }).to.throw();
+  });
+
   it('should create supportedConfigurations from level data', function () {
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy('valid'),
+      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy,
       getEMEInitializationDataFunc: getEMEInitializationDataSpy,
       getEMELicenseFunc: getEMELicenseSpy
     });
 
     const supportedConfigurations = emeController._getSupportedMediaKeySystemConfigurations(levelsMock);
 
-    expect(supportedConfigurations).to.eql(supportedConfigurationsMock.valid);
+    expect(supportedConfigurations).to.eql(supportedConfigurationsMock);
   });
 
   it('should get MediaKeySystemAccess with valid configuration', function () {
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy('valid'),
+      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy,
       getEMEInitializationDataFunc: getEMEInitializationDataSpy,
       getEMELicenseFunc: getEMELicenseSpy
     });
@@ -157,32 +152,63 @@ describe('EMEController', function () {
     });
   });
 
-  // it('should trigger key system error when bad encrypted data is received', function (done) {
-  //   let reqMediaKsAccessSpy = sinon.spy(function () {
-  //     return Promise.resolve({
-  //       // Media-keys mock
-  //     });
-  //   });
+  it('should trigger KEY_SYSTEM_NO_ACCESS error when key system cannot be accessed', function () {
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy,
+      getEMEInitializationDataFunc: getEMEInitializationDataSpy,
+      getEMELicenseFunc: getEMELicenseSpy
+    });
 
-  //   setupEach({
-  //     emeEnabled: true,
-  //     requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
-  //   });
+    emeController.onMediaAttaching({ media });
 
-  //   let badData = {
-  //     initDataType: 'cenc',
-  //     initData: 'bad data'
-  //   };
+    keySystemMock = 'bad-key-system';
 
-  //   emeController.onMediaAttached({ media });
-  //   emeController.onManifestParsed({ levels: fakeLevels });
+    return emeController._getMediaKeySystemAccess(null).catch((err) => {
+      expect(err).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+    }).finally(() => {
+      keySystemMock = 'com.widevine.alpha';
+    });
+  });
 
-  //   media.emit('encrypted', badData);
+  it('should create MediaKeys', function () {
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy,
+      getEMEInitializationDataFunc: getEMEInitializationDataSpy,
+      getEMELicenseFunc: getEMELicenseSpy
+    });
 
-  //   setTimeout(function () {
-  //     expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
-  //     expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
-  //     done();
-  //   }, 0);
-  // });
+    emeController.onMediaAttaching({ media });
+
+    const supportedConfigurations = emeController._getSupportedMediaKeySystemConfigurations(levelsMock);
+
+    return emeController._getMediaKeySystemAccess(supportedConfigurations).then((mediaKeySystemAccess) => {
+      return emeController._onMediaKeySystemAccessObtained(mediaKeySystemAccess);
+    }).then((mediaKeys) => {
+      expect(mediaKeys).to.be.an.instanceOf(MediaKeys);
+    });
+  });
+
+  it('should set MediaKeys on media', function () {
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy,
+      getEMEInitializationDataFunc: getEMEInitializationDataSpy,
+      getEMELicenseFunc: getEMELicenseSpy
+    });
+
+    emeController.onMediaAttaching({ media });
+
+    const supportedConfigurations = emeController._getSupportedMediaKeySystemConfigurations(levelsMock);
+
+    return emeController._getMediaKeySystemAccess(supportedConfigurations).then((mediaKeySystemAccess) => {
+      return emeController._onMediaKeySystemAccessObtained(mediaKeySystemAccess);
+    }).then((mediaKeys) => {
+      return emeController._onMediaKeysCreated(mediaKeys);
+    }).then((mediaKeys) => {
+      expect(mediaKeys).to.be.an.instanceOf(MediaKeys);
+      expect(media.mediaKeys).to.be.an.instanceOf(MediaKeys);
+    });
+  });
 });
