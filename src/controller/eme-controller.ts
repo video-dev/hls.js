@@ -13,7 +13,7 @@ import { EMEInitDataInfo } from '../config';
 import { logger } from '../utils/logger';
 
 interface EMEKeySessionResponse {
-  session: MediaKeySession,
+  keySession: MediaKeySession,
   levelOrAudioTrack: any
 }
 
@@ -123,12 +123,12 @@ class EMEController extends EventHandler {
   private _onMediaKeysSet (mediaKeys: MediaKeys, levelOrAudioTrack: any): Promise<EMEKeySessionResponse> {
     logger.log('Creating session on media keys');
 
-    const session = mediaKeys.createSession();
+    const keySession = mediaKeys.createSession();
 
-    this.keySessions.push(session);
+    this.keySessions.push(keySession);
 
     const keySessionResponse: EMEKeySessionResponse = {
-      session,
+      keySession,
       levelOrAudioTrack
     };
 
@@ -261,7 +261,7 @@ class EMEController extends EventHandler {
       logger.log('Created media key sessions');
 
       const licenseRequests = keySessionResponses.map((keySessionResponse: EMEKeySessionResponse) => {
-        return this._onMediaKeySessionCreated(keySessionResponse.session, keySessionResponse.levelOrAudioTrack);
+        return this._onMediaKeySessionCreated(keySessionResponse.keySession, keySessionResponse.levelOrAudioTrack);
       });
 
       return Promise.all(licenseRequests);
@@ -286,13 +286,13 @@ class EMEController extends EventHandler {
     if (media) {
       this._media = media; // keep reference of media
 
-      this.media.onencrypted = (event) => {
+      this.media.addEventListener('encrypted', (event) => {
         this.initDataType = event.initDataType;
 
         this.initData = event.initData;
 
         this._configureEME();
-      };
+      });
     }
   }
 
