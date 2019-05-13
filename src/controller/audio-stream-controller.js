@@ -283,7 +283,9 @@ class AudioStreamController extends BaseStreamController {
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
             this.fragCurrent = frag;
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-              this.startFragRequested = true;
+              if (frag.sn !== 'initSegment') {
+                this.startFragRequested = true;
+              }
               if (Number.isFinite(frag.sn)) {
                 this.nextLoadPosition = frag.start + frag.duration;
               }
@@ -593,8 +595,8 @@ class AudioStreamController extends BaseStreamController {
 
       let audioSwitch = this.audioSwitch, media = this.media, appendOnBufferFlush = false;
       // Only flush audio from old audio tracks when PTS is known on new audio track
-      if (audioSwitch && media) {
-        if (media.readyState) {
+      if (audioSwitch) {
+        if (media && media.readyState) {
           let currentTime = media.currentTime;
           logger.log('switching audio track : currentTime:' + currentTime);
           if (currentTime >= data.startPTS) {
@@ -697,7 +699,9 @@ class AudioStreamController extends BaseStreamController {
         stats.tbuffered = performance.now();
         hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'audio' });
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        logger.log(`audio buffered : ${TimeRanges.toString(media.buffered)}`);
+        if (media) {
+          logger.log(`audio buffered : ${TimeRanges.toString(media.buffered)}`);
+        }
         if (this.audioSwitch && this.appended) {
           this.audioSwitch = false;
           hls.trigger(Event.AUDIO_TRACK_SWITCHED, { id: this.trackId });
