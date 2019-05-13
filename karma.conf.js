@@ -1,6 +1,3 @@
-// Karma configuration
-// Generated on Tue Jul 18 2017 12:17:16 GMT-0700 (PDT)
-const path = require('path');
 const merge = require('webpack-merge');
 const webpackConfig = require('./webpack.config')({ debug: true })[0];
 delete webpackConfig.entry;
@@ -11,7 +8,7 @@ const mergeConfig = merge(webpackConfig, {
     rules: [
       {
         test: /\.(ts|js)$/,
-        exclude: path.resolve(__dirname, 'node_modules'),
+        exclude: /(node_modules|tests)/,
         enforce: 'post',
         use: [
           {
@@ -28,17 +25,16 @@ const mergeConfig = merge(webpackConfig, {
 
 module.exports = function (config) {
   config.set({
-    // base path that will be used to resolve all patterns (eg. files, exclude)
-    basePath: '',
-
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
     frameworks: ['mocha', 'sinon-chai'],
 
     // list of files / patterns to load in the browser
-    files: [
-      'tests/index.js'
-    ],
+    // https://github.com/webpack-contrib/karma-webpack#alternative-usage
+    files: [{
+      pattern: 'tests/index.js',
+      watched: false
+    }],
 
     // list of files to exclude
     exclude: [],
