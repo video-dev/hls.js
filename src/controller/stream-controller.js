@@ -1295,7 +1295,34 @@ class StreamController extends BaseStreamController {
 
   computeLivePosition (sliding, levelDetails) {
     let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
-    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
+
+    let pos = sliding + Math.max(0, levelDetails.totalduration - targetLatency);
+
+    // If the distance between the position and the start of the next fragment is
+    // less than maxFragLookUpTolerance, move the position to the start of the next fragment.
+
+    const fragments = levelDetails.fragments;
+
+    let start = -1;
+
+    const length = fragments.length;
+
+    for (let i = 0; i < length; ++i) {
+      const fragment = fragments[i];
+
+      if (fragment.start > pos) {
+        start = fragment.start;
+        break;
+      }
+    }
+
+    if (start !== -1) {
+      if (start - pos <= this.config.maxFragLookUpTolerance) {
+        pos = start;
+      }
+    }
+
+    return pos;
   }
 
   /**
