@@ -107,6 +107,7 @@ class AACDemuxer implements Demuxer {
 
   flush (timeOffset): DemuxerResult {
     this.frameIndex = 0;
+    this.cachedData = new Uint8Array();
     
     return {
       audioTrack: this._audioTrack,
