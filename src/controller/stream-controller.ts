@@ -18,10 +18,9 @@ import FragmentLoader from '../loader/fragment-loader';
 const TICK_INTERVAL = 100; // how often to tick in ms
 
 export default class StreamController extends BaseStreamController {
-  private audioCodecSwap: boolean;
-  private bitrateTest: boolean;
-  private gapController: any;
-  private stallReported: boolean;
+  private audioCodecSwap: boolean = false;
+  private bitrateTest: boolean = false;
+  private gapController: any | null = null;
   private level: number = -1;
   private startFragRequested: boolean = false;
   private forceStartLoad: boolean = false;
@@ -60,16 +59,10 @@ export default class StreamController extends BaseStreamController {
       Event.FRAG_BUFFERED
     );
 
-    this.audioCodecSwap = false;
-    this.bitrateTest = false;
     this.fragmentLoader = new FragmentLoader(hls.config);
     this.config = hls.config;
     this.fragmentTracker = fragmentTracker;
-    this.gapController = null;
-    this.stallReported = false;
     this.state = State.STOPPED;
-    this.stallReported = false;
-    this.gapController = null;
   }
 
   startLoad (startPosition): void {

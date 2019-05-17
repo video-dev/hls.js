@@ -162,7 +162,7 @@ export class SubtitleStreamController extends BaseStreamController {
       return;
     }
     // check to see if the payload needs to be decrypted
-    if (payload.byteLength > 0 && (decryptData && decryptData.key && decryptData.method === 'AES-128')) {
+    if (payload && payload.byteLength > 0 && (decryptData && decryptData.key && decryptData.method === 'AES-128')) {
       let startTime = performance.now();
       // decrypt the subtitles
       this.decrypter.decrypt(payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {

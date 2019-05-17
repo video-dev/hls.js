@@ -67,7 +67,6 @@ const MpegAudio = {
       track.channelCount = header.channelCount;
       track.samplerate = header.sampleRate;
       track.samples.push(sample);
-      track.len += header.frameLength;
 
       return { sample, length: header.frameLength };
     }

@@ -89,13 +89,14 @@ export default class BaseStreamController extends TaskLoop {
     const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
 
     if (Number.isFinite(currentTime)) {
-      this.log(`media seeking to ${currentTime.toFixed(3)}`);
+      this.log(`media seeking to ${currentTime.toFixed(3)}, state: ${state}`);
     }
 
+    // TODO: Handle frag abort while progressively parsing (state is PARSING after the first progress event)
     if (state === State.FRAG_LOADING) {
       let fragCurrent = this.fragCurrent;
       // check if we are seeking to a unbuffered area AND if frag loading is in progress
-      if (bufferInfo.len === 0 && fragCurrent) {
+      if (!bufferInfo.len && fragCurrent) {
         const tolerance = config.maxFragLookUpTolerance;
         const fragStartOffset = fragCurrent.start - tolerance;
         const fragEndOffset = fragCurrent.start + fragCurrent.duration + tolerance;
@@ -112,6 +113,8 @@ export default class BaseStreamController extends TaskLoop {
         } else {
           this.log('seeking outside of buffer but within currently loaded fragment range');
         }
+      } else {
+        this.log(`didn't cancel, len: ${bufferInfo.len}, fragCurrent: ${fragCurrent}`);
       }
     } else if (state === State.ENDED) {
       // if seeking to unbuffered area, clean up fragPrevious
