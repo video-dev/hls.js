@@ -17,7 +17,7 @@ import SampleAesDecrypter from './sample-aes';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { DemuxedAvcTrack, DemuxedAudioTrack, DemuxedTrack, Demuxer, DemuxerResult } from '../types/demuxer';
-import NonProgressiveDemuxer from './non-progressive-demuxer';
+import { appendUint8Array } from '../utils/mp4-tools';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -34,13 +34,16 @@ const RemuxerTrackIdConfig = {
   text: 4
 };
 
-class TSDemuxer extends NonProgressiveDemuxer {
+class TSDemuxer implements Demuxer {
+  static readonly minProbeByteLength = 1024;
+
   private observer: any;
   private config: any;
   private typeSupported: any;
 
   private sampleAes: any = null;
   private pmtParsed: boolean = false;
+  private contiguous: boolean = false;
   private audioCodec!: string;
   private videoCodec!: string;
   private _duration: number = 0;
@@ -55,9 +58,9 @@ class TSDemuxer extends NonProgressiveDemuxer {
   private _txtTrack!: DemuxedTrack;
   private aacOverFlow: any;
   private avcSample: any;
+  private remainderData?: Uint8Array = new Uint8Array(0);
 
   constructor (observer, config, typeSupported) {
-    super();
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
@@ -107,8 +110,7 @@ class TSDemuxer extends NonProgressiveDemuxer {
       inputTimeScale: 90000,
       sequenceNumber: 0,
       samples: [],
-      len: 0,
-      dropped: type === 'video' ? 0 : undefined,
+      dropped: 0,
       duration: type === 'audio' ? duration : undefined
     };
   }
@@ -116,16 +118,8 @@ class TSDemuxer extends NonProgressiveDemuxer {
   /**
    * Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start)
    * Resets all internal track instances of the demuxer.
-   *
-   * @override Implements generic demuxing/remuxing interface (see DemuxerInline)
-   * @param {Uint8Array} initSegment
-   * @param {string} audioCodec
-   * @param {string} videoCodec
-   * @param {number} duration (in TS timescale = 90kHz)
-   */
+  */
   resetInitSegment (audioCodec, videoCodec, duration) {
-    super.resetInitSegment(audioCodec, videoCodec, duration);
-
     this.pmtParsed = false;
     this._pmtId = -1;
 
@@ -144,19 +138,15 @@ class TSDemuxer extends NonProgressiveDemuxer {
     this._duration = duration;
   }
 
-  /**
-   *
-   * @override
-   */
   resetTimeStamp () {
-    super.resetTimeStamp()
   }
 
-  // feed incoming data to the front of the parsing pipeline
-  demuxInternal (data, timeOffset, isSampleAes = false): DemuxerResult {
+  demux (data: Uint8Array, contiguous, timeOffset, isSampleAes = false): DemuxerResult {
     if (!isSampleAes) {
       this.sampleAes = null;
     }
+
+    this.contiguous = contiguous;
     let start;
     let stt;
     let pid;
@@ -174,7 +164,6 @@ class TSDemuxer extends NonProgressiveDemuxer {
     const parseAACPES = this._parseAACPES.bind(this);
     const parseMPEGPES = this._parseMPEGPES.bind(this);
     const parseID3PES = this._parseID3PES.bind(this);
-    const syncOffset = TSDemuxer._syncOffset(data);
 
     let avcId = avcTrack.pid;
     let avcData = avcTrack.pesData;
@@ -182,12 +171,19 @@ class TSDemuxer extends NonProgressiveDemuxer {
     let id3Id = id3Track.pid;
     let audioData = audioTrack.pesData;
     let id3Data = id3Track.pesData;
-    let len = data.length;
     let unknownPIDs = false;
     let pmtParsed = this.pmtParsed;
     let pmtId = this._pmtId;
 
-    if (!len) {
+    let len = data.length;
+    if (this.remainderData) {
+      data = appendUint8Array(this.remainderData, data);
+      len = data.length;
+    }
+
+    const syncOffset = TSDemuxer._syncOffset(data);
+    if (syncOffset < 0) {
+      this.remainderData = data;
       return {
         audioTrack,
         avcTrack,
@@ -195,9 +191,8 @@ class TSDemuxer extends NonProgressiveDemuxer {
         textTrack: this._txtTrack
       };
     }
-
-    // don't parse last TS packet if incomplete
     len -= (len + syncOffset) % 188;
+    this.remainderData = data.slice(len);
 
     // loop through TS packets
     for (start = syncOffset; start < len; start += 188) {
@@ -313,20 +308,58 @@ class TSDemuxer extends NonProgressiveDemuxer {
         this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
       }
     }
+
+    avcTrack.pesData = avcData;
+    audioTrack.pesData = audioData;
+    id3Track.pesData = id3Data;
+
+    return {
+      audioTrack,
+      avcTrack,
+      id3Track,
+      textTrack: this._txtTrack
+    };
+  }
+
+  // TODO: re-check TS syncOffset before demuxing
+  flush () {
+    const { remainderData } = this;
+    let result;
+    if (remainderData) {
+      result = this.demux(remainderData, this.contiguous, -1);
+    } else {
+      result = {
+        audioTrack: this._audioTrack,
+        avcTrack: this._avcTrack,
+        textTrack: this._txtTrack,
+        id3Track: this._id3Track
+      };
+    }
+    this.extractRemainingSamples(result);
+    this.remainderData = undefined;
+    return result;
+  }
+
+  private extractRemainingSamples (demuxResult: DemuxerResult) {
+    const { audioTrack, avcTrack, id3Track } = demuxResult;
+    let avcData = avcTrack.pesData;
+    let audioData = audioTrack.pesData;
+    let id3Data = id3Track.pesData;
     // try to parse last PES packets
-    if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
-      parseAVCPES(pes, true);
+    let pes;
+    if (avcData && (pes = this._parsePES(avcData)) && pes.pts !== undefined) {
+      this._parseAVCPES(pes, true);
       avcTrack.pesData = null;
     } else {
       // either avcData null or PES truncated, keep it for next frag parsing
       avcTrack.pesData = avcData;
     }
 
-    if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
+    if (audioData && (pes = this._parsePES(audioData)) && pes.pts !== undefined) {
       if (audioTrack.isAAC) {
-        parseAACPES(pes);
+        this._parseAACPES(pes);
       } else {
-        parseMPEGPES(pes);
+        this._parseMPEGPES(pes);
       }
 
       audioTrack.pesData = null;
@@ -339,20 +372,13 @@ class TSDemuxer extends NonProgressiveDemuxer {
       audioTrack.pesData = audioData;
     }
 
-    if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
-      parseID3PES(pes);
+    if (id3Data && (pes = this._parsePES(id3Data)) && pes.pts !== undefined) {
+      this._parseID3PES(pes);
       id3Track.pesData = null;
     } else {
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-
-    return {
-      audioTrack,
-      avcTrack,
-      id3Track,
-      textTrack: this._txtTrack
-    };
   }
 
   demuxSampleAes (data, decryptData, timeOffset): Promise <DemuxerResult> {
@@ -575,24 +601,9 @@ class TSDemuxer extends NonProgressiveDemuxer {
     }
   }
 
-  pushAccesUnit (avcSample, avcTrack) {
+  pushAccessUnit (avcSample, avcTrack) {
     if (avcSample.units.length && avcSample.frame) {
-      const samples = avcTrack.samples;
-      const nbSamples = samples.length;
-      // only push AVC sample if starting with a keyframe is not mandatory OR
-      //    if keyframe already found in this fragment OR
-      //       keyframe found in last fragment (track.sps) AND
-      //          samples already appended (we already found a keyframe in this fragment)
-      // TODO: The contiguous flag was removed; does it need replacing?
-      if (!this.config.forceKeyFrameOnDiscontinuity ||
-          avcSample.key === true ||
-          (avcTrack.sps && nbSamples)) {
-        avcSample.id = nbSamples;
-        samples.push(avcSample);
-      } else {
-        // dropped samples, track it
-        avcTrack.dropped++;
-      }
+      avcTrack.samples.push(avcSample);
     }
     if (avcSample.debug.length) {
       logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug);
@@ -609,7 +620,7 @@ class TSDemuxer extends NonProgressiveDemuxer {
       push,
       spsfound = false,
       i,
-      pushAccesUnit = this.pushAccesUnit.bind(this),
+      pushAccessUnit = this.pushAccessUnit.bind(this),
       createAVCSample = function (key, pts, dts, debug) {
         return { key: key, pts: pts, dts: dts, units: [], debug: debug };
       };
@@ -619,7 +630,7 @@ class TSDemuxer extends NonProgressiveDemuxer {
     // if new NAL units found and last sample still there, let's push ...
     // this helps parsing streams with missing AUD (only do this if AUD never found)
     if (avcSample && units.length && !track.audFound) {
-      pushAccesUnit(avcSample, track);
+      pushAccessUnit(avcSample, track);
       avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, '');
     }
 
@@ -787,7 +798,7 @@ class TSDemuxer extends NonProgressiveDemuxer {
         push = false;
         track.audFound = true;
         if (avcSample) {
-          pushAccesUnit(avcSample, track);
+          pushAccessUnit(avcSample, track);
         }
 
         avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
@@ -811,7 +822,7 @@ class TSDemuxer extends NonProgressiveDemuxer {
     });
     // if last PES packet, push samples
     if (last && avcSample) {
-      pushAccesUnit(avcSample, track);
+      pushAccessUnit(avcSample, track);
       this.avcSample = null;
     }
   }
@@ -841,7 +852,7 @@ class TSDemuxer extends NonProgressiveDemuxer {
       let track = this._avcTrack, samples = track.samples;
       avcSample = samples[samples.length - 1];
     }
-    if (avcSample) {
+    if (avcSample && avcSample.units) {
       let units = avcSample.units;
       lastUnit = units[units.length - 1];
     }
@@ -1034,7 +1045,7 @@ class TSDemuxer extends NonProgressiveDemuxer {
     if (aacOverFlow && aacLastPTS) {
       let newPTS = aacLastPTS + frameDuration;
       if (Math.abs(newPTS - pts) > 1) {
-        logger.log(`AAC: align PTS for overlapping frames by ${Math.round((newPTS - pts) / 90)}`);
+        logger.log(`[tsdemuxer]: AAC: align PTS for overlapping frames by ${Math.round((newPTS - pts) / 90)}`);
         pts = newPTS;
       }
     }

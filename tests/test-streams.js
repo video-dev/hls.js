@@ -64,21 +64,6 @@ module.exports = {
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
-  issue666: {
-    'url': 'https://video-dev.github.io/streams/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
-    'description': 'hls.js/issues/666',
-    'live': false,
-    'abr': false,
-    'blacklist_ua': ['internet explorer']
-  },
-  /* // went offline for us :( would be good to replace this for regression test with something mimicking the issue
-  issue649: {
-    'url': 'https://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
-    'description': 'hls.js/issues/649',
-    'live': false,
-    'abr': false
-  },
-  */
   closedCaptions: {
     'url': 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
     'description': 'CNN special report, with CC',
@@ -92,14 +77,12 @@ module.exports = {
     'live': false,
     'abr': true
   },
-  /*
   bbbAES: {
     'url': 'https://video-dev.github.io/streams/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
   },
-  */
   mp3Audio: {
     'url': 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
     'description': 'MP3 VOD demo',
@@ -175,10 +158,6 @@ module.exports = {
   noTrackIntersection: {
     url: 'https://s3.amazonaws.com/bob.jwplayer.com/%7Ealex/123633/new_master.m3u8',
     description: 'Audio/video track PTS values do not intersect; 10 second start gap'
-  },
-  altAudioNoVideoCodecSignaled: {
-    url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/3cbf1114-b2f4-4320-afb3-f0f7eeeb8630/playlist.m3u8',
-    description: 'Alternate audio track, but no video codec is signaled in the master manifest'
   },
   altAudioAndTracks: {
     url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',

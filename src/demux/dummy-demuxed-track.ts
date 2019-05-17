@@ -7,5 +7,5 @@ export const dummyTrack = () : DemuxedTrack => ({
   inputTimeScale: 90000,
   sequenceNumber: -1,
   samples: [],
-  len: 0
+  dropped: 0
 });

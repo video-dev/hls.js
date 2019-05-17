@@ -21,10 +21,9 @@ export interface DemuxedTrack {
   inputTimeScale: number
   sequenceNumber: number
   samples: any
-  len: number,
   timescale?: number
   container?: string
-  dropped?: number
+  dropped: number
   duration?: number
   pesData?: ElementaryStreamData | null
   codec?: string
@@ -48,6 +47,6 @@ export interface DemuxedAvcTrack extends DemuxedTrack {
 }
 
 export interface ElementaryStreamData {
-  data: Array<number>
+  data: Array<Uint8Array>
   size: number
 }
