@@ -147,6 +147,10 @@ export function getFullFrameLength (data, offset) {
     ((data[offset + 5] & 0xE0) >>> 5);
 }
 
+export function canGetFrameLength (data, offset) {
+  return offset + 5 < data.length;
+}
+
 export function isHeader (data, offset) {
   // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
   // Layer bits (position 14 and 15) in header should be always 0 for ADTS
@@ -156,6 +160,14 @@ export function isHeader (data, offset) {
   }
 
   return false;
+}
+
+export function canParse (data, offset) {
+  return (
+    canGetFrameLength(data, offset) &&
+    isHeaderPattern(data, offset) &&
+    getFullFrameLength(data, offset) < data.length - offset
+  );
 }
 
 export function probe (data, offset) {

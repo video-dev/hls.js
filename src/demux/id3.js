@@ -107,6 +107,10 @@ class ID3 {
     return size;
   }
 
+  static canParse (data, offset) {
+    return ID3.isHeader(data, offset) && ID3._readSize(data, offset + 6) + 10 <= data.length - offset;
+  }
+
   /**
    * Searches for the Elementary Stream timestamp found in the ID3 data chunk
    * @param {Uint8Array} data - Block of data containing one or more ID3 tags
