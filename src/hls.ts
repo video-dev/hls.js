@@ -16,7 +16,7 @@ import ID3TrackController from './controller/id3-track-controller';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import { hlsDefaultConfig } from './config';
+import { hlsDefaultConfig, HlsConfig } from './config';
 
 import HlsEvents from './events';
 
@@ -28,17 +28,33 @@ import { Observer } from './observer';
  * @constructor
  */
 export default class Hls extends Observer {
+  public static defaultConfig?: HlsConfig;
+  public config: HlsConfig;
+
+  private _autoLevelCapping: number;
+  private abrController: any;
+  private capLevelController: any;
+  private levelController: any;
+  private streamController: any;
+  private networkControllers: any[];
+  private audioTrackController: any;
+  private subtitleTrackController: any;
+  private emeController: any;
+  private coreComponents: any[];
+  private media: HTMLMediaElement | null = null;
+  private url: string | null = null;
+
   /**
    * @type {string}
    */
-  static get version () {
+  static get version (): string {
     return __VERSION__;
   }
 
   /**
    * @type {boolean}
    */
-  static isSupported () {
+  static isSupported (): boolean {
     return isSupported();
   }
 
@@ -66,7 +82,7 @@ export default class Hls extends Observer {
   /**
    * @type {HlsConfig}
    */
-  static get DefaultConfig () {
+  static get DefaultConfig (): HlsConfig {
     if (!Hls.defaultConfig) {
       return hlsDefaultConfig;
     }
@@ -77,7 +93,7 @@ export default class Hls extends Observer {
   /**
    * @type {HlsConfig}
    */
-  static set DefaultConfig (defaultConfig) {
+  static set DefaultConfig (defaultConfig: HlsConfig) {
     Hls.defaultConfig = defaultConfig;
   }
 
@@ -87,30 +103,33 @@ export default class Hls extends Observer {
    * @constructs Hls
    * @param {HlsConfig} config
    */
-  constructor (config = {}) {
+  constructor (userConfig: Partial<HlsConfig> = {}) {
     super();
 
     const defaultConfig = Hls.DefaultConfig;
 
-    if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
+    if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
       throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
     }
 
-    for (let prop in defaultConfig) {
-      if (prop in config) continue;
-      config[prop] = defaultConfig[prop];
-    }
+    // Shallow clone
+    this.config = {
+      ...defaultConfig,
+      ...userConfig
+    };
+
+    const { config } = this;
 
     if (config.liveMaxLatencyDurationCount !== void 0 && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
     }
 
-    if (config.liveMaxLatencyDuration !== void 0 && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === void 0)) {
+    if (config.liveMaxLatencyDuration !== void 0 && (config.liveSyncDuration === void 0 || config.liveMaxLatencyDuration <= config.liveSyncDuration)) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"');
     }
 
     enableLogs(config.debug);
-    this.config = config;
+
     this._autoLevelCapping = -1;
 
     // core controllers and network loaders
@@ -119,7 +138,6 @@ export default class Hls extends Observer {
      * @member {AbrController} abrController
      */
     const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap
-
     const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
     const capLevelController = this.capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
     const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
@@ -243,7 +261,7 @@ export default class Hls extends Observer {
    * Attach a media element
    * @param {HTMLMediaElement} media
    */
-  attachMedia (media) {
+  attachMedia (media: HTMLMediaElement) {
     logger.log('attachMedia');
     this.media = media;
     this.trigger(HlsEvents.MEDIA_ATTACHING, { media: media });
@@ -262,7 +280,7 @@ export default class Hls extends Observer {
    * Set the source URL. Can be relative or absolute.
    * @param {string} url
    */
-  loadSource (url) {
+  loadSource (url: string) {
     url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
@@ -277,7 +295,7 @@ export default class Hls extends Observer {
    * @param {number} startPosition Set the start position to stream from
    * @default -1 None (from earliest point)
    */
-  startLoad (startPosition = -1) {
+  startLoad (startPosition: number = -1) {
     logger.log(`startLoad(${startPosition})`);
     this.networkControllers.forEach(controller => {
       controller.startLoad(startPosition);
@@ -312,13 +330,16 @@ export default class Hls extends Observer {
     logger.log('recoverMediaError');
     let media = this.media;
     this.detachMedia();
-    this.attachMedia(media);
+    if (media) {
+      this.attachMedia(media);
+    }
   }
 
   /**
    * @type {QualityLevel[]}
    */
-  get levels () {
+  // todo(typescript-levelController)
+  get levels (): any[] {
     return this.levelController.levels;
   }
 
@@ -326,7 +347,7 @@ export default class Hls extends Observer {
    * Index of quality level currently played
    * @type {number}
    */
-  get currentLevel () {
+  get currentLevel (): number {
     return this.streamController.currentLevel;
   }
 
@@ -336,7 +357,7 @@ export default class Hls extends Observer {
    * That means playback will interrupt at least shortly to re-buffer and re-sync eventually.
    * @type {number} -1 for automatic level selection
    */
-  set currentLevel (newLevel) {
+  set currentLevel (newLevel: number) {
     logger.log(`set currentLevel:${newLevel}`);
     this.loadLevel = newLevel;
     this.streamController.immediateLevelSwitch();
@@ -346,7 +367,7 @@ export default class Hls extends Observer {
    * Index of next quality level loaded as scheduled by stream controller.
    * @type {number}
    */
-  get nextLevel () {
+  get nextLevel (): number {
     return this.streamController.nextLevel;
   }
 
@@ -356,7 +377,7 @@ export default class Hls extends Observer {
    * May abort current loading of data, and flush parts of buffer (outside currently played fragment region).
    * @type {number} -1 for automatic level selection
    */
-  set nextLevel (newLevel) {
+  set nextLevel (newLevel: number) {
     logger.log(`set nextLevel:${newLevel}`);
     this.levelController.manualLevel = newLevel;
     this.streamController.nextLevelSwitch();
@@ -366,7 +387,7 @@ export default class Hls extends Observer {
    * Return the quality level of the currently or last (of none is loaded currently) segment
    * @type {number}
    */
-  get loadLevel () {
+  get loadLevel (): number {
     return this.levelController.level;
   }
 
@@ -376,7 +397,7 @@ export default class Hls extends Observer {
    * Thus the moment when the quality switch will appear in effect will only be after the already existing buffer.
    * @type {number} newLevel -1 for automatic level selection
    */
-  set loadLevel (newLevel) {
+  set loadLevel (newLevel: number) {
     logger.log(`set loadLevel:${newLevel}`);
     this.levelController.manualLevel = newLevel;
   }
@@ -385,7 +406,7 @@ export default class Hls extends Observer {
    * get next quality level loaded
    * @type {number}
    */
-  get nextLoadLevel () {
+  get nextLoadLevel (): number {
     return this.levelController.nextLoadLevel;
   }
 
@@ -394,7 +415,7 @@ export default class Hls extends Observer {
    * Same as `loadLevel` but will wait for next switch (until current loading is done).
    * @type {number} level
    */
-  set nextLoadLevel (level) {
+  set nextLoadLevel (level: number) {
     this.levelController.nextLoadLevel = level;
   }
 
@@ -403,7 +424,7 @@ export default class Hls extends Observer {
    * falls back to index of first level referenced in manifest
    * @type {number}
    */
-  get firstLevel () {
+  get firstLevel (): number {
     return Math.max(this.levelController.firstLevel, this.minAutoLevel);
   }
 
@@ -411,7 +432,7 @@ export default class Hls extends Observer {
    * Sets "first-level", see getter.
    * @type {number}
    */
-  set firstLevel (newLevel) {
+  set firstLevel (newLevel: number) {
     logger.log(`set firstLevel:${newLevel}`);
     this.levelController.firstLevel = newLevel;
   }
@@ -423,7 +444,7 @@ export default class Hls extends Observer {
    * (determined from download of first segment)
    * @type {number}
    */
-  get startLevel () {
+  get startLevel (): number {
     return this.levelController.startLevel;
   }
 
@@ -434,15 +455,14 @@ export default class Hls extends Observer {
    * (determined from download of first segment)
    * @type {number} newLevel
    */
-  set startLevel (newLevel) {
+  set startLevel (newLevel: number) {
     logger.log(`set startLevel:${newLevel}`);
-    const hls = this;
     // if not in automatic start level detection, ensure startLevel is greater than minAutoLevel
     if (newLevel !== -1) {
-      newLevel = Math.max(newLevel, hls.minAutoLevel);
+      newLevel = Math.max(newLevel, this.minAutoLevel);
     }
 
-    hls.levelController.startLevel = newLevel;
+    this.levelController.startLevel = newLevel;
   }
 
   /**
@@ -450,7 +470,7 @@ export default class Hls extends Observer {
    *
    * @type {boolean}
    */
-  set capLevelToPlayerSize (shouldStartCapping) {
+  set capLevelToPlayerSize (shouldStartCapping: boolean) {
     const newCapLevelToPlayerSize = !!shouldStartCapping;
 
     if (newCapLevelToPlayerSize !== this.config.capLevelToPlayerSize) {
@@ -470,7 +490,7 @@ export default class Hls extends Observer {
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
    * @type {number}
    */
-  get autoLevelCapping () {
+  get autoLevelCapping (): number {
     return this._autoLevelCapping;
   }
 
@@ -478,7 +498,7 @@ export default class Hls extends Observer {
    * get bandwidth estimate
    * @type {number}
    */
-  get bandwidthEstimate () {
+  get bandwidthEstimate (): number {
     const bwEstimator = this.abrController._bwEstimator;
     return bwEstimator ? bwEstimator.getEstimate() : NaN;
   }
@@ -487,7 +507,7 @@ export default class Hls extends Observer {
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
    * @type {number}
    */
-  set autoLevelCapping (newLevel) {
+  set autoLevelCapping (newLevel: number) {
     logger.log(`set autoLevelCapping:${newLevel}`);
     this._autoLevelCapping = newLevel;
   }
@@ -496,7 +516,7 @@ export default class Hls extends Observer {
    * True when automatic level selection enabled
    * @type {boolean}
    */
-  get autoLevelEnabled () {
+  get autoLevelEnabled (): boolean {
     return (this.levelController.manualLevel === -1);
   }
 
@@ -504,7 +524,7 @@ export default class Hls extends Observer {
    * Level set manually (if any)
    * @type {number}
    */
-  get manualLevel () {
+  get manualLevel (): number {
     return this.levelController.manualLevel;
   }
 
@@ -512,17 +532,20 @@ export default class Hls extends Observer {
    * min level selectable in auto mode according to config.minAutoBitrate
    * @type {number}
    */
-  get minAutoLevel () {
-    const hls = this;
-    const levels = hls.levels;
-    const minAutoBitrate = hls.config.minAutoBitrate;
+  get minAutoLevel (): number {
+    const { levels, config: { minAutoBitrate } } = this;
     const len = levels ? levels.length : 0;
+
     for (let i = 0; i < len; i++) {
-      const levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate;
+      const levelNextBitrate = levels[i].realBitrate
+        ? Math.max(levels[i].realBitrate, levels[i].bitrate)
+        : levels[i].bitrate;
+
       if (levelNextBitrate > minAutoBitrate) {
         return i;
       }
     }
+
     return 0;
   }
 
@@ -530,10 +553,9 @@ export default class Hls extends Observer {
    * max level selectable in auto mode according to autoLevelCapping
    * @type {number}
    */
-  get maxAutoLevel () {
-    const hls = this;
-    const levels = hls.levels;
-    const autoLevelCapping = hls.autoLevelCapping;
+  get maxAutoLevel (): number {
+    const { levels, autoLevelCapping } = this;
+
     let maxAutoLevel;
     if (autoLevelCapping === -1 && levels && levels.length) {
       maxAutoLevel = levels.length - 1;
@@ -548,10 +570,9 @@ export default class Hls extends Observer {
    * next automatically selected quality level
    * @type {number}
    */
-  get nextAutoLevel () {
-    const hls = this;
+  get nextAutoLevel (): number {
     // ensure next auto level is between  min and max auto level
-    return Math.min(Math.max(hls.abrController.nextAutoLevel, hls.minAutoLevel), hls.maxAutoLevel);
+    return Math.min(Math.max(this.abrController.nextAutoLevel, this.minAutoLevel), this.maxAutoLevel);
   }
 
   /**
@@ -562,15 +583,15 @@ export default class Hls extends Observer {
    * this value will be resetted to -1 by ABR controller.
    * @type {number}
    */
-  set nextAutoLevel (nextLevel) {
-    const hls = this;
-    hls.abrController.nextAutoLevel = Math.max(hls.minAutoLevel, nextLevel);
+  set nextAutoLevel (nextLevel: number) {
+    this.abrController.nextAutoLevel = Math.max(this.minAutoLevel, nextLevel);
   }
 
   /**
    * @type {AudioTrack[]}
    */
-  get audioTracks () {
+  // todo(typescript-audioTrackController)
+  get audioTracks (): any[] {
     const audioTrackController = this.audioTrackController;
     return audioTrackController ? audioTrackController.audioTracks : [];
   }
@@ -579,7 +600,7 @@ export default class Hls extends Observer {
    * index of the selected audio track (index in audio track lists)
    * @type {number}
    */
-  get audioTrack () {
+  get audioTrack (): number {
     const audioTrackController = this.audioTrackController;
     return audioTrackController ? audioTrackController.audioTrack : -1;
   }
@@ -588,7 +609,7 @@ export default class Hls extends Observer {
    * selects an audio track, based on its index in audio track lists
    * @type {number}
    */
-  set audioTrack (audioTrackId) {
+  set audioTrack (audioTrackId: number) {
     const audioTrackController = this.audioTrackController;
     if (audioTrackController) {
       audioTrackController.audioTrack = audioTrackId;
@@ -598,7 +619,7 @@ export default class Hls extends Observer {
   /**
    * @type {Seconds}
    */
-  get liveSyncPosition () {
+  get liveSyncPosition (): number {
     return this.streamController.liveSyncPosition;
   }
 
@@ -606,7 +627,8 @@ export default class Hls extends Observer {
    * get alternate subtitle tracks list from playlist
    * @type {SubtitleTrack[]}
    */
-  get subtitleTracks () {
+  // todo(typescript-subtitleTrackController)
+  get subtitleTracks (): any[] {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
@@ -615,16 +637,16 @@ export default class Hls extends Observer {
    * index of the selected subtitle track (index in subtitle track lists)
    * @type {number}
    */
-  get subtitleTrack () {
+  get subtitleTrack (): number {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTrack : -1;
   }
 
   /**
    * select an subtitle track, based on its index in subtitle track lists
-   * @type{number}
+   * @type {number}
    */
-  set subtitleTrack (subtitleTrackId) {
+  set subtitleTrack (subtitleTrackId: number) {
     const subtitleTrackController = this.subtitleTrackController;
     if (subtitleTrackController) {
       subtitleTrackController.subtitleTrack = subtitleTrackId;
@@ -634,7 +656,7 @@ export default class Hls extends Observer {
   /**
    * @type {boolean}
    */
-  get subtitleDisplay () {
+  get subtitleDisplay (): boolean {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleDisplay : false;
   }
@@ -643,7 +665,7 @@ export default class Hls extends Observer {
    * Enable/disable subtitle display rendering
    * @type {boolean}
    */
-  set subtitleDisplay (value) {
+  set subtitleDisplay (value: boolean) {
     const subtitleTrackController = this.subtitleTrackController;
     if (subtitleTrackController) {
       subtitleTrackController.subtitleDisplay = value;

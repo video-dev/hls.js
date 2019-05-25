@@ -13,7 +13,7 @@ const cueString2millis = function (timeString) {
   let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
   if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {
-    return -1;
+    throw Error(`Malformed X-TIMESTAMP-MAP: Local:${timeString}`);
   }
 
   ts += 1000 * secs;
@@ -72,6 +72,7 @@ const WebVTTParser = {
     let cues = [];
     let parsingError;
     let inHeader = true;
+    let timestampMap = false;
     // let VTTCue = VTTCue || window.TextTrackCue;
 
     // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
@@ -97,8 +98,10 @@ const WebVTTParser = {
         cueOffset = presentationTime - vttCCs.presentationOffset;
       }
 
-      cue.startTime += cueOffset - localTime;
-      cue.endTime += cueOffset - localTime;
+      if (timestampMap) {
+        cue.startTime += cueOffset - localTime;
+        cue.endTime += cueOffset - localTime;
+      }
 
       // Create a unique hash id for a cue based on start/end times and text.
       // This helps timeline-controller to avoid showing repeated captions.
@@ -130,6 +133,7 @@ const WebVTTParser = {
         if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
           // Once found, no more are allowed anyway, so stop searching.
           inHeader = false;
+          timestampMap = true;
           // Extract LOCAL and MPEGTS.
           line.substr(16).split(',').forEach(timestamp => {
             if (startsWith(timestamp, 'LOCAL:')) {
@@ -149,12 +153,9 @@ const WebVTTParser = {
             localTime = cueString2millis(cueTime) / 1000;
             // Convert MPEGTS to seconds from 90kHz.
             presentationTime = mpegTs / 90000;
-
-            if (localTime === -1) {
-              parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
-            }
           } catch (e) {
-            parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
+            timestampMap = false;
+            parsingError = e;
           }
           // Return without parsing X-TIMESTAMP-MAP line.
           return;
