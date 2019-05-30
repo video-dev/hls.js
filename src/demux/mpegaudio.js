@@ -112,6 +112,12 @@ const MpegAudio = {
     return false;
   },
 
+  canParse: function (data, offset) {
+    let headerSize = 4;
+
+    return this.isHeaderPattern(data, offset) && data.length - offset >= headerSize;
+  },
+
   probe: function (data, offset) {
     // same as isHeader but we also check that MPEG frame follows last MPEG frame
     // or end of data is reached

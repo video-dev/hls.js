@@ -4,27 +4,22 @@
 import ID3 from '../demux/id3';
 import { logger } from '../utils/logger';
 import MpegAudio from './mpegaudio';
-import { DemuxerResult } from '../types/demuxer';
-import NonProgressiveDemuxer from './non-progressive-demuxer';
+import { DemuxerResult, Demuxer } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
+import { appendUint8Array } from '../utils/mp4-tools';
 
-class MP3Demuxer extends NonProgressiveDemuxer {
-  private observer: any;
-  private config: any;
+class MP3Demuxer implements Demuxer {
   private _audioTrack!: any;
-  constructor (observer, config) {
-    super();
-    this.observer = observer;
-    this.config = config;
-  }
+  private cachedData: Uint8Array = new Uint8Array();
+  private frameIndex: number = 0;
+  private initPTS: number | null = null;
+  static readonly minProbeByteLength: number = 4;
 
   resetInitSegment (audioCodec, videoCodec, duration) {
     this._audioTrack = { container: 'audio/mpeg', type: 'audio', id: -1, sequenceNumber: 0, isAAC: false, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
-    super.resetInitSegment(audioCodec, videoCodec, duration);
   }
 
   resetTimeStamp () {
-    super.resetTimeStamp()
   }
 
   static probe (data) {
@@ -47,34 +42,49 @@ class MP3Demuxer extends NonProgressiveDemuxer {
 
   // feed incoming data to the front of the parsing pipeline
   demux (data, timeOffset) {
-    let id3Data = ID3.getID3Data(data, 0);
-    let timestamp = ID3.getTimeStamp(id3Data);
-    let pts = timestamp ? 90 * timestamp : timeOffset * 90000;
-    let offset = id3Data.length;
-    let length = data.length;
-    let frameIndex = 0, stamp = 0;
-    let track = this._audioTrack;
+    if (this.cachedData.length) {
+      data = appendUint8Array(this.cachedData, data);
+      this.cachedData = new Uint8Array();
+    }
 
-    let id3Samples = [{ pts: pts, dts: pts, data: id3Data }];
+    let id3Data = ID3.getID3Data(data, 0) || [];
+    let offset = id3Data.length;
+    let pts;
+    const track = this._audioTrack;
+    const timestamp = ID3.getTimeStamp(id3Data);
+    const length = data.length;
+    const id3Samples: any[] = [];
+    
+    if (this.initPTS === null) {
+      this.initPTS = timestamp ? 90 * timestamp : timeOffset * 90000;
+    }
+
+    if (id3Data.length) {
+      id3Samples.push({ pts: this.initPTS, dts: this.initPTS, data: id3Data });
+    }
 
     while (offset < length) {
-      if (MpegAudio.isHeader(data, offset)) {
-        let frame = MpegAudio.appendFrame(track, data, offset, pts, frameIndex);
+      if (MpegAudio.canParse(data, offset)) {
+        let frame = MpegAudio.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
         if (frame) {
           offset += frame.length;
-          stamp = frame.sample.pts;
-          frameIndex++;
+          pts = frame.sample.pts;
+          this.frameIndex++;
         } else {
-          // logger.log('Unable to parse Mpeg audio frame');
-          break;
+          let partialData = data.slice(offset);
+
+          this.cachedData = appendUint8Array(this.cachedData, partialData);
+          offset += partialData.length;
         }
-      } else if (ID3.isHeader(data, offset)) {
+      } else if (ID3.canParse(data, offset)) {
         id3Data = ID3.getID3Data(data, offset);
-        id3Samples.push({ pts: stamp, dts: stamp, data: id3Data });
+        id3Samples.push({ pts: pts, dts: pts, data: id3Data });
         offset += id3Data.length;
       } else {
-        // nothing found, keep looking
-        offset++;
+        let partialData = data.slice(offset);
+
+        this.cachedData = appendUint8Array(this.cachedData, partialData);
+        offset += partialData.length;
       }
     }
 
@@ -88,6 +98,24 @@ class MP3Demuxer extends NonProgressiveDemuxer {
 
   demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
     return Promise.reject(new Error('The MP3 demuxer does not support SAMPLE-AES decryption'));
+  }
+
+  flush (timeOffset): DemuxerResult {
+    // Parse cache in case of remaining frames.
+    if (this.cachedData) {
+      this.demux(this.cachedData, 0);
+    }
+    
+    this.frameIndex = 0;
+    this.initPTS = null;
+    this.cachedData = new Uint8Array();
+    
+    return {
+      audioTrack: this._audioTrack,
+      avcTrack: dummyTrack(),
+      id3Track: dummyTrack(),
+      textTrack: dummyTrack()
+    };
   }
 
   destroy () {
