@@ -3,13 +3,17 @@ import M3U8Parser from '../../../src/loader/m3u8-parser';
 
 describe('PlaylistLoader', function () {
   it('parses empty manifest returns empty array', function () {
-    expect(M3U8Parser.parseMasterPlaylist('', 'http://www.dailymotion.com')).to.deep.equal([]);
+    const result = M3U8Parser.parseMasterPlaylist('', 'http://www.dailymotion.com');
+    expect(result.levels).to.deep.equal([]);
+    expect(result.sessionData).to.equal(null);
   });
 
   it('manifest with broken syntax returns empty array', function () {
     let manifest = `#EXTXSTREAMINF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
-    expect(M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com')).to.deep.equal([]);
+    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
+    expect(result.levels).to.deep.equal([]);
+    expect(result.sessionData).to.equal(null);
   });
 
   it('parses manifest with one level', function () {
@@ -18,14 +22,15 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     let result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
-    expect(result).to.have.lengthOf(1);
-    expect(result[0]['bitrate']).to.equal(836280);
-    expect(result[0]['audioCodec']).to.equal('mp4a.40.2');
-    expect(result[0]['videoCodec']).to.equal('avc1.64001f');
-    expect(result[0]['width']).to.equal(848);
-    expect(result[0]['height']).to.equal(360);
-    expect(result[0]['name']).to.equal('480');
-    expect(result[0]['url']).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.levels).to.have.lengthOf(1);
+    expect(result.levels[0]['bitrate']).to.equal(836280);
+    expect(result.levels[0]['audioCodec']).to.equal('mp4a.40.2');
+    expect(result.levels[0]['videoCodec']).to.equal('avc1.64001f');
+    expect(result.levels[0]['width']).to.equal(848);
+    expect(result.levels[0]['height']).to.equal(360);
+    expect(result.levels[0]['name']).to.equal('480');
+    expect(result.levels[0]['url']).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.sessionData).to.equal(null);
   });
 
   it('parses manifest without codecs', function () {
@@ -34,14 +39,15 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     let result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
-    expect(result.length, 1);
-    expect(result[0]['bitrate']).to.equal(836280);
-    expect(result[0]['audioCodec']).to.not.exist;
-    expect(result[0]['videoCodec']).to.not.exist;
-    expect(result[0]['width']).to.equal(848);
-    expect(result[0]['height']).to.equal(360);
-    expect(result[0]['name']).to.equal('480');
-    expect(result[0]['url']).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.levels.length, 1);
+    expect(result.levels[0]['bitrate']).to.equal(836280);
+    expect(result.levels[0]['audioCodec']).to.not.exist;
+    expect(result.levels[0]['videoCodec']).to.not.exist;
+    expect(result.levels[0]['width']).to.equal(848);
+    expect(result.levels[0]['height']).to.equal(360);
+    expect(result.levels[0]['name']).to.equal('480');
+    expect(result.levels[0]['url']).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.sessionData).to.equal(null);
   });
 
   it('does not care about the attribute order', function () {
@@ -50,42 +56,45 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     let result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
-    expect(result.length, 1);
-    expect(result[0]['bitrate'], 836280);
-    expect(result[0]['audioCodec'], 'mp4a.40.2');
-    expect(result[0]['videoCodec'], 'avc1.64001f');
-    expect(result[0]['width'], 848);
-    expect(result[0]['height'], 360);
-    expect(result[0]['name'], '480');
-    expect(result[0]['url'], 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.levels.length, 1);
+    expect(result.levels[0]['bitrate'], 836280);
+    expect(result.levels[0]['audioCodec'], 'mp4a.40.2');
+    expect(result.levels[0]['videoCodec'], 'avc1.64001f');
+    expect(result.levels[0]['width'], 848);
+    expect(result.levels[0]['height'], 360);
+    expect(result.levels[0]['name'], '480');
+    expect(result.levels[0]['url'], 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.sessionData).to.equal(null);
 
     manifest = `#EXTM3U
 #EXT-X-STREAM-INF:NAME="480",RESOLUTION=848x360,PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f"
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
-    expect(result.length, 1);
-    expect(result[0]['bitrate']).to.equal(836280);
-    expect(result[0]['audioCodec']).to.equal('mp4a.40.2');
-    expect(result[0]['videoCodec']).to.equal('avc1.64001f');
-    expect(result[0]['width']).to.equal(848);
-    expect(result[0]['height']).to.equal(360);
-    expect(result[0]['name']).to.equal('480');
-    expect(result[0]['url']).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.levels.length, 1);
+    expect(result.levels[0]['bitrate']).to.equal(836280);
+    expect(result.levels[0]['audioCodec']).to.equal('mp4a.40.2');
+    expect(result.levels[0]['videoCodec']).to.equal('avc1.64001f');
+    expect(result.levels[0]['width']).to.equal(848);
+    expect(result.levels[0]['height']).to.equal(360);
+    expect(result.levels[0]['name']).to.equal('480');
+    expect(result.levels[0]['url']).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.sessionData).to.equal(null);
 
     manifest = `#EXTM3U
 #EXT-X-STREAM-INF:CODECS="mp4a.40.2,avc1.64001f",NAME="480",RESOLUTION=848x360,PROGRAM-ID=1,BANDWIDTH=836280
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
-    expect(result).to.have.lengthOf(1);
-    expect(result[0]['bitrate']).to.equal(836280);
-    expect(result[0]['audioCodec']).to.equal('mp4a.40.2');
-    expect(result[0]['videoCodec']).to.equal('avc1.64001f');
-    expect(result[0]['width']).to.equal(848);
-    expect(result[0]['height']).to.equal(360);
-    expect(result[0]['name']).to.equal('480');
-    expect(result[0]['url']).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.levels).to.have.lengthOf(1);
+    expect(result.levels[0]['bitrate']).to.equal(836280);
+    expect(result.levels[0]['audioCodec']).to.equal('mp4a.40.2');
+    expect(result.levels[0]['videoCodec']).to.equal('avc1.64001f');
+    expect(result.levels[0]['width']).to.equal(848);
+    expect(result.levels[0]['height']).to.equal(360);
+    expect(result.levels[0]['name']).to.equal('480');
+    expect(result.levels[0]['url']).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+    expect(result.sessionData).to.equal(null);
   });
 
   it('parses manifest with 10 levels', function () {
@@ -112,17 +121,55 @@ http://proxy-62.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
 http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/282/158282701_mp4_h264_aac_fhd.m3u8#cell=core`;
 
     let result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
-    expect(result.length, 10);
-    expect(result[0]['bitrate']).to.equal(836280);
-    expect(result[1]['bitrate']).to.equal(836280);
-    expect(result[2]['bitrate']).to.equal(246440);
-    expect(result[3]['bitrate']).to.equal(246440);
-    expect(result[4]['bitrate']).to.equal(460560);
-    expect(result[5]['bitrate']).to.equal(460560);
-    expect(result[6]['bitrate']).to.equal(2149280);
-    expect(result[7]['bitrate']).to.equal(2149280);
-    expect(result[8]['bitrate']).to.equal(6221600);
-    expect(result[9]['bitrate']).to.equal(6221600);
+    expect(result.levels.length, 10);
+    expect(result.levels[0]['bitrate']).to.equal(836280);
+    expect(result.levels[1]['bitrate']).to.equal(836280);
+    expect(result.levels[2]['bitrate']).to.equal(246440);
+    expect(result.levels[3]['bitrate']).to.equal(246440);
+    expect(result.levels[4]['bitrate']).to.equal(460560);
+    expect(result.levels[5]['bitrate']).to.equal(460560);
+    expect(result.levels[6]['bitrate']).to.equal(2149280);
+    expect(result.levels[7]['bitrate']).to.equal(2149280);
+    expect(result.levels[8]['bitrate']).to.equal(6221600);
+    expect(result.levels[9]['bitrate']).to.equal(6221600);
+    expect(result.sessionData).to.equal(null);
+  });
+
+  it('parses manifest with EXT-X-SESSION-DATA', function () {
+    let manifest = `#EXTM3U
+#EXT-X-SESSION-DATA:DATA-ID="com.dailymotion.sessiondata.test",VALUE="some data"
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+
+    const result = M3U8Parser.parseMasterPlaylist(manifest);
+    assert.deepEqual(result.sessionData['com.dailymotion.sessiondata.test'], {
+      'DATA-ID': 'com.dailymotion.sessiondata.test',
+      'VALUE': 'some data'
+    });
+  });
+
+  it('parses manifest with multiple EXT-X-SESSION-DATA', function () {
+    let manifest = `#EXTM3U
+#EXT-X-SESSION-DATA:DATA-ID="com.dailymotion.sessiondata.test",VALUE="some data"
+#EXT-X-SESSION-DATA:DATA-ID="com.dailymotion.sessiondata.test2",VALUE="different data"
+#EXT-X-SESSION-DATA:DATA-ID="com.dailymotion.sessiondata.test3",VALUE="different data",URI="http://www.dailymotion.com/"
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+
+    const result = M3U8Parser.parseMasterPlaylist(manifest);
+    assert.deepEqual(result.sessionData['com.dailymotion.sessiondata.test'], {
+      'DATA-ID': 'com.dailymotion.sessiondata.test',
+      'VALUE': 'some data'
+    });
+    assert.deepEqual(result.sessionData['com.dailymotion.sessiondata.test2'], {
+      'DATA-ID': 'com.dailymotion.sessiondata.test2',
+      'VALUE': 'different data'
+    });
+    assert.deepEqual(result.sessionData['com.dailymotion.sessiondata.test3'], {
+      'DATA-ID': 'com.dailymotion.sessiondata.test3',
+      'VALUE': 'different data',
+      'URI': 'http://www.dailymotion.com/'
+    });
   });
 
   it('parses empty levels returns empty fragment array', function () {

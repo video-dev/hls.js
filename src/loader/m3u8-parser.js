@@ -14,7 +14,7 @@ import { isCodecType } from '../utils/codecs';
  */
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
+const MASTER_PLAYLIST_REGEX = /((#EXT-X-STREAM-INF):([^\n\r]*)[\r\n]+([^\r\n]+))|((#EXT-X-SESSION-DATA):(.*))/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
@@ -66,49 +66,47 @@ export default class M3U8Parser {
 
   static parseMasterPlaylist (string, baseurl) {
     let levels = [];
+    let sessionData = {};
+    let hasSessionData = false;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
-
-    function setCodecs (codecs, level) {
-      ['video', 'audio'].forEach((type) => {
-        const filtered = codecs.filter((codec) => isCodecType(codec, type));
-        if (filtered.length) {
-          const preferred = filtered.filter((codec) => {
-            return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
-          });
-          level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
-
-          // remove from list
-          codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
-        }
-      });
-
-      level.unknownCodecs = codecs;
-    }
 
     let result;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
-      const level = {};
+      if (result[2]) {
+        // group 2 is '#EXT-X-STREAM-INF' if found, parse level tag
+        const level = {};
 
-      const attrs = level.attrs = new AttrList(result[1]);
-      level.url = M3U8Parser.resolve(result[2], baseurl);
+        const attrs = level.attrs = new AttrList(result[3]);
+        level.url = M3U8Parser.resolve(result[4], baseurl);
 
-      const resolution = attrs.decimalResolution('RESOLUTION');
-      if (resolution) {
-        level.width = resolution.width;
-        level.height = resolution.height;
+        const resolution = attrs.decimalResolution('RESOLUTION');
+        if (resolution) {
+          level.width = resolution.width;
+          level.height = resolution.height;
+        }
+        level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
+        level.name = attrs.NAME;
+
+        setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+
+        if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+          level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
+        }
+
+        levels.push(level);
+      } else if (result[6]) {
+        // group 6 is '#EXT-X-SESSION-DATA' if found, parse session data
+        let sessionAttrs = new AttrList(result[7]);
+        if (sessionAttrs['DATA-ID']) {
+          hasSessionData = true;
+          sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
+        }
       }
-      level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
-      level.name = attrs.NAME;
-
-      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
-
-      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
-        level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
-      }
-
-      levels.push(level);
     }
-    return levels;
+    return {
+      levels,
+      sessionData: hasSessionData ? sessionData : null
+    };
   }
 
   static parseMasterPlaylistMedia (string, baseurl, type, audioGroups = []) {
@@ -364,4 +362,21 @@ function assignProgramDateTime (frag, prevFrag) {
     frag.programDateTime = null;
     frag.rawProgramDateTime = null;
   }
+}
+
+function setCodecs (codecs, level) {
+  ['video', 'audio'].forEach((type) => {
+    const filtered = codecs.filter((codec) => isCodecType(codec, type));
+    if (filtered.length) {
+      const preferred = filtered.filter((codec) => {
+        return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+      });
+      level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
+
+      // remove from list
+      codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
+    }
+  });
+
+  level.unknownCodecs = codecs;
 }
