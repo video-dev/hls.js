@@ -161,7 +161,13 @@ class TimelineController extends EventHandler {
   onManifestLoading () {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
-    this.vttCCs = { ccOffset: 0, presentationOffset: 0 }; // Detect discontinuity in subtitle manifests
+    this.vttCCs = { // Detect discontinuity in subtitle manifests
+      ccOffset: 0,
+      presentationOffset: 0,
+      0: {
+        start: 0, prevCC: -1, new: false
+      }
+    };
     this._cleanTracks();
   }
 
@@ -191,7 +197,15 @@ class TimelineController extends EventHandler {
       this.tracks.forEach((track, index) => {
         let textTrack;
         if (index < inUseTracks.length) {
-          const inUseTrack = [].slice.call(inUseTracks).find(inUseTrack => canReuseVttTextTrack(inUseTrack, track));
+          let inUseTrack = null;
+
+          for (let i = 0; i < inUseTracks.length; i++) {
+            if (canReuseVttTextTrack(inUseTracks[i], track)) {
+              inUseTrack = inUseTracks[i];
+              break;
+            }
+          }
+
           // Reuse tracks with the same label, but do not reuse 608/708 tracks
           if (inUseTrack) {
             textTrack = inUseTrack;
@@ -266,7 +280,7 @@ class TimelineController extends EventHandler {
 
     // Parse the WebVTT file contents.
     WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, function (cues) {
-      const currentTrack = textTracks[frag.trackId];
+      const currentTrack = textTracks[frag.level];
       // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
       // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
       // and trying to access getCueById method of cues will throw an exception

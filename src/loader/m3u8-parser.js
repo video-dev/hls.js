@@ -14,14 +14,8 @@ import { isCodecType } from '../utils/codecs';
  */
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_STREAM_INF_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
-const MASTER_PLAYLIST_SESSION_DATA_REGEX = /#EXT-X-SESSION-DATA:(.*)/g;
+const MASTER_PLAYLIST_REGEX = /((#EXT-X-STREAM-INF):([^\n\r]*)[\r\n]+([^\r\n]+))|((#EXT-X-SESSION-DATA):(.*))/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-
-const MASTER_PLAYLIST_PARSE_REGEX = new RegExp([
-  `(${MASTER_PLAYLIST_STREAM_INF_REGEX.source})`,
-  `(${MASTER_PLAYLIST_SESSION_DATA_REGEX.source})`
-].join('|'), 'g');
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
@@ -34,23 +28,6 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)([^:]*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
-
-function setLevelCodecs (level, codecs) {
-  ['video', 'audio'].forEach((type) => {
-    const filtered = codecs.filter((codec) => isCodecType(codec, type));
-    if (filtered.length) {
-      const preferred = filtered.filter((codec) => {
-        return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
-      });
-      level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
-
-      // remove from list
-      codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
-    }
-  });
-
-  level.unknownCodecs = codecs;
-}
 
 export default class M3U8Parser {
   static findGroup (groups, mediaGroupId) {
@@ -71,7 +48,8 @@ export default class M3U8Parser {
   }
 
   static convertAVC1ToAVCOTI (codec) {
-    let result, avcdata = codec.split('.');
+    let avcdata = codec.split('.');
+    let result;
     if (avcdata.length > 2) {
       result = avcdata.shift() + '.';
       result += parseInt(avcdata.shift()).toString(16);
@@ -86,55 +64,45 @@ export default class M3U8Parser {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
-  /**
-   * @param result {RegExpExecArray}
-   * @private
-   */
-  static _parseMasterPlaylistLevel (result, baseurl) {
-    const level = {};
-
-    const attrs = level.attrs = new AttrList(result[1]);
-    level.url = M3U8Parser.resolve(result[2], baseurl);
-
-    const resolution = attrs.decimalResolution('RESOLUTION');
-    if (resolution) {
-      level.width = resolution.width;
-      level.height = resolution.height;
-    }
-    level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
-    level.name = attrs.NAME;
-
-    setLevelCodecs(level, [].concat((attrs.CODECS || '').split(/[ ,]+/)));
-
-    if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
-      level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
-    }
-
-    return level;
-  }
-
   static parseMasterPlaylist (string, baseurl) {
     let levels = [];
     let sessionData = {};
     let hasSessionData = false;
-    let result, tmp;
+    MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
-    MASTER_PLAYLIST_PARSE_REGEX.lastIndex = 0;
-    MASTER_PLAYLIST_SESSION_DATA_REGEX.lastIndex = 0;
-    MASTER_PLAYLIST_STREAM_INF_REGEX.lastIndex = 0;
+    let result;
+    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
+      if (result[2]) {
+        // group 2 is '#EXT-X-STREAM-INF' if found, parse level tag
+        const level = {};
 
-    while ((tmp = MASTER_PLAYLIST_PARSE_REGEX.exec(string)) != null) {
-      if ((result = MASTER_PLAYLIST_STREAM_INF_REGEX.exec(tmp[0])) !== null) {
-        levels.push(this._parseMasterPlaylistLevel(result, baseurl));
-      } else if ((result = MASTER_PLAYLIST_SESSION_DATA_REGEX.exec(tmp))) {
-        let sessionAttrs = new AttrList(result[1]);
+        const attrs = level.attrs = new AttrList(result[3]);
+        level.url = M3U8Parser.resolve(result[4], baseurl);
+
+        const resolution = attrs.decimalResolution('RESOLUTION');
+        if (resolution) {
+          level.width = resolution.width;
+          level.height = resolution.height;
+        }
+        level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
+        level.name = attrs.NAME;
+
+        setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+
+        if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+          level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
+        }
+
+        levels.push(level);
+      } else if (result[6]) {
+        // group 6 is '#EXT-X-SESSION-DATA' if found, parse session data
+        let sessionAttrs = new AttrList(result[7]);
         if (sessionAttrs['DATA-ID']) {
           hasSessionData = true;
           sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
         }
       }
     }
-
     return {
       levels,
       sessionData: hasSessionData ? sessionData : null
@@ -221,12 +189,11 @@ export default class M3U8Parser {
           frag = new Fragment();
         }
       } else if (result[4]) { // X-BYTERANGE
-        frag.rawByteRange = (' ' + result[4]).slice(1);
+        const data = (' ' + result[4]).slice(1);
         if (prevFrag) {
-          const lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
-          if (lastByteRangeEndOffset) {
-            frag.lastByteRangeEndOffset = lastByteRangeEndOffset;
-          }
+          frag.setByteRange(data, prevFrag);
+        } else {
+          frag.setByteRange(data);
         }
       } else if (result[5]) { // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
@@ -238,7 +205,7 @@ export default class M3U8Parser {
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
-          if (result[i] !== undefined) {
+          if (typeof result[i] !== 'undefined') {
             break;
           }
         }
@@ -275,13 +242,14 @@ export default class M3U8Parser {
         case 'DISCONTINUITY-SEQ':
           cc = parseInt(value1);
           break;
-        case 'KEY':
+        case 'KEY': {
           // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-          var decryptparams = value1;
-          var keyAttrs = new AttrList(decryptparams);
-          var decryptmethod = keyAttrs.enumeratedString('METHOD'),
-            decrypturi = keyAttrs.URI,
-            decryptiv = keyAttrs.hexadecimalInteger('IV');
+          const decryptparams = value1;
+          const keyAttrs = new AttrList(decryptparams);
+          const decryptmethod = keyAttrs.enumeratedString('METHOD');
+          const decrypturi = keyAttrs.URI;
+          const decryptiv = keyAttrs.hexadecimalInteger('IV');
+
           if (decryptmethod) {
             levelkey = new LevelKey();
             if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
@@ -295,20 +263,22 @@ export default class M3U8Parser {
             }
           }
           break;
-        case 'START':
-          let startParams = value1;
-          let startAttrs = new AttrList(startParams);
-          let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+        }
+        case 'START': {
+          const startAttrs = new AttrList(value1);
+          const startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
           // TIME-OFFSET can be 0
           if (Number.isFinite(startTimeOffset)) {
             level.startTimeOffset = startTimeOffset;
           }
-
           break;
-        case 'MAP':
-          let mapAttrs = new AttrList(value1);
+        }
+        case 'MAP': {
+          const mapAttrs = new AttrList(value1);
           frag.relurl = mapAttrs.URI;
-          frag.rawByteRange = mapAttrs.BYTERANGE;
+          if (mapAttrs.BYTERANGE) {
+            frag.setByteRange(mapAttrs.BYTERANGE);
+          }
           frag.baseurl = baseurl;
           frag.level = id;
           frag.type = type;
@@ -317,6 +287,7 @@ export default class M3U8Parser {
           frag = new Fragment();
           frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
           break;
+        }
         default:
           logger.warn(`line parsed but not handled: ${result}`);
           break;
@@ -391,4 +362,21 @@ function assignProgramDateTime (frag, prevFrag) {
     frag.programDateTime = null;
     frag.rawProgramDateTime = null;
   }
+}
+
+function setCodecs (codecs, level) {
+  ['video', 'audio'].forEach((type) => {
+    const filtered = codecs.filter((codec) => isCodecType(codec, type));
+    if (filtered.length) {
+      const preferred = filtered.filter((codec) => {
+        return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+      });
+      level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
+
+      // remove from list
+      codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
+    }
+  });
+
+  level.unknownCodecs = codecs;
 }

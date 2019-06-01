@@ -3,28 +3,15 @@ set -e
 
 # GITHUB_TOKEN and NETLIFY_ACCESS_TOKEN set in travis
 
-id=$(git rev-parse HEAD)
+currentCommit=$(git rev-parse HEAD)
+masterLatestCommit=$(git rev-parse master)
+
+id=$currentCommit
 root="./netlify"
-tag=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "")
-idShort=$(echo "$id" | cut -c 1-8)
-if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
-  idShort="$idShort ($tag)"
-fi
+version=$(jq -r -e '.version' "./package.json")
+idShort="$(echo "$id" | cut -c 1-8) ($version)"
 latestSiteId="642d9ad4-f002-4104-9309-40ed9cd81a1f"
 stableSiteId="deef7ecf-4c3e-4de0-b6bb-676b02e1c20e"
-
-rm -rf "$root"
-mkdir "$root"
-
-echo "Building netlify for $id"
-
-# redirect / to /demo
-echo "/ /demo" > "$root/_redirects"
-cp -r "./dist" "$root/dist"
-cp -r "./demo" "$root/demo"
-cp -r "./api-docs" "$root/api-docs"
-
-echo "Built netlify."
 
 deploy () {
   siteId=$1
@@ -33,16 +20,21 @@ deploy () {
   echo "Deployed netlify to '$siteId'."
 }
 
-echo "Creating site for current commit."
+echo "Creating site for current commit ($id)."
 uuid=$(uuidgen)
 commitSiteName="hls-js-$uuid"
-commitSiteId=$(curl --fail -d "{\"name\":\"$commitSiteName\"}" -H "Content-Type: application/json" -X POST "https://api.netlify.com/api/v1/sites?access_token=$NETLIFY_ACCESS_TOKEN" | jq -r '.site_id')
+commitSiteId=$(curl --fail -d "{\"name\":\"$commitSiteName\"}" -H "Content-Type: application/json" -X POST "https://api.netlify.com/api/v1/hls-js/sites?access_token=$NETLIFY_ACCESS_TOKEN" | jq -r '.site_id')
 echo "Created site '$commitSiteId'."
 
 deploy "$commitSiteId"
-deploy "$latestSiteId"
-if [ ! -z "$tag" ] && [[ $tag == v* ]]; then
-  echo "Detected tag: $tag"
+
+if [ $currentCommit = $masterLatestCommit ]; then
+  echo "On latest master commit."
+  deploy "$latestSiteId"
+fi
+
+if [[ $version != *"-"* ]]; then
+  echo "Detected new version: $version"
   deploy "$stableSiteId"
 fi
 echo "Finished deploying to netlify."
