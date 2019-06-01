@@ -671,12 +671,4 @@ export default class Hls extends Observer {
       subtitleTrackController.subtitleDisplay = value;
     }
   }
-
-  /**
-   * Parsed EXT-X-SESSION-DATA value of master playlist
-   * @return {Object.<string, AttrList>}
-   */
-  get sessionData () {
-    return this.levelController.sessionData;
-  }
 }
