@@ -180,8 +180,8 @@ describe('BufferController SourceBuffer operation queueing', function () {
     it('should trigger FRAG_BUFFERED when all audio/video data has been buffered', function () {
       const flushLiveBackBufferSpy = sandbox.spy(bufferController, 'flushLiveBackBuffer');
       const frag = new Fragment();
-      frag.addElementaryStream(ElementaryStreamTypes.AUDIO);
-      frag.addElementaryStream(ElementaryStreamTypes.VIDEO);
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 
       bufferController.onFragParsed({ frag });
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;

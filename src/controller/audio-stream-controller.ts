@@ -3,7 +3,7 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import Event from '../events';
 import * as LevelHelper from './level-helper';
 import TimeRanges from '../utils/time-ranges';
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
 import { FragmentState } from './fragment-tracker';
@@ -592,12 +592,10 @@ class AudioStreamController extends BaseStreamController {
       this.warn(`The loading context changed while buffering fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}. This chunk will not be buffered.`);
       return;
     }
-    const { frag, level } = context;
-
-    this.state = State.PARSING;
-
+    const { frag } = context;
     const { audio, text, id3, initSegment } = remuxResult;
 
+    this.state = State.PARSING;
     if (this.audioSwitch && audio) {
       this.completeAudioSwitch();
     }
@@ -608,7 +606,8 @@ class AudioStreamController extends BaseStreamController {
       // Only flush audio from old audio tracks when PTS is known on new audio track
     }
     if (audio) {
-      this._bufferFragmentData(frag, level, audio);
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, audio.startPTS, audio.endPTS, audio.startDTS, audio.endDTS);
+      this.bufferFragmentData(audio, 'audio');
     }
     if (id3) {
       id3.frag = frag;
@@ -647,29 +646,6 @@ class AudioStreamController extends BaseStreamController {
       this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
     }
     // trigger handler right now
-    this.tick();
-  }
-
-  private _bufferFragmentData (frag, currentLevel, data) {
-    if (this.state !== State.PARSING) {
-      return;
-    }
-
-    frag.addElementaryStream(ElementaryStreamTypes.AUDIO);
-    if (!Number.isFinite(data.endPTS)) {
-      data.endPTS = data.startPTS + frag.duration;
-      data.endDTS = data.startDTS + frag.duration;
-    }
-    // this.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
-
-    LevelHelper.updateFragPTSDTS(currentLevel.details, frag, data.startPTS, data.endPTS, data.startDTS, data.endDTS);
-
-    const buffer = this.combineFragmentData(data.data1, data.data2);
-    if (!buffer || !buffer.length) {
-      return;
-    }
-
-    this.hls.trigger(Event.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'audio', content: 'data' });
     this.tick();
   }
 

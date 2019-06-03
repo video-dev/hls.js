@@ -252,10 +252,11 @@ export default class BufferController extends EventHandler {
 
   onFragParsed ({ frag }) {
     let buffersAppendedTo: Array<SourceBufferName> = [];
-    if (frag.hasElementaryStream(ElementaryStreamTypes.AUDIO)) {
+
+    if (frag.elementaryStreams[ElementaryStreamTypes.AUDIO]) {
       buffersAppendedTo.push('audio');
     }
-    if (frag.hasElementaryStream(ElementaryStreamTypes.VIDEO)) {
+    if (frag.elementaryStreams[ElementaryStreamTypes.VIDEO]) {
       buffersAppendedTo.push('video');
     }
     console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);

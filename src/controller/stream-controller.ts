@@ -1174,10 +1174,6 @@ export default class StreamController extends BaseStreamController {
       audio = null;
     }
 
-    // Update timing before a potential backtrack
-    this._updateTiming(frag, level, audio);
-    this._updateTiming(frag, level, video);
-
     this.state = State.PARSING;
 
     if (initSegment) {
@@ -1196,11 +1192,15 @@ export default class StreamController extends BaseStreamController {
         this._backtrack(frag, video.startPTS);
         return;
       } else {
-        this._bufferFragmentData(video);
+        frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, video.startPTS, video.endPTS, video.startDTS, video.endDTS);
+        this.bufferFragmentData(video, 'main');
       }
     }
 
-    this._bufferFragmentData(audio);
+    if (audio) {
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, audio.startPTS, audio.endPTS, audio.startDTS, audio.endDTS);
+      this.bufferFragmentData(audio, 'main');
+    }
 
     if (id3) {
       id3.frag = frag;
@@ -1267,44 +1267,6 @@ export default class StreamController extends BaseStreamController {
     });
     // trigger handler right now
     this.tick();
-  }
-
-  private _bufferFragmentData (data) {
-    if (!data || this.state !== State.PARSING) {
-      return;
-    }
-
-    const buffer = this.combineFragmentData(data.data1, data.data2);
-    if (!buffer || !buffer.length) {
-      return;
-    }
-
-    this.hls.trigger(Event.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
-    this.tick();
-  }
-
-  private _updateTiming (frag, currentLevel, data) {
-    if (!data) {
-      return;
-    }
-
-    if (!Number.isFinite(data.endPTS)) {
-      data.endPTS = data.startPTS + frag.duration;
-      data.endDTS = data.startDTS + frag.duration;
-    }
-
-    if (data.hasAudio === true) {
-      frag.addElementaryStream(ElementaryStreamTypes.AUDIO);
-    }
-
-    if (data.hasVideo === true) {
-      frag.addElementaryStream(ElementaryStreamTypes.VIDEO);
-    }
-    // this.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
-
-    const { details } = currentLevel;
-    const drift = LevelHelper.updateFragPTSDTS(details, frag, data.startPTS, data.endPTS, data.startDTS, data.endDTS);
-    this.hls.trigger(Event.LEVEL_PTS_UPDATED, { details, level: currentLevel, drift, type: data.type, start: data.startPTS, end: data.endPTS });
   }
 
   private _backtrack (frag, nextLoadPosition) {
