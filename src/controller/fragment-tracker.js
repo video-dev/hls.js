@@ -1,5 +1,6 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
+import { ElementaryStreamTypes } from '../loader/fragment';
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -105,7 +106,7 @@ export class FragmentTracker extends EventHandler {
       fragmentEntity.buffered = true;
 
       Object.keys(this.timeRanges).forEach(elementaryStream => {
-        if (fragment.hasElementaryStream(elementaryStream)) {
+        if (fragment.elementaryStreams[elementaryStream]) {
           let timeRange = this.timeRanges[elementaryStream];
           // Check for malformed fragments
           // Gaps need to be calculated for each elementaryStream

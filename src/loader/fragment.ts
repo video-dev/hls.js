@@ -15,15 +15,22 @@ export enum FragmentTypes {
   SUBTITLE = 'subtitle'
 }
 
+interface ElementaryStreamInfo {
+  startPTS: number
+  endPTS: number
+  startDTS: number
+  endDTS: number
+}
+
 export default class Fragment {
   private _url: string | null = null;
   private _byteRange: number[] | null = null;
   private _decryptdata: LevelKey | null = null;
 
   // Holds the types of data this fragment supports
-  private _elementaryStreams: Record<ElementaryStreamTypes, boolean> = {
-    [ElementaryStreamTypes.AUDIO]: false,
-    [ElementaryStreamTypes.VIDEO]: false
+  public elementaryStreams: Record<ElementaryStreamTypes, ElementaryStreamInfo | null> = {
+    [ElementaryStreamTypes.AUDIO]: null,
+    [ElementaryStreamTypes.VIDEO]: null
   };
 
   public rawProgramDateTime: string | null = null;
@@ -169,21 +176,6 @@ export default class Fragment {
   }
 
   /**
-   * @param {ElementaryStreamTypes} type
-   */
-  addElementaryStream (type: ElementaryStreamTypes) {
-    this._elementaryStreams[type] = true;
-  }
-
-  /**
-   * @param {ElementaryStreamTypes} type
-   */
-  hasElementaryStream (type: ElementaryStreamTypes) {
-    return this._elementaryStreams[type];
-  }
-
-
-  /**
    * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
    * @param {number} segmentNumber - segment number to generate IV with
    * @returns {Uint8Array}
@@ -214,5 +206,24 @@ export default class Fragment {
     }
 
     return decryptdata;
+  }
+
+  setElementaryStreamInfo (type: ElementaryStreamTypes, startPTS: number, endPTS: number, startDTS: number, endDTS: number) {
+    const { elementaryStreams } = this;
+    const info = elementaryStreams[type];
+    if (!info) {
+      elementaryStreams[type] = {
+        startPTS,
+        endPTS,
+        startDTS,
+        endDTS
+      };
+      return;
+    }
+
+    info.startPTS = Math.min(info.startPTS, startPTS);
+    info.endPTS = Math.max(info.endPTS, endPTS);
+    info.startDTS = Math.min(info.startDTS, startDTS);
+    info.endDTS = Math.max(info.endDTS, endDTS);
   }
 }
