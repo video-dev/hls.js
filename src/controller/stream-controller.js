@@ -277,7 +277,18 @@ class StreamController extends BaseStreamController {
     // logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
     let maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
 
-    if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
+    // first clamp to the actual beginning of the video
+    if (bufferEnd < start - config.maxFragLookUpTolerance) {
+      logger.log(`buffer end: ${bufferEnd.toFixed(3)} is located before the start, reset currentTime to : ${start.toFixed(3)}`);
+      bufferEnd = start;
+      if (media && media.readyState && media.duration > start) {
+        media.currentTime = bufferEnd;
+      }
+      this.nextLoadPosition = start;
+    }
+
+    // next clamp to the configured max latency
+    if (bufferEnd < end - maxLatency) {
       let liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
       logger.log(`buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
       bufferEnd = liveSyncPosition;
