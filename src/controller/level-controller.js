@@ -459,7 +459,7 @@ export default class LevelController extends EventHandler {
   }
 
   removeLevel (levelIndex, urlId) {
-    this._levels = this.levels.filter((level, index) => {
+    const levels = this.levels.filter((level, index) => {
       if (index !== levelIndex) {
         return true;
       }
@@ -470,8 +470,18 @@ export default class LevelController extends EventHandler {
         return true;
       }
       return false;
+    }).map((level, index) => {
+      const { details } = level;
+      if (details && details.fragments) {
+        details.fragments.forEach((fragment) => {
+          fragment.level = index;
+        });
+      }
+      return level;
     });
 
-    this.hls.trigger(Event.LEVELS_UPDATED, { levels: this._levels });
+    this._levels = levels;
+
+    this.hls.trigger(Event.LEVELS_UPDATED, { levels });
   }
 }
