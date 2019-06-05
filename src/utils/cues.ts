@@ -1,12 +1,21 @@
 import { fixLineBreaks } from './vttparser';
+import { CaptionScreen, Row } from './cea-608-parser';
 
-export function newCue (track, startTime, endTime, captionScreen) {
-  let row;
-  let cue;
-  let indenting;
-  let indent;
-  let text;
-  let VTTCue = window.VTTCue || window.TextTrackCue;
+interface VTTCue extends TextTrackCue {
+  new(start: number, end: number, cueText: string): VTTCue
+  line: number
+  align: string
+  position: number
+}
+
+export function newCue (track: TextTrack, startTime: number, endTime: number, captionScreen: CaptionScreen) {
+  let row: Row;
+  // the type data states this is VTTCue, but it can potentially be a TextTrackCue on old browsers
+  let cue: VTTCue;
+  let indenting: boolean;
+  let indent: number;
+  let text: string;
+  let VTTCue: VTTCue = (window as any).VTTCue as VTTCue || TextTrackCue;
 
   for (let r = 0; r < captionScreen.rows.length; r++) {
     row = captionScreen.rows[r];
