@@ -3,5 +3,5 @@
  */
 
 export function getMediaSource (): typeof MediaSource {
-  return MediaSource || (window as any).WebKitMediaSource;
+  return (window as any).MediaSource || (window as any).WebKitMediaSource;
 }
