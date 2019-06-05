@@ -367,6 +367,7 @@ class BufferController extends EventHandler {
           this.tracks[trackName] = {
             buffer: sb,
             codec: codec,
+            id: track.id,
             container: track.container,
             levelCodec: track.levelCodec
           };
