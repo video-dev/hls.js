@@ -1,4 +1,5 @@
 import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
+import { TransmuxState, TransmuxConfig } from '../../../src/demux/transmuxer';
 
 const sinon = require('sinon');
 
@@ -89,39 +90,41 @@ describe('TransmuxerInterface tests', function () {
       level: 1,
       startPTS: 1000
     };
-    let data = new ArrayBuffer(8),
-      initSegment = {},
-      audioCodec = {},
-      videoCodec = {},
-      duration = {},
-      accurateTimeOffset = {},
-      defaultInitPTS = {};
+    const data = new ArrayBuffer(8);
+    const initSegment = {};
+    const audioCodec = '';
+    const videoCodec = '';
+    const duration = 0;
+    const accurateTimeOffset = true;
+    const transmuxIdentifier = { sn: newFrag.sn, level: newFrag.level };
 
-    let stub = sinon.stub(transmuxerInterface.worker, 'postMessage').callsFake(function (obj1, obj2) {
-      expect(obj1.cmd).to.equal('demux', 'cmd');
-      expect(obj1.data).to.equal(data, 'data');
-      expect(obj1.decryptdata).to.equal(newFrag.decryptdata, 'decryptdata');
-      expect(obj1.initSegment).to.equal(initSegment, 'initSegment');
-      expect(obj1.audioCodec).to.equal(audioCodec, 'audioCodec');
-      expect(obj1.videoCodec).to.equal(videoCodec, 'videoCodec');
-      expect(obj1.timeOffset).to.equal(newFrag.startPTS, 'timeOffset');
-      expect(obj1.discontinuity).to.be.false;
-      expect(obj1.trackSwitch).to.be.false;
-      expect(obj1.contiguous).to.be.true;
-      expect(obj1.duration).to.equal(duration, 'duration');
-      expect(obj1.defaultInitPTS).to.equal(defaultInitPTS, 'defaultInitPTS');
-      expect(obj2[0]).to.equal(data, 'ArrayBuffer');
+    const stub = sinon.stub(transmuxerInterface.worker, 'postMessage');
+
+    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, transmuxIdentifier);
+
+    expect(stub).to.have.been.calledTwice;
+    const firstCall = stub.args[0][0];
+    const secondCall = stub.args[1][0];
+
+    expect(firstCall).to.deep.equal({
+      cmd: 'configure',
+      config: new TransmuxConfig('', '', new Uint8Array(), 0),
+      state: new TransmuxState(false, true, true, false, 1000)
     });
 
-    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);
-
-    expect(stub).to.have.been.calledOnce;
+    expect(secondCall).to.deep.equal({
+      cmd: 'demux',
+      data,
+      decryptdata: newFrag.decryptdata,
+      transmuxIdentifier: { sn: newFrag.sn, level: newFrag.level }
+    });
   });
 
   it('pushes data to demuxer with no worker', function () {
     let config = { enableWorker: false }; // Option debug : true crashes mocha
     let hls = {
-      trigger: function () {},
+      trigger: function () {
+      },
       config: config
     };
     let id = 'main';
@@ -131,7 +134,7 @@ describe('TransmuxerInterface tests', function () {
       sn: 5,
       level: 1
     };
-    // Config for push
+      // Config for push
     transmuxerInterface.frag = currentFrag;
 
     let newFrag = {
@@ -141,31 +144,25 @@ describe('TransmuxerInterface tests', function () {
       level: 2,
       start: 1000
     };
-    let data = {},
-      initSegment = {},
-      audioCodec = {},
-      videoCodec = {},
-      duration = {},
-      accurateTimeOffset = {},
-      defaultInitPTS = {};
+    const data = new ArrayBuffer(8);
+    const initSegment = {};
+    const audioCodec = '';
+    const videoCodec = '';
+    const duration = 0;
+    const accurateTimeOffset = true;
+    const transmuxIdentifier = { sn: newFrag.sn, level: newFrag.level };
 
-    let stub = sinon.stub(transmuxerInterface.transmuxer, 'push').callsFake(function (obj1, obj2, obj3, obj4, obj5, obj6, obj7, obj8, obj9, obj10, obj11, obj12) {
-      expect(obj1).to.equal(data);
-      expect(obj2).to.equal(newFrag.decryptdata);
-      expect(obj3).to.equal(initSegment);
-      expect(obj4).to.equal(audioCodec);
-      expect(obj5).to.equal(videoCodec);
-      expect(obj6).to.equal(newFrag.start);
-      expect(obj7).to.be.true;
-      expect(obj8).to.be.true;
-      expect(obj9).to.be.false;
-      expect(obj10).to.equal(duration);
-      expect(obj11).to.equal(accurateTimeOffset);
-      expect(obj12).to.equal(defaultInitPTS);
-    });
+    const configureStub = sinon.stub(transmuxerInterface.transmuxer, 'configure');
+    const pushStub = sinon.stub(transmuxerInterface.transmuxer, 'push');
+    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, transmuxIdentifier);
 
-    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, defaultInitPTS);
-    expect(stub).to.have.been.calledWith(data, newFrag.decryptdata, initSegment, audioCodec, videoCodec, newFrag.start, true, true, false, duration, accurateTimeOffset, defaultInitPTS);
+    const tConfig = new TransmuxConfig('', '', new Uint8Array(), 0);
+    const state = new TransmuxState(true, false, true, true, 1000);
+    expect(configureStub).to.have.been.calledOnce;
+    expect(configureStub).to.have.been.calledWith(tConfig, state);
+
+    expect(pushStub).to.have.been.calledOnce;
+    expect(pushStub).to.have.been.calledWith(data, newFrag.decryptdata, transmuxIdentifier);
   });
 
   it('sends worker generic message', function () {

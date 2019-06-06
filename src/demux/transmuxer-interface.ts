@@ -1,6 +1,6 @@
 import * as work from 'webworkify-webpack';
 import Event from '../events';
-import Transmuxer from '../demux/transmuxer';
+import Transmuxer, { TransmuxConfig, TransmuxState } from '../demux/transmuxer';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
@@ -100,29 +100,28 @@ export default class TransmuxerInterface {
     }
   }
 
-  push (data: Uint8Array, initSegment: any, audioCodec: string, videoCodec: string, frag: Fragment, duration: number, accurateTimeOffset: boolean, defaultInitPTS: number | null, transmuxIdentifier: TransmuxIdentifier): void {
+  push (data: Uint8Array, initSegment: any, audioCodec: string, videoCodec: string, frag: Fragment, duration: number, accurateTimeOffset: boolean, transmuxIdentifier: TransmuxIdentifier, defaultInitPTS?: number): void {
     const { currentTransmuxSession, transmuxer, worker } = this;
     const timeOffset = Number.isFinite(frag.startPTS) ? frag.startPTS : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
 
-    let contiguous = true;
-    let discontinuity = false;
-    let trackSwitch = false;
-
     if (startingNewTransmuxSession(currentTransmuxSession, transmuxIdentifier)) {
-     discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
-     trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
-     const nextSN = !!(lastFrag && (frag.sn === (lastFrag.sn as number + 1)));
-     contiguous = !trackSwitch && nextSN;
+      const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
+      const trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
+      const nextSN = !!(lastFrag && (frag.sn === (lastFrag.sn as number + 1)));
+      const contiguous = !trackSwitch && nextSN;
 
-     logger.log(`[transmuxer-interface, ${frag.type}]: Starting new transmux session for fragment ${frag.sn}, of level ${frag.level}:
+      logger.log(`[transmuxer-interface, ${frag.type}]: Starting new transmux session for fragment ${frag.sn}, of level ${frag.level}:
         discontinuity: ${discontinuity}
         trackSwitch: ${trackSwitch}
         contiguous: ${contiguous}
         accurateTimeOffset: ${accurateTimeOffset}
         timeOffset: ${timeOffset}`);
-     this.currentTransmuxSession = transmuxIdentifier;
+      this.currentTransmuxSession = transmuxIdentifier;
+      const config = new TransmuxConfig(audioCodec, videoCodec, new Uint8Array(initSegment), duration, defaultInitPTS);
+      const state = new TransmuxState(discontinuity, contiguous, accurateTimeOffset, trackSwitch, timeOffset);
+      this.configureTransmuxer(config, state);
     }
 
     this.frag = frag;
@@ -133,34 +132,10 @@ export default class TransmuxerInterface {
         cmd: 'demux',
         data,
         decryptdata,
-        initSegment,
-        audioCodec,
-        videoCodec,
-        timeOffset,
-        discontinuity,
-        trackSwitch,
-        contiguous,
-        duration,
-        accurateTimeOffset,
-        defaultInitPTS,
         transmuxIdentifier
       }, data instanceof ArrayBuffer ? [data] : []);
     } else if (transmuxer) {
-      const transmuxResult =
-        transmuxer.push(data,
-            decryptdata,
-            initSegment,
-            audioCodec,
-            videoCodec,
-            timeOffset,
-            discontinuity,
-            trackSwitch,
-            !!contiguous,
-            duration,
-            accurateTimeOffset,
-            defaultInitPTS,
-            transmuxIdentifier
-        );
+      const transmuxResult = transmuxer.push(data, decryptdata, transmuxIdentifier);
       if (!transmuxResult) {
         return;
       }
@@ -177,7 +152,6 @@ export default class TransmuxerInterface {
     }
   }
 
-  // TODO: handle non-worker flush return
   flush (transmuxIdentifier: TransmuxIdentifier) {
     const { transmuxer, worker } = this;
     if (worker) {
@@ -229,6 +203,19 @@ export default class TransmuxerInterface {
         hls.trigger(data.event, data.data);
         break;
       }
+    }
+  }
+
+  private configureTransmuxer (config: TransmuxConfig, state: TransmuxState) {
+    const { worker, transmuxer } = this;
+    if (worker) {
+      worker.postMessage({
+        cmd: 'configure',
+        config,
+        state
+      })
+    } else if (transmuxer) {
+      transmuxer.configure(config, state);
     }
   }
 }
