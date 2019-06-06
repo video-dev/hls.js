@@ -35,7 +35,7 @@ const RemuxerTrackIdConfig = {
 };
 
 class TSDemuxer implements Demuxer {
-  static readonly minProbeByteLength = 1024;
+  static readonly minProbeByteLength = 188;
 
   private observer: any;
   private config: any;

@@ -46,7 +46,7 @@ muxConfig.forEach(({ demux }) => {
   minProbeByteLength = Math.max(minProbeByteLength, demux.minProbeByteLength);
 });
 
-class Transmuxer {
+export default class Transmuxer {
   private observer: any;
   private typeSupported: any;
   private config: any;
@@ -56,9 +56,8 @@ class Transmuxer {
   private decrypter: any;
   private probe!: Function;
   private decryptionPromise: Promise<TransmuxerResult> | null = null;
-
-  private timeOffset: number = 0;
-  private accurateTimeOffset: boolean = false;
+  private transmuxConfig!: TransmuxConfig;
+  private currentTransmuxState!: TransmuxState;
 
   private cache: ChunkCache = new ChunkCache();
 
@@ -69,131 +68,106 @@ class Transmuxer {
     this.vendor = vendor;
   }
 
+  configure (transmuxConfig: TransmuxConfig, state: TransmuxState) {
+    this.transmuxConfig = transmuxConfig;
+    this.currentTransmuxState = state;
+  }
+
   push (data: ArrayBuffer,
     decryptdata: any | null,
-    initSegment: any,
-    audioCodec: string,
-    videoCodec: string,
-    timeOffset: number,
-    discontinuity: boolean,
-    trackSwitch: boolean,
-    contiguous: boolean,
-    duration: number,
-    accurateTimeOffset: boolean,
-    defaultInitPTS: number | null,
     transmuxIdentifier: TransmuxIdentifier
   ): TransmuxerResult | Promise<TransmuxerResult> {
     let uintData = new Uint8Array(data);
-    const uintInitSegment = new Uint8Array(initSegment);
-    const cache = this.cache;
     const encryptionType = getEncryptionType(uintData, decryptdata);
 
     // TODO: Handle progressive AES-128 decryption
     if (encryptionType === 'AES-128') {
       this.decryptionPromise = this.decryptAes128(data, decryptdata)
         .then(decryptedData => {
-          const result = this.push(decryptedData,
-            null,
-            initSegment,
-            audioCodec,
-            videoCodec,
-            timeOffset,
-            discontinuity,
-            trackSwitch,
-            contiguous,
-            duration,
-            accurateTimeOffset,
-            defaultInitPTS,
-            transmuxIdentifier);
+          const result = this.push(decryptedData, null, transmuxIdentifier);
           this.decryptionPromise = null;
           return result;
         });
       return this.decryptionPromise;
     }
 
-    this.timeOffset = timeOffset;
-    this.accurateTimeOffset = accurateTimeOffset;
+    const { cache, currentTransmuxState: state, transmuxConfig: config } = this;
+    const { contiguous, discontinuity, trackSwitch, accurateTimeOffset, timeOffset } = state;
+    const { audioCodec, videoCodec, defaultInitPts, duration, initSegmentData } = config;
 
     // Reset muxers before probing to ensure that their state is clean, even if flushing occurs before a successful probe
     if (discontinuity || trackSwitch) {
-      this.resetInitSegment(uintInitSegment, audioCodec, videoCodec, duration);
+      this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
     }
 
     if (discontinuity) {
-      this.resetInitialTimestamp(defaultInitPTS);
+      this.resetInitialTimestamp(defaultInitPts);
     }
 
     if (!contiguous) {
       this.resetNextTimestamp();
     }
 
-    const needsProbing = this.needsProbing(uintData, discontinuity, trackSwitch);
-    if (needsProbing && (uintData.length + cache.dataLength < minProbeByteLength)) {
-      logger.log(`[transmuxer.ts]: Received ${uintData.length} bytes, but at least ${minProbeByteLength} are required to probe for demuxer types\n` +
-        'This data will be cached until the minimum amount is met.');
-      cache.push(uintData);
-      return {
-        remuxResult: {},
-        transmuxIdentifier
-      };
-    } else if (cache.dataLength) {
-      logger.log(`[transmuxer.ts]: Cache now has enough data to probe.`);
-      uintData = appendUint8Array(cache.flush(), uintData);
-    }
-
     let { demuxer, remuxer } = this;
-    if (needsProbing) {
-      ({ demuxer, remuxer } = this.configureTransmuxer(uintData, uintInitSegment, audioCodec, videoCodec, duration));
+    if (this.needsProbing(uintData, discontinuity, trackSwitch)) {
+      uintData = appendUint8Array(cache.flush(), uintData);
+      ({ demuxer, remuxer } = this.configureTransmuxer(uintData, initSegmentData, audioCodec, videoCodec, duration));
     }
 
     if (!demuxer || !remuxer) {
-      this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
-      return {
-        remuxResult: {},
-        transmuxIdentifier
-      };
+      cache.push(uintData);
+        return {
+          remuxResult: {},
+          transmuxIdentifier
+        };
     }
 
-   let result;
-   if (encryptionType === 'SAMPLE-AES') {
-      result = this.transmuxSampleAes(uintData, decryptdata, timeOffset, accurateTimeOffset, transmuxIdentifier);
-    } else {
-      result = this.transmux(uintData, timeOffset, accurateTimeOffset, transmuxIdentifier);
-    }
+    const result = this.transmux(uintData, decryptdata, encryptionType, timeOffset, accurateTimeOffset, transmuxIdentifier);
+
+    state.contiguous = true;
+    state.discontinuity = false;
+    state.trackSwitch = false;
+
     return result;
   }
 
-  // TODO: Probe for demuxer on flush
   flush (transmuxIdentifier: TransmuxIdentifier) : TransmuxerResult | Promise<TransmuxerResult>  {
-    if (this.decryptionPromise) {
-      return this.decryptionPromise.then(() => {
+    const { demuxer, remuxer, cache, currentTransmuxState, decryptionPromise, observer } = this;
+    if (decryptionPromise) {
+      return decryptionPromise.then(() => {
         return this.flush(transmuxIdentifier);
       });
     }
 
-    this.cache.reset();
-    if (!this.demuxer) {
+    const bytesSeen = cache.dataLength;
+    cache.reset();
+    if (!demuxer || !remuxer) {
+      // If probing failed, and each demuxer saw enough bytes to be able to probe, then Hls.js has been given content its not able to handle
+      if (bytesSeen >= minProbeByteLength) {
+        observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
+      }
       return {
         remuxResult: {},
         transmuxIdentifier
       }
     }
-    const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.flush(this.timeOffset);
+
+    const { accurateTimeOffset, timeOffset } = currentTransmuxState;
+    const { audioTrack, avcTrack, id3Track, textTrack } = demuxer.flush(timeOffset);
     logger.log(`[transmuxer.ts]: Flushed fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}`);
-    // TODO: ensure that remuxers use last DTS as the timeOffset when passed null
     return {
-        remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, this.timeOffset, this.accurateTimeOffset),
+        remuxResult: remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
         transmuxIdentifier
     }
   }
 
-  resetInitialTimestamp (defaultInitPTS) {
+  resetInitialTimestamp (defaultInitPts: number | undefined) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
     }
-    demuxer.resetTimeStamp(defaultInitPTS);
-    remuxer.resetTimeStamp(defaultInitPTS);
+    demuxer.resetTimeStamp(defaultInitPts);
+    remuxer.resetTimeStamp(defaultInitPts);
   }
 
   resetNextTimestamp () {
@@ -204,13 +178,13 @@ class Transmuxer {
     remuxer.resetNextTimestamp();
   }
 
-  resetInitSegment (initSegment: Uint8Array, audioCodec: string, videoCodec: string, duration: number) {
+  resetInitSegment (initSegmentData: Uint8Array, audioCodec: string, videoCodec: string, duration: number) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
     }
     demuxer.resetInitSegment(audioCodec, videoCodec, duration);
-    remuxer.resetInitSegment(initSegment, audioCodec, videoCodec);
+    remuxer.resetInitSegment(initSegmentData, audioCodec, videoCodec);
   }
 
   destroy (): void {
@@ -224,11 +198,21 @@ class Transmuxer {
     }
   }
 
-  private transmux (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, transmuxIdentifier: TransmuxIdentifier): TransmuxerResult {
+  private transmux (data: Uint8Array, decryptData: Uint8Array, encryptionType: string | null, timeOffset: number, accurateTimeOffset: boolean, transmuxIdentifier: TransmuxIdentifier): TransmuxerResult | Promise<TransmuxerResult> {
+    let result: TransmuxerResult | Promise<TransmuxerResult>;
+    if (encryptionType === 'SAMPLE-AES') {
+      result = this.transmuxSampleAes(data, decryptData, timeOffset, accurateTimeOffset, transmuxIdentifier);
+    } else {
+      result = this.transmuxUnencrypted(data, timeOffset, accurateTimeOffset, transmuxIdentifier);
+    }
+    return result;
+  }
+
+  private transmuxUnencrypted (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, transmuxIdentifier: TransmuxIdentifier) {
     const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(data, timeOffset,false);
     return {
-        remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
-        transmuxIdentifier
+      remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
+      transmuxIdentifier
     }
   }
 
@@ -296,4 +280,34 @@ function getEncryptionType (data: Uint8Array, decryptData: any): string | null {
   return encryptionType;
 }
 
-export default Transmuxer;
+export class TransmuxConfig {
+  public audioCodec: string;
+  public videoCodec: string;
+  public initSegmentData: Uint8Array;
+  public duration: number;
+  public defaultInitPts?: number;
+
+  constructor (audioCodec: string, videoCodec: string, initSegmentData: Uint8Array, duration: number, defaultInitPts?: number) {
+    this.audioCodec = audioCodec;
+    this.videoCodec = videoCodec;
+    this.initSegmentData = initSegmentData;
+    this.duration = duration;
+    this.defaultInitPts = defaultInitPts;
+  }
+}
+
+export class TransmuxState {
+  public discontinuity: boolean;
+  public contiguous: boolean;
+  public accurateTimeOffset: boolean;
+  public trackSwitch: boolean;
+  public timeOffset: number;
+
+  constructor(discontinuity: boolean, contiguous: boolean, accurateTimeOffset: boolean, trackSwitch: boolean, timeOffset: number){
+    this.discontinuity = discontinuity;
+    this.contiguous = contiguous;
+    this.accurateTimeOffset = accurateTimeOffset;
+    this.trackSwitch = trackSwitch;
+    this.timeOffset = timeOffset;
+  }
+}

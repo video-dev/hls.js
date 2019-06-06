@@ -30,7 +30,6 @@ export default function TransmuxerWorker (self) {
 
   self.addEventListener('message', (ev) => {
     const data = ev.data;
-    // console.log('transmuxer cmd:' + data.cmd);
     switch (data.cmd) {
       case 'init': {
         const config = JSON.parse(data.config);
@@ -39,22 +38,12 @@ export default function TransmuxerWorker (self) {
         forwardMessage('init', null);
         break;
       }
+      case 'configure': {
+        self.transmuxer.configure(data.config, data.state);
+        break;
+      }
       case 'demux': {
-        const transmuxResult: TransmuxerResult = self.transmuxer.push(data.data,
-          data.decryptdata,
-          data.initSegment,
-          data.audioCodec,
-          data.videoCodec,
-          data.timeOffset,
-          data.discontinuity,
-          data.trackSwitch,
-          data.contiguous,
-          data.duration,
-          data.accurateTimeOffset,
-          data.defaultInitPTS,
-          data.transmuxIdentifier
-        );
-
+        const transmuxResult: TransmuxerResult = self.transmuxer.push(data.data, data.decryptdata, data.transmuxIdentifier);
         if (!transmuxResult) {
           return;
         }

@@ -853,7 +853,6 @@ export default class StreamController extends BaseStreamController {
       frag,
       details.totalduration,
       accurateTimeOffset,
-      null,
       transmuxIdentifier
     );
   }

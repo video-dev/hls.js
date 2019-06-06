@@ -442,7 +442,7 @@ class AudioStreamController extends BaseStreamController {
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
     let accurateTimeOffset = false; // details.PTSKnown || !details.live;
     const transmuxIdentifier = { level: frag.level, sn: frag.sn };
-    transmuxer.push(payload, initSegmentData, audioCodec, '', frag, details.totalduration, accurateTimeOffset, initPTS, transmuxIdentifier);
+    transmuxer.push(payload, initSegmentData, audioCodec, '', frag, details.totalduration, accurateTimeOffset, transmuxIdentifier, initPTS);
   }
 
   onBufferReset () {

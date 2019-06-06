@@ -7,7 +7,7 @@ import { findBox, segmentValidRange, appendUint8Array } from '../utils/mp4-tools
 import { dummyTrack } from './dummy-demuxed-track';
 
 class MP4Demuxer implements Demuxer {
-  static readonly minProbeByteLength = 16384; // 16kb;
+  static readonly minProbeByteLength = 1024;
   private remainderData: Uint8Array | null = null;
 
   resetTimeStamp () {
