@@ -114,7 +114,9 @@ class FetchLoader implements Loader<LoaderContext> {
       if (stats.aborted) {
         return;
       }
-      callbacks.onError({ code: error.code, text: error.message }, context, error.details);
+      // CORS errors result in an undefined code. Set it to 0 here to align with XHR's behavior
+      const code = error.code || 0;
+      callbacks.onError({ code, text: error.message }, context, error.details);
     });
   }
 
