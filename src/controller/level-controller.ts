@@ -30,7 +30,7 @@ export default class LevelController extends EventHandler {
   private levelRetryCount: number = 0;
   private manualLevelIndex: number = -1;
   private timer: number | null = null;
-  
+
   constructor (hls) {
     super(hls,
       Event.MANIFEST_LOADED,
@@ -499,8 +499,17 @@ export default class LevelController extends EventHandler {
         return true;
       }
       return false;
+    }).map((level, index) => {
+      const { details } = level;
+      if (details && details.fragments) {
+        details.fragments.forEach((fragment) => {
+          fragment.level = index;
+        });
+      }
+      return level;
     });
     this._levels = levels;
+
     this.hls.trigger(Event.LEVELS_UPDATED, { levels });
   }
 }
