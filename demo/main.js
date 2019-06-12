@@ -102,8 +102,11 @@ $(document).ready(function() {
   $('#dumpfMP4').prop('checked', dumpfMP4 );
   $('#levelCapping').val(levelCapping);
 
-  $('h2').append('&nbsp;<a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
-  $('#currentVersion').html('Hls version:' + Hls.version);
+  if (Hls.version) {
+    $('h2').append('&nbsp;<a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
+  } else {
+    $('h2').append('<span>development</span>');
+  }
 
   $('#streamURL').val(sourceURL)
 
