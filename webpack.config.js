@@ -94,7 +94,10 @@ const baseConfig = {
     __dirname: false,
     Buffer: false,
     setImmediate: false
-  }
+  },
+  devServer: {
+    host: '0.0.0.0'
+  },
 };
 
 function getAliasesForLightDist () {
