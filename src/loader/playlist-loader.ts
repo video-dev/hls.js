@@ -9,32 +9,44 @@
  *
  */
 
-import Event from '../events';
-import EventHandler from '../event-handler';
+import Event, { IEventHandler, HlsEvents } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { Loader, PlaylistContextType, PlaylistLoaderContext, PlaylistLevelType, LoaderCallbacks, LoaderResponse, LoaderStats, LoaderConfiguration } from '../types/loader';
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
+import Hls from '../hls';
+import EventHandler from '../event-handler';
 
 const { performance } = window;
 
 /**
  * @constructor
  */
-class PlaylistLoader extends EventHandler {
+class PlaylistLoader implements IEventHandler {
+  private hls: Hls;
   private loaders: Partial<Record<PlaylistContextType, Loader<PlaylistLoaderContext>>> = {};
 
   /**
    * @constructs
    * @param {Hls} hls
    */
-  constructor (hls) {
-    super(hls,
-      Event.MANIFEST_LOADING,
-      Event.LEVEL_LOADING,
-      Event.AUDIO_TRACK_LOADING,
-      Event.SUBTITLE_TRACK_LOADING);
+  constructor (hls: Hls) {
+    this.hls = hls;
+  }
+
+  public registerListeners () {
+    this.hls.on(Event.MANIFEST_LOADING, this.onManifestLoading);
+    this.hls.on(Event.LEVEL_LOADING, this.onLevelLoading);
+    this.hls.on(Event.AUDIO_TRACK_LOADING, this.onAudioTrackLoading);
+    this.hls.on(Event.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading);
+  }
+
+  public unregisterListeners () {
+    this.hls.removeListener(Event.MANIFEST_LOADING, this.onManifestLoading);
+    this.hls.removeListener(Event.LEVEL_LOADING, this.onLevelLoading);
+    this.hls.removeListener(Event.AUDIO_TRACK_LOADING, this.onAudioTrackLoading);
+    this.hls.removeListener(Event.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading);
   }
 
   /**
@@ -122,9 +134,8 @@ class PlaylistLoader extends EventHandler {
   }
 
   destroy () {
+    this.unregisterListeners();
     this.destroyInternalLoaders();
-
-    super.destroy();
   }
 
   onManifestLoading (data: { url: string; }) {
@@ -321,7 +332,7 @@ class PlaylistLoader extends EventHandler {
       }
     }
 
-    hls.trigger(Event.MANIFEST_LOADED, {
+    hls.emit(Event.MANIFEST_LOADED, {
       levels,
       audioTracks,
       subtitles,
@@ -359,7 +370,7 @@ class PlaylistLoader extends EventHandler {
         details: levelDetails
       };
 
-      hls.trigger(Event.MANIFEST_LOADED, {
+      hls.emit(Event.MANIFEST_LOADED, {
         levels: [singleLevel],
         audioTracks: [],
         url,
@@ -425,7 +436,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   _handleManifestParsingError (response: LoaderResponse, context: PlaylistLoaderContext, reason: string, networkDetails: unknown) {
-    this.hls.trigger(Event.ERROR, {
+    this.hls.emit(Event.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
       fatal: true,
@@ -481,7 +492,7 @@ class PlaylistLoader extends EventHandler {
       errorData.response = response;
     }
 
-    this.hls.trigger(Event.ERROR, errorData);
+    this.hls.emit(Event.ERROR, errorData);
   }
 
   _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: unknown) {
@@ -494,7 +505,7 @@ class PlaylistLoader extends EventHandler {
 
     const canHaveLevels = PlaylistLoader.canHaveQualityLevels(context.type);
     if (canHaveLevels) {
-      this.hls.trigger(Event.LEVEL_LOADED, {
+      this.hls.emit(Event.LEVEL_LOADED, {
         details: levelDetails,
         level: level || 0,
         id: id || 0,
@@ -504,7 +515,7 @@ class PlaylistLoader extends EventHandler {
     } else {
       switch (type) {
       case PlaylistContextType.AUDIO_TRACK:
-        this.hls.trigger(Event.AUDIO_TRACK_LOADED, {
+        this.hls.emit(Event.AUDIO_TRACK_LOADED, {
           details: levelDetails,
           id,
           stats,
@@ -512,7 +523,7 @@ class PlaylistLoader extends EventHandler {
         });
         break;
       case PlaylistContextType.SUBTITLE_TRACK:
-        this.hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
+        this.hls.emit(Event.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
           id,
           stats,

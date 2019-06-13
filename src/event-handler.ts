@@ -6,7 +6,7 @@
 
 import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
-import Event from './events';
+import Event, { TypedEventEmitter } from './events';
 
 const FORBIDDEN_EVENT_NAMES = {
   'hlsEventGeneric': true,

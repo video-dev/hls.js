@@ -1,17 +1,14 @@
+import { LoaderStats } from './types/loader';
+
 /**
  * @readonly
  * @enum {string}
  */
-enum HlsEvents {
-  // fired before MediaSource is attaching to media element - data: { media }
+export enum HlsEvents {
   MEDIA_ATTACHING = 'hlsMediaAttaching',
-  // fired when MediaSource has been succesfully attached to media element - data: { }
   MEDIA_ATTACHED = 'hlsMediaAttached',
-  // fired before detaching MediaSource from media element - data: { }
   MEDIA_DETACHING = 'hlsMediaDetaching',
-  // fired when MediaSource has been detached from media element - data: { }
   MEDIA_DETACHED = 'hlsMediaDetached',
-  // fired when we buffer is going to be reset - data: { }
   BUFFER_RESET = 'hlsBufferReset',
   // fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}
   BUFFER_CODECS = 'hlsBufferCodecs',
@@ -27,9 +24,7 @@ enum HlsEvents {
   BUFFER_FLUSHING = 'hlsBufferFlushing',
   // fired when the media buffer has been flushed - data: { }
   BUFFER_FLUSHED = 'hlsBufferFlushed',
-  // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING = 'hlsManifestLoading',
-  // fired after manifest has been loaded - data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   MANIFEST_LOADED = 'hlsManifestLoaded',
   // fired after manifest has been parsed - data: { levels : [available quality levels], firstLevel : index of first quality level appearing in Manifest}
   MANIFEST_PARSED = 'hlsManifestParsed',
@@ -37,9 +32,7 @@ enum HlsEvents {
   LEVEL_SWITCHING = 'hlsLevelSwitching',
   // fired when a level switch is effective - data: { level : id of new level }
   LEVEL_SWITCHED = 'hlsLevelSwitched',
-  // fired when a level playlist loading starts - data: { url : level URL, level : id of level being loaded}
   LEVEL_LOADING = 'hlsLevelLoading',
-  // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
   LEVEL_LOADED = 'hlsLevelLoaded',
   // fired when a level's details have been updated based on previous details, after it has been loaded - data: { details : levelDetails object, level : id of updated level }
   LEVEL_UPDATED = 'hlsLevelUpdated',
@@ -51,17 +44,13 @@ enum HlsEvents {
   AUDIO_TRACK_SWITCHING = 'hlsAudioTrackSwitching',
   // fired when an audio track switch actually occurs - data: { id : audio track id }
   AUDIO_TRACK_SWITCHED = 'hlsAudioTrackSwitched',
-  // fired when an audio track loading starts - data: { url : audio track URL, id : audio track id }
   AUDIO_TRACK_LOADING = 'hlsAudioTrackLoading',
-  // fired when an audio track loading finishes - data: { details : levelDetails object, id : audio track id, stats : { trequest, tfirst, tload, mtime } }
   AUDIO_TRACK_LOADED = 'hlsAudioTrackLoaded',
   // fired to notify that subtitle track lists has been updated - data: { subtitleTracks : subtitleTracks }
   SUBTITLE_TRACKS_UPDATED = 'hlsSubtitleTracksUpdated',
   // fired when an subtitle track switch occurs - data: { id : subtitle track id }
   SUBTITLE_TRACK_SWITCH = 'hlsSubtitleTrackSwitch',
-  // fired when a subtitle track loading starts - data: { url : subtitle track URL, id : subtitle track id }
   SUBTITLE_TRACK_LOADING = 'hlsSubtitleTrackLoading',
-  // fired when a subtitle track loading finishes - data: { details : levelDetails object, id : subtitle track id, stats : { trequest, tfirst, tload, mtime } }
   SUBTITLE_TRACK_LOADED = 'hlsSubtitleTrackLoaded',
   // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag }
   SUBTITLE_FRAG_PROCESSED = 'hlsSubtitleFragProcessed',
@@ -95,9 +84,7 @@ enum HlsEvents {
   FPS_DROP = 'hlsFpsDrop',
   // triggered when FPS drop triggers auto level capping - data: { level, droppedlevel }
   FPS_DROP_LEVEL_CAPPING = 'hlsFpsDropLevelCapping',
-  // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data }
   ERROR = 'hlsError',
-  // fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example - data: { }
   DESTROYING = 'hlsDestroying',
   // fired when a decrypt key loading starts - data: { frag : fragment object }
   KEY_LOADING = 'hlsKeyLoading',
@@ -105,6 +92,105 @@ enum HlsEvents {
   KEY_LOADED = 'hlsKeyLoaded',
   // fired upon stream controller state transitions - data: { previousState, nextState }
   STREAM_STATE_TRANSITION = 'hlsStreamStateTransition',
+}
+
+export interface HLSListeners {
+  [HlsEvents.MEDIA_ATTACHING]: (data: {
+    media: HTMLMediaElement;
+  }) => void
+
+  [HlsEvents.MEDIA_ATTACHED]: (data: {
+    media: HTMLMediaElement;
+  }) => void
+
+  [HlsEvents.MEDIA_DETACHING]: () => void
+
+  [HlsEvents.MEDIA_DETACHED]: () => void
+
+  [HlsEvents.MANIFEST_LOADING]: (data: {
+    url: string;
+  }) => void
+
+  [HlsEvents.MANIFEST_LOADED]: (data: {
+    levels: any[];
+    audioTracks: any[];
+    subtitles?: any[];
+    url: string;
+    stats: LoaderStats;
+    networkDetails: unknown;
+  }) => void
+
+  [HlsEvents.LEVEL_LOADING]: (data: {
+    url: string;
+    level: number | null;
+    id: number;
+  }) => void
+
+  [HlsEvents.LEVEL_LOADED]: (data: {
+    details: any; // LevelDetails type?
+    level: number;
+    id: number;
+    stats: LoaderStats;
+    networkDetails: unknown;
+  }) => void
+
+  [HlsEvents.AUDIO_TRACK_LOADING]: (data: {
+    url: string;
+    id: number | null;
+  }) => void
+
+  [HlsEvents.AUDIO_TRACK_LOADED]: (data: {
+    details: any; // LevelDetails type?
+    id: number | null;
+    stats: LoaderStats;
+    networkDetails: unknown;
+  }) => void
+
+  [HlsEvents.SUBTITLE_TRACK_LOADING]: (data: {
+    url: string;
+    id: number | null;
+  }) => void
+
+  [HlsEvents.SUBTITLE_TRACK_LOADED]: (data: {
+    details: any; // LevelDetails type?
+    id: number | null;
+    stats: LoaderStats;
+    networkDetails: unknown;
+  }) => void;
+
+  [HlsEvents.ERROR]: (data: {
+    type: any // ErrorType enum
+    details: any // ErrorDetails enum
+    fatal: boolean
+
+    // Other error specific data...
+    [key: string]: any;
+  }) => void
+
+  [HlsEvents.DESTROYING]: () => void
+}
+
+type Arguments < T > = [ T ] extends [ (...args: infer U) => any ]
+  ? U
+  : [T] extends [void] ? [] : [T];
+
+export interface TypedEventEmitter<Events> {
+  addListener<E extends keyof Events> (event: E, listener: Events[E]): this
+  on<E extends keyof Events> (event: E, listener: Events[E]): this
+  once<E extends keyof Events> (event: E, listener: Events[E]): this
+
+  removeAllListeners<E extends keyof Events> (event?: E): this
+  removeListener<E extends keyof Events> (event: E, listener?: Events[E], context?: any, once?: boolean): this
+
+  emit<E extends keyof Events> (event: E, ...args: Arguments<Events[E]>): boolean
+  listeners<E extends keyof Events> (event: E): Function[]
+  listenerCount<E extends keyof Events> (event: E): number
+}
+
+export interface IEventHandler {
+  registerListeners(): void;
+  unregisterListeners(): void;
+  destroy(): void
 }
 
 export default HlsEvents;

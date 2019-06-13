@@ -18,16 +18,15 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig, HlsConfig } from './config';
 
-import HlsEvents from './events';
-
-import { Observer } from './observer';
+import HlsEvents, { TypedEventEmitter, HLSListeners } from './events';
+import { EventEmitter } from 'eventemitter3';
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls extends Observer {
+export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLSListeners> }) {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
@@ -104,8 +103,7 @@ export default class Hls extends Observer {
    * @param {HlsConfig} config
    */
   constructor (userConfig: Partial<HlsConfig> = {}) {
-    super();
-
+    super(); // eslint-disable-line constructor-super
     const defaultConfig = Hls.DefaultConfig;
 
     if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
@@ -247,7 +245,7 @@ export default class Hls extends Observer {
    */
   destroy () {
     logger.log('destroy');
-    this.trigger(HlsEvents.DESTROYING);
+    this.emit(HlsEvents.DESTROYING);
     this.detachMedia();
     this.coreComponents.concat(this.networkControllers).forEach(component => {
       component.destroy();
@@ -264,7 +262,7 @@ export default class Hls extends Observer {
   attachMedia (media: HTMLMediaElement) {
     logger.log('attachMedia');
     this.media = media;
-    this.trigger(HlsEvents.MEDIA_ATTACHING, { media: media });
+    this.emit(HlsEvents.MEDIA_ATTACHING, { media: media });
   }
 
   /**
@@ -272,7 +270,7 @@ export default class Hls extends Observer {
    */
   detachMedia () {
     logger.log('detachMedia');
-    this.trigger(HlsEvents.MEDIA_DETACHING);
+    this.emit(HlsEvents.MEDIA_DETACHING);
     this.media = null;
   }
 
@@ -285,7 +283,7 @@ export default class Hls extends Observer {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(HlsEvents.MANIFEST_LOADING, { url: url });
+    this.emit(HlsEvents.MANIFEST_LOADING, { url: url });
   }
 
   /**
