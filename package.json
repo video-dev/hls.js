@@ -1,6 +1,6 @@
 {
   "name": "hls.js",
-  "version": "0.11.0",
+  "version": "1.0.0-dev",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
