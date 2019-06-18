@@ -80,7 +80,8 @@ const baseConfig = {
                   }
                 }
               }
-            }
+            },
+            ['@babel/plugin-transform-object-assign']
           ]
         }
       }
