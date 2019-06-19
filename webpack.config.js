@@ -7,35 +7,21 @@ const importHelper = require('@babel/helper-module-imports');
 /* Allow to customise builds through env-vars */
 const env = process.env;
 
-const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES;
-const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
-const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
-
-const createDefinePlugin = (type) => {
-  const buildConstants = {
-    __VERSION__: JSON.stringify(pkgJson.version),
-    __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
-    __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
-    __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
-  };
-  return new webpack.DefinePlugin(buildConstants);
-};
-
-const basePlugins = [
+const plugins = [
   new webpack.optimize.ModuleConcatenationPlugin(),
   new webpack.optimize.OccurrenceOrderPlugin(),
-  new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }) // SSR/Node.js guard
+  new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
+  new webpack.DefinePlugin({
+    __VERSION__: JSON.stringify(pkgJson.version),
+
+    // TODO: Remove this env
+    __USE_SUBTITLES__: false
+  })
 ];
-const mainPlugins = [...basePlugins, createDefinePlugin('main')];
-const lightPlugins = [...basePlugins, createDefinePlugin('light')];
 
 const baseConfig = {
   mode: 'development',
-  entry: './src/hls',
   node: false,
-  optimization: {
-    splitChunks: false
-  },
   resolve: {
     // Add `.ts` as a resolvable extension.
     extensions: ['.ts', '.js']
@@ -97,42 +83,17 @@ const baseConfig = {
   }
 };
 
-function getAliasesForLightDist () {
-  let aliases = {};
-
-  if (!addEMESupport) {
-    aliases = Object.assign({}, aliases, {
-      './controller/eme-controller': './empty.js'
-    });
-  }
-
-  if (!addSubtitleSupport) {
-    aliases = Object.assign(aliases, {
-      './utils/cues': './empty.js',
-      './controller/timeline-controller': './empty.js',
-      './controller/subtitle-track-controller': './empty.js',
-      './controller/subtitle-stream-controller': './empty.js'
-    });
-  }
-
-  if (!addAltAudioSupport) {
-    aliases = Object.assign(aliases, {
-      './controller/audio-track-controller': './empty.js',
-      './controller/audio-stream-controller': './empty.js'
-    });
-  }
-
-  return aliases;
-}
-
 const multiConfig = [
   {
     name: 'debug',
     mode: 'development',
+    entry: {
+      'hls.core': './src/hls'
+    },
     output: {
-      filename: 'hls.js',
+      filename: '[name].js',
       chunkFilename: '[name].js',
-      sourceMapFilename: 'hls.js.map',
+      sourceMapFilename: '[name].js.map',
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/dist/',
       library: 'Hls',
@@ -140,15 +101,30 @@ const multiConfig = [
       libraryExport: 'default',
       globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
-    plugins: mainPlugins,
+    optimization: {
+      splitChunks: {
+        cacheGroups: {
+          'hls.core': {
+            test: /(hls|node_modules)/,
+            chunks: 'initial',
+            name: 'hls.core',
+            enforce: true
+          }
+        }
+      }
+    },
+    plugins: plugins,
     devtool: 'source-map'
   },
   {
     name: 'dist',
     mode: 'production',
+    entry: {
+      'hls.core': './src/hls'
+    },
     output: {
-      filename: 'hls.min.js',
-      chunkFilename: '[name].js',
+      filename: '[name].min.js',
+      chunkFilename: '[name].min.js',
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/dist/',
       library: 'Hls',
@@ -156,46 +132,62 @@ const multiConfig = [
       libraryExport: 'default',
       globalObject: 'this'
     },
-    plugins: mainPlugins,
+    optimization: {
+      splitChunks: {
+        cacheGroups: {
+          'hls.core': {
+            test: /(hls|node_modules)/,
+            chunks: 'initial',
+            name: 'hls.core',
+            enforce: true
+          }
+        }
+      }
+    },
+    plugins: plugins,
     devtool: 'source-map'
   },
   {
-    name: 'light',
+    name: 'debug',
     mode: 'development',
+    entry: {
+      'hls.subtitle-stream': './src/controller/subtitle-stream-controller',
+      'hls.subtitle-track': './src/controller/subtitle-track-controller',
+      'hls.timeline': './src/controller/timeline-controller',
+      'hls.audio-stream': './src/controller/audio-stream-controller',
+      'hls.audio-track': './src/controller/audio-track-controller',
+      'hls.eme': './src/controller/eme-controller',
+    },
     output: {
-      filename: 'hls.light.js',
+      filename: '[name].js',
       chunkFilename: '[name].js',
-      sourceMapFilename: 'hls.light.js.map',
+      sourceMapFilename: '[name].js.map',
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/dist/',
-      library: 'Hls',
-      libraryTarget: 'umd',
-      libraryExport: 'default',
-      globalObject: 'this'
+      globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
-    resolve: {
-      alias: getAliasesForLightDist()
-    },
-    plugins: lightPlugins,
+    plugins: plugins,
     devtool: 'source-map'
   },
   {
-    name: 'light-dist',
+    name: 'dist',
     mode: 'production',
+    entry: {
+      'hls.subtitle-stream': './src/controller/subtitle-stream-controller',
+      'hls.subtitle-track': './src/controller/subtitle-track-controller',
+      'hls.timeline': './src/controller/timeline-controller',
+      'hls.audio-stream': './src/controller/audio-stream-controller',
+      'hls.audio-track': './src/controller/audio-track-controller',
+      'hls.eme': './src/controller/eme-controller',
+    },
     output: {
-      filename: 'hls.light.min.js',
-      chunkFilename: '[name].js',
+      filename: '[name].min.js',
+      chunkFilename: '[name].min.js',
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/dist/',
-      library: 'Hls',
-      libraryTarget: 'umd',
-      libraryExport: 'default',
       globalObject: 'this'
     },
-    resolve: {
-      alias: getAliasesForLightDist()
-    },
-    plugins: lightPlugins,
+    plugins: plugins,
     devtool: 'source-map'
   },
   {
@@ -213,7 +205,7 @@ const multiConfig = [
       libraryExport: 'default',
       globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
-    plugins: mainPlugins,
+    plugins: plugins,
     devtool: 'source-map'
   }
 ].map(config => merge(baseConfig, config));
