@@ -21,7 +21,6 @@ const plugins = [
 
 const baseConfig = {
   mode: 'development',
-  node: false,
   resolve: {
     // Add `.ts` as a resolvable extension.
     extensions: ['.ts', '.js']
