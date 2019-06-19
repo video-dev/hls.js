@@ -332,8 +332,11 @@ class TimelineController extends EventHandler {
     // immediately. It will create the proper timestamps based on our PTS value
     if (this.enabled && this.config.enableCEA708Captions) {
       for (let i = 0; i < data.samples.length; i++) {
-        let ccdatas = this.extractCea608Data(data.samples[i].bytes);
-        this.cea608Parser.addData(data.samples[i].pts, ccdatas);
+        const ccBytes = data.samples[i].bytes;
+        if (ccBytes) {
+          const ccdatas = this.extractCea608Data(ccBytes);
+          this.cea608Parser.addData(data.samples[i].pts, ccdatas);
+        }
       }
     }
   }
