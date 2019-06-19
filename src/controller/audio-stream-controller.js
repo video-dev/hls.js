@@ -194,11 +194,7 @@ class AudioStreamController extends BaseStreamController {
             }
           }
         }
-        if (trackDetails.initSegment && !trackDetails.initSegment.data) {
-          frag = trackDetails.initSegment;
-        } // eslint-disable-line brace-style
-        // if bufferEnd before start of playlist, load first fragment
-        else if (bufferEnd <= start) {
+        if (bufferEnd <= start) {
           frag = fragments[0];
           if (this.videoTrackCC !== null && frag.cc !== this.videoTrackCC) {
             // Ensure we find a fragment which matches the continuity of the video track
@@ -281,6 +277,9 @@ class AudioStreamController extends BaseStreamController {
             logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
             // only load if fragment is not loaded or if in audio switch
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+            if (trackDetails.initSegments[frag.initSegment] && !trackDetails.initSegments[frag.initSegment].data) {
+              frag = trackDetails.initSegments[frag.initSegment].fragment;
+            }
             this.fragCurrent = frag;
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
               if (frag.sn !== 'initSegment') {
@@ -504,7 +503,7 @@ class AudioStreamController extends BaseStreamController {
         this.state = State.IDLE;
 
         stats.tparsed = stats.tbuffered = performance.now();
-        details.initSegment.data = data.payload;
+        details.initSegments[data.frag.relurl].data = data.payload;
         this.hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'audio' });
         this.tick();
       } else {
@@ -518,8 +517,8 @@ class AudioStreamController extends BaseStreamController {
         // Check if we have video initPTS
         // If not we need to wait for it
         let initPTS = this.initPTS[cc];
-        let initSegmentData = details.initSegment ? details.initSegment.data : [];
-        if (details.initSegment || initPTS !== undefined) {
+        const initSegmentData = details.initSegments[fragCurrent.initSegment] ? details.initSegments[fragCurrent.initSegment].data : [];
+        if (details.initSegments[fragCurrent.initSegment] || initPTS !== undefined) {
           this.pendingBuffering = true;
           logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
