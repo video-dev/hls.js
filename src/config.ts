@@ -9,14 +9,7 @@ import FPSController from './controller/fps-controller';
 import XhrLoader from './utils/xhr-loader';
 // import FetchLoader from './utils/fetch-loader';
 
-import AudioTrackController from './controller/audio-track-controller';
-import AudioStreamController from './controller/audio-stream-controller';
-
 import * as Cues from './utils/cues';
-import TimelineController from './controller/timeline-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
-import { SubtitleStreamController } from './controller/subtitle-stream-controller';
-import EMEController from './controller/eme-controller';
 import { requestMediaKeySystemAccess, MediaKeyFunc } from './utils/mediakeys-helper';
 
 type ABRControllerConfig = {
@@ -133,16 +126,6 @@ export type HlsConfig =
     loader: any, // TODO(typescript-xhrloader): Type once XHR is done
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
 
-    // Alt Audio
-    audioStreamController?: any, // TODO(typescript-audiostreamcontroller): Type once file is done
-    audioTrackController?: any, // TODO(typescript-audiotrackcontroller): Type once file is done
-    // Subtitle
-    subtitleStreamController?: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
-    subtitleTrackController?: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
-    timelineController?: any, // TODO(typescript-timelinecontroller): Type once file is done
-    // EME
-    emeController?: typeof EMEController,
-
     abrController: any, // TODO(typescript-abrcontroller): Type once file is done
     bufferController: typeof BufferController,
     capLevelController: any, // TODO(typescript-caplevelcontroller): Type once file is done
@@ -237,13 +220,7 @@ export const hlsDefaultConfig: HlsConfig = {
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
 
   // Dynamic Modules
-  ...timelineConfig(),
-  subtitleStreamController: (__USE_SUBTITLES__) ? SubtitleStreamController : void 0,
-  subtitleTrackController: (__USE_SUBTITLES__) ? SubtitleTrackController : void 0,
-  timelineController: (__USE_SUBTITLES__) ? TimelineController : void 0,
-  audioStreamController: (__USE_ALT_AUDIO__) ? AudioStreamController : void 0,
-  audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : void 0,
-  emeController: (__USE_EME_DRM__) ? EMEController : void 0
+  ...timelineConfig()
 };
 
 function timelineConfig (): TimelineControllerConfig {
