@@ -4,7 +4,6 @@ export default class Level {
     this.endCC = 0;
     this.endSN = 0;
     this.fragments = [];
-    this.initSegment = null;
     this.initSegments = {};
     this.live = true;
     this.needSidxRanges = false;

@@ -42,6 +42,10 @@ export default class Fragment {
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
 
+  // initSegment is the relurl of the initsegment associated with the fragment which can be found
+  // on level details
+  public initSegment?: string;
+
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
     const params = value.split('@', 2);
