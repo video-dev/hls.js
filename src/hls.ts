@@ -97,6 +97,15 @@ export default class Hls extends Observer {
     Hls.defaultConfig = defaultConfig;
   }
 
+  static registry: any[] = [];
+
+  static add (component: any): void {
+    // TODO: Use `Array.prototype.includes`
+    if (Hls.registry.indexOf(component) === -1) {
+      Hls.registry.push(component);
+    }
+  }
+
   /**
    * Creates an instance of an HLS client that can attach to exactly one `HTMLMediaElement`.
    *
@@ -135,16 +144,10 @@ export default class Hls extends Observer {
     // core controllers and network loaders
 
     /**
-     * @member {AbrController} abrController
+     * @var {ICoreComponent[]}
      */
-    const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap
-    const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
-    const capLevelController = this.capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
-    const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
-    const playListLoader = new PlaylistLoader(this);
-    const fragmentLoader = new FragmentLoader(this);
-    const keyLoader = new KeyLoader(this);
-    const id3TrackController = new ID3TrackController(this);
+    this.abrController = new config.abrController(this); // eslint-disable-line new-cap
+    this.capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
 
     // network controllers
 
@@ -161,85 +164,27 @@ export default class Hls extends Observer {
      */
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
 
-    let networkControllers = [levelController, streamController];
-
-    // optional audio stream controller
-    /**
-     * @var {ICoreComponent | Controller}
-     */
-    let Controller = config.audioStreamController;
-    if (Controller) {
-      networkControllers.push(new Controller(this, fragmentTracker));
-    }
-
     /**
      * @member {INetworkController[]} networkControllers
      */
-    this.networkControllers = networkControllers;
+    this.networkControllers = [levelController, streamController];
 
-    /**
-     * @var {ICoreComponent[]}
-     */
-    const coreComponents = [
-      playListLoader,
-      fragmentLoader,
-      keyLoader,
-      abrController,
-      bufferController,
-      capLevelController,
-      fpsController,
-      id3TrackController,
-      fragmentTracker
-    ];
-
-    // optional audio track and subtitle controller
-    Controller = config.audioTrackController;
-    if (Controller) {
-      const audioTrackController = new Controller(this);
-
-      /**
-       * @member {AudioTrackController} audioTrackController
-       */
-      this.audioTrackController = audioTrackController;
-      coreComponents.push(audioTrackController);
-    }
-
-    Controller = config.subtitleTrackController;
-    if (Controller) {
-      const subtitleTrackController = new Controller(this);
-
-      /**
-       * @member {SubtitleTrackController} subtitleTrackController
-       */
-      this.subtitleTrackController = subtitleTrackController;
-      networkControllers.push(subtitleTrackController);
-    }
-
-    Controller = config.emeController;
-    if (Controller) {
-      const emeController = new Controller(this);
-
-      /**
-       * @member {EMEController} emeController
-       */
-      this.emeController = emeController;
-      coreComponents.push(emeController);
-    }
-
-    // optional subtitle controllers
-    Controller = config.subtitleStreamController;
-    if (Controller) {
-      networkControllers.push(new Controller(this, fragmentTracker));
-    }
-    Controller = config.timelineController;
-    if (Controller) {
-      coreComponents.push(new Controller(this));
-    }
+    Hls.add(PlaylistLoader);
+    Hls.add(FragmentLoader);
+    Hls.add(KeyLoader);
+    Hls.add(config.abrController);
+    Hls.add(config.bufferController);
+    Hls.add(config.capLevelController);
+    Hls.add(config.fpsController);
+    Hls.add(ID3TrackController);
+    Hls.add(FragmentTracker);
 
     /**
      * @member {ICoreComponent[]}
      */
-    this.coreComponents = coreComponents;
+    this.coreComponents = Hls.registry.map(component => {
+      return new component(this, fragmentTracker);
+    });
   }
 
   /**
