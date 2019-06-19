@@ -10,6 +10,7 @@ import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { mergeSubtitlePlaylists } from './level-helper';
+import Hls from '../hls';
 
 const { performance } = window;
 const TICK_INTERVAL = 500; // how often to tick in ms
@@ -240,3 +241,5 @@ export class SubtitleStreamController extends BaseStreamController {
     this.fragPrevious = null;
   }
 }
+
+Hls.add(SubtitleStreamController);

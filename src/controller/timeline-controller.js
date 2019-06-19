@@ -9,6 +9,7 @@ import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import Hls from '../hls';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -365,5 +366,7 @@ class TimelineController extends EventHandler {
     return actualCCBytes;
   }
 }
+
+Hls.add(TimelineController);
 
 export default TimelineController;

@@ -12,6 +12,8 @@ import { logger } from '../utils/logger';
 import { EMEControllerConfig } from '../config';
 import { KeySystems, MediaKeyFunc } from '../utils/mediakeys-helper';
 
+import Hls from '../hls';
+
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
 /**
@@ -504,5 +506,7 @@ class EMEController extends EventHandler {
     this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
   }
 }
+
+Hls.add(EMEController);
 
 export default EMEController;

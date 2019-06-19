@@ -2,6 +2,7 @@ import Event from '../events';
 import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import Hls from '../hls';
 
 /**
  * @class AudioTrackController
@@ -401,5 +402,7 @@ class AudioTrackController extends TaskLoop {
     this._setAudioTrack(newId);
   }
 }
+
+Hls.add(AudioTrackController);
 
 export default AudioTrackController;

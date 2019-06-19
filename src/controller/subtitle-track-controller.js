@@ -2,6 +2,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { computeReloadInterval } from './level-helper';
+import Hls from '../hls';
 
 class SubtitleTrackController extends EventHandler {
   constructor (hls) {
@@ -240,5 +241,7 @@ function filterSubtitleTracks (textTrackList) {
   }
   return tracks;
 }
+
+Hls.add(SubtitleTrackController);
 
 export default SubtitleTrackController;

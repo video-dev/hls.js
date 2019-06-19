@@ -14,6 +14,7 @@ import { findFragWithCC } from '../utils/discontinuities';
 import { FragmentState } from './fragment-tracker';
 import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
+import Hls from '../hls';
 const { performance } = window;
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -820,4 +821,7 @@ class AudioStreamController extends BaseStreamController {
     }
   }
 }
+
+Hls.add(AudioStreamController);
+
 export default AudioStreamController;
