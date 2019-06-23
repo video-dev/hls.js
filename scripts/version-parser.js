@@ -1,6 +1,6 @@
 'use strict';
 
-const VALID_VERSION_REGEX = /^v\d+\.\d+\.\d+(?:-([0-9A-Za-z-]+))?/;
+const VALID_VERSION_REGEX = /^v\d+\.\d+\.\d+(?:-([a-zA-Z][0-9a-zA-Z-]*))?/;
 const STABLE_VERSION_REGEX = /^v\d+\.\d+\.\d+$/;
 
 module.exports = {
