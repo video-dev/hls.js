@@ -12,9 +12,9 @@ module.exports = {
   },
   // extract what we should use as the npm dist-tag (https://docs.npmjs.com/cli/dist-tag)
   // e.g
-  // 1.2.3-beta => beta
-  // 1.2.3-beta.1 => beta
-  // 1.2.3 => latest
+  // v1.2.3-beta => beta
+  // v1.2.3-beta.1 => beta
+  // v1.2.3 => latest
   getVersionTag: function(version) {
     const match = VALID_VERSION_REGEX.exec(version);
     if (!match) {
