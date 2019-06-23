@@ -9,6 +9,6 @@ Releases are performed automatically with travis.
 6. Publish the GitHub release.
 
 ## Examples
-- `git tag -a -v1.2.3` will result in `1.2.3` being published with the `latest` npm tag.
-- `git tag -a -v1.2.3-beta` will result in `1.2.3-beta` being published with the `beta` npm tag.
-- `git tag -a -v1.2.3-beta.1` will result in `1.2.3-beta.1` being published with the `beta` npm tag.
+- `git tag -a v1.2.3` will result in `1.2.3` being published with the `latest` npm tag.
+- `git tag -a v1.2.3-beta` will result in `1.2.3-beta` being published with the `beta` npm tag.
+- `git tag -a v1.2.3-beta.1` will result in `1.2.3-beta.1` being published with the `beta` npm tag.
