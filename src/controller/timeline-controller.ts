@@ -6,11 +6,12 @@ import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 import Fragment from '../loader/fragment';
+import { HlsConfig } from '../config';
 
 // TS todo: Reduce usage of any
 class TimelineController extends EventHandler {
   private media: HTMLMediaElement | null = null;
-  private config: any;
+  private config: HlsConfig;
   private enabled: boolean = true;
   private Cues: any;
   private textTracks: Array<TextTrack> = [];
@@ -23,7 +24,7 @@ class TimelineController extends EventHandler {
   private cea608Parser: Cea608Parser;
   private lastSn: number = -1;
   private prevCC: number = -1;
-  private vttCCs: any | null = null;
+  private vttCCs: any = null;
 
   constructor (hls) {
     super(hls, Event.MEDIA_ATTACHING,
@@ -58,7 +59,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  addCues (trackName: string, startTime: number, endTime: number, screen) {
+  addCues (trackName: string, startTime: number, endTime: number, screen: any) {
     // skip cues which overlap more than 50% with previously parsed time ranges
     const ranges = this.cueRanges;
     let merged = false;
@@ -323,15 +324,17 @@ class TimelineController extends EventHandler {
   }
 
   onFragParsingUserdata (data: { samples: Array<any> }) {
-    // push all of the CEA-708 messages into the interpreter
-    // immediately. It will create the proper timestamps based on our PTS value
-    if (this.enabled && this.config.enableCEA708Captions) {
-      for (let i = 0; i < data.samples.length; i++) {
-        const ccBytes = data.samples[i].bytes;
-        if (ccBytes) {
-          const ccdatas = this.extractCea608Data(ccBytes);
-          this.cea608Parser.addData(data.samples[i].pts, ccdatas);
-        }
+    if (!this.enabled || !this.config.enableCEA708Captions) {
+      return;
+    }
+
+    // If the event contains captions (found in the bytes property), push all bytes into the parser immediately
+    // It will create the proper timestamps based on the PTS value
+    for (let i = 0; i < data.samples.length; i++) {
+      const ccBytes = data.samples[i].bytes;
+      if (ccBytes) {
+        const ccdatas = this.extractCea608Data(ccBytes);
+        this.cea608Parser.addData(data.samples[i].pts, ccdatas);
       }
     }
   }
