@@ -37,11 +37,11 @@ export default class GapController {
       return;
     }
 
-    if (media.ended || !media.buffered.length || media.readyState > 2) {
+    if (media.ended || !media.buffered.length || media.readyState <= 2) {
       return;
     }
 
-    if (media.seeking && BufferHelper.isBuffered(media, currentTime)) {
+    if (media.seeking && !BufferHelper.isBuffered(media, currentTime)) {
       return;
     }
 
