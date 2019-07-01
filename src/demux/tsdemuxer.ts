@@ -58,7 +58,7 @@ class TSDemuxer implements Demuxer {
   private _txtTrack!: DemuxedTrack;
   private aacOverFlow: any;
   private avcSample: any;
-  private remainderData?: Uint8Array = new Uint8Array(0);
+  private remainderData?: Uint8Array;
 
   constructor (observer, config, typeSupported) {
     this.observer = observer;
@@ -179,6 +179,7 @@ class TSDemuxer implements Demuxer {
     if (this.remainderData) {
       data = appendUint8Array(this.remainderData, data);
       len = data.length;
+      this.remainderData = undefined;
     }
 
     const syncOffset = TSDemuxer._syncOffset(data);

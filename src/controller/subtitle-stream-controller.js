@@ -40,8 +40,6 @@ export class SubtitleStreamController extends BaseStreamController {
     this.levels = [];
     this.tracksBuffered = [];
     this.fragmentLoader = new FragmentLoader(hls.config);
-    this.currentTrackId = -1;
-    this.decrypter = new Decrypter(hls, hls.config);
     this.lastAVStart = 0;
   }
 

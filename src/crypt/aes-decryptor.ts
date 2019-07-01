@@ -9,18 +9,20 @@ export function removePadding (buffer) {
   }
 }
 
-class AESDecryptor {
+export default class AESDecryptor {
+  private rcon: Array<number> = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+  private subMix: Array<Uint32Array> = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+  private invSubMix: Array<Uint32Array> = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+  private sBox: Uint32Array= new Uint32Array(256);
+  private invSBox: Uint32Array = new Uint32Array(256);
+  private key: Uint32Array = new Uint32Array(0);
+
+  private ksRows: number = 0;
+  private keySize: number = 0;
+  private keySchedule!: Uint32Array;
+  private invKeySchedule!: Uint32Array;
+
   constructor () {
-    // Static after running initTable
-    this.rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
-    this.subMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
-    this.invSubMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
-    this.sBox = new Uint32Array(256);
-    this.invSBox = new Uint32Array(256);
-
-    // Changes during runtime
-    this.key = new Uint32Array(0);
-
     this.initTable();
   }
 
@@ -96,7 +98,7 @@ class AESDecryptor {
     }
   }
 
-  expandKey (keyBuffer) {
+  expandKey (keyBuffer: ArrayBuffer) {
     // convert keyBuffer to Uint32Array
     let key = this.uint8ArrayToUint32Array_(keyBuffer);
     let sameKey = true;
@@ -183,7 +185,7 @@ class AESDecryptor {
     return (word << 24) | ((word & 0xff00) << 8) | ((word & 0xff0000) >> 8) | (word >>> 24);
   }
 
-  decrypt (inputArrayBuffer, offset, aesIV, removePKCS7Padding) {
+  decrypt (inputArrayBuffer: ArrayBuffer, offset: number, aesIV: ArrayBuffer) {
     let nRounds = this.keySize + 6;
     let invKeySchedule = this.invKeySchedule;
     let invSBOX = this.invSBox;
@@ -260,23 +262,6 @@ class AESDecryptor {
       offset = offset + 4;
     }
 
-    return removePKCS7Padding ? removePadding(outputInt32.buffer) : outputInt32.buffer;
-  }
-
-  destroy () {
-    this.key = undefined;
-    this.keySize = undefined;
-    this.ksRows = undefined;
-
-    this.sBox = undefined;
-    this.invSBox = undefined;
-    this.subMix = undefined;
-    this.invSubMix = undefined;
-    this.keySchedule = undefined;
-    this.invKeySchedule = undefined;
-
-    this.rcon = undefined;
+    return outputInt32.buffer;
   }
 }
-
-export default AESDecryptor;
