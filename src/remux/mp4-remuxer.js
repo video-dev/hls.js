@@ -197,6 +197,7 @@ class MP4Remuxer {
 
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
     let nextAvcDts = this.nextAvcDts;
+    let lastAvcDts = this.lastAvcDts;
 
     const isSafari = this.isSafari;
 
@@ -280,7 +281,11 @@ class MP4Remuxer {
     // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
     // set this constant duration as being the avg delta between consecutive DTS.
     if (isSafari) {
-      mp4SampleDuration = Math.round((lastDTS - firstDTS) / (inputSamples.length - 1));
+      if (inputSamples.length === 1 && contiguous && lastAvcDts !== undefined) {
+        mp4SampleDuration = nextAvcDts - lastAvcDts;
+      } else {
+        mp4SampleDuration = Math.round((lastDTS - firstDTS) / (inputSamples.length - 1));
+      }
     }
 
     let nbNalu = 0, naluLen = 0;
@@ -342,8 +347,11 @@ class MP4Remuxer {
         if (i < nbSamples - 1) {
           mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
         } else {
-          let config = this.config,
-            lastFrameDuration = avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
+          let config = this.config, lastFrameDuration = 0;
+          if (i > 0 || (contiguous && lastAvcDts !== undefined)) {
+            lastFrameDuration = avcSample.dts - lastAvcDts;
+          }
+
           if (config.stretchShortVideoTrack) {
             // In some cases, a segment's audio track duration may exceed the video track duration.
             // Since we've already remuxed audio, and we know how long the audio track is, we look to
@@ -389,9 +397,11 @@ class MP4Remuxer {
           isNonSync: avcSample.key ? 0 : 1
         }
       });
+      lastAvcDts = avcSample.dts;
     }
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     this.nextAvcDts = lastDTS + mp4SampleDuration;
+    this.lastAvcDts = lastAvcDts;
     let dropped = track.dropped;
     track.nbNalu = 0;
     track.dropped = 0;
