@@ -222,18 +222,8 @@ export default class BaseStreamController extends TaskLoop {
       this.hls.trigger(Event.ERROR, errorData);
     };
 
-    // TODO: Allow progressive downloading of encrypted streams after the decrypter can handle progressive decryption
-    if (frag.decryptdata && frag.decryptdata.key && progressCallback) {
-      return this.fragmentLoader.load(frag)
-        .then((data: FragLoadSuccessResult) => {
-          progressCallback(data);
-          return data;
-        })
-        .catch(errorHandler);
-    } else {
-      return this.fragmentLoader.load(frag, progressCallback)
-        .catch(errorHandler);
-    }
+    return this.fragmentLoader.load(frag, progressCallback)
+      .catch(errorHandler);
   }
 
   protected _handleTransmuxerFlush (identifier: TransmuxIdentifier) {

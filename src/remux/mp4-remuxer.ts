@@ -428,7 +428,6 @@ export default class MP4Remuxer implements Remuxer {
     let fillFrame: any;
     let nextAudioPts = this.nextAudioPts;
 
-    let debugString = inputSamples.map(s => `pts:${s.pts}, dts: ${s.dts}`);
     // window.audioSamples ? window.audioSamples.push(inputSamples.map(s => s.pts)) : (window.audioSamples = [inputSamples.map(s => s.pts)]);
 
     // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
@@ -641,8 +640,7 @@ export default class MP4Remuxer implements Remuxer {
       type: 'audio',
       hasAudio: true,
       hasVideo: false,
-      nb: nbSamples,
-      debugString
+      nb: nbSamples
     };
 
     console.assert(mdat.length, 'MDAT length must not be zero');

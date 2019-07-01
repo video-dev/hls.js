@@ -71,6 +71,9 @@ export default class Transmuxer {
   configure (transmuxConfig: TransmuxConfig, state: TransmuxState) {
     this.transmuxConfig = transmuxConfig;
     this.currentTransmuxState = state;
+    if (this.decrypter) {
+      this.decrypter.reset();
+    }
   }
 
   push (data: ArrayBuffer,
@@ -82,7 +85,7 @@ export default class Transmuxer {
 
     // TODO: Handle progressive AES-128 decryption
     if (encryptionType === 'AES-128') {
-      this.decryptionPromise = this.decryptAes128(data, decryptdata)
+      this.decryptionPromise = this.decryptAes128(uintData, decryptdata)
         .then(decryptedData => {
           const result = this.push(decryptedData, null, transmuxIdentifier);
           this.decryptionPromise = null;
@@ -132,7 +135,7 @@ export default class Transmuxer {
   }
 
   flush (transmuxIdentifier: TransmuxIdentifier) : TransmuxerResult | Promise<TransmuxerResult>  {
-    const { demuxer, remuxer, cache, currentTransmuxState, decryptionPromise, observer } = this;
+    const { decrypter, demuxer, remuxer, cache, currentTransmuxState, decryptionPromise, observer } = this;
     if (decryptionPromise) {
       return decryptionPromise.then(() => {
         return this.flush(transmuxIdentifier);
@@ -153,6 +156,13 @@ export default class Transmuxer {
     }
 
     const { accurateTimeOffset, timeOffset } = currentTransmuxState;
+    if (decrypter) {
+      const data = decrypter.flush();
+      if (data) {
+        demuxer.demux(data, timeOffset, false);
+      }
+    }
+
     const { audioTrack, avcTrack, id3Track, textTrack } = demuxer.flush(timeOffset);
     logger.log(`[transmuxer.ts]: Flushed fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}`);
     return {
@@ -226,7 +236,7 @@ export default class Transmuxer {
       );
   }
 
-  private decryptAes128 (data: ArrayBuffer, decryptData: any): Promise<ArrayBuffer> {
+  private decryptAes128 (data: Uint8Array, decryptData: any): Promise<ArrayBuffer> {
     let decrypter = this.decrypter;
     if (!decrypter) {
       decrypter = this.decrypter = new Decrypter(this.observer, this.config);

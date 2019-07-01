@@ -1,4 +1,7 @@
-class FastAESKey {
+export default class FastAESKey {
+  private subtle: any;
+  private key: ArrayBuffer;
+
   constructor (subtle, key) {
     this.subtle = subtle;
     this.key = key;
@@ -8,5 +11,3 @@ class FastAESKey {
     return this.subtle.importKey('raw', this.key, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
   }
 }
-
-export default FastAESKey;
