@@ -108,12 +108,14 @@ export default class MP4Remuxer implements Remuxer {
       }
     }
 
-    if (id3Track.samples.length) {
-      id3 = this.remuxID3(id3Track);
-    }
+    if (this.ISGenerated) {
+      if (id3Track.samples.length) {
+        id3 = this.remuxID3(id3Track);
+      }
 
-    if (textTrack.samples.length) {
-      text = this.remuxText(textTrack);
+      if (textTrack.samples.length) {
+        text = this.remuxText(textTrack);
+      }
     }
 
     return {
