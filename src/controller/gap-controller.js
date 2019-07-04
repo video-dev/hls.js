@@ -13,6 +13,7 @@ export default class GapController {
     this.fragmentTracker = fragmentTracker;
     this.hls = hls;
     this.stallReported = false;
+    this.hasPlayed = false;
   }
 
   /**
@@ -26,6 +27,10 @@ export default class GapController {
     const currentTime = media.currentTime;
     const tnow = window.performance.now();
 
+    if (this.hasPlayed && media.paused) {
+      return;
+    }
+
     if (currentTime !== lastCurrentTime) {
       // The playhead is now moving, but was previously stalled
       if (this.stallReported) {
@@ -34,6 +39,7 @@ export default class GapController {
       }
       this.stalled = null;
       this.nudgeRetry = 0;
+      this.hasPlayed = true;
       return;
     }
 
