@@ -487,7 +487,7 @@ class PlaylistLoader extends EventHandler {
   _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: unknown) {
     const { type, level, id, levelDetails } = context;
 
-    if (!levelDetails || !levelDetails.targetduration) {
+    if (!levelDetails || Number.isNaN(levelDetails.targetduration)) {
       this._handleManifestParsingError(response, context, 'invalid target duration', networkDetails);
       return;
     }
