@@ -8,7 +8,7 @@ import Event from '../events';
 import { enableLogs } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
 import { RemuxedTrack } from '../types/remuxer';
-import { TransmuxerResult } from '../types/transmuxer';
+import { TransmuxerResult, TransmuxIdentifier } from '../types/transmuxer';
 
 export default function TransmuxerWorker (self) {
   const observer = new EventEmitter() as any;
@@ -63,13 +63,11 @@ export default function TransmuxerWorker (self) {
           const transmuxResult = self.transmuxer.flush(id);
           if (transmuxResult.then) {
             // @ts-ignore
-            transmuxResult.then(data => {
-              emitTransmuxComplete(self, data);
-              self.postMessage({ event: 'flush', data: id });
+            transmuxResult.then((results: Array<TransmuxerResult>) => {
+              handleFlushResult(self, results as Array<TransmuxerResult>, id);
             });
           } else {
-            emitTransmuxComplete(self, transmuxResult);
-            self.postMessage({ event: 'flush', data: id });
+            handleFlushResult(self, transmuxResult as Array<TransmuxerResult>, id);
           }
           break;
         }
@@ -92,7 +90,7 @@ function emitTransmuxComplete (self: any, transmuxResult : TransmuxerResult): vo
 }
 
 function convertToTransferable (track: RemuxedTrack): Array<ArrayBuffer> {
-  const transferable = [] as Array<ArrayBuffer>;
+  const transferable: Array<ArrayBuffer> = [];
   if (track.data1) {
     transferable.push(track.data1.buffer);
   }
@@ -100,4 +98,11 @@ function convertToTransferable (track: RemuxedTrack): Array<ArrayBuffer> {
     transferable.push(track.data2.buffer);
   }
   return transferable;
+}
+
+function handleFlushResult (self: any, results: Array<TransmuxerResult>, transmuxIdentifier: TransmuxIdentifier) {
+  results.forEach(result => {
+    emitTransmuxComplete(self, result);
+  });
+  self.postMessage({ event: 'flush', data: transmuxIdentifier });
 }

@@ -7,7 +7,7 @@ import { getMediaSource } from '../utils/mediasource-helper';
 import { getSelfScope } from '../utils/get-self-scope';
 import { Observer } from '../observer';
 import Fragment from '../loader/fragment';
-import { TransmuxIdentifier } from '../types/transmuxer';
+import { TransmuxerResult, TransmuxIdentifier } from '../types/transmuxer';
 
 // see https://stackoverflow.com/a/11237259/589493
 const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
@@ -165,14 +165,19 @@ export default class TransmuxerInterface {
       if (transmuxResult.then) {
         // @ts-ignore
         transmuxResult.then(data => {
-          this.onTransmuxComplete(data);
-          this.onFlush(transmuxIdentifier);
+          this.handleFlushResult(data, transmuxIdentifier);
         });
       } else {
-        this.onTransmuxComplete(transmuxResult);
-        this.onFlush(transmuxIdentifier);
+        this.handleFlushResult(transmuxResult as Array<TransmuxerResult>, transmuxIdentifier);
       }
     }
+  }
+
+  private handleFlushResult (results: Array<TransmuxerResult>, transmuxIdentifier: TransmuxIdentifier) {
+    results.forEach(result => {
+      this.onTransmuxComplete(result);
+    });
+    this.onFlush(transmuxIdentifier);
   }
 
   private onWorkerMessage (ev: any): void {
