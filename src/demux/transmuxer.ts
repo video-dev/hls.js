@@ -1,9 +1,3 @@
-/**
- *
- * inline demuxer: probe fragments and instantiate
- * appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
- *
- */
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
@@ -58,7 +52,6 @@ export default class Transmuxer {
   private decryptionPromise: Promise<TransmuxerResult> | null = null;
   private transmuxConfig!: TransmuxConfig;
   private currentTransmuxState!: TransmuxState;
-
   private cache: ChunkCache = new ChunkCache();
 
   constructor (observer, typeSupported, config, vendor) {
@@ -81,22 +74,35 @@ export default class Transmuxer {
     transmuxIdentifier: TransmuxIdentifier
   ): TransmuxerResult | Promise<TransmuxerResult> {
     let uintData = new Uint8Array(data);
-    const encryptionType = getEncryptionType(uintData, decryptdata);
+    const { cache, config, currentTransmuxState: state, transmuxConfig } = this;
 
-    // TODO: Handle progressive AES-128 decryption
+    const encryptionType = getEncryptionType(uintData, decryptdata);
     if (encryptionType === 'AES-128') {
-      this.decryptionPromise = this.decryptAes128(uintData, decryptdata)
-        .then(decryptedData => {
-          const result = this.push(decryptedData, null, transmuxIdentifier);
-          this.decryptionPromise = null;
-          return result;
-        });
-      return this.decryptionPromise;
+      const decrypter = this.getDecrypter();
+      // Software decryption is synchronous; webCrypto is not
+      if (config.enableSoftwareAES) {
+        // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
+        // data is handled in the flush() call
+        const decryptedData = decrypter.softwareDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer);
+        if (!decryptedData) {
+          return emptyResult(transmuxIdentifier);
+        }
+       uintData = decryptedData;
+      } else {
+        this.decryptionPromise = decrypter.webCryptoDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer)
+          .then((decryptedData) : TransmuxerResult => {
+            // Calling push here is important; if flush() is called while this is still resolving, this ensures that
+            // the decrypted data has been transmuxed
+            const result = this.push(decryptedData, null, transmuxIdentifier) as TransmuxerResult;
+            this.decryptionPromise = null;
+            return result;
+          });
+          return this.decryptionPromise!;
+      }
     }
 
-    const { cache, currentTransmuxState: state, transmuxConfig: config } = this;
     const { contiguous, discontinuity, trackSwitch, accurateTimeOffset, timeOffset } = state;
-    const { audioCodec, videoCodec, defaultInitPts, duration, initSegmentData } = config;
+    const { audioCodec, videoCodec, defaultInitPts, duration, initSegmentData } = transmuxConfig;
 
     // Reset muxers before probing to ensure that their state is clean, even if flushing occurs before a successful probe
     if (discontinuity || trackSwitch) {
@@ -113,16 +119,16 @@ export default class Transmuxer {
 
     let { demuxer, remuxer } = this;
     if (this.needsProbing(uintData, discontinuity, trackSwitch)) {
-      uintData = appendUint8Array(cache.flush(), uintData);
+      const cachedData = cache.flush();
+      if (cachedData) {
+        uintData = appendUint8Array(cachedData, uintData);
+      }
       ({ demuxer, remuxer } = this.configureTransmuxer(uintData, initSegmentData, audioCodec, videoCodec, duration));
     }
 
     if (!demuxer || !remuxer) {
       cache.push(uintData);
-        return {
-          remuxResult: {},
-          transmuxIdentifier
-        };
+      return emptyResult(transmuxIdentifier);
     }
 
     const result = this.transmux(uintData, decryptdata, encryptionType, timeOffset, accurateTimeOffset, transmuxIdentifier);
@@ -134,41 +140,52 @@ export default class Transmuxer {
     return result;
   }
 
-  flush (transmuxIdentifier: TransmuxIdentifier) : TransmuxerResult | Promise<TransmuxerResult>  {
-    const { decrypter, demuxer, remuxer, cache, currentTransmuxState, decryptionPromise, observer } = this;
+  // Due to data caching, flush calls can produce more than one TransmuxerResult (hence the Array type)
+  flush (transmuxIdentifier: TransmuxIdentifier) : Array<TransmuxerResult> | Promise<TransmuxerResult> {
+    const { decrypter, cache, currentTransmuxState, decryptionPromise, observer } = this;
+    const transmuxResults: Array<TransmuxerResult> = [];
+
     if (decryptionPromise) {
+      // Upon resolution, the decryption promise calls push() and returns its TransmuxerResult up the stack. Therefore
+      // only flushing is required for async decryption
+      // @ts-ignore
       return decryptionPromise.then(() => {
         return this.flush(transmuxIdentifier);
       });
     }
 
+    const { accurateTimeOffset, timeOffset } = currentTransmuxState;
+    if (decrypter) {
+      // The decrypter may have data cached, which needs to be demuxed. In this case we'll have two TransmuxResults
+      // This happens in the case that we receive only 1 push call for a segment (either for non-progressive downloads,
+      // or for progressive downloads with small segments)
+      const decryptedData = decrypter.flush();
+      if (decryptedData) {
+        // Push always returns a TransmuxerResult if decryptdata is null
+        transmuxResults.push(this.push(decryptedData, null, transmuxIdentifier) as TransmuxerResult);
+      }
+    }
+
     const bytesSeen = cache.dataLength;
     cache.reset();
+    const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       // If probing failed, and each demuxer saw enough bytes to be able to probe, then Hls.js has been given content its not able to handle
       if (bytesSeen >= minProbeByteLength) {
         observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
       }
-      return {
-        remuxResult: {},
-        transmuxIdentifier
-      }
-    }
 
-    const { accurateTimeOffset, timeOffset } = currentTransmuxState;
-    if (decrypter) {
-      const data = decrypter.flush();
-      if (data) {
-        demuxer.demux(data, timeOffset, false);
-      }
+      return [emptyResult(transmuxIdentifier)];
     }
 
     const { audioTrack, avcTrack, id3Track, textTrack } = demuxer.flush(timeOffset);
     logger.log(`[transmuxer.ts]: Flushed fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}`);
-    return {
-        remuxResult: remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
-        transmuxIdentifier
-    }
+    transmuxResults.push({
+      remuxResult: remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
+      transmuxIdentifier
+    });
+
+    return transmuxResults;
   }
 
   resetInitialTimestamp (defaultInitPts: number | undefined) {
@@ -236,21 +253,6 @@ export default class Transmuxer {
       );
   }
 
-  private decryptAes128 (data: Uint8Array, decryptData: any): Promise<ArrayBuffer> {
-    let decrypter = this.decrypter;
-    if (!decrypter) {
-      decrypter = this.decrypter = new Decrypter(this.observer, this.config);
-    }
-    return new Promise(resolve => {
-      const startTime = now();
-      decrypter.decrypt(data, decryptData.key.buffer, decryptData.iv.buffer, (decryptedData) => {
-        const endTime = now();
-        this.observer.trigger(Event.FRAG_DECRYPTED, { stats: { tstart: startTime, tdecrypt: endTime } });
-        resolve(decryptedData);
-      });
-    });
-  }
-
   private configureTransmuxer (data: Uint8Array, initSegmentData: Uint8Array, audioCodec: string, videoCodec: string, duration: number) {
     const { config, observer, typeSupported, vendor } = this;
     let demuxer, remuxer;
@@ -280,6 +282,14 @@ export default class Transmuxer {
     // so let's check that current demuxer is still valid
     return !this.demuxer || ((discontinuity || trackSwitch) && !this.probe(data));
   }
+
+  private getDecrypter () {
+    let decrypter = this.decrypter;
+    if (!decrypter) {
+      decrypter = this.decrypter = new Decrypter(this.observer, this.config);
+    }
+    return decrypter;
+  }
 }
 
 function getEncryptionType (data: Uint8Array, decryptData: any): string | null {
@@ -289,6 +299,11 @@ function getEncryptionType (data: Uint8Array, decryptData: any): string | null {
   }
   return encryptionType;
 }
+
+const emptyResult = (transmuxIdentifier) : TransmuxerResult => ({
+    remuxResult: {},
+    transmuxIdentifier
+  });
 
 export class TransmuxConfig {
   public audioCodec: string;
