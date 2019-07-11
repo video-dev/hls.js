@@ -90,6 +90,10 @@ const getEMEInitializationDataSpy = sinon.spy(emeConfig.getEMEInitializationData
 
 const getEMELicenseSpy = sinon.spy(emeConfig.getEMELicenseFunc);
 
+const getBadEMELicenseSpy = sinon.spy(function (levelOrAudioTrack, event) {
+  return Promise.resolve('Bad license');
+});
+
 const setupEach = function (config) {
   hls = new Hls(config);
 
@@ -346,6 +350,34 @@ describe('EMEController', function () {
       }
 
       expect(data.details).to.equal(ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED);
+
+      done();
+    });
+
+    hls.loadSource('https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8');
+  }).timeout(20000);
+
+  it('should trigger KEY_SYSTEM_LICENSE_UPDATE_FAILED error when key session cannot be updated with license', function (done) {
+    ensureHttps(this);
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: requestMediaKeySystemAccessSpy,
+      getEMEInitializationDataFunc: getEMEInitializationDataSpy,
+      getEMELicenseFunc: getBadEMELicenseSpy
+    });
+
+    licenseServerUrlMock = 'https://cwip-shaka-proxy.appspot.com/no_auth';
+
+    hls.on(HlsEvents.ERROR, (_, data) => {
+      // Other errors can be thrown while we are waiting for the
+      // KEY_SYSTEM_LICENSE_REQUEST_FAILED error to be thrown, so we
+      // filter other errors until the right one comes or the test times out
+      if (data.details !== ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED) {
+        return;
+      }
+
+      expect(data.details).to.equal(ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED);
 
       done();
     });
