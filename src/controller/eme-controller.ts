@@ -44,7 +44,7 @@ class EMEController extends EventHandler {
    * @constructs
    * @param {Hls} hls Our Hls.js instance
    */
-  constructor (hls) {
+  constructor(hls) {
     super(hls,
       Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED,
@@ -59,32 +59,7 @@ class EMEController extends EventHandler {
   }
 
   /**
-   * Handles key session messages and requests licenses
-   * @private
-   * @param {MediaKeyMessageEvent} event The event resulting from generating a license request on a MediaKeySession
-   * @param {Level | AudioTrack} levelOrAudioTrack Either a level or audio track mapped from manifestParsed data, used by client should different licenses be
-   * requred for different levels or audio tracks
-   * @param {Promise.resolve} resolve Resolve method to be called on successful license update on MediaKeySession
-   * @param {Promise.resolve} reject Reject method to be called on unsuccessful license update on MediaKeySession
-   * @param {Event<MediaKeyMessageEvent>} event Message event created by license request generation
-   */
-  private _onKeySessionMessage = (event: MediaKeyMessageEvent, levelOrAudioTrack: any, resolve, reject) => {
-    logger.log('Received key session message, requesting license');
-
-    this.getEMELicense(levelOrAudioTrack, event).then((license: ArrayBuffer) => {
-      logger.log('Received license data, updating key-session');
-      return (event.target! as MediaKeySession).update(license).then(() => {
-        resolve();
-      }).catch((err) => {
-        reject(ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED);
-      });
-    }).catch((err) => {
-      reject(ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED);
-    });
-  }
-
-  /**
-   * Creates and handles the generation of requests for licenses
+   * Creates requests for licenses
    * @private
    * @param {MediaKeys} session Media Keys Session created on the Media Keys object https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySession
    * @param {Level | AudioTrack} levelOrAudioTrack Either a level or audio track mapped from manifestParsed data, used by client should different licenses be
@@ -97,7 +72,21 @@ class EMEController extends EventHandler {
     return this.getEMEInitializationData(levelOrAudioTrack, this.initDataType, this.initData).then((initDataInfo) => {
       const messagePromise = new Promise((resolve, reject) => {
         session.addEventListener('message', (event: MediaKeyMessageEvent) => {
-          this._onKeySessionMessage(event, levelOrAudioTrack, resolve, reject)
+          logger.log('Received key session message, requesting license');
+
+          this.getEMELicense(levelOrAudioTrack, event).catch(() => {
+            reject(ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED);
+          }).then((license: ArrayBuffer) => {
+            logger.log('Received license data, updating key session');
+
+            return (event.target! as MediaKeySession).update(license).then(() => {
+              logger.log('Key session updated with license');
+
+              resolve();
+            }).catch(() => {
+              reject(ErrorDetails.KEY_SYSTEM_LICENSE_UPDATE_FAILED);
+            });
+          });
         });
       });
 
@@ -120,7 +109,7 @@ class EMEController extends EventHandler {
    * @returns {Promise<EMEKeySessionResponse>} Promise that resolves to the Media Key Session created on the Media Keys https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySession
    * Also includes the level or audio track to associate with the session
    */
-  private _onMediaKeysSet (mediaKeys: MediaKeys, levelOrAudioTrack: any): Promise<EMEKeySessionResponse> {
+  private _onMediaKeysSet(mediaKeys: MediaKeys, levelOrAudioTrack: any): Promise<EMEKeySessionResponse> {
     logger.log('Creating session on media keys');
 
     const keySession = mediaKeys.createSession();
@@ -141,7 +130,7 @@ class EMEController extends EventHandler {
    * @param {MediaKeys} mediaKeys Media Keys created on the Key System Access object https://developer.mozilla.org/en-US/docs/Web/API/MediaKeys
    * @returns {Promise<MediaKeys>} Promise that resvoles to the created media keys  https://developer.mozilla.org/en-US/docs/Web/API/MediaKeys
    */
-  private _onMediaKeysCreated (mediaKeys): Promise<MediaKeys> {
+  private _onMediaKeysCreated(mediaKeys): Promise<MediaKeys> {
     if (this.media.mediaKeys) {
       logger.log('Media keys have already been set on media');
 
@@ -165,7 +154,7 @@ class EMEController extends EventHandler {
    * @param {MediaKeySystemAccess} mediaKeySystemAccess https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess
    * @returns {Promise<MediaKeys>} Promise that resolves to the created media keys https://developer.mozilla.org/en-US/docs/Web/API/MediaKeys
    */
-  private _onMediaKeySystemAccessObtained (mediaKeySystemAccess: MediaKeySystemAccess): Promise<MediaKeys> {
+  private _onMediaKeySystemAccessObtained(mediaKeySystemAccess: MediaKeySystemAccess): Promise<MediaKeys> {
     if (this.media.mediaKeys) {
       logger.log('Media keys have already been created');
 
@@ -189,7 +178,7 @@ class EMEController extends EventHandler {
    * @param {MediaKeySystemConfiguration[]} mediaKeySystemConfigs Configurations to request Media Key System access with https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration
    * @returns {Promise<MediaKeySystemAccess} Promise that resolves to the Media Key System Access object https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess
    */
-  private _getMediaKeySystemAccess (mediaKeySystemConfigs: MediaKeySystemConfiguration[]): Promise<MediaKeySystemAccess> {
+  private _getMediaKeySystemAccess(mediaKeySystemConfigs: MediaKeySystemConfiguration[]): Promise<MediaKeySystemAccess> {
     logger.log('Requesting encrypted media key system access');
 
     if (!window.navigator.requestMediaKeySystemAccess) {
@@ -209,7 +198,7 @@ class EMEController extends EventHandler {
    * @param {any} levels Levels found in manifest
    * @returns {Array<MediaSystemConfiguration>} A non-empty Array of MediaKeySystemConfiguration objects https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration
    */
-  private _getSupportedMediaKeySystemConfigurations (levels: any): MediaKeySystemConfiguration[] {
+  private _getSupportedMediaKeySystemConfigurations(levels: any): MediaKeySystemConfiguration[] {
     const baseConfig: MediaKeySystemConfiguration = {
       audioCapabilities: [], // e.g. { contentType: 'audio/mp4; codecs="avc1.42E01E"' }
       videoCapabilities: [] // e.g. { contentType: 'video/mp4; codecs="avc1.42E01E"' }
@@ -230,7 +219,7 @@ class EMEController extends EventHandler {
     ];
   }
 
-  private _configureEME () {
+  private _configureEME() {
     this.hls.trigger(Event.EME_CONFIGURING, {});
 
     const mediaKeySystemConfigs = this._getSupportedMediaKeySystemConfigurations(this.manifestData.levels);
@@ -256,7 +245,13 @@ class EMEController extends EventHandler {
 
       const keySessionRequests = levelRequests.concat(audioRequests);
 
-      return Promise.all(keySessionRequests);
+      return keySessionRequests.reduce((prevKeySessionRequest, currentKeySessionRequest) => {
+        return prevKeySessionRequest.then((prevKeySessionResponses) => {
+          return currentKeySessionRequest.then((keySessionResponse) => {
+            return [...prevKeySessionResponses, keySessionResponse];
+          });
+        });
+      }, Promise.resolve([]));
     }).then((keySessionResponses) => {
       logger.log('Created media key sessions');
 
@@ -264,7 +259,11 @@ class EMEController extends EventHandler {
         return this._onMediaKeySessionCreated(keySessionResponse.keySession, keySessionResponse.levelOrAudioTrack);
       });
 
-      return Promise.all(licenseRequests);
+      return licenseRequests.reduce((prevLicenseRequest, currentLicenseRequest) => {
+        return prevLicenseRequest.then(() => {
+          return currentLicenseRequest;
+        });
+      }, Promise.resolve());
     }).then(() => {
       logger.log('EME sucessfully configured');
 
@@ -280,7 +279,7 @@ class EMEController extends EventHandler {
     });
   }
 
-  onMediaAttaching (data: { media: HTMLMediaElement }) {
+  onMediaAttaching(data: { media: HTMLMediaElement }) {
     let media = data.media;
 
     if (media) {
@@ -296,7 +295,7 @@ class EMEController extends EventHandler {
     }
   }
 
-  onManifestParsed (data: any) {
+  onManifestParsed(data: any) {
     if (this.emeEnabled) {
       this.manifestData = data;
 
@@ -306,7 +305,7 @@ class EMEController extends EventHandler {
     }
   }
 
-  onMediaDetaching () {
+  onMediaDetaching() {
     if (this.emeEnabled) {
       const keySessionClosePromises: Promise<void>[] = this._keySessions.map((keySession) => {
         return keySession.close();
@@ -320,7 +319,7 @@ class EMEController extends EventHandler {
 
   // Getters for EME Controller
 
-  get media () {
+  get media() {
     if (!this._media) {
       throw new Error('Media has not been set on EME Controller');
     }
@@ -328,49 +327,49 @@ class EMEController extends EventHandler {
     return this._media;
   }
 
-  get manifestData () {
+  get manifestData() {
     return this._manifestData;
   }
 
-  set manifestData (value) {
+  set manifestData(value) {
     this._manifestData = value;
   }
 
-  get initDataType () {
+  get initDataType() {
     return this._initDataType;
   }
 
-  set initDataType (value) {
+  set initDataType(value) {
     this._initDataType = value;
   }
 
-  get initData () {
+  get initData() {
     return this._initData;
   }
 
-  set initData (value) {
+  set initData(value) {
     this._initData = value;
   }
 
-  get keySessions () {
+  get keySessions() {
     return this._keySessions;
   }
 
-  set keySessions (value) {
+  set keySessions(value) {
     this._keySessions = value;
   }
 
   // Getters for user configurations
 
-  get emeEnabled () {
+  get emeEnabled() {
     return this._emeEnabled;
   }
 
-  get emeInitDataInFrag () {
+  get emeInitDataInFrag() {
     return this._emeInitDataInFrag;
   }
 
-  get requestMediaKeySystemAccess () {
+  get requestMediaKeySystemAccess() {
     if (!this._requestMediaKeySystemAccess) {
       throw new Error('No requestMediaKeySystemAccess function configured');
     }
@@ -378,7 +377,7 @@ class EMEController extends EventHandler {
     return this._requestMediaKeySystemAccess;
   }
 
-  get getEMEInitializationData () {
+  get getEMEInitializationData() {
     if (!this._getEMEInitializationData) {
       throw new Error('No getInitializationData function configured');
     }
@@ -386,7 +385,7 @@ class EMEController extends EventHandler {
     return this._getEMEInitializationData;
   }
 
-  get getEMELicense () {
+  get getEMELicense() {
     if (!this._getEMELicense) {
       throw new Error('No getEMELicense function configured');
     }
