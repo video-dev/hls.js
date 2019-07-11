@@ -82,6 +82,7 @@ export default class Fragment {
   public maxStartPTS?: number;
   // Load/parse timing information
   public stats: LoadStats = new LoadStats();
+  public urlId: number = 0;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
