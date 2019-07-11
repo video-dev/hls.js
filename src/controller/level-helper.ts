@@ -125,6 +125,8 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
     if (Number.isFinite(oldFrag.startPTS)) {
       newFrag.start = newFrag.startPTS = oldFrag.startPTS;
       newFrag.endPTS = oldFrag.endPTS;
+      newFrag.startDTS = oldFrag.startDTS;
+      newFrag.endDTS = oldFrag.endDTS;
       newFrag.duration = oldFrag.duration;
       newFrag.backtracked = oldFrag.backtracked;
       newFrag.dropped = oldFrag.dropped;
