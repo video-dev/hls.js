@@ -383,18 +383,8 @@ export default class StreamController extends BaseStreamController {
       if (fragPrevious && frag.sn === fragPrevious.sn) {
         if (sameLevel && !frag.backtracked) {
           if (frag.sn < levelDetails.endSN) {
-            let deltaPTS = fragPrevious.deltaPTS;
-            // if there is a significant delta between audio and video, larger than max allowed hole,
-            // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
-            // let's try to load previous fragment again to get last keyframe
-            // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
-            if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped && curSNIdx && !frag.backtracked) {
-              frag = prevFrag;
-              this.warn('SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this');
-            } else {
-              frag = nextFrag;
-              this.log(`SN just loaded, load next one: ${frag.sn}`);
-            }
+            frag = nextFrag;
+            this.log(`SN just loaded, load next one: ${frag.sn}`);
           } else {
             frag = null;
           }
@@ -406,7 +396,6 @@ export default class StreamController extends BaseStreamController {
           } else {
             // If a fragment has dropped frames and it's in a same level/sequence, load the previous fragment to try and find the keyframe
             // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
-            this.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
             frag.dropped = 0;
             if (prevFrag) {
               frag = prevFrag;
@@ -1295,7 +1284,7 @@ function _hasDroppedFrames (frag, dropped, startSN) {
     frag.dropped = dropped;
     if (!frag.backtracked) {
       if (frag.sn === startSN) {
-        logger.warn(`[stream-controller]:  Fragment ${frag.sn} of level ${frag.level} is missing ${frag.dropped} video frame(s); this is the start fragment and will be appended with a gap`);
+        logger.warn(`[stream-controller]: Fragment ${frag.sn} of level ${frag.level} is missing ${frag.dropped} video frame(s); this is the start fragment and will be appended with a gap`);
         return false;
       } else {
         logger.warn(`[stream-controller]: Fragment ${frag.sn} of level ${frag.level} is missing ${frag.dropped} video frame(s); backtracking to find a keyframe`);

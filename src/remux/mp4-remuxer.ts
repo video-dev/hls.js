@@ -62,9 +62,9 @@ export default class MP4Remuxer implements Remuxer {
     const isVideoContiguous = Number.isFinite(this.nextAvcDts!);
     if (!isVideoContiguous && this.config.forceKeyFrameOnDiscontinuity) {
       const length = videoTrack.samples.length;
-      dropSamplesUntilKeyframe(videoTrack);
-      if (videoTrack.dropped) {
-        logger.warn(`[mp4-remuxer]: Dropped ${videoTrack.dropped} out of ${length} video samples due to a missing keyframe`);
+      const dropped = dropSamplesUntilKeyframe(videoTrack);
+      if (dropped) {
+        logger.warn(`[mp4-remuxer]: Dropped ${dropped} out of ${length} video samples due to a missing keyframe`);
       }
     }
 
@@ -749,7 +749,7 @@ function PTSNormalize (value: number, reference: number | null): number {
   return value;
 }
 
-function dropSamplesUntilKeyframe (track: DemuxedTrack) : void {
+function dropSamplesUntilKeyframe (track: DemuxedTrack) : number {
   const samples = track.samples;
   let dropIndex = 0;
   for (let i = 0; i < samples.length; i++) {
@@ -759,10 +759,11 @@ function dropSamplesUntilKeyframe (track: DemuxedTrack) : void {
     }
     dropIndex++;
   }
-  track.dropped = dropIndex;
+  track.dropped += dropIndex;
   if (dropIndex) {
     track.samples = samples.slice(dropIndex);
   }
+  return dropIndex;
 }
 
 
