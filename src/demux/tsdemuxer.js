@@ -365,7 +365,7 @@ class TSDemuxer {
       switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
-          logger.log('unkown stream type:' + data[offset]);
+          logger.log('unknown stream type:' + data[offset]);
           break;
         }
         /* falls through */
@@ -390,7 +390,7 @@ class TSDemuxer {
 
       case 0xdb: // SAMPLE-AES AVC
         if (!isSampleAes) {
-          logger.log('unkown stream type:' + data[offset]);
+          logger.log('unknown stream type:' + data[offset]);
           break;
         }
         /* falls through */
@@ -422,7 +422,7 @@ class TSDemuxer {
         break;
 
       default:
-        logger.log('unkown stream type:' + data[offset]);
+        logger.log('unknown stream type:' + data[offset]);
         break;
       }
       // move to the next table entry
