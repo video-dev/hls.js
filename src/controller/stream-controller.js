@@ -691,7 +691,8 @@ class StreamController extends BaseStreamController {
       media.removeEventListener('ended', this.onvended);
       this.onvseeking = this.onvseeked = this.onvended = null;
     }
-    this.media = this.mediaBuffer = null;
+    this.fragmentTracker.removeAllFragments();
+    this.media = this.mediaBuffer = this.altAudio = null;
     this.loadedmetadata = false;
     this.stopLoad();
   }
