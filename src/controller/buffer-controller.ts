@@ -149,7 +149,7 @@ class BufferController extends EventHandler {
 
   onMediaAttaching (data: { media: HTMLMediaElement }) {
     let media = this.media = data.media;
-    if (media) {
+    if (media && MediaSource) {
       // setup the media source
       let ms = this.mediaSource = new MediaSource();
       // Media Source listeners
