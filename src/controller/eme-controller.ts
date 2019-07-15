@@ -305,6 +305,17 @@ class EMEController extends EventHandler {
       return;
     }
 
+    // initData is null if the media is not CORS-same-origin
+    if (!initData) {
+      logger.warn('Fatal: initData required for generating a key session is null');
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_NO_INIT_DATA,
+        fatal: true
+      });
+      return;
+    }
+
     logger.log(`Generating key-session request for "${initDataType}" init data type`);
     keysListItem.mediaKeysSessionInitialized = true;
 
