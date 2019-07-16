@@ -692,7 +692,7 @@ class StreamController extends BaseStreamController {
       this.onvseeking = this.onvseeked = this.onvended = null;
     }
     this.fragmentTracker.removeAllFragments();
-    this.media = this.mediaBuffer = this.altAudio = null;
+    this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
     this.stopLoad();
   }
@@ -736,6 +736,7 @@ class StreamController extends BaseStreamController {
       logger.log('both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC');
     }
 
+    this.altAudio = data.altAudio;
     this.levels = data.levels;
     this.startFragRequested = false;
     let config = this.config;
