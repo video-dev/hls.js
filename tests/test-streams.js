@@ -36,7 +36,7 @@ function createTestStreamWithConfig (target, config) {
 
 module.exports = {
   bbb: createTestStreamWithConfig({
-    url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8',
+    url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     description: 'Big Buck Bunny - adaptive qualities'
   },
   {
@@ -45,25 +45,40 @@ module.exports = {
   }
   ),
   bigBuckBunny480p: {
-    'url': 'https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
+    'url': 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     'description': 'Big Buck Bunny - 480p only',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
   arte: {
-    'url': 'https://video-dev.github.io/streams/test_001/stream.m3u8',
+    'url': 'https://test-streams.mux.dev/test_001/stream.m3u8',
     'description': 'ARTE China,ABR',
     'live': false,
     'abr': true
   },
   deltatreDAI: {
-    'url': 'https://video-dev.github.io/streams/dai-discontinuity-deltatre/manifest.m3u8',
+    'url': 'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
     'description': 'Ad-insertion in event stream',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
+  issue666: {
+    'url': 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    'description': 'hls.js/issues/666',
+    'live': false,
+    'abr': false,
+    'blacklist_ua': ['internet explorer']
+  },
+  /* // went offline for us :( would be good to replace this for regression test with something mimicking the issue
+  issue649: {
+    'url': 'https://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
+    'description': 'hls.js/issues/649',
+    'live': false,
+    'abr': false
+  },
+  */
   closedCaptions: {
     'url': 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
     'description': 'CNN special report, with CC',
@@ -78,7 +93,7 @@ module.exports = {
     'abr': true
   },
   bbbAES: {
-    'url': 'https://video-dev.github.io/streams/bbbAES/playlists/sample_aes/index.m3u8',
+    'url': 'https://test-streams.mux.dev/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
@@ -112,7 +127,7 @@ module.exports = {
     'blacklist_ua': ['safari', 'internet explorer']
   },
   offset_pts: {
-    'url': 'https://video-dev.github.io/streams/pts_shift/master.m3u8',
+    'url': 'https://test-streams.mux.dev/pts_shift/master.m3u8',
     'description': 'DK Turntable, PTS shifted by 2.3s',
     'live': false,
     'abr': false
@@ -162,10 +177,5 @@ module.exports = {
   altAudioAndTracks: {
     url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
     description: 'Alternate audio tracks, and multiple VTT tracks'
-  },
-  akamaiLhlsCmaf: {
-    url: 'https://cmafref.akamaized.net/cmaf/live/2003074/akamai/master.m3u8',
-    description: 'Akamai LHLS stream via LL-CMAF',
-    live: true
   }
 };
