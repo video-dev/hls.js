@@ -55,15 +55,16 @@ class PassThroughRemuxer implements Remuxer {
       tracks.audiovideo = {
         container: 'video/mp4',
         codec: audioCodec + ',' + videoCodec,
-        initSegment
+        initSegment,
+        id: 'main'
       };
     } else {
       if (initData.audio) {
-        tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment };
+        tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment, id: 'audio' };
       }
 
       if (initData.video) {
-        tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment };
+        tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment, id: 'main' };
       }
     }
     this.initTracks = tracks;

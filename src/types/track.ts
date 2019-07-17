@@ -5,10 +5,11 @@ export interface TrackSet {
 }
 
 export interface Track {
-  buffer?: SourceBuffer;
+  id: 'audio' | 'main'
+  buffer?: SourceBuffer
   container: string;
   codec?: string;
-  initSegment?: Uint8Array;
+  initSegment?: Uint8Array
   levelCodec?: string;
   metadata?: any
 }
