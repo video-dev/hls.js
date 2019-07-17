@@ -453,6 +453,56 @@ class BufferController extends EventHandler {
     this.doFlush();
   }
 
+  getClosestCue (cues: TextTrackCueList, id3TrackendOffset: number): TextTrackCue {
+    // If the offset is less than the first element, the first element is the closest.
+    if (id3TrackendOffset < cues[0].endTime) {
+      return cues[0];
+    }
+    // If the offset is greater than the last cue, the last is the closest.
+    if (id3TrackendOffset > cues[cues.length - 1].endTime) {
+      return cues[cues.length - 1];
+    }
+
+    let left = 0;
+    let right = cues.length - 1;
+
+    while (left <= right) {
+      const mid = (right + left) / 2;
+
+      if (id3TrackendOffset < cues[mid].endTime) {
+        right = mid - 1;
+      } else if (id3TrackendOffset > cues[mid].endTime) {
+        left = mid + 1;
+      } else {
+        // If it's not lower or higher, it must be equal.
+        return cues[mid];
+      }
+    }
+    // At this point, left and right have swapped.
+    // No direct match was found, left or right element must be the closest. Check which one has the smallest diff.
+    return (cues[left].endTime - id3TrackendOffset) < (id3TrackendOffset - cues[right].endTime) ? cues[left] : cues[right];
+  }
+
+  flushId3Cues (textTrack: TextTrack, id3TrackendOffset: number) {
+    if (!textTrack || !textTrack.cues || !textTrack.cues.length) {
+      return;
+    }
+    const foundCue = this.getClosestCue(textTrack.cues, id3TrackendOffset);
+    if (!foundCue) {
+      return;
+    }
+
+    let removeCues = true;
+    while (removeCues) {
+      const cue = textTrack.cues[0];
+      if (!textTrack.cues.length || cue.endTime === foundCue.endTime) {
+        removeCues = false;
+        return;
+      }
+      textTrack.removeCue(cue);
+    }
+  }
+
   flushLiveBackBuffer () {
     if (!this.media) {
       throw Error('flushLiveBackBuffer called without attaching media');
@@ -484,6 +534,7 @@ class BufferController extends EventHandler {
           // time will lead to playback freezing)
           // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
           this.removeBufferRange(bufferType, sb, 0, targetBackBufferPosition);
+          this.flushId3Cues(this.hls.coreComponents[7].id3Track, targetBackBufferPosition);
         }
       }
     }
