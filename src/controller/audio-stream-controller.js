@@ -703,7 +703,7 @@ class AudioStreamController extends BaseStreamController {
         hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'audio' });
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
         if (media) {
-          logger.log(`audio buffered : ${TimeRanges.toString(media.buffered)}`);
+          logger.log(`audio buffered : ${TimeRanges.toString(BufferHelper.getBuffered(media))}`);
         }
         if (this.audioSwitch && this.appended) {
           this.audioSwitch = false;

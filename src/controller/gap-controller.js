@@ -57,7 +57,7 @@ export default class GapController {
     }
 
     // The playhead should not be moving
-    if (media.paused || media.ended || media.playbackRate === 0 || !media.buffered.length) {
+    if (media.paused || media.ended || media.playbackRate === 0 || !BufferHelper.getBuffered(media).length) {
       return;
     }
 
@@ -185,8 +185,9 @@ export default class GapController {
     const currentTime = media.currentTime;
     let lastEndTime = 0;
     // Check if currentTime is between unbuffered regions of partial fragments
-    for (let i = 0; i < media.buffered.length; i++) {
-      const startTime = media.buffered.start(i);
+    const buffered = BufferHelper.getBuffered(media);
+    for (let i = 0; i < buffered.length; i++) {
+      const startTime = buffered.start(i);
       if (currentTime + config.maxBufferHole >= lastEndTime && currentTime < startTime) {
         const targetTime = Math.max(startTime + SKIP_BUFFER_RANGE_START, media.currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS);
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`);
@@ -204,7 +205,7 @@ export default class GapController {
         }
         return targetTime;
       }
-      lastEndTime = media.buffered.end(i);
+      lastEndTime = buffered.end(i);
     }
     return 0;
   }
