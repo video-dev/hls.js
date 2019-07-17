@@ -158,6 +158,7 @@ export default class MP4Remuxer implements Remuxer {
         }
       }
       tracks.audio = {
+        id: 'audio',
         container: container,
         codec: audioTrack.codec,
         initSegment: !audioTrack.isAAC && typeSupported.mpeg ? new Uint8Array(0) : MP4.initSegment([audioTrack]),
@@ -176,6 +177,7 @@ export default class MP4Remuxer implements Remuxer {
       // we use input time scale straight away to avoid rounding issues on frame duration / cts computation
       const inputTimeScale = videoTrack.timescale = videoTrack.inputTimeScale;
       tracks.video = {
+        id: 'main',
         container: 'video/mp4',
         codec: videoTrack.codec,
         initSegment: MP4.initSegment([videoTrack]),
@@ -212,7 +214,7 @@ export default class MP4Remuxer implements Remuxer {
     const initPTS: number = this._initPTS;
     let nextAvcDts = this.nextAvcDts;
     let offset = 8;
-    let mp4SampleDuration: number;
+    let mp4SampleDuration!: number;
 
     // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
     const isSafari: boolean = this.isSafari;
@@ -311,7 +313,7 @@ export default class MP4Remuxer implements Remuxer {
       // normalize PTS/DTS
       if (isSafari) {
         // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
-        sample.dts = firstDTS + i * mp4SampleDuration!;
+        sample.dts = firstDTS + i * mp4SampleDuration;
       } else {
         // ensure sample monotonic DTS
         sample.dts = Math.max(sample.dts, firstDTS);
@@ -389,6 +391,7 @@ export default class MP4Remuxer implements Remuxer {
       outputSamples.push(new Mp4Sample(avcSample.key, mp4SampleDuration, mp4SampleLength, compositionTimeOffset));
     }
 
+    console.assert(mp4SampleDuration !== undefined, 'mp4SampleDuration must be computed');
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     this.nextAvcDts = nextAvcDts = lastDTS + mp4SampleDuration;
     track.samples = outputSamples;
