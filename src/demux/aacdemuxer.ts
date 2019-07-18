@@ -4,7 +4,7 @@
 import * as ADTS from './adts';
 import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
-import { DemuxerResult, Demuxer } from '../types/demuxer';
+import {DemuxerResult, Demuxer, DemuxedTrack} from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 
@@ -12,6 +12,7 @@ class AACDemuxer implements Demuxer {
   private observer: any;
   private config: any;
   private _audioTrack!: any;
+  private _id3Track!: DemuxedTrack;
   private frameIndex: number = 0;
   private cachedData: Uint8Array = new Uint8Array();
   private initPTS: number | null = null;
@@ -24,6 +25,15 @@ class AACDemuxer implements Demuxer {
 
   resetInitSegment (audioCodec, videoCodec, duration) {
     this._audioTrack = { container: 'audio/adts', type: 'audio', id: 0, sequenceNumber: 0, isAAC: true, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
+    this._id3Track = {
+      type: 'id3',
+      id: 0,
+      pid: -1,
+      inputTimeScale: 90000,
+      sequenceNumber: 0,
+      samples: [],
+      dropped: 0
+    };
   }
 
   resetTimeStamp () {
@@ -62,16 +72,16 @@ class AACDemuxer implements Demuxer {
     let offset = id3Data.length;
     let pts;
     const track = this._audioTrack;
+    const id3Track = this._id3Track;
     const timestamp = ID3.getTimeStamp(id3Data);
     const length = data.length;
-    const id3Samples: any[] = [];
 
     if (this.initPTS === null) {
       this.initPTS = Number.isFinite(timestamp) ? timestamp * 90 : timeOffset * 90000;
     }
     
     if (id3Data.length) {
-      id3Samples.push({ pts: this.initPTS, dts: this.initPTS, data: id3Data });
+      id3Track.samples.push({ pts: this.initPTS, dts: this.initPTS, data: id3Data });
     }
     
     pts = this.initPTS;
@@ -95,7 +105,7 @@ class AACDemuxer implements Demuxer {
         }
       } else if (ID3.canParse(data, offset)) {
         id3Data = ID3.getID3Data(data, offset);
-        id3Samples.push({ pts: pts, dts: pts, data: id3Data });
+        id3Track.samples.push({ pts: pts, dts: pts, data: id3Data });
         offset += id3Data.length;
       } else {
         // Nothing found, cache and keep looking
@@ -109,7 +119,7 @@ class AACDemuxer implements Demuxer {
     return {
       audioTrack: track,
       avcTrack: dummyTrack(),
-      id3Track: dummyTrack(),
+      id3Track,
       textTrack: dummyTrack()
     };
   }
@@ -131,7 +141,7 @@ class AACDemuxer implements Demuxer {
     return {
       audioTrack: this._audioTrack,
       avcTrack: dummyTrack(),
-      id3Track: dummyTrack(),
+      id3Track: this._id3Track,
       textTrack: dummyTrack()
     };
   }
