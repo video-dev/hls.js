@@ -190,8 +190,10 @@ describe('StreamController', function () {
       streamController.media = {
         buffered: {
           length: 1
-        }
+        },
+        readyState: 4
       };
+      streamController.mediaBuffer = null;
     });
     afterEach(function () {
       sandbox.restore();
@@ -199,13 +201,13 @@ describe('StreamController', function () {
 
     it('should not throw when media is undefined', function () {
       streamController.media = null;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
     });
 
     it('should seek to start pos when metadata has not yet been loaded', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.loadedmetadata = false;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
       expect(seekStub).to.have.been.calledOnce;
       expect(streamController.loadedmetadata).to.be.true;
     });
@@ -213,7 +215,7 @@ describe('StreamController', function () {
     it('should not seek to start pos when metadata has been loaded', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.loadedmetadata = true;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
       expect(seekStub).to.have.not.been.called;
       expect(streamController.loadedmetadata).to.be.true;
     });
@@ -221,7 +223,7 @@ describe('StreamController', function () {
     it('should not seek to start pos when nothing has been buffered', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.media.buffered.length = 0;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
       expect(seekStub).to.have.not.been.called;
       expect(streamController.loadedmetadata).to.be.false;
     });
@@ -230,7 +232,7 @@ describe('StreamController', function () {
       const levelSwitchStub = sandbox.stub(streamController, 'immediateLevelSwitchEnd');
       streamController.loadedmetadata = true;
       streamController.immediateSwitch = true;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
       expect(levelSwitchStub).to.have.been.calledOnce;
     });
 
