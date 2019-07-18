@@ -5,6 +5,7 @@ export interface Demuxer {
   destroy() : void
   resetInitSegment(audioCodec: string, videoCodec: string, duration: number);
   resetTimeStamp(defaultInitPTS?: number | null): void;
+  resetContiguity(): void;
 }
 
 export interface DemuxerResult {

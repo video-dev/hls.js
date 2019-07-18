@@ -154,6 +154,7 @@ export default class TransmuxerInterface {
 
   flush (transmuxIdentifier: TransmuxIdentifier) {
     const { transmuxer, worker } = this;
+    this.currentTransmuxSession = null;
     if (worker) {
       worker.postMessage({
         cmd: 'flush',

@@ -16,6 +16,9 @@ class MP4Demuxer implements Demuxer {
   resetInitSegment () {
   }
 
+  resetContiguity (): void {
+  }
+
   static probe (data) {
     // ensure we find a moof box in the first 16 kB
     return findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, ['moof']).length > 0;

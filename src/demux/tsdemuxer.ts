@@ -141,6 +141,21 @@ class TSDemuxer implements Demuxer {
   resetTimeStamp () {
   }
 
+  resetContiguity (): void {
+    const { _audioTrack, _avcTrack, _id3Track } = this;
+    if (_audioTrack) {
+      _audioTrack.pesData = null;
+    }
+    if (_avcTrack) {
+      _avcTrack.pesData = null;
+    }
+    if (_id3Track) {
+      _id3Track.pesData = null;
+    }
+    this.aacOverFlow = null;
+    this.aacLastPTS = null;
+  }
+
   demux (data: Uint8Array, contiguous, timeOffset, isSampleAes = false): DemuxerResult {
     if (!isSampleAes) {
       this.sampleAes = null;
@@ -495,7 +510,7 @@ class TSDemuxer implements Demuxer {
         break;
 
       default:
-        logger.log('unknown stream type:' + data[offset]);
+        // logger.log('unknown stream type:' + data[offset]);
         break;
       }
       // move to the next table entry

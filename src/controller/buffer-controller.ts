@@ -456,7 +456,8 @@ export default class BufferController extends EventHandler {
             buffer: sb,
             codec: codec,
             container: track.container,
-            levelCodec: track.levelCodec
+            levelCodec: track.levelCodec,
+            id: track.id
           };
         } catch (err) {
           logger.error(`error while trying to add sourceBuffer:${err.message}`);

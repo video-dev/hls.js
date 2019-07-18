@@ -15,18 +15,6 @@ export function findFirstFragWithCC (fragments, cc) {
   return firstFrag;
 }
 
-export function findFragWithCC (fragments, CC) {
-  return BinarySearch.search(fragments, (candidate) => {
-    if (candidate.cc < CC) {
-      return 1;
-    } else if (candidate.cc > CC) {
-      return -1;
-    } else {
-      return 0;
-    }
-  });
-}
-
 export function shouldAlignOnDiscontinuities (lastFrag, lastLevel, details) {
   let shouldAlign = false;
   if (lastLevel && lastLevel.details && details) {
