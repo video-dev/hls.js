@@ -1,5 +1,5 @@
 import TaskLoop from '../task-loop';
-import { FragmentState } from './fragment-tracker';
+import { FragmentState, FragmentTracker } from './fragment-tracker';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import Event from '../events';
@@ -10,6 +10,9 @@ import FragmentLoader, { FragLoadSuccessResult, FragmentLoadProgressCallback } f
 import * as LevelHelper from './level-helper';
 import { TransmuxIdentifier } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
+import LevelDetails from '../loader/level-details';
+import { alignStream } from '../utils/discontinuities';
+import { findFragmentByPDT, findFragmentByPTS, findFragWithCC } from './fragment-finders';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -31,7 +34,7 @@ export const State = {
 export default class BaseStreamController extends TaskLoop {
   protected fragPrevious: Fragment | null = null;
   protected fragCurrent: Fragment | null = null;
-  protected fragmentTracker: any;
+  protected fragmentTracker!: FragmentTracker;
   protected transmuxer: TransmuxerInterface | null = null;
   protected _state: string = State.STOPPED;
   protected media?: any;
@@ -44,6 +47,9 @@ export default class BaseStreamController extends TaskLoop {
   protected fragLoadError: number = 0;
   protected levels: Array<any> | null = null;
   protected fragmentLoader!: FragmentLoader;
+  protected _liveSyncPosition: number | null = null;
+  protected levelLastLoaded: number | null = null;
+  protected startFragRequested: boolean = false;
 
   protected readonly logPrefix: string = '';
 
@@ -143,7 +149,7 @@ export default class BaseStreamController extends TaskLoop {
 
   protected onHandlerDestroyed () {
     this.state = State.STOPPED;
-    this.fragmentTracker = null;
+    super.onHandlerDestroyed();
   }
 
   protected _loadFragForPlayback (frag) {
@@ -265,7 +271,6 @@ export default class BaseStreamController extends TaskLoop {
     return { frag, level: currentLevel };
   }
 
-  // TODO: Emit moof+mdat as a single Uint8 instead of data1 & data2
   protected bufferFragmentData (data, parent) {
     if (!data || this.state !== State.PARSING) {
       return;
@@ -284,6 +289,249 @@ export default class BaseStreamController extends TaskLoop {
 
     this.hls.trigger(Event.BUFFER_APPENDING, { type: data.type, data: buffer, parent, content: 'data' });
     this.tick();
+  }
+
+  protected getNextFragment (pos: number, levelDetails: LevelDetails): Fragment | null {
+    const { config, startFragRequested } = this;
+    const fragments = levelDetails.fragments;
+    const fragLen = fragments.length;
+
+    if (!fragLen) {
+      return null;
+    }
+
+    // find fragment index, contiguous with end of buffer position
+    const start = fragments[0].start;
+    const end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
+    let loadPosition = pos;
+    let frag;
+
+    // If an initSegment is present, it must be buffered first
+    if (levelDetails.initSegment && !levelDetails.initSegment.data) {
+      frag = levelDetails.initSegment;
+    } else if (levelDetails.live) {
+      const initialLiveManifestSize = config.initialLiveManifestSize;
+      if (fragLen < initialLiveManifestSize) {
+        this.warn(`Not enough fragments to start playback (have: ${fragLen}, need: ${initialLiveManifestSize})`);
+        return null;
+      }
+      // Check to see if we're within the live range; if not, this method will seek to the live edge and return the new position
+      const syncPos = this.synchronizeToLiveEdge(start, end, loadPosition, levelDetails.targetduration, levelDetails.totalduration);
+      if (syncPos !== null) {
+        loadPosition = syncPos;
+      }
+      // The real fragment start times for a live stream are only known after the PTS range for that level is known.
+      // In order to discover the range, we load the best matching fragment for that level and demux it.
+      // Do not load using live logic if the starting frag is requested - we want to use getFragmentAtPosition() so that
+      // we get the fragment matching that start time
+      if (!levelDetails.PTSKnown && !startFragRequested) {
+        frag = this.getInitialLiveFragment(levelDetails, fragments);
+      }
+    } else if (loadPosition < start) {
+      // VoD playlist: if loadPosition before start of playlist, load first fragment
+      frag = fragments[0];
+    }
+
+    // If we haven't run into any special cases already, just load the fragment most closely matching the requested position
+    if (!frag) {
+      frag = this.getFragmentAtPosition(loadPosition, end, levelDetails);
+    }
+
+    return frag;
+  }
+
+  /*
+   This method is used find the best matching first fragment for a live playlist. This fragment is used to calculate the
+   "sliding" of the playlist, which is its offset from the start of playback. After sliding we can compute the real
+   start and end times for each fragment in the playlist (after which this method will not need to be called).
+  */
+  protected getInitialLiveFragment (levelDetails: LevelDetails, fragments: Array<Fragment>): Fragment | null {
+    const { config, fragPrevious } = this;
+    let frag: Fragment | null = null;
+    if (fragPrevious) {
+      if (levelDetails.hasProgramDateTime) {
+        // Prefer using PDT, because it can be accurate enough to choose the correct fragment without knowing the level sliding
+        this.log(`Live playlist, switching playlist, load frag with same PDT: ${fragPrevious.programDateTime}`);
+        frag = findFragmentByPDT(fragments, fragPrevious.endProgramDateTime, config.maxFragLookUpTolerance);
+      } else {
+        // SN does not need to be accurate between renditions, but depending on the packaging it may be so.
+        const targetSN = (fragPrevious.sn as number) + 1;
+        if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
+          const fragNext = fragments[targetSN - levelDetails.startSN];
+          // Ensure that we're staying within the continuity range, since PTS resets upon a new range
+          if (fragPrevious.cc === fragNext.cc) {
+            frag = fragNext;
+            this.log(`Live playlist, switching playlist, load frag with next SN: ${frag!.sn}`);
+          }
+        }
+        // It's important to stay within the continuity range if available; otherwise the fragments in the playlist
+        // will have the wrong start times
+        if (!frag) {
+          frag = findFragWithCC(fragments, fragPrevious.cc);
+          if (frag) {
+            this.log(`Live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
+          }
+        }
+      }
+    }
+
+    // If no fragment has been selected by this point, load any one
+    if (!frag) {
+      const len = fragments.length;
+      frag = fragments[Math.min(len - 1, Math.round(len / 2))];
+      this.log(`Live playlist, switching playlist, unknown, load middle frag : ${frag!.sn}`);
+    }
+
+    return frag;
+  }
+
+  /*
+  This method finds the best matching fragment given the provided position.
+   */
+  protected getFragmentAtPosition (bufferEnd: number, end: number, levelDetails: LevelDetails): Fragment | null {
+    const { config, fragPrevious } = this;
+    const fragments = levelDetails.fragments;
+    const tolerance = config.maxFragLookUpTolerance;
+
+    let frag;
+    if (bufferEnd < end) {
+      const lookupTolerance = (bufferEnd > end - tolerance) ? 0 : tolerance;
+      // Remove the tolerance if it would put the bufferEnd past the actual end of stream
+      // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+      frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
+    } else {
+      // reach end of playlist
+      frag = fragments[fragments.length - 1];
+    }
+
+    if (frag) {
+      const curSNIdx = frag.sn - levelDetails.startSN;
+      const sameLevel = fragPrevious && frag.level === fragPrevious.level;
+      const prevFrag = fragments[curSNIdx - 1];
+      const nextFrag = fragments[curSNIdx + 1];
+      // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
+      // non-uniform fragment durations
+      if (fragPrevious && frag.sn === fragPrevious.sn) {
+        if (sameLevel && !frag.backtracked) {
+          if (frag.sn < levelDetails.endSN) {
+            frag = nextFrag;
+            this.log(`SN just loaded, load next one: ${frag.sn}`);
+          } else {
+            frag = null;
+          }
+        } else if (frag.backtracked) {
+          // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
+          if (nextFrag && nextFrag.backtracked) {
+            this.warn(`Already backtracked from fragment ${nextFrag.sn}, will not backtrack to fragment ${frag.sn}. Loading fragment ${nextFrag.sn}`);
+            frag = nextFrag;
+          } else {
+            // If a fragment has dropped frames and it's in a same level/sequence, load the previous fragment to try and find the keyframe
+            // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
+            frag.dropped = 0;
+            if (prevFrag) {
+              frag = prevFrag;
+              frag.backtracked = true;
+            } else if (curSNIdx) {
+              // can't backtrack on very first fragment
+              frag = null;
+            }
+          }
+        }
+      }
+    }
+    return frag;
+  }
+
+  protected synchronizeToLiveEdge (start: number, end: number, bufferEnd: number, targetDuration: number, totalDuration: number): number | null {
+    const { config, media } = this;
+    const maxLatency = config.liveMaxLatencyDuration !== undefined
+      ? config.liveMaxLatencyDuration
+      : config.liveMaxLatencyDurationCount * targetDuration;
+
+    if (bufferEnd >= Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
+      return null;
+    }
+
+    const liveSyncPosition = this._liveSyncPosition = this.computeLivePosition(start, targetDuration, totalDuration);
+    this.log(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
+    this.nextLoadPosition = liveSyncPosition;
+    if (media && media.readyState && media.duration > liveSyncPosition) {
+      media.currentTime = liveSyncPosition;
+    }
+
+    return liveSyncPosition;
+  }
+
+  protected mergeLivePlaylists (oldDetails: LevelDetails, newDetails: LevelDetails): number {
+    const { levels, levelLastLoaded } = this;
+    let lastLevel;
+    if (levelLastLoaded) {
+      lastLevel = levels![levelLastLoaded];
+    }
+
+    let sliding = 0;
+    if (oldDetails && newDetails.fragments.length > 0) {
+      // we already have details for that level, merge them
+      LevelHelper.mergeDetails(oldDetails, newDetails);
+      sliding = newDetails.fragments[0].start;
+      if (newDetails.PTSKnown && Number.isFinite(sliding)) {
+        this.log(`Live playlist sliding:${sliding.toFixed(3)}`);
+      } else {
+        this.log('Live playlist - outdated PTS, unknown sliding');
+        alignStream(this.fragPrevious, lastLevel, newDetails);
+      }
+    } else {
+      this.log('Live playlist - first load, unknown sliding');
+      newDetails.PTSKnown = false;
+      alignStream(this.fragPrevious, lastLevel, newDetails);
+    }
+
+    return sliding;
+  }
+
+  protected setStartPosition (details: LevelDetails, sliding: number) {
+    // compute start position if set to -1. use it straight away if value is defined
+    if (this.startPosition === -1 || this.lastCurrentTime === -1) {
+      // first, check if start time offset has been set in playlist, if yes, use this value
+      let startTimeOffset = details.startTimeOffset!;
+      if (Number.isFinite(startTimeOffset)) {
+        if (startTimeOffset < 0) {
+          this.log(`Negative start time offset ${startTimeOffset}, count from end of last fragment`);
+          startTimeOffset = sliding + details.totalduration + startTimeOffset;
+        }
+        this.log(`Start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
+        this.startPosition = startTimeOffset;
+      } else {
+        // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
+        if (details.live) {
+          this.startPosition = this.computeLivePosition(sliding, details.targetduration, details.totalduration);
+          this.log(`Configure startPosition to ${this.startPosition}`);
+        } else {
+          this.startPosition = 0;
+        }
+      }
+      this.lastCurrentTime = this.startPosition;
+    }
+    this.nextLoadPosition = this.startPosition;
+  }
+
+  protected computeLivePosition (sliding: number, targetDuration: number, totalDuration: number): number {
+    const { liveSyncDuration, liveSyncDurationCount } = this.config;
+    const targetLatency = liveSyncDuration !== undefined ? liveSyncDuration : liveSyncDurationCount * targetDuration;
+    return sliding + Math.max(0, totalDuration - targetLatency);
+  }
+
+  protected getLoadPosition (): number {
+    const { media } = this;
+    // if we have not yet loaded any fragment, start loading from start position
+    let pos = 0;
+    if (this.loadedmetadata) {
+      pos = media.currentTime;
+    } else if (this.nextLoadPosition) {
+      pos = this.nextLoadPosition;
+    }
+
+    return pos;
   }
 
   private handleFragLoadAborted (frag: Fragment) {

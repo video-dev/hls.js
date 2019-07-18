@@ -78,7 +78,8 @@ describe('StreamController', function () {
     let fragLen = mockFragments.length;
     let levelDetails = {
       startSN: mockFragments[0].sn,
-      endSN: mockFragments[mockFragments.length - 1].sn
+      endSN: mockFragments[mockFragments.length - 1].sn,
+      fragments: mockFragments
     };
     let bufferEnd = fragPrevious.start + fragPrevious.duration;
     let end = mockFragments[mockFragments.length - 1].start + mockFragments[mockFragments.length - 1].duration;
@@ -87,21 +88,25 @@ describe('StreamController', function () {
       levelDetails.hasProgramDateTime = false;
     });
 
+    beforeEach(function () {
+      streamController.fragPrevious = fragPrevious;
+    });
+
     it('PTS search choosing wrong fragment (3 instead of 2) after level loaded', function () {
-      let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
+      let foundFragment = streamController.getNextFragment(bufferEnd, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       expect(foundFragment).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     // TODO: This test fails if using a real instance of Hls
     it('PTS search choosing the right segment if fragPrevious is not available', function () {
-      let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, bufferEnd, end, levelDetails);
+      let foundFragment = streamController.getNextFragment(bufferEnd, levelDetails);
       let resultSN = foundFragment ? foundFragment.sn : -1;
       expect(foundFragment).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     it('returns the last fragment if the stream is fully buffered', function () {
-      const actual = streamController._findFragment(0, null, mockFragments.length, mockFragments, end, end, levelDetails);
+      const actual = streamController.getNextFragment(end, levelDetails);
       expect(actual).to.equal(mockFragments[mockFragments.length - 1]);
     });
 
@@ -114,15 +119,7 @@ describe('StreamController', function () {
         levelDetails.PTSKnown = false;
         levelDetails.live = true;
 
-        let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, bufferEnd, 0, end, fragPrevious, mockFragments, mockFragments.length);
-        let resultSN = foundFragment ? foundFragment.sn : -1;
-        expect(foundFragment).to.equal(mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
-      });
-
-      it('PDT search hitting empty discontinuity', function () {
-        let discontinuityPDTHit = 6.00;
-
-        let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, discontinuityPDTHit, 0, end, fragPrevious, mockFragments, mockFragments.length);
+        let foundFragment = streamController.getInitialLiveFragment(levelDetails, mockFragments);
         let resultSN = foundFragment ? foundFragment.sn : -1;
         expect(foundFragment).to.equal(mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
       });

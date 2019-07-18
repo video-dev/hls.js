@@ -83,6 +83,8 @@ export default class Fragment {
   // Load/parse timing information
   public stats: LoadStats = new LoadStats();
   public urlId: number = 0;
+  // TODO: Create InitSegment class extended from Fragment
+  public data?: ArrayBuffer;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {

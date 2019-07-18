@@ -39,6 +39,9 @@ class AACDemuxer implements Demuxer {
   resetTimeStamp () {
   }
 
+  resetContiguity (): void {
+  }
+
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
   static probe (data) {
     if (!data) {

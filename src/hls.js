@@ -558,7 +558,7 @@ export default class Hls extends Observer {
    * @type {Seconds}
    */
   get liveSyncPosition () {
-    return this.streamController.liveSyncPosition;
+    return this.streamController._liveSyncPosition;
   }
 
   /**

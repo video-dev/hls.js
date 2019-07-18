@@ -114,7 +114,7 @@ export default class Transmuxer {
     }
 
     if (!contiguous) {
-      this.resetNextTimestamp();
+      this.resetContiguity();
     }
 
     let { demuxer, remuxer } = this;
@@ -123,7 +123,7 @@ export default class Transmuxer {
       if (cachedData) {
         uintData = appendUint8Array(cachedData, uintData);
       }
-      ({ demuxer, remuxer } = this.configureTransmuxer(uintData, initSegmentData, audioCodec, videoCodec, duration));
+      ({ demuxer, remuxer } = this.configureTransmuxer(uintData, transmuxConfig));
     }
 
     if (!demuxer || !remuxer) {
@@ -197,11 +197,12 @@ export default class Transmuxer {
     remuxer.resetTimeStamp(defaultInitPts);
   }
 
-  resetNextTimestamp () {
+  resetContiguity () {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
     }
+    demuxer.resetContiguity();
     remuxer.resetNextTimestamp();
   }
 
@@ -253,8 +254,9 @@ export default class Transmuxer {
       );
   }
 
-  private configureTransmuxer (data: Uint8Array, initSegmentData: Uint8Array, audioCodec: string, videoCodec: string, duration: number) {
+  private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig) {
     const { config, observer, typeSupported, vendor } = this;
+    const { audioCodec, defaultInitPts, duration, initSegmentData, videoCodec } = transmuxConfig;
     let demuxer, remuxer;
     // probe for content type
     for (let i = 0, len = muxConfig.length; i < len; i++) {
@@ -265,8 +267,8 @@ export default class Transmuxer {
         demuxer = this.demuxer = new mux.demux(observer, config, typeSupported);
 
         // Ensure that muxers are always initialized with an initSegment
-        demuxer.resetInitSegment(audioCodec, videoCodec, duration);
-        remuxer.resetInitSegment(initSegmentData, audioCodec, videoCodec);
+        this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
+        this.resetInitialTimestamp(defaultInitPts);
         logger.log(`[transmuxer.ts]: Probe succeeded with a data length of ${data.length}.`);
         this.probe = probe;
         break;

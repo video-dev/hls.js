@@ -96,3 +96,15 @@ export function pdtWithinToleranceTest (pdtBufferEnd, maxFragLookUpTolerance, ca
   let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
   return candidate.endProgramDateTime - candidateLookupTolerance > pdtBufferEnd;
 }
+
+export function findFragWithCC (fragments, CC) {
+  return BinarySearch.search(fragments, (candidate) => {
+    if (candidate.cc < CC) {
+      return 1;
+    } else if (candidate.cc > CC) {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
+}
