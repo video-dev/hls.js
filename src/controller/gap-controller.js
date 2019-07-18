@@ -3,7 +3,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import Event from '../events';
 import { logger } from '../utils/logger';
 
-const stallDebounceInterval = 1000;
+const stallDebounceInterval = 250;
 const jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 
 export default class GapController {

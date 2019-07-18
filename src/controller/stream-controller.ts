@@ -136,9 +136,14 @@ export default class StreamController extends BaseStreamController {
       break;
     }
     // check buffer
-    this._checkBuffer();
     // check/update current fragment
-    this._checkFragmentChanged();
+    this.onTickEnd();
+  }
+
+  protected onTickEnd () {
+    super.onTickEnd();
+    this.checkBuffer();
+    this.checkFragmentChanged();
   }
 
   _doTickIdle () {
@@ -257,78 +262,12 @@ export default class StreamController extends BaseStreamController {
     return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
   }
 
-  get currentLevel () {
-    let media = this.media;
-    if (media) {
-      const frag = this.getBufferedFrag(media.currentTime);
-      if (frag) {
-        return frag.level;
-      }
-    }
-    return -1;
-  }
-
-  get nextBufferedFrag () {
-    let media = this.media;
-    if (media) {
-      // first get end range of current fragment
-      return this.followingBufferedFrag(this.getBufferedFrag(media.currentTime));
-    } else {
-      return null;
-    }
-  }
-
   followingBufferedFrag (frag) {
     if (frag) {
       // try to get range of next fragment (500ms after this range)
       return this.getBufferedFrag(frag.endPTS + 0.5);
     }
     return null;
-  }
-
-  get nextLevel () {
-    const frag = this.nextBufferedFrag;
-    if (frag) {
-      return frag.level;
-    } else {
-      return -1;
-    }
-  }
-
-  _checkFragmentChanged () {
-    let fragPlayingCurrent, currentTime, video = this.media;
-    if (video && video.readyState && video.seeking === false) {
-      currentTime = video.currentTime;
-      /* if video element is in seeked state, currentTime can only increase.
-        (assuming that playback rate is positive ...)
-        As sometimes currentTime jumps back to zero after a
-        media decode error, check this, to avoid seeking back to
-        wrong position after a media decode error
-      */
-
-      if (BufferHelper.isBuffered(video, currentTime)) {
-        fragPlayingCurrent = this.getBufferedFrag(currentTime);
-      } else if (BufferHelper.isBuffered(video, currentTime + 0.1)) {
-        /* ensure that FRAG_CHANGED event is triggered at startup,
-          when first video frame is displayed and playback is paused.
-          add a tolerance of 100ms, in case current position is not buffered,
-          check if current pos+100ms is buffered and use that buffer range
-          for FRAG_CHANGED event reporting */
-        fragPlayingCurrent = this.getBufferedFrag(currentTime + 0.1);
-      }
-      if (fragPlayingCurrent) {
-        let fragPlaying = fragPlayingCurrent;
-        if (fragPlaying !== this.fragPlaying) {
-          this.hls.trigger(Event.FRAG_CHANGED, { frag: fragPlaying });
-          const fragPlayingLevel = fragPlaying.level;
-          if (!this.fragPlaying || this.fragPlaying.level !== fragPlayingLevel) {
-            this.hls.trigger(Event.LEVEL_SWITCHED, { level: fragPlayingLevel });
-          }
-
-          this.fragPlaying = fragPlaying;
-        }
-      }
-    }
   }
 
   /*
@@ -792,14 +731,11 @@ export default class StreamController extends BaseStreamController {
     return false;
   }
 
-  /**
-   * Checks the health of the buffer and attempts to resolve playback stalls.
-   * @private
-   */
-  _checkBuffer () {
-    const { media } = this;
-    if (!media || media.readyState === 0) {
-      // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
+  // Checks the health of the buffer and attempts to resolve playback stalls.
+  private checkBuffer () {
+    const { media, gapController } = this;
+    if (!media || !media.readyState) {
+      // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
 
@@ -812,8 +748,11 @@ export default class StreamController extends BaseStreamController {
     } else if (this.immediateSwitch) {
       this.immediateLevelSwitchEnd();
     } else {
-      this.gapController.poll(this.lastCurrentTime, buffered);
+      // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
+      gapController.poll(this.lastCurrentTime, media.buffered);
     }
+
+    this.lastCurrentTime = media.currentTime;
   }
 
   onFragLoadEmergencyAborted () {
@@ -936,7 +875,7 @@ export default class StreamController extends BaseStreamController {
     // Avoid buffering if backtracking this fragment
     if (video) {
       if (_hasDroppedFrames(frag, video.dropped, level.details.startSN)) {
-        this._backtrack(frag, video.startPTS);
+        this.backtrack(frag, video.startPTS);
         return;
       } else {
         frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, video.startPTS, video.endPTS, video.startDTS, video.endDTS);
@@ -1016,7 +955,7 @@ export default class StreamController extends BaseStreamController {
     this.tick();
   }
 
-  private _backtrack (frag, nextLoadPosition) {
+  private backtrack (frag, nextLoadPosition) {
     // Return back to the IDLE state without appending to buffer
     // Causes findFragments to backtrack a segment and find the keyframe
     // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
@@ -1028,8 +967,74 @@ export default class StreamController extends BaseStreamController {
     this.tick();
   }
 
+  private checkFragmentChanged () {
+    let fragPlayingCurrent, currentTime, video = this.media;
+    if (video && video.readyState && video.seeking === false) {
+      currentTime = video.currentTime;
+      /* if video element is in seeked state, currentTime can only increase.
+        (assuming that playback rate is positive ...)
+        As sometimes currentTime jumps back to zero after a
+        media decode error, check this, to avoid seeking back to
+        wrong position after a media decode error
+      */
+
+      if (BufferHelper.isBuffered(video, currentTime)) {
+        fragPlayingCurrent = this.getBufferedFrag(currentTime);
+      } else if (BufferHelper.isBuffered(video, currentTime + 0.1)) {
+        /* ensure that FRAG_CHANGED event is triggered at startup,
+          when first video frame is displayed and playback is paused.
+          add a tolerance of 100ms, in case current position is not buffered,
+          check if current pos+100ms is buffered and use that buffer range
+          for FRAG_CHANGED event reporting */
+        fragPlayingCurrent = this.getBufferedFrag(currentTime + 0.1);
+      }
+      if (fragPlayingCurrent) {
+        let fragPlaying = fragPlayingCurrent;
+        if (fragPlaying !== this.fragPlaying) {
+          this.hls.trigger(Event.FRAG_CHANGED, { frag: fragPlaying });
+          const fragPlayingLevel = fragPlaying.level;
+          if (!this.fragPlaying || this.fragPlaying.level !== fragPlayingLevel) {
+            this.hls.trigger(Event.LEVEL_SWITCHED, { level: fragPlayingLevel });
+          }
+
+          this.fragPlaying = fragPlaying;
+        }
+      }
+    }
+  }
+
   get liveSyncPosition () {
     return this._liveSyncPosition;
+  }
+
+  get nextLevel () {
+    const frag = this.nextBufferedFrag;
+    if (frag) {
+      return frag.level;
+    } else {
+      return -1;
+    }
+  }
+
+  get currentLevel () {
+    let media = this.media;
+    if (media) {
+      const frag = this.getBufferedFrag(media.currentTime);
+      if (frag) {
+        return frag.level;
+      }
+    }
+    return -1;
+  }
+
+  get nextBufferedFrag () {
+    let media = this.media;
+    if (media) {
+      // first get end range of current fragment
+      return this.followingBufferedFrag(this.getBufferedFrag(media.currentTime));
+    } else {
+      return null;
+    }
   }
 
   set liveSyncPosition (value) {
