@@ -84,7 +84,7 @@ class AudioStreamController extends BaseStreamController {
   }
 
   doTick () {
-    const {lastCurrentTime, media} = this;
+    const { media } = this;
 
     switch (this.state) {
       case State.ERROR:
@@ -138,23 +138,20 @@ class AudioStreamController extends BaseStreamController {
     this.onTickEnd();
   }
 
-  private onTickEnd () {
-    const { lastCurrentTime, media } = this;
-    if (!media || media.readyState === 0) {
-      // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
+  protected onTickEnd () {
+    const { media } = this;
+    if (!media || !media.readyState) {
+      // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
-
-    if (media.currentTime > lastCurrentTime) {
-      this.lastCurrentTime = media.currentTime;
-    }
-
     const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
     const buffered = mediaBuffer.buffered;
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
     }
+
+    this.lastCurrentTime = media.currentTime;
   }
 
   private doTickIdle() {

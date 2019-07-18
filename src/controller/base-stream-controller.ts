@@ -53,7 +53,11 @@ export default class BaseStreamController extends TaskLoop {
 
   protected readonly logPrefix: string = '';
 
-  protected doTick () {}
+  protected doTick () {
+    this.onTickEnd();
+  }
+
+  protected onTickEnd () {}
 
   public startLoad (startPosition: number) : void {}
 
