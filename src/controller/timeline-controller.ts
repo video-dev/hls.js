@@ -1,6 +1,6 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
-import Cea608Parser from '../utils/cea-608-parser';
+import Cea608Parser, { CaptionScreen } from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
@@ -59,7 +59,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  addCues (trackName: string, startTime: number, endTime: number, screen: any) {
+  addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen) {
     // skip cues which overlap more than 50% with previously parsed time ranges
     const ranges = this.cueRanges;
     let merged = false;
