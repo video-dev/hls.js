@@ -14,7 +14,8 @@ class ID3TrackController extends EventHandler {
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
       Event.FRAG_PARSING_METADATA,
-      Event.LIVE_BACK_BUFFER_REACHED);
+      Event.LIVE_BACK_BUFFER_REACHED
+    );
     this.id3Track = undefined;
     this.media = undefined;
   }
