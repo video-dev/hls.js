@@ -70,9 +70,9 @@ class AACDemuxer implements Demuxer {
       data = appendUint8Array(this.cachedData, data);
       this.cachedData = new Uint8Array();
     }
-    let lastDataIndex;
     let id3Data = ID3.getID3Data(data, 0) || [];
     let offset = id3Data.length;
+    let lastDataIndex;
     let pts;
     const track = this._audioTrack;
     const id3Track = this._id3Track;
@@ -99,13 +99,13 @@ class AACDemuxer implements Demuxer {
           this.frameIndex++;
           pts = frame.sample.pts;
           offset += frame.length;
+          lastDataIndex = offset;
         } else {
           logger.log('Unable to parse AAC frame');
           let partialData = data.slice(offset);
 
           this.cachedData = appendUint8Array(this.cachedData, partialData);
           offset += partialData.length;
-          lastDataIndex = offset;
         }
       } else if (ID3.canParse(data, offset)) {
         id3Data = ID3.getID3Data(data, offset);

@@ -62,6 +62,7 @@ class MP3Demuxer implements Demuxer {
 
     let id3Data = ID3.getID3Data(data, 0) || [];
     let offset = id3Data.length;
+    let lastDataIndex;
     let pts;
     const track = this._audioTrack;
     const id3Track = this._id3Track;
