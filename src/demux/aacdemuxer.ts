@@ -70,7 +70,7 @@ class AACDemuxer implements Demuxer {
       data = appendUint8Array(this.cachedData, data);
       this.cachedData = new Uint8Array();
     }
-
+    let lastDataIndex;
     let id3Data = ID3.getID3Data(data, 0) || [];
     let offset = id3Data.length;
     let pts;
@@ -91,7 +91,7 @@ class AACDemuxer implements Demuxer {
     
     // Iteratively parse data for ADTS Headers and ID3 headers
     while (offset < length) {
-      //  Only begin parsing if there's at least one full frame
+      //  Only begin parsing if able.
       if (ADTS.canParse(data, offset)) {
         ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec);
         let frame = ADTS.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
@@ -105,17 +105,20 @@ class AACDemuxer implements Demuxer {
 
           this.cachedData = appendUint8Array(this.cachedData, partialData);
           offset += partialData.length;
+          lastDataIndex = offset;
         }
       } else if (ID3.canParse(data, offset)) {
         id3Data = ID3.getID3Data(data, offset);
         id3Track.samples.push({ pts: pts, dts: pts, data: id3Data });
         offset += id3Data.length;
+        lastDataIndex = offset;
       } else {
-        // Nothing found, cache and keep looking
-        let partialData = data.slice(offset);
-        
-        this.cachedData = appendUint8Array(this.cachedData, partialData);
-        offset += partialData.length;
+        offset++;
+      }
+      // At end of fragment, if there is remaining data, append everything since last useable data to cache.
+      if (offset === length && lastDataIndex !== length) {
+          let partialData = data.slice(lastDataIndex);
+          this.cachedData = appendUint8Array(this.cachedData, partialData);
       }
     }
 
