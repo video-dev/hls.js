@@ -863,8 +863,8 @@ class Cea608Channel {
         this.cueStartTime = t;
       } else {
         if (!this.displayedMemory.equals(this.lastOutputScreen)) {
-          this.outputFilter.newCue(this.cueStartTime, t, this.lastOutputScreen);
-          if (dispatch === true && this.outputFilter.dispatchCue) {
+          this.outputFilter.newCue(this.cueStartTime!, t, this.lastOutputScreen);
+          if (dispatch && this.outputFilter.dispatchCue) {
             this.outputFilter.dispatchCue();
           }
 
@@ -879,7 +879,7 @@ class Cea608Channel {
     if (this.outputFilter) {
       if (!this.displayedMemory.isEmpty()) {
         if (this.outputFilter.newCue) {
-          this.outputFilter.newCue(this.cueStartTime, t, this.displayedMemory);
+          this.outputFilter.newCue(this.cueStartTime!, t, this.displayedMemory);
         }
 
         this.cueStartTime = t;
