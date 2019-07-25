@@ -1145,12 +1145,11 @@ class Cea608Parser {
      * Reset state of parser and its channels.
      */
   reset () {
-    for (let i = 0; i < this.channels.length; i++) {
+    for (let i = 0; i < Object.keys(this.channels).length; i++) {
       if (this.channels[i]) {
         this.channels[i].reset();
       }
     }
-
     this.cmdHistory = createCmdHistory();
   }
 
