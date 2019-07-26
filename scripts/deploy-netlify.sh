@@ -8,7 +8,6 @@ git remote set-branches origin master
 git fetch
 
 currentCommit=$(git rev-parse HEAD)
-masterLatestCommit=""
 masterLatestCommit=$(git rev-parse origin/master)
 
 id=$currentCommit
