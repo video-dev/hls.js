@@ -161,6 +161,9 @@ export default class BufferController extends EventHandler {
           if (this.mediaSource) {
             this.mediaSource.removeSourceBuffer(sb);
           }
+          // Synchronously remove the SB from the map before the next call in order to prevent an async function from
+          // accessing it
+          this.sourceBuffer[type] = undefined;
         }
       } catch (err) {
         logger.warn(`Failed to reset the ${type} buffer`, err);
