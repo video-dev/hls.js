@@ -70,25 +70,25 @@ describe('BufferHelper', function () {
         }
       };
       const maxHoleDuration = 0;
-      assert.deepEqual(BufferHelper.bufferInfo(media, 0, maxHoleDuration), {
+      assert.deepEqual(BufferHelper.mediaBufferInfo(media, 0, maxHoleDuration), {
         len: 0.5,
         start: 0,
         end: 0.5,
         nextStart: 1
       });
-      assert.deepEqual(BufferHelper.bufferInfo(media, 0.5, maxHoleDuration), {
+      assert.deepEqual(BufferHelper.mediaBufferInfo(media, 0.5, maxHoleDuration), {
         len: 0,
         start: 0.5,
         end: 0.5,
         nextStart: 1
       });
-      assert.deepEqual(BufferHelper.bufferInfo(media, 1, maxHoleDuration), {
+      assert.deepEqual(BufferHelper.mediaBufferInfo(media, 1, maxHoleDuration), {
         len: 1,
         start: 1,
         end: 2,
         nextStart: undefined
       });
-      assert.deepEqual(BufferHelper.bufferInfo(media, 2, maxHoleDuration), {
+      assert.deepEqual(BufferHelper.mediaBufferInfo(media, 2, maxHoleDuration), {
         len: 0,
         start: 2,
         end: 2,
@@ -113,7 +113,7 @@ describe('BufferHelper', function () {
         }
       };
       const maxHoleDuration = 0.5;
-      assert.deepEqual(BufferHelper.bufferInfo(media, 0, maxHoleDuration), {
+      assert.deepEqual(BufferHelper.mediaBufferInfo(media, 0, maxHoleDuration), {
         len: 0.5,
         start: 0,
         end: 0.5,
@@ -122,19 +122,19 @@ describe('BufferHelper', function () {
       // M: maxHoleDuration: 0.5
       // |////////|__________|////////////////|
       // 0     0.5 --- M --- 1               2.0
-      assert.deepEqual(BufferHelper.bufferInfo(media, 0.5, maxHoleDuration), {
+      assert.deepEqual(BufferHelper.mediaBufferInfo(media, 0.5, maxHoleDuration), {
         len: 1.5,
         start: 1,
         end: 2,
         nextStart: undefined
       });
-      assert.deepEqual(BufferHelper.bufferInfo(media, 1, maxHoleDuration), {
+      assert.deepEqual(BufferHelper.mediaBufferInfo(media, 1, maxHoleDuration), {
         len: 1,
         start: 1,
         end: 2,
         nextStart: undefined
       });
-      assert.deepEqual(BufferHelper.bufferInfo(media, 2, maxHoleDuration), {
+      assert.deepEqual(BufferHelper.mediaBufferInfo(media, 2, maxHoleDuration), {
         len: 0,
         start: 2,
         end: 2,

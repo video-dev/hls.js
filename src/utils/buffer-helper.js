@@ -33,76 +33,117 @@ export class BufferHelper {
     return false;
   }
 
-  static bufferInfo (media, pos, maxHoleDuration) {
+  /**
+   *
+   * @param {HTMLMediaElement|SourceBuffer} media
+   * @param {number} playheadPosition
+   * @param {number} maxHoleDuration
+   * @returns {len: number, start: number, end: number, nextStart: number}
+   */
+  static mediaBufferInfo (media, playheadPosition, maxHoleDuration) {
     try {
       if (media) {
-        let vbuffered = media.buffered, buffered = [], i;
-        for (i = 0; i < vbuffered.length; i++) {
-          buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+        let bufferedRanges = media.buffered;
+        let bufferedRangeInfos = [];
+
+        for (let i = 0; i < bufferedRanges.length; i++) {
+          bufferedRangeInfos.push({ start: bufferedRanges.start(i), end: bufferedRanges.end(i) });
         }
 
-        return this.bufferedInfo(buffered, pos, maxHoleDuration);
+        return BufferHelper.bufferedRangesInfo(bufferedRangeInfos, playheadPosition, maxHoleDuration);
       }
     } catch (error) {
       // this is to catch
       // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
       // This SourceBuffer has been removed from the parent media source
     }
-    return { len: 0, start: pos, end: pos, nextStart: undefined };
+    return {
+      len: 0,
+      start: playheadPosition,
+      end: playheadPosition,
+      nextStart: null
+    };
   }
 
-  static bufferedInfo (buffered, pos, maxHoleDuration) {
-    let buffered2 = [],
-      // bufferStart and bufferEnd are buffer boundaries around current video position
-      bufferLen, bufferStart, bufferEnd, bufferStartNext, i;
+  // TODO: rename this function to explain what it really does (same for above ^)
+  // TODO: why are these two functions needed, they wrap into each other, when is one needed or the other,
+  //       why not simply put them inline?
+  /**
+   *
+   * @param {Array<{start: number, end: number}>} ranges
+   * @param {number} playheadPosition
+   * @param {number} maxHoleDuration
+   * @returns {len: number, start: number, end: number, nextStart: number}
+   */
+  static bufferedRangesInfo (ranges, playheadPosition, maxHoleDuration) {
+    const mergedRanges = [];
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
-    buffered.sort(function (a, b) {
+    ranges.sort(function (a, b) {
       let diff = a.start - b.start;
-      if (diff) {
+      if (diff !== 0) {
         return diff;
       } else {
         return b.end - a.end;
       }
     });
-    // there might be some small holes between buffer time range
-    // consider that holes smaller than maxHoleDuration are irrelevant and build another
-    // buffer time range representations that discards those holes
-    for (i = 0; i < buffered.length; i++) {
-      let buf2len = buffered2.length;
-      if (buf2len) {
-        let buf2end = buffered2[buf2len - 1].end;
+    // there might be some small holes between buffered time-ranges.
+    // we consider that holes smaller than maxHoleDuration are irrelevant.
+    // we  build a new ranges representation that bridges over these holes.
+    for (let i = 0; i < ranges.length; i++) {
+      const mergedRangesLen = mergedRanges.length;
+      if (mergedRangesLen) {
+        const mergedRangesEnd = mergedRanges[mergedRangesLen - 1].end;
         // if small hole (value between 0 or maxHoleDuration ) or overlapping (negative)
-        if ((buffered[i].start - buf2end) < maxHoleDuration) {
+        if ((ranges[i].start - mergedRangesEnd) < maxHoleDuration) {
           // merge overlapping time ranges
           // update lastRange.end only if smaller than item.end
           // e.g.  [ 1, 15] with  [ 2,8] => [ 1,15] (no need to modify lastRange.end)
           // whereas [ 1, 8] with  [ 2,15] => [ 1,15] ( lastRange should switch from [1,8] to [1,15])
-          if (buffered[i].end > buf2end) {
-            buffered2[buf2len - 1].end = buffered[i].end;
+          if (ranges[i].end > mergedRangesEnd) {
+            mergedRanges[mergedRangesLen - 1].end = ranges[i].end;
           }
+          // else range end is within previous range end
+        // hole is larger than maxHoleDuration
         } else {
-          // big hole
-          buffered2.push(buffered[i]);
+          mergedRanges.push(ranges[i]);
         }
       } else {
         // first value
-        buffered2.push(buffered[i]);
+        mergedRanges.push(ranges[i]);
       }
     }
-    for (i = 0, bufferLen = 0, bufferStart = bufferEnd = pos; i < buffered2.length; i++) {
-      let start = buffered2[i].start,
-        end = buffered2[i].end;
-      // logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
-      if ((pos + maxHoleDuration) >= start && pos < end) {
-        // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
-        bufferStart = start;
-        bufferEnd = end;
-        bufferLen = bufferEnd - pos;
-      } else if ((pos + maxHoleDuration) < start) {
-        bufferStartNext = start;
+
+    // Here we determine the last range in which we find the playhead position and
+    // output info about it
+    let bufferInfoLen = 0;
+    let bufferInfoStart = playheadPosition;
+    let bufferInfoEnd = playheadPosition;
+    let bufferInfoNextStart;
+    // we iterate over all the ranges and
+    for (let i = 0; i < mergedRanges.length; i++) {
+      let start = mergedRanges[i].start;
+      let end = mergedRanges[i].end;
+
+      // playhead position is inside this time-range
+      // (allowing gaps of size up to `maxHoleDuration` between playhead and range start)
+      // store end of buffer position and buffer length
+      if ((playheadPosition + maxHoleDuration) >= start && playheadPosition < end) {
+        bufferInfoStart = start;
+        bufferInfoEnd = end;
+        bufferInfoLen = bufferInfoEnd - playheadPosition;
+      // playhead position is further away from start of range than max buffer hole
+      // we break the loop here and go with any stored values from previous iteration
+      // and also store the current range start
+      } else if ((playheadPosition + maxHoleDuration) < start) {
+        bufferInfoNextStart = start;
         break;
       }
     }
-    return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
+    return {
+      len: bufferInfoLen, // distance between position anbd range end
+      start: bufferInfoStart, // range start
+      end: bufferInfoEnd, // range end
+      nextStart: bufferInfoNextStart // start of next range
+    };
   }
 }

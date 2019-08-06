@@ -40,7 +40,7 @@ export default class BaseStreamController extends TaskLoop {
   onMediaSeeking () {
     const { config, media, mediaBuffer, state } = this;
     const currentTime = media ? media.currentTime : null;
-    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
+    const bufferInfo = BufferHelper.mediaBufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
 
     if (Number.isFinite(currentTime)) {
       logger.log(`media seeking to ${currentTime.toFixed(3)}`);
