@@ -14,7 +14,7 @@ import LevelController from './controller/level-controller';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import { hlsDefaultConfig } from './config';
+import { hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
 import HlsEvents from './events';
 
@@ -89,27 +89,12 @@ export default class Hls extends Observer {
     super();
 
     const defaultConfig = Hls.DefaultConfig;
-
-    if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
-      throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
-    }
-
-    for (let prop in defaultConfig) {
-      if (prop in config) continue;
-      config[prop] = defaultConfig[prop];
-    }
-
-    if (config.liveMaxLatencyDurationCount !== void 0 && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
-      throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
-    }
-
-    if (config.liveMaxLatencyDuration !== void 0 && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === void 0)) {
-      throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"');
-    }
-
+    mergeConfig(defaultConfig, config);
     enableLogs(config.debug);
     this.config = config;
     this._autoLevelCapping = -1;
+    // Try to enable progressive streaming by default. Whether it will be enabled depends on API support
+    this.progressive = config.progressive;
 
     // core controllers and network loaders
 
@@ -579,6 +564,10 @@ export default class Hls extends Observer {
     return subtitleTrackController ? subtitleTrackController.subtitleTrack : -1;
   }
 
+  get progressive () {
+    return this.config.progressive;
+  }
+
   /**
    * select an subtitle track, based on its index in subtitle track lists
    * @type{number}
@@ -607,5 +596,9 @@ export default class Hls extends Observer {
     if (subtitleTrackController) {
       subtitleTrackController.subtitleDisplay = value;
     }
+  }
+
+  set progressive (value) {
+    setStreamingMode(this.config, value);
   }
 }
