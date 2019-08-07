@@ -10,7 +10,6 @@ import { Segment } from '../../../src/types/segment';
 import Events from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import Fragment, { ElementaryStreamTypes } from '../../../src/loader/fragment';
-import queue from '../../../../media-lighthouse/src/queue';
 
 chai.use(sinonChai);
 const expect = chai.expect;

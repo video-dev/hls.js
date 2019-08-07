@@ -18,10 +18,8 @@ import SubtitleTrackController from './controller/subtitle-track-controller';
 import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
 
+import { logger } from './utils/logger';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
-
-const canStreamProgressively = fetchSupported();
-const loader = canStreamProgressively ? FetchLoader : XhrLoader;
 
 export const hlsDefaultConfig = {
   autoStartLoad: true, // used by stream-controller
@@ -47,7 +45,7 @@ export const hlsDefaultConfig = {
   liveBackBufferLength: Infinity, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
-  enableSoftwareAES: canStreamProgressively, // used by decrypter
+  enableSoftwareAES: true, // used by decrypter
   manifestLoadingTimeOut: 10000, // used by playlist-loader
   manifestLoadingMaxRetry: 1, // used by playlist-loader
   manifestLoadingRetryDelay: 1000, // used by playlist-loader
@@ -65,7 +63,7 @@ export const hlsDefaultConfig = {
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
   appendErrorMaxRetry: 3, // used by buffer-controller
-  loader,
+  loader: FetchLoader,
   fLoader: void 0, // used by fragment-loader
   pLoader: void 0, // used by playlist-loader
   xhrSetup: void 0, // used by xhr-loader
@@ -92,8 +90,51 @@ export const hlsDefaultConfig = {
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: void 0, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
-  testBandwidth: true
+  testBandwidth: true,
+  progressive: true
 };
+
+export function mergeConfig (defaultConfig, passedConfig) {
+  if ((passedConfig.liveSyncDurationCount || passedConfig.liveMaxLatencyDurationCount) && (passedConfig.liveSyncDuration || passedConfig.liveMaxLatencyDuration)) {
+    throw new Error('Illegal hls.js passedConfig: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+  }
+
+  for (let prop in defaultConfig) {
+    if (prop in passedConfig) continue;
+    passedConfig[prop] = defaultConfig[prop];
+  }
+
+  if (passedConfig.liveMaxLatencyDurationCount !== void 0 && passedConfig.liveMaxLatencyDurationCount <= passedConfig.liveSyncDurationCount) {
+    throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
+  }
+
+  if (passedConfig.liveMaxLatencyDuration !== void 0 && (passedConfig.liveMaxLatencyDuration <= passedConfig.liveSyncDuration || passedConfig.liveSyncDuration === void 0)) {
+    throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
+  }
+}
+
+const canStreamProgressively = fetchSupported();
+export function setStreamingMode (config, allowProgressive) {
+  const currentLoader = config.loader;
+  if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
+    // If a developer has configured their own loader, respect that choice
+    logger.log('[config]: Custom loader detected, cannot enable progressive streaming');
+    config.progressive = false;
+    return;
+  }
+
+  if (allowProgressive && canStreamProgressively) {
+    config.loader = FetchLoader;
+    config.progressive = true;
+    config.enableSoftwareAES = true;
+    logger.log('[config]: Progressive streaming enabled, using FetchLoader');
+  } else {
+    config.loader = XhrLoader;
+    config.progressive = false;
+    config.enableSoftwareAES = false;
+    logger.log('[config]: Progressive streaming disabled, using XhrLoader');
+  }
+}
 
 if (__USE_SUBTITLES__) {
   hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
