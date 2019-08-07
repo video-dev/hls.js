@@ -762,9 +762,9 @@ function dropSamplesUntilKeyframe (track: DemuxedTrack) : number {
     }
     dropIndex++;
   }
-  track.dropped += dropIndex;
   if (dropIndex) {
     track.samples = samples.slice(dropIndex);
+    track.dropped += dropIndex;
   }
   return dropIndex;
 }
