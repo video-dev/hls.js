@@ -35,28 +35,28 @@ class MP4Demuxer implements Demuxer {
     // that the fetch loader gives us flush moof+mdat pairs. If we push jagged data to MSE, it will throw an exception.
     const segmentedData = segmentValidRange(avcSamples);
     this.remainderData = segmentedData.remainder;
-    const avcTrack = dummyTrack();
+    const avcTrack = dummyTrack;
     avcTrack.samples = segmentedData.valid;
 
     return {
-      audioTrack: dummyTrack(),
+      audioTrack: dummyTrack,
       avcTrack,
-      id3Track: dummyTrack(),
-      textTrack: dummyTrack()
+      id3Track: dummyTrack,
+      textTrack: dummyTrack
     };
   }
 
   // TODO: Re-validate remainder data? Or we can assume that the segmented remainder is always valid CMAF
   flush () {
-    const avcTrack: DemuxedTrack = dummyTrack();
+    const avcTrack: DemuxedTrack = dummyTrack;
     avcTrack.samples = this.remainderData;
     this.remainderData = null;
 
     return {
-        audioTrack: dummyTrack(),
+        audioTrack: dummyTrack,
         avcTrack,
-        id3Track: dummyTrack(),
-        textTrack: dummyTrack()
+        id3Track: dummyTrack,
+        textTrack: dummyTrack
     };
   }
 

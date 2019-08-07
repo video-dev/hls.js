@@ -110,9 +110,9 @@ class MP3Demuxer implements Demuxer {
 
     return {
       audioTrack: track,
-      avcTrack: dummyTrack(),
+      avcTrack: dummyTrack,
       id3Track,
-      textTrack: dummyTrack()
+      textTrack: dummyTrack
     };
   }
 
@@ -132,9 +132,9 @@ class MP3Demuxer implements Demuxer {
     
     return {
       audioTrack: this._audioTrack,
-      avcTrack: dummyTrack(),
+      avcTrack: dummyTrack,
       id3Track: this._id3Track,
-      textTrack: dummyTrack()
+      textTrack: dummyTrack
     };
   }
 

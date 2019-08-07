@@ -1,6 +1,6 @@
 import { DemuxedTrack } from '../types/demuxer';
 
-export const dummyTrack = () : DemuxedTrack => ({
+export const dummyTrack: DemuxedTrack = {
   type: '',
   id: -1,
   pid: -1,
@@ -8,4 +8,4 @@ export const dummyTrack = () : DemuxedTrack => ({
   sequenceNumber: -1,
   samples: [],
   dropped: 0
-});
+};
