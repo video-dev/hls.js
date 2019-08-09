@@ -408,9 +408,13 @@ class TimelineController extends EventHandler {
   onFragParsingUserdata (data) {
     // push all of the CEA-708 messages into the interpreter
     // immediately. It will create the proper timestamps based on our PTS value
-    if (this.enabled && this.config.enableCEA708Captions) {
-      for (let i = 0; i < data.samples.length; i++) {
-        let ccdatas = this.extractCea608Data(data.samples[i].bytes);
+    if (!this.enabled || !this.config.enableCEA708Captions) {
+      return;
+    }
+    for (let i = 0; i < data.samples.length; i++) {
+      const ccBytes = data.samples[i].bytes;
+      if (ccBytes) {
+        const ccdatas = this.extractCea608Data(ccBytes);
         this.cea608Parser.addData(data.samples[i].pts, ccdatas[0], 1);
         this.cea608Parser.addData(data.samples[i].pts, ccdatas[1], 3);
       }
