@@ -9,6 +9,7 @@ import { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
+import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 
 const { performance } = window;
 
@@ -368,8 +369,8 @@ class AudioStreamController extends BaseStreamController {
     // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
     let accurateTimeOffset = false; // details.PTSKnown || !details.live;
-    const transmuxIdentifier = { level: frag.level, sn: frag.sn };
-    transmuxer.push(payload, initSegmentData, audioCodec, '', frag, details.totalduration, accurateTimeOffset, transmuxIdentifier, initPTS);
+    const chunkMeta = new ChunkMetadata(frag.level, frag.sn);
+    transmuxer.push(payload, initSegmentData, audioCodec, '', frag, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
   }
 
   onBufferReset () {
@@ -508,14 +509,14 @@ class AudioStreamController extends BaseStreamController {
     this.fragPrevious = null;
   }
 
-  private _handleTransmuxComplete (transmuxResult) {
+  private _handleTransmuxComplete (transmuxResult: TransmuxerResult) {
     const id = 'audio';
     const { hls } = this;
-    const { remuxResult, transmuxIdentifier } = transmuxResult;
+    const { remuxResult, chunkMeta } = transmuxResult;
 
-    const context = this.getCurrentContext(transmuxIdentifier);
+    const context = this.getCurrentContext(chunkMeta);
     if (!context) {
-      this.warn(`The loading context changed while buffering fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}. This chunk will not be buffered.`);
+      this.warn(`The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`);
       return;
     }
     const { frag } = context;
@@ -535,15 +536,18 @@ class AudioStreamController extends BaseStreamController {
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, audio.startPTS, audio.endPTS, audio.startDTS, audio.endDTS);
       this.bufferFragmentData(audio, 'audio');
     }
+
     if (id3) {
-      id3.frag = frag;
-      id3.id = id;
-      hls.trigger(Event.FRAG_PARSING_METADATA, id3);
+      const emittedID3: any = id3;
+      emittedID3.frag = frag;
+      emittedID3.id = id;
+      hls.trigger(Event.FRAG_PARSING_METADATA, emittedID3);
     }
     if (text) {
-      text.frag = frag;
-      text.id = id;
-      hls.trigger(Event.FRAG_PARSING_USERDATA, text);
+      const emittedText: any = text;
+      emittedText.frag = frag;
+      emittedText.id = id;
+      hls.trigger(Event.FRAG_PARSING_USERDATA, emittedText);
     }
   }
 

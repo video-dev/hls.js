@@ -8,7 +8,7 @@ import Fragment from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import FragmentLoader, { FragLoadSuccessResult, FragmentLoadProgressCallback } from '../loader/fragment-loader';
 import * as LevelHelper from './level-helper';
-import { TransmuxIdentifier } from '../types/transmuxer';
+import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import LevelDetails from '../loader/level-details';
 import { alignStream } from '../utils/discontinuities';
@@ -214,7 +214,8 @@ export default class BaseStreamController extends TaskLoop {
     if (!transmuxer) {
       return;
     }
-    transmuxer.flush({ level: frag.level, sn: frag.sn });
+    const chunkMeta = new ChunkMetadata(frag.level, frag.sn);
+    transmuxer.flush(chunkMeta);
   }
 
   protected _handleFragmentLoadProgress (frag, payload) {}
@@ -236,13 +237,13 @@ export default class BaseStreamController extends TaskLoop {
       .catch(errorHandler);
   }
 
-  protected _handleTransmuxerFlush (identifier: TransmuxIdentifier) {
+  protected _handleTransmuxerFlush (chunkMeta: ChunkMetadata) {
     if (this.state !== State.PARSING) {
       this.warn(`State is expected to be PARSING on transmuxer flush, but is ${this.state}.`);
       return;
     }
 
-    const context = this.getCurrentContext(identifier);
+    const context = this.getCurrentContext(chunkMeta);
     if (!context) {
       return;
     }
@@ -254,9 +255,9 @@ export default class BaseStreamController extends TaskLoop {
     this.hls.trigger(Event.FRAG_PARSED, { frag });
   }
 
-  protected getCurrentContext (identifier: TransmuxIdentifier) : { frag: Fragment, level: any } | null {
+  protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, level: any } | null {
     const { fragCurrent, levels } = this;
-    const { level, sn } = identifier;
+    const { level, sn } = chunkMeta;
     if (!levels || !levels[level]) {
       this.warn(`Levels object was unset while buffering fragment ${sn} of level ${level}. The current chunk will not be buffered.`);
       return null;
@@ -547,7 +548,7 @@ export default class BaseStreamController extends TaskLoop {
       this.nextLoadPosition = this.lastCurrentTime;
     }
     if (transmuxer && frag.sn !== 'initSegment') {
-      transmuxer.flush({ sn: frag.sn, level: frag.level });
+      transmuxer.flush(new ChunkMetadata(frag.level, frag.sn));
     }
 
     Object.keys(frag.elementaryStreams).forEach(type => frag.elementaryStreams[type] = null);
