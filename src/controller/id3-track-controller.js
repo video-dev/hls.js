@@ -6,7 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
 import { logger } from '../utils/logger';
-import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import { sendAddTrackEvent, clearCurrentCues, getClosestCue } from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
   constructor (hls) {
@@ -94,41 +94,11 @@ class ID3TrackController extends EventHandler {
     }
   }
 
-  getClosestCue (cues, bufferEnd) {
-    // If the offset is less than the first element, the first element is the closest.
-    if (bufferEnd < cues[0].endTime) {
-      return cues[0];
-    }
-    // If the offset is greater than the last cue, the last is the closest.
-    if (bufferEnd > cues[cues.length - 1].endTime) {
-      return cues[cues.length - 1];
-    }
-
-    let left = 0;
-    let right = cues.length - 1;
-
-    while (left <= right) {
-      const mid = Math.floor((right + left) / 2);
-
-      if (bufferEnd < cues[mid].endTime) {
-        right = mid - 1;
-      } else if (bufferEnd > cues[mid].endTime) {
-        left = mid + 1;
-      } else {
-        // If it's not lower or higher, it must be equal.
-        return cues[mid];
-      }
-    }
-    // At this point, left and right have swapped.
-    // No direct match was found, left or right element must be the closest. Check which one has the smallest diff.
-    return (cues[left].endTime - bufferEnd) < (bufferEnd - cues[right].endTime) ? cues[left] : cues[right];
-  }
-
   onLiveBackBufferReached ({ bufferEnd }) {
     if (!this.id3Track || !this.id3Track.cues || !this.id3Track.cues.length) {
       return;
     }
-    const foundCue = this.getClosestCue(this.id3Track.cues, bufferEnd);
+    const foundCue = getClosestCue(this.id3Track.cues, bufferEnd);
     if (!foundCue) {
       return;
     }
@@ -136,7 +106,7 @@ class ID3TrackController extends EventHandler {
     let removeCues = true;
     while (removeCues) {
       const cue = this.id3Track.cues[0];
-      if (!this.id3Track.cues.length || cue.endTime === foundCue.endTime) {
+      if (!this.id3Track.cues.length || cue.id === foundCue.id) {
         removeCues = false;
         return;
       }
