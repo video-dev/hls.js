@@ -8,7 +8,7 @@ import Event from '../events';
 import { enableLogs } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
 import { RemuxedTrack } from '../types/remuxer';
-import { TransmuxerResult, TransmuxIdentifier } from '../types/transmuxer';
+import { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 
 export default function TransmuxerWorker (self) {
   const observer = new EventEmitter() as any;
@@ -43,7 +43,7 @@ export default function TransmuxerWorker (self) {
         break;
       }
       case 'demux': {
-        const transmuxResult: TransmuxerResult = self.transmuxer.push(data.data, data.decryptdata, data.transmuxIdentifier);
+        const transmuxResult: TransmuxerResult = self.transmuxer.push(data.data, data.decryptdata, data.chunkMeta);
         if (!transmuxResult) {
           return;
         }
@@ -59,7 +59,7 @@ export default function TransmuxerWorker (self) {
         break;
       }
         case 'flush': {
-          const id = data.transmuxIdentifier;
+          const id = data.chunkMeta;
           const transmuxResult = self.transmuxer.flush(id);
           if (transmuxResult.then) {
             // @ts-ignore
@@ -100,9 +100,9 @@ function convertToTransferable (track: RemuxedTrack): Array<ArrayBuffer> {
   return transferable;
 }
 
-function handleFlushResult (self: any, results: Array<TransmuxerResult>, transmuxIdentifier: TransmuxIdentifier) {
+function handleFlushResult (self: any, results: Array<TransmuxerResult>, chunkMeta: ChunkMetadata) {
   results.forEach(result => {
     emitTransmuxComplete(self, result);
   });
-  self.postMessage({ event: 'flush', data: transmuxIdentifier });
+  self.postMessage({ event: 'flush', data: chunkMeta });
 }

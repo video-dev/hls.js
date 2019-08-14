@@ -19,9 +19,9 @@ export interface RemuxedTrack {
     data1: Uint8Array
     data2?: Uint8Array
     startPTS: number
-    endPTS?: number
+    endPTS: number
     startDTS: number
-    endDTS?: number
+    endDTS: number
     type: string
     hasAudio: boolean
     hasVideo: boolean

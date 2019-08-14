@@ -11,6 +11,7 @@ import { alignStream } from '../utils/discontinuities';
 import GapController from './gap-controller';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
+import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -262,7 +263,7 @@ export default class StreamController extends BaseStreamController {
     return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
   }
 
-  followingBufferedFrag (frag) {
+  followingBufferedFrag (frag: Fragment | null) {
     if (frag) {
       // try to get range of next fragment (500ms after this range)
       return this.getBufferedFrag(frag.endPTS + 0.5);
@@ -536,7 +537,7 @@ export default class StreamController extends BaseStreamController {
     // this.log(`Transmuxing ${frag.sn} of [${details.startSN} ,${details.endSN}],level ${frag.level}, cc ${frag.cc}`);
     const transmuxer = this.transmuxer = this.transmuxer ||
           new TransmuxerInterface(this.hls, 'main', this._handleTransmuxComplete.bind(this), this._handleTransmuxerFlush.bind(this));
-    const transmuxIdentifier = { level: frag.level, sn: frag.sn };
+    const chunkMeta = new ChunkMetadata(frag.level, frag.sn);
     transmuxer.push(
       payload,
       initSegmentData,
@@ -545,7 +546,7 @@ export default class StreamController extends BaseStreamController {
       frag,
       details.totalduration,
       accurateTimeOffset,
-      transmuxIdentifier
+      chunkMeta
     );
   }
 
@@ -842,22 +843,21 @@ export default class StreamController extends BaseStreamController {
       });
   }
 
-  private _handleTransmuxComplete (transmuxResult) {
+  private _handleTransmuxComplete (transmuxResult: TransmuxerResult) {
     const id = 'main';
     const { hls } = this;
-    const { remuxResult, transmuxIdentifier } = transmuxResult;
+    const { remuxResult, chunkMeta } = transmuxResult;
 
-    const context = this.getCurrentContext(transmuxIdentifier);
+    const context = this.getCurrentContext(chunkMeta);
     if (!context) {
-      this.warn(`The loading context changed while buffering fragment ${transmuxIdentifier.sn} of level ${transmuxIdentifier.level}. This chunk will not be buffered.`);
+      this.warn(`The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`);
       return;
     }
     const { frag, level } = context;
-
     let { audio, video, text, id3, initSegment } = remuxResult;
     // The audio-stream-controller handles audio buffering if Hls.js is playing an alternate audio track
     if (this.altAudio) {
-      audio = null;
+      audio = undefined;
     }
 
     this.state = State.PARSING;
@@ -867,7 +867,7 @@ export default class StreamController extends BaseStreamController {
         this._bufferInitSegment(level,initSegment.tracks);
         hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
       }
-      if (Number.isFinite(initSegment.initPTS)) {
+      if (Number.isFinite(initSegment.initPTS as number)) {
         hls.trigger(Event.INIT_PTS_FOUND, { frag, id, initPTS: initSegment.initPTS });
       }
     }
@@ -889,14 +889,16 @@ export default class StreamController extends BaseStreamController {
     }
 
     if (id3) {
-      id3.frag = frag;
-      id3.id = id;
-      hls.trigger(Event.FRAG_PARSING_METADATA, id3);
+      const emittedID3: any = id3;
+      emittedID3.frag = frag;
+      emittedID3.id = id;
+      hls.trigger(Event.FRAG_PARSING_METADATA, emittedID3);
     }
     if (text) {
-      text.frag = frag;
-      text.id = id;
-      hls.trigger(Event.FRAG_PARSING_USERDATA, text);
+      const emittedText: any = text;
+      emittedText.frag = frag;
+      emittedText.id = id;
+      hls.trigger(Event.FRAG_PARSING_USERDATA, emittedText);
     }
   }
 
@@ -1042,7 +1044,7 @@ export default class StreamController extends BaseStreamController {
   }
 }
 
-function _hasDroppedFrames (frag, dropped, startSN) {
+function _hasDroppedFrames (frag, dropped: number | undefined, startSN: number) {
   // Detect gaps in a fragment  and try to fix it by finding a keyframe in the previous fragment (see _findFragments)
   if (dropped) {
     frag.dropped = dropped;

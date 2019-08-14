@@ -1,5 +1,6 @@
 import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
 import { TransmuxState, TransmuxConfig } from '../../../src/demux/transmuxer';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
 
 const sinon = require('sinon');
 
@@ -96,11 +97,11 @@ describe('TransmuxerInterface tests', function () {
     const videoCodec = '';
     const duration = 0;
     const accurateTimeOffset = true;
-    const transmuxIdentifier = { sn: newFrag.sn, level: newFrag.level };
+    const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn);
 
     const stub = sinon.stub(transmuxerInterface.worker, 'postMessage');
 
-    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, transmuxIdentifier);
+    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, chunkMeta);
 
     expect(stub).to.have.been.calledTwice;
     const firstCall = stub.args[0][0];
@@ -116,7 +117,7 @@ describe('TransmuxerInterface tests', function () {
       cmd: 'demux',
       data,
       decryptdata: newFrag.decryptdata,
-      transmuxIdentifier: { sn: newFrag.sn, level: newFrag.level }
+      chunkMeta: { sn: newFrag.sn, level: newFrag.level }
     });
   });
 
@@ -150,11 +151,11 @@ describe('TransmuxerInterface tests', function () {
     const videoCodec = '';
     const duration = 0;
     const accurateTimeOffset = true;
-    const transmuxIdentifier = { sn: newFrag.sn, level: newFrag.level };
+    const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn);
 
     const configureStub = sinon.stub(transmuxerInterface.transmuxer, 'configure');
     const pushStub = sinon.stub(transmuxerInterface.transmuxer, 'push');
-    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, transmuxIdentifier);
+    transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, chunkMeta);
 
     const tConfig = new TransmuxConfig('', '', new Uint8Array(), 0);
     const state = new TransmuxState(true, false, true, true, 1000);
@@ -162,7 +163,7 @@ describe('TransmuxerInterface tests', function () {
     expect(configureStub).to.have.been.calledWith(tConfig, state);
 
     expect(pushStub).to.have.been.calledOnce;
-    expect(pushStub).to.have.been.calledWith(data, newFrag.decryptdata, transmuxIdentifier);
+    expect(pushStub).to.have.been.calledWith(data, newFrag.decryptdata, chunkMeta);
   });
 
   it('sends worker generic message', function () {
