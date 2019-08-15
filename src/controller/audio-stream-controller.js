@@ -458,7 +458,12 @@ class AudioStreamController extends BaseStreamController {
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
         } else {
-          this.startPosition = 0;
+          if (newDetails.live) {
+            this.startPosition = this.computeLivePosition(sliding, newDetails);
+            logger.log(`compute startPosition for audio-track to ${this.startPosition}`);
+          } else {
+            this.startPosition = 0;
+          }
         }
       }
       this.nextLoadPosition = this.startPosition;
