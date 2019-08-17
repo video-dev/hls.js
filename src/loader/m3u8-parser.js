@@ -14,7 +14,7 @@ import { isCodecType } from '../utils/codecs';
  */
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /((#EXT-X-STREAM-INF):([^\n\r]*)[\r\n]+([^\r\n]+))|((#EXT-X-SESSION-DATA):(.*))/g;
+const MASTER_PLAYLIST_REGEX = /((#EXT-X-STREAM-INF):([^\n\r]*)[\r\n]+([^\r\n]+))|((#EXT-X-SESSION-DATA):([^\n\r]*)[\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
