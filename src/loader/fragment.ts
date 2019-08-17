@@ -2,6 +2,7 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { logger } from '../utils/logger';
 import LevelKey from './level-key';
+import { PlaylistLevelType } from '../types/loader';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
@@ -29,6 +30,7 @@ export default class Fragment {
   // Have Fragment be the representation once we have a known state?
   // Something to think on.
 
+  public type!: PlaylistLevelType;
   // relurl is the portion of the URL that comes from inside the playlist.
   public relurl!: string;
   // baseurl is the URL to the playlist
@@ -41,6 +43,9 @@ export default class Fragment {
   // core difference from the private field _decryptdata is the lack of the initialized IV
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
+
+  // TODO(typescript-xhrloader)
+  public loader: any;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
