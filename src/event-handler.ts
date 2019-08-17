@@ -34,8 +34,8 @@ class EventHandler {
     this.onHandlerDestroyed();
   }
 
-  onHandlerDestroying () {}
-  onHandlerDestroyed () {}
+  protected onHandlerDestroying () {}
+  protected onHandlerDestroyed () {}
 
   isEventHandler () {
     return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';

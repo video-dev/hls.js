@@ -36,7 +36,7 @@ function createTestStreamWithConfig (target, config) {
 
 module.exports = {
   bbb: createTestStreamWithConfig({
-    url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8',
+    url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     description: 'Big Buck Bunny - adaptive qualities'
   },
   {
@@ -45,27 +45,27 @@ module.exports = {
   }
   ),
   bigBuckBunny480p: {
-    'url': 'https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
+    'url': 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     'description': 'Big Buck Bunny - 480p only',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
   arte: {
-    'url': 'https://video-dev.github.io/streams/test_001/stream.m3u8',
+    'url': 'https://test-streams.mux.dev/test_001/stream.m3u8',
     'description': 'ARTE China,ABR',
     'live': false,
     'abr': true
   },
   deltatreDAI: {
-    'url': 'https://video-dev.github.io/streams/dai-discontinuity-deltatre/manifest.m3u8',
+    'url': 'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
     'description': 'Ad-insertion in event stream',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
   issue666: {
-    'url': 'https://video-dev.github.io/streams/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    'url': 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
     'description': 'hls.js/issues/666',
     'live': false,
     'abr': false,
@@ -94,7 +94,7 @@ module.exports = {
   },
   /*
   bbbAES: {
-    'url': 'https://video-dev.github.io/streams/bbbAES/playlists/sample_aes/index.m3u8',
+    'url': 'https://test-streams.mux.dev/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
@@ -129,7 +129,7 @@ module.exports = {
     'blacklist_ua': ['safari', 'internet explorer']
   },
   offset_pts: {
-    'url': 'https://video-dev.github.io/streams/pts_shift/master.m3u8',
+    'url': 'https://test-streams.mux.dev/pts_shift/master.m3u8',
     'description': 'DK Turntable, PTS shifted by 2.3s',
     'live': false,
     'abr': false

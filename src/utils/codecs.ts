@@ -63,13 +63,13 @@ const sampleEntryCodesISO = {
   }
 };
 
-function isCodecType (codec, type) {
+function isCodecType (codec: string, type: 'audio' | 'video'): boolean {
   const typeCodes = sampleEntryCodesISO[type];
   return !!typeCodes && typeCodes[codec.slice(0, 4)] === true;
 }
 
-function isCodecSupportedInMp4 (codec, type) {
-  return window.MediaSource.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`);
+function isCodecSupportedInMp4 (codec: string, type: 'audio' | 'video'): boolean {
+  return MediaSource.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`);
 }
 
 export { isCodecType, isCodecSupportedInMp4 };
