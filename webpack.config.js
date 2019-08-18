@@ -224,9 +224,8 @@ module.exports = (envArgs) => {
     // If no arguments are specified, return every configuration
     configs = multiConfig;
   } else {
-    // Find the first enabled config within the arguments array
     const enabledConfigNames = Object.keys(envArgs);
-    // Filter out config with name
+    // Filter out enabled configs
     const enabledConfigs = multiConfig.filter(config => enabledConfigNames.includes(config.name));
     if (!enabledConfigs.length) {
       throw new Error(`Couldn't find a valid config with the names ${JSON.stringify(enabledConfigNames)}. Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
