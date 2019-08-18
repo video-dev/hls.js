@@ -107,7 +107,7 @@ class KeyLoader extends EventHandler {
 
     // detach fragment loader on load success
     frag.loader = undefined;
-    this.loaders[frag.type] = undefined;
+    delete this.loaders[frag.type];
     this.hls.trigger(Event.KEY_LOADED, { frag: frag });
   }
 
@@ -119,7 +119,7 @@ class KeyLoader extends EventHandler {
     }
 
     this.loaders[frag.type] = undefined;
-    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: response });
+    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag, response });
   }
 
   loadtimeout (stats: LoaderStats, context: KeyLoaderContext) {
@@ -130,7 +130,7 @@ class KeyLoader extends EventHandler {
     }
 
     this.loaders[frag.type] = undefined;
-    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag: frag });
+    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
   }
 }
 
