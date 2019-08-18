@@ -71,7 +71,7 @@ class KeyLoader extends EventHandler {
       this.decrypturl = uri;
       this.decryptkey = null;
 
-      let loaderContext: KeyLoaderContext = {
+      const loaderContext: KeyLoaderContext = {
         url: uri,
         frag: frag,
         responseType: 'arraybuffer'
@@ -80,14 +80,14 @@ class KeyLoader extends EventHandler {
       // maxRetry is 0 so that instead of retrying the same key on the same variant multiple times,
       // key-loader will trigger an error and rely on stream-controller to handle retry logic.
       // this will also align retry logic with fragment-loader
-      let loaderConfig: LoaderConfiguration = {
+      const loaderConfig: LoaderConfiguration = {
         timeout: config.fragLoadingTimeOut,
         maxRetry: 0,
         retryDelay: config.fragLoadingRetryDelay,
         maxRetryDelay: config.fragLoadingMaxRetryTimeout
       };
 
-      let loaderCallbacks: LoaderCallbacks<KeyLoaderContext> = {
+      const loaderCallbacks: LoaderCallbacks<KeyLoaderContext> = {
         onSuccess: this.loadsuccess.bind(this),
         onError: this.loaderror.bind(this),
         onTimeout: this.loadtimeout.bind(this)
@@ -118,7 +118,7 @@ class KeyLoader extends EventHandler {
       loader.abort();
     }
 
-    this.loaders[frag.type] = undefined;
+    delete this.loaders[frag.type];
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag, response });
   }
 
@@ -129,7 +129,7 @@ class KeyLoader extends EventHandler {
       loader.abort();
     }
 
-    this.loaders[frag.type] = undefined;
+    delete this.loaders[frag.type];
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
   }
 }
