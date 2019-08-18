@@ -3,7 +3,7 @@ import Hls from '../../../src/hls';
 
 const sinon = require('sinon');
 
-describe.only('AudioTrackController', function () {
+describe('AudioTrackController', function () {
   const tracks = [{
     groupId: '1',
     id: 0,
@@ -80,7 +80,7 @@ describe.only('AudioTrackController', function () {
     });
   });
 
-  it.only('should select audioGroupId and trigger AUDIO_TRACK_SWITCHING', function (done) {
+  it('should select audioGroupId and trigger AUDIO_TRACK_SWITCHING', function (done) {
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, (event, data) => {
       done();
     });
