@@ -2,10 +2,11 @@ import FragmentLoader, { LoadError } from '../../../src/loader/fragment-loader';
 import Fragment from '../../../src/loader/fragment';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import sinon from 'sinon';
+import LoadStats from '../../../src/loader/load-stats';
 
 class MockXhr {
   constructor () {
-    this.stats = {};
+    this.stats = new LoadStats();
   }
   load (context, config, callbacks) {
     this.callbacks = callbacks;
@@ -27,7 +28,7 @@ describe('FragmentLoader tests', function () {
     frag.url = 'foo';
     response = {};
     context = {};
-    stats = {};
+    stats = new LoadStats();
     networkDetails = {};
   });
 

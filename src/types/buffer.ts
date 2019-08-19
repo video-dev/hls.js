@@ -1,4 +1,4 @@
-export type SourceBufferName = 'video' | 'audio';
+export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 
 export type ExtendedSourceBuffer = SourceBuffer & {
   ended?: boolean
@@ -15,7 +15,9 @@ export interface SourceBufferFlushRange {
 export interface BufferOperation {
   execute: Function
   onComplete: Function
-  onError: Function
+  onError: Function,
+  start?: number
+  end?: number
 }
 
 export interface SourceBufferListener {

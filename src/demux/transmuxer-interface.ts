@@ -107,6 +107,7 @@ export default class TransmuxerInterface {
     const lastFrag = this.frag;
 
     if (startingNewTransmuxSession(currentTransmuxSession, chunkMeta)) {
+      frag.stats.parsing.start = performance.now();
       const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
       const trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
       const nextSN = !!(lastFrag && (frag.sn === (lastFrag.sn as number + 1)));
@@ -144,10 +145,10 @@ export default class TransmuxerInterface {
       if (transmuxResult.then) {
         // @ts-ignore
         transmuxResult.then(data => {
-          this.onTransmuxComplete(data);
+          this.handleTransmuxComplete(data);
         });
       } else {
-        this.onTransmuxComplete(transmuxResult);
+        this.handleTransmuxComplete(transmuxResult as TransmuxerResult);
       }
     }
   }
@@ -155,6 +156,7 @@ export default class TransmuxerInterface {
   flush (chunkMeta: ChunkMetadata) {
     const { transmuxer, worker } = this;
     this.currentTransmuxSession = null;
+    chunkMeta.transmuxing.start = performance.now();
     if (worker) {
       worker.postMessage({
         cmd: 'flush',
@@ -176,7 +178,7 @@ export default class TransmuxerInterface {
 
   private handleFlushResult (results: Array<TransmuxerResult>, chunkMeta: ChunkMetadata) {
     results.forEach(result => {
-      this.onTransmuxComplete(result);
+      this.handleTransmuxComplete(result);
     });
     this.onFlush(chunkMeta);
   }
@@ -192,7 +194,7 @@ export default class TransmuxerInterface {
       }
 
       case 'transmuxComplete': {
-          this.onTransmuxComplete(data.data);
+          this.handleTransmuxComplete(data.data);
           break;
       }
 
@@ -223,6 +225,11 @@ export default class TransmuxerInterface {
     } else if (transmuxer) {
       transmuxer.configure(config, state);
     }
+  }
+
+  private handleTransmuxComplete (result: TransmuxerResult) {
+    result.chunkMeta.transmuxing.end = performance.now();
+    this.onTransmuxComplete(result);
   }
 }
 

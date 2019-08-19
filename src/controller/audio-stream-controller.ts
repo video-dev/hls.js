@@ -5,11 +5,13 @@ import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
 import { FragmentState } from './fragment-tracker';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
+import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
+import { TrackSet } from '../types/track';
 
 const { performance } = window;
 
@@ -343,7 +345,7 @@ class AudioStreamController extends BaseStreamController {
     }
   }
 
-  _handleFragmentLoadProgress (frag, payload) {
+  _handleFragmentLoadProgress (frag: Fragment, payload: Uint8Array) {
     const { config, trackId, levels } = this;
     if (!levels) {
       this.warn(`Audio tracks were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
@@ -369,7 +371,7 @@ class AudioStreamController extends BaseStreamController {
     // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
     let accurateTimeOffset = false; // details.PTSKnown || !details.live;
-    const chunkMeta = new ChunkMetadata(frag.level, frag.sn);
+    const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount, payload.byteLength);
     transmuxer.push(payload, initSegmentData, audioCodec, '', frag, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
   }
 
@@ -389,7 +391,7 @@ class AudioStreamController extends BaseStreamController {
     }
   }
 
-  onFragBuffered (data) {
+  onFragBuffered (data: { frag: Fragment }) {
     const { frag } = data;
     if (frag && frag.type !== 'audio') {
       return;
@@ -528,13 +530,13 @@ class AudioStreamController extends BaseStreamController {
     }
 
     if (initSegment && initSegment.tracks) {
-      this._bufferInitSegment(initSegment.tracks);
+      this._bufferInitSegment(initSegment.tracks, frag, chunkMeta);
       hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
       // Only flush audio from old audio tracks when PTS is known on new audio track
     }
     if (audio) {
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, audio.startPTS, audio.endPTS, audio.startDTS, audio.endDTS);
-      this.bufferFragmentData(audio, 'audio');
+      this.bufferFragmentData(audio, frag, chunkMeta);
     }
 
     if (id3) {
@@ -551,7 +553,7 @@ class AudioStreamController extends BaseStreamController {
     }
   }
 
-  private _bufferInitSegment (tracks) {
+  private _bufferInitSegment (tracks: TrackSet, frag: Fragment, chunkMeta: ChunkMetadata) {
     if (this.state !== State.PARSING) {
       return;
     }
@@ -572,14 +574,14 @@ class AudioStreamController extends BaseStreamController {
     this.log(`Audio, container:${track.container}, codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
     let initSegment = track.initSegment;
     if (initSegment) {
-      let appendObj = { type: 'audio', data: initSegment, parent: 'audio', content: 'initSegment' };
-      this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
+      let segment: BufferAppendingEventPayload = { type: 'audio', data: initSegment, frag, chunkMeta };
+      this.hls.trigger(Event.BUFFER_APPENDING, segment);
     }
     // trigger handler right now
     this.tick();
   }
 
-  private loadFragment (frag) {
+  private loadFragment (frag: Fragment) {
     // only load if fragment is not loaded or if in audio switch
     // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
     const fragState = this.fragmentTracker.getState(frag);

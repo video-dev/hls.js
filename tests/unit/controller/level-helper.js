@@ -1,6 +1,7 @@
 import * as LevelHelper from '../../../src/controller/level-helper';
 import LevelDetails from '../../../src/loader/level-details';
 import Fragment from '../../../src/loader/fragment';
+import LoadStats from '../../../src/loader/load-stats';
 
 const generatePlaylist = (sequenceNumbers) => {
   const playlist = new LevelDetails('');
@@ -181,10 +182,10 @@ describe('LevelHelper Tests', function () {
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5;
       newPlaylist.updated = true;
-      const actual = LevelHelper.computeReloadInterval(newPlaylist, {
-        trequest: 0,
-        tload: 1000
-      });
+      const stats = new LoadStats();
+      stats.loading.start = 0;
+      stats.loading.end = 1000;
+      const actual = LevelHelper.computeReloadInterval(newPlaylist, stats);
       expect(actual).to.equal(4000);
     });
 
@@ -192,10 +193,10 @@ describe('LevelHelper Tests', function () {
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5;
       newPlaylist.updated = false;
-      const actual = LevelHelper.computeReloadInterval(newPlaylist, {
-        trequest: 0,
-        tload: 1000
-      });
+      const stats = new LoadStats();
+      stats.loading.start = 0;
+      stats.loading.end = 1000;
+      const actual = LevelHelper.computeReloadInterval(newPlaylist, stats);
       expect(actual).to.equal(2500);
     });
   });

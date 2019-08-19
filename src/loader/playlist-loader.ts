@@ -290,6 +290,7 @@ class PlaylistLoader extends EventHandler {
       return;
     }
 
+    stats.parsing.start = performance.now();
     // Check if chunk-list or master. handle empty chunk list case (first EXTINF not signaled, but TARGETDURATION present)
     if (string.indexOf('#EXTINF:') > 0 || string.indexOf('#EXT-X-TARGETDURATION:') > 0) {
       this._handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
@@ -377,7 +378,7 @@ class PlaylistLoader extends EventHandler {
     const mtime = toDate((loader as Loader<LoaderContext>).getResponseHeader('Last-Modified'));
     const encoded = toDate(getProgramDateTimeAtEndOfLastEncodedFragment(levelDetails));
 
-    levelDetails.tload = stats.tload;
+    levelDetails.tload = stats.loading.end;
     levelDetails.lastModified = Math.max(+(mtime as Date), +(encoded as Date));
 
     if (!levelDetails.fragments.length) {
@@ -414,7 +415,7 @@ class PlaylistLoader extends EventHandler {
     }
 
     // save parsing time
-    stats.tparsed = performance.now();
+    stats.parsing.end = performance.now();
 
     // in case we need SIDX ranges
     // return early after calling load for

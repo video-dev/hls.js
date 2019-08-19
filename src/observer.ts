@@ -10,6 +10,9 @@ export class Observer extends EventEmitter {
    * extending the standard API.
    */
   trigger (event: string, ...data: Array<any>): void {
+    performance.mark(`${event}-start`);
     this.emit(event, event, ...data);
+    performance.mark(`${event}-end`);
+    performance.measure(`${event}`, `${event}-start`, `${event}-end`);
   }
 }

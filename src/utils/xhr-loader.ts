@@ -49,7 +49,7 @@ class XhrLoader implements Loader<LoaderContext> {
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
-    this.stats.trequest = performance.now();
+    this.stats.loading.start = performance.now();
     this.retryDelay = config.retryDelay;
     this.loadInternal();
   }
@@ -59,7 +59,7 @@ class XhrLoader implements Loader<LoaderContext> {
     const xhr = this.loader = new XMLHttpRequest();
 
     const stats = this.stats;
-    stats.tfirst = 0;
+    stats.loading.first = 0;
     stats.loaded = 0;
     const xhrSetup = this.xhrSetup;
 
@@ -89,9 +89,6 @@ class XhrLoader implements Loader<LoaderContext> {
 
     xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
-    if (this.callbacks.onProgress) {
-      xhr.onprogress = this.loadprogress.bind(this);
-    }
     // setup timeout before we perform request
     this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
     xhr.send();
@@ -111,15 +108,15 @@ class XhrLoader implements Loader<LoaderContext> {
     if (readyState >= 2) {
       // clear xhr timeout and rearm it if readyState less than 4
       window.clearTimeout(this.requestTimeout);
-      if (stats.tfirst === 0) {
-        stats.tfirst = Math.max(performance.now(), stats.trequest);
+      if (stats.loading.first === 0) {
+        stats.loading.first = Math.max(performance.now(), stats.loading.start);
       }
 
       if (readyState === 4) {
         const status = xhr.status;
         // http status between 200 to 299 are all successful
         if (status >= 200 && status < 300) {
-          stats.tload = Math.max(performance.now(), stats.tfirst);
+          stats.loading.end = Math.max(performance.now(), stats.loading.first);
           let data;
           let len : number;
           if (context.responseType === 'arraybuffer') {
@@ -170,19 +167,6 @@ class XhrLoader implements Loader<LoaderContext> {
     logger.warn(`timeout while loading ${this.context.url}`);
     this.abortInternal();
     this.callbacks.onTimeout(this.stats, this.context, this.loader);
-  }
-
-  loadprogress (event): void {
-    const xhr = event.currentTarget;
-    const stats = this.stats;
-    const data = (this.context.responseType === 'arraybuffer') ? new ArrayBuffer(0) : '';
-
-    stats.loaded = event.loaded;
-    if (event.lengthComputable) {
-      stats.total = event.total;
-    }
-    const onProgress = this.callbacks.onProgress as Function;
-    onProgress(stats, this.context, data, xhr);
   }
 
   getResponseHeader(name: string): string | null {

@@ -98,7 +98,7 @@ class AbrController extends EventHandler {
     }
 
     const stats: LoaderStats = loader.stats;
-    const requestDelay = performance.now() - stats.trequest;
+    const requestDelay = performance.now() - stats.loading.start;
     const playbackRate = Math.abs(media.playbackRate);
     // In order to work with a stable bandwidth, only begin monitoring bandwidth after half of the fragment has been loaded
     if (requestDelay <= (500 * frag.duration / playbackRate)) {
@@ -180,9 +180,7 @@ class AbrController extends EventHandler {
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
         level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
       }
-      // if fragment has been loaded to perform a bitrate test,
       if (frag.bitrateTest) {
-        stats.tparsed = stats.tbuffered = stats.tload;
         this.onFragBuffered(data);
       }
     }
@@ -191,24 +189,25 @@ class AbrController extends EventHandler {
   onFragBuffered (data: { frag: Fragment }) {
     const frag = data.frag;
     const stats = frag.stats;
-    // only update stats on first frag buffering
-    // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
-    // and leading to wrong bw estimation
-    // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
-    if (!stats.aborted && frag.type === 'main' && Number.isFinite(frag.sn as number) && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
-      // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
-      // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
-      // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation
-      let fragLoadingProcessingMs = stats.tparsed - stats.trequest;
-      logger.log(`latency/loading/parsing/append/kbps:${Math.round(stats.tfirst - stats.trequest)}/${Math.round(stats.tload - stats.tfirst)}/${Math.round(stats.tparsed - stats.tload)}/${Math.round(stats.tbuffered - stats.tparsed)}/${Math.round(8 * stats.loaded / (stats.tbuffered - stats.trequest))}`);
-      this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
-      stats.bwEstimate = this._bwEstimator.getEstimate();
-      // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
-      if (frag.bitrateTest) {
-        this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
-      } else {
-        this.bitrateTestDelay = 0;
-      }
+
+    if (stats.aborted) {
+      return;
+    }
+    // Only count non-alt-audio frags which were actually buffered in our BW calculations
+    // TODO: Figure out a heuristical way to see if a frag was loaded from the cache
+    if (frag.type !== 'main' || frag.sn === 'initSegment' || frag.bitrateTest) {
+      return;
+    }
+    // Use the difference between parsing and request instead of buffering and request to compute fragLoadingProcessing;
+    // rationale is that buffer appending only happens once media is attached. This can happen when config.startFragPrefetch
+    // is used. If we used buffering in that case, our BW estimate sample will be very large.
+    const fragLoadingProcessingMs = stats.parsing.end - stats.loading.start;
+    this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+    stats.bwEstimate = this._bwEstimator.getEstimate();
+    if (frag.bitrateTest) {
+      this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
+    } else {
+      this.bitrateTestDelay = 0;
     }
   }
 
@@ -341,5 +340,7 @@ class AbrController extends EventHandler {
     this._nextAutoLevel = nextLevel;
   }
 }
+
+
 
 export default AbrController;

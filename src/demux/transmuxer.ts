@@ -73,6 +73,9 @@ export default class Transmuxer {
     decryptdata: any | null,
     chunkMeta: ChunkMetadata
   ): TransmuxerResult | Promise<TransmuxerResult> {
+    const stats = chunkMeta.transmuxing;
+    stats.executeStart = now();
+
     let uintData = new Uint8Array(data);
     const { cache, config, currentTransmuxState: state, transmuxConfig } = this;
 
@@ -85,6 +88,7 @@ export default class Transmuxer {
         // data is handled in the flush() call
         const decryptedData = decrypter.softwareDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer);
         if (!decryptedData) {
+          stats.executeEnd = now();
           return emptyResult(chunkMeta);
         }
        uintData = decryptedData;
@@ -128,6 +132,7 @@ export default class Transmuxer {
 
     if (!demuxer || !remuxer) {
       cache.push(uintData);
+      stats.executeEnd = now();
       return emptyResult(chunkMeta);
     }
 
@@ -137,11 +142,15 @@ export default class Transmuxer {
     state.discontinuity = false;
     state.trackSwitch = false;
 
+    stats.executeEnd = now();
     return result;
   }
 
   // Due to data caching, flush calls can produce more than one TransmuxerResult (hence the Array type)
   flush (chunkMeta: ChunkMetadata) : Array<TransmuxerResult> | Promise<TransmuxerResult> {
+    const stats = chunkMeta.transmuxing;
+    stats.executeStart = now();
+
     const { decrypter, cache, currentTransmuxState, decryptionPromise, observer } = this;
     const transmuxResults: Array<TransmuxerResult> = [];
 
@@ -174,7 +183,7 @@ export default class Transmuxer {
       if (bytesSeen >= minProbeByteLength) {
         observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
       }
-
+      stats.executeEnd = now();
       return [emptyResult(chunkMeta)];
     }
 
@@ -185,7 +194,7 @@ export default class Transmuxer {
       chunkMeta
     });
 
-    // chunkMeta.end = now();
+    stats.executeEnd = now();
     return transmuxResults;
   }
 

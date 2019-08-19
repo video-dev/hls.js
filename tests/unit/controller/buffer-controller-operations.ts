@@ -6,10 +6,11 @@ import Hls from '../../../src/hls';
 import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import BufferController from '../../../src/controller/buffer-controller';
 import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
-import { Segment } from '../../../src/types/segment';
+import { BufferAppendingEventPayload } from '../../../src/types/bufferAppendingEventPayload';
 import Events from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import Fragment, { ElementaryStreamTypes } from '../../../src/loader/fragment';
+import Fragment, { ElementaryStreamTypes, FragmentTypes } from '../../../src/loader/fragment';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -138,11 +139,14 @@ describe('BufferController SourceBuffer operation queueing', function () {
       queueNames.forEach((name, i) => {
         const buffer = buffers[name];
         const segmentData = new Uint8Array();
-        const data: Segment = {
+        const frag = new Fragment();
+        frag.type = FragmentTypes.MAIN;
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingEventPayload = {
           type: name,
           data: segmentData,
-          parent: 'main',
-          content: 'data'
+          frag,
+          chunkMeta
         };
 
         bufferController.onBufferAppending(data);
@@ -152,7 +156,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
         expect(buffer.ended, `The ${name} buffer should not be marked as true if an append occurred`).to.be.false;
         expect(buffer.appendBuffer, `appendBuffer should have been called with the remuxed data`).to.have.been.calledWith(segmentData);
         expect(triggerSpy, `BUFFER_APPENDED should be triggered upon completion of the operation`)
-          .to.have.been.calledWith(Events.BUFFER_APPENDED, { parent: 'main', timeRanges: { audio: buffers['audio'].buffered, video: buffers['video'].buffered } });
+          .to.have.been.calledWith(Events.BUFFER_APPENDED, { parent: 'main', timeRanges: { audio: buffers['audio'].buffered, video: buffers['video'].buffered }, chunkMeta });
         expect(shiftAndExecuteNextSpy, `The queue should have been cycled`).to.have.callCount(i + 1);
       });
     });
@@ -164,8 +168,8 @@ describe('BufferController SourceBuffer operation queueing', function () {
         bufferController.onBufferAppending({
           type: name,
           data: new Uint8Array(),
-          parent: 'main',
-          content: 'data'
+          frag: new Fragment(),
+          chunkMeta: new ChunkMetadata(0, 0, 0, 0)
         });
 
         expect(queueAppendSpy, `The append operation should have been enqueued`).to.have.callCount(i + 1);

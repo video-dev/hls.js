@@ -125,26 +125,28 @@ class PassThroughRemuxer implements Remuxer {
 
     const hasAudio = !!initData.audio;
     const hasVideo = !!initData.video;
+
+    let type: any = '';
+    if (hasAudio) {
+      type += 'audio';
+    }
+
+    if (hasVideo) {
+      type += 'video';
+    }
+
     const track: RemuxedTrack = {
         data1: data,
         startPTS: startDTS,
         startDTS,
         endPTS: endDTS,
         endDTS,
-        type: '',
+        type,
         hasAudio,
         hasVideo,
         nb: 1,
         dropped: 0
     };
-
-    if (hasAudio) {
-        track.type += 'audio';
-    }
-
-    if (hasVideo) {
-        track.type += 'video';
-    }
 
     result.audio = track.type === 'audio' ? track : undefined;
     result.video = track.type !== 'audio' ? track : undefined;

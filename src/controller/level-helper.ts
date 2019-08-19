@@ -219,7 +219,7 @@ export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderSt
   const reloadIntervalAfterMiss = reloadInterval / 2;
   const timeSinceLastModified = newDetails.lastModified ? +new Date() - newDetails.lastModified : 0;
   const useLastModified = timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;
-  const roundTrip = stats ? stats.tload - stats.trequest : 0;
+  const roundTrip = stats ? stats.loading.end - stats.loading.start : 0;
 
   let estimatedTimeUntilUpdate = reloadInterval;
   let availabilityDelay = newDetails.availabilityDelay;

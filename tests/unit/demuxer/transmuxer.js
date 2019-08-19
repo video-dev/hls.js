@@ -1,6 +1,7 @@
 import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
 import { TransmuxState, TransmuxConfig } from '../../../src/demux/transmuxer';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import Fragment from '../../../src/loader/fragment';
 
 const sinon = require('sinon');
 
@@ -76,21 +77,19 @@ describe('TransmuxerInterface tests', function () {
     };
     let id = 'main';
     let transmuxerInterface = new TransmuxerInterface(hls, id);
-    let currentFrag = {
-      cc: 100,
-      sn: 5,
-      level: 1
-    };
+    const currentFrag = new Fragment();
+    currentFrag.cc = 100;
+    currentFrag.sn = 5;
+    currentFrag.level = 1;
     // Config for push
     transmuxerInterface.frag = currentFrag;
 
-    let newFrag = {
-      decryptdata: {},
-      cc: 100,
-      sn: 6,
-      level: 1,
-      startPTS: 1000
-    };
+    const newFrag = new Fragment();
+    newFrag.cc = 100;
+    newFrag.sn = 6;
+    newFrag.level = 1;
+    newFrag.startPTS = 1000;
+
     const data = new ArrayBuffer(8);
     const initSegment = {};
     const audioCodec = '';
@@ -107,17 +106,17 @@ describe('TransmuxerInterface tests', function () {
     const firstCall = stub.args[0][0];
     const secondCall = stub.args[1][0];
 
-    expect(firstCall).to.deep.equal({
+    expect(firstCall, 'Configure call').to.deep.equal({
       cmd: 'configure',
       config: new TransmuxConfig('', '', new Uint8Array(), 0),
       state: new TransmuxState(false, true, true, false, 1000)
     });
 
-    expect(secondCall).to.deep.equal({
+    expect(secondCall, 'Demux call').to.deep.equal({
       cmd: 'demux',
       data,
       decryptdata: newFrag.decryptdata,
-      chunkMeta: { sn: newFrag.sn, level: newFrag.level }
+      chunkMeta
     });
   });
 
@@ -130,21 +129,21 @@ describe('TransmuxerInterface tests', function () {
     };
     let id = 'main';
     let transmuxerInterface = new TransmuxerInterface(hls, id);
-    let currentFrag = {
-      cc: 100,
-      sn: 5,
-      level: 1
-    };
-      // Config for push
+
+    const currentFrag = new Fragment();
+    currentFrag.cc = 100;
+    currentFrag.sn = 5;
+    currentFrag.level = 1;
+
+    // Config for push
     transmuxerInterface.frag = currentFrag;
 
-    let newFrag = {
-      decryptdata: {},
-      cc: 200,
-      sn: 5,
-      level: 2,
-      start: 1000
-    };
+    const newFrag = new Fragment();
+    newFrag.cc = 200;
+    newFrag.sn = 5;
+    newFrag.level = 2;
+    newFrag.start = 1000;
+
     const data = new ArrayBuffer(8);
     const initSegment = {};
     const audioCodec = '';

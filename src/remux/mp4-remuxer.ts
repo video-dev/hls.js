@@ -6,6 +6,7 @@ import { logger } from '../utils/logger';
 import { InitSegmentData, Remuxer, RemuxerResult, RemuxedMetadata, RemuxedTrack } from '../types/remuxer';
 import { DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../types/demuxer';
 import { TrackSet } from '../types/track';
+import { SourceBufferName } from '../types/buffer';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
@@ -396,6 +397,7 @@ export default class MP4Remuxer implements Remuxer {
     this.nextAvcDts = nextAvcDts = lastDTS + mp4SampleDuration;
     track.samples = outputSamples;
     const moof = MP4.moof(track.sequenceNumber++, firstDTS, track);
+    const type: SourceBufferName = 'video';
     const data = {
       data1: moof,
       data2: mdat,
@@ -403,7 +405,7 @@ export default class MP4Remuxer implements Remuxer {
       endPTS: (maxPTS + mp4SampleDuration) / timeScale,
       startDTS: firstDTS / timeScale,
       endDTS: nextAvcDts / timeScale,
-      type: 'video',
+      type,
       hasAudio: false,
       hasVideo: true,
       nb: outputSamples.length,
@@ -635,6 +637,7 @@ export default class MP4Remuxer implements Remuxer {
     track.samples = [];
     const start = firstPTS! / inputTimeScale;
     const end = nextAudioPts / inputTimeScale;
+    const type: SourceBufferName = 'audio';
     const audioData = {
       data1: moof,
       data2: mdat,
@@ -642,7 +645,7 @@ export default class MP4Remuxer implements Remuxer {
       endPTS: end,
       startDTS: start,
       endDTS: end,
-      type: 'audio',
+      type,
       hasAudio: true,
       hasVideo: false,
       nb: nbSamples
