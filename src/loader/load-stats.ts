@@ -1,14 +1,14 @@
-import { LoaderStats } from '../types/loader';
+import { HlsPerformanceTiming, HlsProgressivePerformanceTiming, LoaderStats } from '../types/loader';
 
 export default class LoadStats implements LoaderStats {
   aborted: boolean = false;
   loaded: number = 0;
   retry: number = 0;
-  tbuffered: number = 0;
-  tfirst: number = 0;
-  tload: number = 0;
   total: number = 0;
-  tparsed: number = 0;
-  trequest: number = 0;
+  chunkCount: number = 0;
   bwEstimate: number = 0;
+  loading: HlsProgressivePerformanceTiming = { start: 0, first: 0, end: 0 };
+  parsing: HlsPerformanceTiming = { start: 0, end: 0 };
+  buffering: HlsProgressivePerformanceTiming = { start: 0, first: 0, end: 0 };
 }
+

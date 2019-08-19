@@ -12,6 +12,8 @@ import { FragmentTracker } from './controller/fragment-tracker';
 import StreamController from './controller/stream-controller';
 import LevelController from './controller/level-controller';
 
+import PerformancMonitor from './performance/performance-monitor';
+
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
@@ -168,6 +170,8 @@ export default class Hls extends Observer {
      */
     this.emeController = this.createController(config.emeController, null, coreComponents);
 
+    this.performanceMonitor = new PerformancMonitor(this);
+    coreComponents.push(this.performanceMonitor);
     /**
      * @member {ICoreComponent[]}
      */

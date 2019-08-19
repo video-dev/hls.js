@@ -1,5 +1,6 @@
 import { TrackSet } from './track';
 import { DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from './demuxer';
+import { SourceBufferName } from './buffer';
 
 export interface Remuxer {
   remux(audioTrack: DemuxedAudioTrack,
@@ -22,7 +23,7 @@ export interface RemuxedTrack {
     endPTS: number
     startDTS: number
     endDTS: number
-    type: string
+    type: SourceBufferName
     hasAudio: boolean
     hasVideo: boolean
     nb: number
