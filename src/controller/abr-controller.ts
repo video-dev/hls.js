@@ -10,29 +10,36 @@ import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
+import Fragment from '../loader/fragment';
+import { LoaderStats } from '../types/loader';
+import LevelDetails from '../loader/level-details';
 
 const { performance } = window;
 
 class AbrController extends EventHandler {
+  protected hls: any;
+  private lastLoadedFragLevel: number = 0;
+  private _nextAutoLevel: number = -1;
+  private timer?: number;
+  private _bwEstimator: any | null = null;
+  private onCheck: Function = this._abandonRulesCheck.bind(this);
+  private fragCurrent: Fragment | null = null;
+  private bitrateTestDelay: number = 0;
+
   constructor (hls) {
     super(hls, Event.FRAG_LOADING,
       Event.FRAG_LOADED,
       Event.FRAG_BUFFERED,
       Event.ERROR);
-    this.lastLoadedFragLevel = 0;
-    this._nextAutoLevel = -1;
     this.hls = hls;
-    this.timer = null;
-    this._bwEstimator = null;
-    this.onCheck = this._abandonRulesCheck.bind(this);
   }
 
   destroy () {
     this.clearTimer();
-    EventHandler.prototype.destroy.call(this);
+    super.destroy.call(this);
   }
 
-  onFragLoading (data) {
+  onFragLoading (data: { frag: Fragment }) {
     const frag = data.frag;
     if (frag.type === 'main') {
       if (!this.timer) {
@@ -62,95 +69,102 @@ class AbrController extends EventHandler {
     }
   }
 
-  _abandonRulesCheck () {
     /*
-      monitor fragment retrieval time...
-      we compute expected time of arrival of the complete fragment.
-      we compare it to expected time of buffer starvation
+      This method monitors the download rate of the current fragment, and will downswitch if that fragment will not load
+      quickly enough to prevent underbuffering
+      TODO: Can we enhance this method when progressively streaming?
+      TODO: Lots of magic numbers, are any suitable for configuration?
     */
-    const hls = this.hls;
-    const video = hls.media;
-    const frag = this.fragCurrent;
-
-    if (!frag) {
+  _abandonRulesCheck () {
+    const { fragCurrent: frag, hls } = this;
+    const { autoLevelEnabled, config, media } = hls;
+    if (!frag || !media) {
       return;
     }
 
     const loader = frag.loader;
-    const minAutoLevel = hls.minAutoLevel;
-
-    // if loader has been destroyed or loading has been aborted, stop timer and return
-    if (!loader || (loader.stats && loader.stats.aborted)) {
+    // If loader has been destroyed or loading has been aborted, stop timer and return
+    if (!loader || loader.stats.aborted) {
       logger.warn('frag loader destroy or aborted, disarm abandonRules');
       this.clearTimer();
       // reset forced auto level value so that next level will be selected
       this._nextAutoLevel = -1;
       return;
     }
-    let stats = loader.stats;
-    /* only monitor frag retrieval time if
-    (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
-    if (video && stats && ((!video.paused && (video.playbackRate !== 0)) || !video.readyState) && frag.autoLevel && frag.level) {
-      const requestDelay = performance.now() - stats.trequest;
-      const playbackRate = Math.abs(video.playbackRate);
 
-      // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
-      if (requestDelay > (500 * frag.duration / playbackRate)) {
-        const levels = hls.levels;
-        const loadRate = Math.max(1, stats.bw ? stats.bw / 8 : stats.loaded * 1000 / requestDelay); // byte/s; at least 1 byte/s to avoid division by zero
+    // This check only runs if we're in ABR mode and actually playing
+    if (!autoLevelEnabled || media.paused || !media.playbackRate || !media.readyState) {
+      return;
+    }
 
-        // compute expected fragment length using frag duration and level bitrate. also ensure that expected len is gte than already loaded size
-        const level = levels[frag.level];
-        const levelBitrate = Math.max(level.realBitrate, level.bitrate);
-        const expectedLen = stats.total ? stats.total : Math.max(stats.loaded, Math.round(frag.duration * levelBitrate / 8));
-        const pos = video.currentTime;
-        const fragLoadedDelay = (expectedLen - stats.loaded) / loadRate;
-        const bufferStarvationDelay = (BufferHelper.bufferInfo(video, pos, hls.config.maxBufferHole).end - pos) / playbackRate;
+    const stats: LoaderStats = loader.stats;
+    const requestDelay = performance.now() - stats.trequest;
+    const playbackRate = Math.abs(media.playbackRate);
+    // In order to work with a stable bandwidth, only begin monitoring bandwidth after half of the fragment has been loaded
+    if (requestDelay <= (500 * frag.duration / playbackRate)) {
+      return;
+    }
 
-        // consider emergency switch down only if we have less than 2 frag buffered AND
-        // time to finish loading current fragment is bigger than buffer starvation delay
-        // ie if we risk buffer starvation if bw does not increase quickly
-        if ((bufferStarvationDelay < (2 * frag.duration / playbackRate)) && (fragLoadedDelay > bufferStarvationDelay)) {
-          let fragLevelNextLoadedDelay;
-          let nextLoadLevel;
-          // lets iterate through lower level and try to find the biggest one that could avoid rebuffering
-          // we start from current level - 1 and we step down , until we find a matching level
-          for (nextLoadLevel = frag.level - 1; nextLoadLevel > minAutoLevel; nextLoadLevel--) {
-            // compute time to load next fragment at lower level
-            // 0.8 : consider only 80% of current bw to be conservative
-            // 8 = bits per byte (bps/Bps)
-            const levelNextBitrate = Math.max(levels[nextLoadLevel].realBitrate, levels[nextLoadLevel].bitrate);
+    const { levels, minAutoLevel } = hls;
+    const level = levels[frag.level];
 
-            const fragLevelNextLoadedDelay = frag.duration * levelNextBitrate / (8 * 0.8 * loadRate);
+    const levelBitrate = Math.max(level.realBitrate, level.bitrate);
+    const expectedLen = stats.total || Math.max(stats.loaded, Math.round(frag.duration * levelBitrate / 8));
+    const loadRate = Math.max(1, stats.bwEstimate ? (stats.bwEstimate / 8) : (stats.loaded * 1000 / requestDelay));
+    // fragLoadDelay is an estimate of the time (in seconds) it will take to buffer the entire fragment
+    const fragLoadedDelay = (expectedLen - stats.loaded) / loadRate;
 
-            if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
-              // we found a lower level that be rebuffering free with current estimated bw !
-              break;
-            }
-          }
-          // only emergency switch down if it takes less time to load new fragment at lowest level instead
-          // of finishing loading current one ...
-          if (fragLevelNextLoadedDelay < fragLoadedDelay) {
-            logger.warn(`loading too slow, abort fragment loading and switch to level ${nextLoadLevel}:fragLoadedDelay[${nextLoadLevel}]<fragLoadedDelay[${frag.level - 1}];bufferStarvationDelay:${fragLevelNextLoadedDelay.toFixed(1)}<${fragLoadedDelay.toFixed(1)}:${bufferStarvationDelay.toFixed(1)}`);
-            // force next load level in auto mode
-            hls.nextLoadLevel = nextLoadLevel;
-            // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
-            this._bwEstimator.sample(requestDelay, stats.loaded);
-            // abort fragment loading
-            loader.abort();
-            // stop abandon rules timer
-            this.clearTimer();
-            hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag, stats: stats });
-          }
-        }
+    const pos = media.currentTime;
+    // bufferStarvationDelay is an estimate of the amount time (in seconds) it will take to exhaust the buffer
+    const bufferStarvationDelay = (BufferHelper.bufferInfo(media, pos, config.maxBufferHole).end - pos) / playbackRate;
+
+    // Attempt an emergency downswitch only if less than 2 fragment lengths are buffered, and the time to finish loading
+    // the current fragment is greater than the amount of buffer we have left
+    if ((bufferStarvationDelay >= (2 * frag.duration / playbackRate)) || (fragLoadedDelay <= bufferStarvationDelay)) {
+      return;
+    }
+
+    let fragLevelNextLoadedDelay: number = Number.POSITIVE_INFINITY;
+    let nextLoadLevel: number;
+    // Iterate through lower level and try to find the largest one that avoids rebuffering
+    for (nextLoadLevel = frag.level - 1; nextLoadLevel > minAutoLevel; nextLoadLevel--) {
+      // compute time to load next fragment at lower level
+      // 0.8 : consider only 80% of current bw to be conservative
+      // 8 = bits per byte (bps/Bps)
+      const levelNextBitrate = Math.max(levels[nextLoadLevel].realBitrate, levels[nextLoadLevel].bitrate);
+      fragLevelNextLoadedDelay = frag.duration * levelNextBitrate / (8 * 0.8 * loadRate);
+
+      if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
+        break;
       }
     }
+    // Only emergency switch down if it takes less time to load a new fragment at lowest level instead of continuing
+    // to load the current one
+    if (fragLevelNextLoadedDelay >= fragLoadedDelay) {
+      return;
+    }
+    let bwEstimate = this._bwEstimator.getEstimate();
+    if (Number.isFinite(bwEstimate)) {
+      bwEstimate = (bwEstimate / 1024).toFixed(3);
+    } else {
+      bwEstimate = 'Unknown'
+    }
+    logger.warn(`Fragment ${frag.sn} of level ${frag.level} is loading too slowly and will cause an underbuffer; aborting and switching to level ${nextLoadLevel}
+      Current BW estimate: ${bwEstimate} Kb/s
+      Estimated load time for current fragment: ${fragLoadedDelay.toFixed(3)} s
+      Estimated load time for the next fragment: ${fragLevelNextLoadedDelay.toFixed(3)} s
+      Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s`);
+    hls.nextLoadLevel = nextLoadLevel;
+    this._bwEstimator.sample(requestDelay, stats.loaded);
+    loader.abort();
+    this.clearTimer();
+    hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
   }
 
-  onFragLoaded (data) {
+  onFragLoaded (data: { frag: Fragment }) {
     const frag = data.frag;
     const stats = frag.stats;
-    if (frag.type === 'main' && Number.isFinite(frag.sn)) {
+    if (frag.type === 'main' && Number.isFinite(frag.sn as number)) {
       // stop monitoring bw once frag loaded
       this.clearTimer();
       // store level id after successful fragment load
@@ -174,13 +188,14 @@ class AbrController extends EventHandler {
     }
   }
 
-  onFragBuffered ({ frag }) {
+  onFragBuffered (data: { frag: Fragment }) {
+    const frag = data.frag;
     const stats = frag.stats;
     // only update stats on first frag buffering
     // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
     // and leading to wrong bw estimation
     // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
-    if (stats.aborted !== true && frag.type === 'main' && Number.isFinite(frag.sn) && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
+    if (!stats.aborted && frag.type === 'main' && Number.isFinite(frag.sn as number) && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
       // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
       // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
       // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation
@@ -211,7 +226,7 @@ class AbrController extends EventHandler {
 
   clearTimer () {
     clearInterval(this.timer);
-    this.timer = null;
+    this.timer = undefined;
   }
 
   // return next auto level
@@ -233,11 +248,10 @@ class AbrController extends EventHandler {
     return nextABRAutoLevel;
   }
   get _nextABRAutoLevel () {
-    let hls = this.hls;
+    const { fragCurrent, hls, lastLoadedFragLevel: currentLevel } = this;
     const { maxAutoLevel, levels, config, minAutoLevel } = hls;
     const video = hls.media;
-    const currentLevel = this.lastLoadedFragLevel;
-    const currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0;
+    const currentFragDuration = fragCurrent ? fragCurrent.duration : 0;
     const pos = (video ? video.currentTime : 0);
 
     // playbackRate is the absolute value of the playback rate; if video.playbackRate is 0, we use 1 to load as
@@ -259,9 +273,9 @@ class AbrController extends EventHandler {
       let bwFactor = config.abrBandWidthFactor;
       let bwUpFactor = config.abrBandWidthUpFactor;
 
-      if (bufferStarvationDelay === 0) {
+      if (!bufferStarvationDelay) {
         // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
-        let bitrateTestDelay = this.bitrateTestDelay;
+        const bitrateTestDelay = this.bitrateTestDelay;
         if (bitrateTestDelay) {
           // if it is the case, then we need to adjust our max starvation delay using maxLoadingDelay config value
           // max video loading delay used in  automatic start level selection :
@@ -280,7 +294,7 @@ class AbrController extends EventHandler {
     }
   }
 
-  _findBestLevel (currentLevel, currentFragDuration, currentBw, minAutoLevel, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
+  _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Array<any>): number {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       let levelInfo = levels[i];
 
@@ -288,11 +302,11 @@ class AbrController extends EventHandler {
         continue;
       }
 
-      const levelDetails = levelInfo.details;
+      const levelDetails: LevelDetails = levelInfo.details;
       const avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration;
       const live = levelDetails ? levelDetails.live : false;
 
-      let adjustedbw;
+      let adjustedbw: number;
       // follow algorithm captured from stagefright :
       // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
       // Pick the highest bandwidth stream below or equal to estimated bandwidth.
@@ -305,8 +319,8 @@ class AbrController extends EventHandler {
         adjustedbw = bwUpFactor * currentBw;
       }
 
-      const bitrate = Math.max(levels[i].realBitrate, levels[i].bitrate);
-      const fetchDuration = bitrate * avgDuration / adjustedbw;
+      const bitrate: number = Math.max(levels[i].realBitrate, levels[i].bitrate);
+      const fetchDuration: number = bitrate * avgDuration / adjustedbw;
 
       logger.trace(`level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ${i}/${Math.round(adjustedbw)}/${bitrate}/${avgDuration}/${maxFetchDuration}/${fetchDuration}`);
       // if adjusted bw is greater than level bitrate AND

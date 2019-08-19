@@ -85,6 +85,8 @@ export default class Fragment {
   public urlId: number = 0;
   // TODO: Create InitSegment class extended from Fragment
   public data?: ArrayBuffer;
+  // A flag indicating whether the segment was downloaded in order to test bitrate, and was not buffered
+  public bitrateTest: boolean = false;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
