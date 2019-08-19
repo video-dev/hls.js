@@ -54,7 +54,9 @@ export interface LoaderStats {
   // number of retries attempted
   retry: number,
   // the request was cancelled or timed out
-  aborted: boolean
+  aborted: boolean,
+  // The bandwidth estimate recorded while the download was occurring
+  bwEstimate: number
 }
 
 type LoaderOnSuccess < T extends LoaderContext > = (

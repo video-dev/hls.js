@@ -10,4 +10,5 @@ export default class LoadStats implements LoaderStats {
   total: number = 0;
   tparsed: number = 0;
   trequest: number = 0;
+  bwEstimate: number = 0;
 }

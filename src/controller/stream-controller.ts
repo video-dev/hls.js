@@ -228,19 +228,17 @@ export default class StreamController extends BaseStreamController {
     this.hls.trigger(Event.KEY_LOADING, { frag });
   }
 
-  _loadFragment (frag) {
+  _loadFragment (frag: Fragment) {
     // Check if fragment is not loaded
     const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
     // Don't update nextLoadPosition for fragments which are not buffered
-    if (Number.isFinite(frag.sn) && !this.bitrateTest) {
+    if (Number.isFinite(frag.sn as number) && !this.bitrateTest) {
       this.nextLoadPosition = frag.start + frag.duration;
     }
 
     // Allow backtracked fragments to load
     if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
-      frag.autoLevel = this.hls.autoLevelEnabled;
-
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
       } else if (this.bitrateTest) {
