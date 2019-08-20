@@ -20,6 +20,9 @@ export default class Fragment {
     [ElementaryStreamTypes.VIDEO]: false
   };
 
+  // deltaPTS tracks the change in presentation timestamp between fragments
+  public deltaPTS: number = 0;
+
   public rawProgramDateTime: string | null = null;
   public programDateTime: number | null = null;
   public tagList: Array<string[]> = [];
@@ -37,6 +40,8 @@ export default class Fragment {
   public baseurl!: string;
   // EXTINF has to be present for a m3u8 to be considered valid
   public duration!: number;
+  // When this segment starts in the timeline
+  public start!: number;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
   public sn: number | 'initSegment' = 0;
   // levelkey is the EXT-X-KEY that applies to this segment for decryption
