@@ -1,9 +1,11 @@
+import { GenericObjectType } from '../types/general';
+
 const DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/; // eslint-disable-line no-useless-escape
 const ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g; // eslint-disable-line no-useless-escape
 
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
 class AttrList {
-  constructor (attrs) {
+  constructor (attrs: string | GenericObjectType) {
     if (typeof attrs === 'string') {
       attrs = AttrList.parseAttrList(attrs);
     }
@@ -15,7 +17,7 @@ class AttrList {
     }
   }
 
-  decimalInteger (attrName) {
+  decimalInteger (attrName: string): number {
     const intValue = parseInt(this[attrName], 10);
     if (intValue > Number.MAX_SAFE_INTEGER) {
       return Infinity;
@@ -24,7 +26,7 @@ class AttrList {
     return intValue;
   }
 
-  hexadecimalInteger (attrName) {
+  hexadecimalInteger (attrName: string) {
     if (this[attrName]) {
       let stringValue = (this[attrName] || '0x').slice(2);
       stringValue = ((stringValue.length & 1) ? '0' : '') + stringValue;
@@ -40,7 +42,7 @@ class AttrList {
     }
   }
 
-  hexadecimalIntegerAsNumber (attrName) {
+  hexadecimalIntegerAsNumber (attrName: string): number {
     const intValue = parseInt(this[attrName], 16);
     if (intValue > Number.MAX_SAFE_INTEGER) {
       return Infinity;
@@ -49,15 +51,18 @@ class AttrList {
     return intValue;
   }
 
-  decimalFloatingPoint (attrName) {
+  decimalFloatingPoint (attrName: string): number {
     return parseFloat(this[attrName]);
   }
 
-  enumeratedString (attrName) {
+  enumeratedString (attrName: string): string {
     return this[attrName];
   }
 
-  decimalResolution (attrName) {
+  decimalResolution (attrName: string): {
+    width: number,
+    height: number
+  } | undefined {
     const res = DECIMAL_RESOLUTION_REGEX.exec(this[attrName]);
     if (res === null) {
       return undefined;
@@ -69,7 +74,7 @@ class AttrList {
     };
   }
 
-  static parseAttrList (input) {
+  static parseAttrList (input: string): GenericObjectType {
     let match, attrs = {};
     ATTR_LIST_REGEX.lastIndex = 0;
     while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {

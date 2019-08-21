@@ -1,3 +1,5 @@
+import { BufferUtilInfo, BufferedUtilArray } from '../types/buffer';
+
 /**
  * @module BufferHelper
  *
@@ -15,7 +17,7 @@ export class BufferHelper {
    * @param {number} position
    * @returns {boolean}
    */
-  static isBuffered (media, position) {
+  static isBuffered (media: HTMLMediaElement, position: number): boolean {
     try {
       if (media) {
         let buffered = media.buffered;
@@ -33,10 +35,12 @@ export class BufferHelper {
     return false;
   }
 
-  static bufferInfo (media, pos, maxHoleDuration) {
+  static bufferInfo (media: HTMLMediaElement, pos: number, maxHoleDuration: number): BufferUtilInfo {
     try {
       if (media) {
-        let vbuffered = media.buffered, buffered = [], i;
+        let vbuffered = media.buffered;
+        let buffered: BufferedUtilArray = [];
+        let i;
         for (i = 0; i < vbuffered.length; i++) {
           buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
         }
@@ -51,8 +55,8 @@ export class BufferHelper {
     return { len: 0, start: pos, end: pos, nextStart: undefined };
   }
 
-  static bufferedInfo (buffered, pos, maxHoleDuration) {
-    let buffered2 = [],
+  static bufferedInfo (buffered: BufferedUtilArray, pos: number, maxHoleDuration: number): BufferUtilInfo {
+    let buffered2: BufferedUtilArray = [],
       // bufferStart and bufferEnd are buffer boundaries around current video position
       bufferLen, bufferStart, bufferEnd, bufferStartNext, i;
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
