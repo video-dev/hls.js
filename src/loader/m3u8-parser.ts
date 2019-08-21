@@ -119,8 +119,8 @@ export default class M3U8Parser {
         const media: MediaPlaylist = {
           id: id++,
           groupId: attrs['GROUP-ID'],
-          name: attrs.NAME ? attrs.NAME : attrs.LANGUAGE,
-          type: type,
+          name: attrs.NAME || attrs.LANGUAGE,
+          type,
           default: (attrs.DEFAULT === 'YES'),
           autoselect: (attrs.AUTOSELECT === 'YES'),
           forced: (attrs.FORCED === 'YES'),
