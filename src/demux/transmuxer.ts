@@ -123,8 +123,8 @@ export default class Transmuxer {
 
     let { demuxer, remuxer } = this;
     if (this.needsProbing(uintData, discontinuity, trackSwitch)) {
-      const cachedData = cache.flush();
-      if (cachedData) {
+      if (cache.dataLength) {
+        const cachedData = cache.flush();
         uintData = appendUint8Array(cachedData, uintData);
       }
       ({ demuxer, remuxer } = this.configureTransmuxer(uintData, transmuxConfig));
