@@ -53,7 +53,8 @@ export default class FragmentLoader {
       timeout: config.fragLoadingTimeOut,
       maxRetry: 0,
       retryDelay: 0,
-      maxRetryDelay: config.fragLoadingMaxRetryTimeout
+      maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+      highWaterMark: Math.pow(2, 14) // 16kb
     };
 
     return new Promise((resolve, reject) => {
