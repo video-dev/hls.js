@@ -24,3 +24,12 @@ export interface SourceBufferListener {
   event: string,
   listener: EventListener
 }
+
+export type BufferedUtilArray = Array<{ start: number, end: number }>
+
+export interface BufferUtilInfo {
+  len: number,
+  start: number,
+  end: number,
+  nextStart: number | undefined
+}
