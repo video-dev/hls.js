@@ -4,8 +4,19 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
+import { Level } from '../types/level';
+import { Track } from '../types/track';
+import { LoaderStats } from '../types/loader';
+import { ManifestParsedData, BufferCodecsData, MediaAttachingData, FPSDropLevelCappingData, LevelsUpdatedData } from '../types/events';
 
 class CapLevelController extends EventHandler {
+  public autoLevelCapping: number;
+  public firstLevel: number;
+  public levels: Array<Level>;
+  public media: HTMLVideoElement | null;
+  public restrictedLevels: Array<number>;
+  public timer: number | undefined;
+
   constructor (hls) {
     super(hls,
       Event.FPS_DROP_LEVEL_CAPPING,
@@ -16,11 +27,11 @@ class CapLevelController extends EventHandler {
       Event.MEDIA_DETACHING);
 
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
-    this.firstLevel = null;
     this.levels = [];
+    this.firstLevel = -1;
     this.media = null;
     this.restrictedLevels = [];
-    this.timer = null;
+    this.timer = undefined;
   }
 
   destroy () {
@@ -30,18 +41,18 @@ class CapLevelController extends EventHandler {
     }
   }
 
-  onFpsDropLevelCapping (data) {
+  onFpsDropLevelCapping (data: FPSDropLevelCappingData) {
     // Don't add a restricted level more than once
     if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels)) {
       this.restrictedLevels.push(data.droppedLevel);
     }
   }
 
-  onMediaAttaching (data) {
-    this.media = data.media instanceof window.HTMLVideoElement ? data.media : null;
+  onMediaAttaching (data: MediaAttachingData) {
+    this.media = data.media instanceof HTMLVideoElement ? data.media : null;
   }
 
-  onManifestParsed (data) {
+  onManifestParsed (data: ManifestParsedData) {
     const hls = this.hls;
     this.restrictedLevels = [];
     this.levels = data.levels;
@@ -54,7 +65,7 @@ class CapLevelController extends EventHandler {
 
   // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
   // to the first level
-  onBufferCodecs (data) {
+  onBufferCodecs (data: BufferCodecsData) {
     const hls = this.hls;
     if (hls.config.capLevelToPlayerSize && data.video) {
       // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
@@ -62,7 +73,7 @@ class CapLevelController extends EventHandler {
     }
   }
 
-  onLevelsUpdated (data) {
+  onLevelsUpdated (data: LevelsUpdatedData) {
     this.levels = data.levels;
   }
 
@@ -89,7 +100,7 @@ class CapLevelController extends EventHandler {
   /*
   * returns level should be the one with the dimensions equal or greater than the media (player) dimensions (so the video will be downscaled)
   */
-  getMaxLevel (capLevelIndex) {
+  getMaxLevel (capLevelIndex: number): number {
     if (!this.levels) {
       return -1;
     }
@@ -109,21 +120,21 @@ class CapLevelController extends EventHandler {
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.hls.firstLevel = this.getMaxLevel(this.firstLevel);
     clearInterval(this.timer);
-    this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
+    this.timer = window.setInterval(this.detectPlayerSize.bind(this), 1000);
     this.detectPlayerSize();
   }
 
   _stopCapping () {
     this.restrictedLevels = [];
-    this.firstLevel = null;
+    this.firstLevel = -1;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     if (this.timer) {
-      this.timer = clearInterval(this.timer);
-      this.timer = null;
+      clearInterval(this.timer);
+      this.timer = undefined;
     }
   }
 
-  get mediaWidth () {
+  get mediaWidth (): number {
     let width;
     const media = this.media;
     if (media) {
@@ -133,7 +144,7 @@ class CapLevelController extends EventHandler {
     return width;
   }
 
-  get mediaHeight () {
+  get mediaHeight (): number {
     let height;
     const media = this.media;
     if (media) {
@@ -143,7 +154,7 @@ class CapLevelController extends EventHandler {
     return height;
   }
 
-  static get contentScaleFactor () {
+  static get contentScaleFactor (): number {
     let pixelRatio = 1;
     try {
       pixelRatio = window.devicePixelRatio;
@@ -151,11 +162,11 @@ class CapLevelController extends EventHandler {
     return pixelRatio;
   }
 
-  static isLevelAllowed (level, restrictedLevels = []) {
+  static isLevelAllowed (level: number, restrictedLevels: Array<number> = []): boolean {
     return restrictedLevels.indexOf(level) === -1;
   }
 
-  static getMaxLevelByMediaSize (levels, width, height) {
+  static getMaxLevelByMediaSize (levels: Array<Level>, width: number, height: number): number {
     if (!levels || (levels && !levels.length)) {
       return -1;
     }

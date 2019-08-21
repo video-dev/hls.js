@@ -2,6 +2,7 @@ import Fragment from '../loader/fragment';
 import LevelDetails from '../loader/level-details';
 import { Level, LevelParsed, PlaylistMedia } from './level';
 import { LoaderStats } from './loader';
+import { Track } from './track';
 
 export interface ManifestLoadingData {
   url: string
@@ -78,4 +79,20 @@ export interface ErrorData {
   reason?: string
   response?: any
   url?: string
+}
+
+export interface MediaAttachingData {
+  media: HTMLVideoElement
+}
+
+export interface BufferCodecsData {
+  video: Track
+}
+
+export interface FPSDropLevelCappingData {
+  droppedLevel: number
+}
+
+export interface LevelsUpdatedData {
+  levels: Array<Level>
 }
