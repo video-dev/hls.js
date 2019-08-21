@@ -86,7 +86,7 @@ describe('CapLevelController', function () {
 
         expect(capLevelController.autoLevelCapping).to.equal(Number.POSITIVE_INFINITY);
         expect(capLevelController.restrictedLevels).to.be.empty;
-        expect(capLevelController.firstLevel).to.not.exist;
+        expect(capLevelController.firstLevel).to.equal(-1);
         expect(capLevelController.timer).to.not.exist;
       });
     });
