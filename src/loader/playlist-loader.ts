@@ -16,7 +16,7 @@ import { logger } from '../utils/logger';
 import { Loader, PlaylistContextType, PlaylistLoaderContext, PlaylistLevelType, LoaderCallbacks, LoaderResponse, LoaderStats, LoaderConfiguration } from '../types/loader';
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
-import { AudioGroup } from '../types/index-playlist';
+import { AudioGroup } from '../types/media-playlist';
 
 const { performance } = window;
 
@@ -315,7 +315,6 @@ class PlaylistLoader extends EventHandler {
         logger.log('audio codec signaled in quality level, but no embedded audio track signaled, create one');
         audioTracks.unshift({
           type: 'main',
-          groupId: 'hlsjsGenerated',
           name: 'main',
           default: false,
           autoselect: false,
