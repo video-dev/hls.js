@@ -54,6 +54,9 @@ export default class Fragment {
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
 
+  // TODO(typescript-xhrloader)
+  public loader: any;
+
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
     const params = value.split('@', 2);

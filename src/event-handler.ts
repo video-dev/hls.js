@@ -7,6 +7,7 @@
 import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
 import Event from './events';
+import Hls from './hls';
 
 const FORBIDDEN_EVENT_NAMES = {
   'hlsEventGeneric': true,
@@ -15,11 +16,11 @@ const FORBIDDEN_EVENT_NAMES = {
 };
 
 class EventHandler {
-  hls: any;
+  hls: Hls;
   handledEvents: any[];
   useGenericHandler: boolean;
 
-  constructor (hls: any, ...events: any[]) {
+  constructor (hls: Hls, ...events: any[]) {
     this.hls = hls;
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
