@@ -98,11 +98,10 @@ Settings.prototype = {
   },
   // Accept a setting if its a valid percentage.
   percent: function (k, v) {
-    let m;
-    if ((m = v.match(/^([\d]{1,3})(\.[\d]*)?%$/))) {
-      v = parseFloat(v);
-      if (v >= 0 && v <= 100) {
-        this.set(k, v);
+    if (/^([\d]{1,3})(\.[\d]*)?%$/.test(v)) {
+      const percent = parseFloat(v);
+      if (percent >= 0 && percent <= 100) {
+        this.set(k, percent);
         return true;
       }
     }
@@ -376,8 +375,8 @@ VTTParser.prototype = {
           }
           _this.state = 'CUETEXT';
           continue;
-        case 'CUETEXT':
-          var hasSubstring = line.indexOf('-->') !== -1;
+        case 'CUETEXT': {
+          const hasSubstring = line.indexOf('-->') !== -1;
           // 34 - If we have an empty line then report the cue.
           // 35 - If we have the special substring '-->' then report the cue,
           // but do not collect the line as we need to process the current
@@ -397,6 +396,7 @@ VTTParser.prototype = {
           }
 
           _this.cue.text += line;
+        }
           continue;
         case 'BADCUE': // BADCUE
           // 54-62 - Collect and discard the remaining cue.
@@ -422,18 +422,24 @@ VTTParser.prototype = {
   },
   flush: function () {
     const _this = this;
-    // Finish decoding the stream.
-    _this.buffer += _this.decoder.decode();
-    // Synthesize the end of the current cue or region.
-    if (_this.cue || _this.state === 'HEADER') {
-      _this.buffer += '\n\n';
-      _this.parse();
-    }
-    // If we've flushed, parsed, and we're still on the INITIAL state then
-    // that means we don't have enough of the stream to parse the first
-    // line.
-    if (_this.state === 'INITIAL') {
-      throw new Error('Malformed WebVTT signature.');
+    try {
+      // Finish decoding the stream.
+      _this.buffer += _this.decoder.decode();
+      // Synthesize the end of the current cue or region.
+      if (_this.cue || _this.state === 'HEADER') {
+        _this.buffer += '\n\n';
+        _this.parse();
+      }
+      // If we've flushed, parsed, and we're still on the INITIAL state then
+      // that means we don't have enough of the stream to parse the first
+      // line.
+      if (_this.state === 'INITIAL' || _this.state === 'BADWEBVTT') {
+        throw new Error('Malformed WebVTT signature.');
+      }
+    } catch (e) {
+      if (_this.onparsingerror) {
+        _this.onparsingerror(e);
+      }
     }
     if (_this.onflush) {
       _this.onflush();
