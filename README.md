@@ -119,6 +119,7 @@ hls.js is (being) integrated in the following players:
  - [Videojs](http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
  - [Fluid Player](https://www.fluidplayer.com)
  - [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
+- [CDNBye](https://github.com/cdnbye/hlsjs-p2p-engine), a p2p engine for hls.js powered by WebRTC Datachannel. 
 
 ## Chrome/Firefox integration
 
