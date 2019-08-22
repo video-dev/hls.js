@@ -52,12 +52,9 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   onSubtitleFragProcessed (data) {
-    const { frag, success } = data;
+    const { frag } = data;
     this.fragPrevious = frag;
     this.state = State.IDLE;
-    if (!success) {
-      return;
-    }
 
     const buffered = this.tracksBuffered[this.currentTrackId];
     if (!buffered) {
