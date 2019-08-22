@@ -4,7 +4,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { computeReloadInterval } from './level-helper';
 import EventHandler from '../event-handler';
 import { PlaylistMedia } from '../types/level';
-import { AudioTrackSwitchedData, TrackLoadedData, ManifestParsedData, LevelLoadedData, ErrorData } from '../types/events';
+import { TrackSwitchedData, TrackLoadedData, ManifestParsedData, LevelLoadedData, ErrorData } from '../types/events';
 
 /**
  * @class AudioTrackController
@@ -152,7 +152,7 @@ class AudioTrackController extends EventHandler {
    *
    * Quality-levels should update to that group ID in this case.
    */
-  protected onAudioTrackSwitched (data: AudioTrackSwitchedData): void {
+  protected onAudioTrackSwitched (data: TrackSwitchedData): void {
     const audioGroupId = this.tracks[data.id].groupId;
     if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
       this.audioGroupId = audioGroupId;

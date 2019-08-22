@@ -11,12 +11,28 @@ import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { mergeSubtitlePlaylists } from './level-helper';
+import { ErrorData, MediaAttachedData, SubtitleFragProcessed, SubtitleTracksUpdated, TrackSwitchedData } from '../types/events';
+import { PlaylistMedia } from '../types/level';
+import Fragment from '../loader/fragment';
+import LevelDetails from '../loader/level-details';
 
 const { performance } = self;
 
 const TICK_INTERVAL = 500; // how often to tick in ms
 
+interface TimeRange {
+  start: number,
+  end: number
+}
+
 export class SubtitleStreamController extends BaseStreamController {
+  private currentTrackId: number = -1;
+  private decrypter: Decrypter;
+  private tracksBuffered: Array<TimeRange[]>;
+  // lastAVStart stores the time in seconds for the start time of a level load
+  private lastAVStart: number = 0;
+  private readonly _onMediaSeeking: () => void;
+
   constructor (hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
@@ -30,7 +46,6 @@ export class SubtitleStreamController extends BaseStreamController {
       Event.LEVEL_UPDATED);
 
     this.config = hls.config;
-    this.currentTrackId = -1;
     this.decrypter = new Decrypter(hls, hls.config);
     this.fragCurrent = null;
     this.fragmentTracker = fragmentTracker;
@@ -40,18 +55,16 @@ export class SubtitleStreamController extends BaseStreamController {
     this.levels = [];
     this.tracksBuffered = [];
     this.fragmentLoader = new FragmentLoader(hls.config);
-    // lastAVStart stores the time in seconds for the start time of a level load
-    this.lastAVStart = 0;
     this._onMediaSeeking = this.onMediaSeeking.bind(this);
   }
 
   onHandlerDestroyed () {
-    this.fragmentTracker = null;
+    delete this.fragmentTracker;
     this.state = State.STOPPED;
     super.onHandlerDestroyed();
   }
 
-  onSubtitleFragProcessed (data) {
+  onSubtitleFragProcessed (data: SubtitleFragProcessed) {
     const { frag } = data;
     this.fragPrevious = frag;
     this.state = State.IDLE;
@@ -63,7 +76,7 @@ export class SubtitleStreamController extends BaseStreamController {
 
     // Create/update a buffered array matching the interface used by BufferHelper.bufferedInfo
     // so we can re-use the logic used to detect how much have been buffered
-    let timeRange;
+    let timeRange: TimeRange | undefined;
     const fragStart = frag.start;
     for (let i = 0; i < buffered.length; i++) {
       if (fragStart >= buffered[i].start && fragStart <= buffered[i].end) {
@@ -84,7 +97,7 @@ export class SubtitleStreamController extends BaseStreamController {
     }
   }
 
-  onMediaAttached ({ media }) {
+  onMediaAttached ({ media }: MediaAttachedData) {
     this.media = media;
     media.addEventListener('seeking', this._onMediaSeeking);
     this.state = State.IDLE;
@@ -99,7 +112,7 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   // If something goes wrong, proceed to next frag, if we were processing one.
-  onError (data) {
+  onError (data: ErrorData) {
     const frag = data.frag;
     // don't handle error not related to subtitle fragment
     if (!frag || frag.type !== 'subtitle') {
@@ -109,16 +122,16 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   // Got all new subtitle levels.
-  onSubtitleTracksUpdated (data) {
+  onSubtitleTracksUpdated ({ subtitleTracks }: SubtitleTracksUpdated) {
     logger.log('subtitle levels updated');
     this.tracksBuffered = [];
-    this.levels = data.subtitleTracks;
-    this.levels.forEach((track) => {
+    this.levels = subtitleTracks as PlaylistMedia[];
+    this.levels.forEach((track: PlaylistMedia) => {
       this.tracksBuffered[track.id] = [];
     });
   }
 
-  onSubtitleTrackSwitch (data) {
+  onSubtitleTrackSwitch (data: TrackSwitchedData) {
     this.currentTrackId = data.id;
 
     if (!this.levels || this.currentTrackId === -1) {
@@ -134,15 +147,18 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded (data) {
+  onSubtitleTrackLoaded (data: PlaylistMedia) {
     const { id, details } = data;
     const { currentTrackId, levels } = this;
-    const currentTrack = levels[currentTrackId];
+    if (!levels || !details) {
+      return;
+    }
+    const currentTrack: PlaylistMedia = levels[currentTrackId];
     if (id >= levels.length || id !== currentTrackId || !currentTrack) {
       return;
     }
 
-    if (details.live) {
+    if (details.live && currentTrack.details) {
       mergeSubtitlePlaylists(currentTrack.details, details, this.lastAVStart);
     }
     currentTrack.details = details;
@@ -155,7 +171,7 @@ export class SubtitleStreamController extends BaseStreamController {
     }
   }
 
-  _handleFragmentLoadComplete (frag, payload) {
+  _handleFragmentLoadComplete (frag: Fragment, payload: Uint8Array) {
     const decryptData = frag.decryptdata;
     const hls = this.hls;
 
@@ -163,10 +179,10 @@ export class SubtitleStreamController extends BaseStreamController {
       return;
     }
     // check to see if the payload needs to be decrypted
-    if (payload && payload.byteLength > 0 && (decryptData && decryptData.key && decryptData.method === 'AES-128')) {
+    if (payload && payload.byteLength > 0 && decryptData && decryptData.key && decryptData.iv && decryptData.method === 'AES-128') {
       const startTime = performance.now();
       // decrypt the subtitles
-      this.decrypter.decrypt(payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {
+      this.decrypter.webCryptoDecrypt(payload, decryptData.key.buffer, decryptData.iv.buffer).then((decryptedData) => {
         const endTime = performance.now();
         hls.trigger(Event.FRAG_DECRYPTED, {
           frag,
@@ -180,7 +196,7 @@ export class SubtitleStreamController extends BaseStreamController {
     }
   }
 
-  onLevelUpdated ({ details }) {
+  onLevelUpdated ({ details }: { details: LevelDetails }) {
     const frags = details.fragments;
     this.lastAVStart = frags.length ? frags[0].start : 0;
   }
@@ -191,11 +207,10 @@ export class SubtitleStreamController extends BaseStreamController {
       return;
     }
 
-    switch (this.state) {
-    case State.IDLE: {
+    if (this.state === State.IDLE) {
       const { config, currentTrackId, fragmentTracker, media, levels } = this;
       if (!levels || !levels[currentTrackId] || !levels[currentTrackId].details) {
-        break;
+        return;
       }
 
       const { maxBufferHole, maxFragLookUpTolerance } = config;
@@ -234,7 +249,6 @@ export class SubtitleStreamController extends BaseStreamController {
         this.fragCurrent = foundFrag;
         this._loadFragForPlayback(foundFrag);
       }
-    }
     }
   }
 
