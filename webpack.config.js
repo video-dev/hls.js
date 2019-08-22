@@ -32,7 +32,6 @@ const lightPlugins = [...basePlugins, createDefinePlugin('light')];
 const baseConfig = {
   mode: 'development',
   entry: './src/hls',
-  node: false,
   optimization: {
     splitChunks: false
   },
@@ -225,15 +224,14 @@ module.exports = (envArgs) => {
     // If no arguments are specified, return every configuration
     configs = multiConfig;
   } else {
-    // Find the first enabled config within the arguments array
-    const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
-    // Filter out config with name
-    const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
-    if (!enabledConfig) {
-      throw new Error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
+    const enabledConfigNames = Object.keys(envArgs);
+    // Filter out enabled configs
+    const enabledConfigs = multiConfig.filter(config => enabledConfigNames.includes(config.name));
+    if (!enabledConfigs.length) {
+      throw new Error(`Couldn't find a valid config with the names ${JSON.stringify(enabledConfigNames)}. Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
     }
 
-    configs = [enabledConfig];
+    configs = enabledConfigs;
   }
 
   console.log(`Building configs: ${configs.map(config => config.name).join(', ')}.\n`);

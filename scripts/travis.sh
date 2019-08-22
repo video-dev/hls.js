@@ -58,8 +58,15 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
         curl https://purge.jsdelivr.net/npm/hls.js@canary/dist/hls-demo.js
         echo "Cleared jsdelivr cache."
       elif [ "${TRAVIS_MODE}" = "release" ]; then
-        npm publish
-        curl https://purge.jsdelivr.net/npm/hls.js@latest
+        tag=$(node ./scripts/get-version-tag.js)
+        if [ "${tag}" = "canary" ]; then
+          # canary is blacklisted because this is handled separately on every commit
+          echo "canary not supported as explicit tag"
+          exit 1
+        fi
+        echo "Publishing tag: ${tag}"
+        npm publish --tag "${tag}"
+        curl "https://purge.jsdelivr.net/npm/hls.js@${tag}"
         echo "Published."
       fi
     else
