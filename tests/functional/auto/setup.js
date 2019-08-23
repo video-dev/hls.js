@@ -128,7 +128,7 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
           // ensure that the page has loaded and we haven't got an error page
           return this.browser.findElement(webdriver.By.css('body#hlsjs-functional-tests')).catch(function (e) {
             console.log('DOM not found');
-            this.browser.getPageSource().then(function (source) {
+            return this.browser.getPageSource().then(function (source) {
               console.log(source);
               return Promise.reject(e);
             });
