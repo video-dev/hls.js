@@ -25,6 +25,7 @@ export default class Fragment {
 
   public rawProgramDateTime: string | null = null;
   public programDateTime: number | null = null;
+  public title: string | null = null;
   public tagList: Array<string[]> = [];
 
   // TODO: Move at least baseurl to constructor.
@@ -32,6 +33,9 @@ export default class Fragment {
   // It may make more sense to just use a POJO to keep state during the parsing phase.
   // Have Fragment be the representation once we have a known state?
   // Something to think on.
+
+  // Discontinuity Counter
+  public cc!: number;
 
   public type!: PlaylistLevelType;
   // relurl is the portion of the URL that comes from inside the playlist.
@@ -44,6 +48,10 @@ export default class Fragment {
   public start!: number;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
   public sn: number | 'initSegment' = 0;
+
+  public urlId: number = 0;
+  // level matches this fragment to a index playlist
+  public level: number = 0;
   // levelkey is the EXT-X-KEY that applies to this segment for decryption
   // core difference from the private field _decryptdata is the lack of the initialized IV
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
