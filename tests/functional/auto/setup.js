@@ -245,10 +245,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     browser = browser.withCapabilities(capabilities).build();
     try {
       console.log('Retrieving web driver session...');
-      const [timeouts, session] = await Promise.all(
+      const [timeouts, session] = await Promise.all([
         browser.manage().setTimeouts({ script: 75000 }),
         browser.getSession()
-      );
+      ]);
       console.log(`Web driver session id: ${session.getId()}`);
       if (onTravis) {
         console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
