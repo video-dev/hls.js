@@ -15,6 +15,8 @@ const browserConfig = {
   name: 'chrome'
 };
 let browserDescription = browserConfig.name;
+let browser;
+let stream;
 // Setup browser config data from env vars
 if (onTravis) {
   let UA = process.env.UA;
@@ -76,7 +78,7 @@ function retry (cb, numAttempts, interval) {
   });
 }
 
-async function testLoadedData (browser, url, config) {
+async function testLoadedData (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -92,7 +94,7 @@ async function testLoadedData (browser, url, config) {
   expect(result.code).to.equal('loadeddata');
 }
 
-async function testSmoothSwitch (browser, url, config) {
+async function testSmoothSwitch (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -119,7 +121,7 @@ async function testSmoothSwitch (browser, url, config) {
   expect(result.code).to.be.true;
 }
 
-async function testSeekOnLive (browser, url, config) {
+async function testSeekOnLive (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -140,7 +142,7 @@ async function testSeekOnLive (browser, url, config) {
   expect(result.code).to.equal('seeked');
 }
 
-async function testSeekOnVOD (browser, url, config) {
+async function testSeekOnVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -161,7 +163,7 @@ async function testSeekOnVOD (browser, url, config) {
   expect(result.code).to.equal('ended');
 }
 
-async function testSeekEndVOD (browser, url, config) {
+async function testSeekEndVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -182,7 +184,7 @@ async function testSeekEndVOD (browser, url, config) {
   expect(result.code).to.equal('ended');
 }
 
-async function testIsPlayingVOD (browser, url, config) {
+async function testIsPlayingVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -211,8 +213,6 @@ async function testIsPlayingVOD (browser, url, config) {
 }
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
-  let browser;
-  let stream;
   beforeEach(async function () {
     if (!stream) {
       throw new Error('Stream not defined');
@@ -299,18 +299,18 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     let url = stream.url;
     let config = stream.config || {};
     if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
-      it(`should receive video loadeddata event for ${stream.description}`, testLoadedData.bind(null, browser, url, config));
+      it(`should receive video loadeddata event for ${stream.description}`, testLoadedData.bind(null, url, config));
 
       if (stream.abr) {
-        it(`should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`, testSmoothSwitch.bind(null, browser, url, config));
+        it(`should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`, testSmoothSwitch.bind(null, url, config));
       }
 
       if (stream.live) {
-        it(`should seek near the end and receive video seeked event for ${stream.description}`, testSeekOnLive.bind(null, browser, url, config));
+        it(`should seek near the end and receive video seeked event for ${stream.description}`, testSeekOnLive.bind(null, url, config));
       } else {
-        it(`should play ${stream.description}`, testIsPlayingVOD.bind(null, browser, url, config));
-        it(`should seek 5s from end and receive video ended event for ${stream.description}`, testSeekOnVOD.bind(null, browser, url, config));
-        // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, browser, url));
+        it(`should play ${stream.description}`, testIsPlayingVOD.bind(null, url, config));
+        it(`should seek 5s from end and receive video ended event for ${stream.description}`, testSeekOnVOD.bind(null, url, config));
+        // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
       }
     }
   }
