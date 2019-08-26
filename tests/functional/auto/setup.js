@@ -10,21 +10,13 @@ const onTravis = !!process.env.TRAVIS;
 const chai = require('chai');
 const expect = chai.expect;
 
-let browserDescription;
-let browser;
-let stream;
-
 const browserConfig = {
   version: 'latest',
   name: 'chrome'
 };
+let browserDescription = browserConfig.name;
 // Setup browser config data from env vars
 if (onTravis) {
-  let UA_VERSION = process.env.UA_VERSION;
-  if (UA_VERSION) {
-    browserConfig.version = UA_VERSION;
-  }
-
   let UA = process.env.UA;
   if (!UA) {
     throw new Error('No test browser name.');
@@ -35,11 +27,15 @@ if (onTravis) {
     throw new Error('No test browser platform.');
   }
 
+  let UA_VERSION = process.env.UA_VERSION;
+  if (UA_VERSION) {
+    browserConfig.version = UA_VERSION;
+  }
+
   browserConfig.name = UA;
   browserConfig.platform = OS;
 }
 
-browserDescription = browserConfig.name;
 if (browserConfig.version) {
   browserDescription += ` (${browserConfig.version})`;
 }
@@ -80,7 +76,7 @@ function retry (cb, numAttempts, interval) {
   });
 }
 
-async function testLoadedData (url, config) {
+async function testLoadedData (browser, url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -96,7 +92,7 @@ async function testLoadedData (url, config) {
   expect(result.code).to.equal('loadeddata');
 }
 
-async function testSmoothSwitch (url, config) {
+async function testSmoothSwitch (browser, url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -123,7 +119,7 @@ async function testSmoothSwitch (url, config) {
   expect(result.code).to.be.true;
 }
 
-async function testSeekOnLive (url, config) {
+async function testSeekOnLive (browser, url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -144,7 +140,7 @@ async function testSeekOnLive (url, config) {
   expect(result.code).to.equal('seeked');
 }
 
-async function testSeekOnVOD (url, config) {
+async function testSeekOnVOD (browser, url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -165,7 +161,7 @@ async function testSeekOnVOD (url, config) {
   expect(result.code).to.equal('ended');
 }
 
-async function testSeekEndVOD (url, config) {
+async function testSeekEndVOD (browser, url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -186,7 +182,7 @@ async function testSeekEndVOD (url, config) {
   expect(result.code).to.equal('ended');
 }
 
-async function testIsPlayingVOD (url, config) {
+async function testIsPlayingVOD (browser, url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
@@ -215,6 +211,8 @@ async function testIsPlayingVOD (url, config) {
 }
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
+  let browser;
+  let stream;
   beforeEach(async function () {
     if (!stream) {
       throw new Error('Stream not defined');
@@ -234,33 +232,32 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       };
     }
 
+    browser = new webdriver.Builder();
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
       capabilities.build = 'HLSJS-' + process.env.TRAVIS_BUILD_NUMBER;
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;
-      browser = new webdriver.Builder().usingServer(`http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`);
-    } else {
-      browser = new webdriver.Builder();
+      browser = browser.usingServer(`http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`);
     }
 
     browser = browser.withCapabilities(capabilities).build();
     try {
-      browser.manage().setTimeouts({ script: 75000 });
-    } catch (err) {
-      console.log('setTimeouts failed: ' + err);
-    }
-
-    try {
       console.log('Retrieving web driver session...');
-      const session = await browser.getSession();
+      const [timeouts, session] = await Promise.all(
+        browser.manage().setTimeouts({ script: 75000 }),
+        browser.getSession()
+      );
       console.log(`Web driver session id: ${session.getId()}`);
-
       if (onTravis) {
         console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
       }
+    } catch (err) {
+      console.log(`failed setting up session: ${err}`);
+    }
 
+    try {
       await retry(async () => {
         console.log('Loading test page...');
         try {
@@ -270,9 +267,11 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         }
 
         try {
-          await browser.findElement(webdriver.By.css('body#hlsjs-functional-tests'));
+          const found = await browser.findElements(webdriver.By.css('body#hlsjs-functional-tests'));
+          if (found.length === 0) {
+            throw new Error('DOM not found');
+          }
         } catch (e) {
-          console.log('DOM not found');
           const source = await browser.getPageSource();
           console.log(source);
           throw e;
@@ -300,18 +299,18 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     let url = stream.url;
     let config = stream.config || {};
     if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
-      it(`should receive video loadeddata event for ${stream.description}`, testLoadedData.bind(null, url, config));
+      it(`should receive video loadeddata event for ${stream.description}`, testLoadedData.bind(null, browser, url, config));
 
       if (stream.abr) {
-        it(`should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`, testSmoothSwitch.bind(null, url, config));
+        it(`should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`, testSmoothSwitch.bind(null, browser, url, config));
       }
 
       if (stream.live) {
-        it(`should seek near the end and receive video seeked event for ${stream.description}`, testSeekOnLive.bind(null, url, config));
+        it(`should seek near the end and receive video seeked event for ${stream.description}`, testSeekOnLive.bind(null, browser, url, config));
       } else {
-        it(`should play ${stream.description}`, testIsPlayingVOD.bind(null, url, config));
-        it(`should seek 5s from end and receive video ended event for ${stream.description}`, testSeekOnVOD.bind(null, url, config));
-        // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
+        it(`should play ${stream.description}`, testIsPlayingVOD.bind(null, browser, url, config));
+        it(`should seek 5s from end and receive video ended event for ${stream.description}`, testSeekOnVOD.bind(null, browser, url, config));
+        // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, browser, url));
       }
     }
   }
