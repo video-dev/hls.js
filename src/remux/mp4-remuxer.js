@@ -12,8 +12,8 @@ import { toMsFromMpegTsClock, toMpegTsClockFromTimescale } from '../utils/timesc
 
 import { logger } from '../utils/logger';
 
-// 10 seconds
-const MAX_SILENT_FRAME_DURATION = 10 * 1000;
+const MAX_SILENT_FRAME_DURATION_90KHZ = toMpegTsClockFromTimescale(10);
+const PTS_DTS_SHIFT_TOLERANCE_90KHZ = toMpegTsClockFromTimescale(0.2);
 
 class MP4Remuxer {
   constructor (observer, config, typeSupported, vendor) {
@@ -239,7 +239,7 @@ class MP4Remuxer {
     });
 
     // handle broken streams with PTS < DTS, tolerance up 0.2 seconds
-    let PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), toMpegTsClockFromTimescale(0.2, 1)), 0);
+    let PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), PTS_DTS_SHIFT_TOLERANCE_90KHZ), 0);
     if (PTSDTSshift < 0) {
       logger.warn(`PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(PTSDTSshift)} ms to overcome this issue`);
       for (let i = 0; i < inputSamples.length; i++) {
@@ -511,7 +511,7 @@ class MP4Remuxer {
         // 1: We're more than maxAudioFramesDrift frame away
         // 2: Not more than MAX_SILENT_FRAME_DURATION away
         // 3: currentTime (aka nextPtsNorm) is not 0
-        else if (delta >= maxAudioFramesDrift * inputSampleDuration && duration < MAX_SILENT_FRAME_DURATION && nextPts) {
+        else if (delta >= maxAudioFramesDrift * inputSampleDuration && duration < MAX_SILENT_FRAME_DURATION_90KHZ && nextPts) {
           let missing = Math.round(delta / inputSampleDuration);
           logger.warn(`Injecting ${missing} audio frame @ ${(nextPts / inputTimeScale).toFixed(3)}s due to ${Math.round(1000 * delta / inputTimeScale)} ms gap.`);
           for (let j = 0; j < missing; j++) {
@@ -565,7 +565,7 @@ class MP4Remuxer {
         if (contiguous && track.isAAC) {
           // log delta
           if (delta) {
-            if (delta > 0 && delta < MAX_SILENT_FRAME_DURATION) {
+            if (delta > 0 && delta < MAX_SILENT_FRAME_DURATION_90KHZ) {
               numMissingFrames = Math.round((pts - nextAudioPts) / inputSampleDuration);
               logger.log(`${delta} ms hole between AAC samples detected,filling it`);
               if (numMissingFrames > 0) {
