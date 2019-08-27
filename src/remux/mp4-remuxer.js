@@ -8,6 +8,8 @@ import MP4 from './mp4-generator';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
+import { toMsFromMpegTsClock, toMpegTsClockFromTimescale } from '../utils/timescale-conversion';
+
 import { logger } from '../utils/logger';
 
 // 10 seconds
@@ -236,10 +238,10 @@ class MP4Remuxer {
       return deltadts || (deltapts || (a.id - b.id));
     });
 
-    // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
-    let PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), -18000), 0);
+    // handle broken streams with PTS < DTS, tolerance up 0.2 seconds
+    let PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), toMpegTsClockFromTimescale(0.2, 1)), 0);
     if (PTSDTSshift < 0) {
-      logger.warn(`PTS < DTS detected in video samples, shifting DTS by ${Math.round(PTSDTSshift / 90)} ms to overcome this issue`);
+      logger.warn(`PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(PTSDTSshift)} ms to overcome this issue`);
       for (let i = 0; i < inputSamples.length; i++) {
         inputSamples[i].dts += PTSDTSshift;
       }
@@ -256,9 +258,9 @@ class MP4Remuxer {
     if (contiguous) {
       if (delta) {
         if (delta > 1) {
-          logger.log(`AVC:${delta} ms hole between fragments detected,filling it`);
+          logger.log(`AVC: ${toMsFromMpegTsClock(delta)} ms hole between fragments detected,filling it`);
         } else if (delta < -1) {
-          logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
+          logger.log(`AVC: ${toMsFromMpegTsClock(-delta)} ms overlapping between fragments detected`);
         }
 
         // remove hole/gap : set DTS to next expected DTS
@@ -267,7 +269,7 @@ class MP4Remuxer {
         // offset PTS as well, ensure that PTS is smaller or equal than new DTS
         firstPTS = Math.max(firstPTS - delta, nextAvcDts);
         inputSamples[0].pts = firstPTS;
-        logger.log(`Video/PTS/DTS adjusted: ${Math.round(firstPTS / 90)}/${Math.round(firstDTS / 90)},delta:${delta} ms`);
+        logger.log(`Video: PTS/DTS adjusted: ${toMsFromMpegTsClock(firstPTS)}/${toMsFromMpegTsClock(firstDTS)}, delta: ${toMsFromMpegTsClock(delta)} ms`);
       }
     }
 
@@ -361,7 +363,7 @@ class MP4Remuxer {
                 mp4SampleDuration = lastFrameDuration;
               }
 
-              logger.log(`It is approximately ${deltaToFrameEnd / 90} ms to the next segment; using duration ${mp4SampleDuration / 90} ms for the last video frame.`);
+              logger.log(`It is approximately ${toMsFromMpegTsClock(deltaToFrameEnd, false)} ms to the next segment; using duration ${toMsFromMpegTsClock(mp4SampleDuration, false)} ms for the last video frame.`);
             } else {
               mp4SampleDuration = lastFrameDuration;
             }
@@ -529,7 +531,7 @@ class MP4Remuxer {
           nextPts += inputSampleDuration;
           i++;
         } else {
-        // Otherwise, just adjust pts
+          // Otherwise, just adjust pts
           if (Math.abs(delta) > (0.1 * inputSampleDuration)) {
             // logger.log(`Invalid frame delta ${Math.round(delta + inputSampleDuration)} at PTS ${Math.round(pts / 90)} (should be ${Math.round(inputSampleDuration)}).`);
           }
