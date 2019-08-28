@@ -52,12 +52,14 @@ if (browserConfig.platform) {
   browserDescription += `, ${browserConfig.platform}`;
 }
 
+let hostname = (onTravis) ? 'travis.dev' : '127.0.0.1';
+
 // Launch static server
 HttpServer.createServer({
   showDir: false,
   autoIndex: false,
   root: './'
-}).listen(8000, '127.0.0.1');
+}).listen(8000, hostname);
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function retry (attempt, numAttempts = 5, interval = 2000) {
@@ -68,11 +70,8 @@ async function retry (attempt, numAttempts = 5, interval = 2000) {
       // reject with the last error
       throw e;
     }
-    return wait(interval)
-      .then(retry.bind(null, attempt, numAttempts, interval))
-      .catch(e => {
-        throw e;
-      });
+    await wait(interval);
+    return retry(attempt, numAttempts, interval);
   }
 }
 
@@ -242,24 +241,25 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
     browser = browser.withCapabilities(capabilities).build();
     try {
-      console.log('Retrieving web driver session...');
-      const [timeouts, session] = await Promise.all([
-        browser.manage().setTimeouts({ script: 75000 }),
-        browser.getSession()
-      ]);
-      console.log(`Web driver session id: ${session.getId()}`);
-      if (onTravis) {
-        console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
-      }
-    } catch (err) {
-      console.log(`failed setting up session: ${err}`);
-    }
-
-    try {
       await retry(async () => {
+        console.log('Retrieving web driver session...');
+        try {
+          const [timeouts, session] = await Promise.all([
+            browser.manage().setTimeouts({ script: 75000 }),
+            browser.getSession()
+          ]);
+          if (onTravis) {
+            console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
+          } else {
+            console.log(`WebDriver SessionID: ${session.getId()}`);
+          }
+        } catch (err) {
+          throw new Error(`failed setting up session: ${err}`);
+        }
+
         console.log('Loading test page...');
         try {
-          await browser.get('http://127.0.0.1:8000/tests/functional/auto/index.html');
+          await browser.get(`http://${hostname}:8000/tests/functional/auto/index.html`);
         } catch (e) {
           throw new Error('failed to open test page');
         }
