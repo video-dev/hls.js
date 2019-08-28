@@ -31,25 +31,21 @@ function VTTParser () {
 // Try to parse input as a time stamp.
 export function parseTimeStamp (input) {
   function computeSeconds (h, m, s, f) {
-    return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + (f | 0) / 1000;
+    return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + parseFloat(f || 0);
   }
 
-  const m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d+)/);
+  const m = input.match(/^(?:(\d+):)?(\d{2}):(\d{2})(\.\d+)?/);
   if (!m) {
     return null;
   }
 
-  if (m[3]) {
-    // Timestamp takes the form of [hours]:[minutes]:[seconds].[milliseconds]
-    return computeSeconds(m[1], m[2], m[3].replace(':', ''), m[4]);
-  } else if (m[1] > 59) {
+  if (m[2] > 59) {
     // Timestamp takes the form of [hours]:[minutes].[milliseconds]
     // First position is hours as it's over 59.
-    return computeSeconds(m[1], m[2], 0, m[4]);
-  } else {
-    // Timestamp takes the form of [minutes]:[seconds].[milliseconds]
-    return computeSeconds(0, m[1], m[2], m[4]);
+    return computeSeconds(m[2], m[3], 0, m[4]);
   }
+  // Timestamp takes the form of [hours (optional)]:[minutes]:[seconds].[milliseconds]
+  return computeSeconds(m[1], m[2], m[3], m[4]);
 }
 
 // A settings object holds key/value pairs and will ignore anything but the first
