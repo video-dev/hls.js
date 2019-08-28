@@ -65,7 +65,7 @@ export default class M3U8Parser {
 
     // TODO(typescript-level)
     function setCodecs (codecs: Array<string>, level: any) {
-      ['video', 'audio'].forEach((type: CodecType) => {
+      ['video', 'audio', 'text'].forEach((type: CodecType) => {
         const filtered = codecs.filter((codec) => isCodecType(codec, type));
         if (filtered.length) {
           const preferred = filtered.filter((codec) => {
@@ -107,7 +107,7 @@ export default class M3U8Parser {
     return levels;
   }
 
-  static parseMasterPlaylistMedia (string: string, baseurl: string, type: MediaPlaylistType, audioGroups: Array<AudioGroup> = []): Array<MediaPlaylist> {
+  static parseMasterPlaylistMedia (string: string, baseurl: string, type: MediaPlaylistType, groups: Array<AudioGroup> = []): Array<MediaPlaylist> {
     let result: RegExpExecArray | null;
     const medias: Array<MediaPlaylist> = [];
     let id = 0;
@@ -131,15 +131,13 @@ export default class M3U8Parser {
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
         }
 
-        if (audioGroups.length) {
-          // If there are audio groups signalled in the manifest, let's look for a matching codec string for this track
-          let groupCodec;
-          if (media.groupId) {
-            groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
-          }
+        if (groups.length) {
+          // If there are audio or text groups signalled in the manifest, let's look for a matching codec string for this track
           // If we don't find the track signalled, lets use the first audio groups codec we have
           // Acting as a best guess
-          media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
+          const groupCodec = M3U8Parser.findGroup(groups, media.groupId as string) || groups[0];
+          assignCodec(media, groupCodec, 'audioCodec');
+          assignCodec(media, groupCodec, 'textCodec');
         }
 
         medias.push(media);
@@ -372,6 +370,13 @@ export default class M3U8Parser {
     }
 
     return level;
+  }
+}
+
+function assignCodec (media, groupItem, codecProperty) {
+  const codecValue = groupItem[codecProperty];
+  if (codecValue) {
+    media[codecProperty] = codecValue;
   }
 }
 
