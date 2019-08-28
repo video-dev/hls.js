@@ -9,6 +9,7 @@ export interface LevelParsed {
   id?: number
   level?: number
   name?: string | undefined
+  textCodec?: string
   unknownCodecs?: string[]
   url: string
   videoCodec?: string

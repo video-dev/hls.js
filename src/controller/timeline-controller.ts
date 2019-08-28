@@ -7,6 +7,15 @@ import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 import Fragment from '../loader/fragment';
 import { HlsConfig } from '../config';
+import { parseIMSC1 } from '../utils/imsc1-parser';
+
+function canReuseVttTextTrack (inUseTrack, manifestTrack) {
+  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
+}
+
+function intersection (x1, x2, y1, y2) {
+  return Math.min(x2, y2) - Math.max(x1, y1);
+}
 
 class TimelineController extends EventHandler {
   private media: HTMLMediaElement | null = null;
@@ -247,15 +256,17 @@ class TimelineController extends EventHandler {
     this.initPTS = [];
     this.cueRanges = {};
 
-    if (this.config.enableWebVTT) {
-      const sameTracks = this.tracks && data.subtitles && this.tracks.length === data.subtitles.length;
-      this.tracks = data.subtitles || [];
+    const tracks = data.subtitles;
+    const hasIMSC1 = tracks.some((track) => track.textCodec === 'stpp.ttml.im1t');
+    if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
+      const sameTracks = this.tracks && tracks && this.tracks.length === tracks.length;
+      this.tracks = tracks || [];
 
       if (this.config.renderNatively) {
         const inUseTracks = this.media ? this.media.textTracks : [];
 
         this.tracks.forEach((track, index) => {
-          let textTrack;
+          let textTrack: TextTrack | undefined;
           if (index < inUseTracks.length) {
             let inUseTrack: TextTrack | null = null;
 
@@ -274,14 +285,14 @@ class TimelineController extends EventHandler {
           if (!textTrack) {
             textTrack = this.createTextTrack('subtitles', track.name, track.lang);
           }
-
-          if (track.default) {
-            textTrack.mode = this.hls.subtitleDisplay ? 'showing' : 'hidden';
-          } else {
-            textTrack.mode = 'disabled';
+          if (textTrack) {
+            if (track.default) {
+              textTrack.mode = this.hls.subtitleDisplay ? 'showing' : 'hidden';
+            } else {
+              textTrack.mode = 'disabled';
+            }
+            this.textTracks.push(textTrack);
           }
-
-          this.textTracks.push(textTrack);
         });
       } else if (!sameTracks && this.tracks && this.tracks.length) {
         // Create a list of tracks for the provider to consume
@@ -343,61 +354,63 @@ class TimelineController extends EventHandler {
         const decryptData = frag.decryptdata;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
         if ((decryptData == null) || (decryptData.key == null) || (decryptData.method !== 'AES-128')) {
-          this._parseVTTs(frag, payload);
+          const trackPlaylistMedia = this.tracks[frag.level];
+          const vttCCs = this.vttCCs;
+          if (!vttCCs[frag.cc]) {
+            vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
+            this.prevCC = frag.cc;
+          }
+          if (trackPlaylistMedia && trackPlaylistMedia.textCodec === 'stpp.ttml.im1t') {
+            this._parseIMSC1(frag, payload, vttCCs);
+          } else {
+            this._parseVTTs(frag, payload, vttCCs);
+          }
         }
       } else {
         // In case there is no payload, finish unsuccessfully.
-        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag });
+        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
       }
     }
   }
 
-  _parseVTTs (frag: Fragment, payload) {
-    const { hls, prevCC, vttCCs } = this;
-    if (!vttCCs[frag.cc]) {
-      vttCCs[frag.cc] = { start: frag.start, prevCC, new: true };
-      this.prevCC = frag.cc;
-    }
-    const tracks = (this.config.renderNatively) ? this.textTracks : this.tracks;
+  _parseIMSC1 (frag, payload, vttCCs) {
+    const hls = this.hls;
+    parseIMSC1(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
+      this._appendCues(cues, frag.level);
+      hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
+    }, (error) => {
+      logger.log(`Failed to parse IMSC1: ${error}`);
+      hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
+    });
+  }
 
+  _parseVTTs (frag, payload, vttCCs) {
+    const hls = this.hls;
     // Parse the WebVTT file contents.
     WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
-      const currentTrack = tracks[frag.level];
-      if (this.config.renderNatively) {
-        // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
-        // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
-        // and trying to access getCueById method of cues will throw an exception
-        if (currentTrack.mode === 'disabled') {
-          hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
-          return;
-        }
-        // Add cues and trigger event with success true.
-        cues.forEach(cue => {
-          // Sometimes there are cue overlaps on segmented vtts so the same
-          // cue can appear more than once in different vtt files.
-          // This avoid showing duplicated cues with same timecode and text.
-          if (!currentTrack.cues.getCueById(cue.id)) {
-            try {
-              currentTrack.addCue(cue);
-            } catch (err) {
-              const textTrackCue = new (self as any).TextTrackCue(cue.startTime, cue.endTime, cue.text);
-              textTrackCue.id = cue.id;
-              currentTrack.addCue(textTrackCue);
-            }
-          }
-        }
-        );
-      } else {
-        const trackId = currentTrack.default ? 'default' : 'subtitles' + frag.level;
-        hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
-      }
+      this._appendCues(cues, frag.level);
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
-    },
-    function (e) {
+    }, (error) => {
       // Something went wrong while parsing. Trigger event with success false.
-      logger.log(`Failed to parse VTT cue: ${e}`);
-      hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
+      logger.log(`Failed to parse VTT cue: ${error}`);
+      hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
     });
+  }
+
+  _appendCues (cues, fragLevel) {
+    const hls = this.hls;
+    const renderNatively = this.config.renderNatively;
+    const tracks = renderNatively ? this.textTracks : this.tracks;
+    const currentTrack = tracks[fragLevel];
+
+    if (renderNatively) {
+      cues.filter(cue => !currentTrack.cues.getCueById(cue.id)).forEach(cue => {
+        currentTrack.addCue(cue);
+      });
+    } else {
+      const track = currentTrack.default ? 'default' : 'subtitles' + fragLevel;
+      hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues, track });
+    }
   }
 
   onFragDecrypted (data: { frag: Fragment, payload: any}) {
@@ -408,7 +421,7 @@ class TimelineController extends EventHandler {
         return;
       }
 
-      this._parseVTTs(frag, payload);
+      this.onFragLoaded(data);
     }
   }
 
@@ -468,14 +481,6 @@ class TimelineController extends EventHandler {
     }
     return actualCCBytes;
   }
-}
-
-function canReuseVttTextTrack (inUseTrack, manifestTrack): boolean {
-  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
-}
-
-function intersection (x1: number, x2: number, y1: number, y2: number): number {
-  return Math.min(x2, y2) - Math.max(x1, y1);
 }
 
 export default TimelineController;

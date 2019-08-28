@@ -29,12 +29,12 @@ function VTTParser () {
 }
 
 // Try to parse input as a time stamp.
-function parseTimeStamp (input) {
+export function parseTimeStamp (input) {
   function computeSeconds (h, m, s, f) {
     return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + (f | 0) / 1000;
   }
 
-  const m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d{3})/);
+  const m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d+)/);
   if (!m) {
     return null;
   }
