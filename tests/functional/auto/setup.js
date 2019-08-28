@@ -1,6 +1,8 @@
 /* eslint-disable no-console */
 
 const webdriver = require('selenium-webdriver');
+const By = webdriver.By;
+const until = webdriver.until;
 // requiring this automatically adds the chromedriver binary to the PATH
 // eslint-disable-next-line
 const chromedriver = require('chromedriver');
@@ -15,6 +17,10 @@ const browserConfig = {
   name: 'chrome'
 };
 let browserDescription = browserConfig.name;
+
+/**
+ * @type {webdriver.ThenableWebDriver}
+ */
 let browser;
 let stream;
 // Setup browser config data from env vars
@@ -266,20 +272,18 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         } catch (e) {
           throw new Error('failed to open test page');
         }
+        console.log('Test page loaded.');
 
+        console.log('Locating ID \'hlsjs-functional-tests\'');
         try {
-          const found = await browser.findElements(webdriver.By.css('body#hlsjs-functional-tests'));
-          if (found.length === 0) {
-            throw new Error('DOM not found');
-          }
+          await browser.wait(until.elementLocated(By.css('body#hlsjs-functional-tests')));
         } catch (e) {
           const source = await browser.getPageSource();
           console.log('Failed to load test page, source of other page below.');
           console.log(source);
           throw e;
         }
-
-        console.log('Test page loaded.');
+        console.log('Located the ID, page confirmed loaded');
       });
     } catch (e) {
       throw new Error(`error getting test page loaded: ${e}`);
