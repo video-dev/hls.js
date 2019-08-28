@@ -2,7 +2,7 @@ import { findBox } from './mp4-tools';
 import { parseTimeStamp } from './vttparser';
 import VTTCue from './vttcue';
 
-export function parseIMSC1(payload: ArrayBuffer, syncPTS: number, vttCCs: any, cc: number, callBack: (cues: Array<VTTCue>) => any, errorCallBack: (error: Error) => any) {
+export function parseIMSC1(payload: ArrayBuffer, syncPTS: number, callBack: (cues: Array<VTTCue>) => any, errorCallBack: (error: Error) => any) {
   const results = findBox(new Uint8Array(payload), ['mdat']);
   if (results === null || results.length === 0) {
     errorCallBack(new Error('Could not parse IMSC1 mdat'));
@@ -11,13 +11,13 @@ export function parseIMSC1(payload: ArrayBuffer, syncPTS: number, vttCCs: any, c
   const mdat = results[0];
   const ttml = String.fromCharCode.apply(null, new Uint8Array(payload, mdat.start, mdat.end - mdat.start));
   try {
-    callBack(parseTTML(ttml, syncPTS, vttCCs, cc));
+    callBack(parseTTML(ttml, syncPTS));
   } catch (error) {
     errorCallBack(error);
   }
 }
 
-function parseTTML(ttml: string, syncPTS: number, vttCCs: any, cc: number): Array<VTTCue> {
+function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(ttml, 'text/xml');
   const tt = xmlDoc.getElementsByTagName('tt')[0];
@@ -47,11 +47,9 @@ function parseTTML(ttml: string, syncPTS: number, vttCCs: any, cc: number): Arra
     if (!text || !node.hasAttribute('begin')) {
       return null;
     }
-    // TODO: calculate time offset with cc info
-    const timeOffset = syncPTS;
     // TODO: handle different time formats using `rateInfo` where needed
-    const startTime = parseTimeStamp(node.getAttribute('begin')) - timeOffset;
-    const endTime = parseTimeStamp(node.getAttribute('end')) - timeOffset;
+    const startTime = parseTimeStamp(node.getAttribute('begin')) - syncPTS;
+    const endTime = parseTimeStamp(node.getAttribute('end')) - syncPTS;
     // TODO: elements may have a 'dur' attribute rather than 'end'
 
     // TODO: apply layout and style info

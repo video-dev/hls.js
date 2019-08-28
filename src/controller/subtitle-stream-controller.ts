@@ -171,7 +171,7 @@ export class SubtitleStreamController extends BaseStreamController {
     }
   }
 
-  _handleFragmentLoadComplete (frag: Fragment, payload: Uint8Array) {
+  _handleFragmentLoadComplete (frag: Fragment, payload: ArrayBuffer | Uint8Array) {
     const decryptData = frag.decryptdata;
     const hls = this.hls;
 
@@ -182,7 +182,7 @@ export class SubtitleStreamController extends BaseStreamController {
     if (payload && payload.byteLength > 0 && decryptData && decryptData.key && decryptData.iv && decryptData.method === 'AES-128') {
       const startTime = performance.now();
       // decrypt the subtitles
-      this.decrypter.webCryptoDecrypt(payload, decryptData.key.buffer, decryptData.iv.buffer).then((decryptedData) => {
+      this.decrypter.webCryptoDecrypt(new Uint8Array(payload), decryptData.key.buffer, decryptData.iv.buffer).then((decryptedData) => {
         const endTime = performance.now();
         hls.trigger(Event.FRAG_DECRYPTED, {
           frag,

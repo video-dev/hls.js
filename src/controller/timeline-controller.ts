@@ -361,7 +361,7 @@ class TimelineController extends EventHandler {
             this.prevCC = frag.cc;
           }
           if (trackPlaylistMedia && trackPlaylistMedia.textCodec === 'stpp.ttml.im1t') {
-            this._parseIMSC1(frag, payload, vttCCs);
+            this._parseIMSC1(frag, payload);
           } else {
             this._parseVTTs(frag, payload, vttCCs);
           }
@@ -373,9 +373,9 @@ class TimelineController extends EventHandler {
     }
   }
 
-  _parseIMSC1 (frag, payload, vttCCs) {
+  _parseIMSC1 (frag, payload) {
     const hls = this.hls;
-    parseIMSC1(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
+    parseIMSC1(payload, this.initPTS[frag.cc], (cues) => {
       this._appendCues(cues, frag.level);
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     }, (error) => {
