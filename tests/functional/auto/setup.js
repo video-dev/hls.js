@@ -59,29 +59,21 @@ HttpServer.createServer({
   root: './'
 }).listen(8000, '127.0.0.1');
 
-function retry (cb, numAttempts, interval) {
-  const DEFAULT_NUM_ATTEMPTS = 20;
-  const DEFAULT_INTERVAL_MS = 3000;
-
-  numAttempts = numAttempts || DEFAULT_NUM_ATTEMPTS;
-  interval = interval || DEFAULT_INTERVAL_MS;
-
-  return new Promise(function (resolve, reject) {
-    let attempts = 0;
-
-    function attempt () {
-      cb().then(resolve).catch(e => {
-        if (++attempts >= numAttempts) {
-          // reject with the last error
-          reject(e);
-        } else {
-          setTimeout(attempt, interval);
-        }
-      });
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function retry (attempt, numAttempts = 5, interval = 2000) {
+  try {
+    return await attempt();
+  } catch (e) {
+    if (--numAttempts === 0) {
+      // reject with the last error
+      throw e;
     }
-
-    attempt();
-  });
+    return wait(interval)
+      .then(retry.bind(null, attempt, numAttempts, interval))
+      .catch(e => {
+        throw e;
+      });
+  }
 }
 
 async function testLoadedData (url, config) {
