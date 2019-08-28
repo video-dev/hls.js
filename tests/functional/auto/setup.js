@@ -276,10 +276,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
         console.log('Locating ID \'hlsjs-functional-tests\'');
         try {
-          await browser.wait(until.elementLocated(By.css('body#hlsjs-functional-tests')));
+          await browser.wait(until.elementLocated(By.css('body#hlsjs-functional-tests')), 5000, 'Failed to load test page, source of other page below.');
         } catch (e) {
           const source = await browser.getPageSource();
-          console.log('Failed to load test page, source of other page below.');
           console.log(source);
           throw e;
         }
