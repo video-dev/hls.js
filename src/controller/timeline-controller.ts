@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 import Fragment from '../loader/fragment';
 import { HlsConfig } from '../config';
-import { parseIMSC1 } from '../utils/imsc1-parser';
+import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -257,7 +257,7 @@ class TimelineController extends EventHandler {
     this.cueRanges = {};
 
     const tracks = data.subtitles;
-    const hasIMSC1 = tracks.some((track) => track.textCodec === 'stpp.ttml.im1t');
+    const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
     if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
       const sameTracks = this.tracks && tracks && this.tracks.length === tracks.length;
       this.tracks = tracks || [];
@@ -360,7 +360,7 @@ class TimelineController extends EventHandler {
             vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
             this.prevCC = frag.cc;
           }
-          if (trackPlaylistMedia && trackPlaylistMedia.textCodec === 'stpp.ttml.im1t') {
+          if (trackPlaylistMedia && trackPlaylistMedia.textCodec === IMSC1_CODEC) {
             this._parseIMSC1(frag, payload);
           } else {
             this._parseVTTs(frag, payload, vttCCs);
@@ -391,10 +391,24 @@ class TimelineController extends EventHandler {
       this._appendCues(cues, frag.level);
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     }, (error) => {
+      this._fallbackToIMSC1(frag, payload);
       // Something went wrong while parsing. Trigger event with success false.
       logger.log(`Failed to parse VTT cue: ${error}`);
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
     });
+  }
+
+  _fallbackToIMSC1 (frag, payload) {
+    // If textCodec is unknown, try parsing as IMSC1. Set textCodec based on the result
+    const trackPlaylistMedia = this.tracks[frag.level];
+    if (!trackPlaylistMedia.textCodec) {
+      parseIMSC1(payload, this.initPTS[frag.cc], () => {
+        trackPlaylistMedia.textCodec = IMSC1_CODEC;
+        this._parseIMSC1(frag, payload);
+      }, () => {
+        trackPlaylistMedia.textCodec = 'wvtt';
+      });
+    }
   }
 
   _appendCues (cues, fragLevel) {

@@ -2,6 +2,8 @@ import { findBox } from './mp4-tools';
 import { parseTimeStamp } from './vttparser';
 import VTTCue from './vttcue';
 
+export const IMSC1_CODEC = 'stpp.ttml.im1t';
+
 export function parseIMSC1(payload: ArrayBuffer, syncPTS: number, callBack: (cues: Array<VTTCue>) => any, errorCallBack: (error: Error) => any) {
   const results = findBox(new Uint8Array(payload), ['mdat']);
   if (results === null || results.length === 0) {
