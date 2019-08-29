@@ -435,14 +435,16 @@ class MP4Remuxer {
     const initPTS = this._initPTS;
     const rawMPEG = !track.isAAC && this.typeSupported.mpeg;
 
-    let mp4Sample,
-      fillFrame,
-      mdat, moof,
-      firstPTS, lastPTS,
-      offset = (rawMPEG ? 0 : 8),
-      inputSamples = track.samples,
-      outputSamples = [],
-      nextAudioPts = this.nextAudioPts;
+    let mp4Sample;
+    let fillFrame;
+    let mdat;
+    let moof;
+    let firstPTS;
+    let lastPTS;
+    let offset = (rawMPEG ? 0 : 8);
+    let inputSamples = track.samples;
+    let outputSamples = [];
+    let nextAudioPts = this.nextAudioPts;
 
     // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
     // for sake of clarity:
