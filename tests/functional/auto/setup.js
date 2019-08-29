@@ -262,7 +262,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     try {
       await retry(async () => {
         let start = Date.now();
-        console.log('Retrieving web driver session in...');
+        console.log('Retrieving web driver session...');
         try {
           const [timeouts, session] = await Promise.all([
             browser.manage().setTimeouts({ script: 75000 }),
