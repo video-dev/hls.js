@@ -688,23 +688,23 @@ class MP4Remuxer {
   }
 
   remuxEmptyAudio (track, timeOffset, contiguous, videoData) {
-    let inputTimeScale = track.inputTimeScale,
-      mp4timeScale = track.samplerate ? track.samplerate : inputTimeScale,
-      scaleFactor = inputTimeScale / mp4timeScale,
-      nextAudioPts = this.nextAudioPts,
+    let inputTimeScale = track.inputTimeScale;
+    let mp4timeScale = track.samplerate ? track.samplerate : inputTimeScale;
+    let scaleFactor = inputTimeScale / mp4timeScale;
+    let nextAudioPts = this.nextAudioPts;
 
-      // sync with video's timestamp
-      startDTS = (nextAudioPts !== undefined ? nextAudioPts : videoData.startDTS * inputTimeScale) + this._initDTS,
-      endDTS = videoData.endDTS * inputTimeScale + this._initDTS,
-      // one sample's duration value
-      sampleDuration = 1024,
-      frameDuration = scaleFactor * sampleDuration,
+    // sync with video's timestamp
+    let startDTS = (nextAudioPts !== undefined ? nextAudioPts : videoData.startDTS * inputTimeScale) + this._initDTS;
+    let endDTS = videoData.endDTS * inputTimeScale + this._initDTS;
+    // one sample's duration value
+    let sampleDuration = 1024;
+    let frameDuration = scaleFactor * sampleDuration;
 
-      // samples count of this segment's duration
-      nbSamples = Math.ceil((endDTS - startDTS) / frameDuration),
+    // samples count of this segment's duration
+    let nbSamples = Math.ceil((endDTS - startDTS) / frameDuration);
 
-      // silent frame
-      silentFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
+    // silent frame
+    let silentFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
 
     logger.warn('remux empty Audio');
     // Can't remux if we can't generate a silent frame...
