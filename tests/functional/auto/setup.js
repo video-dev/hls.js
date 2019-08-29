@@ -52,7 +52,7 @@ if (browserConfig.platform) {
   browserDescription += `, ${browserConfig.platform}`;
 }
 
-let hostname = (onTravis) ? 'hlsjs.test' : '127.0.0.1';
+let hostname = onTravis ? 'hlsjs.test' : '127.0.0.1';
 
 // Launch static server
 HttpServer.createServer({
@@ -106,8 +106,13 @@ async function testSmoothSwitch (url, config) {
           console.log(`[log] > switched on level: ${data.level}`);
           window.setTimeout(() => {
             let newCurrentTime = video.currentTime;
-            console.log(`[log] > currentTime delta : ${newCurrentTime - currentTime}`);
-            callback({ code: newCurrentTime > currentTime, logs: window.logString });
+            console.log(
+              `[log] > currentTime delta : ${newCurrentTime - currentTime}`
+            );
+            callback({
+              code: newCurrentTime > currentTime,
+              logs: window.logString
+            });
           }, 2000);
         }
       });
@@ -188,17 +193,23 @@ async function testIsPlayingVOD (url, config) {
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = () => {
-        let expectedPlaying = !(video.paused || // not playing when video is paused
+        let expectedPlaying = !(
+          video.paused || // not playing when video is paused
           video.ended || // not playing when video is ended
-          video.buffered.length === 0); // not playing if nothing buffered
+          video.buffered.length === 0
+        ); // not playing if nothing buffered
         let currentTime = video.currentTime;
         if (expectedPlaying) {
           window.setTimeout(() => {
-            console.log(`video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`);
+            console.log(
+              `video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
+            );
             callback({ playing: currentTime !== video.currentTime });
           }, 5000);
         } else {
-          console.log(`video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`);
+          console.log(
+            `video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`
+          );
           callback({ playing: false });
         }
       };
@@ -225,7 +236,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
     if (browserConfig.name === 'chrome') {
       capabilities.chromeOptions = {
-        args: ['--autoplay-policy=no-user-gesture-required', '--disable-web-security']
+        args: [
+          '--autoplay-policy=no-user-gesture-required',
+          '--disable-web-security'
+        ]
       };
     }
 
@@ -236,7 +250,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;
-      browser = browser.usingServer(`http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`);
+      browser = browser.usingServer(
+        `http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`
+      );
     }
 
     browser = browser.withCapabilities(capabilities).build();
@@ -249,7 +265,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
             browser.getSession()
           ]);
           if (onTravis) {
-            console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
+            console.log(
+              `Job URL: https://saucelabs.com/jobs/${session.getId()}`
+            );
           } else {
             console.log(`WebDriver SessionID: ${session.getId()}`);
           }
@@ -259,7 +277,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
         console.log('Loading test page...');
         try {
-          await browser.get(`http://${hostname}:8000/tests/functional/auto/index.html`);
+          await browser.get(
+            `http://${hostname}:8000/tests/functional/auto/index.html`
+          );
         } catch (e) {
           throw new Error('failed to open test page');
         }
@@ -267,7 +287,11 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
         console.log('Locating ID \'hlsjs-functional-tests\'');
         try {
-          await browser.wait(until.elementLocated(By.css('body#hlsjs-functional-tests')), 5000, 'Failed to load test page, source of other page below.');
+          await browser.wait(
+            until.elementLocated(By.css('body#hlsjs-functional-tests')),
+            5000,
+            'Failed to load test page, source of other page below.'
+          );
         } catch (e) {
           const source = await browser.getPageSource();
           console.log(source);
@@ -294,18 +318,36 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     stream = streams[name];
     let url = stream.url;
     let config = stream.config || {};
-    if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
-      it(`should receive video loadeddata event for ${stream.description}`, testLoadedData.bind(null, url, config));
+    if (
+      !stream.blacklist_ua ||
+      stream.blacklist_ua.indexOf(browserConfig.name) === -1
+    ) {
+      it(
+        `should receive video loadeddata event for ${stream.description}`,
+        testLoadedData.bind(null, url, config)
+      );
 
       if (stream.abr) {
-        it(`should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`, testSmoothSwitch.bind(null, url, config));
+        it(
+          `should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`,
+          testSmoothSwitch.bind(null, url, config)
+        );
       }
 
       if (stream.live) {
-        it(`should seek near the end and receive video seeked event for ${stream.description}`, testSeekOnLive.bind(null, url, config));
+        it(
+          `should seek near the end and receive video seeked event for ${stream.description}`,
+          testSeekOnLive.bind(null, url, config)
+        );
       } else {
-        it(`should play ${stream.description}`, testIsPlayingVOD.bind(null, url, config));
-        it(`should seek 5s from end and receive video ended event for ${stream.description}`, testSeekOnVOD.bind(null, url, config));
+        it(
+          `should play ${stream.description}`,
+          testIsPlayingVOD.bind(null, url, config)
+        );
+        it(
+          `should seek 5s from end and receive video ended event for ${stream.description}`,
+          testSeekOnVOD.bind(null, url, config)
+        );
         // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
       }
     }
