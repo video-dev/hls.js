@@ -222,6 +222,8 @@ async function testIsPlayingVOD (url, config) {
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
   beforeEach(async function () {
+    // high timeout because sometimes getSession() takes a while
+    this.timeout(100000);
     if (!stream) {
       throw new Error('Stream not defined');
     }
@@ -258,12 +260,14 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     browser = browser.withCapabilities(capabilities).build();
     try {
       await retry(async () => {
-        console.log('Retrieving web driver session...');
+        let start = Date.now();
+        console.log('Retrieving web driver session in...');
         try {
           const [timeouts, session] = await Promise.all([
             browser.manage().setTimeouts({ script: 75000 }),
             browser.getSession()
           ]);
+          console.log(`Retrieved session in ${Date.now() - start}ms`);
           if (onTravis) {
             console.log(
               `Job URL: https://saucelabs.com/jobs/${session.getId()}`
