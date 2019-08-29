@@ -4,6 +4,12 @@ import VTTCue from './vttcue';
 
 export const IMSC1_CODEC = 'stpp.ttml.im1t';
 
+// Time format: h:m:s:frames(.subframes)
+const HMSF_REGEX = /^(\d{2,}):(\d{2}):(\d{2}):(\d{2})\.?(\d+)?$/;
+
+// Time format: hours, minutes, seconds, milliseconds, frames, ticks
+const TIME_UNIT_REGEX = /^(\d*(?:\.\d*)?)(h|m|s|ms|f|t)$/;
+
 export function parseIMSC1(payload: ArrayBuffer, syncPTS: number, callBack: (cues: Array<VTTCue>) => any, errorCallBack: (error: Error) => any) {
   const results = findBox(new Uint8Array(payload), ['mdat']);
   if (results === null || results.length === 0) {
@@ -41,7 +47,7 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
 
   // TODO: parse layout and style info
 
-  const body = xmlDoc.getElementsByTagName('body')[0];
+  const body = tt.getElementsByTagName('body')[0];
   const nodes = body.getElementsByTagName('p');
 
   return [].map.call(nodes, (node) => {
@@ -49,14 +55,65 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
     if (!text || !node.hasAttribute('begin')) {
       return null;
     }
-    // TODO: handle different time formats using `rateInfo` where needed
-    const startTime = parseTimeStamp(node.getAttribute('begin')) - syncPTS;
-    const endTime = parseTimeStamp(node.getAttribute('end')) - syncPTS;
-    // TODO: elements may have a 'dur' attribute rather than 'end'
-
+    const startTime = parseTtmlTime(node.getAttribute('begin'), rateInfo);
+    const duration = parseTtmlTime(node.getAttribute('dur'), rateInfo);
+    let endTime = parseTtmlTime(node.getAttribute('end'), rateInfo);
+    if (startTime === null) {
+      throw timestampParsingError(node);
+    }
+    if (endTime === null) {
+      if (duration === null) {
+        throw timestampParsingError(node);
+      }
+      endTime = startTime + duration;
+    }
     // TODO: apply layout and style info
 
     const cueText = trim ? text.trim() : text;
-    return new VTTCue(startTime, endTime, cueText);
+    return new VTTCue(startTime - syncPTS, endTime - syncPTS, cueText);
   }).filter((cue) => cue !== null);
+}
+
+function timestampParsingError(node) {
+  return new Error(`Could not parse ttml timestamp ${node}`);
+}
+
+function parseTtmlTime(timeAttributeValue, rateInfo): number | null {
+  if (!timeAttributeValue) {
+    return null;
+  }
+  let seconds: number | null = parseTimeStamp(timeAttributeValue);
+  if (seconds === null) {
+    if (HMSF_REGEX.test(timeAttributeValue)) {
+      seconds = parseHoursMinutesSecondsFrames(timeAttributeValue, rateInfo);
+    } else if (TIME_UNIT_REGEX.test(timeAttributeValue)) {
+      seconds = parseTimeUnits(timeAttributeValue, rateInfo);
+    }
+  }
+  return seconds;
+}
+
+function parseHoursMinutesSecondsFrames(timeAttributeValue, rateInfo): number {
+  const m = HMSF_REGEX.exec(timeAttributeValue) as Array<any>;
+  const frames = (m[4] | 0) + (m[5] | 0) / rateInfo.subFrameRate;
+  return (m[1] | 0) * 3600 + (m[2] | 0) * 60 + (m[3] | 0) + frames / rateInfo.frameRate;
+}
+
+function parseTimeUnits(timeAttributeValue, rateInfo): number {
+  const m = TIME_UNIT_REGEX.exec(timeAttributeValue) as Array<any>;
+  const value = Number(m[1]);
+  const unit = m[2];
+  switch (unit) {
+    case 'h':
+      return value * 3600;
+    case 'm':
+      return value * 60;
+    case 'ms':
+      return value * 1000;
+    case 'f':
+      return value / rateInfo.frameRate;
+    case 't':
+      return value / rateInfo.tickRate;
+  }
+  return value;
 }
