@@ -49,7 +49,7 @@
     "@babel/register": "^7.0.0",
     "babel-loader": "8.0.4",
     "chai": "4.2.0",
-    "chromedriver": "^2.38.3",
+    "chromedriver": "^76.0.1",
     "esdoc": "^1.1.0",
     "esdoc-ecmascript-proposal-plugin": "^1.0.0",
     "esdoc-standard-plugin": "^1.0.0",
