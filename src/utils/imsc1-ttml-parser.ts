@@ -1,6 +1,7 @@
 import { findBox } from './mp4-tools';
 import { parseTimeStamp } from './vttparser';
 import VTTCue from './vttcue';
+import { utf8ArrayToStr } from '../demux/id3';
 
 export const IMSC1_CODEC = 'stpp.ttml.im1t';
 
@@ -17,7 +18,8 @@ export function parseIMSC1(payload: ArrayBuffer, syncPTS: number, callBack: (cue
     return;
   }
   const mdat = results[0];
-  const ttml = String.fromCharCode.apply(null, new Uint8Array(payload, mdat.start, mdat.end - mdat.start));
+  const ttml = utf8ArrayToStr(new Uint8Array(payload, mdat.start, mdat.end - mdat.start));
+
   try {
     callBack(parseTTML(ttml, syncPTS));
   } catch (error) {
@@ -45,7 +47,9 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
 
   const trim = tt.getAttribute('xml:space') !== 'preserve';
 
-  // TODO: parse layout and style info
+  // TODO: parse style and region elements
+  // const styling = tt.getElementsByTagName('styling')[0];
+  // const layout = tt.getElementsByTagName('layout')[0];
 
   const body = tt.getElementsByTagName('body')[0];
   const nodes = body.getElementsByTagName('p');
@@ -68,6 +72,7 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
       endTime = startTime + duration;
     }
     // TODO: apply layout and style info
+    // console.log(node.getAttribute('begin'), endTime - syncPTS, document.querySelector('video').currentTime);
 
     const cueText = trim ? text.trim() : text;
     return new VTTCue(startTime - syncPTS, endTime - syncPTS, cueText);
