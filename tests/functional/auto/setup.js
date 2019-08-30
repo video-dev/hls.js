@@ -253,9 +253,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;
-      browser = browser.usingServer(
-        `http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`
-      );
+      browser = browser.usingServer(`http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`);
     }
 
     browser = browser.withCapabilities(capabilities).build();
