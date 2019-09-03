@@ -47,12 +47,9 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
 
   const trim = tt.getAttribute('xml:space') !== 'preserve';
 
-  // TODO: parse style and region elements
-  // const styling = tt.getElementsByTagName('styling')[0];
-  // const layout = tt.getElementsByTagName('layout')[0];
-
-  const body = tt.getElementsByTagName('body')[0];
-  const nodes = body.getElementsByTagName('p');
+  const styleElements = collectionToDictionary(getElementCollection(tt, 'styling', 'style'));
+  const regionElements = collectionToDictionary(getElementCollection(tt, 'layout', 'region'));
+  const nodes = getElementCollection(tt, 'body', 'p');
 
   return [].map.call(nodes, (node) => {
     const text = node.innerHTML;
@@ -71,12 +68,81 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
       }
       endTime = startTime + duration;
     }
-    // TODO: apply layout and style info
-    // console.log(node.getAttribute('begin'), endTime - syncPTS, document.querySelector('video').currentTime);
-
     const cueText = trim ? text.trim() : text;
-    return new VTTCue(startTime - syncPTS, endTime - syncPTS, cueText);
+    const cue =  new VTTCue(startTime - syncPTS, endTime - syncPTS, cueText);
+
+    const region = regionElements[node.getAttribute('region')];
+    const style = styleElements[node.getAttribute('style')];
+
+    // TODO: Add regions to track and cue (origin and extend)
+    cue.position = 10;
+    cue.size = 80;
+
+    // Apply styles to cue
+    const styles = getTtmlStyles(region, style);
+    const { textAlign } = styles;
+    if (textAlign) {
+      // cue.positionAlign not settable in FF~2016
+      cue.lineAlign = ({
+        left: 'start',
+        center: 'center',
+        right: 'end',
+        start: 'start',
+        end: 'end',
+      })[textAlign];
+      cue.align = textAlign;
+    }
+    Object.assign(cue, styles);
+
+    return cue;
   }).filter((cue) => cue !== null);
+}
+
+function getElementCollection(fromElement, parentName, childName): Array<HTMLElement> {
+  const parent = fromElement.getElementsByTagName(parentName)[0];
+  if (parent) {
+    return [].slice.call(parent.getElementsByTagName(childName));
+  }
+  return [];
+}
+
+function collectionToDictionary(elementsWithId: Array<HTMLElement>): { [id: string]: HTMLElement } {
+  return elementsWithId.reduce((dict, element: HTMLElement) => {
+    const id = element.getAttribute('xml:id');
+    if (id) {
+      dict[id] = element;
+    }
+    return dict;
+  }, {});
+}
+
+function getTtmlStyles(region, style): { [style: string]: string }  {
+  const ttsNs = 'http://www.w3.org/ns/ttml#styling';
+  const styleAttributes = [
+    'displayAlign',
+    'textAlign',
+    'color',
+    'backgroundColor',
+    'fontSize',
+    'fontFamily',
+    // 'fontWeight',
+    // 'lineHeight',
+    // 'wrapOption',
+    // 'fontStyle',
+    // 'direction',
+    // 'writingMode'
+  ];
+  return styleAttributes.reduce((styles, name) => {
+    const value = getAttributeNS(style, ttsNs, name) || getAttributeNS(region, ttsNs, name);
+    if (value) {
+      styles[name] = value;
+    }
+    return styles;
+  }, {});
+}
+
+function getAttributeNS(element, ns, name): string | null {
+  return element.hasAttributeNS(ns, name) ? element.getAttributeNS(ns, name) : null;
 }
 
 function timestampParsingError(node) {
