@@ -1,7 +1,14 @@
+import assert from 'assert';
+import sinon from 'sinon';
+
 import Hls from '../../../src/hls';
-import GapController from '../../../src/controller/gap-controller';
+
+import GapController from '../../../src/controller/gap-controller'; // eslint-disable-line import/no-duplicates
+import { STALL_DEBOUNCE_INTERVAL_MS } from '../../../src/controller/gap-controller'; // eslint-disable-line import/no-duplicates
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+
 import Event from '../../../src/events';
+
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
 
 describe('checkBuffer', function () {
@@ -9,7 +16,7 @@ describe('checkBuffer', function () {
   let config;
   let media;
   let triggerSpy;
-  const sandbox = sinon.createSandbox();
+  const sandbox = sinon.sandbox.create();
 
   beforeEach(function () {
     const hls = new Hls({});
@@ -28,43 +35,42 @@ describe('checkBuffer', function () {
       for (let i = 1; i < config.nudgeMaxRetry; i++) {
         let expected = media.currentTime + (i * config.nudgeOffset);
         gapController._tryNudgeBuffer();
-        expect(media.currentTime).to.equal(expected);
+        assert.strictEqual(expected, media.currentTime);
       }
-
-      expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
+      assert(triggerSpy.alwaysCalledWith(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
         fatal: false
-      });
+      }));
     });
 
     it('should not increment the currentTime if the max amount of nudges has been attempted', function () {
       config.nudgeMaxRetry = 0;
       gapController._tryNudgeBuffer();
-      expect(media.currentTime).to.equal(0);
-      expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
+      assert.strictEqual(0, media.currentTime);
+      assert(triggerSpy.calledWith(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: true
-      });
+      }));
     });
   });
 
   describe('_reportStall', function () {
     it('should report a stall with the current buffer length if it has not already been reported', function () {
       gapController._reportStall(42);
-      expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
+      assert(triggerSpy.calledWith(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: false,
         buffer: 42
-      });
+      }));
     });
 
     it('should not report a stall if it was already reported', function () {
       gapController.stallReported = true;
       gapController._reportStall(42);
-      expect(triggerSpy).to.not.have.been.called;
+      assert(triggerSpy.notCalled);
     });
   });
 
@@ -74,7 +80,7 @@ describe('checkBuffer', function () {
       const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
       gapController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
-      expect(nudgeStub).to.have.been.calledOnce;
+      assert(nudgeStub.calledOnce);
     });
 
     it('should not nudge when briefly stalling close to the buffer end', function () {
@@ -82,7 +88,7 @@ describe('checkBuffer', function () {
       const mockStallDuration = (config.highBufferWatchdogPeriod / 2) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
       gapController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
-      expect(nudgeStub).to.have.not.been.called;
+      assert(nudgeStub.notCalled);
     });
 
     it('should not nudge when too far from the buffer end', function () {
@@ -90,43 +96,58 @@ describe('checkBuffer', function () {
       const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
       gapController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
-      expect(nudgeStub).to.have.not.been.called;
+      assert(nudgeStub.notCalled);
     });
 
     it('should try to jump partial fragments when detected', function () {
       sandbox.stub(gapController.fragmentTracker, 'getPartialFragment').returns({});
       const skipHoleStub = sandbox.stub(gapController, '_trySkipBufferHole');
       gapController._tryFixBufferStall({ len: 0 });
-      expect(skipHoleStub).to.have.been.calledOnce;
+      assert(skipHoleStub.calledOnce);
     });
 
     it('should not try to jump partial fragments when none are detected', function () {
       sandbox.stub(gapController.fragmentTracker, 'getPartialFragment').returns(null);
       const skipHoleStub = sandbox.stub(gapController, '_trySkipBufferHole');
       gapController._tryFixBufferStall({ len: 0 });
-      expect(skipHoleStub).to.have.not.been.called;
+      assert(skipHoleStub.notCalled);
     });
   });
 
   describe('poll', function () {
     let mockMedia;
+    let mockTimeRanges;
+    let mockTimeRangesData;
     let reportStallSpy;
     let lastCurrentTime;
-    let buffered;
+
     beforeEach(function () {
-      mockMedia = {
-        buffered: {
-          length: 1
+      mockTimeRangesData = [[100, 200], [400, 500]];
+      mockTimeRanges = {
+        length: mockTimeRangesData.length,
+        start (index) {
+          return mockTimeRangesData[index][0];
+        },
+        end (index) {
+          return mockTimeRangesData[index][1];
         }
       };
+
+      mockMedia = {
+        currentTime: 0,
+        paused: false,
+        readyState: 0,
+        buffered: mockTimeRanges,
+        addEventListener () {}
+      };
+
       gapController.media = mockMedia;
       reportStallSpy = sandbox.spy(gapController, '_reportStall');
-      buffered = mockMedia.buffered;
     });
 
     function setStalling () {
       mockMedia.paused = false;
-      mockMedia.readyState = 1;
+      mockMedia.readyState = 4;
       mockMedia.currentTime = 4;
       lastCurrentTime = 4;
     }
@@ -139,42 +160,59 @@ describe('checkBuffer', function () {
     }
 
     it('should try to fix a stall if expected to be playing', function () {
+      const clock = sandbox.useFakeTimers(0);
+
       const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
       setStalling();
-      gapController.poll(lastCurrentTime, buffered);
+
+      clock.tick(1);
+
+      gapController.poll(lastCurrentTime);
+
+      clock.tick(1);
+
+      console.log(gapController.hasPlayed, gapController.stallDetectedAtTime);
 
       // The first poll call made while stalling just sets stall flags
-      expect(gapController.stalled).to.be.a('number');
-      expect(gapController.stallReported).to.be.false;
+      assert.strictEqual(typeof gapController.stallDetectedAtTime, 'number');
+      assert.strictEqual(typeof gapController.stallHandledAtTime, 'number');
+      assert.strictEqual(gapController.stallReported, false);
 
-      gapController.poll(lastCurrentTime, buffered);
-      expect(fixStallStub).to.have.been.calledOnce;
+      clock.tick(STALL_DEBOUNCE_INTERVAL_MS);
+
+      gapController.poll(lastCurrentTime);
+
+      assert(fixStallStub.calledOnce);
     });
 
     it('should reset stall flags when no longer stalling', function () {
       setNotStalling();
       gapController.stallReported = true;
       gapController.nudgeRetry = 1;
-      gapController.stalled = 4200;
-      const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
-      gapController.poll(lastCurrentTime, buffered);
+      gapController.stallDetectedAtTime = 4200;
+      gapController.stallHandledAtTime = 4201;
 
-      expect(gapController.stalled).to.not.exist;
-      expect(gapController.nudgeRetry).to.equal(0);
-      expect(gapController.stallReported).to.be.false;
-      expect(fixStallStub).to.not.have.been.called;
+      const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
+
+      gapController.poll(lastCurrentTime);
+
+      assert.strictEqual(gapController.stallDetectedAtTime, null);
+      assert.strictEqual(gapController.stallHandledAtTime, null);
+      assert.strictEqual(gapController.nudgeRetry, 0);
+      assert.strictEqual(gapController.stallReported, false);
+      assert(fixStallStub.notCalled);
     });
 
     it('should trigger reportStall when stalling for 1 second or longer', function () {
       setStalling();
       const clock = sandbox.useFakeTimers(0);
       clock.tick(1000);
-      gapController.stalled = 1;
-      gapController.poll(lastCurrentTime, buffered);
-      expect(reportStallSpy).to.not.have.been.called;
+      gapController.stallDetectedAtTime = 1;
+      gapController.poll(lastCurrentTime);
+      assert(reportStallSpy.notCalled);
       clock.tick(1001);
-      gapController.poll(lastCurrentTime, buffered);
-      expect(reportStallSpy).to.have.been.calledOnce;
+      gapController.poll(lastCurrentTime);
+      assert(reportStallSpy.calledOnce);
     });
   });
 });
