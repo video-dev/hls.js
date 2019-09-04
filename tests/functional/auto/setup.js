@@ -52,7 +52,7 @@ if (browserConfig.platform) {
   browserDescription += `, ${browserConfig.platform}`;
 }
 
-let hostname = onTravis ? 'hlsjs.test' : '127.0.0.1';
+let hostname = onTravis ? 'localhost' : '127.0.0.1';
 
 // Launch static server
 HttpServer.createServer({
