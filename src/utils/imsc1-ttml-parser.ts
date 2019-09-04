@@ -49,32 +49,33 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
 
   const styleElements = collectionToDictionary(getElementCollection(tt, 'styling', 'style'));
   const regionElements = collectionToDictionary(getElementCollection(tt, 'layout', 'region'));
-  const nodes = getElementCollection(tt, 'body', 'p');
+  const cueElements = getElementCollection(tt, 'body', '[begin]');
 
-  return [].map.call(nodes, (node) => {
-    const text = node.innerHTML;
-    if (!text || !node.hasAttribute('begin')) {
+  return [].map.call(cueElements, (cueElement) => {
+    const cueText = getTextContent(cueElement, trim);
+
+    if (!cueText || !cueElement.hasAttribute('begin')) {
       return null;
     }
-    const startTime = parseTtmlTime(node.getAttribute('begin'), rateInfo);
-    const duration = parseTtmlTime(node.getAttribute('dur'), rateInfo);
-    let endTime = parseTtmlTime(node.getAttribute('end'), rateInfo);
+    const startTime = parseTtmlTime(cueElement.getAttribute('begin'), rateInfo);
+    const duration = parseTtmlTime(cueElement.getAttribute('dur'), rateInfo);
+    let endTime = parseTtmlTime(cueElement.getAttribute('end'), rateInfo);
     if (startTime === null) {
-      throw timestampParsingError(node);
+      throw timestampParsingError(cueElement);
     }
     if (endTime === null) {
       if (duration === null) {
-        throw timestampParsingError(node);
+        throw timestampParsingError(cueElement);
       }
       endTime = startTime + duration;
     }
-    const cueText = trim ? text.trim() : text;
     const cue =  new VTTCue(startTime - syncPTS, endTime - syncPTS, cueText);
 
-    const region = regionElements[node.getAttribute('region')];
-    const style = styleElements[node.getAttribute('style')];
+    const region = regionElements[cueElement.getAttribute('region')];
+    const style = styleElements[cueElement.getAttribute('style')];
 
     // TODO: Add regions to track and cue (origin and extend)
+    // These values are hard-coded (for now) to simulate region settings in the demo
     cue.position = 10;
     cue.size = 80;
 
@@ -101,7 +102,7 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
 function getElementCollection(fromElement, parentName, childName): Array<HTMLElement> {
   const parent = fromElement.getElementsByTagName(parentName)[0];
   if (parent) {
-    return [].slice.call(parent.getElementsByTagName(childName));
+    return [].slice.call(parent.querySelectorAll(childName));
   }
   return [];
 }
@@ -114,6 +115,19 @@ function collectionToDictionary(elementsWithId: Array<HTMLElement>): { [id: stri
     }
     return dict;
   }, {});
+}
+
+function getTextContent(element, trim): string {
+  return [].slice.call(element.childNodes).reduce((str, node, i) => {
+    if (node.nodeName === 'br' && i) {
+      return str + '\n';
+    } if (node.childNodes && node.childNodes.length) {
+      return getTextContent(node, trim);
+    } else if (trim) {
+      return str + node.textContent.trim().replace(/\s+/g, ' ');
+    }
+    return str + node.textContent;
+  }, '');
 }
 
 function getTtmlStyles(region, style): { [style: string]: string }  {
