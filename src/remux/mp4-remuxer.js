@@ -239,7 +239,7 @@ class MP4Remuxer {
     });
 
     // handle broken streams with PTS < DTS, tolerance up 0.2 seconds
-    let PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), PTS_DTS_SHIFT_TOLERANCE_90KHZ), 0);
+    let PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), -1 * PTS_DTS_SHIFT_TOLERANCE_90KHZ), 0);
     if (PTSDTSshift < 0) {
       logger.warn(`PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(PTSDTSshift, true)} ms to overcome this issue`);
       for (let i = 0; i < inputSamples.length; i++) {
