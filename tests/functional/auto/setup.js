@@ -238,11 +238,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
     if (browserConfig.name === 'chrome') {
       capabilities.chromeOptions = {
-        args: (() =>
-          [
-            '--autoplay-policy=no-user-gesture-required',
-            onTravis && '--disable-web-security'
-          ].filter(Boolean))()
+        args: [
+          '--autoplay-policy=no-user-gesture-required',
+          '--disable-web-security'
+        ]
       };
     }
 
