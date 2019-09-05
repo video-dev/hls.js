@@ -17,6 +17,7 @@ import SampleAesDecrypter from './sample-aes';
 // import Hex from '../utils/hex';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { utf8ArrayToStr } from './id3';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -710,8 +711,10 @@ class TSDemuxer {
                 pts: pes.pts,
                 payloadType: payloadType,
                 uuid: uuidStrArray.join(''),
-                userData: String.fromCharCode.apply(null, userDataPayloadBytes),
-                userDataBytes: userDataPayloadBytes
+                userDataBytes: userDataPayloadBytes,
+                get userData () {
+                  return utf8ArrayToStr(new Uint16Array(this.userDataBytes).buffer);
+                }
               });
             }
           } else if (payloadSize < expGolombDecoder.bytesAvailable) {
