@@ -529,6 +529,105 @@ class TSDemuxer {
     }
   }
 
+  _parseSEI (avcSample) {
+    avcSample.units.filter(u => u.type === 6).forEach(unit => {
+      let expGolombDecoder = new ExpGolomb(this.discardEPB(unit.data));
+      let i;
+
+      // skip frameType
+      expGolombDecoder.readUByte();
+
+      let payloadType = 0;
+      let payloadSize = 0;
+      let endOfCaptions = false;
+      let b = 0;
+
+      while (!endOfCaptions && expGolombDecoder.bytesAvailable > 1) {
+        payloadType = 0;
+        do {
+          b = expGolombDecoder.readUByte();
+          payloadType += b;
+        } while (b === 0xFF);
+
+        // Parse payload size.
+        payloadSize = 0;
+        do {
+          b = expGolombDecoder.readUByte();
+          payloadSize += b;
+        } while (b === 0xFF);
+
+        // TODO: there can be more than one payload in an SEI packet...
+        // TODO: need to read type and size in a while loop to get them all
+        if (payloadType === 4 && expGolombDecoder.bytesAvailable !== 0) {
+          endOfCaptions = true;
+
+          let countryCode = expGolombDecoder.readUByte();
+
+          if (countryCode === 181) {
+            let providerCode = expGolombDecoder.readUShort();
+
+            if (providerCode === 49) {
+              let userStructure = expGolombDecoder.readUInt();
+
+              if (userStructure === 0x47413934) {
+                let userDataType = expGolombDecoder.readUByte();
+
+                // Raw CEA-608 bytes wrapped in CEA-708 packet
+                if (userDataType === 3) {
+                  let firstByte = expGolombDecoder.readUByte();
+                  let secondByte = expGolombDecoder.readUByte();
+
+                  let totalCCs = 31 & firstByte;
+                  let byteArray = [firstByte, secondByte];
+
+                  for (i = 0; i < totalCCs; i++) {
+                    // 3 bytes per CC
+                    byteArray.push(expGolombDecoder.readUByte());
+                    byteArray.push(expGolombDecoder.readUByte());
+                    byteArray.push(expGolombDecoder.readUByte());
+                  }
+
+                  this._insertSampleInOrder(this._txtTrack.samples, { type: 3, pts: avcSample.pts, bytes: byteArray });
+                }
+              }
+            }
+          }
+        } else if (payloadType === 5 && expGolombDecoder.bytesAvailable !== 0) {
+          endOfCaptions = true;
+
+          if (payloadSize > 16) {
+            let uuidStrArray = [];
+            let userDataPayloadBytes = [];
+
+            for (i = 0; i < 16; i++) {
+              uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
+
+              if (i === 3 || i === 5 || i === 7 || i === 9) {
+                uuidStrArray.push('-');
+              }
+            }
+
+            for (i = 16; i < payloadSize; i++) {
+              userDataPayloadBytes.push(expGolombDecoder.readUByte());
+            }
+
+            this._insertSampleInOrder(this._txtTrack.samples, {
+              pts: avcSample.pts,
+              payloadType: payloadType,
+              uuid: uuidStrArray.join(''),
+              userData: String.fromCharCode.apply(null, userDataPayloadBytes),
+              userDataBytes: userDataPayloadBytes
+            });
+          }
+        } else if (payloadSize < expGolombDecoder.bytesAvailable) {
+          for (i = 0; i < payloadSize; i++) {
+            expGolombDecoder.readUByte();
+          }
+        }
+      }
+    });
+  }
+
   pushAccesUnit (avcSample, avcTrack) {
     if (avcSample.units.length && avcSample.frame) {
       const samples = avcTrack.samples;
@@ -562,6 +661,7 @@ class TSDemuxer {
       push,
       spsfound = false,
       i,
+      parseSEI = this._parseSEI.bind(this),
       pushAccesUnit = this.pushAccesUnit.bind(this),
       createAVCSample = function (key, pts, dts, debug) {
         return { key: key, pts: pts, dts: dts, units: [], debug: debug };
@@ -572,6 +672,7 @@ class TSDemuxer {
     // if new NAL units found and last sample still there, let's push ...
     // this helps parsing streams with missing AUD (only do this if AUD never found)
     if (avcSample && units.length && !track.audFound) {
+      parseSEI(avcSample);
       pushAccesUnit(avcSample, track);
       avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, '');
     }
@@ -626,100 +727,9 @@ class TSDemuxer {
         if (debug && avcSample) {
           avcSample.debug += 'SEI ';
         }
-
-        expGolombDecoder = new ExpGolomb(this.discardEPB(unit.data));
-
-        // skip frameType
-        expGolombDecoder.readUByte();
-
-        var payloadType = 0;
-        var payloadSize = 0;
-        var endOfCaptions = false;
-        var b = 0;
-
-        while (!endOfCaptions && expGolombDecoder.bytesAvailable > 1) {
-          payloadType = 0;
-          do {
-            b = expGolombDecoder.readUByte();
-            payloadType += b;
-          } while (b === 0xFF);
-
-          // Parse payload size.
-          payloadSize = 0;
-          do {
-            b = expGolombDecoder.readUByte();
-            payloadSize += b;
-          } while (b === 0xFF);
-
-          // TODO: there can be more than one payload in an SEI packet...
-          // TODO: need to read type and size in a while loop to get them all
-          if (payloadType === 4 && expGolombDecoder.bytesAvailable !== 0) {
-            endOfCaptions = true;
-
-            let countryCode = expGolombDecoder.readUByte();
-
-            if (countryCode === 181) {
-              let providerCode = expGolombDecoder.readUShort();
-
-              if (providerCode === 49) {
-                let userStructure = expGolombDecoder.readUInt();
-
-                if (userStructure === 0x47413934) {
-                  let userDataType = expGolombDecoder.readUByte();
-
-                  // Raw CEA-608 bytes wrapped in CEA-708 packet
-                  if (userDataType === 3) {
-                    let firstByte = expGolombDecoder.readUByte();
-                    let secondByte = expGolombDecoder.readUByte();
-
-                    let totalCCs = 31 & firstByte;
-                    let byteArray = [firstByte, secondByte];
-
-                    for (i = 0; i < totalCCs; i++) {
-                      // 3 bytes per CC
-                      byteArray.push(expGolombDecoder.readUByte());
-                      byteArray.push(expGolombDecoder.readUByte());
-                      byteArray.push(expGolombDecoder.readUByte());
-                    }
-
-                    this._insertSampleInOrder(this._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
-                  }
-                }
-              }
-            }
-          } else if (payloadType === 5 && expGolombDecoder.bytesAvailable !== 0) {
-            endOfCaptions = true;
-
-            if (payloadSize > 16) {
-              let uuidStrArray = [];
-              let userDataPayloadBytes = [];
-
-              for (i = 0; i < 16; i++) {
-                uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
-
-                if (i === 3 || i === 5 || i === 7 || i === 9) {
-                  uuidStrArray.push('-');
-                }
-              }
-
-              for (i = 16; i < payloadSize; i++) {
-                userDataPayloadBytes.push(expGolombDecoder.readUByte());
-              }
-
-              this._insertSampleInOrder(this._txtTrack.samples, {
-                pts: pes.pts,
-                payloadType: payloadType,
-                uuid: uuidStrArray.join(''),
-                userData: String.fromCharCode.apply(null, userDataPayloadBytes),
-                userDataBytes: userDataPayloadBytes
-              });
-            }
-          } else if (payloadSize < expGolombDecoder.bytesAvailable) {
-            for (i = 0; i < payloadSize; i++) {
-              expGolombDecoder.readUByte();
-            }
-          }
-        }
+        // we can't parse SEI immediately because
+        // there might be remaining ES in the next PES
+        // we will parse it just before pushing avcSample to avcTrack
         break;
         // SPS
       case 7:
@@ -767,6 +777,7 @@ class TSDemuxer {
         push = false;
         track.audFound = true;
         if (avcSample) {
+          parseSEI(avcSample);
           pushAccesUnit(avcSample, track);
         }
 
@@ -791,6 +802,7 @@ class TSDemuxer {
     });
     // if last PES packet, push samples
     if (last && avcSample) {
+      parseSEI(avcSample);
       pushAccesUnit(avcSample, track);
       this.avcSample = null;
     }
