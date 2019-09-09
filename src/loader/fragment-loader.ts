@@ -9,6 +9,8 @@ import {
     LoaderCallbacks
 } from '../types/loader';
 
+const MIN_CHUNK_SIZE = Math.pow(2, 14); // 16kb
+
 export default class FragmentLoader {
   private config: any;
   private loader: Loader<FragmentLoaderContext> | null = null;
@@ -54,7 +56,7 @@ export default class FragmentLoader {
       maxRetry: 0,
       retryDelay: 0,
       maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-      highWaterMark: Math.pow(2, 14) // 16kb
+      highWaterMark: MIN_CHUNK_SIZE
     };
 
     return new Promise((resolve, reject) => {
