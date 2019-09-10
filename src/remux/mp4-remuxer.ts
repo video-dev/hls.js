@@ -16,20 +16,30 @@ export default class MP4Remuxer implements Remuxer {
   private observer: any;
   private config: any;
   private typeSupported: any;
-  private isSafari: boolean = false;
   private ISGenerated: boolean = false;
   private _initPTS!: number;
   private _initDTS!: number;
   private nextAvcDts: number | null = null;
   private nextAudioPts: number | null = null;
+  private isSafari: boolean = false;
+  private isOldChrome: boolean = false;
 
-  constructor (observer, config, typeSupported, vendor) {
+  constructor (observer, config, typeSupported, vendor = '') {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
-    const userAgent = navigator.userAgent;
-    this.isSafari = !!(vendor && vendor.indexOf('Apple') > -1 && userAgent && !userAgent.match('CriOS'));
     this.ISGenerated = false;
+
+    const userAgent = navigator.userAgent || '';
+    this.isSafari = !!(vendor.indexOf('Apple') > -1 && !userAgent.match('CriOS'));
+    const chromeIndex = userAgent.indexOf('Chrome');
+    if (chromeIndex > -1) {
+      // The version string starts immediately after the word "Chrome"
+      if (parseInt(userAgent.substring(chromeIndex + 7), 10) < 50) {
+        // This flag is used to maintain compatibility with old versions of MSE
+        this.isOldChrome = true;
+      }
+    }
   }
 
   destroy () {
@@ -390,6 +400,14 @@ export default class MP4Remuxer implements Remuxer {
       }
 
       outputSamples.push(new Mp4Sample(avcSample.key, mp4SampleDuration, mp4SampleLength, compositionTimeOffset));
+    }
+
+    if (outputSamples.length && this.isOldChrome) {
+      // Chrome workaround, mark first sample as being a Random Access Point (keyframe) to avoid sourcebuffer append issue
+      // https://code.google.com/p/chromium/issues/detail?id=229412
+      const flags = outputSamples[0].flags;
+      flags.dependsOn = 2;
+      flags.isNonSync = 0;
     }
 
     console.assert(mp4SampleDuration !== undefined, 'mp4SampleDuration must be computed');
