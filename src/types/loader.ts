@@ -28,6 +28,8 @@ export interface LoaderConfiguration {
   retryDelay: number
   // max connection retry delay (ms)
   maxRetryDelay: number
+  // When streaming progressively, this is the minimum chunk size required to emit a PROGRESS event
+  highWaterMark: number
 }
 
 export interface LoaderResponse {
@@ -69,7 +71,7 @@ type LoaderOnSuccess < T extends LoaderContext > = (
   networkDetails: any
 ) => void;
 
-type LoaderOnProgress < T extends LoaderContext > = (
+export type LoaderOnProgress < T extends LoaderContext > = (
   stats: LoaderStats,
   context: T,
   data: string | ArrayBuffer,

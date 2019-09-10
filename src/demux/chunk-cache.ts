@@ -7,11 +7,11 @@ export default class ChunkCache {
     this.dataLength += chunk.length;
   }
 
-  flush (): Uint8Array | null {
+  flush (): Uint8Array {
     const { chunks, dataLength } = this;
     let result;
     if (!chunks.length) {
-      return null
+      return new Uint8Array(0);
     } else if (chunks.length === 1) {
       result = chunks[0];
     } else {
