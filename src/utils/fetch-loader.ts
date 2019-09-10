@@ -1,5 +1,13 @@
-import { LoaderCallbacks, LoaderContext, Loader, LoaderStats, LoaderConfiguration } from '../types/loader';
+import {
+  LoaderCallbacks,
+  LoaderContext,
+  Loader,
+  LoaderStats,
+  LoaderConfiguration,
+  LoaderOnProgress
+} from '../types/loader';
 import LoadStats from '../loader/load-stats';
+import ChunkCache from '../demux/chunk-cache';
 
 const { fetch, AbortController, ReadableStream, Request, Headers, performance } = window as any;
 
@@ -52,7 +60,7 @@ FetchLoader implements Loader<LoaderContext> {
     stats.loading.start = performance.now();
 
     const initParams = getRequestParameters(context, this.controller.signal);
-    const onProgress = callbacks.onProgress;
+    const onProgress: LoaderOnProgress<LoaderContext> | undefined = callbacks.onProgress;
     const isArrayBuffer = context.responseType === 'arraybuffer';
     const LENGTH = isArrayBuffer ? 'byteLength' : 'length';
 
@@ -76,22 +84,7 @@ FetchLoader implements Loader<LoaderContext> {
       stats.total = parseInt(response.headers.get('Content-Length') || '0');
 
       if (onProgress) {
-        const reader = (response.clone().body as ReadableStream).getReader();
-        new ReadableStream({
-          start() {
-            const pump = () => {
-              reader.read().then(({ done, value }) => {
-                if (done) {
-                  return;
-                }
-                stats.loaded += value[LENGTH];
-                onProgress(stats, context, value, response);
-                pump();
-              }).catch(() => {/* aborted */});
-            };
-            pump();
-          }
-        });
+        this.loadProgressively(response, stats, context, config.highWaterMark, onProgress);
       }
 
       if (isArrayBuffer) {
@@ -128,6 +121,44 @@ FetchLoader implements Loader<LoaderContext> {
       } catch (error) {/* Could not get header */}
     }
     return null;
+  }
+
+  private loadProgressively (response: Response, stats: LoaderStats, context: LoaderContext, highWaterMark: number = 0, onProgress: LoaderOnProgress<LoaderContext>) {
+    const chunkCache = new ChunkCache();
+    const reader = (response.clone().body as ReadableStream).getReader();
+
+    const pump = () => {
+      reader.read().then((data: { done: boolean, value: Uint8Array }) => {
+        const { done, value: chunk } = data;
+        if (done) {
+          if (chunkCache.dataLength) {
+            onProgress(stats, context, chunkCache.flush(), response);
+          }
+          return;
+        }
+        const len = chunk.length;
+        stats.loaded += len;
+        if (len >= highWaterMark) {
+          // The cache already has data, and the current chunk is large enough to be emitted. Push it to the cache
+          // and flush in order to join the typed arrays
+          if (chunkCache.dataLength) {
+            chunkCache.push(chunk);
+            onProgress(stats, context, chunkCache.flush(), response);
+          } else {
+            // If there's nothing cached already, just emit the progress event
+            onProgress(stats, context, chunk, response);
+          }
+        } else {
+          chunkCache.push(chunk);
+          if (chunkCache.dataLength >= highWaterMark) {
+            onProgress(stats, context, chunkCache.flush(), response);
+          }
+        }
+        pump();
+      }).catch(() => {/* aborted */});
+    };
+
+    pump();
   }
 }
 

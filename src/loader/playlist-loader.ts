@@ -259,7 +259,8 @@ class PlaylistLoader extends EventHandler {
       timeout,
       maxRetry,
       retryDelay,
-      maxRetryDelay
+      maxRetryDelay,
+      highWaterMark: 0
     };
 
     const loaderCallbacks = {
