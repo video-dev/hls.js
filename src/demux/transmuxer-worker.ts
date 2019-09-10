@@ -1,7 +1,4 @@
-/* transmuxer web worker.
- *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
- *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
- */
+import '../polyfills/runtime-polyfills';
 
 import Transmuxer from '../demux/transmuxer';
 import Event from '../events';

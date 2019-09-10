@@ -1,5 +1,4 @@
-import { polyfillSlice } from './polyfills/runtime-polyfills';
-polyfillSlice();
+import './polyfills/runtime-polyfills';
 import * as URLToolkit from 'url-toolkit';
 
 import {
