@@ -119,6 +119,7 @@ export default class M3U8Parser {
         const media: MediaPlaylist = {
           id: id++,
           groupId: attrs['GROUP-ID'],
+          instreamId: attrs['INSTREAM-ID'],
           name: attrs.NAME || attrs.LANGUAGE,
           type,
           default: (attrs.DEFAULT === 'YES'),
@@ -126,15 +127,17 @@ export default class M3U8Parser {
           forced: (attrs.FORCED === 'YES'),
           lang: attrs.LANGUAGE
         };
-        media.instreamId = attrs['INSTREAM-ID'];
+
         if (attrs.URI) {
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
         }
 
         if (audioGroups.length) {
           // If there are audio groups signalled in the manifest, let's look for a matching codec string for this track
-          const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
-
+          let groupCodec;
+          if (media.groupId) {
+            groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
+          }
           // If we don't find the track signalled, lets use the first audio groups codec we have
           // Acting as a best guess
           media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
