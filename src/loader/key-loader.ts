@@ -84,7 +84,8 @@ class KeyLoader extends EventHandler {
         timeout: config.fragLoadingTimeOut,
         maxRetry: 0,
         retryDelay: config.fragLoadingRetryDelay,
-        maxRetryDelay: config.fragLoadingMaxRetryTimeout
+        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+        highWaterMark: 0
       };
 
       const loaderCallbacks: LoaderCallbacks<KeyLoaderContext> = {

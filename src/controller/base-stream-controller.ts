@@ -15,7 +15,6 @@ import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS, findFragWithCC } from './fragment-finders';
 import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
 import { SourceBufferName } from '../types/buffer';
-import { HlsChunkPerformanceTiming, HlsProgressivePerformanceTiming, LoaderStats } from '../types/loader';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -558,7 +557,9 @@ export default class BaseStreamController extends TaskLoop {
       transmuxer.flush(new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0));
     }
 
-    Object.keys(frag.elementaryStreams).forEach(type => frag.elementaryStreams[type] = null);
+    Object.keys(frag.elementaryStreams).forEach(type => {
+      frag.elementaryStreams[type] = null;
+    });
     this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer & resetting nextLoadPosition to ${this.nextLoadPosition}`);
   }
 

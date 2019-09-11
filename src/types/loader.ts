@@ -1,4 +1,5 @@
 import Fragment from '../loader/fragment';
+import LevelDetails from '../loader/level-details';
 
 export interface LoaderContext {
   // target URL
@@ -120,4 +121,39 @@ export interface Loader<T extends LoaderContext> {
   getResponseHeader(name:string): string | null
   context: T
   stats: LoaderStats
+}
+
+/**
+ * `type` property values for this loaders' context object
+ * @enum
+ *
+ */
+export enum PlaylistContextType {
+  MANIFEST = 'manifest',
+  LEVEL = 'level',
+  AUDIO_TRACK = 'audioTrack',
+  SUBTITLE_TRACK= 'subtitleTrack'
+}
+
+/**
+ * @enum {string}
+ */
+export enum PlaylistLevelType {
+  MAIN = 'main',
+  AUDIO = 'audio',
+  SUBTITLE = 'subtitle'
+}
+
+export interface PlaylistLoaderContext extends LoaderContext {
+  loader?: Loader<PlaylistLoaderContext>
+
+  type: PlaylistContextType
+  // the level index to load
+  level: number | null
+  // TODO: what is id?
+  id: number | null
+  // defines if the loader is handling a sidx request for the playlist
+  isSidxRequest?: boolean
+  // internal reprsentation of a parsed m3u8 level playlist
+  levelDetails?: LevelDetails
 }
