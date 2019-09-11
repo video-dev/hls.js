@@ -120,7 +120,7 @@ export default class LevelController extends EventHandler {
 
     // only keep levels with supported audio/video codecs
     levels = levels.filter(({ audioCodec, videoCodec }) => {
-      return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
+      return (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) && (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'));
     });
 
     if (data.audioTracks) {
@@ -413,7 +413,15 @@ export default class LevelController extends EventHandler {
     }
 
     if (currentLevel.audioGroupIds) {
-      const urlId = currentLevel.audioGroupIds.findIndex((groupId) => groupId === audioGroupId);
+      let urlId = -1;
+
+      for (let i = 0; i < currentLevel.audioGroupIds.length; i++) {
+        if (currentLevel.audioGroupIds[i] === audioGroupId) {
+          urlId = i;
+          break;
+        }
+      }
+
       if (urlId !== currentLevel.urlId) {
         currentLevel.urlId = urlId;
         this.startLoad();

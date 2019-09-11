@@ -58,7 +58,7 @@ describe('StreamController', function () {
       expect(spy.called).to.be.false;
     });
 
-    it('should not start when controller have not levels data', function () {
+    it('should not start when controller does not have level data', function () {
       streamController.startLoad(1);
       assertStreamControllerStopped(streamController);
     });
@@ -207,9 +207,6 @@ describe('StreamController', function () {
       };
       streamController.media = {
         buffered: {
-          start: function () {
-            return 6.014;
-          },
           length: 1
         }
       };

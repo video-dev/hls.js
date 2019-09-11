@@ -1,5 +1,6 @@
 /**
- *  ADTS parser helper
+ * ADTS parser helper
+ * @link https://wiki.multimedia.cx/index.php?title=ADTS
  */
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
@@ -160,7 +161,7 @@ export function isHeader (data, offset) {
 export function probe (data, offset) {
   // same as isHeader but we also check that ADTS frame follows last ADTS frame
   // or end of data is reached
-  if (offset + 1 < data.length && isHeaderPattern(data, offset)) {
+  if (isHeader(data, offset)) {
     // ADTS header Length
     let headerLength = getHeaderLength(data, offset);
     // ADTS frame Length
@@ -228,8 +229,6 @@ export function appendFrame (track, data, offset, pts, frameIndex) {
     };
 
     track.samples.push(aacSample);
-    track.len += frameLength;
-
     return { sample: aacSample, length: frameLength + headerLength };
   }
 

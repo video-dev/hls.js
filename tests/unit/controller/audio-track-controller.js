@@ -55,7 +55,7 @@ describe('AudioTrackController', function () {
   });
 
   describe('onManifestParsed', function () {
-    it('should set the audioTracks contained in the event data and trigger AUDIO_TRACKS_UPDATED', (done) => {
+    it('should set the audioTracks contained in the event data and trigger AUDIO_TRACKS_UPDATED', function (done) {
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
         expect(data.audioTracks).to.equal(tracks);
         expect(audioTrackController.tracks).to.equal(tracks);
@@ -67,7 +67,7 @@ describe('AudioTrackController', function () {
       });
     });
 
-    it('should set the audioTracks contained in the event data (nullable) to an empty array and trigger AUDIO_TRACKS_UPDATED', (done) => {
+    it('should set the audioTracks contained in the event data (nullable) to an empty array and trigger AUDIO_TRACKS_UPDATED', function (done) {
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
         expect(data.audioTracks).to.be.empty;
         expect(audioTrackController.tracks).to.be.empty;
@@ -80,13 +80,13 @@ describe('AudioTrackController', function () {
     });
   });
 
-  describe('_needsTrackLoading', () => {
+  describe('_needsTrackLoading', function () {
     it('should not need loading because the audioTrack is embedded in the main playlist', function () {
       expect(audioTrackController._needsTrackLoading({ details: { live: true } })).to.be.false;
       expect(audioTrackController._needsTrackLoading({ details: null })).to.be.false;
     });
 
-    it('should need loading because the track has not been loaded yet', () => {
+    it('should need loading because the track has not been loaded yet', function () {
       expect(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' })).to.be.true;
       expect(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' })).to.be.true;
     });
@@ -141,7 +141,7 @@ describe('AudioTrackController', function () {
   });
 
   describe('onLevelLoaded', function () {
-    it('should reselect the current track and trigger AUDIO_TRACK_SWITCHING eventually', (done) => {
+    it('should reselect the current track and trigger AUDIO_TRACK_SWITCHING eventually', function (done) {
       hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, (event, data) => {
         done();
       });
@@ -237,7 +237,7 @@ describe('AudioTrackController', function () {
       expect(audioTrackLoadingCallback).to.not.have.been.called;
     });
 
-    it('should load audio tracks with a url', () => {
+    it('should load audio tracks with a url', function () {
       const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithUrl = {
@@ -270,7 +270,7 @@ describe('AudioTrackController', function () {
       expect(audioTrackLoadingCallback).to.have.been.calledOnce;
     });
 
-    it('should not attempt to load audio tracks without a url', () => {
+    it('should not attempt to load audio tracks without a url', function () {
       const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithOutUrl = tracks[0];

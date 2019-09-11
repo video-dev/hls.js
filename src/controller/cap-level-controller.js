@@ -26,7 +26,7 @@ class CapLevelController extends EventHandler {
   destroy () {
     if (this.hls.config.capLevelToPlayerSize) {
       this.media = null;
-      this._stopCapping();
+      this.stopCapping();
     }
   }
 
@@ -48,7 +48,7 @@ class CapLevelController extends EventHandler {
     this.firstLevel = data.firstLevel;
     if (hls.config.capLevelToPlayerSize && data.video) {
       // Start capping immediately if the manifest has signaled video codecs
-      this._startCapping();
+      this.startCapping();
     }
   }
 
@@ -58,7 +58,7 @@ class CapLevelController extends EventHandler {
     const hls = this.hls;
     if (hls.config.capLevelToPlayerSize && data.video) {
       // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
-      this._startCapping();
+      this.startCapping();
     }
   }
 
@@ -67,7 +67,7 @@ class CapLevelController extends EventHandler {
   }
 
   onMediaDetaching () {
-    this._stopCapping();
+    this.stopCapping();
   }
 
   detectPlayerSize () {
@@ -101,7 +101,7 @@ class CapLevelController extends EventHandler {
     return CapLevelController.getMaxLevelByMediaSize(validLevels, this.mediaWidth, this.mediaHeight);
   }
 
-  _startCapping () {
+  startCapping () {
     if (this.timer) {
       // Don't reset capping if started twice; this can happen if the manifest signals a video codec
       return;
@@ -113,7 +113,7 @@ class CapLevelController extends EventHandler {
     this.detectPlayerSize();
   }
 
-  _stopCapping () {
+  stopCapping () {
     this.restrictedLevels = [];
     this.firstLevel = null;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
