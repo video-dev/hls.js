@@ -2,11 +2,17 @@
 # https://docs.travis-ci.com/user/customizing-the-build/#Implementing-Complex-Build-Steps
 set -ev
 
-npm install --quiet
+echo "travis_fold:start:npm_install"
+npm install
+echo "travis_fold:end:npm_install"
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
+  echo "travis_fold:start:lint"
   npm run lint
+  echo "travis_fold:end:lint"
+  echo "travis_fold:start:build"
   npm run build
+  echo "travis_fold:end:build"
   # check that hls.js doesn't error if requiring in node
   # see https://github.com/video-dev/hls.js/pull/1642
   node -e 'require("./" + require("./package.json").main)'
@@ -52,8 +58,15 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
         curl https://purge.jsdelivr.net/npm/hls.js@canary/dist/hls-demo.js
         echo "Cleared jsdelivr cache."
       elif [ "${TRAVIS_MODE}" = "release" ]; then
-        npm publish
-        curl https://purge.jsdelivr.net/npm/hls.js@latest
+        tag=$(node ./scripts/get-version-tag.js)
+        if [ "${tag}" = "canary" ]; then
+          # canary is blacklisted because this is handled separately on every commit
+          echo "canary not supported as explicit tag"
+          exit 1
+        fi
+        echo "Publishing tag: ${tag}"
+        npm publish --tag "${tag}"
+        curl "https://purge.jsdelivr.net/npm/hls.js@${tag}"
         echo "Published."
       fi
     else

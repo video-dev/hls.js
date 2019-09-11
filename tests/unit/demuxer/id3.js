@@ -23,4 +23,15 @@ describe('ID3 tests', function () {
     expect(ID3.canParse(mockID3HeaderMissingLeadingByte, 0)).to.equal(false);
     expect(ID3.canParse(mockID3HeaderMissingTrailingByte, 0)).to.equal(false);
   });
+
+  it('should decode a TXXX frame', function () {
+    const frame = {
+      type: 'TXXX',
+      data: new Uint8Array([0, 102, 111, 111, 0, 97, 98, 99])
+    };
+    const result = ID3._decodeTextFrame(frame);
+    expect(result.key).to.equal('TXXX');
+    expect(result.info).to.equal('foo');
+    expect(result.data).to.equal('abc');
+  });
 });

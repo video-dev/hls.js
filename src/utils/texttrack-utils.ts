@@ -1,18 +1,17 @@
-
-export function sendAddTrackEvent (track, videoEl) {
-  let event = null;
+export function sendAddTrackEvent (track: TextTrack, videoEl: HTMLMediaElement) {
+  let event: Event;
   try {
-    event = new window.Event('addtrack');
+    event = new Event('addtrack');
   } catch (err) {
     // for IE11
     event = document.createEvent('Event');
     event.initEvent('addtrack', false, false);
   }
-  event.track = track;
+  (event as any).track = track;
   videoEl.dispatchEvent(event);
 }
 
-export function clearCurrentCues (track) {
+export function clearCurrentCues (track: TextTrack) {
   if (track) {
     let trackMode = track.mode;
 

@@ -1,9 +1,7 @@
 import Hls from '../../../src/hls';
 import Event from '../../../src/events';
 import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
-import PlaylistLoader from '../../../src/loader/playlist-loader';
-
-const LevelType = PlaylistLoader.LevelType;
+import { PlaylistLevelType } from '../../../src/types/loader';
 
 function createMockBuffer (buffered) {
   return {
@@ -216,14 +214,14 @@ describe('FragmentTracker', function () {
       fragments.forEach(fragment => {
         loadFragmentAndBuffered(hls, fragment);
       });
-      expect(fragmentTracker.getBufferedFrag(0.0, LevelType.MAIN)).to.equal(fragments[0]);
-      expect(fragmentTracker.getBufferedFrag(0.1, LevelType.MAIN)).to.equal(fragments[0]);
-      expect(fragmentTracker.getBufferedFrag(1.0, LevelType.MAIN)).to.equal(fragments[1]);
-      expect(fragmentTracker.getBufferedFrag(1.1, LevelType.MAIN)).to.equal(fragments[1]);
-      expect(fragmentTracker.getBufferedFrag(2.0, LevelType.MAIN)).to.equal(fragments[2]);
-      expect(fragmentTracker.getBufferedFrag(2.1, LevelType.MAIN)).to.equal(fragments[2]);
-      expect(fragmentTracker.getBufferedFrag(2.9, LevelType.MAIN)).to.equal(fragments[2]);
-      expect(fragmentTracker.getBufferedFrag(3.0, LevelType.MAIN)).to.equal(fragments[2]);
+      expect(fragmentTracker.getBufferedFrag(0.0, PlaylistLevelType.MAIN)).to.equal(fragments[0]);
+      expect(fragmentTracker.getBufferedFrag(0.1, PlaylistLevelType.MAIN)).to.equal(fragments[0]);
+      expect(fragmentTracker.getBufferedFrag(1.0, PlaylistLevelType.MAIN)).to.equal(fragments[1]);
+      expect(fragmentTracker.getBufferedFrag(1.1, PlaylistLevelType.MAIN)).to.equal(fragments[1]);
+      expect(fragmentTracker.getBufferedFrag(2.0, PlaylistLevelType.MAIN)).to.equal(fragments[2]);
+      expect(fragmentTracker.getBufferedFrag(2.1, PlaylistLevelType.MAIN)).to.equal(fragments[2]);
+      expect(fragmentTracker.getBufferedFrag(2.9, PlaylistLevelType.MAIN)).to.equal(fragments[2]);
+      expect(fragmentTracker.getBufferedFrag(3.0, PlaylistLevelType.MAIN)).to.equal(fragments[2]);
     });
     it('should return null if found it, but it is not buffered', function () {
       const fragments = [
@@ -256,10 +254,10 @@ describe('FragmentTracker', function () {
       fragments.forEach(fragment => {
         loadFragment(hls, fragment);
       });
-      expect(fragmentTracker.getBufferedFrag(0, LevelType.MAIN)).to.not.exist;
-      expect(fragmentTracker.getBufferedFrag(1, LevelType.MAIN)).to.not.exist;
-      expect(fragmentTracker.getBufferedFrag(2, LevelType.MAIN)).to.not.exist;
-      expect(fragmentTracker.getBufferedFrag(3, LevelType.MAIN)).to.not.exist;
+      expect(fragmentTracker.getBufferedFrag(0, PlaylistLevelType.MAIN)).to.not.exist;
+      expect(fragmentTracker.getBufferedFrag(1, PlaylistLevelType.MAIN)).to.not.exist;
+      expect(fragmentTracker.getBufferedFrag(2, PlaylistLevelType.MAIN)).to.not.exist;
+      expect(fragmentTracker.getBufferedFrag(3, PlaylistLevelType.MAIN)).to.not.exist;
     });
     it('should return null if anyone does not match the position', function () {
       loadFragmentAndBuffered(hls, createMockFragment({
@@ -270,10 +268,10 @@ describe('FragmentTracker', function () {
         type: 'main'
       }, ['audio', 'video']));
       // not found
-      expect(fragmentTracker.getBufferedFrag(1.1, LevelType.MAIN)).to.not.exist;
+      expect(fragmentTracker.getBufferedFrag(1.1, PlaylistLevelType.MAIN)).to.not.exist;
     });
     it('should return null if fragmentTracker not have any fragments', function () {
-      expect(fragmentTracker.getBufferedFrag(0, LevelType.MAIN)).to.not.exist;
+      expect(fragmentTracker.getBufferedFrag(0, PlaylistLevelType.MAIN)).to.not.exist;
     });
     it('should return null if not found match levelType', function () {
       loadFragmentAndBuffered(hls, createMockFragment({
@@ -281,10 +279,10 @@ describe('FragmentTracker', function () {
         endPTS: 1,
         sn: 1,
         level: 1,
-        type: LevelType.AUDIO // <= level type is not "main"
+        type: PlaylistLevelType.AUDIO // <= level type is not "main"
       }, ['audio', 'video']));
 
-      expect(fragmentTracker.getBufferedFrag(0, LevelType.MAIN)).to.not.exist;
+      expect(fragmentTracker.getBufferedFrag(0, PlaylistLevelType.MAIN)).to.not.exist;
     });
   });
 

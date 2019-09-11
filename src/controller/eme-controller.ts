@@ -9,16 +9,10 @@ import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
+import { EMEControllerConfig } from '../config';
+import { KeySystems, MediaKeyFunc } from '../utils/mediakeys-helper';
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
-
-/**
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
- */
-enum KeySystems {
-  WIDEVINE = 'com.widevine.alpha',
-  PLAYREADY = 'com.microsoft.playready',
-}
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration
@@ -86,12 +80,13 @@ interface MediaKeysListItem {
  * @constructor
  */
 class EMEController extends EventHandler {
-  private _widevineLicenseUrl: string;
-  private _licenseXhrSetup: (xhr: XMLHttpRequest, url: string) => void;
+  private _widevineLicenseUrl?: string;
+  private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
   private _emeEnabled: boolean;
-  private _requestMediaKeySystemAccess: (keySystem: KeySystems, supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>
+  private _requestMediaKeySystemAccess: MediaKeyFunc | null
 
-  private _mediaKeysList: MediaKeysListItem[] = []
+  private _config: EMEControllerConfig;
+  private _mediaKeysList: MediaKeysListItem[] = [];
   private _media: HTMLMediaElement | null = null;
   private _hasSetMediaKeys: boolean = false;
   private _requestLicenseFailureCount: number = 0;
@@ -106,11 +101,12 @@ class EMEController extends EventHandler {
       Event.MEDIA_DETACHED,
       Event.MANIFEST_PARSED
     );
+    this._config = hls.config;
 
-    this._widevineLicenseUrl = hls.config.widevineLicenseUrl;
-    this._licenseXhrSetup = hls.config.licenseXhrSetup;
-    this._emeEnabled = hls.config.emeEnabled;
-    this._requestMediaKeySystemAccess = hls.config.requestMediaKeySystemAccessFunc;
+    this._widevineLicenseUrl = this._config.widevineLicenseUrl;
+    this._licenseXhrSetup = this._config.licenseXhrSetup;
+    this._emeEnabled = this._config.emeEnabled;
+    this._requestMediaKeySystemAccess = this._config.requestMediaKeySystemAccessFunc;
   }
 
   /**
@@ -121,6 +117,9 @@ class EMEController extends EventHandler {
   getLicenseServerUrl (keySystem: KeySystems): string {
     switch (keySystem) {
     case KeySystems.WIDEVINE:
+      if (!this._widevineLicenseUrl) {
+        break;
+      }
       return this._widevineLicenseUrl;
     }
 
