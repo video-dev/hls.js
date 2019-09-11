@@ -897,13 +897,11 @@ interface PACData {
 }
 
 class Cea608Parser {
-  field: number;
   outputs: OutputFilter[];
   channels: Cea608Channel[];
   currChNr: number | null;
   cmdHistory: CmdHistory;
-  constructor (field: number, out1: OutputFilter, out2: OutputFilter, out3: OutputFilter, out4: OutputFilter) {
-    this.field = field || 1;
+  constructor (out1: OutputFilter, out2: OutputFilter, out3: OutputFilter, out4: OutputFilter) {
     this.outputs = [out1, out2];
     this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2), new Cea608Channel(3, out3), new Cea608Channel(4, out4)];
     this.currChNr = -1; // Will be 1 or 2

@@ -17,4 +17,5 @@ export interface MediaPlaylist {
   url?: string;
   lang?: string;
   audioCodec?: string;
+  instreamId?: string;
 }
