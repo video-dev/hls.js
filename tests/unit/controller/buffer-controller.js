@@ -20,6 +20,21 @@ describe('BufferController tests', function () {
     sandbox.restore();
   });
 
+  describe('onBufferFlushing', function () {
+    it('flushes a specific type when provided a type', function () {
+      const spy = sandbox.spy(bufferController, 'flushBuffer');
+      bufferController.onBufferFlushing({ startOffset: 0, endOffset: 10, type: 'video' });
+      expect(spy).to.have.been.calledOnce;
+    });
+
+    it('flushes all source buffers when buffer flush event type is undefined', function () {
+      const spy = sandbox.spy(bufferController, 'flushBuffer');
+
+      bufferController.onBufferFlushing({ startOffset: 0, endOffset: 10 });
+      expect(spy).to.have.been.calledTwice;
+    });
+  });
+
   describe('Live back buffer enforcement', function () {
     let mockMedia;
     let mockSourceBuffer;
@@ -88,7 +103,7 @@ describe('BufferController tests', function () {
       mockMedia.currentTime = 15;
       bufferController.flushLiveBackBuffer();
       expect(removeStub).to.have.been.calledOnce;
-      expect(bufferController.flushBufferCounter).to.be.undefined;
+      expect(bufferController.flushBufferCounter).to.equal(0);
       expect(removeStub).to.have.been.calledWith('video', mockSourceBuffer.video, 0, 5);
     });
 
@@ -106,12 +121,12 @@ describe('BufferController tests', function () {
 
       sandbox.stub(bufferController, 'doAppending');
 
-      bufferController.onSBUpdateEnd();
+      bufferController._onSBUpdateEnd();
 
       expect(flushSpy).to.not.have.been.called;
 
       bufferController.segments = [];
-      bufferController.onSBUpdateEnd();
+      bufferController._onSBUpdateEnd();
 
       expect(flushSpy).to.have.been.calledOnce;
     });
@@ -128,6 +143,32 @@ describe('BufferController tests', function () {
 
     it('initializes with zero expected BUFFER_CODEC events', function () {
       expect(bufferController.bufferCodecEventsExpected).to.equal(0);
+    });
+
+    it('should throw if no media element has been attached', function () {
+      bufferController.createSourceBuffers.restore();
+      bufferController.pendingTracks = { video: {} };
+
+      expect(bufferController.checkPendingTracks).to.throw();
+    });
+
+    it('exposes tracks from buffer controller through BUFFER_CREATED event', function (done) {
+      bufferController.createSourceBuffers.restore();
+
+      let video = document.createElement('video');
+      bufferController.onMediaAttaching({ media: video });
+
+      hls.on(Hls.Events.BUFFER_CREATED, (_, data) => {
+        const tracks = data.tracks;
+        expect(bufferController.pendingTracks).to.not.equal(tracks);
+        expect(bufferController.tracks).to.equal(tracks);
+        done();
+      });
+
+      bufferController.pendingTracks = { video: { codec: 'testing' } };
+      bufferController.checkPendingTracks();
+
+      video = null;
     });
 
     it('expects one bufferCodec event by default', function () {
@@ -165,7 +206,7 @@ describe('BufferController tests', function () {
     });
 
     it('checks pending tracks in onMediaSourceOpen', function () {
-      bufferController.onMediaSourceOpen();
+      bufferController._onMediaSourceOpen();
       expect(checkPendingTracksSpy).to.have.been.calledOnce;
     });
 
@@ -188,7 +229,7 @@ describe('BufferController tests', function () {
       bufferController.mediaSource = { readyState: 'open', removeEventListener: sandbox.stub() };
 
       bufferController.onManifestParsed({ altAudio: true });
-      bufferController.onMediaSourceOpen();
+      bufferController._onMediaSourceOpen();
       bufferController.onBufferCodecs({ audio: {} });
       bufferController.onBufferCodecs({ video: {} });
 

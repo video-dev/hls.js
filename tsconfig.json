@@ -1,18 +1,24 @@
 {
   "compilerOptions": {
-    "sourceMap": true,
-    "allowJs": true,
+    "target": "esnext",
     "module": "commonjs",
-    "target": "ES5",
-    "strict": false
+    "declaration": true,
+    "sourceMap": true,
+    "strict": false,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "lib": [
+      "dom",
+      "es2015",
+    ],
+    "outDir": "./dist/",
   },
   "include": [
-    "demo/**/*",
-    "src/**/*",
-    "tests/**/*"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
+    "dist/**/*",
     "**/*.spec.*"
   ]
 }

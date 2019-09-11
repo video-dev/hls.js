@@ -107,7 +107,7 @@ describe('Demuxer tests', function () {
       expect(obj1.initSegment).to.equal(initSegment, 'initSegment');
       expect(obj1.audioCodec).to.equal(audioCodec, 'audioCodec');
       expect(obj1.videoCodec).to.equal(videoCodec, 'videoCodec');
-      expect(obj1.timeOffset).to.equal(newFrag.startDTS, 'timeOffset');
+      expect(obj1.timeOffset).to.equal(newFrag.startPTS, 'timeOffset');
       expect(obj1.discontinuity).to.be.false;
       expect(obj1.trackSwitch).to.be.false;
       expect(obj1.contiguous).to.be.true;
@@ -142,7 +142,6 @@ describe('Demuxer tests', function () {
       cc: 200,
       sn: 5,
       level: 2,
-      startDTS: undefined,
       start: 1000
     };
     let data = {},

@@ -1,8 +1,8 @@
-/* eslint-disable no-var */
+/* eslint-disable no-var, no-console */
 
 // Browser environment state
 var video;
-var logString;
+var logString = '';
 var hls;
 
 function setupConsoleLogRedirection () {
@@ -18,6 +18,7 @@ function setupConsoleLogRedirection () {
     line.appendChild(text);
     inner.appendChild(line);
 
+    // The empty log line at the beginning comes from a test in `enableLogs`.
     window.logString = logString += a + '\n';
   }
 
