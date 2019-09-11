@@ -148,6 +148,7 @@ export type HlsConfig =
     bufferController: typeof BufferController,
     capLevelController: any, // TODO(typescript-caplevelcontroller): Type once file is done
     fpsController: any, // TODO(typescript-fpscontroller): Type once file is done
+    renderNatively: boolean
   } &
   ABRControllerConfig &
   BufferControllerConfig &
@@ -237,6 +238,7 @@ export const hlsDefaultConfig: HlsConfig = {
   widevineLicenseUrl: void 0, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
+  renderNatively: false,
 
   // Dynamic Modules
   ...timelineConfig(),
