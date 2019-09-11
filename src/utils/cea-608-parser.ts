@@ -863,7 +863,7 @@ class Cea608Channel {
         this.cueStartTime = t;
       } else {
         if (!this.displayedMemory.equals(this.lastOutputScreen)) {
-          this.outputFilter.newCue(this.cueStartTime, t, this.lastOutputScreen);
+          this.outputFilter.newCue(this.cueStartTime!, t, this.lastOutputScreen);
           if (dispatch === true && this.outputFilter.dispatchCue) {
             this.outputFilter.dispatchCue();
           }
@@ -879,7 +879,7 @@ class Cea608Channel {
     if (this.outputFilter) {
       if (!this.displayedMemory.isEmpty()) {
         if (this.outputFilter.newCue) {
-          this.outputFilter.newCue(this.cueStartTime, t, this.displayedMemory);
+          this.outputFilter.newCue(this.cueStartTime!, t, this.displayedMemory);
         }
 
         this.cueStartTime = t;
@@ -900,8 +900,8 @@ class Cea608Parser {
   field: number;
   outputs: OutputFilter[];
   channels: Cea608Channel[];
-  currChNr: number;
-  dataCounters: { 'padding': number; 'char': number; 'cmd': number; 'other': number; };
+  currChNr: number | null;
+  cmdHistory: CmdHistory;
   constructor (field: number, out1: OutputFilter, out2: OutputFilter, out3: OutputFilter, out4: OutputFilter) {
     this.field = field || 1;
     this.outputs = [out1, out2];
@@ -951,7 +951,7 @@ class Cea608Parser {
       }
 
       if (!cmdFound) {
-        charsFound = this.parseChars(a, b);
+        charsFound = this.parseChars(a, b, field);
         if (charsFound) {
           if (this.currChNr && this.currChNr >= 0) {
             if (field === 3 && this.currChNr > 2 || field === 1 && this.currChNr < 3) {
@@ -1031,7 +1031,7 @@ class Cea608Parser {
         channel.ccEOC();
       }
     } else { // a == 0x17 || a == 0x1F
-      channel = this.channels[dataChannel];
+      channel = this.channels[dataChannel!];
       channel.ccTO(b - 0x20);
     }
     setLastCmd(a, b, cmdHistory[field]);
@@ -1070,7 +1070,7 @@ class Cea608Parser {
      */
   parsePAC (a: number, b: number, field: number): boolean {
     let chNr: number | null = null;
-    let row: number | null = null;
+    let row: number;
     const cmdHistory = this.cmdHistory;
 
     let case1 = ((a >= 0x11 && a <= 0x17) || (a >= 0x19 && a <= 0x1F)) && (b >= 0x40 && b <= 0x7F);
@@ -1233,8 +1233,8 @@ class Cea608Parser {
   }
 }
 
-function getChannelNumber (ccData0) {
-  let channel;
+function getChannelNumber (ccData0: number): number | null {
+  let channel: number | null = null;
   if (ccData0 === 0x14) {
     channel = 1;
   } else if (ccData0 === 0x1C) {
@@ -1248,8 +1248,8 @@ function getChannelNumber (ccData0) {
   return channel;
 }
 
-function getDataChannel (ccData1, field) {
-  let dataChannel = null;
+function getDataChannel (ccData1: number, field: number): number | null {
+  let dataChannel: number | null = null;
   if (ccData1 === 0x17) {
     dataChannel = field;
   } else if (ccData1 === 0x1F) {
@@ -1276,7 +1276,14 @@ function hasCmdRepeated (a, b, cmdHistory) {
   return cmdHistory.a === a && cmdHistory.b === b;
 }
 
-function createCmdHistory () {
+type CmdHistory = {
+  [key: number]: {
+    a: number | null,
+    b: number | null
+  }
+};
+
+function createCmdHistory (): CmdHistory {
   return {
     1: {
       a: null,
