@@ -765,8 +765,8 @@ class TSDemuxer implements Demuxer {
             endOfCaptions = true;
 
             if (payloadSize > 16) {
-              let uuidStrArray = [];
-              let userDataPayloadBytes = [];
+              let uuidStrArray: Array<string> = [];
+              let userDataPayloadBytes: Array<number> = [];
 
               for (i = 0; i < 16; i++) {
                 uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
