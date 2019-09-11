@@ -1202,6 +1202,7 @@ function setupConfigEditor() {
   const elPersistence = document.querySelector('#configPersistence');
   elPersistence.addEventListener('change', onConfigPersistenceChanged);
   elPersistence.checked = shouldRestorePersisted;
+  configPersistenceEnabled = shouldRestorePersisted;
 
   updateConfigEditorValue(contents);
 }
