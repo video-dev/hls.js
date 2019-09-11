@@ -136,27 +136,32 @@ class TimelineController extends EventHandler {
   }
 
   createCaptionsTrack (trackName: string) {
+    const { captionsTracks } = this;
+    if (!captionsTracks[trackName]) {
+      if (this.config.renderNatively) {
+        this.createNativeTrack(trackName);
+      } else {
+        this.createNonNativeTrack(trackName);
+      }
+    }
+  }
+
+  createNativeTrack (trackName: string) {
     const { captionsProperties, captionsTracks, media } = this;
     const { label, languageCode } = captionsProperties[trackName];
-    if (!captionsTracks[trackName]) {
-      if (!this.config.renderNatively) {
-        this.createNonNativeTrack(trackName);
-        return;
+    // Enable reuse of existing text track.
+    const existingTrack = this.getExistingTrack(trackName);
+    if (!existingTrack) {
+      const textTrack = this.createTextTrack('captions', label, languageCode);
+      if (textTrack) {
+        // Set a special property on the track so we know it's managed by Hls.js
+        textTrack[trackName] = true;
+        captionsTracks[trackName] = textTrack;
       }
-      // Enable reuse of existing text track.
-      const existingTrack = this.getExistingTrack(trackName);
-      if (!existingTrack) {
-        const textTrack = this.createTextTrack('captions', label, languageCode);
-        if (textTrack) {
-          // Set a special property on the track so we know it's managed by Hls.js
-          textTrack[trackName] = true;
-          captionsTracks[trackName] = textTrack;
-        }
-      } else {
-        captionsTracks[trackName] = existingTrack;
-        clearCurrentCues(captionsTracks[trackName]);
-        sendAddTrackEvent(captionsTracks[trackName], media as HTMLMediaElement);
-      }
+    } else {
+      captionsTracks[trackName] = existingTrack;
+      clearCurrentCues(captionsTracks[trackName]);
+      sendAddTrackEvent(captionsTracks[trackName], media as HTMLMediaElement);
     }
   }
 
