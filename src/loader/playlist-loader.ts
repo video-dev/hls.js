@@ -312,7 +312,7 @@ class PlaylistLoader extends EventHandler {
       // we need to signal this main audio track this could happen with playlists with
       // alt audio rendition in which quality levels (main)
       // contains both audio+video. but with mixed audio track not signaled
-      if (embeddedAudioFound === false && levels[0].audioCodec && !levels[0].attrs.AUDIO) {
+      if (!embeddedAudioFound && levels[0].audioCodec && !levels[0].attrs.AUDIO) {
         logger.log('audio codec signaled in quality level, but no embedded audio track signaled, create one');
         audioTracks.unshift({
           type: 'main',
@@ -444,7 +444,7 @@ class PlaylistLoader extends EventHandler {
     this.hls.trigger(Event.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
-      fatal: context.type === ContextType.MANIFEST,
+      fatal: context.type === PlaylistContextType.MANIFEST,
       url: response.url,
       reason,
       response,
