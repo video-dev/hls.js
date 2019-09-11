@@ -20,9 +20,13 @@ module.exports = {
     'eslint:recommended',
     'standard'
   ],
+  'parser': 'typescript-eslint-parser',
   'parserOptions': {
-    'sourceType': 'module'
+      'sourceType': 'module'
   },
+  'plugins': [
+      'typescript'
+  ],
   'rules': {
     // our basic style rules
     'semi': [
