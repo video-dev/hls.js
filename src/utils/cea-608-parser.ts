@@ -421,7 +421,7 @@ class Row {
  * Keep a CEA-608 screen of 32x15 styled characters
  * @constructor
 */
-class CaptionScreen {
+export class CaptionScreen {
   constructor () {
     this.rows = [];
     for (let i = 0; i < NR_ROWS; i++) {
