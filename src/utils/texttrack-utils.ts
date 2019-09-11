@@ -1,4 +1,3 @@
-
 export function sendAddTrackEvent (track: TextTrack, videoEl: HTMLMediaElement) {
   let event: Event;
   try {
