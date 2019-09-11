@@ -86,6 +86,8 @@ function emitTransmuxComplete (self: any, transmuxResult : TransmuxerResult): vo
   self.postMessage({ event: 'transmuxComplete', data: transmuxResult }, transferable);
 }
 
+// Converts data to a transferable object https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast)
+// in order to minimize message passing overhead
 function convertToTransferable (track: RemuxedTrack): Array<ArrayBuffer> {
   const transferable: Array<ArrayBuffer> = [];
   if (track.data1) {
