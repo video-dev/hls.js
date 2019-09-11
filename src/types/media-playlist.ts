@@ -1,6 +1,6 @@
 export interface AudioGroup {
-  id: string;
-  codec: string;
+  id?: string;
+  codec?: string;
 }
 
 export type MediaPlaylistType = 'AUDIO' | 'VIDEO' | 'SUBTITLES' | 'CLOSED-CAPTIONS';

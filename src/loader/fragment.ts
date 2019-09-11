@@ -3,16 +3,11 @@ import { buildAbsoluteURL } from 'url-toolkit';
 import { logger } from '../utils/logger';
 import LevelKey from './level-key';
 import LoadStats from './load-stats';
+import { PlaylistLevelType } from '../types/loader';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
   VIDEO = 'video',
-}
-
-export enum FragmentTypes {
-  MAIN = 'main',
-  AUDIO = 'audio',
-  SUBTITLE = 'subtitle'
 }
 
 interface ElementaryStreamInfo {
@@ -56,7 +51,7 @@ export default class Fragment {
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
   // A string representing the fragment type
-  public type!: FragmentTypes;
+  public type!: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
   public loader!: any;
   // The level index to which the fragment belongs
@@ -88,7 +83,8 @@ export default class Fragment {
   // A flag indicating whether the segment was downloaded in order to test bitrate, and was not buffered
   public bitrateTest: boolean = false;
   // Total video frames dropped by the transmuxer
-  dropped: number = 0;
+  public dropped: number = 0;
+  public title: string | null = null;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
