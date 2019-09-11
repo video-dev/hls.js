@@ -1,3 +1,4 @@
+import './polyfills/runtime-polyfills';
 import * as URLToolkit from 'url-toolkit';
 
 import {
