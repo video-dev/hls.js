@@ -8,7 +8,7 @@ interface VTTCue extends TextTrackCue {
   position: number
 }
 
-export function newCue (track: TextTrack, startTime: number, endTime: number, captionScreen: CaptionScreen) {
+export function createCues (startTime: number, endTime: number, captionScreen: CaptionScreen) {
   let row: Row;
   // the type data states this is VTTCue, but it can potentially be a TextTrackCue on old browsers
   let cue: VTTCue;

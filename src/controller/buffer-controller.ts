@@ -90,7 +90,7 @@ export default class BufferController extends EventHandler {
 
   onMediaAttaching (data: { media: HTMLMediaElement }) {
     let media = this.media = data.media;
-    if (media) {
+    if (media && MediaSource) {
       let ms = this.mediaSource = new MediaSource();
       // MediaSource listeners are arrow functions with a lexical scope, and do not need to be bound
       ms.addEventListener('sourceopen', this._onMediaSourceOpen);
