@@ -421,7 +421,7 @@ export default class StreamController extends BaseStreamController {
       media.removeEventListener('seeking', this.onvseeking);
       media.removeEventListener('seeked', this.onvseeked);
       media.removeEventListener('ended', this.onvended);
-      this.onvseeking = this.onvseeked = this.onvended = null
+      this.onvseeking = this.onvseeked = this.onvended = null;
     }
     this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
@@ -643,7 +643,7 @@ export default class StreamController extends BaseStreamController {
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
     const stats = frag.stats;
     this.fragPrevious = frag;
-    this.fragLastKbps = Math.round(8 * stats.total / (stats.buffering.end- stats.loading.first));
+    this.fragLastKbps = Math.round(8 * stats.total / (stats.buffering.end - stats.loading.first));
 
     this.log(`Buffered fragment ${frag.sn} of level ${frag.level}. PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}], Buffered: ${TimeRanges.toString(media.buffered)}`);
     this.state = State.IDLE;

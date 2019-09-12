@@ -24,7 +24,9 @@ export default class BufferOperationQueue {
 
   public appendBlocker (type: SourceBufferName) : Promise<{}> {
     let execute;
-    const promise: Promise<{}> = new Promise((resolve, reject) => { execute = resolve; });
+    const promise: Promise<{}> = new Promise((resolve, reject) => {
+      execute = resolve;
+    });
     const operation = {
       execute,
       onComplete: () => {},
@@ -48,7 +50,7 @@ export default class BufferOperationQueue {
         // which do not end with this event must call _onSBUpdateEnd manually
         operation.execute();
       } catch (e) {
-        logger.warn(`[buffer-operation-queue]: Unhandled exception executing the current operation`);
+        logger.warn('[buffer-operation-queue]: Unhandled exception executing the current operation');
         operation.onError(e);
 
         // Only shift the current operation off, otherwise the updateend handler will do this for us

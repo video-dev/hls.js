@@ -35,21 +35,21 @@ describe('BufferOperationQueue tests', function () {
   });
 
   describe('append', function () {
-  it('appends and executes if the queue is empty', function () {
-    const execute = sandbox.spy();
-    const operation: BufferOperation = {
-      execute,
-      onComplete: () => {},
-      onError: () => {}
-    };
+    it('appends and executes if the queue is empty', function () {
+      const execute = sandbox.spy();
+      const operation: BufferOperation = {
+        execute,
+        onComplete: () => {},
+        onError: () => {}
+      };
 
-    queueNames.forEach((name, i) => {
-      operationQueue.append(operation, name);
-      expect(execute, `The ${name} queue operation should have been executed`).to.have.callCount(i + 1);
-      expect(operationQueue.queues[name], `The ${name} queue should have a length of 1`).to.have.length(1);
+      queueNames.forEach((name, i) => {
+        operationQueue.append(operation, name);
+        expect(execute, `The ${name} queue operation should have been executed`).to.have.callCount(i + 1);
+        expect(operationQueue.queues[name], `The ${name} queue should have a length of 1`).to.have.length(1);
+      });
     });
   });
-});
 
   it('appends but does not execute if the queue has at least one operation enqueued', function () {
     queueNames.forEach((name) => {
@@ -93,7 +93,7 @@ describe('BufferOperationQueue tests', function () {
 
     it('should execute the onError callback and shift the operation if it throws an unhandled exception', function () {
       const onError = sandbox.spy();
-      const error = new Error;
+      const error = new Error();
       const operation: BufferOperation = {
         execute: () => {
           throw error;

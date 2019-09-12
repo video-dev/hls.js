@@ -73,7 +73,7 @@ class PassThroughRemuxer implements Remuxer {
   // TODO: utilize accurateTimeOffset
   remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, accurateTimeOffset): RemuxerResult {
     let { initPTS, lastEndDTS } = this;
-    const result: RemuxerResult =  {
+    const result: RemuxerResult = {
       audio: undefined,
       video: undefined,
       text: textTrack,
@@ -98,8 +98,8 @@ class PassThroughRemuxer implements Remuxer {
     const initSegment: InitSegmentData = {};
     let initData = this.initData;
     if (!initData || !initData.length) {
-        this.generateInitSegment(data);
-        initData = this.initData;
+      this.generateInitSegment(data);
+      initData = this.initData;
     }
     if (!initData.length) {
       // We can't remux if the initSegment could not be generated
@@ -107,12 +107,12 @@ class PassThroughRemuxer implements Remuxer {
       return result;
     }
     if (this.emitInitSegment) {
-        initSegment.tracks = this.initTracks;
-        this.emitInitSegment = false;
+      initSegment.tracks = this.initTracks;
+      this.emitInitSegment = false;
     }
 
     if (!Number.isFinite(initPTS as number)) {
-        this.initPTS = initSegment.initPTS = initPTS = computeInitPTS(initData, data, timeOffset);
+      this.initPTS = initSegment.initPTS = initPTS = computeInitPTS(initData, data, timeOffset);
     }
 
     const duration = getDuration(data, initData);
@@ -136,16 +136,16 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     const track: RemuxedTrack = {
-        data1: data,
-        startPTS: startDTS,
-        startDTS,
-        endPTS: endDTS,
-        endDTS,
-        type,
-        hasAudio,
-        hasVideo,
-        nb: 1,
-        dropped: 0
+      data1: data,
+      startPTS: startDTS,
+      startDTS,
+      endPTS: endDTS,
+      endDTS,
+      type,
+      hasAudio,
+      hasVideo,
+      nb: 1,
+      dropped: 0
     };
 
     result.audio = track.type === 'audio' ? track : undefined;

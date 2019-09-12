@@ -14,16 +14,16 @@ export class ChunkMetadata {
     public size: number;
 
     public transmuxing: HlsChunkPerformanceTiming = { start: 0, executeStart: 0, executeEnd: 0, end: 0 };
-    public buffering:  { [key in SourceBufferName]: HlsChunkPerformanceTiming } = {
-        audio: { start: 0, executeStart: 0, executeEnd: 0, end: 0 },
-        video: { start: 0, executeStart: 0, executeEnd: 0, end: 0 },
-        audiovideo: { start: 0, executeStart: 0, executeEnd: 0, end: 0 }
+    public buffering: { [key in SourceBufferName]: HlsChunkPerformanceTiming } = {
+      audio: { start: 0, executeStart: 0, executeEnd: 0, end: 0 },
+      video: { start: 0, executeStart: 0, executeEnd: 0, end: 0 },
+      audiovideo: { start: 0, executeStart: 0, executeEnd: 0, end: 0 }
     };
 
     constructor (level, sn, id, size = 0) {
-        this.level = level;
-        this.sn = sn;
-        this.id = id;
-        this.size = size;
+      this.level = level;
+      this.sn = sn;
+      this.id = id;
+      this.size = size;
     }
 }

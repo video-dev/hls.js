@@ -7,11 +7,9 @@ import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
-import Fragment from '../loader/fragment';
-
+import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import { TrackSet } from '../types/track';
 import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
-import { ElementaryStreamTypes } from '../loader/fragment';
 import BufferOperationQueue from './buffer-operation-queue';
 
 import {
@@ -21,7 +19,6 @@ import {
   SourceBufferName,
   SourceBufferListener
 } from '../types/buffer';
-import { ChunkMetadata } from '../types/transmuxer';
 
 const MediaSource = getMediaSource();
 
@@ -32,7 +29,7 @@ export default class BufferController extends EventHandler {
   // the target duration of the current media playlist
   private _levelTargetDuration: number | null = null;
   // current stream state: true - for live broadcast, false - for VoD content
-  private _live: boolean =  false;
+  private _live: boolean = false;
   // cache the self generated object url to detect hijack of video tag
   private _objectUrl: string | null = null;
   // A queue of buffer operations which require the SourceBuffer to not be updating upon execution
@@ -263,7 +260,9 @@ export default class BufferController extends EventHandler {
       onComplete: () => {
         this.hls.trigger(Events.BUFFER_FLUSHED);
       },
-      onError: (e) => { logger.warn(`[buffer-controller]: Failed to remove from ${type} SourceBuffer`, e); }
+      onError: (e) => {
+        logger.warn(`[buffer-controller]: Failed to remove from ${type} SourceBuffer`, e);
+      }
     });
 
     if (data.type) {
@@ -286,7 +285,7 @@ export default class BufferController extends EventHandler {
     }
     console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
 
-    logger.log(`[buffer-controller]: All fragment chunks received, enqueueing operation to signal fragment buffered`);
+    logger.log('[buffer-controller]: All fragment chunks received, enqueueing operation to signal fragment buffered');
     const onUnblocked = () => {
       frag.stats.buffering.end = window.performance.now();
       this.hls.trigger(Events.FRAG_BUFFERED, { frag, stats: frag.stats, id: frag.type });
@@ -318,7 +317,7 @@ export default class BufferController extends EventHandler {
       // Allow this to throw and be caught by the enqueueing function
       mediaSource.endOfStream();
     };
-    logger.log(`[buffer-controller: End of stream signalled, enqueuing end of stream operation`);
+    logger.log('[buffer-controller: End of stream signalled, enqueuing end of stream operation');
     this.blockBuffers(endStream);
   }
 
@@ -330,7 +329,7 @@ export default class BufferController extends EventHandler {
     this._live = details.live;
 
     const levelDuration = details.totalduration + details.fragments[0].start;
-    logger.log(`[buffer-controller]: Duration update required; enqueueing duration change operation`);
+    logger.log('[buffer-controller]: Duration update required; enqueueing duration change operation');
     if (this.getSourceBufferTypes().length) {
       this.blockBuffers(this.updateMediaElementDuration.bind(this, levelDuration));
     } else {
@@ -521,7 +520,7 @@ export default class BufferController extends EventHandler {
 
     operation.onComplete();
     operationQueue.shiftAndExecuteNext(type);
-  };
+  }
 
   private _onSBUpdateError (type: SourceBufferName, event: Event) {
     logger.error(`[buffer-controller]: ${type} SourceBuffer error`, event);
@@ -596,7 +595,7 @@ export default class BufferController extends EventHandler {
   // upon completion, since we already do it here
   private blockBuffers (onUnblocked: Function, buffers: Array<SourceBufferName> = this.getSourceBufferTypes()) {
     if (!buffers.length) {
-      logger.log(`[buffer-controller]: Blocking operation requested, but no SourceBuffers exist`);
+      logger.log('[buffer-controller]: Blocking operation requested, but no SourceBuffers exist');
       onUnblocked();
       return;
     }
@@ -615,7 +614,7 @@ export default class BufferController extends EventHandler {
         if (!sb || !sb.updating) {
           operationQueue.shiftAndExecuteNext(type);
         }
-      })
+      });
     });
   }
 
@@ -639,7 +638,7 @@ export default class BufferController extends EventHandler {
       return;
     }
     this.listeners[type].forEach(l => {
-     buffer.removeEventListener(l.event, l.listener);
+      buffer.removeEventListener(l.event, l.listener);
     });
   }
 }

@@ -2,11 +2,11 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import Fragment from './fragment';
 import {
-    Loader,
-    LoaderConfiguration,
-    FragmentLoaderContext,
-    LoaderContext,
-    LoaderCallbacks
+  Loader,
+  LoaderConfiguration,
+  FragmentLoaderContext,
+  LoaderContext,
+  LoaderCallbacks
 } from '../types/loader';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 14); // 16kb
@@ -65,52 +65,52 @@ export default class FragmentLoader {
         return;
       }
       const callbacks: LoaderCallbacks<FragmentLoaderContext> = {
-          onSuccess: (response, stats, context, networkDetails) => {
-              this._resetLoader(frag);
-              resolve({
-                  payload: response.data as ArrayBuffer,
-                  networkDetails
-              });
-          },
-          onError: (response, context, networkDetails) => {
-              this._resetLoader(frag);
-              reject(new LoadError({
-                  type: ErrorTypes.NETWORK_ERROR,
-                  details: ErrorDetails.FRAG_LOAD_ERROR,
-                  fatal: false,
-                  frag,
-                  response,
-                  networkDetails
-              }));
-          },
-          onAbort: (stats, context, networkDetails) => {
-            this._resetLoader(frag);
-              reject(new LoadError({
-                  type: ErrorTypes.NETWORK_ERROR,
-                  details: ErrorDetails.INTERNAL_ABORTED,
-                  fatal: false,
-                  frag,
-                  networkDetails
-              }));
-          },
-          onTimeout: (response, context, networkDetails) => {
-              this._resetLoader(frag);
-              reject(new LoadError({
-                  type: ErrorTypes.NETWORK_ERROR,
-                  details: ErrorDetails.FRAG_LOAD_TIMEOUT,
-                  fatal: false,
-                  frag,
-                  networkDetails
-              }));
-          },
-          onProgress: (stats, context, data, networkDetails) => {
-            if (onProgress) {
-              onProgress({
-                payload: data as ArrayBuffer,
-                networkDetails
-              });
-            }
+        onSuccess: (response, stats, context, networkDetails) => {
+          this._resetLoader(frag);
+          resolve({
+            payload: response.data as ArrayBuffer,
+            networkDetails
+          });
+        },
+        onError: (response, context, networkDetails) => {
+          this._resetLoader(frag);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.FRAG_LOAD_ERROR,
+            fatal: false,
+            frag,
+            response,
+            networkDetails
+          }));
+        },
+        onAbort: (stats, context, networkDetails) => {
+          this._resetLoader(frag);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.INTERNAL_ABORTED,
+            fatal: false,
+            frag,
+            networkDetails
+          }));
+        },
+        onTimeout: (response, context, networkDetails) => {
+          this._resetLoader(frag);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.FRAG_LOAD_TIMEOUT,
+            fatal: false,
+            frag,
+            networkDetails
+          }));
+        },
+        onProgress: (stats, context, data, networkDetails) => {
+          if (onProgress) {
+            onProgress({
+              payload: data as ArrayBuffer,
+              networkDetails
+            });
           }
+        }
       };
       // Assign frag stats to the loader's stats reference
       frag.stats = loader.stats;

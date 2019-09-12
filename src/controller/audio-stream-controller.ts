@@ -90,52 +90,52 @@ class AudioStreamController extends BaseStreamController {
     const { media } = this;
 
     switch (this.state) {
-      case State.ERROR:
-        // don't do anything in error state to avoid breaking further ...
-        break;
-      case State.PAUSED:
-        // TODO: Remove useless PAUSED state
-        // don't do anything in paused state either ...
-        break;
-      case State.STARTING:
-        this.state = State.WAITING_TRACK;
-        this.loadedmetadata = false;
-        break;
-      case State.IDLE:
-        this.doTickIdle();
-        break;
-      case State.WAITING_TRACK: {
-        const {levels, trackId} = this;
-        if (levels && levels[trackId] && levels[trackId].details) {
-          // check if playlist is already loaded
-          this.state = State.WAITING_INIT_PTS;
-        }
-        break;
+    case State.ERROR:
+      // don't do anything in error state to avoid breaking further ...
+      break;
+    case State.PAUSED:
+      // TODO: Remove useless PAUSED state
+      // don't do anything in paused state either ...
+      break;
+    case State.STARTING:
+      this.state = State.WAITING_TRACK;
+      this.loadedmetadata = false;
+      break;
+    case State.IDLE:
+      this.doTickIdle();
+      break;
+    case State.WAITING_TRACK: {
+      const { levels, trackId } = this;
+      if (levels && levels[trackId] && levels[trackId].details) {
+        // check if playlist is already loaded
+        this.state = State.WAITING_INIT_PTS;
       }
-      case State.FRAG_LOADING_WAITING_RETRY:
-        const now = performance.now();
-        const retryDate = this.retryDate;
-        const isSeeking = media && media.seeking;
-        // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-        if (!retryDate || (now >= retryDate) || isSeeking) {
-          this.log('RetryDate reached, switch back to IDLE state');
-          this.state = State.IDLE;
-        }
-        break;
-      case State.WAITING_INIT_PTS:
-        const videoTrackCC = this.videoTrackCC;
-        if (Number.isFinite(this.initPTS[videoTrackCC])) {
-          this.state = State.IDLE;
-        }
-        break;
-      case State.STOPPED:
-      case State.FRAG_LOADING:
-      case State.PARSING:
-      case State.PARSED:
-      case State.ENDED:
-        break;
-      default:
-        break;
+      break;
+    }
+    case State.FRAG_LOADING_WAITING_RETRY:
+      const now = performance.now();
+      const retryDate = this.retryDate;
+      const isSeeking = media && media.seeking;
+      // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
+      if (!retryDate || (now >= retryDate) || isSeeking) {
+        this.log('RetryDate reached, switch back to IDLE state');
+        this.state = State.IDLE;
+      }
+      break;
+    case State.WAITING_INIT_PTS:
+      const videoTrackCC = this.videoTrackCC;
+      if (Number.isFinite(this.initPTS[videoTrackCC])) {
+        this.state = State.IDLE;
+      }
+      break;
+    case State.STOPPED:
+    case State.FRAG_LOADING:
+    case State.PARSING:
+    case State.PARSED:
+    case State.ENDED:
+      break;
+    default:
+      break;
     }
 
     this.onTickEnd();
@@ -157,7 +157,7 @@ class AudioStreamController extends BaseStreamController {
     this.lastCurrentTime = media.currentTime;
   }
 
-  private doTickIdle() {
+  private doTickIdle () {
     const { hls, levels, media, trackId } = this;
 
     const config = hls.config;
@@ -233,7 +233,7 @@ class AudioStreamController extends BaseStreamController {
     if (frag.encrypted) {
       this.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
       this.state = State.KEY_LOADING;
-      hls.trigger(Event.KEY_LOADING, {frag: frag});
+      hls.trigger(Event.KEY_LOADING, { frag: frag });
     } else {
       this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferInfo.end.toFixed(3)}`);
       this.loadFragment(frag);
@@ -282,7 +282,7 @@ class AudioStreamController extends BaseStreamController {
     const { fragCurrent, transmuxer } = this;
 
     if (fragCurrent && fragCurrent.loader) {
-     fragCurrent.loader.abort();
+      fragCurrent.loader.abort();
     }
     this.fragCurrent = null;
     // destroy useless transmuxer when switching audio to main
@@ -309,7 +309,7 @@ class AudioStreamController extends BaseStreamController {
 
   onAudioTrackLoaded (data: { details: LevelDetails, id: number }) {
     const { levels } = this;
-    const { details: newDetails, id: trackId, } = data;
+    const { details: newDetails, id: trackId } = data;
     if (!levels) {
       this.warn(`Audio tracks were reset while loading level ${trackId}`);
       return;

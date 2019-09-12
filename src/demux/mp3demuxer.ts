@@ -4,7 +4,7 @@
 import ID3 from '../demux/id3';
 import { logger } from '../utils/logger';
 import MpegAudio from './mpegaudio';
-import {DemuxerResult, Demuxer, DemuxedTrack} from '../types/demuxer';
+import { DemuxerResult, Demuxer, DemuxedTrack } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 
@@ -68,7 +68,7 @@ class MP3Demuxer implements Demuxer {
     const id3Track = this._id3Track;
     const timestamp = ID3.getTimeStamp(id3Data);
     const length = data.length;
-    
+
     if (this.initPTS === null) {
       this.initPTS = timestamp ? 90 * timestamp : timeOffset * 90000;
     }
@@ -125,11 +125,11 @@ class MP3Demuxer implements Demuxer {
     if (this.cachedData) {
       this.demux(this.cachedData, 0);
     }
-    
+
     this.frameIndex = 0;
     this.initPTS = null;
     this.cachedData = new Uint8Array();
-    
+
     return {
       audioTrack: this._audioTrack,
       avcTrack: dummyTrack,

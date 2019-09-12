@@ -105,7 +105,7 @@ export default class Decrypter {
     return new Uint8Array(result);
   }
 
-  public webCryptoDecrypt (data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): Promise<ArrayBuffer>  {
+  public webCryptoDecrypt (data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): Promise<ArrayBuffer> {
     const subtle = this.subtle;
     if (this.key !== key || !this.fastAesKey) {
       this.key = key;
@@ -118,20 +118,19 @@ export default class Decrypter {
         return crypto.decrypt(data.buffer, aesKey)
           .catch((err) => {
             return this.onWebCryptoError(err, data, key, iv);
-          })
+          });
       })
       .catch((err) => {
         return this.onWebCryptoError(err, data, key, iv);
       });
   }
 
-  private onWebCryptoError (err, data, key, iv)  {
+  private onWebCryptoError (err, data, key, iv) {
     logger.warn('[decrypter.ts]: WebCrypto Error, disable WebCrypto API:', err);
     this.config.enableSoftwareAES = true;
     this.logEnabled = true;
     return this.softwareDecrypt(data, key, iv);
   }
-
 
   private getValidChunk (data: Uint8Array) : Uint8Array {
     let currentChunk = data;

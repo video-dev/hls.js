@@ -29,12 +29,11 @@ class MockSourceBuffer extends EventTarget {
   public appendBuffer = sandbox.stub();
   public remove = sandbox.stub();
 
-
-  public buffered =  {
-    start() {
+  public buffered = {
+    start () {
       return this._start;
     },
-    end() {
+    end () {
       return this._end;
     },
     length: 1,
@@ -107,7 +106,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       currentQueue.push(currentOperation, nextOperation);
       bufferController.sourceBuffer[name].dispatchEvent(new Event('updateend'));
       expect(currentOnComplete, 'onComplete should have been called on the current operation').to.have.callCount(i + 1);
-      expect(shiftAndExecuteNextSpy, `The queue should have been cycled`).to.have.callCount(i + 1);
+      expect(shiftAndExecuteNextSpy, 'The queue should have been cycled').to.have.callCount(i + 1);
     });
   });
 
@@ -128,7 +127,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       expect(onError, 'onError should be called with the error event').to.have.been.calledWith(errorEvent);
       expect(triggerSpy, 'ERROR should have been triggered in response to the SourceBuffer error')
         .to.have.been.calledWith(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false });
-      expect(shiftAndExecuteNextSpy, `The queue should not have been cycled`).to.have.not.been.called;
+      expect(shiftAndExecuteNextSpy, 'The queue should not have been cycled').to.have.not.been.called;
     });
   });
 
@@ -150,14 +149,14 @@ describe('BufferController SourceBuffer operation queueing', function () {
         };
 
         bufferController.onBufferAppending(data);
-        expect(queueAppendSpy, `The append operation should have been enqueued`).to.have.callCount(i + 1);
+        expect(queueAppendSpy, 'The append operation should have been enqueued').to.have.callCount(i + 1);
 
         buffer.dispatchEvent(new Event('updateend'));
         expect(buffer.ended, `The ${name} buffer should not be marked as true if an append occurred`).to.be.false;
-        expect(buffer.appendBuffer, `appendBuffer should have been called with the remuxed data`).to.have.been.calledWith(segmentData);
-        expect(triggerSpy, `BUFFER_APPENDED should be triggered upon completion of the operation`)
+        expect(buffer.appendBuffer, 'appendBuffer should have been called with the remuxed data').to.have.been.calledWith(segmentData);
+        expect(triggerSpy, 'BUFFER_APPENDED should be triggered upon completion of the operation')
           .to.have.been.calledWith(Events.BUFFER_APPENDED, { parent: 'main', timeRanges: { audio: buffers['audio'].buffered, video: buffers['video'].buffered }, chunkMeta });
-        expect(shiftAndExecuteNextSpy, `The queue should have been cycled`).to.have.callCount(i + 1);
+        expect(shiftAndExecuteNextSpy, 'The queue should have been cycled').to.have.callCount(i + 1);
       });
     });
 
@@ -172,10 +171,10 @@ describe('BufferController SourceBuffer operation queueing', function () {
           chunkMeta: new ChunkMetadata(0, 0, 0, 0)
         });
 
-        expect(queueAppendSpy, `The append operation should have been enqueued`).to.have.callCount(i + 1);
-        expect(shiftAndExecuteNextSpy, `The queue should have been cycled`).to.have.callCount(i + 1);
+        expect(queueAppendSpy, 'The append operation should have been enqueued').to.have.callCount(i + 1);
+        expect(shiftAndExecuteNextSpy, 'The queue should have been cycled').to.have.callCount(i + 1);
       });
-      expect(triggerSpy, `No event should have been triggered`).to.have.not.been.called;
+      expect(triggerSpy, 'No event should have been triggered').to.have.not.been.called;
     });
   });
 
@@ -202,16 +201,16 @@ describe('BufferController SourceBuffer operation queueing', function () {
           resolve();
         });
       })
-      .then(() => {
-        expect(shiftAndExecuteNextSpy, `The queues should have been cycled`).to.have.been.calledTwice;
-      });
+        .then(() => {
+          expect(shiftAndExecuteNextSpy, 'The queues should have been cycled').to.have.been.calledTwice;
+        });
     });
   });
 
   describe('onBufferFlushing', function () {
     let queueAppendSpy;
     beforeEach(function () {
-    queueAppendSpy = sandbox.spy(operationQueue, 'append');
+      queueAppendSpy = sandbox.spy(operationQueue, 'append');
       queueNames.forEach(name => {
         const sb = bufferController.sourceBuffer[name];
         sb.setBuffered(0, 10);
@@ -224,16 +223,16 @@ describe('BufferController SourceBuffer operation queueing', function () {
         endOffset: 10
       });
 
-      expect(queueAppendSpy, `A remove operation should have been appended to each queue`).to.have.been.calledTwice;
+      expect(queueAppendSpy, 'A remove operation should have been appended to each queue').to.have.been.calledTwice;
       queueNames.forEach((name, i) => {
         const buffer = bufferController.sourceBuffer[name];
         expect(buffer.remove, `Remove should have been called once on the ${name} SourceBuffer`).to.have.been.calledOnce;
-        expect(buffer.remove, `Remove should have been called with the expected range`).to.have.been.calledWith(0, 10);
+        expect(buffer.remove, 'Remove should have been called with the expected range').to.have.been.calledWith(0, 10);
 
         buffer.dispatchEvent(new Event('updateend'));
-        expect(triggerSpy, `The BUFFER_FLUSHED event should be called once per buffer`).to.have.callCount(i + 1);
-        expect(triggerSpy, `BUFFER_FLUSHED should be the only event fired`).to.have.been.calledWith(Events.BUFFER_FLUSHED);
-        expect(shiftAndExecuteNextSpy, `The queue should have been cycled`).to.have.callCount(i + 1);
+        expect(triggerSpy, 'The BUFFER_FLUSHED event should be called once per buffer').to.have.callCount(i + 1);
+        expect(triggerSpy, 'BUFFER_FLUSHED should be the only event fired').to.have.been.calledWith(Events.BUFFER_FLUSHED);
+        expect(shiftAndExecuteNextSpy, 'The queue should have been cycled').to.have.callCount(i + 1);
       });
     });
 
@@ -244,8 +243,8 @@ describe('BufferController SourceBuffer operation queueing', function () {
         endOffset: Infinity
       });
 
-      expect(queueAppendSpy, `Two remove operations should have been appended`).to.have.been.calledTwice;
-      expect(shiftAndExecuteNextSpy, `The queues should have been cycled`).to.have.callCount(2);
+      expect(queueAppendSpy, 'Two remove operations should have been appended').to.have.been.calledTwice;
+      expect(shiftAndExecuteNextSpy, 'The queues should have been cycled').to.have.callCount(2);
     });
 
     it('dequeues the remove operation if the requested remove range is not valid', function () {
@@ -255,13 +254,13 @@ describe('BufferController SourceBuffer operation queueing', function () {
         endOffset: 9000
       });
 
-      expect(queueAppendSpy, `Four remove operations should have been appended`).to.have.callCount(2);
-      expect(shiftAndExecuteNextSpy, `The queues should have been cycled`).to.have.callCount(2);
+      expect(queueAppendSpy, 'Four remove operations should have been appended').to.have.callCount(2);
+      expect(shiftAndExecuteNextSpy, 'The queues should have been cycled').to.have.callCount(2);
       queueNames.forEach(name => {
         const buffer = bufferController.sourceBuffer[name];
         expect(buffer.remove, `Remove should not have been called on the ${name} buffer`).to.have.not.been.called;
       });
-      expect(triggerSpy, `No event should have been triggered`).to.have.not.been.called;
+      expect(triggerSpy, 'No event should have been triggered').to.have.not.been.called;
     });
   });
 
@@ -282,13 +281,13 @@ describe('BufferController SourceBuffer operation queueing', function () {
     it('exits early if no media is defined', function () {
       delete bufferController.media;
       bufferController.flushLiveBackBuffer();
-      expect(bufferFlushingSpy, `onBufferFlushing should not have been called`).to.have.not.been.called;
+      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
     });
 
     it('exits early if the stream is not live', function () {
       bufferController._live = false;
       bufferController.flushLiveBackBuffer();
-      expect(bufferFlushingSpy, `onBufferFlushing should not have been called`).to.have.not.been.called;
+      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
     });
 
     it('exits early if the liveBackBufferLength config is not a finite number, or less than 0', function () {
@@ -299,7 +298,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       hls.config.liveBackBufferLength = Infinity;
       bufferController.flushLiveBackBuffer();
 
-      expect(bufferFlushingSpy, `onBufferFlushing should not have been called`).to.have.not.been.called;
+      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
     });
 
     it('should execute a remove operation if flushing a valid backBuffer range', function () {
@@ -326,9 +325,8 @@ describe('BufferController SourceBuffer operation queueing', function () {
         buffer.setBuffered(10, 30);
       });
       bufferController.flushLiveBackBuffer();
-      expect(bufferFlushingSpy, `onBufferFlushing should not have been called`).to.have.not.been.called;
+      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
     });
-
 
     it('does not remove if the buffer does not exist', function () {
       queueNames.forEach(name => {
@@ -340,7 +338,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       bufferController.sourceBuffer = {};
       bufferController.flushLiveBackBuffer();
 
-      expect(bufferFlushingSpy, `onBufferFlushing should not have been called`).to.have.not.been.called;
+      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
     });
   });
 
@@ -368,7 +366,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     it('updates class properties based on level data', function () {
       bufferController.onLevelUpdated(data);
       expect(bufferController._levelTargetDuration, '_levelTargetDuration').to.equal(6);
-      expect(bufferController._live, `_live`).to.be.true;
+      expect(bufferController._live, '_live').to.be.true;
 
       // It prefers averagetargetduration, but falls back to targetduration
       delete data.details.averagetargetduration;
@@ -411,4 +409,3 @@ describe('BufferController SourceBuffer operation queueing', function () {
     });
   });
 });
-

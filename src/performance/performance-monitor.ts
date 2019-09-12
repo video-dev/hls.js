@@ -23,7 +23,6 @@ function logFragStats (frag: Fragment) {
   const tParse = stats.parsing.end - stats.parsing.start;
   const tTotal = stats.buffering.end - stats.loading.start;
 
-
   logger.log(`[performance-monitor]: Stats for fragment ${frag.sn} of level ${frag.level}:
         Size:                       ${((stats.total / 1024)).toFixed(3)} kB
         Chunk Count:                ${stats.chunkCount}

@@ -12,13 +12,13 @@ import ChunkCache from '../demux/chunk-cache';
 const { fetch, AbortController, ReadableStream, Request, Headers, performance } = window as any;
 
 export function fetchSupported () {
-    if (fetch && AbortController && ReadableStream && Request) {
-        try {
-            new ReadableStream({}); // eslint-disable-line no-new
-            return true;
-        } catch (e) { /* noop */ }
-    }
-    return false;
+  if (fetch && AbortController && ReadableStream && Request) {
+    try {
+      new ReadableStream({}); // eslint-disable-line no-new
+      return true;
+    } catch (e) { /* noop */ }
+  }
+  return false;
 }
 
 class
@@ -44,8 +44,8 @@ FetchLoader implements Loader<LoaderContext> {
   }
 
   abortInternal (): void {
-      this.stats.aborted = true;
-      this.controller.abort();
+    this.stats.aborted = true;
+    this.controller.abort();
   }
 
   abort (): void {
@@ -114,11 +114,11 @@ FetchLoader implements Loader<LoaderContext> {
     });
   }
 
-  getResponseHeader(name: string): string | null {
+  getResponseHeader (name: string): string | null {
     if (this.response) {
       try {
         return this.response.headers.get(name);
-      } catch (error) {/* Could not get header */}
+      } catch (error) { /* Could not get header */ }
     }
     return null;
   }
@@ -155,7 +155,7 @@ FetchLoader implements Loader<LoaderContext> {
           }
         }
         pump();
-      }).catch(() => {/* aborted */});
+      }).catch(() => { /* aborted */ });
     };
 
     pump();
@@ -167,7 +167,7 @@ function getRequestParameters (context: LoaderContext, signal): any {
     method: 'GET',
     mode: 'cors',
     credentials: 'same-origin',
-    signal,
+    signal
   };
 
   if (context.rangeEnd) {

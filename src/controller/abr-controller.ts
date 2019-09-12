@@ -69,7 +69,7 @@ class AbrController extends EventHandler {
     }
   }
 
-    /*
+  /*
       This method monitors the download rate of the current fragment, and will downswitch if that fragment will not load
       quickly enough to prevent underbuffering
       TODO: Can we enhance this method when progressively streaming?
@@ -147,7 +147,7 @@ class AbrController extends EventHandler {
     if (Number.isFinite(bwEstimate)) {
       bwEstimate = (bwEstimate / 1024).toFixed(3);
     } else {
-      bwEstimate = 'Unknown'
+      bwEstimate = 'Unknown';
     }
     logger.warn(`Fragment ${frag.sn} of level ${frag.level} is loading too slowly and will cause an underbuffer; aborting and switching to level ${nextLoadLevel}
       Current BW estimate: ${bwEstimate} Kb/s
@@ -340,7 +340,5 @@ class AbrController extends EventHandler {
     this._nextAutoLevel = nextLevel;
   }
 }
-
-
 
 export default AbrController;

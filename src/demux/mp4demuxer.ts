@@ -53,10 +53,10 @@ class MP4Demuxer implements Demuxer {
     this.remainderData = null;
 
     return {
-        audioTrack: dummyTrack,
-        avcTrack,
-        id3Track: dummyTrack,
-        textTrack: dummyTrack
+      audioTrack: dummyTrack,
+      avcTrack,
+      id3Track: dummyTrack,
+      textTrack: dummyTrack
     };
   }
 

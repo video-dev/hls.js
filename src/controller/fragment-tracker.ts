@@ -208,7 +208,7 @@ export class FragmentTracker extends EventHandler {
     return state;
   }
 
-  isTimeBuffered (startPTS: number , endPTS: number , timeRange: TimeRanges): boolean {
+  isTimeBuffered (startPTS: number, endPTS: number, timeRange: TimeRanges): boolean {
     let startTime;
     let endTime;
     for (let i = 0; i < timeRange.length; i++) {
