@@ -33,7 +33,6 @@ class TimelineController extends EventHandler {
       Event.MANIFEST_LOADING,
       Event.MANIFEST_LOADED,
       Event.FRAG_LOADED,
-      Event.LEVEL_SWITCHING,
       Event.INIT_PTS_FOUND,
       Event.FRAG_PARSING_INIT_SEGMENT,
       Event.SUBTITLE_TRACKS_CLEARED
