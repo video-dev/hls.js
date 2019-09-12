@@ -268,7 +268,7 @@ export function getProgramDateTimeAtEndOfLastEncodedFragment (levelDetails: Leve
     const encodedFragments = levelDetails.fragments.filter((fragment) => !fragment.prefetch);
     const lastEncodedFrag = encodedFragments[encodedFragments.length - 1];
     if (Number.isFinite(<number>lastEncodedFrag.programDateTime)) {
-      return <number>lastEncodedFrag.programDateTime + lastEncodedFrag.duration * 1000;
+      return <number > lastEncodedFrag.programDateTime + lastEncodedFrag.duration * 1000;
     }
   }
   return null;

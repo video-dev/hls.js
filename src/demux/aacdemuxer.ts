@@ -4,7 +4,7 @@
 import * as ADTS from './adts';
 import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
-import {DemuxerResult, Demuxer, DemuxedTrack} from '../types/demuxer';
+import { DemuxerResult, Demuxer, DemuxedTrack } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 
@@ -17,7 +17,7 @@ class AACDemuxer implements Demuxer {
   private cachedData: Uint8Array = new Uint8Array();
   private initPTS: number | null = null;
   static readonly minProbeByteLength: number = 9;
-  
+
   constructor (observer, config) {
     this.observer = observer;
     this.config = config;
@@ -82,13 +82,13 @@ class AACDemuxer implements Demuxer {
     if (this.initPTS === null) {
       this.initPTS = Number.isFinite(timestamp) ? timestamp * 90 : timeOffset * 90000;
     }
-    
+
     if (id3Data.length) {
       id3Track.samples.push({ pts: this.initPTS, dts: this.initPTS, data: id3Data });
     }
-    
+
     pts = this.initPTS;
-    
+
     // Iteratively parse data for ADTS Headers and ID3 headers
     while (offset < length) {
       //  Only begin parsing if able.
@@ -117,8 +117,8 @@ class AACDemuxer implements Demuxer {
       }
       // At end of fragment, if there is remaining data, append everything since last useable data to cache.
       if (offset === length && lastDataIndex !== length) {
-          let partialData = data.slice(lastDataIndex);
-          this.cachedData = appendUint8Array(this.cachedData, partialData);
+        let partialData = data.slice(lastDataIndex);
+        this.cachedData = appendUint8Array(this.cachedData, partialData);
       }
     }
 
@@ -139,11 +139,11 @@ class AACDemuxer implements Demuxer {
     if (this.cachedData) {
       this.demux(this.cachedData, 0);
     }
-    
+
     this.frameIndex = 0;
     this.cachedData = new Uint8Array();
     this.initPTS = null;
-    
+
     return {
       audioTrack: this._audioTrack,
       avcTrack: dummyTrack,

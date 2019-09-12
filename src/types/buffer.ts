@@ -25,7 +25,7 @@ export interface SourceBufferListener {
   listener: EventListener
 }
 
-export type BufferedUtilArray = Array<{ start: number, end: number }>
+export type BufferedUtilArray = Array<{ start: number, end: number }>;
 
 export interface BufferUtilInfo {
   len: number,

@@ -28,49 +28,49 @@ export default function TransmuxerWorker (self) {
   self.addEventListener('message', (ev) => {
     const data = ev.data;
     switch (data.cmd) {
-      case 'init': {
-        const config = JSON.parse(data.config);
-        self.transmuxer = new Transmuxer(observer, data.typeSupported, config, data.vendor);
-        enableLogs(config.debug);
-        forwardMessage('init', null);
-        break;
+    case 'init': {
+      const config = JSON.parse(data.config);
+      self.transmuxer = new Transmuxer(observer, data.typeSupported, config, data.vendor);
+      enableLogs(config.debug);
+      forwardMessage('init', null);
+      break;
+    }
+    case 'configure': {
+      self.transmuxer.configure(data.config, data.state);
+      break;
+    }
+    case 'demux': {
+      const transmuxResult: TransmuxerResult = self.transmuxer.push(data.data, data.decryptdata, data.chunkMeta);
+      if (!transmuxResult) {
+        return;
       }
-      case 'configure': {
-        self.transmuxer.configure(data.config, data.state);
-        break;
-      }
-      case 'demux': {
-        const transmuxResult: TransmuxerResult = self.transmuxer.push(data.data, data.decryptdata, data.chunkMeta);
-        if (!transmuxResult) {
-          return;
-        }
+      // @ts-ignore
+      if (transmuxResult.then) {
         // @ts-ignore
-        if (transmuxResult.then) {
-          // @ts-ignore
-          transmuxResult.then(data => {
-            emitTransmuxComplete(self, data);
-          });
-        } else {
-            emitTransmuxComplete(self, transmuxResult);
-        }
-        break;
+        transmuxResult.then(data => {
+          emitTransmuxComplete(self, data);
+        });
+      } else {
+        emitTransmuxComplete(self, transmuxResult);
       }
-        case 'flush': {
-          const id = data.chunkMeta;
-          const transmuxResult = self.transmuxer.flush(id);
-          if (transmuxResult.then) {
-            // @ts-ignore
-            transmuxResult.then((results: Array<TransmuxerResult>) => {
-              handleFlushResult(self, results as Array<TransmuxerResult>, id);
-            });
-          } else {
-            handleFlushResult(self, transmuxResult as Array<TransmuxerResult>, id);
-          }
-          break;
-        }
-      default:
-        break;
+      break;
+    }
+    case 'flush': {
+      const id = data.chunkMeta;
+      const transmuxResult = self.transmuxer.flush(id);
+      if (transmuxResult.then) {
+        // @ts-ignore
+        transmuxResult.then((results: Array<TransmuxerResult>) => {
+          handleFlushResult(self, results as Array<TransmuxerResult>, id);
+        });
+      } else {
+        handleFlushResult(self, transmuxResult as Array<TransmuxerResult>, id);
       }
+      break;
+    }
+    default:
+      break;
+    }
   });
 }
 

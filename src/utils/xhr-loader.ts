@@ -30,7 +30,7 @@ class XhrLoader implements Loader<LoaderContext> {
     this.stats.aborted = true;
     let loader = this.loader;
     if (loader && loader.readyState !== 4) {
-        loader.abort();
+      loader.abort();
     }
     window.clearTimeout(this.requestTimeout);
     this.requestTimeout = -1;
@@ -169,13 +169,13 @@ class XhrLoader implements Loader<LoaderContext> {
     this.callbacks.onTimeout(this.stats, this.context, this.loader);
   }
 
-  getResponseHeader(name: string): string | null {
-      if (this.loader) {
-          try {
-            return this.loader.getResponseHeader(name);
-          } catch (error) {/* Could not get headers */}
-      }
-      return null;
+  getResponseHeader (name: string): string | null {
+    if (this.loader) {
+      try {
+        return this.loader.getResponseHeader(name);
+      } catch (error) { /* Could not get headers */ }
+    }
+    return null;
   }
 }
 

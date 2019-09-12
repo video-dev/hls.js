@@ -11,4 +11,3 @@ export default class LoadStats implements LoaderStats {
   parsing: HlsPerformanceTiming = { start: 0, end: 0 };
   buffering: HlsProgressivePerformanceTiming = { start: 0, first: 0, end: 0 };
 }
-

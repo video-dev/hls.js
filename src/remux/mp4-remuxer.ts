@@ -139,7 +139,7 @@ export default class MP4Remuxer implements Remuxer {
   }
 
   generateIS (audioTrack: DemuxedAudioTrack, videoTrack: DemuxedAvcTrack, timeOffset) : InitSegmentData | undefined {
-    logger.log(`[mp4-remuxer]: generateIS`, Object.assign({}, audioTrack), Object.assign({}, videoTrack), timeOffset);
+    logger.log('[mp4-remuxer]: generateIS', Object.assign({}, audioTrack), Object.assign({}, videoTrack), timeOffset);
     const audioSamples = audioTrack.samples;
     const videoSamples = videoTrack.samples;
     const typeSupported = this.typeSupported;
@@ -593,7 +593,7 @@ export default class MP4Remuxer implements Remuxer {
         if (mdatSize > 0) {
           /* concatenate the audio data and construct the mdat in place
             (need 8 more bytes to fill length and mdat type) */
-         mdatSize += offset;
+          mdatSize += offset;
           try {
             mdat = new Uint8Array(mdatSize);
           } catch (err) {
@@ -790,7 +790,6 @@ function dropSamplesUntilKeyframe (track: DemuxedTrack) : number {
   return dropIndex;
 }
 
-
 class Mp4Sample {
   public size: number;
   public duration: number;
@@ -815,6 +814,6 @@ class Mp4SampleFlags {
 
   constructor (isKeyframe) {
     this.dependsOn = isKeyframe ? 2 : 1;
-    this.isNonSync = isKeyframe ? 0 : 1
+    this.isNonSync = isKeyframe ? 0 : 1;
   }
 }

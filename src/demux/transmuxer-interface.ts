@@ -187,30 +187,30 @@ export default class TransmuxerInterface {
     const data = ev.data;
     const hls = this.hls;
     switch (data.event) {
-      case 'init': {
-        // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
-        global.URL.revokeObjectURL(this.worker.objectURL);
-        break;
-      }
+    case 'init': {
+      // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
+      global.URL.revokeObjectURL(this.worker.objectURL);
+      break;
+    }
 
-      case 'transmuxComplete': {
-          this.handleTransmuxComplete(data.data);
-          break;
-      }
+    case 'transmuxComplete': {
+      this.handleTransmuxComplete(data.data);
+      break;
+    }
 
-      case 'flush': {
-        this.onFlush(data.data);
-        break;
-      }
+    case 'flush': {
+      this.onFlush(data.data);
+      break;
+    }
 
-      /* falls through */
-      default: {
-        data.data = data.data || {};
-        data.data.frag = this.frag;
-        data.data.id = this.id;
-        hls.trigger(data.event, data.data);
-        break;
-      }
+    /* falls through */
+    default: {
+      data.data = data.data || {};
+      data.data.frag = this.frag;
+      data.data.id = this.id;
+      hls.trigger(data.event, data.data);
+      break;
+    }
     }
   }
 
@@ -221,7 +221,7 @@ export default class TransmuxerInterface {
         cmd: 'configure',
         config,
         state
-      })
+      });
     } else if (transmuxer) {
       transmuxer.configure(config, state);
     }

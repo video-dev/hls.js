@@ -91,7 +91,7 @@ export default class LevelController extends EventHandler {
     let audioCodecFound = false;
 
     // regroup redundant levels together
-    data.levels.forEach((levelParsed: LevelParsed)  => {
+    data.levels.forEach((levelParsed: LevelParsed) => {
       const attributes = levelParsed.attrs;
 
       videoCodecFound = videoCodecFound || !!levelParsed.videoCodec;
