@@ -11,7 +11,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
 import { FragmentState } from './fragment-tracker';
-import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes } from '../loader/fragment';
 import { findFragmentByPTS } from './fragment-finders';
 import BaseStreamController, { State } from './base-stream-controller';
 const { performance } = window;
@@ -571,7 +571,7 @@ class AudioStreamController extends BaseStreamController {
         this.state === State.PARSING) {
       const { audioSwitch, hls, media, pendingData, trackId } = this;
 
-      fragCurrent.addElementaryStream(Fragment.ElementaryStreamTypes.AUDIO);
+      fragCurrent.addElementaryStream(ElementaryStreamTypes.AUDIO);
       if (!Number.isFinite(data.endPTS)) {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
