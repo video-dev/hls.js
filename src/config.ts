@@ -1,23 +1,19 @@
-/**
- * HLS config
- */
-
 import AbrController from './controller/abr-controller';
+import AudioStreamController from './controller/audio-stream-controller';
+import AudioTrackController from './controller/audio-track-controller';
 import BufferController from './controller/buffer-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-import XhrLoader from './utils/xhr-loader';
-// import FetchLoader from './utils/fetch-loader';
-
-import AudioTrackController from './controller/audio-track-controller';
-import AudioStreamController from './controller/audio-stream-controller';
-
-import * as Cues from './utils/cues';
 import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
-import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
+
+import XhrLoader from './utils/xhr-loader';
+import FetchLoader, { fetchSupported } from './utils/fetch-loader';
+import * as Cues from './utils/cues';
+import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import { requestMediaKeySystemAccess, MediaKeyFunc } from './utils/mediakeys-helper';
+import { logger } from './utils/logger';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
@@ -148,7 +144,8 @@ export type HlsConfig =
     bufferController: typeof BufferController,
     capLevelController: any, // TODO(typescript-caplevelcontroller): Type once file is done
     fpsController: any, // TODO(typescript-fpscontroller): Type once file is done
-    renderNatively: boolean
+    renderNatively: boolean,
+    progressive: boolean
   } &
   ABRControllerConfig &
   BufferControllerConfig &
@@ -239,6 +236,7 @@ export const hlsDefaultConfig: HlsConfig = {
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
   renderNatively: false,
+  progressive: true,
 
   // Dynamic Modules
   ...timelineConfig(),
@@ -265,4 +263,46 @@ function timelineConfig (): TimelineControllerConfig {
     captionsTextTrack2Label: 'Spanish', // used by timeline-controller
     captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
   };
+}
+
+export function mergeConfig (defaultConfig, passedConfig) {
+  if ((passedConfig.liveSyncDurationCount || passedConfig.liveMaxLatencyDurationCount) && (passedConfig.liveSyncDuration || passedConfig.liveMaxLatencyDuration)) {
+    throw new Error('Illegal hls.js passedConfig: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+  }
+
+  for (let prop in defaultConfig) {
+    if (prop in passedConfig) continue;
+    passedConfig[prop] = defaultConfig[prop];
+  }
+
+  if (passedConfig.liveMaxLatencyDurationCount !== void 0 && passedConfig.liveMaxLatencyDurationCount <= passedConfig.liveSyncDurationCount) {
+    throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
+  }
+
+  if (passedConfig.liveMaxLatencyDuration !== void 0 && (passedConfig.liveMaxLatencyDuration <= passedConfig.liveSyncDuration || passedConfig.liveSyncDuration === void 0)) {
+    throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
+  }
+}
+
+const canStreamProgressively = fetchSupported();
+export function setStreamingMode (config, allowProgressive) {
+  const currentLoader = config.loader;
+  if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
+    // If a developer has configured their own loader, respect that choice
+    logger.log('[config]: Custom loader detected, cannot enable progressive streaming');
+    config.progressive = false;
+    return;
+  }
+
+  if (allowProgressive && canStreamProgressively) {
+    config.loader = FetchLoader;
+    config.progressive = true;
+    config.enableSoftwareAES = true;
+    logger.log('[config]: Progressive streaming enabled, using FetchLoader');
+  } else {
+    config.loader = XhrLoader;
+    config.progressive = false;
+    config.enableSoftwareAES = false;
+    logger.log('[config]: Progressive streaming disabled, using XhrLoader');
+  }
 }
