@@ -17,11 +17,12 @@ import PerformancMonitor from './performance/performance-monitor';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import {  HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
+import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
 import HlsEvents from './events';
 
 import { Observer } from './observer';
+import { Level, PlaylistMedia } from './types/level';
 
 /**
  * @module Hls
@@ -45,44 +46,26 @@ export default class Hls extends Observer {
   private media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
-  /**
-   * @type {string}
-   */
   static get version (): string {
     return __VERSION__;
   }
 
-  /**
-   * @type {boolean}
-   */
   static isSupported (): boolean {
     return isSupported();
   }
 
-  /**
-   * @type {HlsEvents}
-   */
   static get Events () {
     return HlsEvents;
   }
 
-  /**
-   * @type {HlsErrorTypes}
-   */
   static get ErrorTypes () {
     return ErrorTypes;
   }
 
-  /**
-   * @type {HlsErrorDetails}
-   */
   static get ErrorDetails () {
     return ErrorDetails;
   }
 
-  /**
-   * @type {HlsConfig}
-   */
   static get DefaultConfig (): HlsConfig {
     if (!Hls.defaultConfig) {
       return hlsDefaultConfig;
@@ -108,7 +91,8 @@ export default class Hls extends Observer {
     super();
 
     const defaultConfig = Hls.DefaultConfig;
-    mergeConfig(defaultConfig, config);
+    mergeConfig(defaultConfig, userConfig);
+    const config = this.config = userConfig as HlsConfig;
     enableLogs(config.debug);
 
     this._autoLevelCapping = -1;
@@ -116,10 +100,6 @@ export default class Hls extends Observer {
     this.progressive = config.progressive;
 
     // core controllers and network loaders
-
-    /**
-     * @member {AbrController} abrController
-     */
     const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap
     const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
     const capLevelController = this.capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
@@ -128,33 +108,17 @@ export default class Hls extends Observer {
     const keyLoader = new KeyLoader(this);
 
     // network controllers
-
-    /**
-     * @member {LevelController} levelController
-     */
     const levelController = this.levelController = new LevelController(this);
-
     // FIXME: FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
-
-    /**
-     * @member {StreamController} streamController
-     */
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
 
-    let networkControllers = [
+    const networkControllers = [
       levelController,
       streamController
     ];
 
-    /**
-     * @member {INetworkController[]} networkControllers
-     */
     this.networkControllers = networkControllers;
-
-    /**
-     * @var {ICoreComponent[]}
-     */
     const coreComponents = [
       playListLoader,
       keyLoader,
@@ -165,32 +129,17 @@ export default class Hls extends Observer {
       fragmentTracker
     ];
 
-    // audioTrackController must be defined before audioStreamController because the order of event handling is important
-    /**
-     * @member {AudioTrackController} audioTrackController
-     */
     this.audioTrackController = this.createController(config.audioTrackController, null, networkControllers);
     this.createController(config.audioStreamController, fragmentTracker, networkControllers);
-
     // subtitleTrackController must be defined before  because the order of event handling is important
-    /**
-     * @member {SubtitleTrackController} subtitleTrackController
-     */
     this.subtitleTrackController = this.createController(config.subtitleTrackController, null, networkControllers);
     this.createController(config.subtitleStreamController, fragmentTracker, networkControllers);
-
     this.createController(config.timelineController, null, coreComponents);
-
-    /**
-     * @member {EMEController} emeController
-     */
     this.emeController = this.createController(config.emeController, null, coreComponents);
 
-    this.performanceMonitor = new PerformancMonitor(this);
-    coreComponents.push(this.performanceMonitor);
-    /**
-     * @member {ICoreComponent[]}
-     */
+    // Push the performance monitor last so that it is the last class to handle events
+    coreComponents.push(new PerformancMonitor(this));
+
     this.coreComponents = coreComponents;
   }
 
@@ -221,7 +170,7 @@ export default class Hls extends Observer {
   }
 
   /**
-   * Attach a media element
+   * Attaches Hls.js to a media element
    * @param {HTMLMediaElement} media
    */
   attachMedia (media: HTMLMediaElement) {
@@ -231,7 +180,7 @@ export default class Hls extends Observer {
   }
 
   /**
-   * Detach from the media
+   * Detach Hls.js from the media
    */
   detachMedia () {
     logger.log('detachMedia');
@@ -303,10 +252,9 @@ export default class Hls extends Observer {
   }
 
   /**
-   * @type {QualityLevel[]}
+   * @type {Level[]}
    */
-  // todo(typescript-levelController)
-  get levels (): any[] {
+  get levels (): Array<Level> {
     return this.levelController.levels;
   }
 
@@ -548,8 +496,7 @@ export default class Hls extends Observer {
   /**
    * @type {AudioTrack[]}
    */
-  // todo(typescript-audioTrackController)
-  get audioTracks (): any[] {
+  get audioTracks (): Array<PlaylistMedia> {
     const audioTrackController = this.audioTrackController;
     return audioTrackController ? audioTrackController.audioTracks : [];
   }
@@ -583,10 +530,9 @@ export default class Hls extends Observer {
 
   /**
    * get alternate subtitle tracks list from playlist
-   * @type {SubtitleTrack[]}
+   * @type {PlaylistMedia[]}
    */
-  // todo(typescript-subtitleTrackController)
-  get subtitleTracks (): any[] {
+  get subtitleTracks (): Array<PlaylistMedia> {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
