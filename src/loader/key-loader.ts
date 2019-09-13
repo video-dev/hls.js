@@ -18,7 +18,7 @@ interface KeyLoaderContext extends LoaderContext {
   frag: Fragment
 }
 
-class KeyLoader extends EventHandler {
+export default class KeyLoader extends EventHandler {
   public loaders = {};
   public decryptkey: Uint8Array | null = null;
   public decrypturl: string | null = null;
@@ -134,5 +134,3 @@ class KeyLoader extends EventHandler {
     this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
   }
 }
-
-export default KeyLoader;
