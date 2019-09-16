@@ -64,7 +64,7 @@ module.exports = {
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
-  /*
+  /// *
   issue666: {
     'url': 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
     'description': 'hls.js/issues/666',
@@ -72,7 +72,7 @@ module.exports = {
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
-  */
+  //* /
   /* // went offline for us :( would be good to replace this for regression test with something mimicking the issue
   issue649: {
     'url': 'https://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw',
