@@ -65,8 +65,9 @@ export default class GapController {
       if (!isFiniteNumber(this.media.currentTime) || this.media.buffered.length === 0) {
         return;
       }
-      // Need to check what the buffer reports as start time for the first fragment appended.
-      // If within the threshold of maxBufferHole, adjust this.startPosition for _seekToStartPos().
+      // Checking what the buffer reports as start time for the first fragment appended
+      // and when the gap is within treshhold of configured maxBufferHole,
+      // skip playhead to this position to overcome an apparent initial gap in the stream.
       const firstBufferedPosition = this.media.buffered.start(0);
       if (Math.abs(this.media.currentTime - firstBufferedPosition) < this.config.maxBufferHole) {
         if (!this.media.seeking) {
