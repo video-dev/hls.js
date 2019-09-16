@@ -1,6 +1,5 @@
 {
   "name": "hls.js",
-  "version": "1.0.0-dev",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
@@ -26,6 +25,8 @@
     "lint": "./scripts/lint.sh",
     "lint:fix": "./scripts/lint.sh --fix",
     "lint:quiet": "./scripts/lint.sh --quiet",
+    "precommit": "./scripts/precommit.sh",
+    "pretest": "npm run lint",
     "start": "npm run dev",
     "test": "npm run test:unit && npm run test:func",
     "test:unit": "karma start karma.conf.js",
@@ -66,6 +67,7 @@
     "eslint-plugin-standard": "^3.0.1",
     "eslint-plugin-typescript": "^0.12.0",
     "http-server": "^0.11.0",
+    "husky": "^0.14.3",
     "istanbul-instrumenter-loader": "^3.0.1",
     "karma": "4.1.0",
     "karma-chrome-launcher": "^2.2.0",
