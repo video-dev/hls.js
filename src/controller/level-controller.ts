@@ -172,7 +172,7 @@ export default class LevelController extends EventHandler {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
         fatal: true,
-        url: this.hls.url,
+        url: data.url,
         reason: 'no level with compatible codecs found in manifest'
       });
     }
