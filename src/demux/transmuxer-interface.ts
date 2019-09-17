@@ -140,10 +140,7 @@ export default class TransmuxerInterface {
       if (!transmuxResult) {
         return;
       }
-      // Checking for existence of .then is the safest promise check, since it detects polyfills which aren't instanceof Promise
-      // @ts-ignore
-      if (transmuxResult.then) {
-        // @ts-ignore
+      if (isPromise(transmuxResult)) {
         transmuxResult.then(data => {
           this.handleTransmuxComplete(data);
         });
@@ -238,4 +235,8 @@ function startingNewTransmuxSession (currentIdentifier: ChunkMetadata | null, ne
     return true;
   }
   return currentIdentifier.sn !== newIdentifier.sn || currentIdentifier.level !== newIdentifier.level;
+}
+
+function isPromise<T> (p: Promise<T> | T): p is Promise<T> {
+  return 'then' in p && p.then instanceof Function;
 }
