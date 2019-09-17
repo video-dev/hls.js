@@ -5,9 +5,8 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import { Level } from '../types/level';
-import { Track } from '../types/track';
-import { LoaderStats } from '../types/loader';
 import { ManifestParsedData, BufferCodecsData, MediaAttachingData, FPSDropLevelCappingData, LevelsUpdatedData } from '../types/events';
+import StreamController from './stream-controller';
 
 class CapLevelController extends EventHandler {
   public autoLevelCapping: number;
@@ -16,6 +15,8 @@ class CapLevelController extends EventHandler {
   public media: HTMLVideoElement | null;
   public restrictedLevels: Array<number>;
   public timer: number | undefined;
+
+  private streamController?: StreamController;
 
   constructor (hls) {
     super(hls,
@@ -32,6 +33,10 @@ class CapLevelController extends EventHandler {
     this.media = null;
     this.restrictedLevels = [];
     this.timer = undefined;
+  }
+
+  setStreamController (streamController: StreamController) {
+    this.streamController = streamController;
   }
 
   destroy () {
@@ -87,10 +92,10 @@ class CapLevelController extends EventHandler {
       if (levelsLength) {
         const hls = this.hls;
         hls.autoLevelCapping = this.getMaxLevel(levelsLength - 1);
-        if (hls.autoLevelCapping > this.autoLevelCapping) {
+        if (hls.autoLevelCapping > this.autoLevelCapping && this.streamController) {
           // if auto level capping has a higher value for the previous one, flush the buffer using nextLevelSwitch
           // usually happen when the user go to the fullscreen mode.
-          hls.streamController.nextLevelSwitch();
+          this.streamController.nextLevelSwitch();
         }
         this.autoLevelCapping = hls.autoLevelCapping;
       }
