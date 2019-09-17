@@ -17,7 +17,7 @@ import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
-import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
+import { requestMediaKeySystemAccess, MediaKeyFunc } from './utils/mediakeys-helper';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
@@ -42,11 +42,11 @@ type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean
 };
 
-type EMEControllerConfig = {
+export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
   widevineLicenseUrl?: string,
-  requestMediaKeySystemAccessFunc: Function, // TODO(typescript-mediakeys-helper) Type once file is done
+  requestMediaKeySystemAccessFunc: MediaKeyFunc | null,
 };
 
 type FragmentLoaderConfig = {
@@ -124,7 +124,7 @@ type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean,
 };
 
-type HlsConfig =
+export type HlsConfig =
   {
     debug: boolean,
     enableWorker: boolean,
@@ -161,6 +161,9 @@ type HlsConfig =
   Partial<TimelineControllerConfig> &
   TSDemuxerConfig;
 
+// If possible, keep hlsDefaultConfig shallow
+// It is cloned whenever a new Hls instance is created, by keeping the config
+// shallow the properties are cloned, and we don't end up manipulating the default
 export const hlsDefaultConfig: HlsConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
