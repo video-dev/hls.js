@@ -113,6 +113,9 @@ export default class Hls extends Observer {
     const fragmentTracker = new FragmentTracker(this);
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
 
+    // Cap level controller uses streamController to flush the buffer
+    capLevelController.setStreamController(streamController);
+
     const networkControllers = [
       levelController,
       streamController

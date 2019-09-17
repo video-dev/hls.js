@@ -11,7 +11,7 @@ import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 
 // see https://stackoverflow.com/a/11237259/589493
 const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
-const MediaSource = getMediaSource();
+const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
 export default class TransmuxerInterface {
   private hls: any;
