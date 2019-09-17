@@ -80,7 +80,7 @@ describe('LevelController', function () {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
         fatal: true,
-        url: undefined,
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
         reason: 'no level with compatible codecs found in manifest'
       });
     });
