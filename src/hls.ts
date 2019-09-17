@@ -410,6 +410,15 @@ export default class Hls extends Observer {
   }
 
   /**
+   * get bandwidth estimate
+   * @type {number}
+   */
+  get bandwidthEstimate (): number {
+    const bwEstimator = this.abrController._bwEstimator;
+    return bwEstimator ? bwEstimator.getEstimate() : NaN;
+  }
+
+  /**
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
    * @type {number}
    */

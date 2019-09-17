@@ -17,15 +17,19 @@ describe('BufferController tests', function () {
   });
 
   describe('onBufferFlushing', function () {
+    beforeEach(function () {
+      bufferController.operationQueue.buffers.audio = {};
+      bufferController.operationQueue.buffers.video = {};
+    });
+
     it('flushes a specific type when provided a type', function () {
-      const spy = sandbox.spy(bufferController, 'flushBuffer');
+      const spy = sandbox.spy(bufferController.operationQueue, 'append');
       bufferController.onBufferFlushing({ startOffset: 0, endOffset: 10, type: 'video' });
       expect(spy).to.have.been.calledOnce;
     });
 
     it('flushes all source buffers when buffer flush event type is undefined', function () {
-      const spy = sandbox.spy(bufferController, 'flushBuffer');
-
+      const spy = sandbox.spy(bufferController.operationQueue, 'append');
       bufferController.onBufferFlushing({ startOffset: 0, endOffset: 10 });
       expect(spy).to.have.been.calledTwice;
     });

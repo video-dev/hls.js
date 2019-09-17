@@ -9,7 +9,8 @@ import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
 import { BufferAppendingEventPayload } from '../../../src/types/bufferAppendingEventPayload';
 import Events from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import Fragment, { ElementaryStreamTypes, FragmentTypes } from '../../../src/loader/fragment';
+import Fragment, { ElementaryStreamTypes } from '../../../src/loader/fragment';
+import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 
 chai.use(sinonChai);
@@ -139,7 +140,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
         const buffer = buffers[name];
         const segmentData = new Uint8Array();
         const frag = new Fragment();
-        frag.type = FragmentTypes.MAIN;
+        frag.type = PlaylistLevelType.MAIN;
         const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
         const data: BufferAppendingEventPayload = {
           type: name,
