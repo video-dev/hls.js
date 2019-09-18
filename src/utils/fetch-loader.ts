@@ -9,7 +9,7 @@ import {
 import LoadStats from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
 
-const { fetch, AbortController, ReadableStream, Request, Headers, performance } = window as any;
+const { fetch, AbortController, ReadableStream, Request, Headers, performance } = self as any;
 
 export function fetchSupported () {
   if (fetch && AbortController && ReadableStream && Request) {
@@ -68,7 +68,7 @@ FetchLoader implements Loader<LoaderContext> {
     this.config = config;
     this.callbacks = callbacks;
     this.request = this.fetchSetup(context, initParams);
-    this.requestTimeout = window.setTimeout(() => {
+    this.requestTimeout = self.setTimeout(() => {
       this.abortInternal();
       callbacks.onTimeout(stats, context, this.response);
     }, config.timeout);

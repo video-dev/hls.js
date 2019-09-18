@@ -4,13 +4,10 @@ import Transmuxer, { TransmuxConfig, TransmuxState } from '../demux/transmuxer';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
-import { getSelfScope } from '../utils/get-self-scope';
 import { Observer } from '../observer';
 import Fragment from '../loader/fragment';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 
-// see https://stackoverflow.com/a/11237259/589493
-const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
 export default class TransmuxerInterface {
@@ -70,7 +67,7 @@ export default class TransmuxerInterface {
         logger.error('Error while initializing DemuxerWorker, fallback to inline');
         if (worker) {
           // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
-          global.URL.revokeObjectURL(worker.objectURL);
+          self.URL.revokeObjectURL(worker.objectURL);
         }
         this.transmuxer = new Transmuxer(observer, typeSupported, config, vendor);
         this.worker = null;
@@ -186,7 +183,7 @@ export default class TransmuxerInterface {
     switch (data.event) {
     case 'init': {
       // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
-      global.URL.revokeObjectURL(this.worker.objectURL);
+      self.URL.revokeObjectURL(this.worker.objectURL);
       break;
     }
 

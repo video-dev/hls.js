@@ -197,8 +197,8 @@ export default class BaseStreamController extends TaskLoop {
         this.state = State.IDLE;
         this.fragLoadError = 0;
         levels[frag.level].details.initSegment.data = payload;
-        stats.parsing.start = stats.buffering.start = window.performance.now();
-        stats.parsing.end = stats.buffering.end = window.performance.now();
+        stats.parsing.start = stats.buffering.start = self.performance.now();
+        stats.parsing.end = stats.buffering.end = self.performance.now();
         // TODO: set id from calling class
         hls.trigger(Event.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
         this.tick();

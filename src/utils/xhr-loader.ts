@@ -32,9 +32,9 @@ class XhrLoader implements Loader<LoaderContext> {
     if (loader && loader.readyState !== 4) {
       loader.abort();
     }
-    window.clearTimeout(this.requestTimeout);
+    self.clearTimeout(this.requestTimeout);
     this.requestTimeout = -1;
-    window.clearTimeout(this.retryTimeout);
+    self.clearTimeout(this.retryTimeout);
     this.retryTimeout = -1;
   }
 
@@ -90,7 +90,7 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
     // setup timeout before we perform request
-    this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
+    this.requestTimeout = self.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
     xhr.send();
   }
 
@@ -107,7 +107,7 @@ class XhrLoader implements Loader<LoaderContext> {
     // >= HEADERS_RECEIVED
     if (readyState >= 2) {
       // clear xhr timeout and rearm it if readyState less than 4
-      window.clearTimeout(this.requestTimeout);
+      self.clearTimeout(this.requestTimeout);
       if (stats.loading.first === 0) {
         stats.loading.first = Math.max(performance.now(), stats.loading.start);
       }
@@ -150,7 +150,7 @@ class XhrLoader implements Loader<LoaderContext> {
             // aborts and resets internal state
             this.destroy();
             // schedule retry
-            this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+            this.retryTimeout = self.setTimeout(this.loadInternal.bind(this), this.retryDelay);
             // set exponential backoff
             this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
             stats.retry++;
@@ -158,7 +158,7 @@ class XhrLoader implements Loader<LoaderContext> {
         }
       } else {
         // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
-        this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout);
+        this.requestTimeout = self.setTimeout(this.loadtimeout.bind(this), config.timeout);
       }
     }
   }

@@ -79,10 +79,10 @@ async function testLoadedData (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
-      window.startStream(url, config, callback);
-      const video = window.video;
+      self.startStream(url, config, callback);
+      const video = self.video;
       video.onloadeddata = function () {
-        callback({ code: 'loadeddata', logs: window.logString });
+        callback({ code: 'loadeddata', logs: self.logString });
       };
     },
     url,
@@ -95,23 +95,23 @@ async function testSmoothSwitch (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
-      window.startStream(url, config, callback);
-      const video = window.video;
+      self.startStream(url, config, callback);
+      const video = self.video;
       video.onloadeddata = () => {
-        window.switchToHighestLevel('next');
+        self.switchToHighestLevel('next');
       };
-      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, (event, data) => {
+      self.hls.on(self.Hls.Events.LEVEL_SWITCHED, (event, data) => {
         let currentTime = video.currentTime;
-        if (data.level === window.hls.levels.length - 1) {
+        if (data.level === self.hls.levels.length - 1) {
           console.log(`[log] > switched on level: ${data.level}`);
-          window.setTimeout(() => {
+          self.setTimeout(() => {
             let newCurrentTime = video.currentTime;
             console.log(
               `[log] > currentTime delta : ${newCurrentTime - currentTime}`
             );
             callback({
               code: newCurrentTime > currentTime,
-              logs: window.logString
+              logs: self.logString
             });
           }, 2000);
         }
@@ -127,15 +127,15 @@ async function testSeekOnLive (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
-      window.startStream(url, config, callback);
-      const video = window.video;
+      self.startStream(url, config, callback);
+      const video = self.video;
       video.onloadeddata = () => {
-        window.setTimeout(() => {
+        self.setTimeout(() => {
           video.currentTime = video.duration - 5;
         }, 5000);
       };
       video.onseeked = () => {
-        callback({ code: 'seeked', logs: window.logString });
+        callback({ code: 'seeked', logs: self.logString });
       };
     },
     url,
@@ -148,15 +148,15 @@ async function testSeekOnVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
-      window.startStream(url, config, callback);
-      const video = window.video;
+      self.startStream(url, config, callback);
+      const video = self.video;
       video.onloadeddata = function () {
-        window.setTimeout(function () {
+        self.setTimeout(function () {
           video.currentTime = video.duration - 5;
         }, 5000);
       };
       video.onended = function () {
-        callback({ code: 'ended', logs: window.logString });
+        callback({ code: 'ended', logs: self.logString });
       };
     },
     url,
@@ -169,15 +169,15 @@ async function testSeekEndVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
-      window.startStream(url, config, callback);
-      const video = window.video;
+      self.startStream(url, config, callback);
+      const video = self.video;
       video.onloadeddata = function () {
-        window.setTimeout(function () {
+        self.setTimeout(function () {
           video.currentTime = video.duration;
         }, 5000);
       };
       video.onended = function () {
-        callback({ code: 'ended', logs: window.logString });
+        callback({ code: 'ended', logs: self.logString });
       };
     },
     url,
@@ -190,8 +190,8 @@ async function testIsPlayingVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
-      window.startStream(url, config, callback);
-      const video = window.video;
+      self.startStream(url, config, callback);
+      const video = self.video;
       video.onloadeddata = () => {
         let expectedPlaying = !(
           video.paused || // not playing when video is paused
@@ -200,7 +200,7 @@ async function testIsPlayingVOD (url, config) {
         ); // not playing if nothing buffered
         let currentTime = video.currentTime;
         if (expectedPlaying) {
-          window.setTimeout(() => {
+          self.setTimeout(() => {
             console.log(
               `video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
             );

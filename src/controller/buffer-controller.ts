@@ -97,7 +97,7 @@ export default class BufferController extends EventHandler {
       ms.addEventListener('sourceended', this._onMediaSourceEnded);
       ms.addEventListener('sourceclose', this._onMediaSourceClose);
       // link video and media Source
-      media.src = window.URL.createObjectURL(ms);
+      media.src = self.URL.createObjectURL(ms);
       // cache the locally generated object url
       this._objectUrl = media.src;
     }
@@ -128,7 +128,7 @@ export default class BufferController extends EventHandler {
       // suggested in https://github.com/w3c/media-source/issues/53.
       if (media) {
         if (_objectUrl) {
-          window.URL.revokeObjectURL(_objectUrl);
+          self.URL.revokeObjectURL(_objectUrl);
         }
 
         // clean up video tag src only if it's our own url. some external libraries might
@@ -287,7 +287,7 @@ export default class BufferController extends EventHandler {
 
     logger.log('[buffer-controller]: All fragment chunks received, enqueueing operation to signal fragment buffered');
     const onUnblocked = () => {
-      frag.stats.buffering.end = window.performance.now();
+      frag.stats.buffering.end = self.performance.now();
       this.hls.trigger(Events.FRAG_BUFFERED, { frag, stats: frag.stats, id: frag.type });
     };
     this.blockBuffers(onUnblocked, buffersAppendedTo);

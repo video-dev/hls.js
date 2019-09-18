@@ -124,8 +124,8 @@ class CapLevelController extends EventHandler {
     }
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.hls.firstLevel = this.getMaxLevel(this.firstLevel);
-    clearInterval(this.timer);
-    this.timer = window.setInterval(this.detectPlayerSize.bind(this), 1000);
+    self.clearInterval(this.timer);
+    this.timer = self.setInterval(this.detectPlayerSize.bind(this), 1000);
     this.detectPlayerSize();
   }
 
@@ -134,7 +134,7 @@ class CapLevelController extends EventHandler {
     this.firstLevel = -1;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     if (this.timer) {
-      clearInterval(this.timer);
+      self.clearInterval(this.timer);
       this.timer = undefined;
     }
   }
@@ -162,7 +162,7 @@ class CapLevelController extends EventHandler {
   static get contentScaleFactor (): number {
     let pixelRatio = 1;
     try {
-      pixelRatio = window.devicePixelRatio;
+      pixelRatio = self.devicePixelRatio;
     } catch (e) {}
     return pixelRatio;
   }

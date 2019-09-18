@@ -76,6 +76,13 @@ module.exports = {
       'never'
     ],
 
+    'no-restricted-globals': [2,
+      {
+        'name': 'window',
+        'message': 'Use `self` instead of `window` to access the global context everywhere (including workers).'
+      }
+    ],
+
     'no-restricted-properties': [2,
       { 'property': 'findIndex' },  // Intended to block usage of Array.prototype.findIndex
       { 'property': 'find' }        // Intended to block usage of Array.prototype.find

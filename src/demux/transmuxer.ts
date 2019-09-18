@@ -13,19 +13,16 @@ import { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import ChunkCache from './chunk-cache';
 import { appendUint8Array } from '../utils/mp4-tools';
 
-import { getSelfScope } from '../utils/get-self-scope';
 import { logger } from '../utils/logger';
-
-// see https://stackoverflow.com/a/11237259/589493
-const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
 try {
-  now = global.performance.now.bind(global.performance);
+  now = self.performance.now.bind(self.performance);
 } catch (err) {
   logger.debug('Unable to use Performance API on this environment');
-  now = global.Date.now;
+  // @ts-ignore
+  now = self.Date.now;
 }
 
 const muxConfig = [
