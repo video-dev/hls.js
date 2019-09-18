@@ -115,8 +115,12 @@ class PassThroughRemuxer implements Remuxer {
       this.initPTS = initSegment.initPTS = initPTS = computeInitPTS(initData, data, timeOffset);
     }
 
-    const duration = getDuration(data, initData);
+    let duration = getDuration(data, initData);
     console.assert(duration > 0, 'Duration parsed from mp4 should be greater than zero');
+    // Workaround for cases where mp4-tools fails to get a duration (fmp4Bitmovin)
+    if (duration === 0) {
+      duration = videoTrack.frag.duration;
+    }
 
     const startDTS = lastEndDTS as number;
     const endDTS = duration + startDTS;
