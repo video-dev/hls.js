@@ -75,7 +75,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   fi
   npm run docs
 
-  ./scripts/build-netlify.sh
+  ./scripts/build-netlify.sh ; sleep 120 ; false
   if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
     ./scripts/deploy-netlify.sh
   fi
