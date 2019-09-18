@@ -459,18 +459,16 @@ export default class BaseStreamController extends TaskLoop {
       ? config.liveMaxLatencyDuration
       : config.liveMaxLatencyDurationCount * targetDuration;
 
-    if (bufferEnd >= Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
-      return null;
+    if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
+      const liveSyncPosition = this._liveSyncPosition = this.computeLivePosition(start, targetDuration, totalDuration);
+      this.log(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
+      this.nextLoadPosition = liveSyncPosition;
+      if (media && media.readyState && media.duration > liveSyncPosition) {
+        media.currentTime = liveSyncPosition;
+      }
+      return liveSyncPosition;
     }
-
-    const liveSyncPosition = this._liveSyncPosition = this.computeLivePosition(start, targetDuration, totalDuration);
-    this.log(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
-    this.nextLoadPosition = liveSyncPosition;
-    if (media && media.readyState && media.duration > liveSyncPosition) {
-      media.currentTime = liveSyncPosition;
-    }
-
-    return liveSyncPosition;
+    return null;
   }
 
   protected mergeLivePlaylists (oldDetails: LevelDetails, newDetails: LevelDetails): number {
