@@ -154,6 +154,7 @@ describe('TransmuxerInterface tests', function () {
 
     const configureStub = sinon.stub(transmuxerInterface.transmuxer, 'configure');
     const pushStub = sinon.stub(transmuxerInterface.transmuxer, 'push');
+    pushStub.returns(Promise.reject(new Error('Stubbed transmux result')));
     transmuxerInterface.push(data, initSegment, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, chunkMeta);
 
     const tConfig = new TransmuxConfig('', '', new Uint8Array(), 0);
