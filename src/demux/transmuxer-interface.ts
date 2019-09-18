@@ -1,6 +1,6 @@
 import * as work from 'webworkify-webpack';
 import Event from '../events';
-import Transmuxer, { TransmuxConfig, TransmuxState } from '../demux/transmuxer';
+import Transmuxer, { TransmuxConfig, TransmuxState, isPromise } from '../demux/transmuxer';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
@@ -134,9 +134,6 @@ export default class TransmuxerInterface {
       }, data instanceof ArrayBuffer ? [data] : []);
     } else if (transmuxer) {
       const transmuxResult = transmuxer.push(data, decryptdata, chunkMeta);
-      if (!transmuxResult) {
-        return;
-      }
       if (isPromise(transmuxResult)) {
         transmuxResult.then(data => {
           this.handleTransmuxComplete(data);
@@ -158,9 +155,7 @@ export default class TransmuxerInterface {
       });
     } else if (transmuxer) {
       const transmuxResult = transmuxer.flush(chunkMeta);
-      // @ts-ignore
-      if (transmuxResult.then) {
-        // @ts-ignore
+      if (isPromise(transmuxResult)) {
         transmuxResult.then(data => {
           this.handleFlushResult(data, chunkMeta);
         });
@@ -232,8 +227,4 @@ function startingNewTransmuxSession (currentIdentifier: ChunkMetadata | null, ne
     return true;
   }
   return currentIdentifier.sn !== newIdentifier.sn || currentIdentifier.level !== newIdentifier.level;
-}
-
-function isPromise<T> (p: Promise<T> | T): p is Promise<T> {
-  return 'then' in p && p.then instanceof Function;
 }
