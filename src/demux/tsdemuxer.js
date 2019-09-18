@@ -628,6 +628,11 @@ class TSDemuxer {
     });
   }
 
+  _processAVCSample (avcSample, avcTrack) {
+    this._parseSEI(avcSample);
+    this.pushAccesUnit(avcSample, avcTrack);
+  }
+
   pushAccesUnit (avcSample, avcTrack) {
     if (avcSample.units.length && avcSample.frame) {
       const samples = avcTrack.samples;
@@ -661,8 +666,7 @@ class TSDemuxer {
       push,
       spsfound = false,
       i,
-      parseSEI = this._parseSEI.bind(this),
-      pushAccesUnit = this.pushAccesUnit.bind(this),
+      processAVCSample = this._processAVCSample.bind(this),
       createAVCSample = function (key, pts, dts, debug) {
         return { key: key, pts: pts, dts: dts, units: [], debug: debug };
       };
@@ -672,8 +676,7 @@ class TSDemuxer {
     // if new NAL units found and last sample still there, let's push ...
     // this helps parsing streams with missing AUD (only do this if AUD never found)
     if (avcSample && units.length && !track.audFound) {
-      parseSEI(avcSample);
-      pushAccesUnit(avcSample, track);
+      processAVCSample(avcSample, track);
       avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, '');
     }
 
@@ -777,8 +780,7 @@ class TSDemuxer {
         push = false;
         track.audFound = true;
         if (avcSample) {
-          parseSEI(avcSample);
-          pushAccesUnit(avcSample, track);
+          processAVCSample(avcSample, track);
         }
 
         avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
@@ -802,8 +804,7 @@ class TSDemuxer {
     });
     // if last PES packet, push samples
     if (last && avcSample) {
-      parseSEI(avcSample);
-      pushAccesUnit(avcSample, track);
+      processAVCSample(avcSample, track);
       this.avcSample = null;
     }
   }
