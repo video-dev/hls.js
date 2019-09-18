@@ -18,7 +18,7 @@ class EWMA {
   }
 
   sample (weight: number, value: number) {
-    let adjAlpha = Math.pow(this.alpha_, weight);
+    const adjAlpha = Math.pow(this.alpha_, weight);
     this.estimate_ = value * (1 - adjAlpha) + adjAlpha * this.estimate_;
     this.totalWeight_ += weight;
   }
@@ -29,7 +29,7 @@ class EWMA {
 
   getEstimate (): number {
     if (this.alpha_) {
-      let zeroFactor = 1 - Math.pow(this.alpha_, this.totalWeight_);
+      const zeroFactor = 1 - Math.pow(this.alpha_, this.totalWeight_);
       return this.estimate_ / zeroFactor;
     } else {
       return this.estimate_;

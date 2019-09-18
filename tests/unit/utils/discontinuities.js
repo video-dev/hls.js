@@ -99,7 +99,7 @@ describe('level-helper', function () {
       }
     };
 
-    let details = {
+    const details = {
       fragments: [
         {
           start: 0,
@@ -130,7 +130,7 @@ describe('level-helper', function () {
       hasProgramDateTime: true
     };
 
-    let detailsExpected = {
+    const detailsExpected = {
       fragments: [
         {
           start: 70,

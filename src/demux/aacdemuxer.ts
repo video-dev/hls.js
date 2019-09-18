@@ -94,7 +94,7 @@ class AACDemuxer implements Demuxer {
       //  Only begin parsing if able.
       if (ADTS.canParse(data, offset)) {
         ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec);
-        let frame = ADTS.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
+        const frame = ADTS.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
         if (frame) {
           this.frameIndex++;
           pts = frame.sample.pts;
@@ -102,7 +102,7 @@ class AACDemuxer implements Demuxer {
           lastDataIndex = offset;
         } else {
           logger.log('Unable to parse AAC frame');
-          let partialData = data.slice(offset);
+          const partialData = data.slice(offset);
 
           this.cachedData = appendUint8Array(this.cachedData, partialData);
           offset += partialData.length;
@@ -117,7 +117,7 @@ class AACDemuxer implements Demuxer {
       }
       // At end of fragment, if there is remaining data, append everything since last useable data to cache.
       if (offset === length && lastDataIndex !== length) {
-        let partialData = data.slice(lastDataIndex);
+        const partialData = data.slice(lastDataIndex);
         this.cachedData = appendUint8Array(this.cachedData, partialData);
       }
     }

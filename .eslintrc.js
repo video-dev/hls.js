@@ -71,10 +71,7 @@ module.exports = {
     // (warnings for now)
 
     // forbid "one var" style, enforce one declaration per variable
-    'one-var': [
-      1,
-      'never'
-    ],
+    'one-var': 2,
 
     'no-restricted-globals': [2,
       {
@@ -101,6 +98,7 @@ module.exports = {
     'no-self-assign': 1,
     'new-cap': 1,
     'no-undefined': 1,
-    'no-global-assign': 2
+    'no-global-assign': 2,
+    'prefer-const': 2
   }
 };

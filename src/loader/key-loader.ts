@@ -29,7 +29,7 @@ export default class KeyLoader extends EventHandler {
 
   destroy (): void {
     for (const loaderName in this.loaders) {
-      let loader = this.loaders[loaderName];
+      const loader = this.loaders[loaderName];
       if (loader) {
         loader.destroy();
       }
@@ -57,7 +57,7 @@ export default class KeyLoader extends EventHandler {
 
     // if uri is different from previous one or if decrypt key not retrieved yet
     if (uri !== this.decrypturl || this.decryptkey === null) {
-      let config = this.hls.config;
+      const config = this.hls.config;
       if (loader) {
         logger.warn(`abort previous key loader for type:${type}`);
         loader.abort();
@@ -99,7 +99,7 @@ export default class KeyLoader extends EventHandler {
   }
 
   loadsuccess (response: LoaderResponse, stats: LoaderStats, context: KeyLoaderContext) {
-    let frag = context.frag;
+    const frag = context.frag;
     if (!frag.decryptdata) {
       logger.error('after key load, decryptdata unset');
       return;
@@ -113,8 +113,8 @@ export default class KeyLoader extends EventHandler {
   }
 
   loaderror (response: LoaderResponse, context: KeyLoaderContext) {
-    let frag = context.frag;
-    let loader = frag.loader;
+    const frag = context.frag;
+    const loader = frag.loader;
     if (loader) {
       loader.abort();
     }
@@ -124,8 +124,8 @@ export default class KeyLoader extends EventHandler {
   }
 
   loadtimeout (stats: LoaderStats, context: KeyLoaderContext) {
-    let frag = context.frag;
-    let loader = frag.loader;
+    const frag = context.frag;
+    const loader = frag.loader;
     if (loader) {
       loader.abort();
     }

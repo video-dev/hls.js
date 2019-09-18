@@ -26,7 +26,7 @@ describe('checkBuffer', function () {
   describe('_tryNudgeBuffer', function () {
     it('should increment the currentTime by a multiple of nudgeRetry and the configured nudge amount', function () {
       for (let i = 1; i < config.nudgeMaxRetry; i++) {
-        let expected = media.currentTime + (i * config.nudgeOffset);
+        const expected = media.currentTime + (i * config.nudgeOffset);
         gapController._tryNudgeBuffer();
         expect(media.currentTime).to.equal(expected);
       }

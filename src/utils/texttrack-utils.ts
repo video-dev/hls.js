@@ -13,7 +13,7 @@ export function sendAddTrackEvent (track: TextTrack, videoEl: HTMLMediaElement) 
 
 export function clearCurrentCues (track: TextTrack) {
   if (track) {
-    let trackMode = track.mode;
+    const trackMode = track.mode;
 
     // When track.mode is disabled, track.cues will be null.
     // To guarantee the removal of cues, we need to temporarily

@@ -88,7 +88,7 @@ class CapLevelController extends EventHandler {
 
   detectPlayerSize () {
     if (this.media && this.mediaHeight > 0 && this.mediaWidth > 0) {
-      let levelsLength = this.levels ? this.levels.length : 0;
+      const levelsLength = this.levels ? this.levels.length : 0;
       if (levelsLength) {
         const hls = this.hls;
         hls.autoLevelCapping = this.getMaxLevel(levelsLength - 1);

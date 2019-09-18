@@ -270,7 +270,7 @@ export function mergeConfig (defaultConfig, passedConfig) {
     throw new Error('Illegal hls.js passedConfig: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
   }
 
-  for (let prop in defaultConfig) {
+  for (const prop in defaultConfig) {
     if (prop in passedConfig) continue;
     passedConfig[prop] = defaultConfig[prop];
   }

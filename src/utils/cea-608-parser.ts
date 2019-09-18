@@ -440,7 +440,7 @@ export class Row {
     const chars: string[] = [];
     let empty = true;
     for (let i = 0; i < NR_COLS; i++) {
-      let char = this.chars[i].uchar;
+      const char = this.chars[i].uchar;
       if (char !== ' ') {
         empty = false;
       }
@@ -631,7 +631,7 @@ export class CaptionScreen {
     let text = '';
     let rowNr = -1;
     for (let i = 0; i < NR_ROWS; i++) {
-      let rowText = this.rows[i].getTextString();
+      const rowText = this.rows[i].getTextString();
       if (rowText) {
         rowNr = i + 1;
         if (asOneRow) {
@@ -738,7 +738,7 @@ class Cea608Channel {
       this.writeScreen.insertChar(chars[i]);
     }
 
-    let screen = this.writeScreen === this.displayedMemory ? 'DISP' : 'NON_DISP';
+    const screen = this.writeScreen === this.displayedMemory ? 'DISP' : 'NON_DISP';
     logger.log('INFO', screen + ': ' + this.writeScreen.getDisplayText(true));
     if (this.mode === 'MODE_PAINT-ON' || this.mode === 'MODE_ROLL-UP') {
       logger.log('TEXT', 'DISPLAYED: ' + this.displayedMemory.getDisplayText(true));
@@ -920,8 +920,10 @@ class Cea608Parser {
      * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
      */
   addData (t: number | null, byteList: number[], field: number) {
-    let cmdFound: boolean, a: number, b: number,
-      charsFound: number[] | boolean | null = false;
+    let cmdFound: boolean;
+    let a: number;
+    let b: number;
+    let charsFound: number[] | boolean | null = false;
 
     logger.setTime(t);
 
@@ -1055,7 +1057,7 @@ class Cea608Parser {
         logger.log('ERROR', 'Mismatch channel in midrow parsing');
         return false;
       }
-      let channel = this.channels[chNr];
+      const channel = this.channels[chNr];
       channel.ccMIDROW(b);
       logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
       return true;
@@ -1071,8 +1073,8 @@ class Cea608Parser {
     let row: number;
     const cmdHistory = this.cmdHistory;
 
-    let case1 = ((a >= 0x11 && a <= 0x17) || (a >= 0x19 && a <= 0x1F)) && (b >= 0x40 && b <= 0x7F);
-    let case2 = (a === 0x10 || a === 0x18) && (b >= 0x40 && b <= 0x5F);
+    const case1 = ((a >= 0x11 && a <= 0x17) || (a >= 0x19 && a <= 0x1F)) && (b >= 0x40 && b <= 0x7F);
+    const case2 = (a === 0x10 || a === 0x18) && (b >= 0x40 && b <= 0x5F);
     if (!(case1 || case2)) {
       return false;
     }
@@ -1134,9 +1136,9 @@ class Cea608Parser {
      * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
      */
   parseChars (a: number, b: number, field: number): number[] | null {
-    let channelNr: number | null = null,
-      charCodes: number[] | null = null,
-      charCode1: number | null = null;
+    let channelNr: number | null = null;
+    let charCodes: number[] | null = null;
+    let charCode1: number | null = null;
 
     if (a >= 0x19) {
       channelNr = 2;
@@ -1174,18 +1176,13 @@ class Cea608Parser {
     * @returns {Boolean} Tells if background attributes are found
     */
   parseBackgroundAttributes (a: number, b: number, field: number): boolean {
-    let bkgData: Partial<PenStyles>,
-      index: number,
-      chNr: number,
-      channel: Cea608Channel;
-
-    let case1 = (a === 0x10 || a === 0x18) && (b >= 0x20 && b <= 0x2f);
-    let case2 = (a === 0x17 || a === 0x1f) && (b >= 0x2d && b <= 0x2f);
+    const case1 = (a === 0x10 || a === 0x18) && (b >= 0x20 && b <= 0x2f);
+    const case2 = (a === 0x17 || a === 0x1f) && (b >= 0x2d && b <= 0x2f);
     if (!(case1 || case2)) {
       return false;
     }
-
-    bkgData = {};
+    let index: number;
+    const bkgData: Partial<PenStyles> = {};
     if (a === 0x10 || a === 0x18) {
       index = Math.floor((b - 0x20) / 2);
       bkgData.background = backgroundColors[index];
@@ -1200,8 +1197,8 @@ class Cea608Parser {
         bkgData.underline = true;
       }
     }
-    chNr = (a < 0x18) ? field : field + 1;
-    channel = this.channels[chNr];
+    const chNr: number = (a < 0x18) ? field : field + 1;
+    const channel: Cea608Channel = this.channels[chNr];
     channel.setBkgData(bkgData);
     setLastCmd(a, b, this.cmdHistory[field]);
     return true;

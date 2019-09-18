@@ -175,8 +175,8 @@ class AbrController extends EventHandler {
       // compute level average bitrate
       if (this.hls.config.abrMaxWithRealBitrate) {
         const level = this.hls.levels[frag.level];
-        let loadedBytes = (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
-        let loadedDuration = (level.loaded ? level.loaded.duration : 0) + frag.duration;
+        const loadedBytes = (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
+        const loadedDuration = (level.loaded ? level.loaded.duration : 0) + frag.duration;
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
         level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
       }
@@ -295,7 +295,7 @@ class AbrController extends EventHandler {
 
   _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Array<any>): number {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
-      let levelInfo = levels[i];
+      const levelInfo = levels[i];
 
       if (!levelInfo) {
         continue;

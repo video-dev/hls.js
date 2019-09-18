@@ -243,7 +243,7 @@ export default class Hls extends Observer {
    */
   recoverMediaError () {
     logger.log('recoverMediaError');
-    let media = this.media;
+    const media = this.media;
     this.detachMedia();
     if (media) {
       this.attachMedia(media);

@@ -28,8 +28,8 @@ export default class AESDecryptor {
 
   // Using view.getUint32() also swaps the byte order.
   uint8ArrayToUint32Array_ (arrayBuffer) {
-    let view = new DataView(arrayBuffer);
-    let newArray = new Uint32Array(4);
+    const view = new DataView(arrayBuffer);
+    const newArray = new Uint32Array(4);
     for (let i = 0; i < 4; i++) {
       newArray[i] = view.getUint32(i * 4);
     }
@@ -38,20 +38,20 @@ export default class AESDecryptor {
   }
 
   initTable () {
-    let sBox = this.sBox;
-    let invSBox = this.invSBox;
-    let subMix = this.subMix;
-    let subMix0 = subMix[0];
-    let subMix1 = subMix[1];
-    let subMix2 = subMix[2];
-    let subMix3 = subMix[3];
-    let invSubMix = this.invSubMix;
-    let invSubMix0 = invSubMix[0];
-    let invSubMix1 = invSubMix[1];
-    let invSubMix2 = invSubMix[2];
-    let invSubMix3 = invSubMix[3];
+    const sBox = this.sBox;
+    const invSBox = this.invSBox;
+    const subMix = this.subMix;
+    const subMix0 = subMix[0];
+    const subMix1 = subMix[1];
+    const subMix2 = subMix[2];
+    const subMix3 = subMix[3];
+    const invSubMix = this.invSubMix;
+    const invSubMix0 = invSubMix[0];
+    const invSubMix1 = invSubMix[1];
+    const invSubMix2 = invSubMix[2];
+    const invSubMix3 = invSubMix[3];
 
-    let d = new Uint32Array(256);
+    const d = new Uint32Array(256);
     let x = 0;
     let xi = 0;
     let i = 0;
@@ -70,9 +70,9 @@ export default class AESDecryptor {
       invSBox[sx] = x;
 
       // Compute multiplication
-      let x2 = d[x];
-      let x4 = d[x2];
-      let x8 = d[x4];
+      const x2 = d[x];
+      const x4 = d[x2];
+      const x8 = d[x4];
 
       // Compute sub/invSub bytes, mix columns tables
       let t = (d[sx] * 0x101) ^ (sx * 0x1010100);
@@ -100,7 +100,7 @@ export default class AESDecryptor {
 
   expandKey (keyBuffer: ArrayBuffer) {
     // convert keyBuffer to Uint32Array
-    let key = this.uint8ArrayToUint32Array_(keyBuffer);
+    const key = this.uint8ArrayToUint32Array_(keyBuffer);
     let sameKey = true;
     let offset = 0;
 
@@ -114,26 +114,26 @@ export default class AESDecryptor {
     }
 
     this.key = key;
-    let keySize = this.keySize = key.length;
+    const keySize = this.keySize = key.length;
 
     if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
       throw new Error('Invalid aes key size=' + keySize);
     }
 
-    let ksRows = this.ksRows = (keySize + 6 + 1) * 4;
+    const ksRows = this.ksRows = (keySize + 6 + 1) * 4;
     let ksRow;
     let invKsRow;
 
-    let keySchedule = this.keySchedule = new Uint32Array(ksRows);
-    let invKeySchedule = this.invKeySchedule = new Uint32Array(ksRows);
-    let sbox = this.sBox;
-    let rcon = this.rcon;
+    const keySchedule = this.keySchedule = new Uint32Array(ksRows);
+    const invKeySchedule = this.invKeySchedule = new Uint32Array(ksRows);
+    const sbox = this.sBox;
+    const rcon = this.rcon;
 
-    let invSubMix = this.invSubMix;
-    let invSubMix0 = invSubMix[0];
-    let invSubMix1 = invSubMix[1];
-    let invSubMix2 = invSubMix[2];
-    let invSubMix3 = invSubMix[3];
+    const invSubMix = this.invSubMix;
+    const invSubMix0 = invSubMix[0];
+    const invSubMix1 = invSubMix[1];
+    const invSubMix2 = invSubMix[2];
+    const invSubMix3 = invSubMix[3];
 
     let prev;
     let t;
@@ -186,31 +186,31 @@ export default class AESDecryptor {
   }
 
   decrypt (inputArrayBuffer: ArrayBuffer, offset: number, aesIV: ArrayBuffer) {
-    let nRounds = this.keySize + 6;
-    let invKeySchedule = this.invKeySchedule;
-    let invSBOX = this.invSBox;
+    const nRounds = this.keySize + 6;
+    const invKeySchedule = this.invKeySchedule;
+    const invSBOX = this.invSBox;
 
-    let invSubMix = this.invSubMix;
-    let invSubMix0 = invSubMix[0];
-    let invSubMix1 = invSubMix[1];
-    let invSubMix2 = invSubMix[2];
-    let invSubMix3 = invSubMix[3];
+    const invSubMix = this.invSubMix;
+    const invSubMix0 = invSubMix[0];
+    const invSubMix1 = invSubMix[1];
+    const invSubMix2 = invSubMix[2];
+    const invSubMix3 = invSubMix[3];
 
-    let initVector = this.uint8ArrayToUint32Array_(aesIV);
+    const initVector = this.uint8ArrayToUint32Array_(aesIV);
     let initVector0 = initVector[0];
     let initVector1 = initVector[1];
     let initVector2 = initVector[2];
     let initVector3 = initVector[3];
 
-    let inputInt32 = new Int32Array(inputArrayBuffer);
-    let outputInt32 = new Int32Array(inputInt32.length);
+    const inputInt32 = new Int32Array(inputArrayBuffer);
+    const outputInt32 = new Int32Array(inputInt32.length);
 
     let t0, t1, t2, t3;
     let s0, s1, s2, s3;
     let inputWords0, inputWords1, inputWords2, inputWords3;
 
     let ksRow, i;
-    let swapWord = this.networkToHostOrderSwap;
+    const swapWord = this.networkToHostOrderSwap;
 
     while (offset < inputInt32.length) {
       inputWords0 = swapWord(inputInt32[offset]);

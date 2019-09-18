@@ -17,12 +17,11 @@ class ExpGolomb {
 
   // ():void
   loadWord () {
-    let
-      data = this.data,
-      bytesAvailable = this.bytesAvailable,
-      position = data.byteLength - bytesAvailable,
-      workingBytes = new Uint8Array(4),
-      availableBytes = Math.min(4, bytesAvailable);
+    const data = this.data;
+    const bytesAvailable = this.bytesAvailable;
+    const position = data.byteLength - bytesAvailable;
+    const workingBytes = new Uint8Array(4);
+    const availableBytes = Math.min(4, bytesAvailable);
     if (availableBytes === 0) {
       throw new Error('no bytes available');
     }
@@ -53,9 +52,8 @@ class ExpGolomb {
 
   // (size:int):uint
   readBits (size) {
-    let
-      bits = Math.min(this.bitsAvailable, size), // :uint
-      valu = this.word >>> (32 - bits); // :uint
+    let bits = Math.min(this.bitsAvailable, size); // :uint
+    const valu = this.word >>> (32 - bits); // :uint
     if (size > 32) {
       logger.error('Cannot read more than 32 bits at a time');
     }
@@ -103,13 +101,13 @@ class ExpGolomb {
 
   // ():uint
   readUEG () {
-    let clz = this.skipLZ(); // :uint
+    const clz = this.skipLZ(); // :uint
     return this.readBits(clz + 1) - 1;
   }
 
   // ():int
   readEG () {
-    let valu = this.readUEG(); // :int
+    const valu = this.readUEG(); // :int
     if (0x01 & valu) {
       // the number is odd if the low order bit is set
       return (1 + valu) >>> 1; // add 1 to make it even, and divide by 2
@@ -146,12 +144,10 @@ class ExpGolomb {
    * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
    */
   skipScalingList (count) {
-    let
-      lastScale = 8,
-      nextScale = 8,
-      j,
-      deltaScale;
-    for (j = 0; j < count; j++) {
+    let lastScale = 8;
+    let nextScale = 8;
+    let deltaScale;
+    for (let j = 0; j < count; j++) {
       if (nextScale !== 0) {
         deltaScale = this.readEG();
         nextScale = (lastScale + deltaScale + 256) % 256;
@@ -170,31 +166,27 @@ class ExpGolomb {
    * associated video frames.
    */
   readSPS () {
-    let
-      frameCropLeftOffset = 0,
-      frameCropRightOffset = 0,
-      frameCropTopOffset = 0,
-      frameCropBottomOffset = 0,
-      profileIdc, profileCompat, levelIdc,
-      numRefFramesInPicOrderCntCycle, picWidthInMbsMinus1,
-      picHeightInMapUnitsMinus1,
-      frameMbsOnlyFlag,
-      scalingListCount,
-      i,
-      readUByte = this.readUByte.bind(this),
-      readBits = this.readBits.bind(this),
-      readUEG = this.readUEG.bind(this),
-      readBoolean = this.readBoolean.bind(this),
-      skipBits = this.skipBits.bind(this),
-      skipEG = this.skipEG.bind(this),
-      skipUEG = this.skipUEG.bind(this),
-      skipScalingList = this.skipScalingList.bind(this);
+    let frameCropLeftOffset = 0;
+    let frameCropRightOffset = 0;
+    let frameCropTopOffset = 0;
+    let frameCropBottomOffset = 0;
+    let numRefFramesInPicOrderCntCycle;
+    let scalingListCount;
+    let i;
+    const readUByte = this.readUByte.bind(this);
+    const readBits = this.readBits.bind(this);
+    const readUEG = this.readUEG.bind(this);
+    const readBoolean = this.readBoolean.bind(this);
+    const skipBits = this.skipBits.bind(this);
+    const skipEG = this.skipEG.bind(this);
+    const skipUEG = this.skipUEG.bind(this);
+    const skipScalingList = this.skipScalingList.bind(this);
 
     readUByte();
-    profileIdc = readUByte(); // profile_idc
-    profileCompat = readBits(5); // constraint_set[0-4]_flag, u(5)
+    const profileIdc = readUByte(); // profile_idc
+    readBits(5); // profileCompat constraint_set[0-4]_flag, u(5)
     skipBits(3); // reserved_zero_3bits u(3),
-    levelIdc = readUByte(); // level_idc u(8)
+    readUByte(); // level_idc u(8)
     skipUEG(); // seq_parameter_set_id
     // some profiles have more optional data we don't need
     if (profileIdc === 100 ||
@@ -206,7 +198,7 @@ class ExpGolomb {
         profileIdc === 86 ||
         profileIdc === 118 ||
         profileIdc === 128) {
-      let chromaFormatIdc = readUEG();
+      const chromaFormatIdc = readUEG();
       if (chromaFormatIdc === 3) {
         skipBits(1);
       } // separate_colour_plane_flag
@@ -228,7 +220,7 @@ class ExpGolomb {
       }
     }
     skipUEG(); // log2_max_frame_num_minus4
-    let picOrderCntType = readUEG();
+    const picOrderCntType = readUEG();
     if (picOrderCntType === 0) {
       readUEG(); // log2_max_pic_order_cnt_lsb_minus4
     } else if (picOrderCntType === 1) {
@@ -242,9 +234,9 @@ class ExpGolomb {
     }
     skipUEG(); // max_num_ref_frames
     skipBits(1); // gaps_in_frame_num_value_allowed_flag
-    picWidthInMbsMinus1 = readUEG();
-    picHeightInMapUnitsMinus1 = readUEG();
-    frameMbsOnlyFlag = readBits(1);
+    const picWidthInMbsMinus1 = readUEG();
+    const picHeightInMapUnitsMinus1 = readUEG();
+    const frameMbsOnlyFlag = readBits(1);
     if (frameMbsOnlyFlag === 0) {
       skipBits(1);
     } // mb_adaptive_frame_field_flag

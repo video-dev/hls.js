@@ -178,7 +178,7 @@ describe('SubtitleTrackController', function () {
         const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
         subtitleTrackController.trackId = 1;
 
-        let mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
+        const mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
         subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
         expect(subtitleTrackController.timer).to.not.exist;
         expect(clearReloadSpy).to.have.been.calledOnce;

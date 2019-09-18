@@ -23,7 +23,7 @@ describe('LevelController', function () {
   });
 
   it('should trigger level switch when level is manually set', function () {
-    let data = {
+    const data = {
       audioTracks: [],
       levels: [
         { id: 1, bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } },
@@ -38,7 +38,7 @@ describe('LevelController', function () {
       url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
     };
 
-    let nextLevel = 1;
+    const nextLevel = 1;
 
     levelController.onManifestLoaded(data);
     // First triggers "hlsManifestParsed"
@@ -86,7 +86,7 @@ describe('LevelController', function () {
     });
 
     it('should trigger hlsManifestParsed when levels are found in the manifest', function () {
-      let data = {
+      const data = {
         audioTracks: [],
         levels: [
           { bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } },
@@ -116,7 +116,7 @@ describe('LevelController', function () {
     });
 
     it.skip('should signal altAudio if present in the manifest', function () {
-      let data = {
+      const data = {
         audioTracks: [
           { audioCodec: 'mp4a.40.5' }
         ],

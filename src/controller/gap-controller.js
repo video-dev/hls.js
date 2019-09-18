@@ -117,7 +117,7 @@ export default class GapController {
     let lastEndTime = 0;
     // Check if currentTime is between unbuffered regions of partial fragments
     for (let i = 0; i < media.buffered.length; i++) {
-      let startTime = media.buffered.start(i);
+      const startTime = media.buffered.start(i);
       if (currentTime >= lastEndTime && currentTime < startTime) {
         media.currentTime = Math.max(startTime, media.currentTime + 0.1);
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${media.currentTime}`);

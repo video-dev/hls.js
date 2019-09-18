@@ -89,9 +89,9 @@ export default class BufferController extends EventHandler {
   }
 
   onMediaAttaching (data: { media: HTMLMediaElement }) {
-    let media = this.media = data.media;
+    const media = this.media = data.media;
     if (media && MediaSource) {
-      let ms = this.mediaSource = new MediaSource();
+      const ms = this.mediaSource = new MediaSource();
       // MediaSource listeners are arrow functions with a lexical scope, and do not need to be bound
       ms.addEventListener('sourceopen', this._onMediaSourceOpen);
       ms.addEventListener('sourceended', this._onMediaSourceEnded);
@@ -221,7 +221,7 @@ export default class BufferController extends EventHandler {
 
         const { sourceBuffer } = this;
         const timeRanges = {};
-        for (let type in sourceBuffer) {
+        for (const type in sourceBuffer) {
           timeRanges[type] = sourceBuffer[type].buffered;
         }
         this.appendError = 0;
@@ -275,7 +275,7 @@ export default class BufferController extends EventHandler {
 
   onFragParsed (data: { frag: Fragment }) {
     const { frag } = data;
-    let buffersAppendedTo: Array<SourceBufferName> = [];
+    const buffersAppendedTo: Array<SourceBufferName> = [];
 
     if (frag.elementaryStreams[ElementaryStreamTypes.AUDIO]) {
       buffersAppendedTo.push('audio');
@@ -437,7 +437,7 @@ export default class BufferController extends EventHandler {
   }
 
   private checkPendingTracks () {
-    let { bufferCodecEventsExpected, operationQueue, pendingTracks } = this;
+    const { bufferCodecEventsExpected, operationQueue, pendingTracks } = this;
 
     // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
     // This is important because the MSE spec allows implementations to throw QuotaExceededErrors if creating new sourceBuffers after
@@ -461,15 +461,15 @@ export default class BufferController extends EventHandler {
       throw Error('createSourceBuffers called when mediaSource was null');
     }
 
-    for (let trackName in tracks) {
+    for (const trackName in tracks) {
       if (!sourceBuffer[trackName]) {
-        let track = tracks[trackName as keyof TrackSet];
+        const track = tracks[trackName as keyof TrackSet];
         if (!track) {
           throw Error(`source buffer exists for track ${trackName}, however track does not`);
         }
         // use levelCodec as first priority
-        let codec = track.levelCodec || track.codec;
-        let mimeType = `${track.container};codecs=${codec}`;
+        const codec = track.levelCodec || track.codec;
+        const mimeType = `${track.container};codecs=${codec}`;
         logger.log(`creating sourceBuffer(${mimeType})`);
         try {
           const sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);

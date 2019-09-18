@@ -15,7 +15,7 @@ export function createCues (startTime: number, endTime: number, captionScreen: C
   let indenting: boolean;
   let indent: number;
   let text: string;
-  let VTTCue: VTTCue = (self as any).VTTCue as VTTCue || TextTrackCue;
+  const VTTCue: VTTCue = (self as any).VTTCue as VTTCue || TextTrackCue;
   const cues: Array<VTTCue> = [];
 
   for (let r = 0; r < captionScreen.rows.length; r++) {

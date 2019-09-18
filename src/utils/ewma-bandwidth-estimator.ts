@@ -29,17 +29,17 @@ class EwmaBandWidthEstimator {
 
   sample (durationMs: number, numBytes: number) {
     durationMs = Math.max(durationMs, this.minDelayMs_);
-    let numBits = 8 * numBytes,
-      // weight is duration in seconds
-      durationS = durationMs / 1000,
-      // value is bandwidth in bits/s
-      bandwidthInBps = numBits / durationS;
+    const numBits = 8 * numBytes;
+    // weight is duration in seconds
+    const durationS = durationMs / 1000;
+    // value is bandwidth in bits/s
+    const bandwidthInBps = numBits / durationS;
     this.fast_.sample(durationS, bandwidthInBps);
     this.slow_.sample(durationS, bandwidthInBps);
   }
 
   canEstimate (): boolean {
-    let fast = this.fast_;
+    const fast = this.fast_;
     return (fast && fast.getTotalWeight() >= this.minWeight_);
   }
 

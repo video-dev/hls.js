@@ -64,7 +64,7 @@ class SubtitleTrackController extends EventHandler {
 
   // Fired whenever a new manifest is loaded.
   protected onManifestLoaded (data: ManifestLoadedData): void {
-    let tracks = data.subtitles || [];
+    const tracks = data.subtitles || [];
     this.tracks = tracks;
     this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, { subtitleTracks: tracks });
 
@@ -207,7 +207,7 @@ class SubtitleTrackController extends EventHandler {
     }
 
     let trackId: number = -1;
-    let tracks = filterSubtitleTracks(this.media.textTracks);
+    const tracks = filterSubtitleTracks(this.media.textTracks);
     for (let id = 0; id < tracks.length; id++) {
       if (tracks[id].mode === 'hidden') {
         // Do not break in case there is a following track with showing.

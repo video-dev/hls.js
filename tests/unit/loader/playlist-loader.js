@@ -7,17 +7,17 @@ describe('PlaylistLoader', function () {
   });
 
   it('manifest with broken syntax returns empty array', function () {
-    let manifest = `#EXTXSTREAMINF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+    const manifest = `#EXTXSTREAMINF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
     expect(M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com')).to.deep.equal([]);
   });
 
   it('parses manifest with one level', function () {
-    let manifest = `#EXTM3U
+    const manifest = `#EXTM3U
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
-    let result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
+    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
     expect(result).to.have.lengthOf(1);
     expect(result[0]['bitrate']).to.equal(836280);
     expect(result[0]['audioCodec']).to.equal('mp4a.40.2');
@@ -29,11 +29,11 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
   });
 
   it('parses manifest without codecs', function () {
-    let manifest = `#EXTM3U
+    const manifest = `#EXTM3U
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
-    let result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
+    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
     expect(result.length, 1);
     expect(result[0]['bitrate']).to.equal(836280);
     expect(result[0]['audioCodec']).to.not.exist;
@@ -89,7 +89,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
   });
 
   it('parses manifest with 10 levels', function () {
-    let manifest = `#EXTM3U
+    const manifest = `#EXTM3U
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
@@ -111,7 +111,7 @@ http://proxy-62.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=6221600,CODECS="mp4a.40.2,avc1.640028",RESOLUTION=1920x816,NAME="1080"
 http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/282/158282701_mp4_h264_aac_fhd.m3u8#cell=core`;
 
-    let result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
+    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
     expect(result.length, 10);
     expect(result[0]['bitrate']).to.equal(836280);
     expect(result[1]['bitrate']).to.equal(836280);
@@ -126,24 +126,24 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
   });
 
   it('parses empty levels returns empty fragment array', function () {
-    let level = '';
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
+    const level = '';
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
     expect(result.fragments).to.have.lengthOf(0);
     expect(result.totalduration).to.equal(0);
   });
 
   it('level with 0 frag returns empty fragment array', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-PLAYLIST-TYPE:VOD
 #EXT-X-TARGETDURATION:14`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
     expect(result.fragments).to.have.lengthOf(0);
     expect(result.totalduration).to.equal(0);
   });
 
   it('parse level with several fragments', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-PLAYLIST-TYPE:VOD
 #EXT-X-TARGETDURATION:14
@@ -159,7 +159,7 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
 #EXTINF:3.880,
 /sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.ts
 #EXT-X-ENDLIST`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
     expect(result.totalduration).to.equal(51.24);
     expect(result.startSN).to.equal(0);
     expect(result.version).to.equal(3);
@@ -181,7 +181,7 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
   });
 
   it('parse level with single char fragment URI', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-ALLOW-CACHE:NO
 #EXT-X-TARGETDURATION:2
 #EXTINF:2,
@@ -189,7 +189,7 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
 #EXTINF:2,
 1
 #EXT-X-ENDLIST`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
     expect(result.totalduration).to.equal(4);
     expect(result.startSN).to.equal(0);
     expect(result.targetduration).to.equal(2);
@@ -206,7 +206,7 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
   });
 
   it('parse level with EXTINF line without comma', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-MEDIA-SEQUENCE:0
 #EXT-X-TARGETDURATION:6
@@ -223,7 +223,7 @@ chop/segment-4.ts
 chop/segment-5.ts
 #EXTINF:6.000000
 #EXT-X-ENDLIST`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
     expect(result.totalduration).to.equal(30);
     expect(result.startSN).to.equal(0);
     expect(result.version).to.equal(3);
@@ -242,7 +242,7 @@ chop/segment-5.ts
   });
 
   it('parse level with start time offset', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-PLAYLIST-TYPE:VOD
 #EXT-X-TARGETDURATION:14
@@ -258,7 +258,7 @@ chop/segment-5.ts
 #EXTINF:3.880,
 /sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.ts
 #EXT-X-ENDLIST`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
     expect(result.totalduration).to.equal(51.24);
     expect(result.startSN).to.equal(0);
     expect(result.targetduration).to.equal(14);
@@ -267,7 +267,7 @@ chop/segment-5.ts
   });
 
   it('parse AES encrypted URLs, with implicit IV', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:1
 ## Created with Unified Streaming Platform(version=1.6.7)
 #EXT-X-MEDIA-SEQUENCE:1
@@ -281,7 +281,7 @@ oceans_aes-audio=65000-video=236000-2.ts
 #EXTINF:7,no desc
 oceans_aes-audio=65000-video=236000-3.ts
 #EXT-X-ENDLIST`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://foo.com/adaptive/oceans_aes/oceans_aes.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://foo.com/adaptive/oceans_aes/oceans_aes.m3u8', 0);
     expect(result.totalduration).to.equal(25);
     expect(result.startSN).to.equal(1);
     expect(result.targetduration).to.equal(11);
@@ -312,7 +312,7 @@ oceans_aes-audio=65000-video=236000-3.ts
   });
 
   it('parse level with #EXT-X-BYTERANGE before #EXTINF', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:4
 #EXT-X-ALLOW-CACHE:YES
 #EXT-X-TARGETDURATION:1
@@ -348,7 +348,7 @@ lo008ts
 #EXTINF:1000000,
 lo008ts`;
 
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
     expect(result.fragments.length, 10);
     expect(result.fragments[0].url).to.equal('http://dummy.com/lo007ts');
     expect(result.fragments[0].byteRangeStartOffset).to.equal(803136);
@@ -361,7 +361,7 @@ lo008ts`;
   });
 
   it('parse level with #EXT-X-BYTERANGE after #EXTINF', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:4
 #EXT-X-ALLOW-CACHE:YES
 #EXT-X-TARGETDURATION:1
@@ -397,7 +397,7 @@ lo008ts
 #EXT-X-BYTERANGE:133480@684508
 lo008ts`;
 
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
     expect(result.fragments).to.have.lengthOf(10);
     expect(result.fragments[0].url).to.equal('http://dummy.com/lo007ts');
     expect(result.fragments[0].byteRangeStartOffset).to.equal(803136);
@@ -410,7 +410,7 @@ lo008ts`;
   });
 
   it('parse level with #EXT-X-BYTERANGE without offset', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:4
 #EXT-X-ALLOW-CACHE:YES
 #EXT-X-TARGETDURATION:1
@@ -425,7 +425,7 @@ lo007ts
 #EXT-X-BYTERANGE:143068
 lo007ts`;
 
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
     expect(result.fragments.length, 3);
     expect(result.fragments[0].url).to.equal('http://dummy.com/lo007ts');
     expect(result.fragments[0].byteRangeStartOffset).to.equal(803136);
@@ -437,7 +437,7 @@ lo007ts`;
   });
 
   it('parses discontinuity and maintains continuity counter', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-TARGETDURATION:10
@@ -455,7 +455,7 @@ lo007ts`;
 0006.ts
 #EXT-X-ENDLIST
     `;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
     expect(result.fragments).to.have.lengthOf(5);
     expect(result.totalduration).to.equal(45);
     expect(result.fragments[2].cc).to.equal(0);
@@ -463,7 +463,7 @@ lo007ts`;
   });
 
   it('parses correctly EXT-X-DISCONTINUITY-SEQUENCE and increases continuity counter', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-TARGETDURATION:10
@@ -482,7 +482,7 @@ lo007ts`;
 0006.ts
 #EXT-X-ENDLIST
     `;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
     expect(result.fragments).to.have.lengthOf(5);
     expect(result.totalduration).to.equal(45);
     expect(result.fragments[0].cc).to.equal(20);
@@ -491,9 +491,9 @@ lo007ts`;
   });
 
   it('parses manifest with one audio track', function () {
-    let manifest = `#EXTM3U
+    const manifest = `#EXTM3U
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="600k",LANGUAGE="eng",NAME="Audio",AUTOSELECT=YES,DEFAULT=YES,URI="/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank",BANDWIDTH=614400`;
-    let result = M3U8Parser.parseMasterPlaylistMedia(manifest, 'https://hls.ted.com/', 'AUDIO');
+    const result = M3U8Parser.parseMasterPlaylistMedia(manifest, 'https://hls.ted.com/', 'AUDIO');
     expect(result.length, 1);
     expect(result[0]['autoselect']).to.be.true;
     expect(result[0]['default']).to.be.true;
@@ -505,7 +505,7 @@ lo007ts`;
   });
   // issue #425 - first fragment has null url and no decryptdata if EXT-X-KEY follows EXTINF
   it('parse level with #EXT-X-KEY after #EXTINF', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-TARGETDURATION:10
 #EXT-X-VERSION:3
 #EXT-X-MEDIA-SEQUENCE:0
@@ -527,7 +527,7 @@ lo007ts`;
 0007.ts
 #EXTINF:10,
 0008.ts`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
     expect(result.fragments).to.have.lengthOf(8);
     expect(result.totalduration).to.equal(80);
 
@@ -545,7 +545,7 @@ lo007ts`;
       expect(fragdecryptdata.key).to.equal(decryptdata.key);
 
       // initialization vector is correctly generated since it wasn't declared in the playlist
-      let iv = fragdecryptdata.iv;
+      const iv = fragdecryptdata.iv;
       expect(iv[15]).to.equal(idx);
 
       // hold this decrypt data to compare to the next fragment's decrypt data
@@ -555,7 +555,7 @@ lo007ts`;
 
   // PR #454 - Add support for custom tags in fragment object
   it('return custom tags in fragment object', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:719926
@@ -581,7 +581,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719933.ts
 http://dummy.url.com/hls/live/segment/segment_022916_164500865_719934.ts
 #EXTINF:9.25,
 http://dummy.url.com/hls/live/segment/segment_022916_164500865_719935.ts`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
     expect(result.fragments).to.have.lengthOf(10);
     expect(result.totalduration).to.equal(84.94);
     expect(result.targetduration).to.equal(10);
@@ -597,7 +597,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719935.ts`;
   });
 
   it('parses playlists with #EXT-X-PROGRAM-DATE-TIME after #EXTINF before fragment URL', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:2
 #EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:69844067
@@ -611,7 +611,7 @@ Rollover38803/20160525T064049-01-69844068.ts
 #EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
 Rollover38803/20160525T064049-01-69844069.ts
     `;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
     expect(result.fragments).to.have.lengthOf(3);
     expect(result.hasProgramDateTime).to.be.true;
     expect(result.totalduration).to.equal(30);
@@ -624,20 +624,20 @@ Rollover38803/20160525T064049-01-69844069.ts
   });
 
   it('parses #EXTINF without a leading digit', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-PLAYLIST-TYPE:VOD
 #EXT-X-TARGETDURATION:14
 #EXTINF:.360,
 /sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(1)/video/107/282/158282701_mp4_h264_aac_hq.ts
 #EXT-X-ENDLIST`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
     expect(result.fragments).to.have.lengthOf(1);
     expect(result.fragments[0].duration).to.equal(0.360);
   });
 
   it('parses #EXT-X-MAP URI', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-TARGETDURATION:6
 #EXT-X-VERSION:7
 #EXT-X-MEDIA-SEQUENCE:1
@@ -647,7 +647,7 @@ Rollover38803/20160525T064049-01-69844069.ts
 #EXTINF:6.00600,
 #EXT-X-BYTERANGE:1543597@718
 main.mp4`;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core', 0);
     expect(result.initSegment.url).to.equal('http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/main.mp4');
     expect(result.initSegment.byteRangeStartOffset).to.equal(0);
     expect(result.initSegment.byteRangeEndOffset).to.equal(718);
@@ -656,7 +656,7 @@ main.mp4`;
 
   describe('PDT calculations', function () {
     it('if playlists contains #EXT-X-PROGRAM-DATE-TIME switching will be applied by PDT', function () {
-      let level = `#EXTM3U
+      const level = `#EXTM3U
 #EXT-X-VERSION:2
 #EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:69844067
@@ -670,7 +670,7 @@ Rollover38803/20160525T064049-01-69844068.ts
 #EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
 Rollover38803/20160525T064049-01-69844069.ts
     `;
-      let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+      const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
       expect(result.hasProgramDateTime).to.be.true;
       expect(result.fragments[0].rawProgramDateTime).to.equal('2016-05-27T16:34:44Z');
       expect(result.fragments[0].programDateTime).to.equal(1464366884000);
@@ -784,7 +784,7 @@ frag1.ts
   });
 
   it('tests : at end of tag name is used to divide custom tags', function () {
-    let level = `#EXTM3U
+    const level = `#EXTM3U
 #EXT-X-VERSION:2
 #EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:69844067
@@ -798,7 +798,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719927.ts
 #EXTINF:10, no desc
 http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
     `;
-    let result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
     expect(result.fragments[2].tagList[0][0]).to.equal('EXT-X-CUSTOM-DATE');
     expect(result.fragments[2].tagList[0][1]).to.equal('2016-05-27T16:34:44Z');
     expect(result.fragments[2].tagList[1][0]).to.equal('EXT-X-CUSTOM-JSON');

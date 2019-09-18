@@ -64,7 +64,7 @@ export default class BaseStreamController extends TaskLoop {
   public startLoad (startPosition: number) : void {}
 
   public stopLoad () {
-    let frag = this.fragCurrent;
+    const frag = this.fragCurrent;
     if (frag) {
       if (frag.loader) {
         frag.loader.abort();
@@ -286,7 +286,7 @@ export default class BaseStreamController extends TaskLoop {
       return;
     }
 
-    let { data1, data2 } = data;
+    const { data1, data2 } = data;
     let buffer = data1;
     if (data1 && data2) {
       // Combine the moof + mdat so that we buffer with a single append

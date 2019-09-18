@@ -78,8 +78,8 @@ class TimelineController extends EventHandler {
     }
     let merged = false;
     for (let i = ranges.length; i--;) {
-      let cueRange = ranges[i];
-      let overlap = intersection(cueRange[0], cueRange[1], startTime, endTime);
+      const cueRange = ranges[i];
+      const overlap = intersection(cueRange[0], cueRange[1], startTime, endTime);
       if (overlap >= 0) {
         cueRange[0] = Math.min(cueRange[0], startTime);
         cueRange[1] = Math.max(cueRange[1], endTime);
@@ -93,7 +93,7 @@ class TimelineController extends EventHandler {
       ranges.push([startTime, endTime]);
     }
 
-    let cues = this.Cues.createCues(startTime, endTime, screen);
+    const cues = this.Cues.createCues(startTime, endTime, screen);
     if (this.config.renderNatively) {
       cues.forEach((cue) => {
         this.captionsTracks[trackName].addCue(cue);
@@ -125,7 +125,7 @@ class TimelineController extends EventHandler {
     const { media } = this;
     if (media) {
       for (let i = 0; i < media.textTracks.length; i++) {
-        let textTrack = media.textTracks[i];
+        const textTrack = media.textTracks[i];
         if (textTrack[trackName]) {
           return textTrack;
         }
@@ -285,7 +285,7 @@ class TimelineController extends EventHandler {
         });
       } else if (!sameTracks && this.tracks && this.tracks.length) {
         // Create a list of tracks for the provider to consume
-        let tracksList = this.tracks.map((track) => {
+        const tracksList = this.tracks.map((track) => {
           return {
             'label': track.name,
             'kind': track.type.toLowerCase(),
@@ -304,7 +304,7 @@ class TimelineController extends EventHandler {
           return;
         }
 
-        let trackName = `textTrack${instreamIdMatch[1]}`;
+        const trackName = `textTrack${instreamIdMatch[1]}`;
         this.captionsProperties[trackName].label = captionsTrack.name;
 
         if (captionsTrack.lang) { // optional attribute
@@ -340,7 +340,7 @@ class TimelineController extends EventHandler {
           return;
         }
 
-        let decryptData = frag.decryptdata;
+        const decryptData = frag.decryptdata;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
         if ((decryptData == null) || (decryptData.key == null) || (decryptData.method !== 'AES-128')) {
           this._parseVTTs(frag, payload);
@@ -388,7 +388,7 @@ class TimelineController extends EventHandler {
         }
         );
       } else {
-        let trackId = currentTrack.default ? 'default' : 'subtitles' + frag.level;
+        const trackId = currentTrack.default ? 'default' : 'subtitles' + frag.level;
         hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
       }
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
@@ -444,16 +444,16 @@ class TimelineController extends EventHandler {
   }
 
   extractCea608Data (byteArray: Uint8Array): number[][] {
-    let count = byteArray[0] & 31;
+    const count = byteArray[0] & 31;
     let position = 2;
-    let actualCCBytes: number[][] = [[], []];
+    const actualCCBytes: number[][] = [[], []];
 
     for (let j = 0; j < count; j++) {
-      let tmpByte = byteArray[position++];
-      let ccbyte1 = 0x7F & byteArray[position++];
-      let ccbyte2 = 0x7F & byteArray[position++];
-      let ccValid = (4 & tmpByte) !== 0;
-      let ccType = 3 & tmpByte;
+      const tmpByte = byteArray[position++];
+      const ccbyte1 = 0x7F & byteArray[position++];
+      const ccbyte2 = 0x7F & byteArray[position++];
+      const ccValid = (4 & tmpByte) !== 0;
+      const ccType = 3 & tmpByte;
 
       if (ccbyte1 === 0 && ccbyte2 === 0) {
         continue;
