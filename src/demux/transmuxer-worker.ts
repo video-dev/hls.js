@@ -1,6 +1,6 @@
 import '../polyfills/runtime-polyfills';
 
-import Transmuxer from '../demux/transmuxer';
+import Transmuxer, { isPromise } from '../demux/transmuxer';
 import Event from '../events';
 import { enableLogs } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
@@ -40,14 +40,10 @@ export default function TransmuxerWorker (self) {
       break;
     }
     case 'demux': {
-      const transmuxResult: TransmuxerResult = self.transmuxer.push(data.data, data.decryptdata, data.chunkMeta);
-      if (!transmuxResult) {
-        return;
-      }
-      // @ts-ignore
-      if (transmuxResult.then) {
-        // @ts-ignore
-        transmuxResult.then(data => {
+      const transmuxResult: TransmuxerResult | Promise<TransmuxerResult> =
+          self.transmuxer.push(data.data, data.decryptdata, data.chunkMeta);
+      if (isPromise(transmuxResult)) {
+        transmuxResult.then((data) => {
           emitTransmuxComplete(self, data);
         });
       } else {
@@ -58,8 +54,7 @@ export default function TransmuxerWorker (self) {
     case 'flush': {
       const id = data.chunkMeta;
       const transmuxResult = self.transmuxer.flush(id);
-      if (transmuxResult.then) {
-        // @ts-ignore
+      if (isPromise(transmuxResult)) {
         transmuxResult.then((results: Array<TransmuxerResult>) => {
           handleFlushResult(self, results as Array<TransmuxerResult>, id);
         });

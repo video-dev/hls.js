@@ -144,7 +144,7 @@ export default class Transmuxer {
   }
 
   // Due to data caching, flush calls can produce more than one TransmuxerResult (hence the Array type)
-  flush (chunkMeta: ChunkMetadata) : Array<TransmuxerResult> | Promise<TransmuxerResult> {
+  flush (chunkMeta: ChunkMetadata) : TransmuxerResult[] | Promise<TransmuxerResult[]> {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
@@ -313,6 +313,10 @@ const emptyResult = (chunkMeta) : TransmuxerResult => ({
   remuxResult: {},
   chunkMeta
 });
+
+export function isPromise<T> (p: Promise<T> | any): p is Promise<T> {
+  return 'then' in p && p.then instanceof Function;
+}
 
 export class TransmuxConfig {
   public audioCodec: string;
