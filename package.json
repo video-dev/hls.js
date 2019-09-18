@@ -16,7 +16,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "webpack --progress",
+    "build": "webpack",
     "build:debug": "webpack --progress --env.debug --env.demo",
     "build:watch": "webpack --progress --env.debug --env.demo --watch",
     "build:types": "tsc --emitDeclarationOnly",
