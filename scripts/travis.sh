@@ -73,9 +73,9 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
       echo "Already published."
     fi
   fi
-  npm run docs
+  # npm run docs
 
-  ./scripts/build-netlify.sh ; sleep 120 ; false
+  ./scripts/build-netlify.sh
   if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
     ./scripts/deploy-netlify.sh
   fi
