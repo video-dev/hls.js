@@ -331,7 +331,7 @@ export default class LevelController extends EventHandler {
         // exponential backoff capped to max retry timeout
         delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
         // Schedule level reload
-        this.timer = window.setTimeout(() => this.loadLevel(), delay);
+        this.timer = self.setTimeout(() => this.loadLevel(), delay);
         // boolean used to inform stream controller not to switch back to IDLE on non fatal error
         errorEvent.levelRetry = true;
         this.levelRetryCount++;
@@ -414,7 +414,7 @@ export default class LevelController extends EventHandler {
       details.availabilityDelay = curDetails && curDetails.availabilityDelay;
       const reloadInterval = computeReloadInterval(details, data.stats);
       logger.log(`[level-controller]: live playlist ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
-      this.timer = window.setTimeout(() => this.loadLevel(), reloadInterval);
+      this.timer = self.setTimeout(() => this.loadLevel(), reloadInterval);
     } else {
       this.clearTimer();
     }

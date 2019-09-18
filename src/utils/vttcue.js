@@ -15,8 +15,8 @@
  */
 
 export default (function () {
-  if (typeof window !== 'undefined' && window.VTTCue) {
-    return window.VTTCue;
+  if (typeof self !== 'undefined' && self.VTTCue) {
+    return self.VTTCue;
   }
 
   let autoKeyword = 'auto';
@@ -292,8 +292,8 @@ export default (function () {
 
   VTTCue.prototype.getCueAsHTML = function () {
     // Assume WebVTT.convertCueToDOMTree is on the global.
-    let WebVTT = window.WebVTT;
-    return WebVTT.convertCueToDOMTree(window, this.text);
+    let WebVTT = self.WebVTT;
+    return WebVTT.convertCueToDOMTree(self, this.text);
   };
 
   return VTTCue;

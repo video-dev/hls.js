@@ -24,7 +24,7 @@ export default class GapController {
   poll (lastCurrentTime, buffered) {
     const { config, media } = this;
     const currentTime = media.currentTime;
-    const tnow = window.performance.now();
+    const tnow = self.performance.now();
 
     if (currentTime !== lastCurrentTime) {
       // The playhead is now moving, but was previously stalled

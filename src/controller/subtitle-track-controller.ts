@@ -40,7 +40,7 @@ class SubtitleTrackController extends EventHandler {
 
     this.useTextTrackPolling = !(this.media.textTracks && 'onchange' in this.media.textTracks);
     if (this.useTextTrackPolling) {
-      this.subtitlePollingInterval = window.setInterval(() => {
+      this.subtitlePollingInterval = self.setInterval(() => {
         this.trackChangeListener();
       }, 500);
     } else {
@@ -54,7 +54,7 @@ class SubtitleTrackController extends EventHandler {
     }
 
     if (this.useTextTrackPolling) {
-      clearInterval(this.subtitlePollingInterval);
+      self.clearInterval(this.subtitlePollingInterval);
     } else {
       this.media.textTracks.removeEventListener('change', this.trackChangeListener);
     }
@@ -102,7 +102,7 @@ class SubtitleTrackController extends EventHandler {
       details.availabilityDelay = curDetails && curDetails.availabilityDelay;
       const reloadInterval = computeReloadInterval(details, data.stats);
       logger.log(`[subtitle-track-controller]: live subtitle track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
-      this.timer = window.setTimeout(() => {
+      this.timer = self.setTimeout(() => {
         this._loadCurrentTrack();
       }, reloadInterval);
     } else {

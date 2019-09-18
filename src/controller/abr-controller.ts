@@ -14,7 +14,7 @@ import Fragment from '../loader/fragment';
 import { LoaderStats } from '../types/loader';
 import LevelDetails from '../loader/level-details';
 
-const { performance } = window;
+const { performance } = self;
 
 class AbrController extends EventHandler {
   protected hls: any;
@@ -224,7 +224,7 @@ class AbrController extends EventHandler {
   }
 
   clearTimer () {
-    clearInterval(this.timer);
+    self.clearInterval(this.timer);
     this.timer = undefined;
   }
 

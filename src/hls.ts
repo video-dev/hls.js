@@ -196,7 +196,7 @@ export default class Hls extends Observer {
    * @param {string} url
    */
   loadSource (url: string) {
-    url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
+    url = URLToolkit.buildAbsoluteURL(self.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load

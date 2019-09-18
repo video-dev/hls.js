@@ -120,14 +120,15 @@ export default class StreamController extends BaseStreamController {
       }
       break;
     }
-    case State.FRAG_LOADING_WAITING_RETRY:
-      var now = window.performance.now();
-      var retryDate = this.retryDate;
+    case State.FRAG_LOADING_WAITING_RETRY: {
+      const now = self.performance.now();
+      const retryDate = this.retryDate;
       // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
       if (!retryDate || (now >= retryDate) || (this.media && this.media.seeking)) {
         this.log('retryDate reached, switch back to IDLE state');
         this.state = State.IDLE;
       }
+    }
       break;
     case State.ERROR:
     case State.STOPPED:
@@ -669,7 +670,7 @@ export default class StreamController extends BaseStreamController {
           // exponential backoff capped to config.fragLoadingMaxRetryTimeout
           let delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
           this.warn(`Fragment ${frag.sn} of level ${frag.level} failed to load, retrying in ${delay}ms`);
-          this.retryDate = window.performance.now() + delay;
+          this.retryDate = self.performance.now() + delay;
           // retry loading state
           // if loadedmetadata is not set, it means that we are emergency switch down on first frag
           // in that case, reset startFragRequested flag
@@ -842,7 +843,7 @@ export default class StreamController extends BaseStreamController {
         frag.bitrateTest = false;
         const stats = frag.stats;
         // Bitrate tests fragments are neither parsed nor buffered
-        stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = window.performance.now();
+        stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = self.performance.now();
         hls.trigger(Event.FRAG_BUFFERED, { stats, frag, id: 'main' });
         this.tick();
       });

@@ -2,7 +2,7 @@ import { BufferHelper } from '../utils/buffer-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import Event from '../events';
 import TimeRanges from '../utils/time-ranges';
-import { ErrorDetails, ErrorTypes } from '../errors';
+import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { FragmentState } from './fragment-tracker';
 import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
@@ -13,7 +13,7 @@ import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
 import { TrackSet } from '../types/track';
 
-const { performance } = window;
+const { performance } = self;
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 

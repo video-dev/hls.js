@@ -119,7 +119,7 @@ class AudioTrackController extends EventHandler {
       logger.log(`[audio-track-controller]: live audio track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
       // Stop reloading if the timer was cleared
       if (this.canLoad) {
-        this.timer = window.setTimeout(() => this._updateTrack(this._trackId), reloadInterval);
+        this.timer = self.setTimeout(() => this._updateTrack(this._trackId), reloadInterval);
       }
     } else {
       // playlist is not live and timer is scheduled: cancel it

@@ -29,7 +29,7 @@ import { ManifestLoadingData, LevelLoadingData, TrackLoadingData } from '../type
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 
-const { performance } = window;
+const { performance } = self;
 
 /**
  * @param {PlaylistContextType} type

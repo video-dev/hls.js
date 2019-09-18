@@ -75,7 +75,6 @@ describe('StreamController', function () {
       cc: 0
     };
 
-    let fragLen = mockFragments.length;
     let levelDetails = {
       startSN: mockFragments[0].sn,
       endSN: mockFragments[mockFragments.length - 1].sn,

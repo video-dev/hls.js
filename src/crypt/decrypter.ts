@@ -1,13 +1,9 @@
 import AESCrypto from './aes-crypto';
 import FastAESKey from './fast-aes-key';
 import AESDecryptor, { removePadding } from './aes-decryptor';
-import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import { getSelfScope } from '../utils/get-self-scope';
 import { appendUint8Array } from '../utils/mp4-tools';
 
-// see https://stackoverflow.com/a/11237259/589493
-const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
 const CHUNK_SIZE = 16; // 16 bytes, 128 bits
 
 export default class Decrypter {
@@ -30,8 +26,9 @@ export default class Decrypter {
     // built in decryptor expects PKCS7 padding
     if (removePKCS7Padding) {
       try {
-        const browserCrypto = global.crypto;
+        const browserCrypto = self.crypto;
         if (browserCrypto) {
+          // @ts-ignore
           this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
         } else {
           this.config.enableSoftwareAES = true;

@@ -21,7 +21,7 @@ const StringDecoder = function StringDecoder () {
 };
 
 function VTTParser () {
-  this.window = window;
+  this.window = self;
   this.state = 'INITIAL';
   this.buffer = '';
   this.decoder = new StringDecoder();
@@ -247,18 +247,18 @@ function fixLineBreaks (input) {
 
 VTTParser.prototype = {
   parse: function (data) {
-    let self = this;
+    let _this = this;
 
     // If there is no data then we won't decode it, but will just try to parse
     // whatever is in buffer already. This may occur in circumstances, for
     // example when flush() is called.
     if (data) {
       // Try to decode the data that we received.
-      self.buffer += self.decoder.decode(data, { stream: true });
+      _this.buffer += _this.decoder.decode(data, { stream: true });
     }
 
     function collectNextLine () {
-      let buffer = self.buffer;
+      let buffer = _this.buffer;
       let pos = 0;
 
       buffer = fixLineBreaks(buffer);
@@ -277,7 +277,7 @@ VTTParser.prototype = {
         ++pos;
       }
 
-      self.buffer = buffer.substr(pos);
+      _this.buffer = buffer.substr(pos);
       return line;
     }
 
@@ -297,9 +297,9 @@ VTTParser.prototype = {
     // 5.1 WebVTT file parsing.
     try {
       let line;
-      if (self.state === 'INITIAL') {
+      if (_this.state === 'INITIAL') {
         // We can't start parsing until we have the first line.
-        if (!/\r\n|\n/.test(self.buffer)) {
+        if (!/\r\n|\n/.test(_this.buffer)) {
           return this;
         }
 
@@ -311,13 +311,13 @@ VTTParser.prototype = {
           throw new Error('Malformed WebVTT signature.');
         }
 
-        self.state = 'HEADER';
+        _this.state = 'HEADER';
       }
 
       let alreadyCollectedLine = false;
-      while (self.buffer) {
+      while (_this.buffer) {
         // We can't parse a line until we have the full line.
-        if (!/\r\n|\n/.test(self.buffer)) {
+        if (!/\r\n|\n/.test(_this.buffer)) {
           return this;
         }
 
@@ -327,27 +327,27 @@ VTTParser.prototype = {
           alreadyCollectedLine = false;
         }
 
-        switch (self.state) {
+        switch (_this.state) {
         case 'HEADER':
           // 13-18 - Allow a header (metadata) under the WEBVTT line.
           if (/:/.test(line)) {
             parseHeader(line);
           } else if (!line) {
             // An empty line terminates the header and starts the body (cues).
-            self.state = 'ID';
+            _this.state = 'ID';
           }
           continue;
         case 'NOTE':
           // Ignore NOTE blocks.
           if (!line) {
-            self.state = 'ID';
+            _this.state = 'ID';
           }
 
           continue;
         case 'ID':
           // Check for the start of NOTE blocks.
           if (/^NOTE($|[ \t])/.test(line)) {
-            self.state = 'NOTE';
+            _this.state = 'NOTE';
             break;
           }
           // 19-29 - Allow any number of line terminators, then initialize new cue values.
@@ -355,11 +355,11 @@ VTTParser.prototype = {
             continue;
           }
 
-          self.cue = new VTTCue(0, 0, '');
-          self.state = 'CUE';
+          _this.cue = new VTTCue(0, 0, '');
+          _this.state = 'CUE';
           // 30-39 - Check if self line contains an optional identifier or timing data.
           if (line.indexOf('-->') === -1) {
-            self.cue.id = line;
+            _this.cue.id = line;
             continue;
           }
           // Process line as start of a cue.
@@ -367,14 +367,14 @@ VTTParser.prototype = {
         case 'CUE':
           // 40 - Collect cue timings and settings.
           try {
-            parseCue(line, self.cue, self.regionList);
+            parseCue(line, _this.cue, _this.regionList);
           } catch (e) {
             // In case of an error ignore rest of the cue.
-            self.cue = null;
-            self.state = 'BADCUE';
+            _this.cue = null;
+            _this.state = 'BADCUE';
             continue;
           }
-          self.state = 'CUETEXT';
+          _this.state = 'CUETEXT';
           continue;
         case 'CUETEXT':
           var hasSubstring = line.indexOf('-->') !== -1;
@@ -384,24 +384,24 @@ VTTParser.prototype = {
           // one as a new cue.
           if (!line || hasSubstring && (alreadyCollectedLine = true)) {
             // We are done parsing self cue.
-            if (self.oncue) {
-              self.oncue(self.cue);
+            if (_this.oncue) {
+              _this.oncue(_this.cue);
             }
 
-            self.cue = null;
-            self.state = 'ID';
+            _this.cue = null;
+            _this.state = 'ID';
             continue;
           }
-          if (self.cue.text) {
-            self.cue.text += '\n';
+          if (_this.cue.text) {
+            _this.cue.text += '\n';
           }
 
-          self.cue.text += line;
+          _this.cue.text += line;
           continue;
         case 'BADCUE': // BADCUE
           // 54-62 - Collect and discard the remaining cue.
           if (!line) {
-            self.state = 'ID';
+            _this.state = 'ID';
           }
 
           continue;
@@ -409,38 +409,38 @@ VTTParser.prototype = {
       }
     } catch (e) {
       // If we are currently parsing a cue, report what we have.
-      if (self.state === 'CUETEXT' && self.cue && self.oncue) {
-        self.oncue(self.cue);
+      if (_this.state === 'CUETEXT' && _this.cue && _this.oncue) {
+        _this.oncue(_this.cue);
       }
 
-      self.cue = null;
+      _this.cue = null;
       // Enter BADWEBVTT state if header was not parsed correctly otherwise
       // another exception occurred so enter BADCUE state.
-      self.state = self.state === 'INITIAL' ? 'BADWEBVTT' : 'BADCUE';
+      _this.state = _this.state === 'INITIAL' ? 'BADWEBVTT' : 'BADCUE';
     }
     return this;
   },
   flush: function () {
-    let self = this;
+    let _this = this;
     try {
       // Finish decoding the stream.
-      self.buffer += self.decoder.decode();
+      _this.buffer += _this.decoder.decode();
       // Synthesize the end of the current cue or region.
-      if (self.cue || self.state === 'HEADER') {
-        self.buffer += '\n\n';
-        self.parse();
+      if (_this.cue || _this.state === 'HEADER') {
+        _this.buffer += '\n\n';
+        _this.parse();
       }
       // If we've flushed, parsed, and we're still on the INITIAL state then
       // that means we don't have enough of the stream to parse the first
       // line.
-      if (self.state === 'INITIAL') {
+      if (_this.state === 'INITIAL') {
         throw new Error('Malformed WebVTT signature.');
       }
     } catch (e) {
       throw e;
     }
-    if (self.onflush) {
-      self.onflush();
+    if (_this.onflush) {
+      _this.onflush();
     }
 
     return this;

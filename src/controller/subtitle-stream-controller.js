@@ -12,7 +12,7 @@ import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { mergeSubtitlePlaylists } from './level-helper';
 
-const { performance } = window;
+const { performance } = self;
 
 const TICK_INTERVAL = 500; // how often to tick in ms
 

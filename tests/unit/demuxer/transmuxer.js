@@ -205,7 +205,7 @@ describe('TransmuxerInterface tests', function () {
       }
     };
 
-    const spy = sinon.spy(window.URL, 'revokeObjectURL');
+    const spy = sinon.spy(self.URL, 'revokeObjectURL');
     transmuxerInterface.onWorkerMessage(evt);
     expect(spy).to.have.been.calledOnce;
   });
