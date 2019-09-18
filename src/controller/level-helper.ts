@@ -27,7 +27,9 @@ export function addGroupId (level: Level, type: string, id: string): void {
 }
 
 export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number): void {
-  let fragFrom = fragments[fromIdx], fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
+  const fragFrom = fragments[fromIdx];
+  const fragTo = fragments[toIdx];
+  const fragToPTS = fragTo.startPTS;
   // if we know startPTS[toIdx]
   if (Number.isFinite(fragToPTS)) {
     // update fragment duration.
@@ -58,7 +60,7 @@ export function updateFragPTSDTS (details: LevelDetails, frag: Fragment, startPT
   let maxStartPTS = startPTS;
   if (Number.isFinite(frag.startPTS)) {
     // delta PTS between audio and video
-    let deltaPTS = Math.abs(frag.startPTS - startPTS);
+    const deltaPTS = Math.abs(frag.startPTS - startPTS);
     if (!Number.isFinite(<number>frag.deltaPTS)) {
       frag.deltaPTS = deltaPTS;
     } else {
@@ -86,10 +88,9 @@ export function updateFragPTSDTS (details: LevelDetails, frag: Fragment, startPT
   if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
   }
-
-  let fragIdx, fragments, i;
-  fragIdx = sn - details.startSN;
-  fragments = details.fragments;
+  let i;
+  const fragIdx = sn - details.startSN;
+  const fragments = details.fragments;
   // update frag reference in fragments array
   // rationale is that fragments array might not contain this frag object.
   // this will happen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()

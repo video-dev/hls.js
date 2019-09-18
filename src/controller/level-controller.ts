@@ -55,7 +55,7 @@ export default class LevelController extends EventHandler {
   }
 
   public startLoad (): void {
-    let levels = this._levels;
+    const levels = this._levels;
 
     this.canLoad = true;
     this.levelRetryCount = 0;
@@ -85,7 +85,7 @@ export default class LevelController extends EventHandler {
     let levels: Level[] = [];
     let audioTracks: PlaylistMedia[] = [];
     let bitrateStart: number | undefined;
-    let levelSet: { [bitrate: number]: Level; } = {};
+    const levelSet: { [bitrate: number]: Level; } = {};
     let levelFromSet: Level;
     let videoCodecFound = false;
     let audioCodecFound = false;
@@ -187,7 +187,7 @@ export default class LevelController extends EventHandler {
   }
 
   set level (newLevel: number) {
-    let levels = this._levels;
+    const levels = this._levels;
     if (levels) {
       newLevel = Math.min(newLevel, levels.length - 1);
       if (this.currentLevelIndex !== newLevel || !levels[newLevel].details) {
@@ -210,7 +210,7 @@ export default class LevelController extends EventHandler {
           // check if we need to load playlist for this level
           if (!levelDetails || levelDetails.live) {
             // level not retrieved yet, or live playlist we need to (re)load it
-            let urlId = level.urlId;
+            const urlId = level.urlId;
             hls.trigger(Event.LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
           }
         } else {
@@ -254,7 +254,7 @@ export default class LevelController extends EventHandler {
     // hls.startLevel takes precedence over config.startLevel
     // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
     if (this._startLevel === undefined) {
-      let configStartLevel = this.hls.config.startLevel;
+      const configStartLevel = this.hls.config.startLevel;
       if (configStartLevel !== undefined) {
         return configStartLevel;
       } else {
@@ -318,9 +318,9 @@ export default class LevelController extends EventHandler {
     if (!this._levels) {
       throw new Error('Levels are not set');
     }
-    let { config } = this.hls;
-    let { details: errorDetails } = errorEvent;
-    let level = this._levels[levelIndex];
+    const { config } = this.hls;
+    const { details: errorDetails } = errorEvent;
+    const level = this._levels[levelIndex];
     let redundantLevels, delay, nextLevel;
 
     level.loadError++;

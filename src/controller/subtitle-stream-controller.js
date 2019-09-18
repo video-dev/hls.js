@@ -101,7 +101,7 @@ export class SubtitleStreamController extends BaseStreamController {
 
   // If something goes wrong, proceed to next frag, if we were processing one.
   onError (data) {
-    let frag = data.frag;
+    const frag = data.frag;
     // don't handle error not related to subtitle fragment
     if (!frag || frag.type !== 'subtitle') {
       return;
@@ -165,7 +165,7 @@ export class SubtitleStreamController extends BaseStreamController {
     }
     // check to see if the payload needs to be decrypted
     if (payload && payload.byteLength > 0 && (decryptData && decryptData.key && decryptData.method === 'AES-128')) {
-      let startTime = performance.now();
+      const startTime = performance.now();
       // decrypt the subtitles
       this.decrypter.decrypt(payload, decryptData.key.buffer, decryptData.iv.buffer, function (decryptedData) {
         const endTime = performance.now();

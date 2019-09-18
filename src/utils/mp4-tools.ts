@@ -43,8 +43,14 @@ export function writeUint32 (buffer, offset, value) {
 
 // Find the data for a box specified by its path
 export function findBox (data, path): any {
-  let results = [] as Array<any>,
-    i, size, type, end, subresults, start, endbox;
+  let results = [] as Array<any>;
+  let i;
+  let size;
+  let type;
+  let end;
+  let subresults;
+  let start;
+  let endbox;
 
   if (data.data) {
     start = data.start;
@@ -89,29 +95,27 @@ export function parseSegmentIndex (initSegment) {
   const moov = findBox(initSegment, ['moov'])[0];
   const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
 
-  let index = 0;
   let sidx = findBox(initSegment, ['sidx']);
-  let references;
 
   if (!sidx || !sidx[0]) {
     return null;
   }
 
-  references = [];
+  const references: any[] = [];
   sidx = sidx[0];
 
   const version = sidx.data[0];
 
   // set initial offset, we skip the reference ID (not needed)
-  index = version === 0 ? 8 : 16;
+  let index = version === 0 ? 8 : 16;
 
   const timescale = readUint32(sidx, index);
   index += 4;
 
   // TODO: parse earliestPresentationTime and firstOffset
   // usually zero in our case
-  let earliestPresentationTime = 0;
-  let firstOffset = 0;
+  const earliestPresentationTime = 0;
+  const firstOffset = 0;
 
   if (version === 0) {
     index += 8;
@@ -194,15 +198,15 @@ export function parseSegmentIndex (initSegment) {
  * the init segment is malformed.
  */
 export function parseInitSegment (initSegment) {
-  let result = [] as Array<any>;
-  let traks = findBox(initSegment, ['moov', 'trak']);
+  const result = [] as Array<any>;
+  const traks = findBox(initSegment, ['moov', 'trak']);
 
   traks.forEach(trak => {
     const tkhd = findBox(trak, ['tkhd'])[0];
     if (tkhd) {
       let version = tkhd.data[tkhd.start];
       let index = version === 0 ? 12 : 20;
-      let trackId = readUint32(tkhd, index);
+      const trackId = readUint32(tkhd, index);
 
       const mdhd = findBox(trak, ['mdia', 'mdhd'])[0];
       if (mdhd) {
@@ -213,13 +217,13 @@ export function parseInitSegment (initSegment) {
         const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
         if (hdlr) {
           const hdlrType = bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
-          let type = { 'soun': 'audio', 'vide': 'video' }[hdlrType];
+          const type = { 'soun': 'audio', 'vide': 'video' }[hdlrType];
           if (type) {
             // extract codec info. TODO : parse codec details to be able to build MIME type
             let codecBox = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);
             if (codecBox.length) {
               codecBox = codecBox[0];
-              let codecType = bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
+              const codecType = bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
             }
             result[trackId] = { timescale: timescale, type: type };
             result[type] = { timescale: timescale, id: trackId };
@@ -248,26 +252,22 @@ export function parseInitSegment (initSegment) {
  * fragment, in seconds
  */
 export function getStartDTS (initData, fragment) {
-  let trafs, baseTimes, result;
-
   // we need info from two children of each track fragment box
-  trafs = findBox(fragment, ['moof', 'traf']);
+  const trafs = findBox(fragment, ['moof', 'traf']);
 
   // determine the start times for each track
-  baseTimes = [].concat.apply([], trafs.map(function (traf) {
+  const baseTimes = [].concat.apply([], trafs.map(function (traf) {
     return findBox(traf, ['tfhd']).map(function (tfhd) {
-      let id, scale, baseTime;
-
       // get the track id from the tfhd
-      id = readUint32(tfhd, 4);
+      const id = readUint32(tfhd, 4);
       // assume a 90kHz clock if no timescale was specified
-      scale = initData[id].timescale || 90e3;
+      const scale = initData[id].timescale || 90e3;
 
       // get the base media decode time from the tfdt
-      baseTime = findBox(traf, ['tfdt']).map(function (tfdt) {
-        let version, result;
+      const baseTime = findBox(traf, ['tfdt']).map(function (tfdt) {
+        let result;
 
-        version = tfdt.data[tfdt.start];
+        const version = tfdt.data[tfdt.start];
         result = readUint32(tfdt, 4);
         if (version === 1) {
           result *= Math.pow(2, 32);
@@ -282,7 +282,7 @@ export function getStartDTS (initData, fragment) {
   }));
 
   // return the minimum
-  result = Math.min.apply(null, baseTimes);
+  const result = Math.min.apply(null, baseTimes);
   return isFinite(result) ? result : 0;
 }
 
@@ -397,13 +397,13 @@ export function offsetStartDTS (initData, fragment, timeOffset) {
   findBox(fragment, ['moof', 'traf']).map(function (traf) {
     return findBox(traf, ['tfhd']).map(function (tfhd) {
       // get the track id from the tfhd
-      let id = readUint32(tfhd, 4);
+      const id = readUint32(tfhd, 4);
       // assume a 90kHz clock if no timescale was specified
-      let timescale = initData[id].timescale || 90e3;
+      const timescale = initData[id].timescale || 90e3;
 
       // get the base media decode time from the tfdt
       findBox(traf, ['tfdt']).map(function (tfdt) {
-        let version = tfdt.data[tfdt.start];
+        const version = tfdt.data[tfdt.start];
         let baseMediaDecodeTime = readUint32(tfdt, 4);
         if (version === 0) {
           writeUint32(tfdt, 4, baseMediaDecodeTime - timeOffset * timescale);

@@ -65,7 +65,7 @@ export default class Decrypter {
   }
 
   public softwareDecrypt (data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): Uint8Array | null {
-    let { currentIV, currentResult, softwareDecrypter, remainderData } = this;
+    const { currentIV, currentResult, remainderData } = this;
     this.logOnce('JS AES decrypt');
     // The output is staggered during progressive parsing - the current result is cached, and emitted on the next call
     // This is done in order to strip PKCS7 padding, which is found at the end of each segment. We only know we've reached
@@ -86,6 +86,8 @@ export default class Decrypter {
     if (currentIV) {
       iv = currentIV;
     }
+
+    let softwareDecrypter = this.softwareDecrypter;
     if (!softwareDecrypter) {
       softwareDecrypter = this.softwareDecrypter = new AESDecryptor();
     }

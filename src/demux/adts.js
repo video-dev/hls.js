@@ -8,24 +8,23 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import Event from '../events';
 
 export function getAudioConfig (observer, data, offset, audioCodec) {
-  let adtsObjectType, // :int
-    adtsSampleingIndex, // :int
-    adtsExtensionSampleingIndex, // :int
-    adtsChanelConfig, // :int
-    config,
-    userAgent = navigator.userAgent.toLowerCase(),
-    manifestCodec = audioCodec,
-    adtsSampleingRates = [
-      96000, 88200,
-      64000, 48000,
-      44100, 32000,
-      24000, 22050,
-      16000, 12000,
-      11025, 8000,
-      7350];
+  let adtsObjectType; // :int
+  let adtsExtensionSampleingIndex; // :int
+  let adtsChanelConfig; // :int
+  let config;
+  const userAgent = navigator.userAgent.toLowerCase();
+  const manifestCodec = audioCodec;
+  const adtsSampleingRates = [
+    96000, 88200,
+    64000, 48000,
+    44100, 32000,
+    24000, 22050,
+    16000, 12000,
+    11025, 8000,
+    7350];
   // byte 2
   adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
-  adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
+  const adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
   if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
     observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
     return;
@@ -173,14 +172,14 @@ export function probe (data, offset) {
   // or end of data is reached
   if (isHeader(data, offset)) {
     // ADTS header Length
-    let headerLength = getHeaderLength(data, offset);
+    const headerLength = getHeaderLength(data, offset);
     // ADTS frame Length
     let frameLength = headerLength;
     if (offset + 5 < data.length) {
       frameLength = getFullFrameLength(data, offset);
     }
 
-    let newOffset = offset + frameLength;
+    const newOffset = offset + frameLength;
     if (newOffset === data.length || (newOffset + 1 < data.length && isHeaderPattern(data, newOffset))) {
       return true;
     }
@@ -190,7 +189,7 @@ export function probe (data, offset) {
 
 export function initTrackConfig (track, observer, data, offset, audioCodec) {
   if (!track.samplerate) {
-    let config = getAudioConfig(observer, data, offset, audioCodec);
+    const config = getAudioConfig(observer, data, offset, audioCodec);
     track.config = config.config;
     track.samplerate = config.samplerate;
     track.channelCount = config.channelCount;
@@ -205,17 +204,16 @@ export function getFrameDuration (samplerate) {
 }
 
 export function parseFrameHeader (data, offset, pts, frameIndex, frameDuration) {
-  let headerLength, frameLength, stamp;
-  let length = data.length;
+  const length = data.length;
 
   // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
-  headerLength = getHeaderLength(data, offset);
+  const headerLength = getHeaderLength(data, offset);
   // retrieve frame size
-  frameLength = getFullFrameLength(data, offset);
+  let frameLength = getFullFrameLength(data, offset);
   frameLength -= headerLength;
 
   if ((frameLength > 0) && ((offset + headerLength + frameLength) <= length)) {
-    stamp = pts + frameIndex * frameDuration;
+    const stamp = pts + frameIndex * frameDuration;
     // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
     return { headerLength, frameLength, stamp };
   }
@@ -224,15 +222,15 @@ export function parseFrameHeader (data, offset, pts, frameIndex, frameDuration) 
 }
 
 export function appendFrame (track, data, offset, pts, frameIndex) {
-  let frameDuration = getFrameDuration(track.samplerate);
-  let header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
+  const frameDuration = getFrameDuration(track.samplerate);
+  const header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
   if (header) {
-    let stamp = header.stamp;
-    let headerLength = header.headerLength;
-    let frameLength = header.frameLength;
+    const stamp = header.stamp;
+    const headerLength = header.headerLength;
+    const frameLength = header.frameLength;
 
     // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-    let aacSample = {
+    const aacSample = {
       unit: data.subarray(offset + headerLength, offset + headerLength + frameLength),
       pts: stamp,
       dts: stamp

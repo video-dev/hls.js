@@ -10,7 +10,7 @@ class AttrList {
       attrs = AttrList.parseAttrList(attrs);
     }
 
-    for (let attr in attrs) {
+    for (const attr in attrs) {
       if (attrs.hasOwnProperty(attr)) {
         this[attr] = attrs[attr];
       }
@@ -75,10 +75,12 @@ class AttrList {
   }
 
   static parseAttrList (input: string): GenericObjectType {
-    let match, attrs = {};
+    let match;
+    const attrs = {};
+    const quote = '"';
     ATTR_LIST_REGEX.lastIndex = 0;
     while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
-      let value = match[2], quote = '"';
+      let value = match[2];
 
       if (value.indexOf(quote) === 0 &&
           value.lastIndexOf(quote) === (value.length - 1)) {

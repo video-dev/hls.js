@@ -124,8 +124,8 @@ class PlaylistLoader extends EventHandler {
    * Call `destroy` on all internal loader instances mapped (one per context type)
    */
   private destroyInternalLoaders (): void {
-    for (let contextType in this.loaders) {
-      let loader = this.loaders[contextType];
+    for (const contextType in this.loaders) {
+      const loader = this.loaders[contextType];
       if (loader) {
         loader.destroy();
       }
@@ -302,9 +302,9 @@ class PlaylistLoader extends EventHandler {
       codec: level.audioCodec
     }));
 
-    let audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
-    let subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
-    let captions = M3U8Parser.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
+    const audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
+    const subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    const captions = M3U8Parser.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -481,7 +481,7 @@ class PlaylistLoader extends EventHandler {
       this.resetInternalLoader(context.type);
     }
 
-    let errorData = {
+    const errorData = {
       type: ErrorTypes.NETWORK_ERROR,
       details,
       fatal,

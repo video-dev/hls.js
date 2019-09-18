@@ -42,7 +42,7 @@ export default class M3U8Parser {
   }
 
   static convertAVC1ToAVCOTI (codec) {
-    let avcdata = codec.split('.');
+    const avcdata = codec.split('.');
     let result;
     if (avcdata.length > 2) {
       result = avcdata.shift() + '.';
@@ -60,7 +60,7 @@ export default class M3U8Parser {
 
   static parseMasterPlaylist (string: string, baseurl: string) {
     // TODO(typescript-level)
-    let levels: Array<any> = [];
+    const levels: Array<any> = [];
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
     // TODO(typescript-level)
@@ -109,7 +109,7 @@ export default class M3U8Parser {
 
   static parseMasterPlaylistMedia (string: string, baseurl: string, type: MediaPlaylistType, audioGroups: Array<AudioGroup> = []): Array<MediaPlaylist> {
     let result: RegExpExecArray | null;
-    let medias: Array<MediaPlaylist> = [];
+    const medias: Array<MediaPlaylist> = [];
     let id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
@@ -151,7 +151,7 @@ export default class M3U8Parser {
   static parseLevelPlaylist (string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number) {
     let currentSN = 0;
     let totalduration = 0;
-    let level = new LevelDetails(baseurl);
+    const level = new LevelDetails(baseurl);
     let discontinuityCounter = 0;
     let prevFrag: Fragment | null = null;
     let frag: Fragment | null = new Fragment();

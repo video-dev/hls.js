@@ -19,13 +19,13 @@ export default (function () {
     return self.VTTCue;
   }
 
-  let autoKeyword = 'auto';
-  let directionSetting = {
+  const autoKeyword = 'auto';
+  const directionSetting = {
     '': true,
     lr: true,
     rl: true
   };
-  let alignSetting = {
+  const alignSetting = {
     start: true,
     middle: true,
     end: true,
@@ -38,7 +38,7 @@ export default (function () {
       return false;
     }
 
-    let dir = directionSetting[value.toLowerCase()];
+    const dir = directionSetting[value.toLowerCase()];
     return dir ? value.toLowerCase() : false;
   }
 
@@ -47,15 +47,15 @@ export default (function () {
       return false;
     }
 
-    let align = alignSetting[value.toLowerCase()];
+    const align = alignSetting[value.toLowerCase()];
     return align ? value.toLowerCase() : false;
   }
 
   function extend (obj) {
     let i = 1;
     for (; i < arguments.length; i++) {
-      let cobj = arguments[i];
-      for (let p in cobj) {
+      const cobj = arguments[i];
+      for (const p in cobj) {
         obj[p] = cobj[p];
       }
     }
@@ -64,8 +64,8 @@ export default (function () {
   }
 
   function VTTCue (startTime, endTime, text) {
-    let cue = this;
-    let baseObj = {};
+    const cue = this;
+    const baseObj = {};
 
     baseObj.enumerable = true;
 
@@ -170,7 +170,7 @@ export default (function () {
         return _vertical;
       },
       set: function (value) {
-        let setting = findDirectionSetting(value);
+        const setting = findDirectionSetting(value);
         // Have to check for false because the setting an be an empty string.
         if (setting === false) {
           throw new SyntaxError('An invalid or illegal string was specified.');
@@ -210,7 +210,7 @@ export default (function () {
         return _lineAlign;
       },
       set: function (value) {
-        let setting = findAlignSetting(value);
+        const setting = findAlignSetting(value);
         if (!setting) {
           throw new SyntaxError('An invalid or illegal string was specified.');
         }
@@ -239,7 +239,7 @@ export default (function () {
         return _positionAlign;
       },
       set: function (value) {
-        let setting = findAlignSetting(value);
+        const setting = findAlignSetting(value);
         if (!setting) {
           throw new SyntaxError('An invalid or illegal string was specified.');
         }
@@ -268,7 +268,7 @@ export default (function () {
         return _align;
       },
       set: function (value) {
-        let setting = findAlignSetting(value);
+        const setting = findAlignSetting(value);
         if (!setting) {
           throw new SyntaxError('An invalid or illegal string was specified.');
         }
@@ -292,7 +292,7 @@ export default (function () {
 
   VTTCue.prototype.getCueAsHTML = function () {
     // Assume WebVTT.convertCueToDOMTree is on the global.
-    let WebVTT = self.WebVTT;
+    const WebVTT = self.WebVTT;
     return WebVTT.convertCueToDOMTree(self, this.text);
   };
 

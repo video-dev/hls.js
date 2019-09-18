@@ -119,7 +119,7 @@ export class FragmentTracker extends EventHandler {
   }
 
   getBufferedTimes (startPTS: number, endPTS: number, timeRange: TimeRanges): FragmentBufferedRange {
-    let fragmentTimes: Array<FragmentTimeRange> = [];
+    const fragmentTimes: Array<FragmentTimeRange> = [];
     let startTime, endTime;
     let fragmentPartial = false;
     for (let i = 0; i < timeRange.length; i++) {
@@ -252,7 +252,7 @@ export class FragmentTracker extends EventHandler {
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = e.timeRanges;
     Object.keys(this.timeRanges).forEach(elementaryStream => {
-      let timeRange = this.timeRanges[elementaryStream];
+      const timeRange = this.timeRanges[elementaryStream];
       this.detectEvictedFragments(elementaryStream, timeRange);
     });
   }
@@ -279,7 +279,7 @@ export class FragmentTracker extends EventHandler {
    * @param {Object} fragment The fragment to remove
    */
   removeFragment (fragment: Fragment): void {
-    let fragKey = getFragmentKey(fragment);
+    const fragKey = getFragmentKey(fragment);
     delete this.fragments[fragKey];
   }
 

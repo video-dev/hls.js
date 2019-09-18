@@ -57,7 +57,7 @@ class MP4 {
       }
     }
 
-    let videoHdlr = new Uint8Array([
+    const videoHdlr = new Uint8Array([
       0x00, // version 0
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x00, // pre_defined
@@ -70,7 +70,7 @@ class MP4 {
       0x64, 0x6c, 0x65, 0x72, 0x00 // name: 'VideoHandler'
     ]);
 
-    let audioHdlr = new Uint8Array([
+    const audioHdlr = new Uint8Array([
       0x00, // version 0
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x00, // pre_defined
@@ -88,7 +88,7 @@ class MP4 {
       'audio': audioHdlr
     };
 
-    let dref = new Uint8Array([
+    const dref = new Uint8Array([
       0x00, // version 0
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x01, // entry_count
@@ -98,7 +98,7 @@ class MP4 {
       0x00, 0x00, 0x01 // entry_flags
     ]);
 
-    let stco = new Uint8Array([
+    const stco = new Uint8Array([
       0x00, // version
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x00 // entry_count
@@ -132,27 +132,25 @@ class MP4 {
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x01]);// entry_count
 
-    let majorBrand = new Uint8Array([105, 115, 111, 109]); // isom
-    let avc1Brand = new Uint8Array([97, 118, 99, 49]); // avc1
-    let minorVersion = new Uint8Array([0, 0, 0, 1]);
+    const majorBrand = new Uint8Array([105, 115, 111, 109]); // isom
+    const avc1Brand = new Uint8Array([97, 118, 99, 49]); // avc1
+    const minorVersion = new Uint8Array([0, 0, 0, 1]);
 
     MP4.FTYP = MP4.box(MP4.types.ftyp, majorBrand, minorVersion, majorBrand, avc1Brand);
     MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, dref));
   }
 
   static box (type) {
-    let
-      payload = Array.prototype.slice.call(arguments, 1),
-      size = 8,
-      i = payload.length,
-      len = i,
-      result;
+    const payload = Array.prototype.slice.call(arguments, 1);
+    let size = 8;
+    let i = payload.length;
+    const len = i;
     // calculate the total size we need to allocate
     while (i--) {
       size += payload[i].byteLength;
     }
 
-    result = new Uint8Array(size);
+    const result = new Uint8Array(size);
     result[0] = (size >> 24) & 0xff;
     result[1] = (size >> 16) & 0xff;
     result[2] = (size >> 8) & 0xff;
@@ -231,9 +229,8 @@ class MP4 {
  * @param tracks... (optional) {array} the tracks associated with this movie
  */
   static moov (tracks) {
-    let
-      i = tracks.length,
-      boxes = [];
+    let i = tracks.length;
+    const boxes = [];
 
     while (i--) {
       boxes[i] = MP4.trak(tracks[i]);
@@ -243,9 +240,8 @@ class MP4 {
   }
 
   static mvex (tracks) {
-    let
-      i = tracks.length,
-      boxes = [];
+    let i = tracks.length;
+    const boxes = [];
 
     while (i--) {
       boxes[i] = MP4.trex(tracks[i]);
@@ -258,7 +254,7 @@ class MP4 {
     duration *= timescale;
     const upperWordDuration = Math.floor(duration / (UINT32_MAX + 1));
     const lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
-    let
+    const
       bytes = new Uint8Array([
         0x01, // version 1
         0x00, 0x00, 0x00, // flags
@@ -302,11 +298,10 @@ class MP4 {
   }
 
   static sdtp (track) {
-    let
-      samples = track.samples || [],
-      bytes = new Uint8Array(4 + samples.length),
-      flags,
-      i;
+    const samples = track.samples || [];
+    const bytes = new Uint8Array(4 + samples.length);
+    let i;
+    let flags;
     // leave the full box header (4 bytes) all zero
     // write the sample table
     for (i = 0; i < samples.length; i++) {
@@ -324,7 +319,11 @@ class MP4 {
   }
 
   static avc1 (track) {
-    let sps = [], pps = [], i, data, len;
+    let sps = [];
+    let pps = [];
+    let i;
+    let data;
+    let len;
     // assemble the SPSs
 
     for (i = 0; i < track.sps.length; i++) {
@@ -347,20 +346,20 @@ class MP4 {
       pps = pps.concat(Array.prototype.slice.call(data));
     }
 
-    let avcc = MP4.box(MP4.types.avcC, new Uint8Array([
-        0x01, // version
-        sps[3], // profile
-        sps[4], // profile compat
-        sps[5], // level
-        0xfc | 3, // lengthSizeMinusOne, hard-coded to 4 bytes
-        0xE0 | track.sps.length // 3bit reserved (111) + numOfSequenceParameterSets
-      ].concat(sps).concat([
-        track.pps.length // numOfPictureParameterSets
-      ]).concat(pps))), // "PPS"
-      width = track.width,
-      height = track.height,
-      hSpacing = track.pixelRatio[0],
-      vSpacing = track.pixelRatio[1];
+    const avcc = MP4.box(MP4.types.avcC, new Uint8Array([
+      0x01, // version
+      sps[3], // profile
+      sps[4], // profile compat
+      sps[5], // level
+      0xfc | 3, // lengthSizeMinusOne, hard-coded to 4 bytes
+      0xE0 | track.sps.length // 3bit reserved (111) + numOfSequenceParameterSets
+    ].concat(sps).concat([
+      track.pps.length // numOfPictureParameterSets
+    ]).concat(pps))); // "PPS"
+    const width = track.width;
+    const height = track.height;
+    const hSpacing = track.pixelRatio[0];
+    const vSpacing = track.pixelRatio[1];
 
     return MP4.box(MP4.types.avc1, new Uint8Array([
       0x00, 0x00, 0x00, // reserved
@@ -408,7 +407,7 @@ class MP4 {
   }
 
   static esds (track) {
-    let configlen = track.config.length;
+    const configlen = track.config.length;
     return new Uint8Array([
       0x00, // version 0
       0x00, 0x00, 0x00, // flags
@@ -431,7 +430,7 @@ class MP4 {
   }
 
   static mp4a (track) {
-    let samplerate = track.samplerate;
+    const samplerate = track.samplerate;
     return MP4.box(MP4.types.mp4a, new Uint8Array([
       0x00, 0x00, 0x00, // reserved
       0x00, 0x00, 0x00, // reserved
@@ -448,7 +447,7 @@ class MP4 {
   }
 
   static mp3 (track) {
-    let samplerate = track.samplerate;
+    const samplerate = track.samplerate;
     return MP4.box(MP4.types['.mp3'], new Uint8Array([
       0x00, 0x00, 0x00, // reserved
       0x00, 0x00, 0x00, // reserved
@@ -476,12 +475,12 @@ class MP4 {
   }
 
   static tkhd (track) {
-    let id = track.id,
-      duration = track.duration * track.timescale,
-      width = track.width,
-      height = track.height,
-      upperWordDuration = Math.floor(duration / (UINT32_MAX + 1)),
-      lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
+    const id = track.id;
+    const duration = track.duration * track.timescale;
+    const width = track.width;
+    const height = track.height;
+    const upperWordDuration = Math.floor(duration / (UINT32_MAX + 1));
+    const lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
     return MP4.box(MP4.types.tkhd, new Uint8Array([
       0x01, // version 1
       0x00, 0x00, 0x07, // flags
@@ -525,10 +524,10 @@ class MP4 {
   }
 
   static traf (track, baseMediaDecodeTime) {
-    let sampleDependencyTable = MP4.sdtp(track),
-      id = track.id,
-      upperWordBaseMediaDecodeTime = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1)),
-      lowerWordBaseMediaDecodeTime = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
+    const sampleDependencyTable = MP4.sdtp(track);
+    const id = track.id;
+    const upperWordBaseMediaDecodeTime = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
+    const lowerWordBaseMediaDecodeTime = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
     return MP4.box(MP4.types.traf,
       MP4.box(MP4.types.tfhd, new Uint8Array([
         0x00, // version 0
@@ -572,7 +571,7 @@ class MP4 {
   }
 
   static trex (track) {
-    let id = track.id;
+    const id = track.id;
     return MP4.box(MP4.types.trex, new Uint8Array([
       0x00, // version 0
       0x00, 0x00, 0x00, // flags
@@ -588,11 +587,16 @@ class MP4 {
   }
 
   static trun (track, offset) {
-    let samples = track.samples || [],
-      len = samples.length,
-      arraylen = 12 + (16 * len),
-      array = new Uint8Array(arraylen),
-      i, sample, duration, size, flags, cts;
+    const samples = track.samples || [];
+    const len = samples.length;
+    const arraylen = 12 + (16 * len);
+    const array = new Uint8Array(arraylen);
+    let i;
+    let sample;
+    let duration;
+    let size;
+    let flags;
+    let cts;
     offset += 8 + arraylen;
     array.set([
       0x00, // version 0
@@ -642,8 +646,8 @@ class MP4 {
       MP4.init();
     }
 
-    let movie = MP4.moov(tracks), result;
-    result = new Uint8Array(MP4.FTYP.byteLength + movie.byteLength);
+    const movie = MP4.moov(tracks);
+    const result = new Uint8Array(MP4.FTYP.byteLength + movie.byteLength);
     result.set(MP4.FTYP);
     result.set(movie, MP4.FTYP.byteLength);
     return result;

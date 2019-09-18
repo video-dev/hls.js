@@ -26,7 +26,7 @@ export default class Chunker {
 
     if (temp.length > chunkSize) {
       let offset = 0;
-      let len = temp.length;
+      const len = temp.length;
       while (offset < (len - chunkSize)) {
         result.push(temp.slice(offset, offset + chunkSize));
         offset += chunkSize;

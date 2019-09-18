@@ -28,7 +28,7 @@ class XhrLoader implements Loader<LoaderContext> {
 
   abortInternal (): void {
     this.stats.aborted = true;
-    let loader = this.loader;
+    const loader = this.loader;
     if (loader && loader.readyState !== 4) {
       loader.abort();
     }

@@ -144,7 +144,7 @@ class ID3 {
     const size = ID3._readSize(data, 4);
 
     // skip frame id, size, and flags
-    let offset = 10;
+    const offset = 10;
 
     return { type, size, data: data.subarray(offset, offset + size) };
   }

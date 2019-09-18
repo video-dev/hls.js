@@ -169,7 +169,7 @@ export default class Fragment {
       return null;
     }
 
-    let duration = !Number.isFinite(this.duration) ? 0 : this.duration;
+    const duration = !Number.isFinite(this.duration) ? 0 : this.duration;
 
     return this.programDateTime + (duration * 1000);
   }
@@ -184,7 +184,7 @@ export default class Fragment {
    * @returns {Uint8Array}
    */
   createInitializationVector (segmentNumber: number): Uint8Array {
-    let uint8View = new Uint8Array(16);
+    const uint8View = new Uint8Array(16);
 
     for (let i = 12; i < 16; i++) {
       uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;

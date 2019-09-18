@@ -123,7 +123,7 @@ describe('CapLevelController', function () {
 
     it('receives level information from the MANIFEST_PARSED event', function () {
       capLevelController.restrictedLevels = [1];
-      let data = {
+      const data = {
         levels: [{ foo: 'bar' }],
         firstLevel: 0
       };

@@ -71,7 +71,7 @@ class AudioStreamController extends BaseStreamController {
       this.state = State.STOPPED;
       return;
     }
-    let lastCurrentTime = this.lastCurrentTime;
+    const lastCurrentTime = this.lastCurrentTime;
     this.stopLoad();
     this.setInterval(TICK_INTERVAL);
     this.fragLoadError = 0;
@@ -241,19 +241,19 @@ class AudioStreamController extends BaseStreamController {
   }
 
   onMediaAttached (data) {
-    let media = this.media = this.mediaBuffer = data.media;
+    const media = this.media = this.mediaBuffer = data.media;
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
     media.addEventListener('seeking', this.onvseeking);
     media.addEventListener('ended', this.onvended);
-    let config = this.config;
+    const config = this.config;
     if (this.levels && config.autoStartLoad) {
       this.startLoad(config.startPosition);
     }
   }
 
   onMediaDetaching () {
-    let media = this.media;
+    const media = this.media;
     if (media && media.ended) {
       this.log('MSE detaching and video ended, reset startPosition');
       this.startPosition = this.lastCurrentTime = 0;
@@ -277,7 +277,7 @@ class AudioStreamController extends BaseStreamController {
 
   onAudioTrackSwitching (data) {
     // if any URL found on new audio track, it is an alternate audio track
-    let altAudio = !!data.url;
+    const altAudio = !!data.url;
     this.trackId = data.id;
     const { fragCurrent, transmuxer } = this;
 
@@ -370,7 +370,7 @@ class AudioStreamController extends BaseStreamController {
     const initSegmentData = details.initSegment ? details.initSegment.data : [];
     // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
-    let accurateTimeOffset = false; // details.PTSKnown || !details.live;
+    const accurateTimeOffset = false; // details.PTSKnown || !details.live;
     const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount, payload.byteLength);
     transmuxer.push(payload, initSegmentData, audioCodec, '', frag, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
   }
@@ -382,7 +382,7 @@ class AudioStreamController extends BaseStreamController {
   }
 
   onBufferCreated (data) {
-    let audioTrack = data.tracks.audio;
+    const audioTrack = data.tracks.audio;
     if (audioTrack) {
       this.mediaBuffer = audioTrack.buffer;
     }
@@ -414,7 +414,7 @@ class AudioStreamController extends BaseStreamController {
   }
 
   onError (data) {
-    let frag = data.frag;
+    const frag = data.frag;
     // don't handle frag error not related to audio fragment
     if (frag && frag.type !== 'audio') {
       return;
@@ -468,10 +468,10 @@ class AudioStreamController extends BaseStreamController {
     case ErrorDetails.BUFFER_FULL_ERROR:
       // if in appending state
       if (data.parent === 'audio' && (this.state === State.PARSING || this.state === State.PARSED)) {
-        const media = this.mediaBuffer,
-          currentTime = this.media.currentTime,
-          mediaBuffered = media && BufferHelper.isBuffered(media, currentTime) && BufferHelper.isBuffered(media, currentTime + 0.5);
-          // reduce max buf len if current position is buffered
+        const media = this.mediaBuffer;
+        const currentTime = this.media.currentTime;
+        const mediaBuffered = media && BufferHelper.isBuffered(media, currentTime) && BufferHelper.isBuffered(media, currentTime + 0.5);
+        // reduce max buf len if current position is buffered
         if (mediaBuffered) {
           const config = this.config;
           if (config.maxMaxBufferLength >= config.maxBufferLength) {
@@ -572,9 +572,9 @@ class AudioStreamController extends BaseStreamController {
     track.id = 'audio';
     this.hls.trigger(Event.BUFFER_CODECS, tracks);
     this.log(`Audio, container:${track.container}, codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
-    let initSegment = track.initSegment;
+    const initSegment = track.initSegment;
     if (initSegment) {
-      let segment: BufferAppendingEventPayload = { type: 'audio', data: initSegment, frag, chunkMeta };
+      const segment: BufferAppendingEventPayload = { type: 'audio', data: initSegment, frag, chunkMeta };
       this.hls.trigger(Event.BUFFER_APPENDING, segment);
     }
     // trigger handler right now
@@ -586,7 +586,7 @@ class AudioStreamController extends BaseStreamController {
     // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
     const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
-    let prevPos = this.nextLoadPosition;
+    const prevPos = this.nextLoadPosition;
 
     if (!this.audioSwitch && fragState !== FragmentState.NOT_LOADED) {
       return;

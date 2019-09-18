@@ -38,7 +38,7 @@ class MP3Demuxer implements Demuxer {
   static probe (data) {
     // check if data contains ID3 timestamp and MPEG sync word
     let offset, length;
-    let id3Data = ID3.getID3Data(data, 0);
+    const id3Data = ID3.getID3Data(data, 0);
     if (id3Data && ID3.getTimeStamp(id3Data) !== undefined) {
       // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
       // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
@@ -79,14 +79,14 @@ class MP3Demuxer implements Demuxer {
 
     while (offset < length) {
       if (MpegAudio.canParse(data, offset)) {
-        let frame = MpegAudio.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
+        const frame = MpegAudio.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
         if (frame) {
           offset += frame.length;
           pts = frame.sample.pts;
           this.frameIndex++;
           lastDataIndex = offset;
         } else {
-          let partialData = data.slice(offset);
+          const partialData = data.slice(offset);
 
           this.cachedData = appendUint8Array(this.cachedData, partialData);
           offset += partialData.length;
@@ -97,13 +97,13 @@ class MP3Demuxer implements Demuxer {
         offset += id3Data.length;
         lastDataIndex = offset;
       } else {
-        let partialData = data.slice(offset);
+        const partialData = data.slice(offset);
 
         this.cachedData = appendUint8Array(this.cachedData, partialData);
         offset += partialData.length;
       }
       if (offset === length && lastDataIndex !== length) {
-        let partialData = data.slice(lastDataIndex);
+        const partialData = data.slice(lastDataIndex);
         this.cachedData = appendUint8Array(this.cachedData, partialData);
       }
     }

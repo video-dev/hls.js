@@ -39,12 +39,12 @@ function loadFragmentAndBuffered (hls, fragment) {
 }
 describe('FragmentTracker', function () {
   describe('getPartialFragment', function () {
-    let hls, fragmentTracker, fragment, buffered, partialFragment, timeRanges;
+    let partialFragment;
 
-    hls = new Hls({});
-    fragmentTracker = new FragmentTracker(hls);
+    const hls = new Hls({});
+    const fragmentTracker = new FragmentTracker(hls);
 
-    fragment = createMockFragment({
+    const fragment = createMockFragment({
       startPTS: 0,
       endPTS: 1,
       sn: 1,
@@ -54,14 +54,14 @@ describe('FragmentTracker', function () {
 
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
-    buffered = createMockBuffer([
+    const buffered = createMockBuffer([
       {
         startPTS: 0,
         endPTS: 0.5
       }
     ]);
 
-    timeRanges = {};
+    const timeRanges = {};
     timeRanges['video'] = buffered;
     timeRanges['audio'] = buffered;
     hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
@@ -84,12 +84,14 @@ describe('FragmentTracker', function () {
   });
 
   describe('getState', function () {
-    let hls, fragmentTracker, fragment, buffered, timeRanges;
+    let buffered;
+    let fragment;
+    let timeRanges;
 
-    hls = new Hls({});
-    fragmentTracker = new FragmentTracker(hls);
+    const hls = new Hls({});
+    const fragmentTracker = new FragmentTracker(hls);
 
-    let addFragment = function () {
+    const addFragment = function () {
       fragment = createMockFragment({
         startPTS: 0,
         endPTS: 1,
@@ -287,10 +289,11 @@ describe('FragmentTracker', function () {
   });
 
   describe('onFragBuffered', function () {
-    let hls, fragmentTracker, fragment, timeRanges;
+    let fragment;
+    let timeRanges;
 
-    hls = new Hls({});
-    fragmentTracker = new FragmentTracker(hls);
+    const hls = new Hls({});
+    const fragmentTracker = new FragmentTracker(hls);
 
     it('supports audio buffer', function () {
       fragment = createMockFragment({

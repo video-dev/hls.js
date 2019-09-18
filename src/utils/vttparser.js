@@ -34,7 +34,7 @@ function parseTimeStamp (input) {
     return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + (f | 0) / 1000;
   }
 
-  let m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d{3})/);
+  const m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d{3})/);
   if (!m) {
     return null;
   }
@@ -113,34 +113,34 @@ Settings.prototype = {
 // Helper function to parse input into groups separated by 'groupDelim', and
 // interprete each group as a key/value pair separated by 'keyValueDelim'.
 function parseOptions (input, callback, keyValueDelim, groupDelim) {
-  let groups = groupDelim ? input.split(groupDelim) : [input];
-  for (let i in groups) {
+  const groups = groupDelim ? input.split(groupDelim) : [input];
+  for (const i in groups) {
     if (typeof groups[i] !== 'string') {
       continue;
     }
 
-    let kv = groups[i].split(keyValueDelim);
+    const kv = groups[i].split(keyValueDelim);
     if (kv.length !== 2) {
       continue;
     }
 
-    let k = kv[0];
-    let v = kv[1];
+    const k = kv[0];
+    const v = kv[1];
     callback(k, v);
   }
 }
 
-let defaults = new VTTCue(0, 0, 0);
+const defaults = new VTTCue(0, 0, 0);
 // 'middle' was changed to 'center' in the spec: https://github.com/w3c/webvtt/pull/244
 //  Safari doesn't yet support this change, but FF and Chrome do.
-let center = defaults.align === 'middle' ? 'middle' : 'center';
+const center = defaults.align === 'middle' ? 'middle' : 'center';
 
 function parseCue (input, cue, regionList) {
   // Remember the original input if we need to throw an error.
-  let oInput = input;
+  const oInput = input;
   // 4.1 WebVTT timestamp
   function consumeTimeStamp () {
-    let ts = parseTimeStamp(input);
+    const ts = parseTimeStamp(input);
     if (ts === null) {
       throw new Error('Malformed timestamp: ' + oInput);
     }
@@ -152,9 +152,10 @@ function parseCue (input, cue, regionList) {
 
   // 4.4.2 WebVTT cue settings
   function consumeCueSettings (input, cue) {
-    let settings = new Settings();
+    const settings = new Settings();
 
     parseOptions(input, function (k, v) {
+      let vals;
       switch (k) {
       case 'region':
         // Find the last region we parsed with the same region id.
@@ -169,14 +170,13 @@ function parseCue (input, cue, regionList) {
         settings.alt(k, v, ['rl', 'lr']);
         break;
       case 'line':
-        var vals = v.split(','),
-          vals0 = vals[0];
-        settings.integer(k, vals0);
-        if (settings.percent(k, vals0)) {
+        vals = v.split(',');
+        settings.integer(k, vals[0]);
+        if (settings.percent(k, vals[0])) {
           settings.set('snapToLines', false);
         }
 
-        settings.alt(k, vals0, ['auto']);
+        settings.alt(k, vals[0], ['auto']);
         if (vals.length === 2) {
           settings.alt('lineAlign', vals[1], ['start', center, 'end']);
         }
@@ -247,7 +247,7 @@ function fixLineBreaks (input) {
 
 VTTParser.prototype = {
   parse: function (data) {
-    let _this = this;
+    const _this = this;
 
     // If there is no data then we won't decode it, but will just try to parse
     // whatever is in buffer already. This may occur in circumstances, for
@@ -267,7 +267,7 @@ VTTParser.prototype = {
         ++pos;
       }
 
-      let line = buffer.substr(0, pos);
+      const line = buffer.substr(0, pos);
       // Advance the buffer early in case we fail below.
       if (buffer[pos] === '\r') {
         ++pos;
@@ -306,7 +306,7 @@ VTTParser.prototype = {
         line = collectNextLine();
         // strip of UTF-8 BOM if any
         // https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
-        let m = line.match(/^(ï»¿)?WEBVTT([ \t].*)?$/);
+        const m = line.match(/^(ï»¿)?WEBVTT([ \t].*)?$/);
         if (!m || !m[0]) {
           throw new Error('Malformed WebVTT signature.');
         }
@@ -421,7 +421,7 @@ VTTParser.prototype = {
     return this;
   },
   flush: function () {
-    let _this = this;
+    const _this = this;
     try {
       // Finish decoding the stream.
       _this.buffer += _this.decoder.decode();

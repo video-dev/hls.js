@@ -57,11 +57,11 @@ const MpegAudio = {
       return undefined;
     }
 
-    let header = this.parseHeader(data, offset);
+    const header = this.parseHeader(data, offset);
     if (header && offset + header.frameLength <= data.length) {
-      let frameDuration = header.samplesPerFrame * 90000 / header.sampleRate;
-      let stamp = pts + frameIndex * frameDuration;
-      let sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
+      const frameDuration = header.samplesPerFrame * 90000 / header.sampleRate;
+      const stamp = pts + frameIndex * frameDuration;
+      const sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
 
       track.config = [];
       track.channelCount = header.channelCount;
@@ -75,21 +75,21 @@ const MpegAudio = {
   },
 
   parseHeader: function (data, offset) {
-    let headerB = (data[offset + 1] >> 3) & 3;
-    let headerC = (data[offset + 1] >> 1) & 3;
-    let headerE = (data[offset + 2] >> 4) & 15;
-    let headerF = (data[offset + 2] >> 2) & 3;
-    let headerG = (data[offset + 2] >> 1) & 1;
+    const headerB = (data[offset + 1] >> 3) & 3;
+    const headerC = (data[offset + 1] >> 1) & 3;
+    const headerE = (data[offset + 2] >> 4) & 15;
+    const headerF = (data[offset + 2] >> 2) & 3;
+    const headerG = (data[offset + 2] >> 1) & 1;
     if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
-      let columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
-      let bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
-      let columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-      let sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
-      let channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-      let sampleCoefficient = MpegAudio.SamplesCoefficients[headerB][headerC];
-      let bytesInSlot = MpegAudio.BytesInSlot[headerC];
-      let samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
-      let frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
+      const columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
+      const bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
+      const columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
+      const sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
+      const channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+      const sampleCoefficient = MpegAudio.SamplesCoefficients[headerB][headerC];
+      const bytesInSlot = MpegAudio.BytesInSlot[headerC];
+      const samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
+      const frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
 
       return { sampleRate, channelCount, frameLength, samplesPerFrame };
     }
@@ -113,7 +113,7 @@ const MpegAudio = {
   },
 
   canParse: function (data, offset) {
-    let headerSize = 4;
+    const headerSize = 4;
 
     return this.isHeaderPattern(data, offset) && data.length - offset >= headerSize;
   },
@@ -123,15 +123,15 @@ const MpegAudio = {
     // or end of data is reached
     if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
       // MPEG header Length
-      let headerLength = 4;
+      const headerLength = 4;
       // MPEG frame Length
-      let header = this.parseHeader(data, offset);
+      const header = this.parseHeader(data, offset);
       let frameLength = headerLength;
       if (header && header.frameLength) {
         frameLength = header.frameLength;
       }
 
-      let newOffset = offset + frameLength;
+      const newOffset = offset + frameLength;
       if (newOffset === data.length || (newOffset + 1 < data.length && this.isHeaderPattern(data, newOffset))) {
         return true;
       }

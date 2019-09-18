@@ -27,7 +27,7 @@ const BinarySearch = {
       currentIndex = (minIndex + maxIndex) / 2 | 0;
       currentElement = list[currentIndex];
 
-      let comparisonResult = comparisonFn(currentElement);
+      const comparisonResult = comparisonFn(currentElement);
       if (comparisonResult > 0) {
         minIndex = currentIndex + 1;
       } else if (comparisonResult < 0) {

@@ -8,7 +8,7 @@ describe('Fragment finders', function () {
     sandbox.restore();
   });
 
-  let fragPrevious = {
+  const fragPrevious = {
     programDateTime: 1505502671523,
     endProgramDateTime: 1505502676523,
     duration: 5.000,
@@ -20,7 +20,7 @@ describe('Fragment finders', function () {
   const bufferEnd = fragPrevious.start + fragPrevious.duration;
 
   describe('findFragmentByPTS', function () {
-    let tolerance = 0.25;
+    const tolerance = 0.25;
     let binarySearchSpy;
     beforeEach(function () {
       binarySearchSpy = sandbox.spy(BinarySearch, 'search');
@@ -47,7 +47,7 @@ describe('Fragment finders', function () {
   });
 
   describe('fragmentWithinToleranceTest', function () {
-    let tolerance = 0.25;
+    const tolerance = 0.25;
     it('returns 0 if the fragment range is equal to the end of the buffer', function () {
       const frag = {
         start: 5,
@@ -150,8 +150,8 @@ describe('Fragment finders', function () {
   });
 
   describe('pdtWithinToleranceTest', function () {
-    let tolerance = 0.25;
-    let pdtBufferEnd = 1505502678523; // Fri Sep 15 2017 15:11:18 GMT-0400 (Eastern Daylight Time)
+    const tolerance = 0.25;
+    const pdtBufferEnd = 1505502678523; // Fri Sep 15 2017 15:11:18 GMT-0400 (Eastern Daylight Time)
     it('returns true if the fragment range is equal to the end of the buffer', function () {
       const frag = {
         programDateTime: pdtBufferEnd,

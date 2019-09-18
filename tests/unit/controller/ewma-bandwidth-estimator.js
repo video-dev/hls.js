@@ -3,14 +3,14 @@ import Hls from '../../../src/hls';
 
 describe('EwmaBandWidthEstimator', function () {
   it('returns default estimate if bw estimator not available yet', function () {
-    let defaultEstimate = 5e5;
-    let bwEstimator = new EwmaBandWidthEstimator(new Hls(), 0, 0, defaultEstimate);
+    const defaultEstimate = 5e5;
+    const bwEstimator = new EwmaBandWidthEstimator(new Hls(), 0, 0, defaultEstimate);
     expect(bwEstimator.getEstimate()).to.equal(5e5);
   });
 
   it('returns last bitrate is fast=slow=0', function () {
-    let defaultEstimate = 5e5;
-    let bwEstimator = new EwmaBandWidthEstimator(new Hls(), 0, 0, defaultEstimate);
+    const defaultEstimate = 5e5;
+    const bwEstimator = new EwmaBandWidthEstimator(new Hls(), 0, 0, defaultEstimate);
     bwEstimator.sample(8000, 1000000);
     expect(bwEstimator.getEstimate()).to.equal(1000000);
     bwEstimator.sample(4000, 1000000);
@@ -20,8 +20,8 @@ describe('EwmaBandWidthEstimator', function () {
   });
 
   it('returns correct value bitrate is slow=15,fast=4', function () {
-    let defaultEstimate = 5e5;
-    let bwEstimator = new EwmaBandWidthEstimator(new Hls(), 15, 4, defaultEstimate);
+    const defaultEstimate = 5e5;
+    const bwEstimator = new EwmaBandWidthEstimator(new Hls(), 15, 4, defaultEstimate);
     bwEstimator.sample(8000, 1000000);
     expect(bwEstimator.getEstimate()).to.equal(1000000);
     bwEstimator.sample(4000, 1000000);
@@ -31,8 +31,8 @@ describe('EwmaBandWidthEstimator', function () {
   });
 
   it('returns correct value bitrate is slow=9,fast=5', function () {
-    let defaultEstimate = 5e5;
-    let bwEstimator = new EwmaBandWidthEstimator(new Hls(), 9, 5, defaultEstimate);
+    const defaultEstimate = 5e5;
+    const bwEstimator = new EwmaBandWidthEstimator(new Hls(), 9, 5, defaultEstimate);
     bwEstimator.sample(8000, 1000000);
     expect(bwEstimator.getEstimate()).to.equal(1000000);
     bwEstimator.sample(4000, 1000000);

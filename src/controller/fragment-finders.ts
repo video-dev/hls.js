@@ -26,7 +26,7 @@ export function findFragmentByPDT (fragments: Array<Fragment>, PDTValue: number 
 
   maxFragLookUpTolerance = maxFragLookUpTolerance || 0;
   for (let seg = 0; seg < fragments.length; ++seg) {
-    let frag = fragments[seg];
+    const frag = fragments[seg];
     if (pdtWithinToleranceTest(PDTValue, maxFragLookUpTolerance, frag)) {
       return frag;
     }
@@ -76,7 +76,7 @@ export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpToleran
   //  return -1             return 0                 return 1
   // logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
   // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
-  let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0));
+  const candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0));
   if (candidate.start + candidate.duration - candidateLookupTolerance <= bufferEnd) {
     return 1;
   } else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start) {
@@ -96,7 +96,7 @@ export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpToleran
  * @returns {boolean} True if contiguous, false otherwise
  */
 export function pdtWithinToleranceTest (pdtBufferEnd: number, maxFragLookUpTolerance: number, candidate: Fragment): boolean {
-  let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
+  const candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
 
   // endProgramDateTime can be null, default to zero
   const endProgramDateTime = candidate.endProgramDateTime || 0;

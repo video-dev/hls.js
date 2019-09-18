@@ -7,13 +7,13 @@ const sinon = require('sinon');
 
 describe('TransmuxerInterface tests', function () {
   it('can construct without a worker', function () {
-    let config = { enableWorker: false }; // Option debug : true crashes mocha
-    let hls = {
+    const config = { enableWorker: false }; // Option debug : true crashes mocha
+    const hls = {
       trigger: function () {},
       config: config
     };
-    let id = 'main';
-    let transmuxerInterface = new TransmuxerInterface(hls, id);
+    const id = 'main';
+    const transmuxerInterface = new TransmuxerInterface(hls, id);
 
     expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
@@ -23,13 +23,13 @@ describe('TransmuxerInterface tests', function () {
   });
 
   it('can construct with a worker', function () {
-    let config = { enableWorker: true }; // Option debug : true crashes mocha
-    let hls = {
+    const config = { enableWorker: true }; // Option debug : true crashes mocha
+    const hls = {
       trigger: function () {},
       config: config
     };
-    let id = 'main';
-    let transmuxerInterface = new TransmuxerInterface(hls, id);
+    const id = 'main';
+    const transmuxerInterface = new TransmuxerInterface(hls, id);
 
     expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
@@ -40,13 +40,13 @@ describe('TransmuxerInterface tests', function () {
   });
 
   it('can destroy a transmuxer worker', function () {
-    let config = { enableWorker: true }; // Option debug : true crashes mocha
-    let hls = {
+    const config = { enableWorker: true }; // Option debug : true crashes mocha
+    const hls = {
       trigger: function () {},
       config: config
     };
-    let id = 'main';
-    let transmuxerInterface = new TransmuxerInterface(hls, id);
+    const id = 'main';
+    const transmuxerInterface = new TransmuxerInterface(hls, id);
     transmuxerInterface.destroy();
 
     expect(transmuxerInterface.observer).to.not.exist;
@@ -55,13 +55,13 @@ describe('TransmuxerInterface tests', function () {
   });
 
   it('can destroy an inline transmuxer', function () {
-    let config = { enableWorker: false }; // Option debug : true crashes mocha
-    let hls = {
+    const config = { enableWorker: false }; // Option debug : true crashes mocha
+    const hls = {
       trigger: function () {},
       config: config
     };
-    let id = 'main';
-    let transmuxerInterface = new TransmuxerInterface(hls, id);
+    const id = 'main';
+    const transmuxerInterface = new TransmuxerInterface(hls, id);
     transmuxerInterface.destroy();
 
     expect(transmuxerInterface.observer).to.not.exist;
@@ -70,13 +70,13 @@ describe('TransmuxerInterface tests', function () {
   });
 
   it('pushes data to a transmuxer worker', function () {
-    let config = { enableWorker: true }; // Option debug : true crashes mocha
-    let hls = {
+    const config = { enableWorker: true }; // Option debug : true crashes mocha
+    const hls = {
       trigger: function () {},
       config: config
     };
-    let id = 'main';
-    let transmuxerInterface = new TransmuxerInterface(hls, id);
+    const id = 'main';
+    const transmuxerInterface = new TransmuxerInterface(hls, id);
     const currentFrag = new Fragment();
     currentFrag.cc = 100;
     currentFrag.sn = 5;
@@ -120,15 +120,15 @@ describe('TransmuxerInterface tests', function () {
     });
   });
 
-  it('pushes data to demuxer with no worker', function () {
-    let config = { enableWorker: false }; // Option debug : true crashes mocha
-    let hls = {
+  it.only('pushes data to demuxer with no worker', function () {
+    const config = { enableWorker: false }; // Option debug : true crashes mocha
+    const hls = {
       trigger: function () {
       },
       config: config
     };
-    let id = 'main';
-    let transmuxerInterface = new TransmuxerInterface(hls, id);
+    const id = 'main';
+    const transmuxerInterface = new TransmuxerInterface(hls, id);
 
     const currentFrag = new Fragment();
     currentFrag.cc = 100;
@@ -144,13 +144,13 @@ describe('TransmuxerInterface tests', function () {
     newFrag.level = 2;
     newFrag.start = 1000;
 
-    const data = new ArrayBuffer(8);
+    const data = new Uint8Array(new ArrayBuffer(8));
     const initSegment = {};
     const audioCodec = '';
     const videoCodec = '';
     const duration = 0;
     const accurateTimeOffset = true;
-    const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn);
+    const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
 
     const configureStub = sinon.stub(transmuxerInterface.transmuxer, 'configure');
     const pushStub = sinon.stub(transmuxerInterface.transmuxer, 'push');

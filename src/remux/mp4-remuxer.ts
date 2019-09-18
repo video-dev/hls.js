@@ -343,7 +343,7 @@ export default class MP4Remuxer implements Remuxer {
       this.observer.trigger(Event.ERROR, { type: ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: `fail allocating video mdat ${mdatSize}` });
       return;
     }
-    let view = new DataView(mdat.buffer);
+    const view = new DataView(mdat.buffer);
     view.setUint32(0, mdatSize);
     mdat.set(MP4.types.mdat, 4);
 
@@ -369,8 +369,8 @@ export default class MP4Remuxer implements Remuxer {
         if (i < nbSamples - 1) {
           mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
         } else {
-          let config = this.config,
-            lastFrameDuration = avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
+          const config = this.config;
+          const lastFrameDuration = avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
           if (config.stretchShortVideoTrack && this.nextAudioPts !== null) {
             // In some cases, a segment's audio track duration may exceed the video track duration.
             // Since we've already remuxed audio, and we know how long the audio track is, we look to
@@ -518,10 +518,10 @@ export default class MP4Remuxer implements Remuxer {
         // 2: Not more than MAX_SILENT_FRAME_DURATION away
         // 3: currentTime (aka nextPtsNorm) is not 0
         else if (delta >= maxAudioFramesDrift * inputSampleDuration && duration < MAX_SILENT_FRAME_DURATION && nextPts) {
-          let missing = Math.round(delta / inputSampleDuration);
+          const missing = Math.round(delta / inputSampleDuration);
           logger.warn(`[mp4-remuxer]: Injecting ${missing} audio frame @ ${(nextPts / inputTimeScale).toFixed(3)}s due to ${Math.round(1000 * delta / inputTimeScale)} ms gap.`);
           for (let j = 0; j < missing; j++) {
-            let newStamp = Math.max(nextPts, 0);
+            const newStamp = Math.max(nextPts, 0);
             fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
             if (!fillFrame) {
               logger.log('[mp4-remuxer]: Unable to get silent frame for given audio codec; duplicating last frame instead.');
@@ -553,8 +553,8 @@ export default class MP4Remuxer implements Remuxer {
       mdatSize += inputSamples[sampleLength].unit.byteLength;
     }
     for (let j = 0, nbSamples = inputSamples.length; j < nbSamples; j++) {
-      let audioSample = inputSamples[j];
-      let unit = audioSample.unit;
+      const audioSample = inputSamples[j];
+      const unit = audioSample.unit;
       let pts = audioSample.pts;
       if (lastPTS !== null) {
         // If we have more than one sample, set the duration of the sample to the "real" duration; the PTS diff with
@@ -562,8 +562,8 @@ export default class MP4Remuxer implements Remuxer {
         const prevSample = outputSamples[j - 1];
         prevSample.duration = Math.round((pts - lastPTS) / scaleFactor);
       } else {
-        let delta = Math.round(1000 * (pts - nextAudioPts) / inputTimeScale),
-          numMissingFrames = 0;
+        const delta = Math.round(1000 * (pts - nextAudioPts) / inputTimeScale);
+        let numMissingFrames = 0;
         // if fragment are contiguous, detect hole/overlapping between fragments
         // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
         if (contiguous && track.isAAC) {
@@ -695,9 +695,9 @@ export default class MP4Remuxer implements Remuxer {
       return;
     }
 
-    let samples = [] as Array<any>;
+    const samples = [] as Array<any>;
     for (let i = 0; i < nbSamples; i++) {
-      let stamp = startDTS + i * frameDuration;
+      const stamp = startDTS + i * frameDuration;
       samples.push({ unit: silentFrame, pts: stamp, dts: stamp });
     }
     track.samples = samples;
@@ -714,7 +714,7 @@ export default class MP4Remuxer implements Remuxer {
     const initPTS = this._initPTS;
     const initDTS = this._initDTS;
     for (let index = 0; index < length; index++) {
-      let sample = track.samples[index];
+      const sample = track.samples[index];
       // setting id3 pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
       sample.pts = ((sample.pts - initPTS) / inputTimeScale);
@@ -737,7 +737,7 @@ export default class MP4Remuxer implements Remuxer {
     const inputTimeScale = track.inputTimeScale;
     const initPTS = this._initPTS;
     for (let index = 0; index < length; index++) {
-      let sample = track.samples[index];
+      const sample = track.samples[index];
       // setting text pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
       sample.pts = ((sample.pts - initPTS) / inputTimeScale);

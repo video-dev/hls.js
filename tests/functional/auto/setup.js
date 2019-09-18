@@ -25,17 +25,17 @@ let browser;
 let stream;
 // Setup browser config data from env vars
 if (onTravis) {
-  let UA = process.env.UA;
+  const UA = process.env.UA;
   if (!UA) {
     throw new Error('No test browser name.');
   }
 
-  let OS = process.env.OS;
+  const OS = process.env.OS;
   if (!OS) {
     throw new Error('No test browser platform.');
   }
 
-  let UA_VERSION = process.env.UA_VERSION;
+  const UA_VERSION = process.env.UA_VERSION;
   if (UA_VERSION) {
     browserConfig.version = UA_VERSION;
   }
@@ -52,7 +52,7 @@ if (browserConfig.platform) {
   browserDescription += `, ${browserConfig.platform}`;
 }
 
-let hostname = onTravis ? 'localhost' : '127.0.0.1';
+const hostname = onTravis ? 'localhost' : '127.0.0.1';
 
 // Launch static server
 HttpServer.createServer({
@@ -78,7 +78,7 @@ async function retry (attempt, numAttempts = 5, interval = 2000) {
 async function testLoadedData (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
-      let callback = arguments[arguments.length - 1];
+      const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
       video.onloadeddata = function () {
@@ -94,18 +94,18 @@ async function testLoadedData (url, config) {
 async function testSmoothSwitch (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
-      let callback = arguments[arguments.length - 1];
+      const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
       video.onloadeddata = () => {
         self.switchToHighestLevel('next');
       };
       self.hls.on(self.Hls.Events.LEVEL_SWITCHED, (event, data) => {
-        let currentTime = video.currentTime;
+        const currentTime = video.currentTime;
         if (data.level === self.hls.levels.length - 1) {
           console.log(`[log] > switched on level: ${data.level}`);
           self.setTimeout(() => {
-            let newCurrentTime = video.currentTime;
+            const newCurrentTime = video.currentTime;
             console.log(
               `[log] > currentTime delta : ${newCurrentTime - currentTime}`
             );
@@ -126,7 +126,7 @@ async function testSmoothSwitch (url, config) {
 async function testSeekOnLive (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
-      let callback = arguments[arguments.length - 1];
+      const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
       video.onloadeddata = () => {
@@ -147,7 +147,7 @@ async function testSeekOnLive (url, config) {
 async function testSeekOnVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
-      let callback = arguments[arguments.length - 1];
+      const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
       video.onloadeddata = function () {
@@ -168,7 +168,7 @@ async function testSeekOnVOD (url, config) {
 async function testSeekEndVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
-      let callback = arguments[arguments.length - 1];
+      const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
       video.onloadeddata = function () {
@@ -189,16 +189,16 @@ async function testSeekEndVOD (url, config) {
 async function testIsPlayingVOD (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
-      let callback = arguments[arguments.length - 1];
+      const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
       video.onloadeddata = () => {
-        let expectedPlaying = !(
+        const expectedPlaying = !(
           video.paused || // not playing when video is paused
           video.ended || // not playing when video is ended
           video.buffered.length === 0
         ); // not playing if nothing buffered
-        let currentTime = video.currentTime;
+        const currentTime = video.currentTime;
         if (expectedPlaying) {
           self.setTimeout(() => {
             console.log(
@@ -228,7 +228,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       throw new Error('Stream not defined');
     }
 
-    let capabilities = {
+    const capabilities = {
       name: `"${stream.description}" on "${browserDescription}"`,
       browserName: browserConfig.name,
       platform: browserConfig.platform,
@@ -258,7 +258,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     browser = browser.withCapabilities(capabilities).build();
     try {
       await retry(async () => {
-        let start = Date.now();
+        const start = Date.now();
         console.log('Retrieving web driver session...');
         try {
           const [timeouts, session] = await Promise.all([
@@ -316,10 +316,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     console.log('Browser quit.');
   });
 
-  for (let name in streams) {
+  for (const name in streams) {
     stream = streams[name];
-    let url = stream.url;
-    let config = stream.config || {};
+    const url = stream.url;
+    const config = stream.config || {};
     if (
       !stream.blacklist_ua ||
       stream.blacklist_ua.indexOf(browserConfig.name) === -1
