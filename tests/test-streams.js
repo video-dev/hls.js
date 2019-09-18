@@ -92,12 +92,14 @@ module.exports = {
     'live': false,
     'abr': true
   },
+  /*
   bbbAES: {
     'url': 'https://test-streams.mux.dev/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
   },
+  */
   mp3Audio: {
     'url': 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
     'description': 'MP3 VOD demo',
