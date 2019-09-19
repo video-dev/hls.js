@@ -94,8 +94,10 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   onMediaDetaching () {
-    this.media.removeEventListener('seeking', this._onMediaSeeking);
-    this.media = null;
+    if (this.media) {
+      this.media.removeEventListener('seeking', this._onMediaSeeking);
+      this.media = null;
+    }
     this.state = State.STOPPED;
   }
 
