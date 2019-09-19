@@ -116,9 +116,9 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     let duration = getDuration(data, initData);
-    console.assert(duration > 0, 'Duration parsed from mp4 should be greater than zero');
     // Workaround for cases where mp4-tools fails to get a duration (fmp4Bitmovin)
     if (duration === 0) {
+      console.error('Duration parsed from mp4 should be greater than zero');
       duration = videoTrack.frag.duration;
     }
 
