@@ -47,6 +47,7 @@ class StreamController extends BaseStreamController {
     this._state = State.STOPPED;
     this.stallReported = false;
     this.gapController = null;
+    this.altAudio = false;
   }
 
   startLoad (startPosition) {
