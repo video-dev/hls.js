@@ -331,6 +331,13 @@ export function getDuration (data, initData) {
     const scale = initData[id].timescale || 90e3;
     duration += rawDuration / scale;
   }
+  if (duration === 0) {
+    // If duration samples are not available in the traf use sidx subsegment_duration
+    const sidx = parseSegmentIndex(data);
+    if (sidx && sidx.references) {
+      return sidx.references.reduce((dur, ref) => dur + ref.info.duration || 0, 0);
+    }
+  }
   return duration;
 }
 
