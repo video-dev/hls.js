@@ -11,7 +11,7 @@ const HMSF_REGEX = /^(\d{2,}):(\d{2}):(\d{2}):(\d{2})\.?(\d+)?$/;
 // Time format: hours, minutes, seconds, milliseconds, frames, ticks
 const TIME_UNIT_REGEX = /^(\d*(?:\.\d*)?)(h|m|s|ms|f|t)$/;
 
-export function parseIMSC1(payload: ArrayBuffer, syncPTS: number, callBack: (cues: Array<VTTCue>) => any, errorCallBack: (error: Error) => any) {
+export function parseIMSC1 (payload: ArrayBuffer, syncPTS: number, callBack: (cues: Array<VTTCue>) => any, errorCallBack: (error: Error) => any) {
   const results = findBox(new Uint8Array(payload), ['mdat']);
   if (results === null || results.length === 0) {
     errorCallBack(new Error('Could not parse IMSC1 mdat'));
@@ -27,7 +27,7 @@ export function parseIMSC1(payload: ArrayBuffer, syncPTS: number, callBack: (cue
   }
 }
 
-function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
+function parseTTML (ttml: string, syncPTS: number): Array<VTTCue> {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(ttml, 'text/xml');
   const tt = xmlDoc.getElementsByTagName('tt')[0];
@@ -69,7 +69,7 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
       }
       endTime = startTime + duration;
     }
-    const cue =  new VTTCue(startTime - syncPTS, endTime - syncPTS, cueText);
+    const cue = new VTTCue(startTime - syncPTS, endTime - syncPTS, cueText);
 
     const region = regionElements[cueElement.getAttribute('region')];
     const style = styleElements[cueElement.getAttribute('style')];
@@ -89,7 +89,7 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
         center: 'center',
         right: 'end',
         start: 'start',
-        end: 'end',
+        end: 'end'
       })[textAlign];
       cue.align = textAlign;
     }
@@ -99,7 +99,7 @@ function parseTTML(ttml: string, syncPTS: number): Array<VTTCue> {
   }).filter((cue) => cue !== null);
 }
 
-function getElementCollection(fromElement, parentName, childName): Array<HTMLElement> {
+function getElementCollection (fromElement, parentName, childName): Array<HTMLElement> {
   const parent = fromElement.getElementsByTagName(parentName)[0];
   if (parent) {
     return [].slice.call(parent.querySelectorAll(childName));
@@ -107,7 +107,7 @@ function getElementCollection(fromElement, parentName, childName): Array<HTMLEle
   return [];
 }
 
-function collectionToDictionary(elementsWithId: Array<HTMLElement>): { [id: string]: HTMLElement } {
+function collectionToDictionary (elementsWithId: Array<HTMLElement>): { [id: string]: HTMLElement } {
   return elementsWithId.reduce((dict, element: HTMLElement) => {
     const id = element.getAttribute('xml:id');
     if (id) {
@@ -117,7 +117,7 @@ function collectionToDictionary(elementsWithId: Array<HTMLElement>): { [id: stri
   }, {});
 }
 
-function getTextContent(element, trim): string {
+function getTextContent (element, trim): string {
   return [].slice.call(element.childNodes).reduce((str, node, i) => {
     if (node.nodeName === 'br' && i) {
       return str + '\n';
@@ -130,7 +130,7 @@ function getTextContent(element, trim): string {
   }, '');
 }
 
-function getTtmlStyles(region, style): { [style: string]: string }  {
+function getTtmlStyles (region, style): { [style: string]: string } {
   const ttsNs = 'http://www.w3.org/ns/ttml#styling';
   const styleAttributes = [
     'displayAlign',
@@ -138,7 +138,7 @@ function getTtmlStyles(region, style): { [style: string]: string }  {
     'color',
     'backgroundColor',
     'fontSize',
-    'fontFamily',
+    'fontFamily'
     // 'fontWeight',
     // 'lineHeight',
     // 'wrapOption',
@@ -155,15 +155,15 @@ function getTtmlStyles(region, style): { [style: string]: string }  {
   }, {});
 }
 
-function getAttributeNS(element, ns, name): string | null {
+function getAttributeNS (element, ns, name): string | null {
   return element.hasAttributeNS(ns, name) ? element.getAttributeNS(ns, name) : null;
 }
 
-function timestampParsingError(node) {
+function timestampParsingError (node) {
   return new Error(`Could not parse ttml timestamp ${node}`);
 }
 
-function parseTtmlTime(timeAttributeValue, rateInfo): number | null {
+function parseTtmlTime (timeAttributeValue, rateInfo): number | null {
   if (!timeAttributeValue) {
     return null;
   }
@@ -178,27 +178,27 @@ function parseTtmlTime(timeAttributeValue, rateInfo): number | null {
   return seconds;
 }
 
-function parseHoursMinutesSecondsFrames(timeAttributeValue, rateInfo): number {
+function parseHoursMinutesSecondsFrames (timeAttributeValue, rateInfo): number {
   const m = HMSF_REGEX.exec(timeAttributeValue) as Array<any>;
   const frames = (m[4] | 0) + (m[5] | 0) / rateInfo.subFrameRate;
   return (m[1] | 0) * 3600 + (m[2] | 0) * 60 + (m[3] | 0) + frames / rateInfo.frameRate;
 }
 
-function parseTimeUnits(timeAttributeValue, rateInfo): number {
+function parseTimeUnits (timeAttributeValue, rateInfo): number {
   const m = TIME_UNIT_REGEX.exec(timeAttributeValue) as Array<any>;
   const value = Number(m[1]);
   const unit = m[2];
   switch (unit) {
-    case 'h':
-      return value * 3600;
-    case 'm':
-      return value * 60;
-    case 'ms':
-      return value * 1000;
-    case 'f':
-      return value / rateInfo.frameRate;
-    case 't':
-      return value / rateInfo.tickRate;
+  case 'h':
+    return value * 3600;
+  case 'm':
+    return value * 60;
+  case 'ms':
+    return value * 1000;
+  case 'f':
+    return value / rateInfo.frameRate;
+  case 't':
+    return value / rateInfo.tickRate;
   }
   return value;
 }
