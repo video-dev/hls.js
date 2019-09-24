@@ -102,10 +102,7 @@ class AACDemuxer implements Demuxer {
           lastDataIndex = offset;
         } else {
           logger.log('Unable to parse AAC frame');
-          const partialData = data.slice(offset);
-
-          this.cachedData = appendUint8Array(this.cachedData, partialData);
-          offset += partialData.length;
+          offset = length;
         }
       } else if (ID3.canParse(data, offset)) {
         id3Data = ID3.getID3Data(data, offset);
