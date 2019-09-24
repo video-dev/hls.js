@@ -9,19 +9,12 @@ import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 
 class MP3Demuxer implements Demuxer {
-  private observer: any;
-  private config: any;
   private _audioTrack!: any;
   private _id3Track!: DemuxedTrack;
   private frameIndex: number = 0;
   private cachedData: Uint8Array = new Uint8Array();
   private initPTS: number | null = null;
   static readonly minProbeByteLength: number = 4;
-
-  constructor (observer, config) {
-    this.observer = observer;
-    this.config = config;
-  }
 
   resetInitSegment (audioCodec, videoCodec, duration) {
     this._audioTrack = { container: 'audio/mpeg', type: 'audio', id: -1, sequenceNumber: 0, isAAC: false, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
