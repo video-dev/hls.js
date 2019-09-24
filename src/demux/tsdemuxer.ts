@@ -10,7 +10,7 @@
 */
 
 import * as ADTS from './adts';
-import MpegAudio from './mpegaudio';
+import * as MpegAudio from './mpegaudio';
 import Event from '../events';
 import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
@@ -37,8 +37,8 @@ const RemuxerTrackIdConfig = {
 class TSDemuxer implements Demuxer {
   static readonly minProbeByteLength = 188;
 
-  private observer: any;
-  private config: any;
+  private readonly observer: any;
+  private readonly config: any;
   private typeSupported: any;
 
   private sampleAes: any = null;

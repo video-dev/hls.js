@@ -35,6 +35,7 @@ export interface DemuxedAudioTrack extends DemuxedTrack {
   samplerate?: number
   isAAC?: boolean
   channelCount?: number
+  manifestCodec?: string
 }
 
 export interface DemuxedAvcTrack extends DemuxedTrack {
