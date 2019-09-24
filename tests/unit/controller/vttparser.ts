@@ -7,7 +7,7 @@ const expect = chai.expect;
 
 describe('VTTParser', function () {
   describe('parseTimeStamp', function () {
-    function assertTimeStampValue(timestamp, value) {
+    function assertTimeStampValue (timestamp, value) {
       expect(parseTimeStamp(timestamp)).to.eq(value,
         `"${timestamp}" should equal ${value}`);
     }
