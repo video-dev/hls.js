@@ -346,7 +346,7 @@ class TimelineController extends EventHandler {
           unparsedVttFrags.push(data);
           if (this.initPTS.length) {
             // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
-            this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag });
+            this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag, error: new Error('Missing initial subtitle PTS') });
           }
           return;
         }
@@ -368,7 +368,7 @@ class TimelineController extends EventHandler {
         }
       } else {
         // In case there is no payload, finish unsuccessfully.
-        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
+        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag, error: new Error('Empty subtitle payload') });
       }
     }
   }
