@@ -4,7 +4,7 @@ import Event from '../events';
 import { logger } from '../utils/logger';
 import { isFiniteNumber } from '../polyfills/number-isFinite';
 
-export const STALL_DEBOUNCE_INTERVAL_MS = 1000;
+export const STALL_MINIMUM_DURATION_MS = 1000;
 export const STALL_HANDLING_RETRY_PERIOD_MS = 1000;
 export const JUMP_THRESHOLD_SECONDS = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 export const SKIP_BUFFER_HOLE_STEP_SECONDS = 0.1;
@@ -19,18 +19,23 @@ export default class GapController {
     /**
      * @private
      * @member {boolean}
+     * Flag set when a flag was detected and appeared to be sustained for more than the stall minimum duration.
      */
     this.stallReported = false;
 
     /**
      * @private
      * @member {number | null}
+     * This keeps state of the time a stall was detected.
+     * It will make sure we only report a stall as one when within the min stall duration.
      */
     this.stallDetectedAtTime = null;
 
     /**
      * @private
      * @member {number | null}
+     * This keeps state of handling stalls (once detected) to throttle the retry pace,
+     * and thus will get updated on each retry.
      */
     this.stallHandledAtTime = null;
 
@@ -192,14 +197,14 @@ export default class GapController {
     logger.warn(`Stall detected at playhead position ${currentPlayheadTime}, buffered-time-ranges info: ${JSON.stringify(bufferInfo)}`);
 
     if (!this.stallDetectedAtTime) {
-      logger.warn('Silently ignoring first detected stall within grace period, storing timestamp: ' + now);
+      logger.warn('Silently ignoring first detected stall within minimum duration, storing timestamp: ' + now);
       this.stallDetectedAtTime = now;
       return;
     }
 
     const stalledDurationMs = now - this.stallDetectedAtTime;
-    if (stalledDurationMs >= STALL_DEBOUNCE_INTERVAL_MS) {
-      logger.warn('Stall detected after grace period, reporting error');
+    if (stalledDurationMs >= STALL_MINIMUM_DURATION_MS) {
+      logger.warn('Stall detected after min stall duration, reporting error');
       // Report stalling after trying to fix
       this._reportStall(bufferInfo.len);
     }
