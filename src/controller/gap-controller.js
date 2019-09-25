@@ -17,32 +17,38 @@ export default class GapController {
     this.hls = hls;
 
     /**
-     * @private @member {boolean}
+     * @private
+     * @member {boolean}
      */
     this.stallReported = false;
 
     /**
-     * @private @member {number | null}
+     * @private
+     * @member {number | null}
      */
     this.stallDetectedAtTime = null;
 
     /**
-     * @private @member {number | null}
+     * @private
+     * @member {number | null}
      */
     this.stallHandledAtTime = null;
 
     /**
-     * @private @member {number | null}
+     * @private
+     * @member {number | null}
      */
     this.currentPlayheadTime = null;
 
     /**
-     * @private @member {boolean}
+     * @private
+     * @member {boolean}
      */
     this.hasPlayed = false;
 
     /**
-     * @private @member {EventListener}
+     * @private
+     * @member {EventListener}
      */
     this.onMediaStalled = null;
   }
