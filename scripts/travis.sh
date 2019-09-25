@@ -44,7 +44,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   fi
   node ./scripts/set-package-version.js
   npm run lint
-  npm run build
+  npm run build:ci
   if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
     npm run test:unit
     if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
