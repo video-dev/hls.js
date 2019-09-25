@@ -79,7 +79,7 @@ export default class GapController {
       // where some MSE implementation might not play when the playhead
       // is exactly on the start value (trying to overcome what would be a browser bug).
       const firstBufferedPosition = this.media.buffered.start(0);
-      if (mediaCurrentTime - firstBufferedPosition > 0 && !this.media.seeking) {
+      if ((firstBufferedPosition - mediaCurrentTime > 0) && !this.media.seeking) {
         logger.warn(`skipping over gap at startup (first segment buffered time-range starts partially later than assumed) from ${mediaCurrentTime} to ${firstBufferedPosition} seconds`);
         this.media.currentTime = firstBufferedPosition + SKIP_BUFFER_HOLE_STEP_SECONDS;
       }
