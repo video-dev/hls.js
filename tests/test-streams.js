@@ -146,12 +146,12 @@ module.exports = {
     blacklist_ua: ['firefox', 'safari', 'internet explorer']
   },
   {
-    widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
+    widevineLicenseUrl: 'http://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }
   ),
   audioOnlyMultipleLevels: {
-    'url': 'https://s3.amazonaws.com/bob.jwplayer.com/~alex/121628/new_master.m3u8',
+    'url': 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/121628/new_master.m3u8',
     'description': 'Multiple non-alternate audio levels',
     'live': false,
     'abr': false
@@ -173,7 +173,7 @@ module.exports = {
     description: 'One PDT, no discontinuities'
   },
   noTrackIntersection: {
-    url: 'https://s3.amazonaws.com/bob.jwplayer.com/%7Ealex/123633/new_master.m3u8',
+    url: 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/123633/new_master.m3u8',
     description: 'Audio/video track PTS values do not intersect; 10 second start gap'
   },
   // altAudioNoVideoCodecSignaled: {
