@@ -454,10 +454,6 @@ class BufferController extends EventHandler {
   }
 
   flushLiveBackBuffer () {
-    if (!this.media) {
-      throw Error('flushLiveBackBuffer called without attaching media');
-    }
-
     // clear back buffer for live only
     if (!this._live) {
       return;
@@ -465,6 +461,11 @@ class BufferController extends EventHandler {
 
     const liveBackBufferLength = this.config.liveBackBufferLength;
     if (!isFinite(liveBackBufferLength) || liveBackBufferLength < 0) {
+      return;
+    }
+
+    if (!this.media) {
+      logger.error('flushLiveBackBuffer called without attaching media');
       return;
     }
 
