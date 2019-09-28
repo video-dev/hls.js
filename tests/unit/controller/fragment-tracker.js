@@ -62,8 +62,8 @@ describe('FragmentTracker', function () {
     ]);
 
     const timeRanges = {};
-    timeRanges['video'] = buffered;
-    timeRanges['audio'] = buffered;
+    timeRanges.video = buffered;
+    timeRanges.audio = buffered;
     hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
     hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
@@ -117,8 +117,8 @@ describe('FragmentTracker', function () {
       ]);
 
       timeRanges = {};
-      timeRanges['video'] = buffered;
-      timeRanges['audio'] = buffered;
+      timeRanges.video = buffered;
+      timeRanges.audio = buffered;
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
@@ -135,8 +135,8 @@ describe('FragmentTracker', function () {
         }
       ]);
       timeRanges = {};
-      timeRanges['video'] = buffered;
-      timeRanges['audio'] = buffered;
+      timeRanges.video = buffered;
+      timeRanges.audio = buffered;
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
@@ -153,8 +153,8 @@ describe('FragmentTracker', function () {
         }
       ]);
       timeRanges = {};
-      timeRanges['video'] = buffered;
-      timeRanges['audio'] = buffered;
+      timeRanges.video = buffered;
+      timeRanges.audio = buffered;
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
@@ -169,8 +169,8 @@ describe('FragmentTracker', function () {
         }
       ]);
       timeRanges = {};
-      timeRanges['video'] = buffered;
-      timeRanges['audio'] = buffered;
+      timeRanges.video = buffered;
+      timeRanges.audio = buffered;
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       expect(fragmentTracker.getState(fragment)).to.equal(FragmentState.NOT_LOADED);
@@ -306,13 +306,13 @@ describe('FragmentTracker', function () {
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = {};
-      timeRanges['video'] = createMockBuffer([
+      timeRanges.video = createMockBuffer([
         {
           startPTS: 0,
           endPTS: 2
         }
       ]);
-      timeRanges['audio'] = createMockBuffer([
+      timeRanges.audio = createMockBuffer([
         {
           startPTS: 0.5,
           endPTS: 2
@@ -336,13 +336,13 @@ describe('FragmentTracker', function () {
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = {};
-      timeRanges['video'] = createMockBuffer([
+      timeRanges.video = createMockBuffer([
         {
           startPTS: 0.5,
           endPTS: 2
         }
       ]);
-      timeRanges['audio'] = createMockBuffer([
+      timeRanges.audio = createMockBuffer([
         {
           startPTS: 0,
           endPTS: 2
@@ -366,13 +366,13 @@ describe('FragmentTracker', function () {
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = {};
-      timeRanges['video'] = createMockBuffer([
+      timeRanges.video = createMockBuffer([
         {
           startPTS: 0.5,
           endPTS: 2
         }
       ]);
-      timeRanges['audio'] = createMockBuffer([
+      timeRanges.audio = createMockBuffer([
         {
           startPTS: 0,
           endPTS: 2

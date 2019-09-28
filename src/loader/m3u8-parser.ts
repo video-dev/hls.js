@@ -94,9 +94,9 @@ export default class M3U8Parser {
         level.height = resolution.height;
       }
       level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
-      level.name = attrs['NAME'];
+      level.name = attrs.NAME;
 
-      setCodecs([].concat((attrs['CODECS'] || '').split(/[ ,]+/)), level);
+      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
 
       if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
         level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
@@ -114,21 +114,21 @@ export default class M3U8Parser {
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
       const attrs = new AttrList(result[1]);
-      if (attrs['TYPE'] === type) {
+      if (attrs.TYPE === type) {
         const media: MediaPlaylist = {
           id: id++,
           groupId: attrs['GROUP-ID'],
           instreamId: attrs['INSTREAM-ID'],
-          name: attrs['NAME'] || attrs['LANGUAGE'],
+          name: attrs.NAME || attrs.LANGUAGE,
           type,
-          default: (attrs['DEFAULT'] === 'YES'),
-          autoselect: (attrs['AUTOSELECT'] === 'YES'),
-          forced: (attrs['FORCED'] === 'YES'),
-          lang: attrs['LANGUAGE']
+          default: (attrs.DEFAULT === 'YES'),
+          autoselect: (attrs.AUTOSELECT === 'YES'),
+          forced: (attrs.FORCED === 'YES'),
+          lang: attrs.LANGUAGE
         };
 
-        if (attrs['URI']) {
-          media.url = M3U8Parser.resolve(attrs['URI'], baseurl);
+        if (attrs.URI) {
+          media.url = M3U8Parser.resolve(attrs.URI, baseurl);
         }
 
         if (audioGroups.length) {
@@ -283,7 +283,7 @@ export default class M3U8Parser {
           const decryptparams = value1;
           const keyAttrs = new AttrList(decryptparams);
           const decryptmethod = keyAttrs.enumeratedString('METHOD');
-          const decrypturi = keyAttrs['URI'];
+          const decrypturi = keyAttrs.URI;
           const decryptiv = keyAttrs.hexadecimalInteger('IV');
 
           if (decryptmethod) {
@@ -308,9 +308,9 @@ export default class M3U8Parser {
         }
         case 'MAP': {
           const mapAttrs = new AttrList(value1);
-          frag.relurl = mapAttrs['URI'];
-          if (mapAttrs['BYTERANGE']) {
-            frag.setByteRange(mapAttrs['BYTERANGE']);
+          frag.relurl = mapAttrs.URI;
+          if (mapAttrs.BYTERANGE) {
+            frag.setByteRange(mapAttrs.BYTERANGE);
           }
           frag.baseurl = baseurl;
           frag.level = id;

@@ -100,7 +100,7 @@ module.exports = {
     'no-undefined': 1,
     'no-global-assign': 2,
     'prefer-const': 2,
-    'dot-notation': 0,
+    'dot-notation': 2,
     'array-bracket-spacing': 2,
     'quote-props': 2,
     'no-void': 0,
