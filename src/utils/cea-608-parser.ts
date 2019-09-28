@@ -1064,6 +1064,7 @@ class Cea608Parser {
     }
     return false;
   }
+
   /**
      * Parse Preable Access Codes (Table 53).
      * @returns {Boolean} Tells if PAC found
