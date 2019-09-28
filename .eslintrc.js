@@ -102,7 +102,7 @@ module.exports = {
     'prefer-const': 2,
     'dot-notation': 0,
     'array-bracket-spacing': 0,
-    'quote-props': 0,
+    'quote-props': 2,
     'no-void': 0,
     'no-useless-catch': 2,
     'lines-between-class-members': 2,

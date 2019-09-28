@@ -84,8 +84,8 @@ class MP4 {
     ]);
 
     MP4.HDLR_TYPES = {
-      'video': videoHdlr,
-      'audio': audioHdlr
+      video: videoHdlr,
+      audio: audioHdlr
     };
 
     const dref = new Uint8Array([
