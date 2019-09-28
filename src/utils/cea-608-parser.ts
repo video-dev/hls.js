@@ -189,7 +189,7 @@ const logger: {
   setTime: (newTime: number | null) => void,
   log: (severity: keyof typeof VerboseFilter, msg: string) => void,
 } = {
-  verboseFilter: { 'DATA': 3, 'DEBUG': 3, 'INFO': 2, 'WARNING': 2, 'TEXT': 1, 'ERROR': 0 },
+  verboseFilter: { DATA: 3, DEBUG: 3, INFO: 2, WARNING: 2, TEXT: 1, ERROR: 0 },
   time: null,
   verboseLevel: 0, // Only write errors
   setTime: function (newTime) {
