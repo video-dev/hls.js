@@ -104,7 +104,7 @@ module.exports = {
     'array-bracket-spacing': 0,
     'quote-props': 0,
     'no-void': 0,
-    'no-useless-catch': 0,
+    'no-useless-catch': 2,
     'lines-between-class-members': 2,
     'no-prototype-builtins': 0
   }
