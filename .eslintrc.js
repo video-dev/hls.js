@@ -105,7 +105,7 @@ module.exports = {
     'quote-props': 0,
     'no-void': 0,
     'no-useless-catch': 0,
-    'lines-between-class-members': 0,
+    'lines-between-class-members': 2,
     'no-prototype-builtins': 0
   }
 };

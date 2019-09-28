@@ -131,6 +131,7 @@ class ExpGolomb {
   readUShort () {
     return this.readBits(16);
   }
+
   // ():int
   readUInt () {
     return this.readBits(32);

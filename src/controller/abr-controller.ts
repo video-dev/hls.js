@@ -246,6 +246,7 @@ class AbrController extends EventHandler {
 
     return nextABRAutoLevel;
   }
+
   get _nextABRAutoLevel () {
     const { fragCurrent, hls, lastLoadedFragLevel: currentLevel } = this;
     const { maxAutoLevel, levels, config, minAutoLevel } = hls;

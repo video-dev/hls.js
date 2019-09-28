@@ -8,9 +8,11 @@ class MockXhr {
   constructor () {
     this.stats = new LoadStats();
   }
+
   load (context, config, callbacks) {
     this.callbacks = callbacks;
   }
+
   abort () {}
 }
 
