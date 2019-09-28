@@ -20,12 +20,12 @@ module.exports = {
     'eslint:recommended',
     'standard'
   ],
-  'parser': 'typescript-eslint-parser',
+  'parser': '@typescript-eslint/parser',
   'parserOptions': {
-      'sourceType': 'module'
+    'sourceType': 'module'
   },
   'plugins': [
-      'typescript'
+    '@typescript-eslint'
   ],
   'rules': {
     // our basic style rules
@@ -99,6 +99,13 @@ module.exports = {
     'new-cap': 1,
     'no-undefined': 1,
     'no-global-assign': 2,
-    'prefer-const': 2
+    'prefer-const': 2,
+    'dot-notation': 0,
+    'array-bracket-spacing': 0,
+    'quote-props': 0,
+    'no-void': 0,
+    'no-useless-catch': 0,
+    'lines-between-class-members': 0,
+    'no-prototype-builtins': 0
   }
 };
