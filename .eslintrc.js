@@ -101,7 +101,7 @@ module.exports = {
     'no-global-assign': 2,
     'prefer-const': 2,
     'dot-notation': 0,
-    'array-bracket-spacing': 0,
+    'array-bracket-spacing': 2,
     'quote-props': 2,
     'no-void': 0,
     'no-useless-catch': 2,

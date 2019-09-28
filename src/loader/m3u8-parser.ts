@@ -171,7 +171,7 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const title = (' ' + result[2]).slice(1);
         frag.title = title || null;
-        frag.tagList.push(title ? [ 'INF', duration, title ] : [ 'INF', duration ]);
+        frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
       } else if (result[3]) { // url
         if (Number.isFinite(frag.duration)) {
           const sn = currentSN++;
@@ -227,7 +227,7 @@ export default class M3U8Parser {
 
         switch (result[i]) {
         case '#':
-          frag.tagList.push(value2 ? [ value1, value2 ] : [ value1 ]);
+          frag.tagList.push(value2 ? [value1, value2] : [value1]);
           break;
         case 'PLAYLIST-TYPE':
           level.type = value1.toUpperCase();
