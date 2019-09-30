@@ -243,7 +243,9 @@ export default class BaseStreamController extends TaskLoop {
       this.hls.trigger(Event.ERROR, errorData);
     };
 
-    return this.fragmentLoader.load(frag, progressCallback)
+    const level = (this.levels as Array<any>)[frag.level];
+
+    return this.fragmentLoader.load(frag, progressCallback, level.bitrate)
       .catch(errorHandler);
   }
 
