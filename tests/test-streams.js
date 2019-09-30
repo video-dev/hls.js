@@ -45,31 +45,31 @@ module.exports = {
   }
   ),
   bigBuckBunny480p: {
-    'url': 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
-    'description': 'Big Buck Bunny - 480p only',
-    'live': false,
-    'abr': false,
-    'blacklist_ua': ['internet explorer']
+    url: 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
+    description: 'Big Buck Bunny - 480p only',
+    live: false,
+    abr: false,
+    blacklist_ua: ['internet explorer']
   },
   arte: {
-    'url': 'https://test-streams.mux.dev/test_001/stream.m3u8',
-    'description': 'ARTE China,ABR',
-    'live': false,
-    'abr': true
+    url: 'https://test-streams.mux.dev/test_001/stream.m3u8',
+    description: 'ARTE China,ABR',
+    live: false,
+    abr: true
   },
   deltatreDAI: {
-    'url': 'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
-    'description': 'Ad-insertion in event stream',
-    'live': false,
-    'abr': false,
-    'blacklist_ua': ['internet explorer']
+    url: 'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
+    description: 'Ad-insertion in event stream',
+    live: false,
+    abr: false,
+    blacklist_ua: ['internet explorer']
   },
   issue666: {
-    'url': 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
-    'description': 'hls.js/issues/666',
-    'live': false,
-    'abr': false,
-    'blacklist_ua': ['internet explorer']
+    url: 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    description: 'hls.js/issues/666',
+    live: false,
+    abr: false,
+    blacklist_ua: ['internet explorer']
   },
   /* // went offline for us :( would be good to replace this for regression test with something mimicking the issue
   issue649: {
@@ -80,17 +80,17 @@ module.exports = {
   },
   */
   closedCaptions: {
-    'url': 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
-    'description': 'CNN special report, with CC',
-    'live': false,
-    'abr': false,
-    'blacklist_ua': ['safari']
+    url: 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
+    description: 'CNN special report, with CC',
+    live: false,
+    abr: false,
+    blacklist_ua: ['safari']
   },
   oceansAES: {
-    'url': 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
-    'description': 'AES encrypted,ABR',
-    'live': false,
-    'abr': true
+    url: 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
+    description: 'AES encrypted,ABR',
+    live: false,
+    abr: true
   },
   /*
   bbbAES: {
@@ -101,38 +101,38 @@ module.exports = {
   },
   */
   mp3Audio: {
-    'url': 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
-    'description': 'MP3 VOD demo',
-    'live': false,
-    'abr': false,
-    'blacklist_ua': ['safari']
+    url: 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
+    description: 'MP3 VOD demo',
+    live: false,
+    abr: false,
+    blacklist_ua: ['safari']
   },
   mpegAudioOnly: {
-    'url': 'https://pl.streamingvideoprovider.com/mp3-playlist/playlist.m3u8',
-    'description': 'MPEG Audio Only demo',
-    'live': false,
-    'abr': false,
-    'blacklist_ua': ['internet explorer', 'MicrosoftEdge', 'safari', 'firefox']
+    url: 'https://pl.streamingvideoprovider.com/mp3-playlist/playlist.m3u8',
+    description: 'MPEG Audio Only demo',
+    live: false,
+    abr: false,
+    blacklist_ua: ['internet explorer', 'MicrosoftEdge', 'safari', 'firefox']
   },
   fmp4: {
-    'url': 'https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8',
-    'description': 'HLS fMP4 Angel-One multiple audio-tracks',
-    'live': false,
-    'abr': false,
-    'blacklist_ua': ['safari', 'internet explorer']
+    url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8',
+    description: 'HLS fMP4 Angel-One multiple audio-tracks',
+    live: false,
+    abr: false,
+    blacklist_ua: ['safari', 'internet explorer']
   },
   fmp4Bitmovin: {
-    'url': 'https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
-    'description': 'HLS fMP4 by Bitmovin',
-    'live': false,
-    'abr': true,
-    'blacklist_ua': ['safari', 'internet explorer']
+    url: 'https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
+    description: 'HLS fMP4 by Bitmovin',
+    live: false,
+    abr: true,
+    blacklist_ua: ['safari', 'internet explorer']
   },
   offset_pts: {
-    'url': 'https://test-streams.mux.dev/pts_shift/master.m3u8',
-    'description': 'DK Turntable, PTS shifted by 2.3s',
-    'live': false,
-    'abr': false
+    url: 'https://test-streams.mux.dev/pts_shift/master.m3u8',
+    description: 'DK Turntable, PTS shifted by 2.3s',
+    live: false,
+    abr: false
   },
   /*
   uspHLSAteam: createTestStream(
@@ -151,10 +151,10 @@ module.exports = {
   }
   ),
   audioOnlyMultipleLevels: {
-    'url': 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/121628/new_master.m3u8',
-    'description': 'Multiple non-alternate audio levels',
-    'live': false,
-    'abr': false
+    url: 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/121628/new_master.m3u8',
+    description: 'Multiple non-alternate audio levels',
+    live: false,
+    abr: false
   },
   pdtDuplicate: {
     url: 'https://playertest.longtailvideo.com/adaptive/artbeats/manifest.m3u8',

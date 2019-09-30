@@ -10,9 +10,9 @@ import Event from './events';
 import Hls from './hls';
 
 const FORBIDDEN_EVENT_NAMES = {
-  'hlsEventGeneric': true,
-  'hlsHandlerDestroying': true,
-  'hlsHandlerDestroyed': true
+  hlsEventGeneric: true,
+  hlsHandlerDestroying: true,
+  hlsHandlerDestroyed: true
 };
 
 class EventHandler {

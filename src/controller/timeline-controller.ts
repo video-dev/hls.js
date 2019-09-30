@@ -173,10 +173,10 @@ class TimelineController extends EventHandler {
     }
     const label = props.label;
     const track = {
-      '_id': trackName,
+      _id: trackName,
       label,
       kind: 'captions',
-      'default': false
+      default: false
     };
     captionsTracks[trackName] = track;
     this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
@@ -287,9 +287,9 @@ class TimelineController extends EventHandler {
         // Create a list of tracks for the provider to consume
         const tracksList = this.tracks.map((track) => {
           return {
-            'label': track.name,
-            'kind': track.type.toLowerCase(),
-            'default': track.default
+            label: track.name,
+            kind: track.type.toLowerCase(),
+            default: track.default
           };
         });
         this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
