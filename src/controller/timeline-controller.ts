@@ -380,7 +380,7 @@ class TimelineController extends EventHandler {
             try {
               currentTrack.addCue(cue);
             } catch (err) {
-              const textTrackCue = new (self as any).TextTrackCue(cue.startTime, cue.endTime, cue.text);
+              const textTrackCue = new self.TextTrackCue(cue.startTime, cue.endTime, cue.text);
               textTrackCue.id = cue.id;
               currentTrack.addCue(textTrackCue);
             }
