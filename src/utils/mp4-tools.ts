@@ -217,7 +217,7 @@ export function parseInitSegment (initSegment) {
         const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
         if (hdlr) {
           const hdlrType = bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
-          const type = { 'soun': 'audio', 'vide': 'video' }[hdlrType];
+          const type = { soun: 'audio', vide: 'video' }[hdlrType];
           if (type) {
             // extract codec info. TODO : parse codec details to be able to build MIME type
             let codecBox = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);

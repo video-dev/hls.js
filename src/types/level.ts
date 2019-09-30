@@ -63,7 +63,7 @@ export class Level {
   public unknownCodecs: string[] | undefined;
 
   constructor (data: LevelParsed) {
-    this.url = [ data.url ];
+    this.url = [data.url];
     this.attrs = data.attrs;
     this.bitrate = data.bitrate;
     this.details = data.details;

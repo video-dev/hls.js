@@ -84,8 +84,8 @@ class MP4 {
     ]);
 
     MP4.HDLR_TYPES = {
-      'video': videoHdlr,
-      'audio': audioHdlr
+      video: videoHdlr,
+      audio: audioHdlr
     };
 
     const dref = new Uint8Array([
@@ -225,6 +225,7 @@ class MP4 {
   static moof (sn, baseMediaDecodeTime, track) {
     return MP4.box(MP4.types.moof, MP4.mfhd(sn), MP4.traf(track, baseMediaDecodeTime));
   }
+
   /**
  * @param tracks... (optional) {array} the tracks associated with this movie
  */
