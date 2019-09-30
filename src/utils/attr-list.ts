@@ -5,6 +5,16 @@ const ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g; // eslint-disab
 
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
 class AttrList {
+  public AUTOSELECT!: string;
+  public BYTERANGE!: string;
+  public CODECS!: string;
+  public DEFAULT!: string;
+  public FORCED!: string;
+  public LANGUAGE!: string;
+  public NAME!: string;
+  public TYPE!: string;
+  public URI!: string;
+
   constructor (attrs: string | GenericObjectType) {
     if (typeof attrs === 'string') {
       attrs = AttrList.parseAttrList(attrs);
