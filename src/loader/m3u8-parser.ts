@@ -96,7 +96,7 @@ export default class M3U8Parser {
       level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
       level.name = attrs.NAME;
 
-      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+      setCodecs((attrs.CODECS || '').split(/[ ,]+/), level);
 
       if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
         level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
