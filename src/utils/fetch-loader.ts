@@ -9,7 +9,7 @@ import {
 import LoadStats from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
 
-const { fetch, AbortController, ReadableStream, Request, Headers, performance } = self as any;
+const { fetch, AbortController, ReadableStream, Request, Headers, performance } = self;
 
 export function fetchSupported () {
   if (fetch && AbortController && ReadableStream && Request) {
