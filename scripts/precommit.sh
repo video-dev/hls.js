@@ -1,2 +1,5 @@
 #!/bin/bash
-npm run lint && npm run type-check
+set -e
+
+npm run lint
+npm run type-check
