@@ -73,15 +73,6 @@ describe('LevelHelper Tests', function () {
       const actual = getIteratedSequence(oldPlaylist, newPlaylist);
       expect(actual).to.deep.equal([]);
     });
-
-    it('exits early if either playlist does not exist', function () {
-      let oldPlaylist = null;
-      let newPlaylist = generatePlaylist([10, 11, 12]);
-      expect(getIteratedSequence(oldPlaylist, newPlaylist)).to.deep.equal([]);
-      oldPlaylist = newPlaylist;
-      newPlaylist = null;
-      expect(getIteratedSequence(oldPlaylist, newPlaylist)).to.deep.equal([]);
-    });
   });
 
   describe('adjustSliding', function () {

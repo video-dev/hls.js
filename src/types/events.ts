@@ -48,7 +48,11 @@ export interface LevelLoadedData extends TrackLoadedData {
   level: number
 }
 
-export interface AudioTrackSwitchedData {
+export interface SubtitleTracksUpdated {
+  subtitleTracks: PlaylistMedia[]
+}
+
+export interface TrackSwitchedData {
   id: number
 }
 
@@ -57,6 +61,11 @@ export interface FragLoadedData {
   networkDetails: any
   payload: ArrayBuffer
   stats: LoaderStats
+}
+
+export interface SubtitleFragProcessed {
+  success: boolean,
+  frag: Fragment
 }
 
 export interface MediaAttachedData {
