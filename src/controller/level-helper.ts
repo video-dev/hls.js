@@ -184,10 +184,6 @@ export function mergeSubtitlePlaylists (oldPlaylist: LevelDetails, newPlaylist: 
 }
 
 export function mapFragmentIntersection (oldPlaylist: LevelDetails, newPlaylist: LevelDetails, intersectionFn): void {
-  if (!oldPlaylist || !newPlaylist) {
-    return;
-  }
-
   const start = Math.max(oldPlaylist.startSN, newPlaylist.startSN) - newPlaylist.startSN;
   const end = Math.min(oldPlaylist.endSN, newPlaylist.endSN) - newPlaylist.startSN;
   const delta = newPlaylist.startSN - oldPlaylist.startSN;

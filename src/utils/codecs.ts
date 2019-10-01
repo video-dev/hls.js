@@ -60,6 +60,10 @@ const sampleEntryCodesISO = {
     'vc-1': true,
     vp08: true,
     vp09: true
+  },
+  text: {
+    stpp: true,
+    wvtt: true
   }
 };
 

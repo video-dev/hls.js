@@ -181,7 +181,7 @@ export default class BaseStreamController extends TaskLoop {
         compatibilityEventData.frag = frag;
         this.hls.trigger(Event.FRAG_LOADED, compatibilityEventData);
         // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
-        this._handleFragmentLoadComplete(frag);
+        this._handleFragmentLoadComplete(frag, data.payload);
       });
   }
 
@@ -213,7 +213,7 @@ export default class BaseStreamController extends TaskLoop {
     return frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn;
   }
 
-  protected _handleFragmentLoadComplete (frag: Fragment) {
+  protected _handleFragmentLoadComplete (frag: Fragment, payload: ArrayBuffer | Uint8Array) {
     const { transmuxer } = this;
     if (!transmuxer) {
       return;

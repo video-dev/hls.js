@@ -342,6 +342,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fpsController: FPSController,
       timelineController: TimelineController,
       enableWebVTT: true,
+      enableIMSC1: true,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
       maxAudioFramesDrift: 1,
