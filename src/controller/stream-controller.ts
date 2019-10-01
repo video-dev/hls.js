@@ -222,7 +222,9 @@ export default class StreamController extends BaseStreamController {
         this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
       } else {
-        this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
+        if (this.fragCurrent !== frag) {
+          this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
+        }
         this._loadFragment(frag);
       }
     }
