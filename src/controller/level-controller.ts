@@ -6,7 +6,7 @@ import {
   ManifestLoadedData,
   ManifestParsedData,
   LevelLoadedData,
-  AudioTrackSwitchedData,
+  TrackSwitchedData,
   FragLoadedData,
   ErrorData
 } from '../types/events';
@@ -420,7 +420,7 @@ export default class LevelController extends EventHandler {
     }
   }
 
-  protected onAudioTrackSwitched (data: AudioTrackSwitchedData) {
+  protected onAudioTrackSwitched (data: TrackSwitchedData) {
     const audioGroupId = this.hls.audioTracks[data.id].groupId;
 
     const currentLevel = this.hls.levels[this.currentLevelIndex as number];
