@@ -21,7 +21,6 @@ try {
   now = self.performance.now.bind(self.performance);
 } catch (err) {
   logger.debug('Unable to use Performance API on this environment');
-  // @ts-ignore
   now = self.Date.now;
 }
 
@@ -154,7 +153,6 @@ export default class Transmuxer {
     if (decryptionPromise) {
       // Upon resolution, the decryption promise calls push() and returns its TransmuxerResult up the stack. Therefore
       // only flushing is required for async decryption
-      // @ts-ignore
       return decryptionPromise.then(() => {
         return this.flush(chunkMeta);
       });

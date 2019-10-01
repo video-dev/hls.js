@@ -11,7 +11,7 @@ export default class Decrypter {
   private observer: any;
   private config: any;
   private removePKCS7Padding: boolean;
-  private subtle: any | null = null;
+  private subtle: SubtleCrypto | null = null;
   private softwareDecrypter: AESDecryptor | null = null;
   private key: ArrayBuffer | null = null;
   private fastAesKey: FastAESKey | null = null;
@@ -28,8 +28,7 @@ export default class Decrypter {
       try {
         const browserCrypto = self.crypto;
         if (browserCrypto) {
-          // @ts-ignore
-          this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
+          this.subtle = browserCrypto.subtle || (<SubtleCrypto> (<any> browserCrypto).webkitSubtle);
         } else {
           this.config.enableSoftwareAES = true;
         }
