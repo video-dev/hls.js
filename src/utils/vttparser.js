@@ -29,27 +29,23 @@ function VTTParser () {
 }
 
 // Try to parse input as a time stamp.
-function parseTimeStamp (input) {
+export function parseTimeStamp (input) {
   function computeSeconds (h, m, s, f) {
-    return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + (f | 0) / 1000;
+    return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + parseFloat(f || 0);
   }
 
-  const m = input.match(/^(\d+):(\d{2})(:\d{2})?\.(\d{3})/);
+  const m = input.match(/^(?:(\d+):)?(\d{2}):(\d{2})(\.\d+)?/);
   if (!m) {
     return null;
   }
 
-  if (m[3]) {
-    // Timestamp takes the form of [hours]:[minutes]:[seconds].[milliseconds]
-    return computeSeconds(m[1], m[2], m[3].replace(':', ''), m[4]);
-  } else if (m[1] > 59) {
+  if (m[2] > 59) {
     // Timestamp takes the form of [hours]:[minutes].[milliseconds]
     // First position is hours as it's over 59.
-    return computeSeconds(m[1], m[2], 0, m[4]);
-  } else {
-    // Timestamp takes the form of [minutes]:[seconds].[milliseconds]
-    return computeSeconds(0, m[1], m[2], m[4]);
+    return computeSeconds(m[2], m[3], 0, m[4]);
   }
+  // Timestamp takes the form of [hours (optional)]:[minutes]:[seconds].[milliseconds]
+  return computeSeconds(m[1], m[2], m[3], m[4]);
 }
 
 // A settings object holds key/value pairs and will ignore anything but the first
@@ -98,11 +94,10 @@ Settings.prototype = {
   },
   // Accept a setting if its a valid percentage.
   percent: function (k, v) {
-    let m;
-    if ((m = v.match(/^([\d]{1,3})(\.[\d]*)?%$/))) {
-      v = parseFloat(v);
-      if (v >= 0 && v <= 100) {
-        this.set(k, v);
+    if (/^([\d]{1,3})(\.[\d]*)?%$/.test(v)) {
+      const percent = parseFloat(v);
+      if (percent >= 0 && percent <= 100) {
+        this.set(k, percent);
         return true;
       }
     }
@@ -376,8 +371,8 @@ VTTParser.prototype = {
           }
           _this.state = 'CUETEXT';
           continue;
-        case 'CUETEXT':
-          var hasSubstring = line.indexOf('-->') !== -1;
+        case 'CUETEXT': {
+          const hasSubstring = line.indexOf('-->') !== -1;
           // 34 - If we have an empty line then report the cue.
           // 35 - If we have the special substring '-->' then report the cue,
           // but do not collect the line as we need to process the current
@@ -397,6 +392,7 @@ VTTParser.prototype = {
           }
 
           _this.cue.text += line;
+        }
           continue;
         case 'BADCUE': // BADCUE
           // 54-62 - Collect and discard the remaining cue.
@@ -422,18 +418,24 @@ VTTParser.prototype = {
   },
   flush: function () {
     const _this = this;
-    // Finish decoding the stream.
-    _this.buffer += _this.decoder.decode();
-    // Synthesize the end of the current cue or region.
-    if (_this.cue || _this.state === 'HEADER') {
-      _this.buffer += '\n\n';
-      _this.parse();
-    }
-    // If we've flushed, parsed, and we're still on the INITIAL state then
-    // that means we don't have enough of the stream to parse the first
-    // line.
-    if (_this.state === 'INITIAL') {
-      throw new Error('Malformed WebVTT signature.');
+    try {
+      // Finish decoding the stream.
+      _this.buffer += _this.decoder.decode();
+      // Synthesize the end of the current cue or region.
+      if (_this.cue || _this.state === 'HEADER') {
+        _this.buffer += '\n\n';
+        _this.parse();
+      }
+      // If we've flushed, parsed, and we're still on the INITIAL state then
+      // that means we don't have enough of the stream to parse the first
+      // line.
+      if (_this.state === 'INITIAL' || _this.state === 'BADWEBVTT') {
+        throw new Error('Malformed WebVTT signature.');
+      }
+    } catch (e) {
+      if (_this.onparsingerror) {
+        _this.onparsingerror(e);
+      }
     }
     if (_this.onflush) {
       _this.onflush();

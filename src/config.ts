@@ -111,6 +111,7 @@ type TimelineControllerConfig = {
   cueHandler: any, // TODO(typescript-cues): Type once file is done
   enableCEA708Captions: boolean,
   enableWebVTT: boolean,
+  enableIMSC1: boolean,
   captionsTextTrack1Label: string,
   captionsTextTrack1LanguageCode: string,
   captionsTextTrack2Label: string,
@@ -258,6 +259,7 @@ function timelineConfig (): TimelineControllerConfig {
     cueHandler: Cues, // used by timeline-controller
     enableCEA708Captions: true, // used by timeline-controller
     enableWebVTT: true, // used by timeline-controller
+    enableIMSC1: true, // used by timeline-controller
     captionsTextTrack1Label: 'English', // used by timeline-controller
     captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
     captionsTextTrack2Label: 'Spanish', // used by timeline-controller
