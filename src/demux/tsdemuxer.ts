@@ -59,7 +59,7 @@ class TSDemuxer implements Demuxer {
   private _txtTrack!: DemuxedTrack;
   private aacOverFlow: any;
   private avcSample: any;
-  private remainderData?: Uint8Array;
+  private remainderData: Uint8Array | null = null;
 
   constructor (observer, config, typeSupported) {
     this.observer = observer;
@@ -195,7 +195,7 @@ class TSDemuxer implements Demuxer {
     if (this.remainderData) {
       data = appendUint8Array(this.remainderData, data);
       len = data.length;
-      this.remainderData = undefined;
+      this.remainderData = null;
     }
 
     const syncOffset = TSDemuxer._syncOffset(data);
@@ -209,7 +209,9 @@ class TSDemuxer implements Demuxer {
       };
     }
     len -= (len + syncOffset) % 188;
-    this.remainderData = sliceUint8(data, len);
+    if (len < data.byteLength) {
+      this.remainderData = sliceUint8(data, len);
+    }
 
     // loop through TS packets
     for (start = syncOffset; start < len; start += 188) {
@@ -353,7 +355,7 @@ class TSDemuxer implements Demuxer {
       };
     }
     this.extractRemainingSamples(result);
-    this.remainderData = undefined;
+    this.remainderData = null;
     return result;
   }
 
