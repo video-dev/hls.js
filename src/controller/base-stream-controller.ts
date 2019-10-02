@@ -4,18 +4,18 @@ import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import Event from '../events';
 import { ErrorDetails } from '../errors';
-import Fragment from '../loader/fragment';
-import TransmuxerInterface from '../demux/transmuxer-interface';
-import FragmentLoader, { FragLoadSuccessResult, FragmentLoadProgressCallback } from '../loader/fragment-loader';
 import * as LevelHelper from './level-helper';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
-import LevelDetails from '../loader/level-details';
 import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS, findFragWithCC } from './fragment-finders';
+import TransmuxerInterface from '../demux/transmuxer-interface';
+import Fragment from '../loader/fragment';
+import FragmentLoader, { FragLoadSuccessResult, FragmentLoadProgressCallback } from '../loader/fragment-loader';
+import LevelDetails from '../loader/level-details';
 import { BufferAppendingEventPayload } from '../types/events';
 import { Level } from '../types/level';
-import { SourceBufferName } from '../types/buffer';
+import { RemuxedTrack } from '../types/remuxer';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -288,7 +288,7 @@ export default class BaseStreamController extends TaskLoop {
     return { frag, level: currentLevel };
   }
 
-  protected bufferFragmentData (data: { data1: Uint8Array, data2?: Uint8Array, type: SourceBufferName }, frag: Fragment, chunkMeta: ChunkMetadata) {
+  protected bufferFragmentData (data: RemuxedTrack, frag: Fragment, chunkMeta: ChunkMetadata) {
     if (!data || this.state !== State.PARSING) {
       return;
     }
@@ -587,8 +587,8 @@ export default class BaseStreamController extends TaskLoop {
   }
 
   set state (nextState) {
-    if (this.state !== nextState) {
-      const previousState = this.state;
+    const previousState = this._state;
+    if (previousState !== nextState) {
       this._state = nextState;
       this.log(`${previousState}->${nextState}`);
     }
