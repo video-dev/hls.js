@@ -12,12 +12,24 @@ export interface SourceBufferFlushRange {
   type: SourceBufferName
 }
 
+export interface BufferOperationQueues {
+  video: Array<BufferOperation>;
+  audio: Array<BufferOperation>;
+  audiovideo: Array<BufferOperation>;
+}
+
 export interface BufferOperation {
   execute: Function
   onComplete: Function
   onError: Function,
   start?: number
   end?: number
+}
+
+export interface SourceBufferListeners {
+  video: Array<SourceBufferListener>;
+  audio: Array<SourceBufferListener>;
+  audiovideo: Array<SourceBufferListener>;
 }
 
 export interface SourceBufferListener {
