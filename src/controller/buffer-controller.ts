@@ -15,7 +15,6 @@ import BufferOperationQueue from './buffer-operation-queue';
 import {
   BufferOperation,
   SourceBuffers,
-  SourceBufferFlushRange,
   SourceBufferName,
   SourceBufferListeners
 } from '../types/buffer';
@@ -33,16 +32,9 @@ export default class BufferController extends EventHandler {
   // cache the self generated object url to detect hijack of video tag
   private _objectUrl: string | null = null;
   // A queue of buffer operations which require the SourceBuffer to not be updating upon execution
-  private operationQueue: BufferOperationQueue;
+  private operationQueue!: BufferOperationQueue;
   // References to event listeners for each SourceBuffer, so that they can be referenced for event removal
-  private listeners: SourceBufferListeners = {
-    audio: [],
-    video: [],
-    audiovideo: []
-  };
-
-  // this is optional because this property is removed from the class sometimes
-  public audioTimestampOffset?: number;
+  private listeners!: SourceBufferListeners;
 
   // The number of BUFFER_CODEC events received before any sourceBuffers are created
   public bufferCodecEventsExpected: number = 0;
@@ -58,8 +50,7 @@ export default class BufferController extends EventHandler {
 
   public tracks: TrackSet = {};
   public pendingTracks: TrackSet = {};
-  public sourceBuffer: SourceBuffers = {};
-  public flushRange: SourceBufferFlushRange[] = [];
+  public sourceBuffer!: SourceBuffers;
 
   constructor (hls: any) {
     super(hls,
@@ -76,7 +67,17 @@ export default class BufferController extends EventHandler {
       Events.FRAG_PARSED
     );
     this.hls = hls;
+    this._initSourceBuffer();
+  }
+
+  private _initSourceBuffer () {
+    this.sourceBuffer = {};
     this.operationQueue = new BufferOperationQueue(this.sourceBuffer);
+    this.listeners = {
+      audio: [],
+      video: [],
+      audiovideo: []
+    };
   }
 
   onManifestParsed (data: { altAudio: boolean }) {
@@ -163,19 +164,13 @@ export default class BufferController extends EventHandler {
           }
           // Synchronously remove the SB from the map before the next call in order to prevent an async function from
           // accessing it
-          this.sourceBuffer[type] = undefined;
+          sourceBuffer[type] = undefined;
         }
       } catch (err) {
         logger.warn(`Failed to reset the ${type} buffer`, err);
       }
     });
-    this.sourceBuffer = {};
-    this.operationQueue = new BufferOperationQueue(this.sourceBuffer);
-    this.listeners = {
-      audio: [],
-      video: [],
-      audiovideo: []
-    };
+    this._initSourceBuffer();
   }
 
   onBufferCodecs (tracks: TrackSet) {
