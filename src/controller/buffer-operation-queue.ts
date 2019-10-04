@@ -1,11 +1,12 @@
 import { logger } from '../utils/logger';
-import { BufferOperation, SourceBuffers, SourceBufferName } from '../types/buffer';
+import { BufferOperation, BufferOperationQueues, SourceBuffers, SourceBufferName } from '../types/buffer';
 
 export default class BufferOperationQueue {
   private buffers: SourceBuffers;
-  public queues = {
-    audio: [] as Array<BufferOperation>,
-    video: [] as Array<BufferOperation>
+  public queues: BufferOperationQueues = {
+    video: [],
+    audio: [],
+    audiovideo: []
   };
 
   constructor (sourceBufferReference: SourceBuffers) {

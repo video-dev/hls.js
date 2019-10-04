@@ -17,7 +17,7 @@ import {
   SourceBuffers,
   SourceBufferFlushRange,
   SourceBufferName,
-  SourceBufferListener
+  SourceBufferListeners
 } from '../types/buffer';
 
 const MediaSource = getMediaSource();
@@ -34,8 +34,8 @@ export default class BufferController extends EventHandler {
   private _objectUrl: string | null = null;
   // A queue of buffer operations which require the SourceBuffer to not be updating upon execution
   private operationQueue: BufferOperationQueue;
-  // References to event listeners for each SourceBuffer, so that they can be reference for event removal
-  private listeners: { [key in SourceBufferName]: Array<SourceBufferListener> } = {
+  // References to event listeners for each SourceBuffer, so that they can be referenced for event removal
+  private listeners: SourceBufferListeners = {
     audio: [],
     video: [],
     audiovideo: []
