@@ -13,16 +13,15 @@ import FragmentLoader from '../loader/fragment-loader';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import { Level } from '../types/level';
 import { TrackSet } from '../types/track';
-import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
 import { SourceBufferName } from '../types/buffer';
-import { LevelUpdatedData } from '../types/events';
+import { LevelUpdatedData, BufferAppendingEventPayload } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
 export default class StreamController extends BaseStreamController {
   private audioCodecSwap: boolean = false;
   private bitrateTest: boolean = false;
-  private gapController: any | null = null;
+  private gapController: GapController | null = null;
   private level: number = -1;
   private forceStartLoad: boolean = false;
   private retryDate: number = 0;

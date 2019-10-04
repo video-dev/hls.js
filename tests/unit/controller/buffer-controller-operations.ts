@@ -6,7 +6,7 @@ import Hls from '../../../src/hls';
 import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import BufferController from '../../../src/controller/buffer-controller';
 import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
-import { BufferAppendingEventPayload } from '../../../src/types/bufferAppendingEventPayload';
+import { BufferAppendingEventPayload } from '../../../src/types/events';
 import Events from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import Fragment, { ElementaryStreamTypes } from '../../../src/loader/fragment';

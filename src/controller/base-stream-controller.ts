@@ -13,7 +13,7 @@ import { appendUint8Array } from '../utils/mp4-tools';
 import LevelDetails from '../loader/level-details';
 import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS, findFragWithCC } from './fragment-finders';
-import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
+import { BufferAppendingEventPayload } from '../types/events';
 import { SourceBufferName } from '../types/buffer';
 
 export const State = {
