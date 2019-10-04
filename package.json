@@ -59,6 +59,7 @@
     "@typescript-eslint/eslint-plugin": "^2.3.1",
     "@typescript-eslint/parser": "^2.3.1",
     "babel-loader": "8.0.4",
+    "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.2.0",
     "chromedriver": "^76.0.1",
     "esdoc": "^1.1.0",
