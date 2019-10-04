@@ -364,8 +364,6 @@ class AudioStreamController extends BaseStreamController {
 
     // initPTS from the video track is required for transmuxing. It should exist before loading a fragment.
     const initPTS = this.initPTS[frag.cc];
-    // TODO: Compile out asserts for production builds so that we can uncomment them
-    // console.assert(Number.isFinite(initPTS), 'initPTS must exist, and must stay set, before and during fragment load');
 
     const initSegmentData = details.initSegment ? details.initSegment.data : [];
     // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
