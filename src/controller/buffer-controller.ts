@@ -523,8 +523,7 @@ export default class BufferController extends EventHandler {
 
   private _onSBUpdateEnd (type: SourceBufferName) {
     const { operationQueue } = this;
-    const queue = operationQueue.queues[type];
-    const operation = queue[0];
+    const operation = operationQueue.current(type);
     console.assert(operation, 'Operation should exist on update end');
 
     operation.onComplete();
@@ -537,8 +536,7 @@ export default class BufferController extends EventHandler {
     // SourceBuffer errors are not necessarily fatal; if so, the HTMLMediaElement will fire an error event
     this.hls.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false });
     // updateend is always fired after error, so we'll allow that to shift the current operation off of the queue
-    const queue = this.operationQueue.queues[type];
-    const operation = queue[0];
+    const operation = this.operationQueue.current(type);
     if (operation) {
       operation.onError(event);
     }
