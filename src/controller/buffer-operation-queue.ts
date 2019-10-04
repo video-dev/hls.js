@@ -3,7 +3,7 @@ import { BufferOperation, BufferOperationQueues, SourceBuffers, SourceBufferName
 
 export default class BufferOperationQueue {
   private buffers: SourceBuffers;
-  public queues: BufferOperationQueues = {
+  private queues: BufferOperationQueues = {
     video: [],
     audio: [],
     audiovideo: []
@@ -65,5 +65,9 @@ export default class BufferOperationQueue {
   public shiftAndExecuteNext (type: SourceBufferName) {
     this.queues[type].shift();
     this.executeNext(type);
+  }
+
+  public current (type: SourceBufferName) {
+    return this.queues[type][0];
   }
 }
