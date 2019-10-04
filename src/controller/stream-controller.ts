@@ -15,6 +15,7 @@ import { Level } from '../types/level';
 import { TrackSet } from '../types/track';
 import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
 import { SourceBufferName } from '../types/buffer';
+import { LevelUpdatedData } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -507,7 +508,7 @@ export default class StreamController extends BaseStreamController {
     // override level info
     curLevel.details = newDetails;
     this.levelLastLoaded = newLevelId;
-    this.hls.trigger(Event.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
+    this.hls.trigger(Event.LEVEL_UPDATED, <LevelUpdatedData>{ details: newDetails, level: newLevelId });
 
     if (!this.startFragRequested) {
       this.setStartPosition(newDetails, sliding);

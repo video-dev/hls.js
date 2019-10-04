@@ -48,6 +48,11 @@ export interface LevelLoadedData extends TrackLoadedData {
   level: number
 }
 
+export interface LevelUpdatedData {
+  details: LevelDetails
+  level: number
+}
+
 export interface SubtitleTracksUpdated {
   subtitleTracks: PlaylistMedia[]
 }

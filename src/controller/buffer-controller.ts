@@ -11,13 +11,13 @@ import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import { TrackSet } from '../types/track';
 import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
 import BufferOperationQueue from './buffer-operation-queue';
-
 import {
   BufferOperation,
   SourceBuffers,
   SourceBufferName,
   SourceBufferListeners
 } from '../types/buffer';
+import { LevelUpdatedData } from '../types/events';
 
 const MediaSource = getMediaSource();
 
@@ -225,8 +225,15 @@ export default class BufferController extends EventHandler {
       onError: (err) => {
         // in case any error occured while appending, put back segment in segments table
         logger.error(`[buffer-controller]: Error encountered while trying to append to the ${type} SourceBuffer`, err);
-        const event = { type: ErrorTypes.MEDIA_ERROR, parent: frag.type, details: '', fatal: false };
+        const event = {
+          type: ErrorTypes.MEDIA_ERROR,
+          parent: frag.type,
+          details: '',
+          err,
+          fatal: false
+        };
         if (err.code === 22) {
+          // TODO: enum MSE error codes
           // TODO: Should queues be cleared on this error?
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
           // let's stop appending any segments, and report BUFFER_FULL_ERROR error
@@ -316,7 +323,7 @@ export default class BufferController extends EventHandler {
     this.blockBuffers(endStream);
   }
 
-  onLevelUpdated ({ details }: { details: { totalduration: number, targetduration?: number, averagetargetduration?: number, live: boolean, fragments: any[] } }) {
+  onLevelUpdated ({ details }: LevelUpdatedData) {
     if (!details.fragments.length) {
       return;
     }
@@ -480,7 +487,13 @@ export default class BufferController extends EventHandler {
           };
         } catch (err) {
           logger.error(`error while trying to add sourceBuffer:${err.message}`);
-          this.hls.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_ADD_CODEC_ERROR, fatal: false, err: err, mimeType: mimeType });
+          this.hls.trigger(Events.ERROR, {
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.BUFFER_ADD_CODEC_ERROR,
+            fatal: false,
+            err,
+            mimeType: mimeType
+          });
         }
       }
     }
