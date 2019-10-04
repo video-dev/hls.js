@@ -131,13 +131,6 @@ export default class StreamController extends BaseStreamController {
       }
     }
       break;
-    case State.ERROR:
-    case State.STOPPED:
-    case State.FRAG_LOADING:
-    case State.PARSING:
-    case State.PARSED:
-    case State.ENDED:
-      break;
     default:
       break;
     }
