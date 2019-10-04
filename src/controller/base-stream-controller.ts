@@ -19,7 +19,6 @@ import { RemuxedTrack } from '../types/remuxer';
 
 export const State = {
   STOPPED: 'STOPPED',
-  STARTING: 'STARTING',
   IDLE: 'IDLE',
   PAUSED: 'PAUSED',
   KEY_LOADING: 'KEY_LOADING',

@@ -81,7 +81,8 @@ class AudioStreamController extends BaseStreamController {
       this.state = State.IDLE;
     } else {
       this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
-      this.state = State.STARTING;
+      this.loadedmetadata = false;
+      this.state = State.WAITING_TRACK;
     }
     this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
     this.tick();
@@ -97,10 +98,6 @@ class AudioStreamController extends BaseStreamController {
     case State.PAUSED:
       // TODO: Remove useless PAUSED state
       // don't do anything in paused state either ...
-      break;
-    case State.STARTING:
-      this.state = State.WAITING_TRACK;
-      this.loadedmetadata = false;
       break;
     case State.IDLE:
       this.doTickIdle();
@@ -128,12 +125,6 @@ class AudioStreamController extends BaseStreamController {
       if (Number.isFinite(this.initPTS[videoTrackCC])) {
         this.state = State.IDLE;
       }
-      break;
-    case State.STOPPED:
-    case State.FRAG_LOADING:
-    case State.PARSING:
-    case State.PARSED:
-    case State.ENDED:
       break;
     default:
       break;
@@ -330,7 +321,7 @@ class AudioStreamController extends BaseStreamController {
     if (!this.startFragRequested) {
       this.setStartPosition(track.details, sliding);
     }
-    // only switch batck to IDLE state if we were waiting for track to start downloading a new fragment
+    // only switch back to IDLE state if we were waiting for track to start downloading a new fragment
     if (this.state === State.WAITING_TRACK) {
       this.state = State.IDLE;
     }
