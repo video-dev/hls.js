@@ -11,10 +11,16 @@ import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { mergeSubtitlePlaylists } from './level-helper';
-import { ErrorData, MediaAttachedData, SubtitleFragProcessed, SubtitleTracksUpdated, TrackSwitchedData } from '../types/events';
+import {
+  ErrorData,
+  LevelUpdatedData,
+  MediaAttachedData,
+  SubtitleFragProcessed,
+  SubtitleTracksUpdated,
+  TrackSwitchedData
+} from '../types/events';
 import { PlaylistMedia } from '../types/level';
 import Fragment from '../loader/fragment';
-import LevelDetails from '../loader/level-details';
 
 const { performance } = self;
 
@@ -196,7 +202,7 @@ export class SubtitleStreamController extends BaseStreamController {
     }
   }
 
-  onLevelUpdated ({ details }: { details: LevelDetails }) {
+  onLevelUpdated ({ details }: LevelUpdatedData) {
     const frags = details.fragments;
     this.lastAVStart = frags.length ? frags[0].start : 0;
   }

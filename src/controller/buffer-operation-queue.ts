@@ -28,7 +28,7 @@ export default class BufferOperationQueue {
     const promise: Promise<{}> = new Promise((resolve, reject) => {
       execute = resolve;
     });
-    const operation = {
+    const operation: BufferOperation = {
       execute,
       onComplete: () => {},
       onError: () => {}
