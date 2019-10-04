@@ -206,7 +206,7 @@ export default class BufferController extends EventHandler {
     const operation: BufferOperation = {
       execute: () => {
         chunkStats.executeStart = performance.now();
-        this.appendExecuteor(data, type);
+        this.appendExecutor(data, type);
       },
       onComplete: () => {
         const end = performance.now();
@@ -259,7 +259,7 @@ export default class BufferController extends EventHandler {
   onBufferFlushing (data: { startOffset: number, endOffset: number, type?: SourceBufferName }) {
     const { operationQueue } = this;
     const flushOperation = (type): BufferOperation => ({
-      execute: this.removeExecuteor.bind(this, type, data.startOffset, data.endOffset),
+      execute: this.removeExecutor.bind(this, type, data.startOffset, data.endOffset),
       onComplete: () => {
         this.hls.trigger(Events.BUFFER_FLUSHED);
       },
@@ -364,7 +364,7 @@ export default class BufferController extends EventHandler {
     }
 
     const operation = {
-      execute: this.abortExecuteor.bind(this, type),
+      execute: this.abortExecutor.bind(this, type),
       onComplete () {
         if (audioBuffer) {
           logger.log(`[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${data.start}`);
@@ -543,7 +543,7 @@ export default class BufferController extends EventHandler {
   }
 
   // This method must result in an updateend event; if remove is not called, _onSBUpdateEnd must be called manually
-  private removeExecuteor (type: SourceBufferName, startOffset: number, endOffset: number) {
+  private removeExecutor (type: SourceBufferName, startOffset: number, endOffset: number) {
     const { media, operationQueue, sourceBuffer } = this;
     const sb = sourceBuffer[type];
     if (!media || !sb) {
@@ -565,7 +565,7 @@ export default class BufferController extends EventHandler {
   }
 
   // This method must result in an updateend event; if append is not called, _onSBUpdateEnd must be called manually
-  private appendExecuteor (data: Uint8Array, type: SourceBufferName) {
+  private appendExecutor (data: Uint8Array, type: SourceBufferName) {
     const { operationQueue, sourceBuffer } = this;
     const sb = sourceBuffer[type];
     if (!sb) {
@@ -582,7 +582,7 @@ export default class BufferController extends EventHandler {
   // SourceBuffers can be aborted while the updating flag is true, but only if it is because of an append operation -
   // aborting during a remove will throw an InvalidStateError. It's safer to enqueue aborts and execute them only if
   // updating is false
-  private abortExecuteor (type: SourceBufferName) {
+  private abortExecutor (type: SourceBufferName) {
     const { operationQueue, sourceBuffer } = this;
     const sb = sourceBuffer[type];
     if (!sb) {
