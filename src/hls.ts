@@ -13,7 +13,7 @@ import { FragmentTracker } from './controller/fragment-tracker';
 import StreamController from './controller/stream-controller';
 import LevelController from './controller/level-controller';
 
-import PerformancMonitor from './performance/performance-monitor';
+import PerformanceMonitor from './performance/performance-monitor';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
@@ -141,7 +141,7 @@ export default class Hls extends Observer {
     this.emeController = this.createController(config.emeController, null, coreComponents);
 
     // Push the performance monitor last so that it is the last class to handle events
-    coreComponents.push(new PerformancMonitor(this));
+    coreComponents.push(new PerformanceMonitor(this));
 
     this.coreComponents = coreComponents;
   }
@@ -537,7 +537,7 @@ export default class Hls extends Observer {
    * @type {Seconds}
    */
   get liveSyncPosition (): number {
-    return this.streamController._liveSyncPosition;
+    return this.streamController.liveSyncPosition;
   }
 
   /**

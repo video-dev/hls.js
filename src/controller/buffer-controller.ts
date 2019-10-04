@@ -9,7 +9,6 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
 import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import { TrackSet } from '../types/track';
-import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
 import BufferOperationQueue from './buffer-operation-queue';
 import {
   BufferOperation,
@@ -17,7 +16,7 @@ import {
   SourceBufferName,
   SourceBufferListeners
 } from '../types/buffer';
-import { LevelUpdatedData } from '../types/events';
+import { LevelUpdatedData, BufferAppendingEventPayload } from '../types/events';
 
 const MediaSource = getMediaSource();
 const DEFAULT_TARGET_DURATION = 10;

@@ -10,7 +10,7 @@ import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import { BufferAppendingEventPayload } from '../types/bufferAppendingEventPayload';
+import { BufferAppendingEventPayload } from '../types/events';
 import { TrackSet } from '../types/track';
 
 const { performance } = self;

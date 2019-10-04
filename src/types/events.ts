@@ -3,6 +3,8 @@ import LevelDetails from '../loader/level-details';
 import { Level, LevelParsed, PlaylistMedia } from './level';
 import { LoaderStats } from './loader';
 import { Track } from './track';
+import { SourceBufferName } from './buffer';
+import { ChunkMetadata } from './transmuxer';
 
 export interface ManifestLoadingData {
   url: string
@@ -75,6 +77,13 @@ export interface SubtitleFragProcessed {
 
 export interface MediaAttachedData {
   media: HTMLVideoElement;
+}
+
+export interface BufferAppendingEventPayload {
+  type: SourceBufferName;
+  data: Uint8Array;
+  frag: Fragment;
+  chunkMeta: ChunkMetadata
 }
 
 export interface ErrorData {

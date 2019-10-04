@@ -1,1 +1,1 @@
-export interface GenericObjectType { [key: string]: any; }
+export interface StringMap { [key: string]: any; }
