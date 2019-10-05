@@ -1,9 +1,11 @@
+import { sliceUint8 } from '../utils/typed-array';
+
 // PKCS7
 export function removePadding (buffer) {
   const outputBytes = buffer.byteLength;
   const paddingBytes = outputBytes && (new DataView(buffer)).getUint8(outputBytes - 1);
   if (paddingBytes) {
-    return buffer.slice(0, outputBytes - paddingBytes);
+    return sliceUint8(buffer, 0, outputBytes - paddingBytes);
   } else {
     return buffer;
   }

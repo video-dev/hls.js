@@ -1,5 +1,3 @@
-import '../polyfills/runtime-polyfills';
-
 import Transmuxer, { isPromise } from '../demux/transmuxer';
 import Event from '../events';
 import { enableLogs } from '../utils/logger';
