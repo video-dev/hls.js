@@ -1,3 +1,5 @@
+import { sliceUint8 } from './typed-array';
+
 // Todo: Optimize by using loops instead of array methods
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
@@ -445,8 +447,8 @@ export function segmentValidRange (data: Uint8Array): SegmentedRange {
   }
   const last = moofs[moofs.length - 1];
   // Offset by 8 bytes; findBox offsets the start by as much
-  segmentedRange.valid = data.slice(0, last.start - 8);
-  segmentedRange.remainder = data.slice(last.start - 8);
+  segmentedRange.valid = sliceUint8(data, 0, last.start - 8);
+  segmentedRange.remainder = sliceUint8(data, last.start - 8);
   return segmentedRange;
 }
 
