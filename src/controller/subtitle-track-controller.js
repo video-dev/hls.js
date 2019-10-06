@@ -66,6 +66,11 @@ class SubtitleTrackController extends EventHandler {
       this.media.textTracks.removeEventListener('change', this.trackChangeListener);
     }
 
+    if (Number.isFinite(this.subtitleTrack)) {
+      this.queuedDefaultTrack = this.subtitleTrack;
+    }
+
+    this.trackId = -1;
     this.media = null;
   }
 

@@ -84,6 +84,11 @@ export class SubtitleStreamController extends BaseStreamController {
 
   onMediaDetaching () {
     this.media.removeEventListener('seeking', this._onMediaSeeking);
+    this.fragmentTracker.removeAllFragments();
+    this.currentTrackId = -1;
+    this.tracks.forEach((track) => {
+      this.tracksBuffered[track.id] = [];
+    });
     this.media = null;
     this.state = State.STOPPED;
   }
