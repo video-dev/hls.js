@@ -47,9 +47,6 @@ class BufferController extends EventHandler {
   // signals that mediaSource should have endOfStream called
   private _needsEos: boolean = false;
 
-  // Track whether the parsed manifest signaled alternate audio
-  private _altAudio: boolean = false;
-
   private config: BufferControllerConfig;
 
   // this is optional because this property is removed from the class sometimes
@@ -57,6 +54,9 @@ class BufferController extends EventHandler {
 
   // The number of BUFFER_CODEC events received before any sourceBuffers are created
   public bufferCodecEventsExpected: number = 0;
+
+  // The total number of BUFFER_CODEC events received
+  private _bufferCodecEventsTotal: number = 0;
 
   // A reference to the attached media element
   public media: HTMLMediaElement | null = null;
@@ -146,8 +146,7 @@ class BufferController extends EventHandler {
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    this._altAudio = data.altAudio;
-    this.bufferCodecEventsExpected = data.altAudio ? 2 : 1;
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = data.altAudio ? 2 : 1;
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
@@ -206,7 +205,7 @@ class BufferController extends EventHandler {
       this.mediaSource = null;
       this.media = null;
       this._objectUrl = null;
-      this.bufferCodecEventsExpected = this._altAudio ? 2 : 1;
+      this.bufferCodecEventsExpected = this._bufferCodecEventsTotal;
       this.pendingTracks = {};
       this.tracks = {};
       this.sourceBuffer = {};
