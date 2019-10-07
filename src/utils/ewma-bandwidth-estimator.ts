@@ -9,7 +9,16 @@
 import EWMA from '../utils/ewma';
 
 class EwmaBandWidthEstimator {
-  constructor (hls, slow, fast, defaultEstimate) {
+  hls: any;
+
+  private defaultEstimate_: number;
+  private minWeight_: number;
+  private minDelayMs_: number;
+  private slow_: EWMA;
+  private fast_: EWMA;
+
+  // TODO(typescript-hls)
+  constructor (hls: any, slow: number, fast: number, defaultEstimate: number) {
     this.hls = hls;
     this.defaultEstimate_ = defaultEstimate;
     this.minWeight_ = 0.001;
@@ -18,7 +27,7 @@ class EwmaBandWidthEstimator {
     this.fast_ = new EWMA(fast);
   }
 
-  sample (durationMs, numBytes) {
+  sample (durationMs: number, numBytes: number) {
     durationMs = Math.max(durationMs, this.minDelayMs_);
     let numBits = 8 * numBytes,
       // weight is duration in seconds
@@ -29,12 +38,12 @@ class EwmaBandWidthEstimator {
     this.slow_.sample(durationS, bandwidthInBps);
   }
 
-  canEstimate () {
+  canEstimate (): boolean {
     let fast = this.fast_;
     return (fast && fast.getTotalWeight() >= this.minWeight_);
   }
 
-  getEstimate () {
+  getEstimate (): number {
     if (this.canEstimate()) {
       // console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
       // console.log('fast estimate:'+ Math.round(this.fast_.getEstimate()));

@@ -5,7 +5,7 @@ design idea is pretty simple :
    - main functionalities are split into several subsystems
    - all subsystems are instantiated by the Hls instance.
    - each subsystem heavily relies on events for internal/external communications.
-   - Events are handled using [EventEmitter](https://nodejs.org/api/events.html)
+   - Events are handled using [EventEmitter3](https://github.com/primus/eventemitter3)
    - bundled for the browser by [webpack](https://webpack.js.org/)
 
 ## Code structure
@@ -14,7 +14,7 @@ design idea is pretty simple :
     - definition of default Hls Config. entry point for conditional compilation (altaudio/subtitle)
   - [src/errors.js][]
     - definition of Hls.ErrorTypes and Hls.ErrorDetails
-  - [src/event-handler.js][]
+  - [src/event-handler.ts][]
     - helper class simplifying Hls event handling, event error catching
   - [src/events.js][]
     - definition of Hls.Events
@@ -172,19 +172,19 @@ design idea is pretty simple :
   - [src/loader/fragment-loader.js][]
     - in charge of loading fragments, use xhr-loader if not overrided by user config
   - [src/loader/key-loader.js][]
-   - in charge of loading decryption key    
+    - in charge of loading decryption key    
   - [src/loader/playlist-loader.js][]
-   - in charge of loading manifest, and level playlists, use xhr-loader if not overrided by user config.
+    - in charge of loading manifest, and level playlists, use xhr-loader if not overrided by user config.
   - [src/remux/dummy-remuxer.js][]
-   - example dummy remuxer
+    - example dummy remuxer
   - [src/remux/mp4-generator.js][]
-   - in charge of generating MP4 boxes
-     - generate Init Segment (moov)
-     - generate samples Box (moof and mdat)
+     - in charge of generating MP4 boxes
+       - generate Init Segment (moov)
+       - generate samples Box (moof and mdat)
   - [src/remux/mp4-remuxer.js][]
-   - in charge of converting AVC/AAC/MP3 samples provided by demuxer into fragmented ISO BMFF boxes, compatible with MediaSource
-   - this remuxer is able to deal with small gaps between fragments and ensure timestamp continuity. it is also able to create audio padding (silent AAC audio frames) in case there is a significant audio 'hole' in the stream.
-   - it notifies remuxing completion using events (```FRAG_PARSING_INIT_SEGMENT```, ```FRAG_PARSING_DATA``` and ```FRAG_PARSED```)
+    - in charge of converting AVC/AAC/MP3 samples provided by demuxer into fragmented ISO BMFF boxes, compatible with MediaSource
+    - this remuxer is able to deal with small gaps between fragments and ensure timestamp continuity. it is also able to create audio padding (silent AAC audio frames) in case there is a significant audio 'hole' in the stream.
+    - it notifies remuxing completion using events (```FRAG_PARSING_INIT_SEGMENT```, ```FRAG_PARSING_DATA``` and ```FRAG_PARSED```)
   - [src/utils/attr-list.js][]
     - Attribute List parsing helper class, used by playlist-loader
   - [src/utils/binary-search.js][]
@@ -218,7 +218,7 @@ design idea is pretty simple :
 
 [src/config.js]: ../src/config.js
 [src/errors.js]: ../src/errors.js
-[src/event-handler.js]: ../src/event-handler.js
+[src/event-handler.ts]: ../src/event-handler.ts
 [src/events.js]: ../src/events.js
 [src/hls.js]: ../src/hls.js
 [src/index.js]: ../src/index.js

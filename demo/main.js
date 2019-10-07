@@ -1152,7 +1152,7 @@ function onConfigPersistenceChanged(event) {
 
 function getEditorValue(options) {
   options = $.extend({ parse: false }, options || {});
-  const value = configEditor.session.getValue();
+  let value = configEditor.session.getValue();
 
   if (options.parse) {
     try {
@@ -1202,6 +1202,7 @@ function setupConfigEditor() {
   const elPersistence = document.querySelector('#configPersistence');
   elPersistence.addEventListener('change', onConfigPersistenceChanged);
   elPersistence.checked = shouldRestorePersisted;
+  configPersistenceEnabled = shouldRestorePersisted;
 
   updateConfigEditorValue(contents);
 }

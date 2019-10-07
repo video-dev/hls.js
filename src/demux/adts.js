@@ -229,8 +229,6 @@ export function appendFrame (track, data, offset, pts, frameIndex) {
     };
 
     track.samples.push(aacSample);
-    track.len += frameLength;
-
     return { sample: aacSample, length: frameLength + headerLength };
   }
 
