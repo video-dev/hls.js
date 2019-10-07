@@ -18,8 +18,8 @@ export default class TransmuxerInterface {
   private worker: any;
   private onwmsg?: Function;
   private transmuxer?: Transmuxer | null;
-  private onTransmuxComplete: Function;
-  private onFlush: Function;
+  private onTransmuxComplete: (transmuxResult: TransmuxerResult) => {};
+  private onFlush: (chunkMeta: ChunkMetadata) => {};
 
   private currentTransmuxSession: ChunkMetadata | null = null;
 
