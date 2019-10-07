@@ -116,7 +116,7 @@ export class SubtitleStreamController extends BaseStreamController {
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
 
-    if (!this.tracks || this.currentTrackId === -1) {
+    if (!this.tracks || !this.tracks.length || this.currentTrackId === -1) {
       this.clearInterval();
       return;
     }
