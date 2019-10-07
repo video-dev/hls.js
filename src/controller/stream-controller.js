@@ -7,8 +7,8 @@ import { BufferHelper } from '../utils/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { FragmentState } from './fragment-tracker';
-import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
-import PlaylistLoader from '../loader/playlist-loader';
+import { ElementaryStreamTypes } from '../loader/fragment';
+import { PlaylistLevelType } from '../types/loader';
 import * as LevelHelper from './level-helper';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
@@ -49,17 +49,6 @@ class StreamController extends BaseStreamController {
     this.gapController = null;
   }
 
-  onHandlerDestroying () {
-    this.stopLoad();
-    super.onHandlerDestroying();
-  }
-
-  onHandlerDestroyed () {
-    this.state = State.STOPPED;
-    this.fragmentTracker = null;
-    super.onHandlerDestroyed();
-  }
-
   startLoad (startPosition) {
     if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
@@ -95,23 +84,8 @@ class StreamController extends BaseStreamController {
   }
 
   stopLoad () {
-    let frag = this.fragCurrent;
-    if (frag) {
-      if (frag.loader) {
-        frag.loader.abort();
-      }
-
-      this.fragmentTracker.removeFragment(frag);
-      this.fragCurrent = null;
-    }
-    this.fragPrevious = null;
-    if (this.demuxer) {
-      this.demuxer.destroy();
-      this.demuxer = null;
-    }
-    this.clearInterval();
-    this.state = State.STOPPED;
     this.forceStartLoad = false;
+    super.stopLoad();
   }
 
   doTick () {
@@ -191,7 +165,7 @@ class StreamController extends BaseStreamController {
     let levelBitrate = levelInfo.bitrate,
       maxBufLen;
 
-    // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
+    // compute max Buffer Length that we could get from this load level, based on level bitrate.
     if (levelBitrate) {
       maxBufLen = Math.max(8 * config.maxBufferSize / levelBitrate, config.maxBufferLength);
     } else {
@@ -443,7 +417,9 @@ class StreamController extends BaseStreamController {
     let fragState = this.fragmentTracker.getState(frag);
 
     this.fragCurrent = frag;
-    this.startFragRequested = true;
+    if (frag.sn !== 'initSegment') {
+      this.startFragRequested = true;
+    }
     // Don't update nextLoadPosition for fragments which are not buffered
     if (Number.isFinite(frag.sn) && !frag.bitrateTest) {
       this.nextLoadPosition = frag.start + frag.duration;
@@ -483,7 +459,7 @@ class StreamController extends BaseStreamController {
   }
 
   getBufferedFrag (position) {
-    return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
+    return this.fragmentTracker.getBufferedFrag(position, PlaylistLevelType.MAIN);
   }
 
   get currentLevel () {
@@ -1316,12 +1292,6 @@ class StreamController extends BaseStreamController {
   swapAudioCodec () {
     this.audioCodecSwap = !this.audioCodecSwap;
   }
-
-  computeLivePosition (sliding, levelDetails) {
-    let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
-    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
-  }
-
   /**
    * Seeks to the set startPosition if not equal to the mediaElement's current time.
    * @private

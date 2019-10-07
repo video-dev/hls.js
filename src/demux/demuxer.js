@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'eventemitter3';
 import * as work from 'webworkify-webpack';
 
 import Event from '../events';
@@ -12,7 +12,7 @@ import { Observer } from '../observer';
 
 // see https://stackoverflow.com/a/11237259/589493
 const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
-const MediaSource = getMediaSource();
+const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
 class Demuxer {
   constructor (hls, id) {

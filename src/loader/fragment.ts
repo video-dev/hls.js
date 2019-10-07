@@ -2,6 +2,7 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { logger } from '../utils/logger';
 import LevelKey from './level-key';
+import { PlaylistLevelType } from '../types/loader';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
@@ -19,8 +20,12 @@ export default class Fragment {
     [ElementaryStreamTypes.VIDEO]: false
   };
 
+  // deltaPTS tracks the change in presentation timestamp between fragments
+  public deltaPTS: number = 0;
+
   public rawProgramDateTime: string | null = null;
   public programDateTime: number | null = null;
+  public title: string | null = null;
   public tagList: Array<string[]> = [];
 
   // TODO: Move at least baseurl to constructor.
@@ -29,18 +34,31 @@ export default class Fragment {
   // Have Fragment be the representation once we have a known state?
   // Something to think on.
 
+  // Discontinuity Counter
+  public cc!: number;
+
+  public type!: PlaylistLevelType;
   // relurl is the portion of the URL that comes from inside the playlist.
   public relurl!: string;
   // baseurl is the URL to the playlist
   public baseurl!: string;
   // EXTINF has to be present for a m3u8 to be considered valid
   public duration!: number;
+  // When this segment starts in the timeline
+  public start!: number;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
   public sn: number | 'initSegment' = 0;
+
+  public urlId: number = 0;
+  // level matches this fragment to a index playlist
+  public level: number = 0;
   // levelkey is the EXT-X-KEY that applies to this segment for decryption
   // core difference from the private field _decryptdata is the lack of the initialized IV
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
+
+  // TODO(typescript-xhrloader)
+  public loader: any;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {

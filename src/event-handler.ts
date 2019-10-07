@@ -7,6 +7,7 @@
 import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
 import Event from './events';
+import Hls from './hls';
 
 const FORBIDDEN_EVENT_NAMES = {
   'hlsEventGeneric': true,
@@ -15,7 +16,11 @@ const FORBIDDEN_EVENT_NAMES = {
 };
 
 class EventHandler {
-  constructor (hls, ...events) {
+  hls: Hls;
+  handledEvents: any[];
+  useGenericHandler: boolean;
+
+  constructor (hls: Hls, ...events: any[]) {
     this.hls = hls;
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
@@ -30,8 +35,8 @@ class EventHandler {
     this.onHandlerDestroyed();
   }
 
-  onHandlerDestroying () {}
-  onHandlerDestroyed () {}
+  protected onHandlerDestroying () {}
+  protected onHandlerDestroyed () {}
 
   isEventHandler () {
     return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
@@ -60,12 +65,12 @@ class EventHandler {
   /**
    * arguments: event (string), data (any)
    */
-  onEvent (event, data) {
+  onEvent (event: string, data: any) {
     this.onEventGeneric(event, data);
   }
 
-  onEventGeneric (event, data) {
-    let eventToFunction = function (event, data) {
+  onEventGeneric (event: string, data: any) {
+    let eventToFunction = function (event: string, data: any) {
       let funcName = 'on' + event.replace('hls', '');
       if (typeof this[funcName] !== 'function') {
         throw new Error(`Event ${event} has no generic handler in this ${this.constructor.name} class (tried ${funcName})`);

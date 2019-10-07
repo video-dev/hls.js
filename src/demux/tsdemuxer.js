@@ -94,7 +94,6 @@ class TSDemuxer {
       inputTimeScale: 90000,
       sequenceNumber: 0,
       samples: [],
-      len: 0,
       dropped: type === 'video' ? 0 : undefined,
       isAAC: type === 'audio' ? true : undefined,
       duration: type === 'audio' ? duration : undefined
@@ -366,7 +365,7 @@ class TSDemuxer {
       switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
-          logger.log('unkown stream type:' + data[offset]);
+          logger.log('unknown stream type:' + data[offset]);
           break;
         }
         /* falls through */
@@ -391,7 +390,7 @@ class TSDemuxer {
 
       case 0xdb: // SAMPLE-AES AVC
         if (!isSampleAes) {
-          logger.log('unkown stream type:' + data[offset]);
+          logger.log('unknown stream type:' + data[offset]);
           break;
         }
         /* falls through */
@@ -423,7 +422,7 @@ class TSDemuxer {
         break;
 
       default:
-        logger.log('unkown stream type:' + data[offset]);
+        logger.log('unknown stream type:' + data[offset]);
         break;
       }
       // move to the next table entry
@@ -687,6 +686,33 @@ class TSDemuxer {
                   }
                 }
               }
+            }
+          } else if (payloadType === 5 && expGolombDecoder.bytesAvailable !== 0) {
+            endOfCaptions = true;
+
+            if (payloadSize > 16) {
+              let uuidStrArray = [];
+              let userDataPayloadBytes = [];
+
+              for (i = 0; i < 16; i++) {
+                uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
+
+                if (i === 3 || i === 5 || i === 7 || i === 9) {
+                  uuidStrArray.push('-');
+                }
+              }
+
+              for (i = 16; i < payloadSize; i++) {
+                userDataPayloadBytes.push(expGolombDecoder.readUByte());
+              }
+
+              this._insertSampleInOrder(this._txtTrack.samples, {
+                pts: pes.pts,
+                payloadType: payloadType,
+                uuid: uuidStrArray.join(''),
+                userData: String.fromCharCode.apply(null, userDataPayloadBytes),
+                userDataBytes: userDataPayloadBytes
+              });
             }
           } else if (payloadSize < expGolombDecoder.bytesAvailable) {
             for (i = 0; i < payloadSize; i++) {

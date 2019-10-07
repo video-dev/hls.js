@@ -3,7 +3,14 @@ set -e
 
 # GITHUB_TOKEN and NETLIFY_ACCESS_TOKEN set in travis
 
-id=$(git rev-parse HEAD)
+# ensure we have fetched origin/master
+git remote set-branches origin master
+git fetch
+
+currentCommit=$(git rev-parse HEAD)
+masterLatestCommit=$(git rev-parse origin/master)
+
+id=$currentCommit
 root="./netlify"
 version=$(jq -r -e '.version' "./package.json")
 idShort="$(echo "$id" | cut -c 1-8) ($version)"
@@ -20,11 +27,16 @@ deploy () {
 echo "Creating site for current commit ($id)."
 uuid=$(uuidgen)
 commitSiteName="hls-js-$uuid"
-commitSiteId=$(curl --fail -d "{\"name\":\"$commitSiteName\"}" -H "Content-Type: application/json" -X POST "https://api.netlify.com/api/v1/sites?access_token=$NETLIFY_ACCESS_TOKEN" | jq -r '.site_id')
+commitSiteId=$(curl --fail -d "{\"name\":\"$commitSiteName\"}" -H "Content-Type: application/json" -X POST "https://api.netlify.com/api/v1/hls-js/sites?access_token=$NETLIFY_ACCESS_TOKEN" | jq -r '.site_id')
 echo "Created site '$commitSiteId'."
 
 deploy "$commitSiteId"
-deploy "$latestSiteId"
+
+if [ $currentCommit = $masterLatestCommit ]; then
+  echo "On latest master commit."
+  deploy "$latestSiteId"
+fi
+
 if [[ $version != *"-"* ]]; then
   echo "Detected new version: $version"
   deploy "$stableSiteId"

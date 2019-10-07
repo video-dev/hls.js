@@ -36,7 +36,7 @@ function createTestStreamWithConfig (target, config) {
 
 module.exports = {
   bbb: createTestStreamWithConfig({
-    url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8',
+    url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     description: 'Big Buck Bunny - adaptive qualities'
   },
   {
@@ -45,27 +45,27 @@ module.exports = {
   }
   ),
   bigBuckBunny480p: {
-    'url': 'https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
+    'url': 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     'description': 'Big Buck Bunny - 480p only',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
   arte: {
-    'url': 'https://video-dev.github.io/streams/test_001/stream.m3u8',
+    'url': 'https://test-streams.mux.dev/test_001/stream.m3u8',
     'description': 'ARTE China,ABR',
     'live': false,
     'abr': true
   },
   deltatreDAI: {
-    'url': 'https://video-dev.github.io/streams/dai-discontinuity-deltatre/manifest.m3u8',
+    'url': 'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
     'description': 'Ad-insertion in event stream',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
   },
   issue666: {
-    'url': 'https://video-dev.github.io/streams/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    'url': 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
     'description': 'hls.js/issues/666',
     'live': false,
     'abr': false,
@@ -94,7 +94,7 @@ module.exports = {
   },
   /*
   bbbAES: {
-    'url': 'https://video-dev.github.io/streams/bbbAES/playlists/sample_aes/index.m3u8',
+    'url': 'https://test-streams.mux.dev/bbbAES/playlists/sample_aes/index.m3u8',
     'description': 'SAMPLE-AES encrypted',
     'live': false,
     'abr': false
@@ -129,7 +129,7 @@ module.exports = {
     'blacklist_ua': ['safari', 'internet explorer']
   },
   offset_pts: {
-    'url': 'https://video-dev.github.io/streams/pts_shift/master.m3u8',
+    'url': 'https://test-streams.mux.dev/pts_shift/master.m3u8',
     'description': 'DK Turntable, PTS shifted by 2.3s',
     'live': false,
     'abr': false
@@ -146,12 +146,12 @@ module.exports = {
     blacklist_ua: ['firefox', 'safari', 'internet explorer']
   },
   {
-    widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
+    widevineLicenseUrl: 'http://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }
   ),
   audioOnlyMultipleLevels: {
-    'url': 'https://s3.amazonaws.com/bob.jwplayer.com/~alex/121628/new_master.m3u8',
+    'url': 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/121628/new_master.m3u8',
     'description': 'Multiple non-alternate audio levels',
     'live': false,
     'abr': false
@@ -173,13 +173,13 @@ module.exports = {
     description: 'One PDT, no discontinuities'
   },
   noTrackIntersection: {
-    url: 'https://s3.amazonaws.com/bob.jwplayer.com/%7Ealex/123633/new_master.m3u8',
+    url: 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/123633/new_master.m3u8',
     description: 'Audio/video track PTS values do not intersect; 10 second start gap'
   },
-  altAudioNoVideoCodecSignaled: {
-    url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/3cbf1114-b2f4-4320-afb3-f0f7eeeb8630/playlist.m3u8',
-    description: 'Alternate audio track, but no video codec is signaled in the master manifest'
-  },
+  // altAudioNoVideoCodecSignaled: {
+  //   url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/3cbf1114-b2f4-4320-afb3-f0f7eeeb8630/playlist.m3u8',
+  //   description: 'Alternate audio track, but no video codec is signaled in the master manifest'
+  // },
   altAudioAndTracks: {
     url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
     description: 'Alternate audio tracks, and multiple VTT tracks'
