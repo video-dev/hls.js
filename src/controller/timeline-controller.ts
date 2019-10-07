@@ -8,6 +8,8 @@ import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 import Fragment from '../loader/fragment';
 import { HlsConfig } from '../config';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
+import { ManifestLoadedData } from '../types/events';
+import { PlaylistMedia } from '../types/level';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -23,7 +25,7 @@ class TimelineController extends EventHandler {
   private enabled: boolean = true;
   private Cues: any;
   private textTracks: Array<TextTrack> = [];
-  private tracks: Array<any> = [];
+  private tracks: Array<PlaylistMedia> = [];
   private initPTS: Array<number> = [];
   private unparsedVttFrags: Array<{frag: Fragment, payload: any}> = [];
   private cueRanges: { [trackName: string]: Array<any> } = {};
@@ -191,7 +193,7 @@ class TimelineController extends EventHandler {
     this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
   }
 
-  createTextTrack (kind: TextTrackKind, label: string, lang: string): TextTrack | undefined {
+  createTextTrack (kind: TextTrackKind, label?: string, lang?: string): TextTrack | undefined {
     const media = this.media;
     if (!media) {
       return;
@@ -250,13 +252,13 @@ class TimelineController extends EventHandler {
     }
   }
 
-  onManifestLoaded (data: { subtitles: Array<any>, captions: Array<any> }) {
+  onManifestLoaded (data: ManifestLoadedData) {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
     this.cueRanges = {};
 
-    const tracks = data.subtitles;
+    const tracks: Array<PlaylistMedia> = data.subtitles || [];
     const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
     if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
       const sameTracks = this.tracks && tracks && this.tracks.length === tracks.length;
@@ -309,7 +311,7 @@ class TimelineController extends EventHandler {
 
     if (this.config.enableCEA708Captions && data.captions) {
       data.captions.forEach(captionsTrack => {
-        const instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(captionsTrack.instreamId);
+        const instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(captionsTrack.instreamId as string);
 
         if (!instreamIdMatch) {
           return;
@@ -413,22 +415,20 @@ class TimelineController extends EventHandler {
 
   _appendCues (cues, fragLevel) {
     const hls = this.hls;
-    const renderNatively = this.config.renderNatively;
-    const tracks = renderNatively ? this.textTracks : this.tracks;
-    const currentTrack = tracks[fragLevel];
-
-    if (renderNatively) {
-      cues.filter(cue => !currentTrack.cues.getCueById(cue.id)).forEach(cue => {
-        currentTrack.addCue(cue);
+    if (this.config.renderNatively) {
+      const textTrack = this.textTracks[fragLevel];
+      cues.filter(cue => !textTrack.cues.getCueById(cue.id)).forEach(cue => {
+        textTrack.addCue(cue);
       });
     } else {
+      const currentTrack = this.tracks[fragLevel];
       const track = currentTrack.default ? 'default' : 'subtitles' + fragLevel;
       hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues, track });
     }
   }
 
   onFragDecrypted (data: { frag: Fragment, payload: any}) {
-    const { frag, payload } = data;
+    const { frag } = data;
     if (frag.type === 'subtitle') {
       if (!Number.isFinite(this.initPTS[frag.cc])) {
         this.unparsedVttFrags.push(data);

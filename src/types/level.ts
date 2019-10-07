@@ -28,6 +28,7 @@ export interface PlaylistMedia {
   instreamId: string | undefined
   lang: string | undefined
   name: string | undefined
+  textCodec?: string
   type: string
   url?: string
 }
