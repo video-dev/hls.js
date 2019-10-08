@@ -2,6 +2,7 @@ import ID3 from '../demux/id3';
 import { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
+import { sliceUint8 } from '../utils/typed-array';
 
 class BaseAudioDemuxer implements Demuxer {
   protected _audioTrack!: DemuxedAudioTrack;
@@ -82,7 +83,7 @@ class BaseAudioDemuxer implements Demuxer {
         offset++;
       }
       if (offset === length && lastDataIndex !== length) {
-        const partialData = data.slice(lastDataIndex);
+        const partialData = sliceUint8(data, lastDataIndex);
         this.cachedData = appendUint8Array(this.cachedData, partialData);
       }
     }

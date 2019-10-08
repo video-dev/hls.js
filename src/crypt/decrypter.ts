@@ -3,6 +3,7 @@ import FastAESKey from './fast-aes-key';
 import AESDecryptor, { removePadding } from './aes-decryptor';
 import { logger } from '../utils/logger';
 import { appendUint8Array } from '../utils/mp4-tools';
+import { sliceUint8 } from '../utils/typed-array';
 
 const CHUNK_SIZE = 16; // 16 bytes, 128 bits
 
@@ -95,7 +96,7 @@ export default class Decrypter {
     const result = currentResult;
 
     this.currentResult = softwareDecrypter.decrypt(currentChunk.buffer, 0, iv);
-    this.currentIV = currentChunk.slice(-16).buffer;
+    this.currentIV = sliceUint8(currentChunk, -16).buffer;
 
     if (!result) {
       return null;
@@ -134,8 +135,8 @@ export default class Decrypter {
     let currentChunk = data;
     const splitPoint = data.length - (data.length % CHUNK_SIZE);
     if (splitPoint !== data.length) {
-      currentChunk = data.slice(0, splitPoint);
-      this.remainderData = data.slice(splitPoint);
+      currentChunk = sliceUint8(data, 0, splitPoint);
+      this.remainderData = sliceUint8(data, splitPoint);
     }
     return currentChunk;
   }

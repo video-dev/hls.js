@@ -18,6 +18,7 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { DemuxedAvcTrack, DemuxedAudioTrack, DemuxedTrack, Demuxer, DemuxerResult } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
+import { sliceUint8 } from '../utils/typed-array';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -208,7 +209,7 @@ class TSDemuxer implements Demuxer {
       };
     }
     len -= (len + syncOffset) % 188;
-    this.remainderData = data.slice(len);
+    this.remainderData = sliceUint8(data, len);
 
     // loop through TS packets
     for (start = syncOffset; start < len; start += 188) {
