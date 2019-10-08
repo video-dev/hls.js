@@ -2,11 +2,11 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { computeReloadInterval } from './level-helper';
-import { PlaylistMedia } from '../types/level';
+import { MediaPlaylist } from '../types/media-playlist';
 import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdated } from '../types/events';
 
 class SubtitleTrackController extends EventHandler {
-  private tracks: PlaylistMedia[];
+  private tracks: MediaPlaylist[];
   private trackId: number = -1;
   private media: HTMLVideoElement | null = null;
   private stopped: boolean = true;
@@ -71,7 +71,7 @@ class SubtitleTrackController extends EventHandler {
 
     // loop through available subtitle tracks and autoselect default if needed
     // TODO: improve selection logic to handle forced, etc
-    subtitleTracks.forEach((track: PlaylistMedia) => {
+    subtitleTracks.forEach((track: MediaPlaylist) => {
       if (track.default) {
         // setting this.subtitleTrack will trigger internal logic
         // if media has not been attached yet, it will fail
@@ -122,7 +122,7 @@ class SubtitleTrackController extends EventHandler {
   }
 
   /** get alternate subtitle tracks list from playlist **/
-  get subtitleTracks (): PlaylistMedia[] {
+  get subtitleTracks (): MediaPlaylist[] {
     return this.tracks;
   }
 

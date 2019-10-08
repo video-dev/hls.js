@@ -8,10 +8,11 @@ import { FragmentState } from './fragment-tracker';
 import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
-import LevelDetails from '../loader/level-details';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import { BufferAppendingEventPayload } from '../types/events';
+import { BufferAppendingEventPayload, TrackLoadedData, AudioTracksUpdated } from '../types/events';
 import { TrackSet } from '../types/track';
+import { Level } from '../types/level';
+import LevelDetails from '../loader/level-details';
 
 const { performance } = self;
 
@@ -270,9 +271,9 @@ class AudioStreamController extends BaseStreamController {
     this.stopLoad();
   }
 
-  onAudioTracksUpdated (data) {
+  onAudioTracksUpdated ({ audioTracks }: AudioTracksUpdated) {
     this.log('Audio tracks updated');
-    this.levels = data.audioTracks;
+    this.levels = audioTracks.map(mediaPlaylist => new Level(mediaPlaylist));
   }
 
   onAudioTrackSwitching (data) {
@@ -307,7 +308,7 @@ class AudioStreamController extends BaseStreamController {
     this.tick();
   }
 
-  onAudioTrackLoaded (data: { details: LevelDetails, id: number }) {
+  onAudioTrackLoaded (data: TrackLoadedData) {
     const { levels } = this;
     const { details: newDetails, id: trackId } = data;
     if (!levels) {
@@ -352,8 +353,10 @@ class AudioStreamController extends BaseStreamController {
       return;
     }
 
-    const track = levels[trackId];
-    const details = track.details;
+    const track = levels[trackId] as Level;
+    console.assert(track, 'Audio track is defined on fragment load progress');
+    const details = track.details as LevelDetails;
+    console.assert(details, 'Audio track details are defined on fragment load progress');
     const audioCodec = config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2';
 
     let transmuxer = this.transmuxer;

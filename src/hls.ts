@@ -22,7 +22,8 @@ import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './co
 import HlsEvents from './events';
 
 import { Observer } from './observer';
-import { Level, PlaylistMedia } from './types/level';
+import { Level } from './types/level';
+import { MediaPlaylist } from './types/media-playlist';
 
 /**
  * @module Hls
@@ -508,7 +509,7 @@ export default class Hls extends Observer {
   /**
    * @type {AudioTrack[]}
    */
-  get audioTracks (): Array<PlaylistMedia> {
+  get audioTracks (): Array<MediaPlaylist> {
     const audioTrackController = this.audioTrackController;
     return audioTrackController ? audioTrackController.audioTracks : [];
   }
@@ -542,9 +543,9 @@ export default class Hls extends Observer {
 
   /**
    * get alternate subtitle tracks list from playlist
-   * @type {PlaylistMedia[]}
+   * @type {MediaPlaylist[]}
    */
-  get subtitleTracks (): Array<PlaylistMedia> {
+  get subtitleTracks (): Array<MediaPlaylist> {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
