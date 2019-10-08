@@ -111,6 +111,13 @@ export default class Hls extends Observer {
     const fragmentTracker = new FragmentTracker(this);
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
 
+    // Level Controller initiates loading after all controllers have received MANIFEST_PARSED
+    levelController.onParsedComplete = () => {
+      if (config.autoStartLoad || streamController.forceStartLoad) {
+        this.startLoad(config.startPosition);
+      }
+    };
+
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
 

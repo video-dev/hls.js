@@ -24,7 +24,7 @@ export default class StreamController extends BaseStreamController {
   private bitrateTest: boolean = false;
   private gapController: GapController | null = null;
   private level: number = -1;
-  private forceStartLoad: boolean = false;
+  private _forceStartLoad: boolean = false;
   private retryDate: number = 0;
   private altAudio: boolean = false;
   private fragPlaying: Fragment | null = null;
@@ -97,13 +97,13 @@ export default class StreamController extends BaseStreamController {
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
       this.tick();
     } else {
-      this.forceStartLoad = true;
+      this._forceStartLoad = true;
       this.state = State.STOPPED;
     }
   }
 
   stopLoad () {
-    this.forceStartLoad = false;
+    this._forceStartLoad = false;
     super.stopLoad();
   }
 
@@ -472,10 +472,6 @@ export default class StreamController extends BaseStreamController {
 
     this.levels = data.levels;
     this.startFragRequested = false;
-    const config = this.config;
-    if (config.autoStartLoad || this.forceStartLoad) {
-      this.hls.startLoad(config.startPosition);
-    }
   }
 
   onLevelLoaded (data) {
@@ -1055,6 +1051,10 @@ export default class StreamController extends BaseStreamController {
 
   set liveSyncPosition (value) {
     this._liveSyncPosition = value;
+  }
+
+  get forceStartLoad () {
+    return this._forceStartLoad;
   }
 }
 
