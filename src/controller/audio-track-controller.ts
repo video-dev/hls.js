@@ -249,9 +249,7 @@ class AudioTrackController extends EventHandler {
 
   private _selectInitialAudioTrack (): void {
     let tracks = this.tracks;
-    if (!tracks.length) {
-      return;
-    }
+    console.assert(tracks.length, 'Initial audio track should be selected when tracks are known');
 
     const currentAudioTrack = this.tracks[this._trackId];
 
