@@ -10,7 +10,7 @@ import {
   FragLoadedData,
   ErrorData
 } from '../types/events';
-import { Level, LevelParsed, PlaylistMedia } from '../types/level';
+import { Level, LevelParsed } from '../types/level';
 import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
@@ -18,6 +18,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, computeReloadInterval } from './level-helper';
 import Fragment from '../loader/fragment';
+import { MediaPlaylist } from '../types/media-playlist';
 
 let chromeOrFirefox: boolean;
 
@@ -83,7 +84,7 @@ export default class LevelController extends EventHandler {
 
   protected onManifestLoaded (data: ManifestLoadedData): void {
     let levels: Level[] = [];
-    let audioTracks: PlaylistMedia[] = [];
+    let audioTracks: MediaPlaylist[] = [];
     let bitrateStart: number | undefined;
     const levelSet: { [bitrate: number]: Level; } = {};
     let levelFromSet: Level;

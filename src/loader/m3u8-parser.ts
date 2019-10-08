@@ -116,20 +116,19 @@ export default class M3U8Parser {
       const attrs = new AttrList(result[1]);
       if (attrs.TYPE === type) {
         const media: MediaPlaylist = {
+          attrs,
+          bitrate: 0,
           id: id++,
           groupId: attrs['GROUP-ID'],
           instreamId: attrs['INSTREAM-ID'],
-          name: attrs.NAME || attrs.LANGUAGE,
+          name: attrs.NAME || attrs.LANGUAGE || '',
           type,
           default: (attrs.DEFAULT === 'YES'),
           autoselect: (attrs.AUTOSELECT === 'YES'),
           forced: (attrs.FORCED === 'YES'),
-          lang: attrs.LANGUAGE
+          lang: attrs.LANGUAGE,
+          url: attrs.URI ? M3U8Parser.resolve(attrs.URI, baseurl) : ''
         };
-
-        if (attrs.URI) {
-          media.url = M3U8Parser.resolve(attrs.URI, baseurl);
-        }
 
         if (groups.length) {
           // If there are audio or text groups signalled in the manifest, let's look for a matching codec string for this track

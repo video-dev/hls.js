@@ -211,7 +211,7 @@ export default class Transmuxer {
     remuxer.resetNextTimestamp();
   }
 
-  resetInitSegment (initSegmentData: Uint8Array, audioCodec: string, videoCodec: string, duration: number) {
+  resetInitSegment (initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, duration: number) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
@@ -317,13 +317,13 @@ export function isPromise<T> (p: Promise<T> | any): p is Promise<T> {
 }
 
 export class TransmuxConfig {
-  public audioCodec: string;
-  public videoCodec: string;
+  public audioCodec?: string;
+  public videoCodec?: string;
   public initSegmentData: Uint8Array;
   public duration: number;
   public defaultInitPts?: number;
 
-  constructor (audioCodec: string, videoCodec: string, initSegmentData: Uint8Array, duration: number, defaultInitPts?: number) {
+  constructor (audioCodec: string | undefined, videoCodec: string | undefined, initSegmentData: Uint8Array, duration: number, defaultInitPts?: number) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.initSegmentData = initSegmentData;

@@ -9,7 +9,7 @@ import Fragment from '../loader/fragment';
 import { HlsConfig } from '../config';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { ManifestLoadedData } from '../types/events';
-import { PlaylistMedia } from '../types/level';
+import { MediaPlaylist } from '../types/media-playlist';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -25,7 +25,7 @@ class TimelineController extends EventHandler {
   private enabled: boolean = true;
   private Cues: any;
   private textTracks: Array<TextTrack> = [];
-  private tracks: Array<PlaylistMedia> = [];
+  private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
   private unparsedVttFrags: Array<{frag: Fragment, payload: any}> = [];
   private cueRanges: { [trackName: string]: Array<any> } = {};
@@ -258,7 +258,7 @@ class TimelineController extends EventHandler {
     this.initPTS = [];
     this.cueRanges = {};
 
-    const tracks: Array<PlaylistMedia> = data.subtitles || [];
+    const tracks: Array<MediaPlaylist> = data.subtitles || [];
     const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
     if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
       const sameTracks = this.tracks && tracks && this.tracks.length === tracks.length;

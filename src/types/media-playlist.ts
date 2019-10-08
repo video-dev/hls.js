@@ -1,3 +1,5 @@
+import { LevelParsed } from './level';
+
 export interface AudioGroup {
   id?: string;
   codec?: string;
@@ -5,17 +7,16 @@ export interface AudioGroup {
 
 export type MediaPlaylistType = 'AUDIO' | 'VIDEO' | 'SUBTITLES' | 'CLOSED-CAPTIONS';
 
-export interface MediaPlaylist {
-  name: string;
-  // 'main' is a custom type added to signal a audioCodec in main track?; see playlist-loader~L310
-  type: MediaPlaylistType | 'main';
-  default: boolean; // implicit false if not present
-  autoselect: boolean; // implicit false if not present
-  forced: boolean; // implicit false if not present
+// audioTracks, captions and subtitles returned by `M3U8Parser.parseMasterPlaylistMedia`
+export interface MediaPlaylist extends LevelParsed {
+  autoselect: boolean // implicit false if not present
+  default: boolean // implicit false if not present
+  forced: boolean // implicit false if not present
+  groupId?: string // not optional in HLS playlists, but it isn't always specified.
   id: number; // incrementing number to track media playlists
-  groupId?: string; // not optional in HLS playlists, but it isn't always specified.
-  url?: string;
-  lang?: string;
-  audioCodec?: string;
-  instreamId?: string;
+  instreamId?: string
+  lang?: string
+  name: string
+  // 'main' is a custom type added to signal a audioCodec in main track?; see playlist-loader~L310
+  type: MediaPlaylistType | 'main'
 }

@@ -14,6 +14,7 @@ import LevelDetails from '../loader/level-details';
 import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS, findFragWithCC } from './fragment-finders';
 import { BufferAppendingEventPayload } from '../types/events';
+import { Level } from '../types/level';
 import { SourceBufferName } from '../types/buffer';
 
 export const State = {
@@ -47,7 +48,7 @@ export default class BaseStreamController extends TaskLoop {
   protected startPosition: number = 0;
   protected loadedmetadata: boolean = false;
   protected fragLoadError: number = 0;
-  protected levels: Array<any> | null = null;
+  protected levels: Array<Level> | null = null;
   protected fragmentLoader!: FragmentLoader;
   protected _liveSyncPosition: number | null = null;
   protected levelLastLoaded: number | null = null;
@@ -192,11 +193,15 @@ export default class BaseStreamController extends TaskLoop {
         if (!data || this._fragLoadAborted(frag) || !levels) {
           return;
         }
+        const details = levels[frag.level].details as LevelDetails;
+        console.assert(details, 'Level details are defined when init segment is loaded');
+        const initSegment = details.initSegment as Fragment;
+        console.assert(initSegment, 'Fragment initSegment is defined when init segment is loaded');
         const { payload } = data;
         const stats = frag.stats;
         this.state = State.IDLE;
         this.fragLoadError = 0;
-        levels[frag.level].details.initSegment.data = payload;
+        initSegment.data = payload;
         stats.parsing.start = stats.buffering.start = self.performance.now();
         stats.parsing.end = stats.buffering.end = self.performance.now();
         // TODO: set id from calling class
@@ -471,7 +476,7 @@ export default class BaseStreamController extends TaskLoop {
     return null;
   }
 
-  protected mergeLivePlaylists (oldDetails: LevelDetails, newDetails: LevelDetails): number {
+  protected mergeLivePlaylists (oldDetails: LevelDetails | undefined, newDetails: LevelDetails): number {
     const { levels, levelLastLoaded } = this;
     let lastLevel;
     if (levelLastLoaded) {

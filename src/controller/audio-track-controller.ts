@@ -3,8 +3,15 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { computeReloadInterval } from './level-helper';
 import EventHandler from '../event-handler';
-import { PlaylistMedia } from '../types/level';
-import { TrackSwitchedData, TrackLoadedData, ManifestParsedData, LevelLoadedData, ErrorData } from '../types/events';
+import { MediaPlaylist } from '../types/media-playlist';
+import {
+  TrackSwitchedData,
+  TrackLoadedData,
+  ManifestParsedData,
+  LevelLoadedData,
+  AudioTracksUpdated,
+  ErrorData
+} from '../types/events';
 
 /**
  * @class AudioTrackController
@@ -48,7 +55,7 @@ class AudioTrackController extends EventHandler {
    * All tracks available
    * @member {AudioTrack[]}
    */
-  public tracks: PlaylistMedia[];
+  public tracks: MediaPlaylist[];
 
   /**
    * @public
@@ -92,7 +99,7 @@ class AudioTrackController extends EventHandler {
    */
   protected onManifestParsed (data: ManifestParsedData): void {
     const tracks = this.tracks = data.audioTracks || [];
-    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
+    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, <AudioTracksUpdated>{ audioTracks: tracks });
   }
 
   /**
@@ -200,7 +207,7 @@ class AudioTrackController extends EventHandler {
     this._handleLoadError();
   }
 
-  get audioTracks (): PlaylistMedia[] {
+  get audioTracks (): MediaPlaylist[] {
     return this.tracks;
   }
 
@@ -299,13 +306,13 @@ class AudioTrackController extends EventHandler {
     }
   }
 
-  private _needsTrackLoading (audioTrack: PlaylistMedia): boolean {
+  private _needsTrackLoading (audioTrack: MediaPlaylist): boolean {
     const { details, url } = audioTrack;
 
     return !!url && (!details || details.live);
   }
 
-  private _loadTrackDetailsIfNeeded (audioTrack: PlaylistMedia): void {
+  private _loadTrackDetailsIfNeeded (audioTrack: MediaPlaylist): void {
     if (this._needsTrackLoading(audioTrack)) {
       const { url, id } = audioTrack;
       // track not retrieved yet, or live playlist we need to (re)load it

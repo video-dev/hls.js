@@ -12,6 +12,7 @@ import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import { Level } from '../types/level';
+import LevelDetails from '../loader/level-details';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
 import { LevelUpdatedData, BufferAppendingEventPayload } from '../types/events';
@@ -414,7 +415,7 @@ export default class StreamController extends BaseStreamController {
       levels.forEach(level => {
         if (level.details) {
           level.details.fragments.forEach(fragment => {
-            fragment.backtracked = undefined;
+            fragment.backtracked = false;
           });
         }
       });
@@ -535,7 +536,9 @@ export default class StreamController extends BaseStreamController {
       return;
     }
     const currentLevel = levels[frag.level];
-    const details = currentLevel.details;
+    const details = currentLevel.details as LevelDetails;
+    console.assert(details, 'Audio track details are defined on fragment load progress');
+    const videoCodec = currentLevel.videoCodec;
 
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
     const accurateTimeOffset = !(media && media.seeking) && (details.PTSKnown || !details.live);
@@ -554,7 +557,7 @@ export default class StreamController extends BaseStreamController {
       payload,
       initSegmentData,
       audioCodec,
-      currentLevel.videoCodec,
+      videoCodec,
       frag,
       details.totalduration,
       accurateTimeOffset,

@@ -17,10 +17,12 @@ import {
   MediaAttachedData,
   SubtitleFragProcessed,
   SubtitleTracksUpdated,
+  TrackLoadedData,
   TrackSwitchedData
 } from '../types/events';
-import { PlaylistMedia } from '../types/level';
+import { Level } from '../types/level';
 import Fragment from '../loader/fragment';
+import LevelDetails from '../loader/level-details';
 
 const { performance } = self;
 
@@ -32,6 +34,7 @@ interface TimeRange {
 }
 
 export class SubtitleStreamController extends BaseStreamController {
+  protected levels: Array<Level> = [];
   private currentTrackId: number = -1;
   private decrypter: Decrypter;
   private tracksBuffered: Array<TimeRange[]>;
@@ -58,7 +61,6 @@ export class SubtitleStreamController extends BaseStreamController {
     this.fragPrevious = null;
     this.media = null;
     this.state = State.STOPPED;
-    this.levels = [];
     this.tracksBuffered = [];
     this.fragmentLoader = new FragmentLoader(hls.config);
     this._onMediaSeeking = this.onMediaSeeking.bind(this);
@@ -131,9 +133,9 @@ export class SubtitleStreamController extends BaseStreamController {
   onSubtitleTracksUpdated ({ subtitleTracks }: SubtitleTracksUpdated) {
     logger.log('subtitle levels updated');
     this.tracksBuffered = [];
-    this.levels = subtitleTracks as PlaylistMedia[];
-    this.levels.forEach((track: PlaylistMedia) => {
-      this.tracksBuffered[track.id] = [];
+    this.levels = subtitleTracks.map(mediaPlaylist => new Level(mediaPlaylist));
+    this.levels.forEach((level: Level) => {
+      this.tracksBuffered[level.id] = [];
     });
   }
 
@@ -153,13 +155,13 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded (data: PlaylistMedia) {
+  onSubtitleTrackLoaded (data: TrackLoadedData) {
     const { id, details } = data;
     const { currentTrackId, levels } = this;
     if (!levels || !details) {
       return;
     }
-    const currentTrack: PlaylistMedia = levels[currentTrackId];
+    const currentTrack: Level = levels[currentTrackId];
     if (id >= levels.length || id !== currentTrackId || !currentTrack) {
       return;
     }
@@ -228,7 +230,8 @@ export class SubtitleStreamController extends BaseStreamController {
         return;
       }
 
-      const trackDetails = levels[currentTrackId].details;
+      const trackDetails = levels[currentTrackId].details as LevelDetails;
+      console.assert(trackDetails, 'Subtitle track details are defined on idle subtitle stream controller tick');
       const fragments = trackDetails.fragments;
       const fragLen = fragments.length;
       const end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;

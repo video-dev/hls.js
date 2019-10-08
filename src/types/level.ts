@@ -4,33 +4,16 @@ export interface LevelParsed {
   attrs: LevelAttributes
   audioCodec?: string
   bitrate: number
-  details: LevelDetails
+  details?: LevelDetails
   height?: number
   id?: number
   level?: number
-  name?: string | undefined
+  name: string
   textCodec?: string
   unknownCodecs?: string[]
   url: string
   videoCodec?: string
   width?: number
-}
-
-// audioTracks, captions and subtitles returned by `M3U8Parser.parseMasterPlaylistMedia`
-export interface PlaylistMedia {
-  audioCodec?: string
-  autoselect: boolean
-  default: boolean
-  details?: LevelDetails
-  forced: boolean
-  groupId: string | undefined
-  id: number
-  instreamId: string | undefined
-  lang: string | undefined
-  name: string | undefined
-  textCodec?: string
-  type: string
-  url?: string
 }
 
 export interface LevelAttributes {
@@ -50,7 +33,7 @@ export class Level {
   public audioCodec?: string;
   public audioGroupIds?: string[];
   public bitrate: number;
-  public details: LevelDetails | undefined;
+  public details?: LevelDetails;
   public fragmentError: boolean = false;
   public height: number;
   public id: number;

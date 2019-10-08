@@ -1,6 +1,7 @@
 import Fragment from '../loader/fragment';
 import LevelDetails from '../loader/level-details';
-import { Level, LevelParsed, PlaylistMedia } from './level';
+import { Level, LevelParsed } from './level';
+import { MediaPlaylist } from './media-playlist';
 import { LoaderStats } from './loader';
 import { Track } from './track';
 import { SourceBufferName } from './buffer';
@@ -11,18 +12,18 @@ export interface ManifestLoadingData {
 }
 
 export interface ManifestLoadedData {
-  audioTracks: PlaylistMedia[]
-  captions?: PlaylistMedia[]
+  audioTracks: MediaPlaylist[]
+  captions?: MediaPlaylist[]
   levels: LevelParsed[]
   networkDetails: any,
   stats: LoaderStats
-  subtitles?: PlaylistMedia[]
+  subtitles?: MediaPlaylist[]
   url: string
 }
 
 export interface ManifestParsedData {
   levels: Level[]
-  audioTracks: PlaylistMedia[]
+  audioTracks: MediaPlaylist[]
   firstLevel: number
   stats: LoaderStats
   audio: boolean
@@ -55,8 +56,12 @@ export interface LevelUpdatedData {
   level: number
 }
 
+export interface AudioTracksUpdated {
+  audioTracks: MediaPlaylist[]
+}
+
 export interface SubtitleTracksUpdated {
-  subtitleTracks: PlaylistMedia[]
+  subtitleTracks: MediaPlaylist[]
 }
 
 export interface TrackSwitchedData {

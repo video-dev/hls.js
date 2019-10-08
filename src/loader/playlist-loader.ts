@@ -327,7 +327,10 @@ class PlaylistLoader extends EventHandler {
           default: false,
           autoselect: false,
           forced: false,
-          id: -1
+          id: -1,
+          attrs: {},
+          bitrate: 0,
+          url: ''
         });
       }
     }
@@ -385,6 +388,7 @@ class PlaylistLoader extends EventHandler {
         attrs: {},
         bitrate: 0,
         details: levelDetails,
+        name: '',
         url
       };
 
