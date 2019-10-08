@@ -64,7 +64,7 @@ export default class Decrypter {
     }
   }
 
-  public softwareDecrypt (data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): Uint8Array | null {
+  public softwareDecrypt (data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): ArrayBuffer | null {
     const { currentIV, currentResult, remainderData } = this;
     this.logOnce('JS AES decrypt');
     // The output is staggered during progressive parsing - the current result is cached, and emitted on the next call
@@ -101,7 +101,7 @@ export default class Decrypter {
     if (!result) {
       return null;
     }
-    return new Uint8Array(result);
+    return result;
   }
 
   public webCryptoDecrypt (data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): Promise<ArrayBuffer> {
@@ -114,17 +114,14 @@ export default class Decrypter {
       .then((aesKey) => {
         // decrypt using web crypto
         const crypto = new AESCrypto(subtle, iv);
-        return crypto.decrypt(data.buffer, aesKey)
-          .catch((err) => {
-            return this.onWebCryptoError(err, data, key, iv);
-          });
+        return crypto.decrypt(data.buffer, aesKey);
       })
       .catch((err) => {
-        return this.onWebCryptoError(err, data, key, iv);
+        return this.onWebCryptoError(err, data, key, iv) as ArrayBuffer;
       });
   }
 
-  private onWebCryptoError (err, data, key, iv) {
+  private onWebCryptoError (err, data, key, iv): ArrayBuffer | null {
     logger.warn('[decrypter.ts]: WebCrypto Error, disable WebCrypto API:', err);
     this.config.enableSoftwareAES = true;
     this.logEnabled = true;

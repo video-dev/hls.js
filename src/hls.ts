@@ -428,8 +428,10 @@ export default class Hls extends Observer {
    * @type {number}
    */
   set autoLevelCapping (newLevel: number) {
-    logger.log(`set autoLevelCapping:${newLevel}`);
-    this._autoLevelCapping = newLevel;
+    if (this._autoLevelCapping !== newLevel) {
+      logger.log(`set autoLevelCapping:${newLevel}`);
+      this._autoLevelCapping = newLevel;
+    }
   }
 
   /**
