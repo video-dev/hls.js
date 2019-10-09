@@ -47,12 +47,12 @@ export default class Decrypter {
       this.reset();
       return;
     }
-    let data = currentResult;
-    if (this.removePKCS7Padding) {
-      data = removePadding(currentResult);
-    }
+    const data = new Uint8Array(currentResult);
     this.reset();
-    return new Uint8Array(data);
+    if (this.removePKCS7Padding) {
+      return removePadding(data);
+    }
+    return data;
   }
 
   reset () {

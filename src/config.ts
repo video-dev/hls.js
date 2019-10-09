@@ -304,7 +304,6 @@ export function setStreamingMode (config, allowProgressive) {
   } else {
     config.loader = XhrLoader;
     config.progressive = false;
-    config.enableSoftwareAES = false;
     logger.log('[config]: Progressive streaming disabled, using XhrLoader');
   }
 }
