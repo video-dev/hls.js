@@ -1,14 +1,13 @@
 import { sliceUint8 } from '../utils/typed-array';
 
 // PKCS7
-export function removePadding (buffer) {
-  const outputBytes = buffer.byteLength;
-  const paddingBytes = outputBytes && (new DataView(buffer)).getUint8(outputBytes - 1);
+export function removePadding (array: Uint8Array): Uint8Array {
+  const outputBytes = array.byteLength;
+  const paddingBytes = outputBytes && (new DataView(array.buffer)).getUint8(outputBytes - 1);
   if (paddingBytes) {
-    return sliceUint8(buffer, 0, outputBytes - paddingBytes);
-  } else {
-    return buffer;
+    return sliceUint8(array, 0, outputBytes - paddingBytes);
   }
+  return array;
 }
 
 export default class AESDecryptor {
