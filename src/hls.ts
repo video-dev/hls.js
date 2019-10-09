@@ -466,6 +466,31 @@ export default class Hls extends Observer {
   }
 
   /**
+   * Return max reload playlist interval
+   * If not specified by the user, this is computed by dividing a playlist's duration
+   * by the number of clips
+   * @type {number}
+   */
+  get maxReloadPlaylistInterval (): number {
+    return this.levelController.maxReloadPlaylistInterval;
+  }
+
+  /**
+   * Set max reload playlist interval
+   * If not specified by the user, this is computed by dividing a playlist's duration
+   * by the number of clips
+   * @type {number}
+   */
+  set maxReloadPlaylistInterval (newInterval: number) {
+    logger.log(`set maxReloadPlaylistInterval:${newInterval}`);
+
+    const MIN_RELOAD_INTERVAL = 1000;
+    newInterval = Math.max(newInterval, MIN_RELOAD_INTERVAL);
+
+    this.levelController.maxReloadPlaylistInterval = newInterval;
+  }
+
+  /**
    * set  dynamically set capLevelToPlayerSize against (`CapLevelController`)
    *
    * @type {boolean}

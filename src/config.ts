@@ -66,6 +66,7 @@ type FPSControllerConfig = {
 
 type LevelControllerConfig = {
   startLevel?: number
+  maxReloadPlaylistInterval?: number
 };
 
 type MP4RemuxerConfig = {
