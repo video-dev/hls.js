@@ -279,7 +279,7 @@ class TimelineController extends EventHandler {
       if (currentTrack.mode === 'disabled') {
         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
         return;
-      }
+      }     
       // Add cues and trigger event with success true.
       cues.forEach(cue => {
         // Sometimes there are cue overlaps on segmented vtts so the same

@@ -120,7 +120,7 @@ class XhrLoader {
           this.callbacks.onSuccess(response, stats, context, xhr);
         } else {
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          if (stats.retry >= config.maxRetry || (status >= 400 && status < 499)) {
+          if (stats.retry >= config.maxRetry) {
             logger.error(`${status} while loading ${context.url}`);
             this.callbacks.onError({ code: status, text: xhr.statusText }, context, xhr);
           } else {
