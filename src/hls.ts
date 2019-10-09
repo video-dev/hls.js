@@ -6,27 +6,29 @@ import {
 } from './errors';
 
 import PlaylistLoader from './loader/playlist-loader';
-import FragmentLoader from './loader/fragment-loader';
 import KeyLoader from './loader/key-loader';
 
 import { FragmentTracker } from './controller/fragment-tracker';
 import StreamController from './controller/stream-controller';
 import LevelController from './controller/level-controller';
-import ID3TrackController from './controller/id3-track-controller';
+
+import PerformanceMonitor from './performance/performance-monitor';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import { hlsDefaultConfig, HlsConfig } from './config';
+import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
-import HlsEvents, { TypedEventEmitter, HLSListeners } from './events';
+import { HlsEvents, HlsEventEmitter } from './events';
 import { EventEmitter } from 'eventemitter3';
+import { Level } from './types/level';
+import { MediaPlaylist } from './types/media-playlist';
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLSListeners> }) {
+export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
@@ -43,44 +45,26 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
   private media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
-  /**
-   * @type {string}
-   */
   static get version (): string {
     return __VERSION__;
   }
 
-  /**
-   * @type {boolean}
-   */
   static isSupported (): boolean {
     return isSupported();
   }
 
-  /**
-   * @type {HlsEvents}
-   */
   static get Events () {
     return HlsEvents;
   }
 
-  /**
-   * @type {HlsErrorTypes}
-   */
   static get ErrorTypes () {
     return ErrorTypes;
   }
 
-  /**
-   * @type {HlsErrorDetails}
-   */
   static get ErrorDetails () {
     return ErrorDetails;
   }
 
-  /**
-   * @type {HlsConfig}
-   */
   static get DefaultConfig (): HlsConfig {
     if (!Hls.defaultConfig) {
       return hlsDefaultConfig;
@@ -105,139 +89,70 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
   constructor (userConfig: Partial<HlsConfig> = {}) {
     super(); // eslint-disable-line constructor-super
     const defaultConfig = Hls.DefaultConfig;
-
-    if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
-      throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
-    }
-
-    // Shallow clone
-    this.config = {
-      ...defaultConfig,
-      ...userConfig
-    };
-
-    const { config } = this;
-
-    if (config.liveMaxLatencyDurationCount !== void 0 && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
-      throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
-    }
-
-    if (config.liveMaxLatencyDuration !== void 0 && (config.liveSyncDuration === void 0 || config.liveMaxLatencyDuration <= config.liveSyncDuration)) {
-      throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"');
-    }
-
+    mergeConfig(defaultConfig, userConfig);
+    const config = this.config = userConfig as HlsConfig;
     enableLogs(config.debug);
 
     this._autoLevelCapping = -1;
+    // Try to enable progressive streaming by default. Whether it will be enabled depends on API support
+    this.progressive = config.progressive;
 
     // core controllers and network loaders
-
-    /**
-     * @member {AbrController} abrController
-     */
     const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap
     const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
     const capLevelController = this.capLevelController = new config.capLevelController(this); // eslint-disable-line new-cap
     const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
     const playListLoader = new PlaylistLoader(this);
-    const fragmentLoader = new FragmentLoader(this);
     const keyLoader = new KeyLoader(this);
-    const id3TrackController = new ID3TrackController(this);
 
     // network controllers
-
-    /**
-     * @member {LevelController} levelController
-     */
     const levelController = this.levelController = new LevelController(this);
-
     // FIXME: FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
-
-    /**
-     * @member {StreamController} streamController
-     */
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
 
-    let networkControllers = [levelController, streamController];
+    // Cap level controller uses streamController to flush the buffer
+    capLevelController.setStreamController(streamController);
 
-    // optional audio stream controller
-    /**
-     * @var {ICoreComponent | Controller}
-     */
-    let Controller = config.audioStreamController;
-    if (Controller) {
-      networkControllers.push(new Controller(this, fragmentTracker));
-    }
+    const networkControllers = [
+      levelController,
+      streamController
+    ];
 
-    /**
-     * @member {INetworkController[]} networkControllers
-     */
     this.networkControllers = networkControllers;
-
-    /**
-     * @var {ICoreComponent[]}
-     */
     const coreComponents = [
       playListLoader,
-      fragmentLoader,
       keyLoader,
       abrController,
       bufferController,
       capLevelController,
       fpsController,
-      id3TrackController,
       fragmentTracker
     ];
 
-    // optional audio track and subtitle controller
-    Controller = config.audioTrackController;
-    if (Controller) {
-      const audioTrackController = new Controller(this);
+    this.audioTrackController = this.createController(config.audioTrackController, null, networkControllers);
+    this.createController(config.audioStreamController, fragmentTracker, networkControllers);
+    // subtitleTrackController must be defined before  because the order of event handling is important
+    this.subtitleTrackController = this.createController(config.subtitleTrackController, null, networkControllers);
+    this.createController(config.subtitleStreamController, fragmentTracker, networkControllers);
+    this.createController(config.timelineController, null, coreComponents);
+    this.emeController = this.createController(config.emeController, null, coreComponents);
 
-      /**
-       * @member {AudioTrackController} audioTrackController
-       */
-      this.audioTrackController = audioTrackController;
-      coreComponents.push(audioTrackController);
-    }
+    // Push the performance monitor last so that it is the last class to handle events
+    coreComponents.push(new PerformanceMonitor(this));
 
-    Controller = config.subtitleTrackController;
-    if (Controller) {
-      const subtitleTrackController = new Controller(this);
-
-      /**
-       * @member {SubtitleTrackController} subtitleTrackController
-       */
-      this.subtitleTrackController = subtitleTrackController;
-      networkControllers.push(subtitleTrackController);
-    }
-
-    Controller = config.emeController;
-    if (Controller) {
-      const emeController = new Controller(this);
-
-      /**
-       * @member {EMEController} emeController
-       */
-      this.emeController = emeController;
-      coreComponents.push(emeController);
-    }
-
-    // optional subtitle controllers
-    Controller = config.subtitleStreamController;
-    if (Controller) {
-      networkControllers.push(new Controller(this, fragmentTracker));
-    }
-    Controller = config.timelineController;
-    if (Controller) {
-      coreComponents.push(new Controller(this));
-    }
-
-    /**
-     * @member {ICoreComponent[]}
-     */
     this.coreComponents = coreComponents;
+  }
+
+  createController (ControllerClass, fragmentTracker, components) {
+    if (ControllerClass) {
+      const controllerInstance = fragmentTracker ? new ControllerClass(this, fragmentTracker) : new ControllerClass(this);
+      if (components) {
+        components.push(controllerInstance);
+      }
+      return controllerInstance;
+    }
+    return null;
   }
 
   /**
@@ -256,7 +171,7 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
   }
 
   /**
-   * Attach a media element
+   * Attaches Hls.js to a media element
    * @param {HTMLMediaElement} media
    */
   attachMedia (media: HTMLMediaElement) {
@@ -266,7 +181,7 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
   }
 
   /**
-   * Detach from the media
+   * Detach Hls.js from the media
    */
   detachMedia () {
     logger.log('detachMedia');
@@ -279,7 +194,7 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
    * @param {string} url
    */
   loadSource (url: string) {
-    url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
+    url = URLToolkit.buildAbsoluteURL(self.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
@@ -326,18 +241,21 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
    */
   recoverMediaError () {
     logger.log('recoverMediaError');
-    let media = this.media;
+    const media = this.media;
     this.detachMedia();
     if (media) {
       this.attachMedia(media);
     }
   }
 
+  removeLevel (levelIndex, urlId = 0) {
+    this.levelController.removeLevel(levelIndex, urlId);
+  }
+
   /**
-   * @type {QualityLevel[]}
+   * @type {Level[]}
    */
-  // todo(typescript-levelController)
-  get levels (): any[] {
+  get levels (): Array<Level> {
     return this.levelController.levels;
   }
 
@@ -588,8 +506,7 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
   /**
    * @type {AudioTrack[]}
    */
-  // todo(typescript-audioTrackController)
-  get audioTracks (): any[] {
+  get audioTracks (): Array<MediaPlaylist> {
     const audioTrackController = this.audioTrackController;
     return audioTrackController ? audioTrackController.audioTracks : [];
   }
@@ -623,10 +540,9 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
 
   /**
    * get alternate subtitle tracks list from playlist
-   * @type {SubtitleTrack[]}
+   * @type {MediaPlaylist[]}
    */
-  // todo(typescript-subtitleTrackController)
-  get subtitleTracks (): any[] {
+  get subtitleTracks (): Array<MediaPlaylist> {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
@@ -638,6 +554,10 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
   get subtitleTrack (): number {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTrack : -1;
+  }
+
+  get progressive () {
+    return this.config.progressive;
   }
 
   /**
@@ -668,5 +588,9 @@ export default class Hls extends (EventEmitter as { new(): TypedEventEmitter<HLS
     if (subtitleTrackController) {
       subtitleTrackController.subtitleDisplay = value;
     }
+  }
+
+  set progressive (value) {
+    setStreamingMode(this.config, value);
   }
 }

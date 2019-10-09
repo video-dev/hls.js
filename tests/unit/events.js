@@ -24,8 +24,8 @@ describe('Events tests', function () {
   describe('Events enumeration', function () {
     Object.keys(Events).forEach(function (event) {
       it('should have a value matching generics convention for event type: ' + event, function () {
-        let value = Events[event];
-        let expected = 'hls' + getAllCapsSnakeCaseToCamelCase(event);
+        const value = Events[event];
+        const expected = 'hls' + getAllCapsSnakeCaseToCamelCase(event);
         expect(value).to.equal(expected);
       });
     });

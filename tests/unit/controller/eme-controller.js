@@ -6,7 +6,7 @@ import { ErrorDetails } from '../../../src/errors';
 const sinon = require('sinon');
 
 const MediaMock = function () {
-  let media = new EventEmitter();
+  const media = new EventEmitter();
   media.setMediaKeys = sinon.spy();
   media.addEventListener = media.addListener.bind(media);
   return media;
@@ -36,7 +36,7 @@ describe('EMEController', function () {
   });
 
   it('should not do anything when `emeEnabled` is false (default)', function () {
-    let reqMediaKsAccessSpy = sinon.spy();
+    const reqMediaKsAccessSpy = sinon.spy();
 
     setupEach({
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
@@ -50,7 +50,7 @@ describe('EMEController', function () {
   });
 
   it('should request keys when `emeEnabled` is true (but not set them)', function (done) {
-    let reqMediaKsAccessSpy = sinon.spy(function () {
+    const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
       });
@@ -76,7 +76,7 @@ describe('EMEController', function () {
   });
 
   it('should trigger key system error when bad encrypted data is received', function (done) {
-    let reqMediaKsAccessSpy = sinon.spy(function () {
+    const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
       });
@@ -87,7 +87,7 @@ describe('EMEController', function () {
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
     });
 
-    let badData = {
+    const badData = {
       initDataType: 'cenc',
       initData: 'bad data'
     };

@@ -41,13 +41,13 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should update tracks list', function () {
-      expect(subtitleStreamController.tracks).to.equal(tracksMock);
+      expect(subtitleStreamController.levels).to.equal(tracksMock);
     });
   });
 
   describe('onSubtitleTrackSwitch', function () {
     beforeEach(function () {
-      subtitleStreamController.tracks = tracksMock;
+      subtitleStreamController.levels = tracksMock;
       subtitleStreamController.clearInterval = sinon.spy();
       subtitleStreamController.setInterval = sinon.spy();
 
@@ -61,7 +61,7 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should call clearInterval if no tracks present', function () {
-      subtitleStreamController.tracks = null;
+      subtitleStreamController.levels = [];
       hls.trigger(Event.SUBTITLE_TRACK_SWITCH, {
         id: 0
       });
@@ -79,7 +79,7 @@ describe('SubtitleStreamController', function () {
   describe('onSubtitleTrackLoaded', function () {
     beforeEach(function () {
       subtitleStreamController.setInterval = sinon.spy();
-      subtitleStreamController.tracks = tracksMock;
+      subtitleStreamController.levels = tracksMock;
     });
 
     // Details are in subtitle-track-controller.js' onSubtitleTrackLoaded handler
@@ -89,7 +89,7 @@ describe('SubtitleStreamController', function () {
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
         id: 1, details
       });
-      expect(subtitleStreamController.tracks[1].details).to.equal(details);
+      expect(subtitleStreamController.levels[1].details).to.equal(details);
       expect(subtitleStreamController.setInterval).to.have.been.calledOnce;
     });
 
@@ -99,18 +99,18 @@ describe('SubtitleStreamController', function () {
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
         id: 1, details
       });
-      expect(subtitleStreamController.tracks[0].details).to.not.equal(details);
+      expect(subtitleStreamController.levels[0].details).to.not.equal(details);
       expect(subtitleStreamController.setInterval).to.not.have.been.called;
     });
 
     it('should ignore the event if there are no tracks, or the id is not within the tracks array', function () {
-      subtitleStreamController.tracks = [];
+      subtitleStreamController.levels = [];
       subtitleStreamController.trackId = 0;
       const details = { foo: 'bar' };
       hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
         id: 0, details
       });
-      expect(subtitleStreamController.tracks[0]).to.not.exist;
+      expect(subtitleStreamController.levels[0]).to.not.exist;
       expect(subtitleStreamController.setInterval).to.not.have.been.called;
     });
   });

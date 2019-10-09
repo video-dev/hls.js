@@ -32,7 +32,6 @@ const lightPlugins = [...basePlugins, createDefinePlugin('light')];
 const baseConfig = {
   mode: 'development',
   entry: './src/hls',
-  node: false,
   optimization: {
     splitChunks: false
   },
@@ -81,7 +80,8 @@ const baseConfig = {
                   }
                 }
               }
-            }
+            },
+            ['@babel/plugin-transform-object-assign']
           ]
         }
       }
@@ -216,7 +216,17 @@ const multiConfig = [
     plugins: mainPlugins,
     devtool: 'source-map'
   }
-].map(config => merge(baseConfig, config));
+].map(config => {
+  const baseClone = merge({}, baseConfig);
+  // Strip console.assert statements from production webpack targets
+  if (config.mode === 'production') {
+    // eslint-disable-next-line no-restricted-properties
+    baseClone.module.rules.find(rule => rule.loader === 'babel-loader').options.plugins.push(['transform-remove-console', {
+      exclude: ['log', 'warn', 'error']
+    }]);
+  }
+  return merge(baseClone, config);
+});
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
@@ -225,15 +235,14 @@ module.exports = (envArgs) => {
     // If no arguments are specified, return every configuration
     configs = multiConfig;
   } else {
-    // Find the first enabled config within the arguments array
-    const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
-    // Filter out config with name
-    const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
-    if (!enabledConfig) {
-      throw new Error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
+    const enabledConfigNames = Object.keys(envArgs);
+    // Filter out enabled configs
+    const enabledConfigs = multiConfig.filter(config => enabledConfigNames.includes(config.name));
+    if (!enabledConfigs.length) {
+      throw new Error(`Couldn't find a valid config with the names ${JSON.stringify(enabledConfigNames)}. Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
     }
 
-    configs = [enabledConfig];
+    configs = enabledConfigs;
   }
 
   console.log(`Building configs: ${configs.map(config => config.name).join(', ')}.\n`);

@@ -19,6 +19,8 @@ module.exports = {
       "xit": false
     },
     "rules": {
+        "one-var": 0,
+        "no-undefined": 0,
         "no-unused-expressions": 0,
         "no-restricted-modules": ["error", "assert"],
         "mocha/no-mocha-arrows": 2

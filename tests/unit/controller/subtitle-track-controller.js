@@ -1,6 +1,7 @@
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import Hls from '../../../src/hls';
 import sinon from 'sinon';
+import LoadStats from '../../../src/loader/load-stats';
 
 describe('SubtitleTrackController', function () {
   let subtitleTrackController;
@@ -8,7 +9,9 @@ describe('SubtitleTrackController', function () {
   let sandbox;
 
   beforeEach(function () {
-    const hls = new Hls({});
+    const hls = new Hls({
+      renderNatively: true
+    });
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
@@ -175,7 +178,7 @@ describe('SubtitleTrackController', function () {
         const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
         subtitleTrackController.trackId = 1;
 
-        let mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
+        const mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
         subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
         expect(subtitleTrackController.timer).to.not.exist;
         expect(clearReloadSpy).to.have.been.calledOnce;
@@ -195,21 +198,21 @@ describe('SubtitleTrackController', function () {
       it('does not set the reload timer if the stopped flag is set', function () {
         subtitleTrackController.stopped = true;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.not.exist;
       });
 
       it('sets the live reload timer if the level is live', function () {
         subtitleTrackController.stopped = false;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.exist;
       });
 
       it('stops the live reload timer if the level is not live', function () {
         subtitleTrackController.trackId = 1;
         subtitleTrackController.timer = setTimeout(() => {}, 0);
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: {} });
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.not.exist;
       });
     });

@@ -26,7 +26,7 @@ describe('checkBuffer', function () {
   describe('_tryNudgeBuffer', function () {
     it('should increment the currentTime by a multiple of nudgeRetry and the configured nudge amount', function () {
       for (let i = 1; i < config.nudgeMaxRetry; i++) {
-        let expected = media.currentTime + (i * config.nudgeOffset);
+        const expected = media.currentTime + (i * config.nudgeOffset);
         gapController._tryNudgeBuffer();
         expect(media.currentTime).to.equal(expected);
       }
@@ -165,14 +165,14 @@ describe('checkBuffer', function () {
       expect(fixStallStub).to.not.have.been.called;
     });
 
-    it('should trigger reportStall when stalling for 1 second or longer', function () {
+    it('should trigger reportStall when stalling for 250ms or longer', function () {
       setStalling();
       const clock = sandbox.useFakeTimers(0);
-      clock.tick(1000);
+      clock.tick(250);
       gapController.stalled = 1;
       gapController.poll(lastCurrentTime, buffered);
       expect(reportStallSpy).to.not.have.been.called;
-      clock.tick(1001);
+      clock.tick(251);
       gapController.poll(lastCurrentTime, buffered);
       expect(reportStallSpy).to.have.been.calledOnce;
     });
