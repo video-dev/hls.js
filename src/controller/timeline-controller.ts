@@ -201,7 +201,17 @@ class TimelineController  {
   }
 
   destroy () {
-    // no-op
+    const { hls } = this;
+    hls.removeListener(HlsEvents.MEDIA_ATTACHING, this.onMediaAttaching)
+    hls.removeListener(HlsEvents.MEDIA_DETACHING, this.onMediaDetaching)
+    hls.removeListener(HlsEvents.FRAG_PARSING_USERDATA, this.onFragParsingUserdata)
+    hls.removeListener(HlsEvents.FRAG_DECRYPTED, this.onFragDecrypted)
+    hls.removeListener(HlsEvents.MANIFEST_LOADING, this.onManifestLoading)
+    hls.removeListener(HlsEvents.MANIFEST_LOADED, this.onManifestLoaded)
+    hls.removeListener(HlsEvents.FRAG_LOADED, this.onFragLoaded)
+    hls.removeListener(HlsEvents.INIT_PTS_FOUND, this.onInitPtsFound)
+    hls.removeListener(HlsEvents.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment)
+    hls.removeListener(HlsEvents.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared)
   }
 
   onMediaAttaching: HlsListeners[HlsEvents.MEDIA_ATTACHED] = (data) => {
