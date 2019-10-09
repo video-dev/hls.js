@@ -1,3 +1,5 @@
 #!/bin/bash
-npm run lint
+set -e
 
+npm run lint
+npm run type-check

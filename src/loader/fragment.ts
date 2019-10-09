@@ -2,10 +2,19 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { logger } from '../utils/logger';
 import LevelKey from './level-key';
+import LoadStats from './load-stats';
+import { PlaylistLevelType } from '../types/loader';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
   VIDEO = 'video',
+}
+
+interface ElementaryStreamInfo {
+  startPTS: number
+  endPTS: number
+  startDTS: number
+  endDTS: number
 }
 
 export default class Fragment {
@@ -14,9 +23,9 @@ export default class Fragment {
   private _decryptdata: LevelKey | null = null;
 
   // Holds the types of data this fragment supports
-  private _elementaryStreams: Record<ElementaryStreamTypes, boolean> = {
-    [ElementaryStreamTypes.AUDIO]: false,
-    [ElementaryStreamTypes.VIDEO]: false
+  public elementaryStreams: Record<ElementaryStreamTypes, ElementaryStreamInfo | null> = {
+    [ElementaryStreamTypes.AUDIO]: null,
+    [ElementaryStreamTypes.VIDEO]: null
   };
 
   public rawProgramDateTime: string | null = null;
@@ -41,6 +50,41 @@ export default class Fragment {
   // core difference from the private field _decryptdata is the lack of the initialized IV
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
+  // A string representing the fragment type
+  public type!: PlaylistLevelType;
+  // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
+  public loader!: any;
+  // The level index to which the fragment belongs
+  public level: number = -1;
+  // The continuity counter of the fragment
+  public cc: number = 0;
+  // The starting Presentation Time Stamp (PTS) of the fragment. Updated after transmuxing.
+  public startPTS!: number;
+  // The ending Presentation Time Stamp (PTS) of the fragment. Updated after transmuxing.
+  public endPTS!: number;
+  // The starting Decode Time Stamp (DTS) of the fragment. Updated after transmuxing.
+  public startDTS!: number;
+  // The ending Decode Time Stamp (DTS) of the fragment. Updated after transmuxing.
+  public endDTS!: number;
+  // The start time of the fragment, as listed in the manifest. Updated after transmuxing.
+  public start: number = 0;
+  // Set when the fragment was loaded and transmuxed, but was stopped from buffering due to dropped frames.
+  public backtracked: boolean = false;
+  // LHLS prefetch flag
+  public prefetch?: boolean;
+  // Set by `updateFragPTSDTS` in level-helper
+  public deltaPTS?: number;
+  public maxStartPTS?: number;
+  // Load/parse timing information
+  public stats: LoadStats = new LoadStats();
+  public urlId: number = 0;
+  // TODO: Create InitSegment class extended from Fragment
+  public data?: ArrayBuffer;
+  // A flag indicating whether the segment was downloaded in order to test bitrate, and was not buffered
+  public bitrateTest: boolean = false;
+  // Total video frames dropped by the transmuxer
+  public dropped: number = 0;
+  public title: string | null = null;
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
@@ -125,7 +169,7 @@ export default class Fragment {
       return null;
     }
 
-    let duration = !Number.isFinite(this.duration) ? 0 : this.duration;
+    const duration = !Number.isFinite(this.duration) ? 0 : this.duration;
 
     return this.programDateTime + (duration * 1000);
   }
@@ -135,26 +179,12 @@ export default class Fragment {
   }
 
   /**
-   * @param {ElementaryStreamTypes} type
-   */
-  addElementaryStream (type: ElementaryStreamTypes) {
-    this._elementaryStreams[type] = true;
-  }
-
-  /**
-   * @param {ElementaryStreamTypes} type
-   */
-  hasElementaryStream (type: ElementaryStreamTypes) {
-    return this._elementaryStreams[type] === true;
-  }
-
-  /**
    * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
    * @param {number} segmentNumber - segment number to generate IV with
    * @returns {Uint8Array}
    */
   createInitializationVector (segmentNumber: number): Uint8Array {
-    let uint8View = new Uint8Array(16);
+    const uint8View = new Uint8Array(16);
 
     for (let i = 12; i < 16; i++) {
       uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
@@ -179,5 +209,24 @@ export default class Fragment {
     }
 
     return decryptdata;
+  }
+
+  setElementaryStreamInfo (type: ElementaryStreamTypes, startPTS: number, endPTS: number, startDTS: number, endDTS: number) {
+    const { elementaryStreams } = this;
+    const info = elementaryStreams[type];
+    if (!info) {
+      elementaryStreams[type] = {
+        startPTS,
+        endPTS,
+        startDTS,
+        endDTS
+      };
+      return;
+    }
+
+    info.startPTS = Math.min(info.startPTS, startPTS);
+    info.endPTS = Math.max(info.endPTS, endPTS);
+    info.startDTS = Math.min(info.startDTS, startDTS);
+    info.endDTS = Math.max(info.endDTS, endDTS);
   }
 }

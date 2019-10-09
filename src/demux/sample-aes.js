@@ -17,13 +17,13 @@ class SampleAesDecrypter {
 
   // AAC - encrypt all full 16 bytes blocks starting from offset 16
   decryptAacSample (samples, sampleIndex, callback, sync) {
-    let curUnit = samples[sampleIndex].unit;
-    let encryptedData = curUnit.subarray(16, curUnit.length - curUnit.length % 16);
-    let encryptedBuffer = encryptedData.buffer.slice(
+    const curUnit = samples[sampleIndex].unit;
+    const encryptedData = curUnit.subarray(16, curUnit.length - curUnit.length % 16);
+    const encryptedBuffer = encryptedData.buffer.slice(
       encryptedData.byteOffset,
       encryptedData.byteOffset + encryptedData.length);
 
-    let localthis = this;
+    const localthis = this;
     this.decryptBuffer(encryptedBuffer, function (decryptedData) {
       decryptedData = new Uint8Array(decryptedData);
       curUnit.set(decryptedData, 16);
@@ -45,7 +45,7 @@ class SampleAesDecrypter {
         continue;
       }
 
-      let sync = this.decrypter.isSync();
+      const sync = this.decrypter.isSync();
 
       this.decryptAacSample(samples, sampleIndex, callback, sync);
 
@@ -57,8 +57,8 @@ class SampleAesDecrypter {
 
   // AVC - encrypt one 16 bytes block out of ten, starting from offset 32
   getAvcEncryptedData (decodedData) {
-    let encryptedDataLen = Math.floor((decodedData.length - 48) / 160) * 16 + 16;
-    let encryptedData = new Int8Array(encryptedDataLen);
+    const encryptedDataLen = Math.floor((decodedData.length - 48) / 160) * 16 + 16;
+    const encryptedData = new Int8Array(encryptedDataLen);
     let outputPos = 0;
     for (let inputPos = 32; inputPos <= decodedData.length - 16; inputPos += 160, outputPos += 16) {
       encryptedData.set(decodedData.subarray(inputPos, inputPos + 16), outputPos);
@@ -78,9 +78,9 @@ class SampleAesDecrypter {
   }
 
   decryptAvcSample (samples, sampleIndex, unitIndex, callback, curUnit, sync) {
-    let decodedData = this.discardEPB(curUnit.data);
-    let encryptedData = this.getAvcEncryptedData(decodedData);
-    let localthis = this;
+    const decodedData = this.discardEPB(curUnit.data);
+    const encryptedData = this.getAvcEncryptedData(decodedData);
+    const localthis = this;
 
     this.decryptBuffer(encryptedData.buffer, function (decryptedData) {
       curUnit.data = localthis.getAvcDecryptedUnit(decodedData, decryptedData);
@@ -98,18 +98,18 @@ class SampleAesDecrypter {
         return;
       }
 
-      let curUnits = samples[sampleIndex].units;
+      const curUnits = samples[sampleIndex].units;
       for (;; unitIndex++) {
         if (unitIndex >= curUnits.length) {
           break;
         }
 
-        let curUnit = curUnits[unitIndex];
+        const curUnit = curUnits[unitIndex];
         if (curUnit.length <= 48 || (curUnit.type !== 1 && curUnit.type !== 5)) {
           continue;
         }
 
-        let sync = this.decrypter.isSync();
+        const sync = this.decrypter.isSync();
 
         this.decryptAvcSample(samples, sampleIndex, unitIndex, callback, curUnit, sync);
 

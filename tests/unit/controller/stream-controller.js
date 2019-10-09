@@ -43,21 +43,6 @@ describe('StreamController', function () {
       assertStreamControllerStopped(streamController);
     });
 
-    it('should trigger STREAM_STATE_TRANSITION when state is updated', function () {
-      const spy = sinon.spy();
-      hls.on(Event.STREAM_STATE_TRANSITION, spy);
-      streamController.state = State.ENDED;
-      expect(spy.args[0][1]).to.deep.equal({ previousState: State.STOPPED, nextState: State.ENDED });
-    });
-
-    it('should not trigger STREAM_STATE_TRANSITION when state is not updated', function () {
-      const spy = sinon.spy();
-      hls.on(Event.STREAM_STATE_TRANSITION, spy);
-      // no update
-      streamController.state = State.STOPPED;
-      expect(spy.called).to.be.false;
-    });
-
     it('should not start when controller does not have level data', function () {
       streamController.startLoad(1);
       assertStreamControllerStopped(streamController);
@@ -80,7 +65,7 @@ describe('StreamController', function () {
   });
 
   describe('SN Searching', function () {
-    let fragPrevious = {
+    const fragPrevious = {
       programDateTime: 1505502671523,
       endProgramDateTime: 1505502676523,
       duration: 5.000,
@@ -90,33 +75,37 @@ describe('StreamController', function () {
       cc: 0
     };
 
-    let fragLen = mockFragments.length;
-    let levelDetails = {
+    const levelDetails = {
       startSN: mockFragments[0].sn,
-      endSN: mockFragments[mockFragments.length - 1].sn
+      endSN: mockFragments[mockFragments.length - 1].sn,
+      fragments: mockFragments
     };
-    let bufferEnd = fragPrevious.start + fragPrevious.duration;
-    let end = mockFragments[mockFragments.length - 1].start + mockFragments[mockFragments.length - 1].duration;
+    const bufferEnd = fragPrevious.start + fragPrevious.duration;
+    const end = mockFragments[mockFragments.length - 1].start + mockFragments[mockFragments.length - 1].duration;
 
     before(function () {
       levelDetails.hasProgramDateTime = false;
     });
 
+    beforeEach(function () {
+      streamController.fragPrevious = fragPrevious;
+    });
+
     it('PTS search choosing wrong fragment (3 instead of 2) after level loaded', function () {
-      let foundFragment = streamController._findFragment(0, fragPrevious, fragLen, mockFragments, bufferEnd, end, levelDetails);
-      let resultSN = foundFragment ? foundFragment.sn : -1;
+      const foundFragment = streamController.getNextFragment(bufferEnd, levelDetails);
+      const resultSN = foundFragment ? foundFragment.sn : -1;
       expect(foundFragment).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     // TODO: This test fails if using a real instance of Hls
     it('PTS search choosing the right segment if fragPrevious is not available', function () {
-      let foundFragment = streamController._findFragment(0, null, fragLen, mockFragments, bufferEnd, end, levelDetails);
-      let resultSN = foundFragment ? foundFragment.sn : -1;
+      const foundFragment = streamController.getNextFragment(bufferEnd, levelDetails);
+      const resultSN = foundFragment ? foundFragment.sn : -1;
       expect(foundFragment).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
     it('returns the last fragment if the stream is fully buffered', function () {
-      const actual = streamController._findFragment(0, null, mockFragments.length, mockFragments, end, end, levelDetails);
+      const actual = streamController.getNextFragment(end, levelDetails);
       expect(actual).to.equal(mockFragments[mockFragments.length - 1]);
     });
 
@@ -129,16 +118,8 @@ describe('StreamController', function () {
         levelDetails.PTSKnown = false;
         levelDetails.live = true;
 
-        let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, bufferEnd, 0, end, fragPrevious, mockFragments, mockFragments.length);
-        let resultSN = foundFragment ? foundFragment.sn : -1;
-        expect(foundFragment).to.equal(mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
-      });
-
-      it('PDT search hitting empty discontinuity', function () {
-        let discontinuityPDTHit = 6.00;
-
-        let foundFragment = streamController._ensureFragmentAtLivePoint(levelDetails, discontinuityPDTHit, 0, end, fragPrevious, mockFragments, mockFragments.length);
-        let resultSN = foundFragment ? foundFragment.sn : -1;
+        const foundFragment = streamController.getInitialLiveFragment(levelDetails, mockFragments);
+        const resultSN = foundFragment ? foundFragment.sn : -1;
         expect(foundFragment).to.equal(mockFragments[2], 'Expected sn 2, found sn segment ' + resultSN);
       });
     });
@@ -208,8 +189,10 @@ describe('StreamController', function () {
       streamController.media = {
         buffered: {
           length: 1
-        }
+        },
+        readyState: 4
       };
+      streamController.mediaBuffer = null;
     });
     afterEach(function () {
       sandbox.restore();
@@ -217,13 +200,13 @@ describe('StreamController', function () {
 
     it('should not throw when media is undefined', function () {
       streamController.media = null;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
     });
 
     it('should seek to start pos when metadata has not yet been loaded', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.loadedmetadata = false;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
       expect(seekStub).to.have.been.calledOnce;
       expect(streamController.loadedmetadata).to.be.true;
     });
@@ -231,7 +214,7 @@ describe('StreamController', function () {
     it('should not seek to start pos when metadata has been loaded', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.loadedmetadata = true;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
       expect(seekStub).to.have.not.been.called;
       expect(streamController.loadedmetadata).to.be.true;
     });
@@ -239,16 +222,16 @@ describe('StreamController', function () {
     it('should not seek to start pos when nothing has been buffered', function () {
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController.media.buffered.length = 0;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
       expect(seekStub).to.have.not.been.called;
-      expect(streamController.loadedmetadata).to.not.exist;
+      expect(streamController.loadedmetadata).to.be.false;
     });
 
     it('should complete the immediate switch if signalled', function () {
       const levelSwitchStub = sandbox.stub(streamController, 'immediateLevelSwitchEnd');
       streamController.loadedmetadata = true;
       streamController.immediateSwitch = true;
-      streamController._checkBuffer();
+      streamController.checkBuffer();
       expect(levelSwitchStub).to.have.been.calledOnce;
     });
 
@@ -302,6 +285,17 @@ describe('StreamController', function () {
         streamController.startLoad();
         expect(streamController.level).to.equal(0);
         expect(streamController.bitrateTest).to.be.true;
+      });
+
+      it('should not signal a bandwidth test if config.testBandwidth is false', function () {
+        streamController.startFragRequested = false;
+        hls.startLevel = -1;
+        hls.nextAutoLevel = 3;
+        hls.config.testBandwidth = false;
+
+        streamController.startLoad();
+        expect(streamController.level).to.equal(hls.nextAutoLevel);
+        expect(streamController.bitrateTest).to.be.false;
       });
     });
   });

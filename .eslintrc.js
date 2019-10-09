@@ -20,13 +20,13 @@ module.exports = {
     'eslint:recommended',
     'standard'
   ],
-  'parser': 'typescript-eslint-parser',
-  'plugins': [
-      'typescript'
-  ],
+  'parser': '@typescript-eslint/parser',
   'parserOptions': {
     'sourceType': 'module'
   },
+  'plugins': [
+    '@typescript-eslint'
+  ],
   'rules': {
     // our basic style rules
     'semi': [
@@ -58,22 +58,26 @@ module.exports = {
 
     // limit code block and line length
     /*
-    "max-len": 1,
-    "max-statements": 1,
-    "max-depth": 1,
-    "max-nested-callbacks": 1,
-    "max-params": 1,
-    "max-statements": 1,
-    "max-statements-per-line": 1
-    */
+        "max-len": 1,
+        "max-statements": 1,
+        "max-depth": 1,
+        "max-nested-callbacks": 1,
+        "max-params": 1,
+        "max-statements": 1,
+        "max-statements-per-line": 1
+        */
 
     // loosening of code-quality rules we may want to fix later
     // (warnings for now)
 
     // forbid "one var" style, enforce one declaration per variable
-    'one-var': [
-      1,
-      'never'
+    'one-var': 2,
+
+    'no-restricted-globals': [2,
+      {
+        'name': 'window',
+        'message': 'Use `self` instead of `window` to access the global context everywhere (including workers).'
+      }
     ],
 
     'no-restricted-properties': [2,
@@ -94,6 +98,14 @@ module.exports = {
     'no-self-assign': 1,
     'new-cap': 1,
     'no-undefined': 1,
-    'no-global-assign': 2
+    'no-global-assign': 2,
+    'prefer-const': 2,
+    'dot-notation': 2,
+    'array-bracket-spacing': 2,
+    'quote-props': 2,
+    'no-void': 0,
+    'no-useless-catch': 2,
+    'lines-between-class-members': 2,
+    'no-prototype-builtins': 0
   }
 };

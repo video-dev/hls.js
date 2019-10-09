@@ -3,7 +3,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import Event from '../events';
 import { logger } from '../utils/logger';
 
-const stallDebounceInterval = 1000;
+const stallDebounceInterval = 250;
 const jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 
 export default class GapController {
@@ -24,7 +24,7 @@ export default class GapController {
   poll (lastCurrentTime, buffered) {
     const { config, media } = this;
     const currentTime = media.currentTime;
-    const tnow = window.performance.now();
+    const tnow = self.performance.now();
 
     if (currentTime !== lastCurrentTime) {
       // The playhead is now moving, but was previously stalled
@@ -117,7 +117,7 @@ export default class GapController {
     let lastEndTime = 0;
     // Check if currentTime is between unbuffered regions of partial fragments
     for (let i = 0; i < media.buffered.length; i++) {
-      let startTime = media.buffered.start(i);
+      const startTime = media.buffered.start(i);
       if (currentTime >= lastEndTime && currentTime < startTime) {
         media.currentTime = Math.max(startTime, media.currentTime + 0.1);
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${media.currentTime}`);

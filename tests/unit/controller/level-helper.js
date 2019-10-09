@@ -1,10 +1,10 @@
 import * as LevelHelper from '../../../src/controller/level-helper';
-import Level from '../../../src/loader/level';
+import LevelDetails from '../../../src/loader/level-details';
 import Fragment from '../../../src/loader/fragment';
-import sinon from 'sinon';
+import LoadStats from '../../../src/loader/load-stats';
 
 const generatePlaylist = (sequenceNumbers) => {
-  const playlist = new Level('');
+  const playlist = new LevelDetails('');
   playlist.startSN = sequenceNumbers[0];
   playlist.endSN = sequenceNumbers[sequenceNumbers.length - 1];
   playlist.fragments = sequenceNumbers.map((n, i) => {
@@ -73,15 +73,6 @@ describe('LevelHelper Tests', function () {
       const actual = getIteratedSequence(oldPlaylist, newPlaylist);
       expect(actual).to.deep.equal([]);
     });
-
-    it('exits early if either playlist does not exist', function () {
-      let oldPlaylist = null;
-      let newPlaylist = generatePlaylist([10, 11, 12]);
-      expect(getIteratedSequence(oldPlaylist, newPlaylist)).to.deep.equal([]);
-      oldPlaylist = newPlaylist;
-      newPlaylist = null;
-      expect(getIteratedSequence(oldPlaylist, newPlaylist)).to.deep.equal([]);
-    });
   });
 
   describe('adjustSliding', function () {
@@ -142,61 +133,61 @@ describe('LevelHelper Tests', function () {
 
   describe('computeReloadInterval', function () {
     it('returns the averagetargetduration of the new level if available', function () {
-      const oldPlaylist = generatePlaylist([1, 2]);
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5;
-      const actual = LevelHelper.computeReloadInterval(oldPlaylist, newPlaylist, null);
+      newPlaylist.updated = true;
+      const actual = LevelHelper.computeReloadInterval(newPlaylist, null);
       expect(actual).to.equal(5000);
     });
 
     it('returns the targetduration of the new level if averagetargetduration is falsy', function () {
-      const oldPlaylist = generatePlaylist([1, 2]);
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = null;
       newPlaylist.targetduration = 4;
-      let actual = LevelHelper.computeReloadInterval(oldPlaylist, newPlaylist, null);
+      newPlaylist.updated = true;
+      let actual = LevelHelper.computeReloadInterval(newPlaylist, null);
       expect(actual).to.equal(4000);
 
       newPlaylist.averagetargetduration = null;
-      actual = LevelHelper.computeReloadInterval(oldPlaylist, newPlaylist, null);
+      actual = LevelHelper.computeReloadInterval(newPlaylist, null);
       expect(actual).to.equal(4000);
     });
 
     it('halves the reload interval if the playlist contains the same segments', function () {
-      const oldPlaylist = generatePlaylist([1, 2]);
       const newPlaylist = generatePlaylist([1, 2]);
+      newPlaylist.updated = false;
       newPlaylist.averagetargetduration = 5;
-      const actual = LevelHelper.computeReloadInterval(oldPlaylist, newPlaylist, null);
+      const actual = LevelHelper.computeReloadInterval(newPlaylist, null);
       expect(actual).to.equal(2500);
     });
 
     it('rounds the reload interval', function () {
-      const oldPlaylist = generatePlaylist([1, 2]);
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5.9999;
-      const actual = LevelHelper.computeReloadInterval(oldPlaylist, newPlaylist, null);
+      newPlaylist.updated = true;
+      const actual = LevelHelper.computeReloadInterval(newPlaylist, null);
       expect(actual).to.equal(6000);
     });
 
     it('subtracts the request time of the last level load from the reload interval', function () {
-      const oldPlaylist = generatePlaylist([1, 2]);
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5;
-
-      const clock = sandbox.useFakeTimers();
-      clock.tick(2000);
-      const actual = LevelHelper.computeReloadInterval(oldPlaylist, newPlaylist, 1000);
+      newPlaylist.updated = true;
+      const stats = new LoadStats();
+      stats.loading.start = 0;
+      stats.loading.end = 1000;
+      const actual = LevelHelper.computeReloadInterval(newPlaylist, stats);
       expect(actual).to.equal(4000);
     });
 
     it('returns a minimum of half the target duration', function () {
-      const oldPlaylist = generatePlaylist([1, 2]);
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5;
-
-      const clock = sandbox.useFakeTimers();
-      clock.tick(9000);
-      const actual = LevelHelper.computeReloadInterval(oldPlaylist, newPlaylist, 1000);
+      newPlaylist.updated = false;
+      const stats = new LoadStats();
+      stats.loading.start = 0;
+      stats.loading.end = 1000;
+      const actual = LevelHelper.computeReloadInterval(newPlaylist, stats);
       expect(actual).to.equal(2500);
     });
   });

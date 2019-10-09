@@ -1,4 +1,5 @@
-import Level from '../loader/level';
+import Fragment from '../loader/fragment';
+import LevelDetails from '../loader/level-details';
 
 export interface LoaderContext {
   // target URL
@@ -13,6 +14,10 @@ export interface LoaderContext {
   progressData?: boolean
 }
 
+export interface FragmentLoaderContext extends LoaderContext {
+  frag: Fragment
+}
+
 export interface LoaderConfiguration {
   // Max number of load retries
   maxRetry: number
@@ -24,6 +29,8 @@ export interface LoaderConfiguration {
   retryDelay: number
   // max connection retry delay (ms)
   maxRetryDelay: number
+  // When streaming progressively, this is the minimum chunk size required to emit a PROGRESS event
+  highWaterMark: number
 }
 
 export interface LoaderResponse {
@@ -33,18 +40,29 @@ export interface LoaderResponse {
 }
 
 export interface LoaderStats {
-  // performance.now() just after load() has been called
-  trequest: number
-  // performance.now() of first received byte
-  tfirst: number
-  // performance.now() on load complete
-  tload: number
-  // performance.now() on parse completion
-  tparsed: number
-  // number of loaded bytes
-  loaded: number
-  // total number of bytes
-  total: number
+  aborted: boolean;
+  loaded: number;
+  retry: number;
+  total: number;
+  chunkCount: number;
+  bwEstimate: number;
+  loading: HlsProgressivePerformanceTiming;
+  parsing: HlsPerformanceTiming;
+  buffering: HlsProgressivePerformanceTiming;
+}
+
+export interface HlsPerformanceTiming {
+  start: number;
+  end: number;
+}
+
+export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
+  executeStart: number;
+  executeEnd: number;
+}
+
+export interface HlsProgressivePerformanceTiming extends HlsPerformanceTiming {
+  first: number;
 }
 
 type LoaderOnSuccess < T extends LoaderContext > = (
@@ -54,7 +72,7 @@ type LoaderOnSuccess < T extends LoaderContext > = (
   networkDetails: any
 ) => void;
 
-type LoaderOnProgress < T extends LoaderContext > = (
+export type LoaderOnProgress < T extends LoaderContext > = (
   stats: LoaderStats,
   context: T,
   data: string | ArrayBuffer,
@@ -75,12 +93,20 @@ type LoaderOnError < T extends LoaderContext > = (
 type LoaderOnTimeout < T extends LoaderContext > = (
   stats: LoaderStats,
   context: T,
+  networkDetails: any,
+) => void;
+
+type LoaderOnAbort < T extends LoaderContext > = (
+    stats: LoaderStats,
+    context: T,
+    networkDetails: any,
 ) => void;
 
 export interface LoaderCallbacks<T extends LoaderContext>{
   onSuccess: LoaderOnSuccess<T>,
   onError: LoaderOnError<T>,
   onTimeout: LoaderOnTimeout<T>,
+  onAbort?: LoaderOnAbort<T>,
   onProgress?: LoaderOnProgress<T>,
 }
 
@@ -92,8 +118,9 @@ export interface Loader<T extends LoaderContext> {
     config: LoaderConfiguration,
     callbacks: LoaderCallbacks<T>,
   ): void
-
+  getResponseHeader(name:string): string | null
   context: T
+  stats: LoaderStats
 }
 
 /**
@@ -128,5 +155,5 @@ export interface PlaylistLoaderContext extends LoaderContext {
   // defines if the loader is handling a sidx request for the playlist
   isSidxRequest?: boolean
   // internal reprsentation of a parsed m3u8 level playlist
-  levelDetails?: Level
+  levelDetails?: LevelDetails
 }

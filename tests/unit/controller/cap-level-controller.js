@@ -89,7 +89,7 @@ describe('CapLevelController', function () {
 
         expect(capLevelController.autoLevelCapping).to.equal(Number.POSITIVE_INFINITY);
         expect(capLevelController.restrictedLevels).to.be.empty;
-        expect(capLevelController.firstLevel).to.not.exist;
+        expect(capLevelController.firstLevel).to.equal(-1);
         expect(capLevelController.timer).to.not.exist;
       });
     });
@@ -123,7 +123,7 @@ describe('CapLevelController', function () {
 
     it('receives level information from the MANIFEST_PARSED event', function () {
       capLevelController.restrictedLevels = [1];
-      let data = {
+      const data = {
         levels: [{ foo: 'bar' }],
         firstLevel: 0
       };

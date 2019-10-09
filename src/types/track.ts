@@ -1,20 +1,15 @@
 export interface TrackSet {
-  audio?: AudioTrack
-  video?: VideoTrack
+  audio?: Track
+  video?: Track
+  audiovideo?: Track
 }
 
-export interface AudioTrack {
-  buffer: SourceBuffer;
+export interface Track {
+  id: 'audio' | 'main'
+  buffer?: SourceBuffer
   container: string;
-  codec: string;
-  initSegment?: Uint8Array;
-  levelCodec: string;
-}
-
-export interface VideoTrack {
-  buffer: SourceBuffer;
-  container: string;
-  codec: string;
-  initSegment?: Uint8Array;
-  levelCodec: string;
+  codec?: string;
+  initSegment?: Uint8Array
+  levelCodec?: string;
+  metadata?: any
 }
