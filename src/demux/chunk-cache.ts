@@ -22,7 +22,7 @@ export default class ChunkCache {
   }
 
   reset () {
-    this.chunks = [];
+    this.chunks.length = 0;
     this.dataLength = 0;
   }
 }
