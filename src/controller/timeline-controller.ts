@@ -9,7 +9,7 @@ import { HlsConfig } from '../config';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { MediaPlaylist } from '../types/media-playlist';
 import Hls from '../hls';
-import { FragParsingUserdataData } from '../types/events';
+import { FragParsingUserdataData, FragLoadedData, FragDecryptedData } from '../types/events';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -28,7 +28,7 @@ class TimelineController  {
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
-  private unparsedVttFrags: Array<{frag: Fragment, payload: any}> = [];
+  private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private cueRanges: { [trackName: string]: Array<any> } = {};
   private captionsTracks: { [trackName: string]: any } = {};
   private captionsProperties: any;
@@ -127,7 +127,8 @@ class TimelineController  {
     if (unparsedVttFrags.length) {
       this.unparsedVttFrags = [];
       unparsedVttFrags.forEach(frag => {
-        this.onFragLoaded(frag);
+        // TODO: This can be either FragLoadedData or FragDecryptedData
+        this.onFragLoaded(frag as FragLoadedData);
       });
     }
   }
@@ -350,9 +351,7 @@ class TimelineController  {
         }
       }
       this.lastSn = sn as number;
-    } // eslint-disable-line brace-style
-    // If fragment is subtitle type, parse as WebVTT.
-    else if (frag.type === 'subtitle') {
+    } else if (frag.type === 'subtitle') { // If fragment is subtitle type, parse as WebVTT.
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
         if (!Number.isFinite(initPTS[frag.cc])) {
@@ -442,11 +441,11 @@ class TimelineController  {
     const { frag } = data;
     if (frag.type === 'subtitle') {
       if (!Number.isFinite(this.initPTS[frag.cc])) {
-        this.unparsedVttFrags.push(data);
+        this.unparsedVttFrags.push(data as FragLoadedData);
         return;
       }
 
-      this.onFragLoaded(data);
+      this.onFragLoaded(data as FragLoadedData);
     }
   }
 

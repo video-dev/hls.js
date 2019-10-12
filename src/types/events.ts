@@ -144,10 +144,9 @@ export interface FragLoadedData {
   stats: LoaderStats
 }
 
-// TODO: What is the payload type?
 export interface FragDecryptedData {
   frag: Fragment
-  payload: any
+  payload: ArrayBuffer
 }
 
 // TODO: What are samples type?
