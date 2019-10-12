@@ -5,7 +5,7 @@ import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttach
  * @readonly
  * @enum {string}
  */
-export enum HlsEvents {
+export enum Events {
   // Fired before MediaSource is attaching to media element
   MEDIA_ATTACHING = 'hlsMediaAttaching',
   // Fired when MediaSource has been successfully attached to media element
@@ -119,38 +119,38 @@ export enum HlsEvents {
 type TodoEventType = () => void;
 
 export interface HlsListeners {
-  [HlsEvents.MEDIA_ATTACHING]: (data: MediaAttachingData) => void
-  [HlsEvents.MEDIA_ATTACHED]: (data: MediaAttachedData) => void
-  [HlsEvents.MEDIA_DETACHING]: () => void
-  [HlsEvents.MEDIA_DETACHED]: () => void
-  [HlsEvents.BUFFER_RESET]: TodoEventType
-  [HlsEvents.BUFFER_CODECS]: TodoEventType
-  [HlsEvents.BUFFER_CREATED]: TodoEventType
-  [HlsEvents.BUFFER_APPENDING]: TodoEventType
-  [HlsEvents.BUFFER_APPENDED]: TodoEventType
-  [HlsEvents.BUFFER_EOS]: TodoEventType
-  [HlsEvents.BUFFER_FLUSHING]: TodoEventType
-  [HlsEvents.BUFFER_FLUSHED]: TodoEventType
-  [HlsEvents.MANIFEST_LOADING]: (data: ManifestLoadingData) => void
-  [HlsEvents.MANIFEST_LOADED]: (data: ManifestLoadedData) => void
-  [HlsEvents.MANIFEST_PARSED]: (data: ManifestParsedData) => void
-  [HlsEvents.LEVEL_SWITCHING]: TodoEventType
-  [HlsEvents.LEVEL_SWITCHED]: TodoEventType
-  [HlsEvents.LEVEL_LOADING]: (data: LevelLoadingData) => void
-  [HlsEvents.LEVEL_LOADED]: (data: LevelLoadedData) => void
-  [HlsEvents.LEVEL_UPDATED]: (data: LevelUpdatedData) => void
-  [HlsEvents.LEVEL_PTS_UPDATED]: TodoEventType
-  [HlsEvents.LEVELS_UPDATED]: (data: LevelsUpdatedData) => void
-  [HlsEvents.AUDIO_TRACKS_UPDATED]: TodoEventType
-  [HlsEvents.AUDIO_TRACK_SWITCHING]: TodoEventType
-  [HlsEvents.AUDIO_TRACK_SWITCHED]: TodoEventType
-  [HlsEvents.AUDIO_TRACK_LOADING]: (
+  [Events.MEDIA_ATTACHING]: (data: MediaAttachingData) => void
+  [Events.MEDIA_ATTACHED]: (data: MediaAttachedData) => void
+  [Events.MEDIA_DETACHING]: () => void
+  [Events.MEDIA_DETACHED]: () => void
+  [Events.BUFFER_RESET]: TodoEventType
+  [Events.BUFFER_CODECS]: TodoEventType
+  [Events.BUFFER_CREATED]: TodoEventType
+  [Events.BUFFER_APPENDING]: TodoEventType
+  [Events.BUFFER_APPENDED]: TodoEventType
+  [Events.BUFFER_EOS]: TodoEventType
+  [Events.BUFFER_FLUSHING]: TodoEventType
+  [Events.BUFFER_FLUSHED]: TodoEventType
+  [Events.MANIFEST_LOADING]: (data: ManifestLoadingData) => void
+  [Events.MANIFEST_LOADED]: (data: ManifestLoadedData) => void
+  [Events.MANIFEST_PARSED]: (data: ManifestParsedData) => void
+  [Events.LEVEL_SWITCHING]: TodoEventType
+  [Events.LEVEL_SWITCHED]: TodoEventType
+  [Events.LEVEL_LOADING]: (data: LevelLoadingData) => void
+  [Events.LEVEL_LOADED]: (data: LevelLoadedData) => void
+  [Events.LEVEL_UPDATED]: (data: LevelUpdatedData) => void
+  [Events.LEVEL_PTS_UPDATED]: TodoEventType
+  [Events.LEVELS_UPDATED]: (data: LevelsUpdatedData) => void
+  [Events.AUDIO_TRACKS_UPDATED]: TodoEventType
+  [Events.AUDIO_TRACK_SWITCHING]: TodoEventType
+  [Events.AUDIO_TRACK_SWITCHED]: TodoEventType
+  [Events.AUDIO_TRACK_LOADING]: (
     data: {
       url: string;
       id: number | null;
     }
   ) => void
-  [HlsEvents.AUDIO_TRACK_LOADED]: (
+  [Events.AUDIO_TRACK_LOADED]: (
     data: {
       details: any; // LevelDetails type?
       id: number | null;
@@ -158,16 +158,16 @@ export interface HlsListeners {
       networkDetails: unknown;
     }
   ) => void
-  [HlsEvents.SUBTITLE_TRACKS_UPDATED]: TodoEventType
-  [HlsEvents.SUBTITLE_TRACKS_CLEARED]: TodoEventType
-  [HlsEvents.SUBTITLE_TRACK_SWITCH]: TodoEventType
-  [HlsEvents.SUBTITLE_TRACK_LOADING]: (
+  [Events.SUBTITLE_TRACKS_UPDATED]: TodoEventType
+  [Events.SUBTITLE_TRACKS_CLEARED]: TodoEventType
+  [Events.SUBTITLE_TRACK_SWITCH]: TodoEventType
+  [Events.SUBTITLE_TRACK_LOADING]: (
     data: {
       url: string;
       id: number | null;
     }
   ) => void
-  [HlsEvents.SUBTITLE_TRACK_LOADED]: (
+  [Events.SUBTITLE_TRACK_LOADED]: (
     data: {
       details: any; // LevelDetails type?
       id: number | null;
@@ -175,25 +175,25 @@ export interface HlsListeners {
       networkDetails: unknown;
     }
   ) => void;
-  [HlsEvents.SUBTITLE_FRAG_PROCESSED]: TodoEventType
-  [HlsEvents.CUES_PARSED]: TodoEventType
-  [HlsEvents.NON_NATIVE_TEXT_TRACKS_FOUND]: TodoEventType
-  [HlsEvents.INIT_PTS_FOUND]: TodoEventType
-  [HlsEvents.FRAG_LOADING]: TodoEventType
-  [HlsEvents.FRAG_LOAD_PROGRESS]: TodoEventType
-  [HlsEvents.FRAG_LOAD_EMERGENCY_ABORTED]: TodoEventType
-  [HlsEvents.FRAG_LOADED]: TodoEventType
-  [HlsEvents.FRAG_DECRYPTED]: TodoEventType
-  [HlsEvents.FRAG_PARSING_INIT_SEGMENT]: TodoEventType
-  [HlsEvents.FRAG_PARSING_USERDATA]: TodoEventType
-  [HlsEvents.FRAG_PARSING_METADATA]: TodoEventType
-  [HlsEvents.FRAG_PARSING_DATA]: TodoEventType
-  [HlsEvents.FRAG_PARSED]: TodoEventType
-  [HlsEvents.FRAG_BUFFERED]: TodoEventType
-  [HlsEvents.FRAG_CHANGED]: TodoEventType
-  [HlsEvents.FPS_DROP]: TodoEventType
-  [HlsEvents.FPS_DROP_LEVEL_CAPPING]: TodoEventType
-  [HlsEvents.ERROR]: (
+  [Events.SUBTITLE_FRAG_PROCESSED]: TodoEventType
+  [Events.CUES_PARSED]: TodoEventType
+  [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: TodoEventType
+  [Events.INIT_PTS_FOUND]: TodoEventType
+  [Events.FRAG_LOADING]: TodoEventType
+  [Events.FRAG_LOAD_PROGRESS]: TodoEventType
+  [Events.FRAG_LOAD_EMERGENCY_ABORTED]: TodoEventType
+  [Events.FRAG_LOADED]: TodoEventType
+  [Events.FRAG_DECRYPTED]: TodoEventType
+  [Events.FRAG_PARSING_INIT_SEGMENT]: TodoEventType
+  [Events.FRAG_PARSING_USERDATA]: TodoEventType
+  [Events.FRAG_PARSING_METADATA]: TodoEventType
+  [Events.FRAG_PARSING_DATA]: TodoEventType
+  [Events.FRAG_PARSED]: TodoEventType
+  [Events.FRAG_BUFFERED]: TodoEventType
+  [Events.FRAG_CHANGED]: TodoEventType
+  [Events.FPS_DROP]: TodoEventType
+  [Events.FPS_DROP_LEVEL_CAPPING]: TodoEventType
+  [Events.ERROR]: (
     data: {
       type: any // ErrorType enum
       details: any // ErrorDetails enum
@@ -203,9 +203,9 @@ export interface HlsListeners {
       [key: string]: any;
     }
   ) => void
-  [HlsEvents.DESTROYING]: () => void
-  [HlsEvents.KEY_LOADING]: TodoEventType
-  [HlsEvents.KEY_LOADED]: TodoEventType
+  [Events.DESTROYING]: () => void
+  [Events.KEY_LOADING]: TodoEventType
+  [Events.KEY_LOADED]: TodoEventType
 }
 
 export interface HlsEventEmitter {
