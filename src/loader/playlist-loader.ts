@@ -9,7 +9,7 @@
  *
  */
 
-import { HlsEvents } from '../events';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { parseSegmentIndex } from '../utils/mp4-tools';
@@ -83,10 +83,10 @@ class PlaylistLoader {
    * @param {Hls} hls
    */
   constructor (hls: Hls) {
-    hls.on(HlsEvents.MANIFEST_LOADING, this.onManifestLoading)
-    hls.on(HlsEvents.LEVEL_LOADING, this.onLevelLoading)
-    hls.on(HlsEvents.AUDIO_TRACK_LOADING, this.onAudioTrackLoading)
-    hls.on(HlsEvents.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading)
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading)
+    hls.on(Events.LEVEL_LOADING, this.onLevelLoading)
+    hls.on(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading)
+    hls.on(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading)
     this.hls = hls;
   }
 
@@ -137,10 +137,10 @@ class PlaylistLoader {
   }
 
   public destroy (): void {
-    this.hls.removeListener(HlsEvents.MANIFEST_LOADING, this.onManifestLoading)
-    this.hls.removeListener(HlsEvents.LEVEL_LOADING, this.onLevelLoading)
-    this.hls.removeListener(HlsEvents.AUDIO_TRACK_LOADING, this.onAudioTrackLoading)
-    this.hls.removeListener(HlsEvents.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading)
+    this.hls.removeListener(Events.MANIFEST_LOADING, this.onManifestLoading)
+    this.hls.removeListener(Events.LEVEL_LOADING, this.onLevelLoading)
+    this.hls.removeListener(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading)
+    this.hls.removeListener(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading)
     this.destroyInternalLoaders();
   }
 
@@ -339,7 +339,7 @@ class PlaylistLoader {
       }
     }
 
-    hls.emit(HlsEvents.MANIFEST_LOADED, {
+    hls.emit(Events.MANIFEST_LOADED, {
       levels,
       audioTracks,
       subtitles,
@@ -372,7 +372,7 @@ class PlaylistLoader {
     levelDetails.lastModified = Math.max(+(mtime as Date), +(encoded as Date));
 
     if (!levelDetails.fragments.length) {
-      hls.emit(HlsEvents.ERROR, {
+      hls.emit(Events.ERROR, {
         type: ErrorTypes.NETWORK_ERROR,
         details: ErrorDetails.LEVEL_EMPTY_ERROR,
         fatal: false,
@@ -396,7 +396,7 @@ class PlaylistLoader {
         url
       };
 
-      hls.emit(HlsEvents.MANIFEST_LOADED, {
+      hls.emit(Events.MANIFEST_LOADED, {
         levels: [singleLevel],
         audioTracks: [],
         url,
@@ -453,7 +453,7 @@ class PlaylistLoader {
   }
 
   private _handleManifestParsingError (response: LoaderResponse, context, reason, networkDetails): void {
-    this.hls.emit(HlsEvents.ERROR, {
+    this.hls.emit(Events.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
       fatal: context.type === PlaylistContextType.MANIFEST,
@@ -509,7 +509,7 @@ class PlaylistLoader {
       errorData.response = response;
     }
 
-    this.hls.emit(HlsEvents.ERROR, errorData);
+    this.hls.emit(Events.ERROR, errorData);
   }
 
   private _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context, networkDetails): void {
@@ -522,7 +522,7 @@ class PlaylistLoader {
 
     const canHaveLevels = canHaveQualityLevels(context.type);
     if (canHaveLevels) {
-      this.hls.emit(HlsEvents.LEVEL_LOADED, {
+      this.hls.emit(Events.LEVEL_LOADED, {
         details: levelDetails,
         level: level || 0,
         id: id || 0,
@@ -532,7 +532,7 @@ class PlaylistLoader {
     } else {
       switch (type) {
       case PlaylistContextType.AUDIO_TRACK:
-        this.hls.emit(HlsEvents.AUDIO_TRACK_LOADED, {
+        this.hls.emit(Events.AUDIO_TRACK_LOADED, {
           details: levelDetails,
           id,
           stats,
@@ -540,7 +540,7 @@ class PlaylistLoader {
         });
         break;
       case PlaylistContextType.SUBTITLE_TRACK:
-        this.hls.emit(HlsEvents.SUBTITLE_TRACK_LOADED, {
+        this.hls.emit(Events.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
           id,
           stats,
