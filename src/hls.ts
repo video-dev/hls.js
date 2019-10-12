@@ -18,7 +18,7 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
-import { HlsEvents, HlsEventEmitter } from './events';
+import { Events, HlsEventEmitter } from './events';
 import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
 import { MediaPlaylist } from './types/media-playlist';
@@ -54,7 +54,7 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
   }
 
   static get Events () {
-    return HlsEvents;
+    return Events;
   }
 
   static get ErrorTypes () {
@@ -160,7 +160,7 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
    */
   destroy () {
     logger.log('destroy');
-    this.emit(HlsEvents.DESTROYING);
+    this.emit(Events.DESTROYING);
     this.detachMedia();
     this.coreComponents.concat(this.networkControllers).forEach(component => {
       component.destroy();
@@ -177,7 +177,7 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
   attachMedia (media: HTMLMediaElement) {
     logger.log('attachMedia');
     this.media = media;
-    this.emit(HlsEvents.MEDIA_ATTACHING, { media: media });
+    this.emit(Events.MEDIA_ATTACHING, { media: media });
   }
 
   /**
@@ -185,7 +185,7 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
    */
   detachMedia () {
     logger.log('detachMedia');
-    this.emit(HlsEvents.MEDIA_DETACHING);
+    this.emit(Events.MEDIA_DETACHING);
     this.media = null;
   }
 
@@ -198,7 +198,7 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    this.emit(HlsEvents.MANIFEST_LOADING, { url: url });
+    this.emit(Events.MANIFEST_LOADING, { url: url });
   }
 
   /**
