@@ -58,6 +58,7 @@
   - [`abrController`](#abrcontroller)
   - [`timelineController`](#timelinecontroller)
   - [`enableWebVTT`](#enablewebvtt)
+  - [`forceTextTrackCue`](#forceTextTrackCue)
   - [`enableCEA708Captions`](#enablecea708captions)
   - [`captionsTextTrack1Label`](#captionstexttrack1label)
   - [`captionsTextTrack1LanguageCode`](#captionstexttrack1languagecode)
@@ -342,6 +343,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fpsController: FPSController,
       timelineController: TimelineController,
       enableWebVTT: true,
+      forceTextTrackCue: false,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
       maxAudioFramesDrift: 1,
@@ -828,6 +830,14 @@ Parameter should be a class with a `destroy()` method:
 (default: `true`)
 
 whether or not to enable WebVTT captions on HLS
+
+parameter should be a boolean
+
+### `forceTextTrackCue`
+
+(default: `false`)
+
+force use on text track cue for specific OS with bug on addCue method
 
 parameter should be a boolean
 

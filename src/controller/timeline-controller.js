@@ -290,16 +290,23 @@ class TimelineController extends EventHandler {
       }
       // Add cues and trigger event with success true.
       cues.forEach(cue => {
+        const addTextTrackCue = (track, cue) => {
+          const textTrackCue = new window.TextTrackCue(cue.startTime, cue.endTime, cue.text);
+          textTrackCue.id = cue.id;
+          track.addCue(textTrackCue);
+        };
         // Sometimes there are cue overlaps on segmented vtts so the same
         // cue can appear more than once in different vtt files.
         // This avoid showing duplicated cues with same timecode and text.
         if (!currentTrack.cues.getCueById(cue.id)) {
-          try {
-            currentTrack.addCue(cue);
-          } catch (err) {
-            const textTrackCue = new window.TextTrackCue(cue.startTime, cue.endTime, cue.text);
-            textTrackCue.id = cue.id;
-            currentTrack.addCue(textTrackCue);
+          if (hls.config.forceTextTrackCue) {
+            addTextTrackCue(currentTrack, cue);
+          } else {
+            try {
+              currentTrack.addCue(cue);
+            } catch (err) {
+              addTextTrackCue(currentTrack, cue);
+            }
           }
         }
       }
