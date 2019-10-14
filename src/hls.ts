@@ -28,7 +28,7 @@ import { MediaPlaylist } from './types/media-playlist';
  * @class
  * @constructor
  */
-export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
+export default class Hls extends HlsEventEmitter {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
