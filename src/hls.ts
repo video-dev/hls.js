@@ -18,7 +18,7 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
-import { Events, HlsEventEmitter } from './events';
+import { Events, HlsEventEmitter, HlsListeners } from './events';
 import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
 import { MediaPlaylist } from './types/media-playlist';
@@ -28,10 +28,11 @@ import { MediaPlaylist } from './types/media-playlist';
  * @class
  * @constructor
  */
-export default class Hls extends HlsEventEmitter {
+export default class Hls implements HlsEventEmitter {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
+  private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
   private abrController: any;
   private capLevelController: any;
@@ -87,7 +88,6 @@ export default class Hls extends HlsEventEmitter {
    * @param {HlsConfig} config
    */
   constructor (userConfig: Partial<HlsConfig> = {}) {
-    super(); // eslint-disable-line constructor-super
     const defaultConfig = Hls.DefaultConfig;
     mergeConfig(defaultConfig, userConfig);
     const config = this.config = userConfig as HlsConfig;
@@ -153,6 +153,40 @@ export default class Hls extends HlsEventEmitter {
       return controllerInstance;
     }
     return null;
+  }
+
+  // Delegate the EventEmitter through the public API of Hls.js
+  on<E extends Events>(event: E, listener: HlsListeners[E]) {
+    this._emitter.on(event, listener)
+  }
+
+  once<E extends Events>(event: E, listener: HlsListeners[E]) {
+    this._emitter.once(event, listener)
+  }
+
+  removeAllListeners<E extends Events>(event?: E | undefined) {
+    this._emitter.removeAllListeners(event)
+  }
+
+  off<E extends Events>(event: E, listener?: HlsListeners[E] | undefined, context?: any, once?: boolean | undefined) {
+    this._emitter.off(event, listener, context, once)
+  }
+
+  listeners<E extends Events>(event: E): HlsListeners[E][] {
+    return this._emitter.listeners(event)
+  }
+
+  emit<E extends Events>(event: E, ...args: Parameters<HlsListeners[E]>): boolean {
+    return this._emitter.emit(event, ...args)
+  }
+
+  // This is a proxy for emit that is temporary to keep stuff compiling
+  trigger<E extends Events>(event: E, ...args: Parameters<HlsListeners[E]>): boolean {
+    return this._emitter.emit(event, ...args)
+  } 
+
+  listenerCount<E extends Events>(event: E): number {
+    return this._emitter.listenerCount(event)
   }
 
   /**
