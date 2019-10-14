@@ -713,7 +713,7 @@ class TSDemuxer {
                 uuid: uuidStrArray.join(''),
                 userDataBytes: userDataPayloadBytes,
                 get userData () {
-                  return utf8ArrayToStr(new Uint16Array(this.userDataBytes).buffer);
+                  return utf8ArrayToStr(this.userDataBytes);
                 }
               });
             }
