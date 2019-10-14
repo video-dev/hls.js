@@ -434,8 +434,8 @@ export function offsetStartDTS (initData, fragment, timeOffset) {
 // TODO: Check if the last moof+mdat pair is part of the valid range
 export function segmentValidRange (data: Uint8Array): SegmentedRange {
   const segmentedRange: SegmentedRange = {
-    valid: new Uint8Array(0),
-    remainder: new Uint8Array(0)
+    valid: null,
+    remainder: null
   };
 
   const moofs = findBox(data, ['moof']);
@@ -453,8 +453,8 @@ export function segmentValidRange (data: Uint8Array): SegmentedRange {
 }
 
 export interface SegmentedRange {
-  valid: Uint8Array,
-  remainder: Uint8Array,
+  valid: Uint8Array | null,
+  remainder: Uint8Array | null,
 }
 
 export function appendUint8Array (data1: Uint8Array, data2: Uint8Array) : Uint8Array {

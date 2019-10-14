@@ -2,7 +2,7 @@ import Transmuxer, { isPromise } from '../demux/transmuxer';
 import Event from '../events';
 import { enableLogs } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
-import { RemuxedTrack } from '../types/remuxer';
+import { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 
 export default function TransmuxerWorker (self) {
@@ -67,29 +67,30 @@ export default function TransmuxerWorker (self) {
   });
 }
 
-function emitTransmuxComplete (self: any, transmuxResult : TransmuxerResult): void {
-  let transferable = [] as Array<ArrayBuffer>;
+function emitTransmuxComplete (self: any, transmuxResult: TransmuxerResult) {
+  if (isEmptyResult(transmuxResult.remuxResult)) {
+    return;
+  }
+  const transferable: Array<ArrayBuffer> = [];
   const { audio, video } = transmuxResult.remuxResult;
   if (audio) {
-    transferable = transferable.concat(convertToTransferable(audio));
+    addToTransferable(transferable, audio);
   }
   if (video) {
-    transferable = transferable.concat(convertToTransferable(video));
+    addToTransferable(transferable, video);
   }
   self.postMessage({ event: 'transmuxComplete', data: transmuxResult }, transferable);
 }
 
 // Converts data to a transferable object https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast)
 // in order to minimize message passing overhead
-function convertToTransferable (track: RemuxedTrack): Array<ArrayBuffer> {
-  const transferable: Array<ArrayBuffer> = [];
+function addToTransferable (transferable: Array<ArrayBuffer>, track: RemuxedTrack) {
   if (track.data1) {
     transferable.push(track.data1.buffer);
   }
   if (track.data2) {
     transferable.push(track.data2.buffer);
   }
-  return transferable;
 }
 
 function handleFlushResult (self: any, results: Array<TransmuxerResult>, chunkMeta: ChunkMetadata) {
@@ -97,4 +98,12 @@ function handleFlushResult (self: any, results: Array<TransmuxerResult>, chunkMe
     emitTransmuxComplete(self, result);
   });
   self.postMessage({ event: 'flush', data: chunkMeta });
+}
+
+function isEmptyResult (remuxResult: RemuxerResult) {
+  return !remuxResult.audio &&
+    !remuxResult.video &&
+    !remuxResult.text &&
+    !remuxResult.id3 &&
+    !remuxResult.initSegment;
 }

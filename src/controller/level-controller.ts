@@ -31,6 +31,7 @@ export default class LevelController extends EventHandler {
   private levelRetryCount: number = 0;
   private manualLevelIndex: number = -1;
   private timer: number | null = null;
+  public onParsedComplete!: Function;
 
   constructor (hls) {
     super(hls,
@@ -168,6 +169,8 @@ export default class LevelController extends EventHandler {
         video: videoCodecFound,
         altAudio: audioTracks.some(t => !!t.url)
       } as ManifestParsedData);
+
+      this.onParsedComplete();
     } else {
       this.hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
