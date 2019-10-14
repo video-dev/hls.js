@@ -215,6 +215,7 @@ interface IEventEmitter {
 
   removeAllListeners<E extends keyof HlsListeners> (event?: E): this
   removeListener<E extends keyof HlsListeners> (event: E, listener?: HlsListeners[E], context?: any, once?: boolean): this
+  off<E extends keyof HlsListeners> (event: E, listener?: HlsListeners[E], context?: any, once?: boolean): this
 
   listeners<E extends keyof HlsListeners> (event: E): HlsListeners[E][]
   emit<E extends keyof HlsListeners> (event: E, ...args: Parameters<HlsListeners[E]>): boolean
