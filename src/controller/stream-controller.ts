@@ -24,7 +24,7 @@ export default class StreamController extends BaseStreamController {
   private bitrateTest: boolean = false;
   private gapController: GapController | null = null;
   private level: number = -1;
-  private forceStartLoad: boolean = false;
+  private _forceStartLoad: boolean = false;
   private retryDate: number = 0;
   private altAudio: boolean = false;
   private fragPlaying: Fragment | null = null;
@@ -97,13 +97,13 @@ export default class StreamController extends BaseStreamController {
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
       this.tick();
     } else {
-      this.forceStartLoad = true;
+      this._forceStartLoad = true;
       this.state = State.STOPPED;
     }
   }
 
   stopLoad () {
-    this.forceStartLoad = false;
+    this._forceStartLoad = false;
     super.stopLoad();
   }
 
@@ -130,13 +130,6 @@ export default class StreamController extends BaseStreamController {
         this.state = State.IDLE;
       }
     }
-      break;
-    case State.ERROR:
-    case State.STOPPED:
-    case State.FRAG_LOADING:
-    case State.PARSING:
-    case State.PARSED:
-    case State.ENDED:
       break;
     default:
       break;
@@ -222,7 +215,9 @@ export default class StreamController extends BaseStreamController {
         this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
         this._loadKey(frag);
       } else {
-        this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
+        if (this.fragCurrent !== frag) {
+          this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
+        }
         this._loadFragment(frag);
       }
     }
@@ -477,10 +472,6 @@ export default class StreamController extends BaseStreamController {
 
     this.levels = data.levels;
     this.startFragRequested = false;
-    const config = this.config;
-    if (config.autoStartLoad || this.forceStartLoad) {
-      this.hls.startLoad(config.startPosition);
-    }
   }
 
   onLevelLoaded (data) {
@@ -1060,6 +1051,10 @@ export default class StreamController extends BaseStreamController {
 
   set liveSyncPosition (value) {
     this._liveSyncPosition = value;
+  }
+
+  get forceStartLoad () {
+    return this._forceStartLoad;
   }
 }
 
