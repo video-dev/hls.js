@@ -18,7 +18,7 @@ function intersection (x1, x2, y1, y2) {
   return Math.min(x2, y2) - Math.max(x1, y1);
 }
 
-class TimelineController  {
+class TimelineController {
   private hls: Hls;
   private media: HTMLMediaElement | null = null;
   private config: HlsConfig;
@@ -68,6 +68,11 @@ class TimelineController  {
       this.cea608Parser = new Cea608Parser(channel1, channel2, channel3, channel4);
     }
 
+    this._registerListeners()
+  }
+
+  private _registerListeners(): void {
+    const { hls } = this
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching)
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching)
     hls.on(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata)
@@ -78,6 +83,20 @@ class TimelineController  {
     hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound)
     hls.on(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment)
     hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared)
+  }
+
+  private _unregisterListeners(): void {
+    const { hls } = this
+    hls.removeListener(Events.MEDIA_ATTACHING, this.onMediaAttaching)
+    hls.removeListener(Events.MEDIA_DETACHING, this.onMediaDetaching)
+    hls.removeListener(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata)
+    hls.removeListener(Events.FRAG_DECRYPTED, this.onFragDecrypted)
+    hls.removeListener(Events.MANIFEST_LOADING, this.onManifestLoading)
+    hls.removeListener(Events.MANIFEST_LOADED, this.onManifestLoaded)
+    hls.removeListener(Events.FRAG_LOADED, this.onFragLoaded)
+    hls.removeListener(Events.INIT_PTS_FOUND, this.onInitPtsFound)
+    hls.removeListener(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment)
+    hls.removeListener(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared)
   }
 
   addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen) {
@@ -201,17 +220,7 @@ class TimelineController  {
   }
 
   destroy () {
-    const { hls } = this;
-    hls.removeListener(Events.MEDIA_ATTACHING, this.onMediaAttaching)
-    hls.removeListener(Events.MEDIA_DETACHING, this.onMediaDetaching)
-    hls.removeListener(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata)
-    hls.removeListener(Events.FRAG_DECRYPTED, this.onFragDecrypted)
-    hls.removeListener(Events.MANIFEST_LOADING, this.onManifestLoading)
-    hls.removeListener(Events.MANIFEST_LOADED, this.onManifestLoaded)
-    hls.removeListener(Events.FRAG_LOADED, this.onFragLoaded)
-    hls.removeListener(Events.INIT_PTS_FOUND, this.onInitPtsFound)
-    hls.removeListener(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment)
-    hls.removeListener(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared)
+    this._unregisterListeners()
   }
 
   onMediaAttaching: HlsListeners[Events.MEDIA_ATTACHED] = (data) => {
