@@ -87,16 +87,16 @@ class TimelineController {
 
   private _unregisterListeners(): void {
     const { hls } = this
-    hls.removeListener(Events.MEDIA_ATTACHING, this.onMediaAttaching)
-    hls.removeListener(Events.MEDIA_DETACHING, this.onMediaDetaching)
-    hls.removeListener(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata)
-    hls.removeListener(Events.FRAG_DECRYPTED, this.onFragDecrypted)
-    hls.removeListener(Events.MANIFEST_LOADING, this.onManifestLoading)
-    hls.removeListener(Events.MANIFEST_LOADED, this.onManifestLoaded)
-    hls.removeListener(Events.FRAG_LOADED, this.onFragLoaded)
-    hls.removeListener(Events.INIT_PTS_FOUND, this.onInitPtsFound)
-    hls.removeListener(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment)
-    hls.removeListener(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared)
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching)
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching)
+    hls.off(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata)
+    hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted)
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading)
+    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded)
+    hls.off(Events.FRAG_LOADED, this.onFragLoaded)
+    hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound)
+    hls.off(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment)
+    hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared)
   }
 
   addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen) {
