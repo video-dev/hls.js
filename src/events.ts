@@ -1,5 +1,6 @@
 import { LoaderStats } from './types/loader';
 import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData } from './types/events';
+import { EventEmitter } from 'eventemitter3';
 
 /**
  * @readonly
@@ -207,8 +208,7 @@ export interface HlsListeners {
   [Events.KEY_LOADING]: TodoEventType
   [Events.KEY_LOADED]: TodoEventType
 }
-
-export interface HlsEventEmitter {
+interface IEventEmitter {
   addListener<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): this
   on<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): this
   once<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): this
@@ -221,8 +221,4 @@ export interface HlsEventEmitter {
   listenerCount<E extends keyof HlsListeners> (event: E): number
 }
 
-export interface IEventHandler {
-  registerListeners(): void;
-  unregisterListeners(): void;
-  destroy(): void
-}
+export abstract class HlsEventEmitter extends EventEmitter implements IEventEmitter {}
