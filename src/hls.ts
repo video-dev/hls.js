@@ -12,8 +12,6 @@ import { FragmentTracker } from './controller/fragment-tracker';
 import StreamController from './controller/stream-controller';
 import LevelController from './controller/level-controller';
 
-import PerformanceMonitor from './performance/performance-monitor';
-
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
@@ -113,6 +111,13 @@ export default class Hls extends Observer {
     const fragmentTracker = new FragmentTracker(this);
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
 
+    // Level Controller initiates loading after all controllers have received MANIFEST_PARSED
+    levelController.onParsedComplete = () => {
+      if (config.autoStartLoad || streamController.forceStartLoad) {
+        this.startLoad(config.startPosition);
+      }
+    };
+
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
 
@@ -139,9 +144,6 @@ export default class Hls extends Observer {
     this.createController(config.subtitleStreamController, fragmentTracker, networkControllers);
     this.createController(config.timelineController, null, coreComponents);
     this.emeController = this.createController(config.emeController, null, coreComponents);
-
-    // Push the performance monitor last so that it is the last class to handle events
-    coreComponents.push(new PerformanceMonitor(this));
 
     this.coreComponents = coreComponents;
   }
@@ -426,8 +428,10 @@ export default class Hls extends Observer {
    * @type {number}
    */
   set autoLevelCapping (newLevel: number) {
-    logger.log(`set autoLevelCapping:${newLevel}`);
-    this._autoLevelCapping = newLevel;
+    if (this._autoLevelCapping !== newLevel) {
+      logger.log(`set autoLevelCapping:${newLevel}`);
+      this._autoLevelCapping = newLevel;
+    }
   }
 
   /**
