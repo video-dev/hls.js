@@ -232,7 +232,7 @@ export default class BufferController extends EventHandler {
           err,
           fatal: false
         };
-        if (err.code === 22) {
+        if (err.code === DOMException.QUOTA_EXCEEDED_ERR) {
           // TODO: enum MSE error codes
           // TODO: Should queues be cleared on this error?
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
