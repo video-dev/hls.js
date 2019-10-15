@@ -1,4 +1,4 @@
-import { Events, HlsListeners } from '../events';
+import { Events } from '../events';
 import Cea608Parser, { CaptionScreen } from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
@@ -9,7 +9,7 @@ import { HlsConfig } from '../config';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { MediaPlaylist } from '../types/media-playlist';
 import Hls from '../hls';
-import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData } from '../types/events';
+import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData, InitPTSFoundData } from '../types/events';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -134,7 +134,7 @@ class TimelineController {
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
-  onInitPtsFound: HlsListeners[Events.INIT_PTS_FOUND] = (data) => {
+  onInitPtsFound (data: InitPTSFoundData) {
     const { frag, id, initPTS } = data;
     const { unparsedVttFrags } = this;
     if (id === 'main') {
