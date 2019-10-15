@@ -43,7 +43,7 @@ export class BufferHelper {
   }
 
   static bufferInfo (
-    media: Bufferable,
+    media: Bufferable | null,
     pos: number,
     maxHoleDuration: number
   ): {

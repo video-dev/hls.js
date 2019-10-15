@@ -5,7 +5,6 @@
  */
 
 import { Events } from '../events';
-import EventHandler from '../event-handler';
 import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
@@ -13,11 +12,14 @@ import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import Fragment from '../loader/fragment';
 import { LoaderStats } from '../types/loader';
 import LevelDetails from '../loader/level-details';
+import Hls from '../hls';
+import { FragLoadingData, MediaAttachedData } from '../types/events';
 
 const { performance } = self;
 
-class AbrController extends EventHandler {
-  protected hls: any;
+class AbrController {
+  protected hls: Hls;
+  private _media: HTMLMediaElement | null = null;
   private lastLoadedFragLevel: number = 0;
   private _nextAutoLevel: number = -1;
   private timer?: number;
@@ -26,20 +28,43 @@ class AbrController extends EventHandler {
   private fragCurrent: Fragment | null = null;
   private bitrateTestDelay: number = 0;
 
-  constructor (hls) {
-    super(hls, Events.FRAG_LOADING,
-      Events.FRAG_LOADED,
-      Events.FRAG_BUFFERED,
-      Events.ERROR);
+  constructor (hls: Hls) {
     this.hls = hls;
+    this._registerListeners();
+  }
+
+  private _registerListeners () {
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    hls.on(Events.FRAG_LOADING, this.onFragLoading, this);
+    hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.on(Events.ERROR, this.onError, this);
+  }
+
+  private _unregisterListeners () {
+    const { hls } = this;
+    hls.off(Events.FRAG_LOADING);
+    hls.off(Events.FRAG_LOADED);
+    hls.off(Events.FRAG_BUFFERED);
+    hls.off(Events.ERROR);
   }
 
   destroy () {
+    this._unregisterListeners();
     this.clearTimer();
-    super.destroy.call(this);
   }
 
-  onFragLoading (data: { frag: Fragment }) {
+  onMediaAttached (data: MediaAttachedData) {
+    this._media = data.media;
+  }
+
+  onMediaDetached () {
+    this._media = null;
+  }
+
+  onFragLoading (data: FragLoadingData) {
     const frag = data.frag;
     if (frag.type === 'main') {
       if (!this.timer) {
@@ -52,8 +77,11 @@ class AbrController extends EventHandler {
       if (!this._bwEstimator) {
         const hls = this.hls;
         const config = hls.config;
-        const level = frag.level;
-        const isLive = hls.levels[level].details.live;
+        const level = hls.levels[frag.level];
+        let isLive = false;
+        if (level.details) {
+          isLive = level.details.live;
+        }
 
         let ewmaFast;
         let ewmaSlow;
@@ -76,8 +104,8 @@ class AbrController extends EventHandler {
       TODO: Lots of magic numbers, are any suitable for configuration?
     */
   _abandonRulesCheck () {
-    const { fragCurrent: frag, hls } = this;
-    const { autoLevelEnabled, config, media } = hls;
+    const { fragCurrent: frag, hls, _media: media } = this;
+    const { autoLevelEnabled, config } = hls;
     if (!frag || !media) {
       return;
     }
@@ -174,7 +202,8 @@ class AbrController extends EventHandler {
 
       // compute level average bitrate
       if (this.hls.config.abrMaxWithRealBitrate) {
-        const level = this.hls.levels[frag.level];
+        const level = (this.hls.levels[frag.level] as any);
+        // TODO: stats on level don't match with types, but it's likely true.
         const loadedBytes = (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
         const loadedDuration = (level.loaded ? level.loaded.duration : 0) + frag.duration;
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
@@ -248,9 +277,8 @@ class AbrController extends EventHandler {
   }
 
   get _nextABRAutoLevel () {
-    const { fragCurrent, hls, lastLoadedFragLevel: currentLevel } = this;
+    const { fragCurrent, hls, lastLoadedFragLevel: currentLevel, _media: video } = this;
     const { maxAutoLevel, levels, config, minAutoLevel } = hls;
-    const video = hls.media;
     const currentFragDuration = fragCurrent ? fragCurrent.duration : 0;
     const pos = (video ? video.currentTime : 0);
 
