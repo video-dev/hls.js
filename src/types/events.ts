@@ -56,12 +56,36 @@ export interface LevelUpdatedData {
   level: number
 }
 
+export interface AudioTrackLoadingData {
+  url: string;
+  id: number | null;
+}
+
+export interface AudioTrackLoadedData {
+  details: any; // LevelDetails type?
+  id: number | null;
+  stats: LoaderStats;
+  networkDetails: unknown;
+}
+
 export interface AudioTracksUpdated {
   audioTracks: MediaPlaylist[]
 }
 
 export interface SubtitleTracksUpdated {
   subtitleTracks: MediaPlaylist[]
+}
+
+export interface SubtitleTrackLoadingData {
+  url: string;
+  id: number | null;
+}
+
+export interface SubtitleTrackLoadedData {
+  details: any; // LevelDetails type?
+  id: number | null;
+  stats: LoaderStats;
+  networkDetails: unknown;
 }
 
 export interface TrackSwitchedData {

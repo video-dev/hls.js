@@ -1,5 +1,5 @@
 import { LoaderStats } from './types/loader';
-import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData } from './types/events';
+import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData, AudioTrackLoadingData, AudioTrackLoadedData, SubtitleTrackLoadedData, SubtitleTrackLoadingData, ErrorData } from './types/events';
 
 /**
  * @readonly
@@ -144,37 +144,13 @@ export interface HlsListeners {
   [Events.AUDIO_TRACKS_UPDATED]: TodoEventType
   [Events.AUDIO_TRACK_SWITCHING]: TodoEventType
   [Events.AUDIO_TRACK_SWITCHED]: TodoEventType
-  [Events.AUDIO_TRACK_LOADING]: (
-    data: {
-      url: string;
-      id: number | null;
-    }
-  ) => void
-  [Events.AUDIO_TRACK_LOADED]: (
-    data: {
-      details: any; // LevelDetails type?
-      id: number | null;
-      stats: LoaderStats;
-      networkDetails: unknown;
-    }
-  ) => void
+  [Events.AUDIO_TRACK_LOADING]: (data: AudioTrackLoadingData) => void
+  [Events.AUDIO_TRACK_LOADED]: (data: AudioTrackLoadedData) => void
   [Events.SUBTITLE_TRACKS_UPDATED]: TodoEventType
   [Events.SUBTITLE_TRACKS_CLEARED]: TodoEventType
   [Events.SUBTITLE_TRACK_SWITCH]: TodoEventType
-  [Events.SUBTITLE_TRACK_LOADING]: (
-    data: {
-      url: string;
-      id: number | null;
-    }
-  ) => void
-  [Events.SUBTITLE_TRACK_LOADED]: (
-    data: {
-      details: any; // LevelDetails type?
-      id: number | null;
-      stats: LoaderStats;
-      networkDetails: unknown;
-    }
-  ) => void;
+  [Events.SUBTITLE_TRACK_LOADING]: (data: SubtitleTrackLoadingData) => void
+  [Events.SUBTITLE_TRACK_LOADED]: (data: SubtitleTrackLoadedData) => void;
   [Events.SUBTITLE_FRAG_PROCESSED]: (data: SubtitleFragProcessedData) => void
   [Events.CUES_PARSED]: (data: CuesParsedData) => void
   [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (data: NonNativeTextTracksData) => void
@@ -193,16 +169,7 @@ export interface HlsListeners {
   [Events.FRAG_CHANGED]: TodoEventType
   [Events.FPS_DROP]: TodoEventType
   [Events.FPS_DROP_LEVEL_CAPPING]: TodoEventType
-  [Events.ERROR]: (
-    data: {
-      type: any // ErrorType enum
-      details: any // ErrorDetails enum
-      fatal: boolean
-
-      // Other error specific data...
-      [key: string]: any;
-    }
-  ) => void
+  [Events.ERROR]: (data: ErrorData) => void
   [Events.DESTROYING]: () => void
   [Events.KEY_LOADING]: TodoEventType
   [Events.KEY_LOADED]: TodoEventType
