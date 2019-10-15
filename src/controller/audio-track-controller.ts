@@ -99,7 +99,8 @@ class AudioTrackController extends EventHandler {
    */
   protected onManifestParsed (data: ManifestParsedData): void {
     const tracks = this.tracks = data.audioTracks || [];
-    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, <AudioTracksUpdated>{ audioTracks: tracks });
+    const audioTracksUpdated: AudioTracksUpdated = { audioTracks: tracks };
+    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
   }
 
   /**

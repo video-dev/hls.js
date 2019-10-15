@@ -29,7 +29,7 @@ export default class Decrypter {
       try {
         const browserCrypto = self.crypto;
         if (browserCrypto) {
-          this.subtle = browserCrypto.subtle || (<SubtleCrypto> (<any> browserCrypto).webkitSubtle);
+          this.subtle = browserCrypto.subtle || (browserCrypto as any).webkitSubtle as SubtleCrypto;
         } else {
           this.config.enableSoftwareAES = true;
         }
