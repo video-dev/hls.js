@@ -1,5 +1,5 @@
 import { LoaderStats } from './types/loader';
-import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData } from './types/events';
+import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData } from './types/events';
 
 /**
  * @readonly
@@ -116,7 +116,7 @@ export enum Events {
   KEY_LOADED = 'hlsKeyLoaded',
 }
 
-type TodoEventType = () => void;
+type TodoEventType = (...args: any[]) => void;
 
 export interface HlsListeners {
   [Events.MEDIA_ATTACHING]: (data: MediaAttachingData) => void
@@ -179,7 +179,7 @@ export interface HlsListeners {
   [Events.CUES_PARSED]: (data: CuesParsedData) => void
   [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (data: NonNativeTextTracksData) => void
   [Events.INIT_PTS_FOUND]: (data: InitPTSFoundData) => void
-  [Events.FRAG_LOADING]: TodoEventType
+  [Events.FRAG_LOADING]: (data: FragLoadingData) => void
   [Events.FRAG_LOAD_PROGRESS]: TodoEventType
   [Events.FRAG_LOAD_EMERGENCY_ABORTED]: TodoEventType
   [Events.FRAG_LOADED]: (data: FragLoadedData) => void
@@ -208,11 +208,11 @@ export interface HlsListeners {
   [Events.KEY_LOADED]: TodoEventType
 }
 export interface HlsEventEmitter {
-  on<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): void
-  once<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): void
+  on<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context): void
+  once<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context): void
 
   removeAllListeners<E extends keyof HlsListeners> (event?: E): void
-  off<E extends keyof HlsListeners> (event: E, listener?: HlsListeners[E], context?: any, once?: boolean): void
+  off<E extends keyof HlsListeners, Context = undefined> (event: E, listener?: HlsListeners[E], context?: Context, once?: boolean): void
 
   listeners<E extends keyof HlsListeners> (event: E): HlsListeners[E][]
   emit<E extends keyof HlsListeners> (event: E, ...args: Parameters<HlsListeners[E]>): boolean
