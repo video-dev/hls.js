@@ -158,37 +158,37 @@ export default class Hls implements HlsEventEmitter {
   }
 
   // Delegate the EventEmitter through the public API of Hls.js
-  on<E extends Events>(event: E, listener: HlsListeners[E]) {
-    this._emitter.on(event, listener)
+  on<E extends Events> (event: E, listener: HlsListeners[E]) {
+    this._emitter.on(event, listener);
   }
 
-  once<E extends Events>(event: E, listener: HlsListeners[E]) {
-    this._emitter.once(event, listener)
+  once<E extends Events> (event: E, listener: HlsListeners[E]) {
+    this._emitter.once(event, listener);
   }
 
-  removeAllListeners<E extends Events>(event?: E | undefined) {
-    this._emitter.removeAllListeners(event)
+  removeAllListeners<E extends Events> (event?: E | undefined) {
+    this._emitter.removeAllListeners(event);
   }
 
-  off<E extends Events>(event: E, listener?: HlsListeners[E] | undefined, context?: any, once?: boolean | undefined) {
-    this._emitter.off(event, listener, context, once)
+  off<E extends Events> (event: E, listener?: HlsListeners[E] | undefined, context?: any, once?: boolean | undefined) {
+    this._emitter.off(event, listener, context, once);
   }
 
-  listeners<E extends Events>(event: E): HlsListeners[E][] {
-    return this._emitter.listeners(event)
+  listeners<E extends Events> (event: E): HlsListeners[E][] {
+    return this._emitter.listeners(event);
   }
 
-  emit<E extends Events>(event: E, ...args: Parameters<HlsListeners[E]>): boolean {
-    return this._emitter.emit(event, ...args)
+  emit<E extends Events> (event: E, ...args: Parameters<HlsListeners[E]>): boolean {
+    return this._emitter.emit(event, ...args);
   }
 
   // This is a proxy for emit that is temporary to keep stuff compiling
-  trigger<E extends Events>(event: E, ...args: Parameters<HlsListeners[E]>): boolean {
-    return this._emitter.emit(event, ...args)
-  } 
+  trigger<E extends Events> (event: E, ...args: Parameters<HlsListeners[E]>): boolean {
+    return this._emitter.emit(event, ...args);
+  }
 
-  listenerCount<E extends Events>(event: E): number {
-    return this._emitter.listenerCount(event)
+  listenerCount<E extends Events> (event: E): number {
+    return this._emitter.listenerCount(event);
   }
 
   /**
