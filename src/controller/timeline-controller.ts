@@ -36,7 +36,7 @@ class TimelineController {
   private prevCC: number = -1;
   private vttCCs: any = null;
 
-  constructor (hls: Hls) { 
+  constructor (hls: Hls) {
     this.hls = hls;
     this.config = hls.config;
     this.Cues = hls.config.cueHandler;
@@ -68,10 +68,10 @@ class TimelineController {
       this.cea608Parser = new Cea608Parser(channel1, channel2, channel3, channel4);
     }
 
-    this._registerListeners()
+    this._registerListeners();
   }
 
-  private _registerListeners(): void {
+  private _registerListeners (): void {
     const { hls } = this;
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching);
@@ -85,7 +85,7 @@ class TimelineController {
     hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared);
   }
 
-  private _unregisterListeners(): void {
+  private _unregisterListeners (): void {
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching);
@@ -220,7 +220,7 @@ class TimelineController {
   }
 
   destroy () {
-    this._unregisterListeners()
+    this._unregisterListeners();
   }
 
   onMediaAttaching: HlsListeners[Events.MEDIA_ATTACHED] = (data) => {
