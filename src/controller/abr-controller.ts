@@ -13,7 +13,7 @@ import Fragment from '../loader/fragment';
 import { LoaderStats } from '../types/loader';
 import LevelDetails from '../loader/level-details';
 import Hls from '../hls';
-import { FragLoadingData, MediaAttachedData } from '../types/events';
+import { FragLoadingData, MediaAttachedData, FragLoadedData, FragBufferedData, ErrorData } from '../types/events';
 
 const { performance } = self;
 
@@ -191,7 +191,7 @@ class AbrController {
     hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
   }
 
-  onFragLoaded (data: { frag: Fragment }) {
+  onFragLoaded (data: FragLoadedData) {
     const frag = data.frag;
     const stats = frag.stats;
     if (frag.type === 'main' && Number.isFinite(frag.sn as number)) {
@@ -217,7 +217,7 @@ class AbrController {
     }
   }
 
-  onFragBuffered (data: { frag: Fragment }) {
+  onFragBuffered (data: FragBufferedData) {
     const frag = data.frag;
     const stats = frag.stats;
 
@@ -242,7 +242,7 @@ class AbrController {
     }
   }
 
-  onError (data) {
+  onError (data: ErrorData) {
     // stop timer in case of frag loading error
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:

@@ -182,6 +182,10 @@ export interface FragParsingUserdataData {
   samples: Array<any>
 }
 
+export interface FragBufferedData {
+  frag: Fragment
+}
+
 export interface FPSDropLevelCappingData {
   droppedLevel: number
 }
