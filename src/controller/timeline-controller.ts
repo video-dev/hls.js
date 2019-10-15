@@ -21,7 +21,7 @@ class TimelineController extends EventHandler {
   private cueRanges: Array<any> = [];
   private captionsTracks: any = {};
   private captionsProperties: any;
-  private cea608Parser: Cea608Parser;
+  private cea608Parser!: Cea608Parser;
   private lastSn: number = -1;
   private prevCC: number = -1;
   private vttCCs: any = null;
@@ -34,7 +34,6 @@ class TimelineController extends EventHandler {
       Event.MANIFEST_LOADING,
       Event.MANIFEST_LOADED,
       Event.FRAG_LOADED,
-      Event.LEVEL_SWITCHING,
       Event.INIT_PTS_FOUND);
 
     this.hls = hls;
@@ -129,7 +128,7 @@ class TimelineController extends EventHandler {
       } else {
         captionsTracks[trackName] = existingTrack;
         clearCurrentCues(captionsTracks[trackName]);
-        sendAddTrackEvent(captionsTracks[trackName], media);
+        sendAddTrackEvent(captionsTracks[trackName], media as HTMLMediaElement);
       }
     }
   }
@@ -199,7 +198,7 @@ class TimelineController extends EventHandler {
       this.tracks.forEach((track, index) => {
         let textTrack;
         if (index < inUseTracks.length) {
-          let inUseTrack = null;
+          let inUseTrack: TextTrack | null = null;
 
           for (let i = 0; i < inUseTracks.length; i++) {
             if (canReuseVttTextTrack(inUseTracks[i], track)) {
@@ -226,10 +225,6 @@ class TimelineController extends EventHandler {
         this.textTracks.push(textTrack);
       });
     }
-  }
-
-  onLevelSwitching () {
-    this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
   }
 
   onFragLoaded (data: { frag: Fragment, payload: any }) {
@@ -324,7 +319,7 @@ class TimelineController extends EventHandler {
   }
 
   onFragParsingUserdata (data: { samples: Array<any> }) {
-    if (!this.enabled || !this.config.enableCEA708Captions) {
+    if (!this.enabled || !this.cea608Parser) {
       return;
     }
 
@@ -343,7 +338,7 @@ class TimelineController extends EventHandler {
     let count = byteArray[0] & 31;
     let position = 2;
     let tmpByte, ccbyte1, ccbyte2, ccValid, ccType;
-    let actualCCBytes = [];
+    let actualCCBytes: number[] = [];
 
     for (let j = 0; j < count; j++) {
       tmpByte = byteArray[position++];
