@@ -68,13 +68,6 @@ export interface TrackSwitchedData {
   id: number
 }
 
-export interface FragLoadedData {
-  frag: Fragment
-  networkDetails: any
-  payload: ArrayBuffer
-  stats: LoaderStats
-}
-
 export interface SubtitleFragProcessed {
   success: boolean,
   frag: Fragment
@@ -115,6 +108,50 @@ export interface ErrorData {
 
 export interface BufferCodecsData {
   video: Track
+}
+
+export interface SubtitleFragProcessedData {
+  success: boolean
+  frag: Fragment
+  error?: Error
+}
+
+export interface CuesParsedData {
+  type: 'captions' | 'subtitles', 
+  cues: any, 
+  track: string
+}
+
+export interface NonNativeTextTracksData {
+  tracks: Array<{
+    _id: string
+    label: any
+    kind: string
+    default: boolean
+  }>
+}
+
+export interface InitPTSFoundData {
+  id: string
+  frag: Fragment
+  initPTS: number
+}
+
+export interface FragLoadedData {
+  frag: Fragment
+  networkDetails: any
+  payload: ArrayBuffer
+  stats: LoaderStats
+}
+
+export interface FragDecryptedData {
+  frag: Fragment
+  payload: ArrayBuffer
+}
+
+// TODO: What are samples type?
+export interface FragParsingUserdataData {
+  samples: Array<any> 
 }
 
 export interface FPSDropLevelCappingData {

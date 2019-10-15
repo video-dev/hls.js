@@ -1,6 +1,5 @@
 import { LoaderStats } from './types/loader';
-import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData } from './types/events';
-import { EventEmitter } from 'eventemitter3';
+import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData } from './types/events';
 
 /**
  * @readonly
@@ -176,17 +175,17 @@ export interface HlsListeners {
       networkDetails: unknown;
     }
   ) => void;
-  [Events.SUBTITLE_FRAG_PROCESSED]: TodoEventType
-  [Events.CUES_PARSED]: TodoEventType
-  [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: TodoEventType
-  [Events.INIT_PTS_FOUND]: TodoEventType
+  [Events.SUBTITLE_FRAG_PROCESSED]: (data: SubtitleFragProcessedData) => void
+  [Events.CUES_PARSED]: (data: CuesParsedData) => void
+  [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (data: NonNativeTextTracksData) => void
+  [Events.INIT_PTS_FOUND]: (data: InitPTSFoundData) => void
   [Events.FRAG_LOADING]: TodoEventType
   [Events.FRAG_LOAD_PROGRESS]: TodoEventType
   [Events.FRAG_LOAD_EMERGENCY_ABORTED]: TodoEventType
-  [Events.FRAG_LOADED]: TodoEventType
-  [Events.FRAG_DECRYPTED]: TodoEventType
+  [Events.FRAG_LOADED]: (data: FragLoadedData) => void
+  [Events.FRAG_DECRYPTED]: (data: FragDecryptedData) => void
   [Events.FRAG_PARSING_INIT_SEGMENT]: TodoEventType
-  [Events.FRAG_PARSING_USERDATA]: TodoEventType
+  [Events.FRAG_PARSING_USERDATA]: (data: FragParsingUserdataData) => void
   [Events.FRAG_PARSING_METADATA]: TodoEventType
   [Events.FRAG_PARSING_DATA]: TodoEventType
   [Events.FRAG_PARSED]: TodoEventType
