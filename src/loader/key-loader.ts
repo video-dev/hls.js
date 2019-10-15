@@ -2,7 +2,7 @@
  * Decrypt key Loader
 */
 
-import Event from '../events';
+import { Events } from '../events';
 import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
@@ -24,7 +24,7 @@ export default class KeyLoader extends EventHandler {
   public decrypturl: string | null = null;
 
   constructor (hls: Hls) {
-    super(hls, Event.KEY_LOADING);
+    super(hls, Events.KEY_LOADING);
   }
 
   destroy (): void {
@@ -92,7 +92,7 @@ export default class KeyLoader extends EventHandler {
     } else if (this.decryptkey) {
       // Return the key if it's already been loaded
       frag.decryptdata.key = this.decryptkey;
-      this.hls.trigger(Event.KEY_LOADED, { frag: frag });
+      this.hls.trigger(Events.KEY_LOADED, { frag: frag });
     }
   }
 
@@ -107,7 +107,7 @@ export default class KeyLoader extends EventHandler {
     // detach fragment loader on load success
     frag.loader = undefined;
     delete this.loaders[frag.type];
-    this.hls.trigger(Event.KEY_LOADED, { frag: frag });
+    this.hls.trigger(Events.KEY_LOADED, { frag: frag });
   }
 
   loaderror (response: LoaderResponse, context: KeyLoaderContext) {
@@ -118,7 +118,7 @@ export default class KeyLoader extends EventHandler {
     }
 
     delete this.loaders[frag.type];
-    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag, response });
+    this.hls.trigger(Events.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag, response });
   }
 
   loadtimeout (stats: LoaderStats, context: KeyLoaderContext) {
@@ -129,6 +129,6 @@ export default class KeyLoader extends EventHandler {
     }
 
     delete this.loaders[frag.type];
-    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
+    this.hls.trigger(Events.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
   }
 }

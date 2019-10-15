@@ -1,5 +1,5 @@
 import EventHandler from '../event-handler';
-import Event from '../events';
+import { Events } from '../events';
 import Fragment from '../loader/fragment';
 import { SourceBufferName } from '../types/buffer';
 import { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../types/fragment-tracker';
@@ -19,9 +19,9 @@ export class FragmentTracker extends EventHandler {
 
   constructor (hls) {
     super(hls,
-      Event.BUFFER_APPENDED,
-      Event.FRAG_BUFFERED,
-      Event.FRAG_LOADED
+      Events.BUFFER_APPENDED,
+      Events.FRAG_BUFFERED,
+      Events.FRAG_LOADED
     );
     this.config = hls.config;
   }

@@ -4,7 +4,7 @@
  *  - implement an abandon rules triggered if we have less than 2 frag buffered and if computed bw shows that we risk buffer stalling
  */
 
-import Event from '../events';
+import { Events } from '../events';
 import EventHandler from '../event-handler';
 import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorDetails } from '../errors';
@@ -27,10 +27,10 @@ class AbrController extends EventHandler {
   private bitrateTestDelay: number = 0;
 
   constructor (hls) {
-    super(hls, Event.FRAG_LOADING,
-      Event.FRAG_LOADED,
-      Event.FRAG_BUFFERED,
-      Event.ERROR);
+    super(hls, Events.FRAG_LOADING,
+      Events.FRAG_LOADED,
+      Events.FRAG_BUFFERED,
+      Events.ERROR);
     this.hls = hls;
   }
 
@@ -158,7 +158,7 @@ class AbrController extends EventHandler {
     this._bwEstimator.sample(requestDelay, stats.loaded);
     loader.abort();
     this.clearTimer();
-    hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
+    hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
   }
 
   onFragLoaded (data: { frag: Fragment }) {

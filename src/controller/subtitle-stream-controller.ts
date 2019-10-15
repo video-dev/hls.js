@@ -2,7 +2,7 @@
  * @class SubtitleStreamController
  */
 
-import Event from '../events';
+import { Events } from '../events';
 import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -44,15 +44,15 @@ export class SubtitleStreamController extends BaseStreamController {
 
   constructor (hls, fragmentTracker) {
     super(hls,
-      Event.MEDIA_ATTACHED,
-      Event.MEDIA_DETACHING,
-      Event.ERROR,
-      Event.KEY_LOADED,
-      Event.SUBTITLE_TRACKS_UPDATED,
-      Event.SUBTITLE_TRACK_SWITCH,
-      Event.SUBTITLE_TRACK_LOADED,
-      Event.SUBTITLE_FRAG_PROCESSED,
-      Event.LEVEL_UPDATED);
+      Events.MEDIA_ATTACHED,
+      Events.MEDIA_DETACHING,
+      Events.ERROR,
+      Events.KEY_LOADED,
+      Events.SUBTITLE_TRACKS_UPDATED,
+      Events.SUBTITLE_TRACK_SWITCH,
+      Events.SUBTITLE_TRACK_LOADED,
+      Events.SUBTITLE_FRAG_PROCESSED,
+      Events.LEVEL_UPDATED);
 
     this.config = hls.config;
     this.decrypter = new Decrypter(hls, hls.config);
@@ -192,7 +192,7 @@ export class SubtitleStreamController extends BaseStreamController {
       // decrypt the subtitles
       this.decrypter.webCryptoDecrypt(new Uint8Array(payload), decryptData.key.buffer, decryptData.iv.buffer).then((decryptedData) => {
         const endTime = performance.now();
-        hls.trigger(Event.FRAG_DECRYPTED, {
+        hls.trigger(Events.FRAG_DECRYPTED, {
           frag,
           payload: decryptedData,
           stats: {
@@ -252,7 +252,7 @@ export class SubtitleStreamController extends BaseStreamController {
       if (foundFrag && foundFrag.encrypted) {
         logger.log(`Loading key for ${foundFrag.sn}`);
         this.state = State.KEY_LOADING;
-        this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });
+        this.hls.trigger(Events.KEY_LOADING, { frag: foundFrag });
       } else if (foundFrag && fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
         // only load if fragment is not loaded
         this.fragCurrent = foundFrag;

@@ -1,5 +1,5 @@
 import Hls from '../../../src/hls';
-import Event from '../../../src/events';
+import { Events } from '../../../src/events';
 import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
 import StreamController from '../../../src/controller/stream-controller';
 import { State } from '../../../src/controller/base-stream-controller';
@@ -138,7 +138,7 @@ describe('StreamController', function () {
     });
 
     function assertLoadingState (frag) {
-      expect(triggerSpy).to.have.been.calledWith(Event.FRAG_LOADING, { frag });
+      expect(triggerSpy).to.have.been.calledWith(Events.FRAG_LOADING, { frag });
       expect(streamController.state).to.equal(State.FRAG_LOADING);
     }
 

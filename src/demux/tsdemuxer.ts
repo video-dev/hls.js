@@ -11,7 +11,7 @@
 
 import * as ADTS from './adts';
 import * as MpegAudio from './mpegaudio';
-import Event from '../events';
+import { Events } from '../events';
 import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
 import { logger } from '../utils/logger';
@@ -324,7 +324,7 @@ class TSDemuxer implements Demuxer {
           break;
         }
       } else {
-        this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
+        this.observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
       }
     }
 
@@ -1101,7 +1101,7 @@ class TSDemuxer implements Demuxer {
         fatal = true;
       }
       logger.warn(`parsing error:${reason}`);
-      this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
+      this.observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
       if (fatal) {
         return;
       }

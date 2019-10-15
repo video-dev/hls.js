@@ -2,7 +2,7 @@
  * Buffer Controller
  */
 
-import Events from '../events';
+import { Events } from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
