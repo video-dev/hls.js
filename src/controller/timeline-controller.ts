@@ -394,7 +394,7 @@ class TimelineController {
     }
   }
 
-  private _parseIMSC1 (frag: Fragment, payload: any) {
+  private _parseIMSC1 (frag: Fragment, payload: ArrayBuffer) {
     const hls = this.hls;
     parseIMSC1(payload, this.initPTS[frag.cc], (cues) => {
       this._appendCues(cues, frag.level);
@@ -405,7 +405,7 @@ class TimelineController {
     });
   }
 
-  private _parseVTTs (frag: Fragment, payload: any, vttCCs: any) {
+  private _parseVTTs (frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
     const hls = this.hls;
     // Parse the WebVTT file contents.
     WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
@@ -419,7 +419,7 @@ class TimelineController {
     });
   }
 
-  private _fallbackToIMSC1 (frag: Fragment, payload: any) {
+  private _fallbackToIMSC1 (frag: Fragment, payload: ArrayBuffer) {
     // If textCodec is unknown, try parsing as IMSC1. Set textCodec based on the result
     const trackPlaylistMedia = this.tracks[frag.level];
     if (!trackPlaylistMedia.textCodec) {
