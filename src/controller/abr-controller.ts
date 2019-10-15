@@ -45,10 +45,12 @@ class AbrController {
 
   private _unregisterListeners () {
     const { hls } = this;
-    hls.off(Events.FRAG_LOADING);
-    hls.off(Events.FRAG_LOADED);
-    hls.off(Events.FRAG_BUFFERED);
-    hls.off(Events.ERROR);
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
+    hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.off(Events.ERROR, this.onError, this);
   }
 
   destroy () {
