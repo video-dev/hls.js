@@ -158,19 +158,19 @@ export default class Hls implements HlsEventEmitter {
   }
 
   // Delegate the EventEmitter through the public API of Hls.js
-  on<E extends Events> (event: E, listener: HlsListeners[E]) {
-    this._emitter.on(event, listener);
+  on<E extends Events, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context) {
+    this._emitter.on(event, listener, context);
   }
 
-  once<E extends Events> (event: E, listener: HlsListeners[E]) {
-    this._emitter.once(event, listener);
+  once<E extends Events, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context) {
+    this._emitter.once(event, listener, context);
   }
 
   removeAllListeners<E extends Events> (event?: E | undefined) {
     this._emitter.removeAllListeners(event);
   }
 
-  off<E extends Events> (event: E, listener?: HlsListeners[E] | undefined, context?: any, once?: boolean | undefined) {
+  off<E extends Events, Context = undefined> (event: E, listener?: HlsListeners[E] | undefined, context?: Context, once?: boolean | undefined) {
     this._emitter.off(event, listener, context, once);
   }
 

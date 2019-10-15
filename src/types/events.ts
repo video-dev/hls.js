@@ -117,8 +117,8 @@ export interface SubtitleFragProcessedData {
 }
 
 export interface CuesParsedData {
-  type: 'captions' | 'subtitles', 
-  cues: any, 
+  type: 'captions' | 'subtitles',
+  cues: any,
   track: string
 }
 
@@ -137,6 +137,10 @@ export interface InitPTSFoundData {
   initPTS: number
 }
 
+export interface FragLoadingData {
+  frag: Fragment
+}
+
 export interface FragLoadedData {
   frag: Fragment
   networkDetails: any
@@ -151,7 +155,7 @@ export interface FragDecryptedData {
 
 // TODO: What are samples type?
 export interface FragParsingUserdataData {
-  samples: Array<any> 
+  samples: Array<any>
 }
 
 export interface FPSDropLevelCappingData {

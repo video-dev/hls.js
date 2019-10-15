@@ -9,7 +9,7 @@ import { HlsConfig } from '../config';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { MediaPlaylist } from '../types/media-playlist';
 import Hls from '../hls';
-import { FragParsingUserdataData, FragLoadedData, FragDecryptedData } from '../types/events';
+import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData } from '../types/events';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -74,30 +74,30 @@ class TimelineController {
 
   private _registerListeners (): void {
     const { hls } = this;
-    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching);
-    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching);
-    hls.on(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata);
-    hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted);
-    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading);
-    hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded);
-    hls.on(Events.FRAG_LOADED, this.onFragLoaded);
-    hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound);
-    hls.on(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment);
-    hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared);
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata, this);
+    hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
+    hls.on(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment, this);
+    hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
   }
 
   private _unregisterListeners (): void {
     const { hls } = this;
-    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching);
-    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching);
-    hls.off(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata);
-    hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted);
-    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading);
-    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded);
-    hls.off(Events.FRAG_LOADED, this.onFragLoaded);
-    hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound);
-    hls.off(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment);
-    hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared);
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata, this);
+    hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
+    hls.off(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment, this);
+    hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
   }
 
   addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen) {
@@ -225,12 +225,12 @@ class TimelineController {
     this._unregisterListeners();
   }
 
-  onMediaAttaching: HlsListeners[Events.MEDIA_ATTACHED] = (data) => {
+  onMediaAttaching (data: MediaAttachingData) {
     this.media = data.media;
     this._cleanTracks();
   }
 
-  onMediaDetaching: HlsListeners[Events.MEDIA_DETACHING] = () => {
+  onMediaDetaching () {
     const { captionsTracks } = this;
     Object.keys(captionsTracks).forEach(trackName => {
       clearCurrentCues(captionsTracks[trackName]);
@@ -238,7 +238,7 @@ class TimelineController {
     });
   }
 
-  onManifestLoading: HlsListeners[Events.MANIFEST_LOADING] = () => {
+  onManifestLoading () {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
     // Detect discontinuity in subtitle manifests
@@ -272,7 +272,7 @@ class TimelineController {
     }
   }
 
-  onManifestLoaded: HlsListeners[Events.MANIFEST_LOADED] = (data) => {
+  onManifestLoaded (data: ManifestLoadedData) {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
@@ -348,7 +348,7 @@ class TimelineController {
     }
   }
 
-  onFragLoaded: HlsListeners[Events.FRAG_LOADED] = (data) => {
+  onFragLoaded (data: FragLoadedData) {
     const { frag, payload } = data;
     const { cea608Parser, initPTS, lastSn, unparsedVttFrags } = this;
     if (frag.type === 'main') {
@@ -446,7 +446,7 @@ class TimelineController {
     }
   }
 
-  onFragDecrypted: HlsListeners[Events.FRAG_DECRYPTED] = (data) => {
+  onFragDecrypted (data: FragDecryptedData) {
     const { frag } = data;
     if (frag.type === 'subtitle') {
       if (!Number.isFinite(this.initPTS[frag.cc])) {
@@ -458,12 +458,12 @@ class TimelineController {
     }
   }
 
-  onSubtitleTracksCleared: HlsListeners[Events.SUBTITLE_TRACKS_CLEARED] = () => {
+  onSubtitleTracksCleared () {
     this.tracks = [];
     this.captionsTracks = {};
   }
 
-  onFragParsingUserdata: HlsListeners[Events.FRAG_PARSING_USERDATA] = (data) => {
+  onFragParsingUserdata (data: FragParsingUserdataData) {
     if (!this.enabled || !this.config.enableCEA708Captions) {
       return;
     }
