@@ -15,6 +15,9 @@ if [ "${TRAVIS_MODE}" = "build" ]; then
   npm run build
   npm run build:types
   echo "travis_fold:end:build"
+  echo "travis_fold:start:docs"
+  npm run docs
+  echo "travis_fold:end:docs"
   # check that hls.js doesn't error if requiring in node
   # see https://github.com/video-dev/hls.js/pull/1642
   node -e 'require("./" + require("./package.json").main)'
