@@ -1,4 +1,4 @@
-import Events from '../../src/events';
+import { Events } from '../../src/events';
 
 function getAllCapsSnakeCaseToCamelCase (eventType) {
   let eventValue = '';

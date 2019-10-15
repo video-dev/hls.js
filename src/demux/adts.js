@@ -5,7 +5,7 @@
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-import Event from '../events';
+import { Events } from '../events';
 
 export function getAudioConfig (observer, data, offset, audioCodec) {
   let adtsObjectType; // :int
@@ -26,7 +26,7 @@ export function getAudioConfig (observer, data, offset, audioCodec) {
   adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
   const adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
   if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
-    observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
+    observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
     return;
   }
   adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);

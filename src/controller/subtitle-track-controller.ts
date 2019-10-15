@@ -1,4 +1,4 @@
-import Event from '../events';
+import { Events } from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { computeReloadInterval } from './level-helper';
@@ -19,10 +19,10 @@ class SubtitleTrackController extends EventHandler {
 
   constructor (hls) {
     super(hls,
-      Event.MEDIA_ATTACHED,
-      Event.MEDIA_DETACHING,
-      Event.MANIFEST_LOADED,
-      Event.SUBTITLE_TRACK_LOADED);
+      Events.MEDIA_ATTACHED,
+      Events.MEDIA_DETACHING,
+      Events.MANIFEST_LOADED,
+      Events.SUBTITLE_TRACK_LOADED);
     this.tracks = [];
   }
 
@@ -67,7 +67,7 @@ class SubtitleTrackController extends EventHandler {
     const subtitleTracks = data.subtitles || [];
     this.tracks = subtitleTracks;
     const subtitleTracksUpdated: SubtitleTracksUpdated = { subtitleTracks };
-    this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
+    this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
     // loop through available subtitle tracks and autoselect default if needed
     // TODO: improve selection logic to handle forced, etc
@@ -153,7 +153,7 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
     logger.log(`[subtitle-track-controller]: Loading subtitle track ${trackId}`);
-    hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
+    hls.trigger(Events.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
   }
 
   /**
@@ -197,7 +197,7 @@ class SubtitleTrackController extends EventHandler {
 
     this.trackId = newId;
     logger.log(`[subtitle-track-controller]: Switching to subtitle track ${newId}`);
-    hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
+    hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
     this._loadCurrentTrack();
   }
 

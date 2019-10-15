@@ -2,7 +2,7 @@
  * cap stream level to media size dimension controller
 */
 
-import Event from '../events';
+import { Events } from '../events';
 import EventHandler from '../event-handler';
 import { Level } from '../types/level';
 import { ManifestParsedData, BufferCodecsData, MediaAttachingData, FPSDropLevelCappingData, LevelsUpdatedData } from '../types/events';
@@ -20,12 +20,12 @@ class CapLevelController extends EventHandler {
 
   constructor (hls) {
     super(hls,
-      Event.FPS_DROP_LEVEL_CAPPING,
-      Event.MEDIA_ATTACHING,
-      Event.MANIFEST_PARSED,
-      Event.LEVELS_UPDATED,
-      Event.BUFFER_CODECS,
-      Event.MEDIA_DETACHING);
+      Events.FPS_DROP_LEVEL_CAPPING,
+      Events.MEDIA_ATTACHING,
+      Events.MANIFEST_PARSED,
+      Events.LEVELS_UPDATED,
+      Events.BUFFER_CODECS,
+      Events.MEDIA_DETACHING);
 
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.levels = [];

@@ -1,4 +1,4 @@
-import Event from '../events';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
@@ -176,7 +176,7 @@ export default class Transmuxer {
     if (!demuxer || !remuxer) {
       // If probing failed, and each demuxer saw enough bytes to be able to probe, then Hls.js has been given content its not able to handle
       if (bytesSeen >= minProbeByteLength) {
-        observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
+        observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
       }
       stats.executeEnd = now();
       return [emptyResult(chunkMeta)];

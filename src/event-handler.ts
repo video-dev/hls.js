@@ -6,7 +6,7 @@
 
 import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
-import Event from './events';
+import { Events } from './events';
 import Hls from './hls';
 
 const FORBIDDEN_EVENT_NAMES = {
@@ -82,7 +82,7 @@ class EventHandler {
       eventToFunction.call(this, event, data).call();
     } catch (err) {
       logger.error(`An internal error happened while handling event ${event}. Error message: "${err.message}". Here is a stacktrace:`, err);
-      this.hls.emit(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, err: err });
+      this.hls.emit(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, err: err });
     }
   }
 }

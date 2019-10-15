@@ -5,7 +5,7 @@
  */
 
 import EventHandler from '../event-handler';
-import Event from '../events';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
@@ -97,9 +97,9 @@ class EMEController extends EventHandler {
      */
   constructor (hls) {
     super(hls,
-      Event.MEDIA_ATTACHED,
-      Event.MEDIA_DETACHED,
-      Event.MANIFEST_PARSED
+      Events.MEDIA_ATTACHED,
+      Events.MEDIA_DETACHED,
+      Events.MANIFEST_PARSED
     );
     this._config = hls.config;
 
@@ -258,7 +258,7 @@ class EMEController extends EventHandler {
       const keysListItem = this._mediaKeysList[0];
       if (!keysListItem || !keysListItem.mediaKeys) {
         logger.error('Fatal: Media is encrypted but no CDM access or no keys have been obtained yet');
-        this.hls.trigger(Event.ERROR, {
+        this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.KEY_SYSTEM_ERROR,
           details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
           fatal: true
@@ -281,7 +281,7 @@ class EMEController extends EventHandler {
     const keysListItem = this._mediaKeysList[0];
     if (!keysListItem) {
       logger.error('Fatal: Media is encrypted but not any key-system access has been obtained yet');
-      this.hls.trigger(Event.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
         fatal: true
@@ -297,7 +297,7 @@ class EMEController extends EventHandler {
     const keySession = keysListItem.mediaKeysSession;
     if (!keySession) {
       logger.error('Fatal: Media is encrypted but no key-session existing');
-      this.hls.trigger(Event.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
         fatal: true
@@ -308,7 +308,7 @@ class EMEController extends EventHandler {
     // initData is null if the media is not CORS-same-origin
     if (!initData) {
       logger.warn('Fatal: initData required for generating a key session is null');
-      this.hls.trigger(Event.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_INIT_DATA,
         fatal: true
@@ -325,7 +325,7 @@ class EMEController extends EventHandler {
       })
       .catch((err) => {
         logger.error('Error generating key-session request:', err);
-        this.hls.trigger(Event.ERROR, {
+        this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.KEY_SYSTEM_ERROR,
           details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
           fatal: false
@@ -393,7 +393,7 @@ class EMEController extends EventHandler {
         logger.error(`License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`);
         this._requestLicenseFailureCount++;
         if (this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES) {
-          this.hls.trigger(Event.ERROR, {
+          this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.KEY_SYSTEM_ERROR,
             details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
             fatal: true
@@ -459,7 +459,7 @@ class EMEController extends EventHandler {
     const keysListItem = this._mediaKeysList[0];
     if (!keysListItem) {
       logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
-      this.hls.trigger(Event.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
         fatal: true
@@ -475,7 +475,7 @@ class EMEController extends EventHandler {
       xhr.send(challenge);
     } catch (e) {
       logger.error(`Failure requesting DRM license: ${e}`);
-      this.hls.trigger(Event.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
         fatal: true

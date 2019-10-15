@@ -8,7 +8,7 @@
  */
 
 import EventHandler from '../event-handler';
-import Events from '../events';
+import { Events } from '../events';
 import Fragment from '../loader/fragment';
 import { logger } from '../utils/logger';
 

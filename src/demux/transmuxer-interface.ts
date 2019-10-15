@@ -1,5 +1,5 @@
 import * as work from 'webworkify-webpack';
-import Event from '../events';
+import { Events } from '../events';
 import Transmuxer, { TransmuxConfig, TransmuxState, isPromise } from '../demux/transmuxer';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
@@ -40,8 +40,8 @@ export default class TransmuxerInterface {
     };
 
     // forward events to main thread
-    observer.on(Event.FRAG_DECRYPTED, forwardMessage);
-    observer.on(Event.ERROR, forwardMessage);
+    observer.on(Events.FRAG_DECRYPTED, forwardMessage);
+    observer.on(Events.ERROR, forwardMessage);
 
     const typeSupported = {
       mp4: MediaSource.isTypeSupported('video/mp4'),
@@ -59,7 +59,7 @@ export default class TransmuxerInterface {
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
-          hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
+          hls.trigger(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
         };
         worker.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
