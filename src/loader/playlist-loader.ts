@@ -24,7 +24,7 @@ import {
   PlaylistLevelType,
   PlaylistLoaderContext
 } from '../types/loader';
-import { ManifestLoadingData, LevelLoadingData, TrackLoadingData } from '../types/events';
+import { ManifestLoadingData, LevelLoadingData, TrackLoadingData, AudioTrackLoadingData, SubtitleTrackLoadingData } from '../types/events';
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 import Hls from '../hls';
@@ -89,18 +89,18 @@ class PlaylistLoader {
 
   private _registerListeners () {
     const { hls } = this;
-    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading);
-    hls.on(Events.LEVEL_LOADING, this.onLevelLoading);
-    hls.on(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading);
-    hls.on(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
+    hls.on(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading, this);
+    hls.on(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading, this);
   }
 
   private _unregisterListeners () {
     const { hls } = this;
-    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading);
-    hls.off(Events.LEVEL_LOADING, this.onLevelLoading);
-    hls.off(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading);
-    hls.off(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.LEVEL_LOADING, this.onLevelLoading, this);
+    hls.off(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading, this);
+    hls.off(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading, this);
   }
 
   // TODO: export as enum once fragment-tracker and stream-controller typed
@@ -154,7 +154,7 @@ class PlaylistLoader {
     this.destroyInternalLoaders();
   }
 
-  protected onManifestLoading: HlsListeners[Events.MANIFEST_LOADING] = (data) => {
+  private onManifestLoading (data: ManifestLoadingData) {
     const { url } = data;
     this.load({
       id: null,
@@ -165,7 +165,7 @@ class PlaylistLoader {
     });
   }
 
-  protected onLevelLoading: HlsListeners[Events.LEVEL_LOADING] = (data) => {
+  private onLevelLoading (data: LevelLoadingData) {
     const { id, level, url } = data;
     this.load({
       id,
@@ -176,7 +176,7 @@ class PlaylistLoader {
     });
   }
 
-  protected onAudioTrackLoading: HlsListeners[Events.AUDIO_TRACK_LOADING] = (data) => {
+  private onAudioTrackLoading (data: AudioTrackLoadingData) {
     const { id, url } = data;
     this.load({
       id,
@@ -187,7 +187,7 @@ class PlaylistLoader {
     });
   }
 
-  protected onSubtitleTrackLoading: HlsListeners[Events.SUBTITLE_TRACK_LOADING] = (data) => {
+  private onSubtitleTrackLoading (data: SubtitleTrackLoadingData) {
     const { id, url } = data;
     this.load({
       id,
@@ -388,7 +388,7 @@ class PlaylistLoader {
         fatal: false,
         url: url,
         reason: 'no fragments found in level',
-        level: context.level
+        level: typeof context.level === "number" ? context.level : undefined
       });
       return;
     }
