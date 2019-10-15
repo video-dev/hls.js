@@ -72,31 +72,31 @@ class TimelineController {
   }
 
   private _registerListeners(): void {
-    const { hls } = this
-    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching)
-    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching)
-    hls.on(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata)
-    hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted)
-    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading)
-    hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded)
-    hls.on(Events.FRAG_LOADED, this.onFragLoaded)
-    hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound)
-    hls.on(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment)
-    hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared)
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching);
+    hls.on(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata);
+    hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading);
+    hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded);
+    hls.on(Events.FRAG_LOADED, this.onFragLoaded);
+    hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound);
+    hls.on(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment);
+    hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared);
   }
 
   private _unregisterListeners(): void {
-    const { hls } = this
-    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching)
-    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching)
-    hls.off(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata)
-    hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted)
-    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading)
-    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded)
-    hls.off(Events.FRAG_LOADED, this.onFragLoaded)
-    hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound)
-    hls.off(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment)
-    hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared)
+    const { hls } = this;
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching);
+    hls.off(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata);
+    hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading);
+    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded);
+    hls.off(Events.FRAG_LOADED, this.onFragLoaded);
+    hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound);
+    hls.off(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment);
+    hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared);
   }
 
   addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen) {
