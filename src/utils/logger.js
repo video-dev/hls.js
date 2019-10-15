@@ -20,21 +20,10 @@ let exportedLogger = fakeLogger;
 //   return msg;
 // }
 
-function formatMsg (type, msg) {
-  msg = '[' + type + '] > ' + msg;
-  return msg;
-}
-
 function consolePrintFn (type) {
   const func = self.console[type];
   if (func) {
-    return function (...args) {
-      if (args[0]) {
-        args[0] = formatMsg(type, args[0]);
-      }
-
-      func.apply(self.console, args);
-    };
+    return func.bind(self.console, `[${type}] >`);
   }
   return noop;
 }

@@ -72,7 +72,7 @@ export default class Transmuxer {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
-    let uintData = new Uint8Array(data);
+    let uintData: Uint8Array = new Uint8Array(data);
     const { cache, config, currentTransmuxState: state, transmuxConfig } = this;
 
     const encryptionType = getEncryptionType(uintData, decryptdata);
@@ -82,12 +82,12 @@ export default class Transmuxer {
       if (config.enableSoftwareAES) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
         // data is handled in the flush() call
-        const decryptedData = decrypter.softwareDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer);
+        const decryptedData: ArrayBuffer = decrypter.softwareDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer);
         if (!decryptedData) {
           stats.executeEnd = now();
           return emptyResult(chunkMeta);
         }
-        uintData = decryptedData;
+        uintData = new Uint8Array(decryptedData);
       } else {
         this.decryptionPromise = decrypter.webCryptoDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer)
           .then((decryptedData) : TransmuxerResult => {

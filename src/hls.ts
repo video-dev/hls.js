@@ -12,13 +12,11 @@ import { FragmentTracker } from './controller/fragment-tracker';
 import StreamController from './controller/stream-controller';
 import LevelController from './controller/level-controller';
 
-import PerformanceMonitor from './performance/performance-monitor';
-
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
-import { Events, HlsEventEmitter } from './events';
+import { Events, HlsEventEmitter, HlsListeners } from './events';
 import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
 import { MediaPlaylist } from './types/media-playlist';
@@ -28,10 +26,11 @@ import { MediaPlaylist } from './types/media-playlist';
  * @class
  * @constructor
  */
-export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
+export default class Hls implements HlsEventEmitter {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
+  private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
   private abrController: any;
   private capLevelController: any;
@@ -87,7 +86,6 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
    * @param {HlsConfig} config
    */
   constructor (userConfig: Partial<HlsConfig> = {}) {
-    super(); // eslint-disable-line constructor-super
     const defaultConfig = Hls.DefaultConfig;
     mergeConfig(defaultConfig, userConfig);
     const config = this.config = userConfig as HlsConfig;
@@ -110,6 +108,13 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
     // FIXME: FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
+
+    // Level Controller initiates loading after all controllers have received MANIFEST_PARSED
+    levelController.onParsedComplete = () => {
+      if (config.autoStartLoad || streamController.forceStartLoad) {
+        this.startLoad(config.startPosition);
+      }
+    };
 
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
@@ -138,9 +143,6 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
     this.createController(config.timelineController, null, coreComponents);
     this.emeController = this.createController(config.emeController, null, coreComponents);
 
-    // Push the performance monitor last so that it is the last class to handle events
-    coreComponents.push(new PerformanceMonitor(this));
-
     this.coreComponents = coreComponents;
   }
 
@@ -153,6 +155,40 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
       return controllerInstance;
     }
     return null;
+  }
+
+  // Delegate the EventEmitter through the public API of Hls.js
+  on<E extends Events> (event: E, listener: HlsListeners[E]) {
+    this._emitter.on(event, listener);
+  }
+
+  once<E extends Events> (event: E, listener: HlsListeners[E]) {
+    this._emitter.once(event, listener);
+  }
+
+  removeAllListeners<E extends Events> (event?: E | undefined) {
+    this._emitter.removeAllListeners(event);
+  }
+
+  off<E extends Events> (event: E, listener?: HlsListeners[E] | undefined, context?: any, once?: boolean | undefined) {
+    this._emitter.off(event, listener, context, once);
+  }
+
+  listeners<E extends Events> (event: E): HlsListeners[E][] {
+    return this._emitter.listeners(event);
+  }
+
+  emit<E extends Events> (event: E, ...args: Parameters<HlsListeners[E]>): boolean {
+    return this._emitter.emit(event, ...args);
+  }
+
+  // This is a proxy for emit that is temporary to keep stuff compiling
+  trigger<E extends Events> (event: E, ...args: Parameters<HlsListeners[E]>): boolean {
+    return this._emitter.emit(event, ...args);
+  }
+
+  listenerCount<E extends Events> (event: E): number {
+    return this._emitter.listenerCount(event);
   }
 
   /**
@@ -424,8 +460,10 @@ export default class Hls extends (EventEmitter as { new(): HlsEventEmitter }) {
    * @type {number}
    */
   set autoLevelCapping (newLevel: number) {
-    logger.log(`set autoLevelCapping:${newLevel}`);
-    this._autoLevelCapping = newLevel;
+    if (this._autoLevelCapping !== newLevel) {
+      logger.log(`set autoLevelCapping:${newLevel}`);
+      this._autoLevelCapping = newLevel;
+    }
   }
 
   /**

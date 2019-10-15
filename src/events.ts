@@ -207,22 +207,14 @@ export interface HlsListeners {
   [Events.KEY_LOADING]: TodoEventType
   [Events.KEY_LOADED]: TodoEventType
 }
-
 export interface HlsEventEmitter {
-  addListener<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): this
-  on<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): this
-  once<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): this
+  on<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): void
+  once<E extends keyof HlsListeners> (event: E, listener: HlsListeners[E]): void
 
-  removeAllListeners<E extends keyof HlsListeners> (event?: E): this
-  removeListener<E extends keyof HlsListeners> (event: E, listener?: HlsListeners[E], context?: any, once?: boolean): this
+  removeAllListeners<E extends keyof HlsListeners> (event?: E): void
+  off<E extends keyof HlsListeners> (event: E, listener?: HlsListeners[E], context?: any, once?: boolean): void
 
   listeners<E extends keyof HlsListeners> (event: E): HlsListeners[E][]
   emit<E extends keyof HlsListeners> (event: E, ...args: Parameters<HlsListeners[E]>): boolean
   listenerCount<E extends keyof HlsListeners> (event: E): number
-}
-
-export interface IEventHandler {
-  registerListeners(): void;
-  unregisterListeners(): void;
-  destroy(): void
 }

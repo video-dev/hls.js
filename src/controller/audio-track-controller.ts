@@ -71,7 +71,7 @@ class AudioTrackController extends EventHandler {
       Event.MANIFEST_PARSED,
       Event.AUDIO_TRACK_LOADED,
       Event.AUDIO_TRACK_SWITCHED,
-      Event.LEVEL_LOADED,
+      Event.LEVEL_LOADING,
       Event.ERROR
     );
 
@@ -167,13 +167,13 @@ class AudioTrackController extends EventHandler {
   }
 
   /**
-   * When a level gets loaded, if it has redundant audioGroupIds (in the same ordinality as it's redundant URLs)
+   * When a level is loading, if it has redundant audioGroupIds (in the same ordinality as it's redundant URLs)
    * we are setting our audio-group ID internally to the one set, if it is different from the group ID currently set.
    *
    * If group-ID got update, we re-select the appropriate audio-track with this group-ID matching the currently
    * selected one (based on NAME property).
    */
-  protected onLevelLoaded (data: LevelLoadedData): void {
+  protected onLevelLoading (data: LevelLoadedData): void {
     const levelInfo = this.hls.levels[data.level];
 
     if (!levelInfo.audioGroupIds) {
@@ -249,9 +249,7 @@ class AudioTrackController extends EventHandler {
 
   private _selectInitialAudioTrack (): void {
     let tracks = this.tracks;
-    if (!tracks.length) {
-      return;
-    }
+    console.assert(tracks.length, 'Initial audio track should be selected when tracks are known');
 
     const currentAudioTrack = this.tracks[this._trackId];
 
