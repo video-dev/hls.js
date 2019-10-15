@@ -499,7 +499,8 @@ export default class StreamController extends BaseStreamController {
     // override level info
     curLevel.details = newDetails;
     this.levelLastLoaded = newLevelId;
-    this.hls.trigger(Event.LEVEL_UPDATED, <LevelUpdatedData>{ details: newDetails, level: newLevelId });
+    const levelUpdatedData: LevelUpdatedData = { details: newDetails, level: newLevelId };
+    this.hls.trigger(Event.LEVEL_UPDATED, levelUpdatedData);
 
     if (!this.startFragRequested) {
       this.setStartPosition(newDetails, sliding);
