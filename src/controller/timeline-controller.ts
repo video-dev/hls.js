@@ -204,7 +204,6 @@ class TimelineController {
     }
     const label = props.label;
     const track = {
-      _id: trackName,
       label,
       kind: 'captions',
       default: false
@@ -320,7 +319,6 @@ class TimelineController {
         // Create a list of tracks for the provider to consume
         const tracksList = this.tracks.map((track) => {
           return {
-            _id: track.id.toString(),
             label: track.name,
             kind: track.type.toLowerCase(),
             default: track.default
