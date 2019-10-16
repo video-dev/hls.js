@@ -33,7 +33,6 @@ describe('Non-Native TimelineController functions', function () {
   it('fires the NON_NATIVE_TEXT_TRACKS_FOUND event', function (done) {
     hls.on(Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND, (event, data) => {
       const track = data.tracks[0];
-      expect(track._id).to.equal('textTrack1');
       expect(track.kind).to.equal('captions');
       expect(track.default).to.equal(false);
       expect(track.label).to.equal(timelineController.captionsProperties.textTrack1.label);

@@ -146,13 +146,14 @@ export interface CuesParsedData {
   track: string
 }
 
+interface NonNativeTextTrack {
+  label: any
+  kind: string
+  default: boolean
+}
+
 export interface NonNativeTextTracksData {
-  tracks: Array<{
-    _id: string
-    label: any
-    kind: string
-    default: boolean
-  }>
+  tracks: Array<NonNativeTextTrack>
 }
 
 export interface InitPTSFoundData {
