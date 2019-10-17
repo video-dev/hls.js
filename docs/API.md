@@ -582,7 +582,7 @@ When set, use this level as the default hls.startLevel. Keep in mind that the st
 
 ### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 
-(default: 60000ms for fragment / 10000ms for level and manifest)
+(default: 20000ms for fragment / 10000ms for level and manifest)
 
 URL Loader timeout.
 A timeout callback will be triggered if loading duration exceeds this timeout.
@@ -1136,12 +1136,18 @@ get : position of live sync point (ie edge of live position minus safety delay d
 
 ## Runtime Events
 
-hls.js fires a bunch of events, that could be registered as below:
+hls.js fires a bunch of events, that could be registered and unregistered as below:
 
 ```js
-hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
+function onLevelLoaded (event, data) {
   var level_duration = data.details.totalduration;
-});
+}
+// subscribe event
+hls.on(Hls.Events.LEVEL_LOADED, onLevelLoaded);
+// unsubscribe event
+hls.off(Hls.Events.LEVEL_LOADED, onLevelLoaded);
+// subscribe for a single event call only
+hls.once(Hls.Events.LEVEL_LOADED, onLevelLoaded);
 ```
 Full list of Events is available below:
 
@@ -1326,7 +1332,7 @@ Full list of errors is described below:
   - `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE` - raised after hls.js seeks over a buffer hole to unstuck the playback,
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE`, fatal : `false`, hole : hole duration }
   - `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL` - raised when playback is stuck although currentTime is in a buffered area
-    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `true` }
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL`, fatal : `true` }
 
 ### Mux Errors
 
