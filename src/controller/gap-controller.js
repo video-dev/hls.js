@@ -83,6 +83,7 @@ export default class GapController {
       if ((firstBufferedPosition - mediaCurrentTime > 0) && !media.seeking) {
         logger.warn(`skipping over gap at startup (first segment buffered time-range starts partially later than assumed) from ${mediaCurrentTime} to ${firstBufferedPosition} seconds`);
         media.currentTime = firstBufferedPosition;
+        return;
       }
     }
 
