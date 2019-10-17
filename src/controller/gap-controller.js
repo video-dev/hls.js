@@ -27,7 +27,7 @@ export default class GapController {
      * @private
      * @member {number | null}
      * This keeps state of the time a stall was detected.
-     * It will make sure we only report a stall as one when within the min stall duration.
+     * It will make sure we only report a stall as one when within the min stall threshold duration.
      */
     this.stallDetectedAtTime = null;
 
@@ -55,13 +55,12 @@ export default class GapController {
      * @private
      * @member {EventListener}
      */
-    this.onMediaStalled = null;
+    this.onMediaElWaiting = null;
   }
 
   destroy () {
-    if (this.onMediaStalled) {
-      this.media.removeEventListener('waiting', this.onMediaStalled);
-      this.media.removeEventListener('stalled', this.onMediaStalled);
+    if (this.onMediaElWaiting) {
+      this.media.removeEventListener('waiting', this.onMediaElWaiting);
     }
   }
 
@@ -125,10 +124,9 @@ export default class GapController {
     this.hasPlayed = true;
 
     // lazy setup media event listeners if not done yet
-    if (!this.onMediaStalled) {
-      this.onMediaStalled = this._onMediaStalled.bind(this);
-      this.media.addEventListener('waiting', this.onMediaStalled);
-      this.media.addEventListener('stalled', this.onMediaStalled);
+    if (!this.onMediaElWaiting) {
+      this.onMediaElWaiting = this._onMediaElWaiting.bind(this);
+      this.media.addEventListener('waiting', this.onMediaElWaiting);
     }
 
     // we can return early here to be lazy on rewriting other member values
@@ -167,7 +165,7 @@ export default class GapController {
     }
   }
 
-  _onMediaStalled () {
+  _onMediaElWaiting () {
     const media = this.media;
     if (media.readyState < 2) {
       return;
@@ -197,15 +195,16 @@ export default class GapController {
     logger.warn(`Stall detected at playhead position ${currentPlayheadTime}, buffered-time-ranges info: ${JSON.stringify(bufferInfo)}`);
 
     if (!this.stallDetectedAtTime) {
-      logger.warn('Silently ignoring first detected stall within minimum duration, storing timestamp: ' + now);
+      logger.debug('Silently ignoring first detected stall within threshold duration. Storing local perf-timestamp: ' + now);
       this.stallDetectedAtTime = now;
       return;
     }
 
+    // when we reach here, it means a stall was detected before, we check the diff to the min threshold
     const stalledDurationMs = now - this.stallDetectedAtTime;
     if (stalledDurationMs >= STALL_MINIMUM_DURATION_MS) {
       logger.warn('Stall detected after min stall duration, reporting error');
-      // Report stalling after trying to fix
+      // Report stalling before trying to fix
       this._reportStall(bufferInfo.len);
     }
 
