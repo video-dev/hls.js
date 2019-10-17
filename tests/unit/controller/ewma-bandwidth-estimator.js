@@ -40,4 +40,18 @@ describe('EwmaBandWidthEstimator', function () {
     bwEstimator.sample(1000, 1000000);
     expect(bwEstimator.getEstimate()).to.closeTo(2208342.324322311, 0.000000001);
   });
+
+  it('returns correct value after updating slow and fast', function () {
+    const defaultEstimate = 5e5;
+    const bwEstimator = new EwmaBandWidthEstimator(new Hls(), 9, 3, defaultEstimate);
+    expect(bwEstimator.getEstimate()).to.equal(defaultEstimate);
+    bwEstimator.sample(8000, 1000000);
+    expect(bwEstimator.getEstimate()).to.equal(1000000);
+    bwEstimator.sample(4000, 1000000);
+    expect(bwEstimator.getEstimate()).to.closeTo(1439580.319105247, 0.000000001);
+    bwEstimator.update(15, 4);
+    expect(bwEstimator.getEstimate()).to.closeTo(1439580.319105247, 0.000000001);
+    bwEstimator.sample(1000, 1000000);
+    expect(bwEstimator.getEstimate()).to.closeTo(2056826.9489827948, 0.000000001);
+  });
 });

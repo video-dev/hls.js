@@ -566,6 +566,10 @@ export default class Hls extends Observer {
     return this.config.progressive;
   }
 
+  get video () {
+    return this.media;
+  }
+
   /**
    * select an subtitle track, based on its index in subtitle track lists
    * @type {number}
