@@ -285,9 +285,13 @@ class TimelineController extends EventHandler {
       if (currentTrack.mode === 'disabled') {
         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
         return;
-      }
+      }     
+      let minStartTime = Number.MAX_SAFE_INTEGER;
       // Add cues and trigger event with success true.
+      
       cues.forEach(cue => {
+        //find the first cue in the entire cue set since its not always sorted
+        minStartTime = Math.min(cue.startTime,minStartTime);
         // Sometimes there are cue overlaps on segmented vtts so the same
         // cue can appear more than once in different vtt files.
         // This avoid showing duplicated cues with same timecode and text.
@@ -300,8 +304,20 @@ class TimelineController extends EventHandler {
             currentTrack.addCue(textTrackCue);
           }
         }
-      }
+      }         
       );
+      
+      let liveSyncPosition = hls.streamController.liveSyncPosition;
+      //need to remove cues only for live so if there is no sync position its a VOD
+      // if there is a better way to detect live vs vod we can use it. 
+      while (cues.length > 0 && liveSyncPosition !== undefined ){
+        //We remove cues which are more than 5 minutes old than the current cue
+        if (currentTrack.cues[0].startTime < minStartTime - 300){
+          currentTrack.removeCue(currentTrack.cues[0]);
+        } else {
+          break;
+        }
+      }
       hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     },
     function (e) {

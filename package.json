@@ -26,7 +26,6 @@
     "lint": "./scripts/lint.sh",
     "lint:fix": "./scripts/lint.sh --fix",
     "lint:quiet": "./scripts/lint.sh --quiet",
-    "precommit": "./scripts/precommit.sh",
     "pretest": "npm run lint",
     "start": "npm run dev",
     "test": "npm run test:unit && npm run test:func",

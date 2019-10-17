@@ -13,7 +13,8 @@ class ID3TrackController extends EventHandler {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
-      Event.FRAG_PARSING_METADATA);
+      Event.FRAG_PARSING_METADATA,
+      Event.LIVE_BACK_BUFFER_REACHED);
     this.id3Track = undefined;
     this.media = undefined;
   }
@@ -48,6 +49,26 @@ class ID3TrackController extends EventHandler {
       }
     }
     return this.media.addTextTrack('metadata', 'id3');
+  }
+
+  onLiveBackBufferReached ({ bufferEnd }) {
+    if (!this.id3Track || !this.id3Track.cues || !this.id3Track.cues.length) {
+      return;
+    }
+    const foundCue = getClosestCue(this.id3Track.cues, bufferEnd);
+    if (!foundCue) {
+      return;
+    }
+
+    let removeCues = true;
+    while (removeCues) {
+      const cue = this.id3Track.cues[0];
+      if (!this.id3Track.cues.length || cue.id === foundCue.id) {
+        removeCues = false;
+        return;
+      }
+      this.id3Track.removeCue(cue);
+    }
   }
 
   onFragParsingMetadata (data) {

@@ -45,6 +45,8 @@ const HlsEvents = {
   LEVEL_UPDATED: 'hlsLevelUpdated',
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
+  // fired when the live back buffer is reached defined by the liveBackBufferLength config option - data : { bufferEnd: number }
+  LIVE_BACK_BUFFER_REACHED: 'hlsLiveBackBufferReached',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
   // fired when an audio track switching is requested - data: { id : audio track id }
