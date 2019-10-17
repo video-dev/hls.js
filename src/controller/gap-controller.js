@@ -153,13 +153,19 @@ export default class GapController {
   _isMediaInPlayableState () {
     const currentPlayheadTime = this.currentPlayheadTime;
     const media = this.media;
+    // the first case of unplayable media lies in it being in an "ended" state, or not being "ready",
+    // the necessary data not being available, which can essentially be see from the buffered time-ranges,
+    // but more clearly from the readyState property the browser exposes for the media element.
     if (media.ended || !media.buffered.length || media.readyState <= 2) {
       return false;
+    // the other cases of unplayable are when the media is seeking, and the targetted time for this
+    // is not yet in the buffered time-ranges, meaning that this position can not be decoded or played
+    // in any forseeable latency (or maybe never depending on wether the data for this media time will ever be received/demuxed).
     } else if (media.seeking && !BufferHelper.isBuffered(media, currentPlayheadTime)) {
       return false;
-    } else {
-      return true;
     }
+    // for all other cases we assume by inverse logic conditions that media is in a playable state
+    return true;
   }
 
   _onMediaElWaiting () {
