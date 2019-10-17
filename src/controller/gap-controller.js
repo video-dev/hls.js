@@ -71,9 +71,10 @@ export default class GapController {
    * @param {number} previousPlayheadTime Previously read playhead position
    */
   poll (previousPlayheadTime) {
+    const media = this.media;
     if (!this.hasPlayed) {
-      const mediaCurrentTime = this.media.currentTime;
-      if (!isFiniteNumber(mediaCurrentTime) || this.media.buffered.length === 0) {
+      const mediaCurrentTime = media.currentTime;
+      if (!isFiniteNumber(mediaCurrentTime) || media.buffered.length === 0) {
         return;
       }
       // Checking what the buffer reports as start time for the first fragment appended.
@@ -82,15 +83,15 @@ export default class GapController {
       // to fix eventual issues with browser-internal thresholds
       // where some MSE implementation might not play when the playhead
       // is exactly on the start value (trying to overcome what would be a browser bug).
-      const firstBufferedPosition = this.media.buffered.start(0);
-      if ((firstBufferedPosition - mediaCurrentTime > 0) && !this.media.seeking) {
+      const firstBufferedPosition = media.buffered.start(0);
+      if ((firstBufferedPosition - mediaCurrentTime > 0) && !media.seeking) {
         logger.warn(`skipping over gap at startup (first segment buffered time-range starts partially later than assumed) from ${mediaCurrentTime} to ${firstBufferedPosition} seconds`);
-        this.media.currentTime = firstBufferedPosition + SKIP_BUFFER_HOLE_STEP_SECONDS;
+        media.currentTime = firstBufferedPosition + SKIP_BUFFER_HOLE_STEP_SECONDS;
       }
     }
 
     // if we are paused and played before, don't bother at all
-    if (this.hasPlayed && this.media.paused) {
+    if (this.hasPlayed && media.paused) {
       return;
     }
 
