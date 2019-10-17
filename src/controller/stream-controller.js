@@ -681,6 +681,10 @@ class StreamController extends BaseStreamController {
       this.startPosition = this.lastCurrentTime = 0;
     }
 
+    // release gap-controller
+    this.gapController.destroy();
+    this.gapController = null;
+
     // reset fragment backtracked flag
     let levels = this.levels;
     if (levels) {
@@ -692,6 +696,7 @@ class StreamController extends BaseStreamController {
         }
       });
     }
+
     // remove video listeners
     if (media) {
       media.removeEventListener('seeking', this.onvseeking);
@@ -699,6 +704,7 @@ class StreamController extends BaseStreamController {
       media.removeEventListener('ended', this.onvended);
       this.onvseeking = this.onvseeked = this.onvended = null;
     }
+
     this.fragmentTracker.removeAllFragments();
     this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
