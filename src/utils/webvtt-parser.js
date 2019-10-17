@@ -93,15 +93,12 @@ const WebVTTParser = {
       }
 
       if (presentationTime) {
-        // If we have MPEGTS, offset = presentation time + discontinuity offset
-        
+        // If we have MPEGTS, offset = presentation time + discontinuity offset        
         cueOffset = presentationTime - vttCCs.presentationOffset;
-        console.log('cueOFFSET IS ' + presentationTime + ' vttCCs.presentationOffset ' + vttCCs.presentationOffset);
       }
      // console.log(cue.startTime + ' before');
       cue.startTime += cueOffset - localTime;
       cue.endTime += cueOffset - localTime;
-      console.log(cue.startTime);
       // Create a unique hash id for a cue based on start/end times and text.
       // This helps timeline-controller to avoid showing repeated captions.
       cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);

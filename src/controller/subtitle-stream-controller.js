@@ -100,11 +100,12 @@ export class SubtitleStreamController extends TaskLoop {
 
   // If something goes wrong, procede to next frag, if we were processing one.
   onError (data) {
-    let frag = data.frag;
-    // don't handle error not related to subtitle fragment
-    if (!frag || frag.type !== 'subtitle') {
-      return;
-    }
+    //Commenting out this code since we need to reset the state for any error
+    // let frag = data.frag;
+    // // don't handle error not related to subtitle fragment
+    // if (!frag || frag.type !== 'subtitle') {
+    //   return;
+    // }
     this.state = State.IDLE;
   }
 
@@ -221,7 +222,7 @@ export class SubtitleStreamController extends TaskLoop {
         this.state = State.KEY_LOADING;
         this.hls.trigger(Event.KEY_LOADING, { frag: foundFrag });
       } else if (foundFrag && this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
-        // only load if fragment is not loaded
+        // only load if fragment is not loaded        
         foundFrag.trackId = trackId; // Frags don't know their subtitle track ID, so let's just add that...
         this.fragCurrent = foundFrag;
         this.state = State.FRAG_LOADING;
