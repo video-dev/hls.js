@@ -142,7 +142,6 @@ export default class GapController {
     // If it was reported stalled, let's log the recovery
     if (this.stallReported) {
       const now = window.performance.now();
-      const currentPlayheadTime = this.media.currentTime;
       logger.warn(`playhead not stalled anymore @${currentPlayheadTime}, after ${(now - this.stallDetectedAtTime)} ms`);
 
       this.stallReported = false;
