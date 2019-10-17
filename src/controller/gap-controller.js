@@ -79,14 +79,10 @@ export default class GapController {
       }
       // Checking what the buffer reports as start time for the first fragment appended.
       // We skip the playhead to this position to overcome an apparent initial gap in the stream.
-      // We add a margin value on top (same as the one used for playhead nudging on stall detection)
-      // to fix eventual issues with browser-internal thresholds
-      // where some MSE implementation might not play when the playhead
-      // is exactly on the start value (trying to overcome what would be a browser bug).
       const firstBufferedPosition = media.buffered.start(0);
       if ((firstBufferedPosition - mediaCurrentTime > 0) && !media.seeking) {
         logger.warn(`skipping over gap at startup (first segment buffered time-range starts partially later than assumed) from ${mediaCurrentTime} to ${firstBufferedPosition} seconds`);
-        media.currentTime = firstBufferedPosition + SKIP_BUFFER_HOLE_STEP_SECONDS;
+        media.currentTime = firstBufferedPosition;
       }
     }
 
