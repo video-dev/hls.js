@@ -48,14 +48,8 @@ class KeyLoader extends EventHandler {
       return;
     }
 
+    // Load the key if the uri is different from previous one, or if the decrypt key has not yet been retrieved
     const uri = frag.decryptdata.uri;
-    if (uri === this.decrypturl || this.decryptkey) {
-      frag.decryptdata.key = this.decryptkey;
-      this.hls.trigger(Event.KEY_LOADED, { frag: frag });
-      return;
-    }
-
-    // if uri is different from previous one or if decrypt key not retrieved yet
     if (uri !== this.decrypturl || this.decryptkey === null) {
       let config = this.hls.config;
       if (loader) {
@@ -94,6 +88,10 @@ class KeyLoader extends EventHandler {
       };
 
       frag.loader.load(loaderContext, loaderConfig, loaderCallbacks);
+    } else if (this.decryptkey) {
+      // Return the key if it's already been loaded
+      frag.decryptdata.key = this.decryptkey;
+      this.hls.trigger(Event.KEY_LOADED, { frag: frag });
     }
   }
 

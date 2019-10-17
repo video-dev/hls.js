@@ -55,6 +55,9 @@ class BufferController extends EventHandler {
   // The number of BUFFER_CODEC events received before any sourceBuffers are created
   public bufferCodecEventsExpected: number = 0;
 
+  // The total number of BUFFER_CODEC events received
+  private _bufferCodecEventsTotal: number = 0;
+
   // A reference to the attached media element
   public media: HTMLMediaElement | null = null;
 
@@ -143,7 +146,7 @@ class BufferController extends EventHandler {
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    this.bufferCodecEventsExpected = data.altAudio ? 2 : 1;
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = data.altAudio ? 2 : 1;
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
@@ -202,6 +205,7 @@ class BufferController extends EventHandler {
       this.mediaSource = null;
       this.media = null;
       this._objectUrl = null;
+      this.bufferCodecEventsExpected = this._bufferCodecEventsTotal;
       this.pendingTracks = {};
       this.tracks = {};
       this.sourceBuffer = {};
@@ -454,10 +458,6 @@ class BufferController extends EventHandler {
   }
 
   flushLiveBackBuffer () {
-    if (!this.media) {
-      throw Error('flushLiveBackBuffer called without attaching media');
-    }
-
     // clear back buffer for live only
     if (!this._live) {
       return;
@@ -465,6 +465,11 @@ class BufferController extends EventHandler {
 
     const liveBackBufferLength = this.config.liveBackBufferLength;
     if (!isFinite(liveBackBufferLength) || liveBackBufferLength < 0) {
+      return;
+    }
+
+    if (!this.media) {
+      logger.error('flushLiveBackBuffer called without attaching media');
       return;
     }
 
