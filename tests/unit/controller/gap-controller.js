@@ -2,8 +2,7 @@ import sinon from 'sinon';
 
 import Hls from '../../../src/hls';
 
-import GapController from '../../../src/controller/gap-controller'; // eslint-disable-line import/no-duplicates
-import { STALL_MINIMUM_DURATION_MS } from '../../../src/controller/gap-controller'; // eslint-disable-line import/no-duplicates
+import GapController, { STALL_MINIMUM_DURATION_MS, STALL_HANDLING_RETRY_PERIOD_MS } from '../../../src/controller/gap-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 
 import Event from '../../../src/events';
