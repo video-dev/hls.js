@@ -41,7 +41,7 @@ export default class Hls extends Observer {
   private subtitleTrackController: any;
   private emeController: any;
   private coreComponents: any[];
-  private media: HTMLMediaElement | null = null;
+  private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
   static get version (): string {
@@ -180,7 +180,7 @@ export default class Hls extends Observer {
    */
   attachMedia (media: HTMLMediaElement) {
     logger.log('attachMedia');
-    this.media = media;
+    this._media = media;
     this.trigger(HlsEvents.MEDIA_ATTACHING, { media: media });
   }
 
@@ -190,7 +190,7 @@ export default class Hls extends Observer {
   detachMedia () {
     logger.log('detachMedia');
     this.trigger(HlsEvents.MEDIA_DETACHING);
-    this.media = null;
+    this._media = null;
   }
 
   /**
@@ -245,7 +245,7 @@ export default class Hls extends Observer {
    */
   recoverMediaError () {
     logger.log('recoverMediaError');
-    const media = this.media;
+    const media = this._media;
     this.detachMedia();
     if (media) {
       this.attachMedia(media);
@@ -566,8 +566,8 @@ export default class Hls extends Observer {
     return this.config.progressive;
   }
 
-  get video () {
-    return this.media;
+  get media () {
+    return this._media;
   }
 
   /**

@@ -72,8 +72,8 @@ class AbrController extends EventHandler {
     */
   private _abandonRulesCheck () {
     const { fragCurrent: frag, hls } = this;
-    const { autoLevelEnabled, config, video } = hls;
-    if (!frag || !video) {
+    const { autoLevelEnabled, config, media } = hls;
+    if (!frag || !media) {
       return;
     }
 
@@ -88,13 +88,13 @@ class AbrController extends EventHandler {
     }
 
     // This check only runs if we're in ABR mode and actually playing
-    if (!autoLevelEnabled || video.paused || !video.playbackRate || !video.readyState) {
+    if (!autoLevelEnabled || media.paused || !media.playbackRate || !media.readyState) {
       return;
     }
 
     const stats: LoaderStats = loader.stats;
     const requestDelay = performance.now() - stats.loading.start;
-    const playbackRate = Math.abs(video.playbackRate);
+    const playbackRate = Math.abs(media.playbackRate);
     // In order to work with a stable bandwidth, only begin monitoring bandwidth after half of the fragment has been loaded
     if (requestDelay <= (500 * frag.duration / playbackRate)) {
       return;
@@ -109,9 +109,9 @@ class AbrController extends EventHandler {
     // fragLoadDelay is an estimate of the time (in seconds) it will take to buffer the entire fragment
     const fragLoadedDelay = (expectedLen - stats.loaded) / loadRate;
 
-    const pos = video.currentTime;
+    const pos = media.currentTime;
     // bufferStarvationDelay is an estimate of the amount time (in seconds) it will take to exhaust the buffer
-    const bufferStarvationDelay = (BufferHelper.bufferInfo(video, pos, config.maxBufferHole).end - pos) / playbackRate;
+    const bufferStarvationDelay = (BufferHelper.bufferInfo(media, pos, config.maxBufferHole).end - pos) / playbackRate;
 
     // Attempt an emergency downswitch only if less than 2 fragment lengths are buffered, and the time to finish loading
     // the current fragment is greater than the amount of buffer we have left
@@ -239,16 +239,16 @@ class AbrController extends EventHandler {
 
   get _nextABRAutoLevel () {
     const { fragCurrent, hls, lastLoadedFragLevel: currentLevel } = this;
-    const { maxAutoLevel, levels, config, minAutoLevel, video } = hls;
+    const { maxAutoLevel, levels, config, minAutoLevel, media } = hls;
     const currentFragDuration = fragCurrent ? fragCurrent.duration : 0;
-    const pos = (video ? video.currentTime : 0);
+    const pos = (media ? media.currentTime : 0);
 
-    // playbackRate is the absolute value of the playback rate; if video.playbackRate is 0, we use 1 to load as
+    // playbackRate is the absolute value of the playback rate; if media.playbackRate is 0, we use 1 to load as
     // if we're playing back at the normal rate.
-    const playbackRate = ((video && (video.playbackRate !== 0)) ? Math.abs(video.playbackRate) : 1.0);
+    const playbackRate = ((media && (media.playbackRate !== 0)) ? Math.abs(media.playbackRate) : 1.0);
     const avgbw = this._bwEstimator ? this._bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate;
     // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
-    const bufferStarvationDelay = (BufferHelper.bufferInfo(video as Bufferable, pos, config.maxBufferHole).end - pos) / playbackRate;
+    const bufferStarvationDelay = (BufferHelper.bufferInfo(media as Bufferable, pos, config.maxBufferHole).end - pos) / playbackRate;
 
     // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
     let bestLevel = this._findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
