@@ -133,7 +133,7 @@ export default class M3U8Parser {
 
         if (audioGroups.length) {
           // If there are audio groups signalled in the manifest, let's look for a matching codec string for this track
-          const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
+          const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId as string);
 
           // If we don't find the track signalled, lets use the first audio groups codec we have
           // Acting as a best guess
