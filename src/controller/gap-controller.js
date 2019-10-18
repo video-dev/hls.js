@@ -183,6 +183,7 @@ export default class GapController {
     const now = window.performance.now();
     const media = this.media;
 
+    // limit the max frequency of stall handling i.e minimum retry period
     if (this.stallHandledAtTime !== null &&
       now - this.stallHandledAtTime < STALL_HANDLING_RETRY_PERIOD_MS) {
       return;
@@ -222,7 +223,7 @@ export default class GapController {
    * @private
    */
   _tryFixBufferStall (bufferInfo, stalledDurationMs) {
-    logger.warn('Trying to fix stalled playhead on buffered time-range ...');
+    logger.warn(`Trying to fix stalled playhead on buffered time-range since ${stalledDurationMs} ms ...`);
 
     const { config, fragmentTracker, media } = this;
     const playheadTime = media.currentTime;
@@ -263,7 +264,7 @@ export default class GapController {
     if (!stallReported) {
       // Report stalled error once
       this.stallReported = true;
-      logger.warn(`Playback stalling at @${media.currentTime} due to low buffer`);
+      logger.warn(`Media element playhead stalling at ${media.currentTime} secs; but should be playing`);
       hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
@@ -314,7 +315,7 @@ export default class GapController {
 
     if (nudgeRetry < config.nudgeMaxRetry) {
       const targetTime = currentTime + nudgeRetry * config.nudgeOffset;
-      logger.log(`adjust currentTime from ${currentTime} to ${targetTime}`);
+      logger.log(`Adjusting media-element currentTime from ${currentTime} to ${targetTime}`);
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
       media.currentTime = targetTime;
 
@@ -324,7 +325,7 @@ export default class GapController {
         fatal: false
       });
     } else {
-      logger.error(`still stuck in high buffer @${currentTime} after ${config.nudgeMaxRetry}, raise fatal error`);
+      logger.error(`Playhead still not moving while enough data buffered @${currentTime} after ${config.nudgeMaxRetry} tries to fix. Raising fatal error now`);
       hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
