@@ -304,6 +304,79 @@ describe('GapController', function () {
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
     });
 
-    // TODO: spec initial gap skipping
+    it('should not handle a stall (clock not advancing) when media has played before and is now paused', function () {
+      wallClock.tick(TIMER_STEP_MS);
+
+      tickMediaClock();
+
+      expect(gapController.hasPlayed).to.equal(true);
+      expect(gapController.stallDetectedAtTime).to.equal(null);
+      expect(gapController.stallHandledAtTime).to.equal(null);
+
+      mockMedia.paused = true;
+      isStalling = true;
+
+      tickMediaClock();
+
+      expect(gapController.stallDetectedAtTime).to.equal(null);
+      expect(gapController.stallHandledAtTime).to.equal(null);
+
+      mockMedia.paused = false;
+
+      tickMediaClock();
+
+      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
+      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
+    });
+
+    it('should handle a stall when getting a waiting event and media clock is on buffered time-range', function () {
+      wallClock.tick(TIMER_STEP_MS);
+
+      tickMediaClock();
+
+      expect(gapController.hasPlayed).to.equal(true);
+      expect(gapController.stallDetectedAtTime).to.equal(null);
+      expect(gapController.stallHandledAtTime).to.equal(null);
+
+      gapController._onMediaElWaiting();
+
+      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
+      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
+    });
+
+    it('should detect/handle stalls also when media never played yet (regardless if paused flag is set or not)', function () {
+      wallClock.tick(TIMER_STEP_MS);
+
+      // set stalling from the start
+      isStalling = true;
+
+      tickMediaClock();
+
+      expect(gapController.hasPlayed).to.equal(false);
+      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
+      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
+
+      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
+
+      mockMedia.paused = true;
+
+      tickMediaClock();
+
+      expect(gapController.hasPlayed).to.equal(false);
+      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
+      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS + 2 * STALL_HANDLING_RETRY_PERIOD_MS);
+    });
+
+    it('should skip any initial gap when not having played yet', function () {
+      wallClock.tick(TIMER_STEP_MS);
+
+      mockMedia.currentTime = 0;
+
+      isStalling = true;
+
+      tickMediaClock();
+
+      expect(mockMedia.currentTime).to.equal(100);
+    });
   });
 });
