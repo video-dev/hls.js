@@ -18,10 +18,11 @@ export default class GapController {
 
     /**
      * @private
-     * @member {boolean}
-     * Flag set when a flag was detected and appeared to be sustained for more than the stall minimum duration.
+     * @member {number | null}
+     * This keeps state of handling stalls (once detected) to throttle the retry pace,
+     * and thus will get updated on each retry.
      */
-    this.stallReported = false;
+    this.stallHandledAtTime = null;
 
     /**
      * @private
@@ -33,11 +34,10 @@ export default class GapController {
 
     /**
      * @private
-     * @member {number | null}
-     * This keeps state of handling stalls (once detected) to throttle the retry pace,
-     * and thus will get updated on each retry.
+     * @member {boolean}
+     * Flag set when a flag was detected and appeared to be sustained for more than the stall minimum duration.
      */
-    this.stallHandledAtTime = null;
+    this.stallReported = false;
 
     /**
      * @private
@@ -203,7 +203,8 @@ export default class GapController {
       return;
     }
 
-    // when we reach here, it means a stall was detected before, we check the diff to the min threshold
+    // when we reach here, it means a stall was detected before,
+    // we check the diff to the min threshold
     const stalledDurationMs = now - this.stallDetectedAtTime;
     if (stalledDurationMs >= STALL_MINIMUM_DURATION_MS) {
       logger.warn('Stall detected after min stall duration, reporting error');
@@ -232,9 +233,15 @@ export default class GapController {
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
       this._trySkipBufferHole(partial);
+      // we return here in this case, meaning
+      // the branch below only executes when we don't handle a partial fragment
       return;
     }
 
+    // if we haven't had to skip over a buffer hole of a partial fragment
+    // we may just have to "nudge" the playlist as the browser decoding/rendering engine
+    // needs to cross some sort of threshold covering all source-buffers content
+    // to start playing properly.
     if (bufferInfo.len > JUMP_THRESHOLD_SECONDS &&
       stalledDurationMs > config.highBufferWatchdogPeriod * 1000) {
       logger.log('Trying to nudge playhead over buffer-hole');
