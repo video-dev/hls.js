@@ -315,9 +315,18 @@ export default class GapController {
 
     if (nudgeRetry < config.nudgeMaxRetry) {
       const targetTime = currentTime + nudgeRetry * config.nudgeOffset;
-      logger.log(`Adjusting media-element currentTime from ${currentTime} to ${targetTime}`);
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
+      logger.log(`Adjusting media-element 'currentTime' from ${currentTime} to ${targetTime}`);
       media.currentTime = targetTime;
+
+      if (nudgeRetry === config.nudgeMaxRetry - 1) {
+        logger.warn('Lastly: Attempting to un-stall playback state by over-calling media-element play() (this should not be necessary, ouch ...)');
+        if (config.enforceAutoPlayByMutingAudioOnly) {
+          logger.warn('Muting media audio now! Needed to allow non-UI-event scheduled play() call (this is a workaround to audio-only autoplay issues on Chrome)');
+          media.muted = true;
+        }
+        media.play();
+      }
 
       hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,

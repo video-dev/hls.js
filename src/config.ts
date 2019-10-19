@@ -124,6 +124,10 @@ type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean,
 };
 
+type GapControllerConfig = {
+  enforceAutoPlayByMutingAudioOnly: boolean
+};
+
 export type HlsConfig =
   {
     debug: boolean,
@@ -159,6 +163,7 @@ export type HlsConfig =
   PlaylistLoaderConfig &
   StreamControllerConfig &
   Partial<TimelineControllerConfig> &
+  GapControllerConfig &
   TSDemuxerConfig;
 
 // If possible, keep hlsDefaultConfig shallow
@@ -175,6 +180,7 @@ export const hlsDefaultConfig: HlsConfig = {
   maxBufferLength: 30, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.5, // used by stream-controller
+  enforceAutoPlayByMutingAudioOnly: true, // used by gap-controller
 
   lowBufferWatchdogPeriod: 0.5, // used by stream-controller
   highBufferWatchdogPeriod: 3, // used by stream-controller
