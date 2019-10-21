@@ -732,7 +732,8 @@ class BufferController extends EventHandler {
           }
 
           logger.log(`sb remove ${type} [${removeStart},${removeEnd}], of [${bufStart},${bufEnd}], pos:${currentTime}`);
-          sb.remove(removeStart, removeEnd);
+          // Disable buffer remove for Tivo/Opera 36 browser
+          // sb.remove(removeStart, removeEnd);
           return true;
         }
       }
