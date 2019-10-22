@@ -692,9 +692,7 @@ class TSDemuxer {
             endOfCaptions = true;
 
             if (payloadSize > 16) {
-              let uuidStrArray = [];
-              let userDataPayloadBytes = [];
-
+              const uuidStrArray = [];
               for (i = 0; i < 16; i++) {
                 uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
 
@@ -702,9 +700,10 @@ class TSDemuxer {
                   uuidStrArray.push('-');
                 }
               }
-
-              for (i = 16; i < payloadSize; i++) {
-                userDataPayloadBytes.push(expGolombDecoder.readUByte());
+              const length = payloadSize - 16;
+              const userDataPayloadBytes = new Uint8Array(length);
+              for (i = 0; i < length; i++) {
+                userDataPayloadBytes[i] = expGolombDecoder.readUByte();
               }
 
               this._insertSampleInOrder(this._txtTrack.samples, {
@@ -712,9 +711,7 @@ class TSDemuxer {
                 payloadType: payloadType,
                 uuid: uuidStrArray.join(''),
                 userDataBytes: userDataPayloadBytes,
-                get userData () {
-                  return utf8ArrayToStr(this.userDataBytes);
-                }
+                userData: utf8ArrayToStr(userDataPayloadBytes.buffer)
               });
             }
           } else if (payloadSize < expGolombDecoder.bytesAvailable) {
