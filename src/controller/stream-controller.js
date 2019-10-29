@@ -68,6 +68,7 @@ class StreamController extends BaseStreamController {
         // set new level to playlist loader : this will trigger start level load
         // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
         this.level = hls.nextLoadLevel = startLevel;
+        if (startPosition === -1) startPosition = this.startPosition;
         this.loadedmetadata = false;
       }
       // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
@@ -714,7 +715,7 @@ class StreamController extends BaseStreamController {
     this.hls.trigger(Event.BUFFER_RESET);
     this.fragmentTracker.removeAllFragments();
     this.stalled = false;
-    this.startPosition = this.lastCurrentTime = 0;
+    this.startPosition = this.lastCurrentTime = -1;
   }
 
   onManifestParsed (data) {
