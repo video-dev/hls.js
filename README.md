@@ -202,7 +202,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
     - ITU-T Rec. H.264 and ISO/IEC 14496-10 Elementary Stream
     - ISO/IEC 13818-7 ADTS AAC Elementary Stream
     - ISO/IEC 11172-3 / ISO/IEC 13818-3 (MPEG-1/2 Audio Layer III) Elementary Stream
-    - Packetized metadata (ID3) Elementary Stream
+    - Packetized metadata (ID3v2.3.0) Elementary Stream
   - AAC container (audio only streams)
   - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
