@@ -16,7 +16,7 @@ import { PlaylistLevelType } from '../types/loader';
  */
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /((#EXT-X-STREAM-INF):([^\n\r]*)[\r\n]+([^\r\n]+))|((#EXT-X-SESSION-DATA):([^\n\r]*)[\r\n]+)/g;
+const MASTER_PLAYLIST_REGEX = /(?:#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)|#EXT-X-SESSION-DATA:(.*))/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
@@ -67,14 +67,14 @@ export default class M3U8Parser {
 
     let result;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
-      if (result[2]) {
-        // group 2 is '#EXT-X-STREAM-INF' if found, parse level tag
+      if (result[1]) {
+        // group 1 is '#EXT-X-STREAM-INF' if found, parse level tag
 
         // TODO(typescript-level)
         const level: any = {};
 
-        const attrs = level.attrs = new AttrList(result[3]);
-        level.url = M3U8Parser.resolve(result[4], baseurl);
+        const attrs = level.attrs = new AttrList(result[1]);
+        level.url = M3U8Parser.resolve(result[2], baseurl);
 
         const resolution = attrs.decimalResolution('RESOLUTION');
         if (resolution) {
@@ -91,8 +91,8 @@ export default class M3U8Parser {
         }
 
         levels.push(level);
-      } else if (result[6]) {
-        // group 6 is '#EXT-X-SESSION-DATA' if found, parse session data
+      } else if (result[3]) {
+        // group 3 is '#EXT-X-SESSION-DATA' if found, parse session data
         let sessionAttrs = new AttrList(result[7]);
         if (sessionAttrs['DATA-ID']) {
           hasSessionData = true;
