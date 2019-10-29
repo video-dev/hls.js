@@ -61,7 +61,7 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should call clearInterval if no tracks present', function () {
-      subtitleStreamController.tracks = null;
+      subtitleStreamController.tracks = [];
       hls.trigger(Event.SUBTITLE_TRACK_SWITCH, {
         id: 0
       });

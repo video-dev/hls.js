@@ -47,6 +47,7 @@ class StreamController extends BaseStreamController {
     this._state = State.STOPPED;
     this.stallReported = false;
     this.gapController = null;
+    this.altAudio = false;
   }
 
   startLoad (startPosition) {
@@ -691,6 +692,7 @@ class StreamController extends BaseStreamController {
       media.removeEventListener('ended', this.onvended);
       this.onvseeking = this.onvseeked = this.onvended = null;
     }
+    this.fragmentTracker.removeAllFragments();
     this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
     this.stopLoad();
@@ -735,6 +737,7 @@ class StreamController extends BaseStreamController {
       logger.log('both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC');
     }
 
+    this.altAudio = data.altAudio;
     this.levels = data.levels;
     this.startFragRequested = false;
     let config = this.config;
