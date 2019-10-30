@@ -50,7 +50,7 @@ class PassThroughRemuxer implements Remuxer {
       videoCodec = 'avc1.42e01e';
     }
 
-    const tracks = {} as TrackSet;
+    const tracks: TrackSet = {};
     if (initData.audio && initData.video) {
       tracks.audiovideo = {
         container: 'video/mp4',
