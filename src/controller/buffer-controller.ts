@@ -487,11 +487,11 @@ export default class BufferController extends EventHandler {
           };
         } catch (err) {
           logger.error(`error while trying to add sourceBuffer:${err.message}`);
-          this.hls.trigger(Events.ERROR, {
+          this.hls.emit(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_ADD_CODEC_ERROR,
             fatal: false,
-            err,
+            error: err,
             mimeType: mimeType
           });
         }
@@ -504,7 +504,12 @@ export default class BufferController extends EventHandler {
   private _onMediaSourceOpen = () => {
     const { hls, media, mediaSource } = this;
     logger.log('media source opened');
-    hls.trigger(Events.MEDIA_ATTACHED, { media });
+    if (media) {
+      hls.emit(Events.MEDIA_ATTACHED, { media });
+    } else {
+      logger.log('[buffer-controller]: Media source opened, and no media was attached');
+    }
+
     if (mediaSource) {
       // once received, don't listen anymore to sourceopen event
       mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);

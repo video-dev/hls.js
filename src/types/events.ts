@@ -125,6 +125,7 @@ export interface ErrorData {
   level?: number
   levelRetry?: boolean
   networkDetails?: any
+  mimeType?: string
   reason?: string
   response?: any
   url?: string

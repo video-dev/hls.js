@@ -8,7 +8,7 @@ import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksU
 class SubtitleTrackController extends EventHandler {
   private tracks: MediaPlaylist[];
   private trackId: number = -1;
-  private media: HTMLVideoElement | null = null;
+  private media: HTMLMediaElement | null = null;
   private stopped: boolean = true;
   private subtitleDisplay: boolean = true; // Enable/disable subtitle display rendering
   private queuedDefaultTrack?: number;
