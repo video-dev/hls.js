@@ -16,7 +16,7 @@ import { PlaylistLevelType } from '../types/loader';
  */
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /(?:#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)|#EXT-X-SESSION-DATA:(.*))/g;
+const MASTER_PLAYLIST_REGEX = /(?:#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)|#EXT-X-SESSION-DATA:([^\n\r]*)[\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
@@ -68,7 +68,7 @@ export default class M3U8Parser {
     let result;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       if (result[1]) {
-        // group 1 is '#EXT-X-STREAM-INF' if found, parse level tag
+        // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
 
         // TODO(typescript-level)
         const level: any = {};
@@ -92,8 +92,8 @@ export default class M3U8Parser {
 
         levels.push(level);
       } else if (result[3]) {
-        // group 3 is '#EXT-X-SESSION-DATA' if found, parse session data
-        let sessionAttrs = new AttrList(result[7]);
+        // '#EXT-X-SESSION-DATA' is found, parse session data in group 3
+        let sessionAttrs = new AttrList(result[3]);
         if (sessionAttrs['DATA-ID']) {
           hasSessionData = true;
           sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
