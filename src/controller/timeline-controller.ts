@@ -204,7 +204,6 @@ class TimelineController {
     }
     const label = props.label;
     const track = {
-      _id: trackName,
       label,
       kind: 'captions',
       default: false
@@ -320,7 +319,6 @@ class TimelineController {
         // Create a list of tracks for the provider to consume
         const tracksList = this.tracks.map((track) => {
           return {
-            _id: track.id.toString(),
             label: track.name,
             kind: track.type.toLowerCase(),
             default: track.default
@@ -450,11 +448,12 @@ class TimelineController {
     const { frag } = data;
     if (frag.type === 'subtitle') {
       if (!Number.isFinite(this.initPTS[frag.cc])) {
-        this.unparsedVttFrags.push(data as FragLoadedData);
+        this.unparsedVttFrags.push(data as unknown as FragLoadedData);
         return;
       }
 
-      this.onFragLoaded(data as FragLoadedData);
+      debugger;
+      this.onFragLoaded(data as unknown as FragLoadedData);
     }
   }
 

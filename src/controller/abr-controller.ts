@@ -5,7 +5,6 @@
  */
 
 import { Events } from '../events';
-import EventHandler from '../event-handler';
 import { BufferHelper, Bufferable } from '../utils/buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
@@ -13,12 +12,12 @@ import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import Fragment from '../loader/fragment';
 import { LoaderStats } from '../types/loader';
 import LevelDetails from '../loader/level-details';
-import { LevelLoadedData } from '../types/events';
 import Hls from '../hls';
+import { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
 
 const { performance } = self;
 
-class AbrController extends EventHandler {
+class AbrController {
   protected hls: Hls;
   private lastLoadedFragLevel: number = 0;
   private _nextAutoLevel: number = -1;
@@ -28,24 +27,39 @@ class AbrController extends EventHandler {
   private fragCurrent: Fragment | null = null;
   private bitrateTestDelay: number = 0;
 
-  constructor (hls) {
-    super(hls, Events.FRAG_LOADING,
-      Events.FRAG_LOADED,
-      Events.FRAG_BUFFERED,
-      Events.LEVEL_LOADED,
-      Events.ERROR);
+  constructor (hls: Hls) {
     this.hls = hls;
 
     const config = hls.config;
     this._bwEstimator = new EwmaBandWidthEstimator(config.abrEwmaSlowVoD, config.abrEwmaFastVoD, config.abrEwmaDefaultEstimate);
+
+    this._registerListeners();
+  }
+
+  private _registerListeners () {
+    const { hls } = this;
+    hls.on(Events.FRAG_LOADING, this.onFragLoading, this);
+    hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.on(Events.ERROR, this.onError, this);
+  }
+
+  private _unregisterListeners () {
+    const { hls } = this;
+    hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
+    hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.off(Events.ERROR, this.onError, this);
   }
 
   destroy () {
+    this._unregisterListeners();
     this.clearTimer();
-    super.destroy.call(this);
   }
 
-  protected onFragLoading (data: { frag: Fragment }) {
+  private onFragLoading (data: FragLoadingData) {
     const frag = data.frag;
     if (frag.type === 'main') {
       if (!this.timer) {
@@ -55,7 +69,7 @@ class AbrController extends EventHandler {
     }
   }
 
-  protected onLevelLoaded (data: LevelLoadedData) {
+  private onLevelLoaded (data: LevelLoadedData) {
     const config = this.hls.config;
     if (data.details.live) {
       this._bwEstimator.update(config.abrEwmaSlowLive, config.abrEwmaFastLive);
@@ -148,10 +162,10 @@ class AbrController extends EventHandler {
     this._bwEstimator.sample(requestDelay, stats.loaded);
     loader.abort();
     this.clearTimer();
-    hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
+    hls.emit(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
   }
 
-  protected onFragLoaded (data: { frag: Fragment }) {
+  private onFragLoaded (data: FragLoadedData) {
     const frag = data.frag;
     const stats = frag.stats;
     if (frag.type === 'main' && Number.isFinite(frag.sn as number)) {
@@ -164,7 +178,8 @@ class AbrController extends EventHandler {
 
       // compute level average bitrate
       if (this.hls.config.abrMaxWithRealBitrate) {
-        const level = this.hls.levels[frag.level];
+        const level = (this.hls.levels[frag.level] as any);
+        // TODO: stats on level don't match with types, but it's likely true.
         const loadedBytes = (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
         const loadedDuration = (level.loaded ? level.loaded.duration : 0) + frag.duration;
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
@@ -176,7 +191,7 @@ class AbrController extends EventHandler {
     }
   }
 
-  protected onFragBuffered (data: { frag: Fragment }) {
+  private onFragBuffered (data: FragBufferedData) {
     const frag = data.frag;
     const stats = frag.stats;
 
@@ -201,7 +216,7 @@ class AbrController extends EventHandler {
     }
   }
 
-  protected onError (data) {
+  private onError (data: ErrorData) {
     // stop timer in case of frag loading error
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:

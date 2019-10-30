@@ -4,16 +4,23 @@ import Transmuxer, { TransmuxConfig, TransmuxState, isPromise } from '../demux/t
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
-import { Observer } from '../observer';
+import { EventEmitter } from 'eventemitter3';
 import Fragment from '../loader/fragment';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
+// TOOD: Refactor this out
+class Observer extends EventEmitter {
+  trigger (event: any, ...args: any[]) {
+    this.emit(event, args);
+  }
+}
+
 export default class TransmuxerInterface {
   private hls: any;
   private id: any;
-  private observer: any;
+  private observer: Observer | null;
   private frag?: Fragment;
   private worker: any;
   private onwmsg?: Function;
@@ -29,7 +36,6 @@ export default class TransmuxerInterface {
     this.onTransmuxComplete = onTransmuxComplete;
     this.onFlush = onFlush;
 
-    const observer = this.observer = new Observer();
     const config = hls.config;
 
     const forwardMessage = (ev, data) => {
@@ -40,8 +46,9 @@ export default class TransmuxerInterface {
     };
 
     // forward events to main thread
-    observer.on(Events.FRAG_DECRYPTED, forwardMessage);
-    observer.on(Events.ERROR, forwardMessage);
+    this.observer = new Observer();
+    this.observer.on(Events.FRAG_DECRYPTED, forwardMessage);
+    this.observer.on(Events.ERROR, forwardMessage);
 
     const typeSupported = {
       mp4: MediaSource.isTypeSupported('video/mp4'),
@@ -69,11 +76,11 @@ export default class TransmuxerInterface {
           // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
           self.URL.revokeObjectURL(worker.objectURL);
         }
-        this.transmuxer = new Transmuxer(observer, typeSupported, config, vendor);
+        this.transmuxer = new Transmuxer(this.observer, typeSupported, config, vendor);
         this.worker = null;
       }
     } else {
-      this.transmuxer = new Transmuxer(observer, typeSupported, config, vendor);
+      this.transmuxer = new Transmuxer(this.observer, typeSupported, config, vendor);
     }
   }
 
