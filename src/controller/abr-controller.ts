@@ -50,7 +50,7 @@ class AbrController {
     hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
-    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
   }
 
