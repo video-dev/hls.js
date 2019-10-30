@@ -65,7 +65,25 @@ export default class M3U8Parser {
     let hasSessionData = false;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
-    let result;
+    // TODO(typescript-level)
+    function setCodecs (codecs: Array<string>, level: any) {
+      ['video', 'audio'].forEach((type: CodecType) => {
+        const filtered = codecs.filter((codec) => isCodecType(codec, type));
+        if (filtered.length) {
+          const preferred = filtered.filter((codec) => {
+            return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+          });
+          level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
+
+          // remove from list
+          codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
+        }
+      });
+
+      level.unknownCodecs = codecs;
+    }
+
+    let result: RegExpExecArray | null;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       if (result[1]) {
         // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
@@ -365,22 +383,4 @@ function assignProgramDateTime (frag, prevFrag) {
     frag.programDateTime = null;
     frag.rawProgramDateTime = null;
   }
-}
-
-// TODO(typescript-level)
-function setCodecs (codecs: Array<string>, level: any) {
-  ['video', 'audio'].forEach((type: CodecType) => {
-    const filtered = codecs.filter((codec) => isCodecType(codec, type));
-    if (filtered.length) {
-      const preferred = filtered.filter((codec) => {
-        return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
-      });
-      level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
-
-      // remove from list
-      codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
-    }
-  });
-
-  level.unknownCodecs = codecs;
 }
