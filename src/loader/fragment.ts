@@ -8,6 +8,7 @@ import { PlaylistLevelType } from '../types/loader';
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
   VIDEO = 'video',
+  AUDIOVIDEO = 'audiovideo'
 }
 
 interface ElementaryStreamInfo {
@@ -25,7 +26,8 @@ export default class Fragment {
   // Holds the types of data this fragment supports
   public elementaryStreams: Record<ElementaryStreamTypes, ElementaryStreamInfo | null> = {
     [ElementaryStreamTypes.AUDIO]: null,
-    [ElementaryStreamTypes.VIDEO]: null
+    [ElementaryStreamTypes.VIDEO]: null,
+    [ElementaryStreamTypes.AUDIOVIDEO]: null
   };
 
   public rawProgramDateTime: string | null = null;
