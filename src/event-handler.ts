@@ -82,7 +82,7 @@ class EventHandler {
       eventToFunction.call(this, event, data).call();
     } catch (err) {
       logger.error(`An internal error happened while handling event ${event}. Error message: "${err.message}". Here is a stacktrace:`, err);
-      this.hls.emit(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, err: err });
+      this.hls.emit(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, error: err });
     }
   }
 }

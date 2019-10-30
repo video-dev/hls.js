@@ -41,7 +41,7 @@ export default class Hls implements HlsEventEmitter {
   private subtitleTrackController: any;
   private emeController: any;
   private coreComponents: any[];
-  private media: HTMLMediaElement | null = null;
+  private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
   static get version (): string {
@@ -182,11 +182,6 @@ export default class Hls implements HlsEventEmitter {
     return this._emitter.emit(event, ...args);
   }
 
-  // This is a proxy for emit that is temporary to keep stuff compiling
-  trigger<E extends Events> (event: E, ...args: Parameters<HlsListeners[E]>): boolean {
-    return this._emitter.emit(event, ...args);
-  }
-
   listenerCount<E extends Events> (event: E): number {
     return this._emitter.listenerCount(event);
   }
@@ -212,7 +207,7 @@ export default class Hls implements HlsEventEmitter {
    */
   attachMedia (media: HTMLMediaElement) {
     logger.log('attachMedia');
-    this.media = media;
+    this._media = media;
     this.emit(Events.MEDIA_ATTACHING, { media: media });
   }
 
@@ -222,7 +217,7 @@ export default class Hls implements HlsEventEmitter {
   detachMedia () {
     logger.log('detachMedia');
     this.emit(Events.MEDIA_DETACHING);
-    this.media = null;
+    this._media = null;
   }
 
   /**
@@ -277,7 +272,7 @@ export default class Hls implements HlsEventEmitter {
    */
   recoverMediaError () {
     logger.log('recoverMediaError');
-    const media = this.media;
+    const media = this._media;
     this.detachMedia();
     if (media) {
       this.attachMedia(media);
@@ -596,6 +591,10 @@ export default class Hls implements HlsEventEmitter {
 
   get progressive () {
     return this.config.progressive;
+  }
+
+  get media () {
+    return this._media;
   }
 
   /**

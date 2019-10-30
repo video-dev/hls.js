@@ -125,6 +125,7 @@ export interface ErrorData {
   level?: number
   levelRetry?: boolean
   networkDetails?: any
+  mimeType?: string
   reason?: string
   response?: any
   url?: string
@@ -176,6 +177,10 @@ export interface FragLoadedData {
 export interface FragDecryptedData {
   frag: Fragment
   payload: ArrayBuffer
+  stats: {
+    tstart: number
+    tdecrypt: number
+  }
 }
 
 // TODO: What are samples type?

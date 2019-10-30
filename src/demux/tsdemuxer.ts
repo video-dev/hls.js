@@ -157,7 +157,7 @@ class TSDemuxer implements Demuxer {
     this.aacLastPTS = null;
   }
 
-  demux (data: Uint8Array, contiguous, timeOffset, isSampleAes = false): DemuxerResult {
+  demux (data: Uint8Array, contiguous, timeOffset, isSampleAes = false, flush = false): DemuxerResult {
     if (!isSampleAes) {
       this.sampleAes = null;
     }
@@ -173,13 +173,6 @@ class TSDemuxer implements Demuxer {
     const avcTrack = this._avcTrack;
     const audioTrack = this._audioTrack;
     const id3Track = this._id3Track;
-    const parsePAT = this._parsePAT;
-    const parsePMT = this._parsePMT;
-    const parsePES = this._parsePES;
-    const parseAVCPES = this._parseAVCPES.bind(this);
-    const parseAACPES = this._parseAACPES.bind(this);
-    const parseMPEGPES = this._parseMPEGPES.bind(this);
-    const parseID3PES = this._parseID3PES.bind(this);
 
     let avcId = avcTrack.pid;
     let avcData = avcTrack.pesData;
@@ -198,8 +191,7 @@ class TSDemuxer implements Demuxer {
       this.remainderData = null;
     }
 
-    const syncOffset = TSDemuxer._syncOffset(data);
-    if (syncOffset < 0) {
+    if (len < 188 && !flush) {
       this.remainderData = data;
       return {
         audioTrack,
@@ -208,9 +200,11 @@ class TSDemuxer implements Demuxer {
         textTrack: this._txtTrack
       };
     }
+
+    const syncOffset = TSDemuxer._syncOffset(data);
     len -= (len + syncOffset) % 188;
-    if (len < data.byteLength) {
-      this.remainderData = sliceUint8(data, len);
+    if (len < data.byteLength && !flush) {
+      this.remainderData = new Uint8Array(data.buffer, len, data.byteLength - len);
     }
 
     // loop through TS packets
@@ -234,7 +228,7 @@ class TSDemuxer implements Demuxer {
         case avcId:
           if (stt) {
             if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
-              parseAVCPES(pes, false);
+              this._parseAVCPES(pes, false);
             }
 
             avcData = { data: [], size: 0 };
@@ -248,9 +242,9 @@ class TSDemuxer implements Demuxer {
           if (stt) {
             if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
               if (audioTrack.isAAC) {
-                parseAACPES(pes);
+                this._parseAACPES(pes);
               } else {
-                parseMPEGPES(pes);
+                this._parseMPEGPES(pes);
               }
             }
             audioData = { data: [], size: 0 };
@@ -263,7 +257,7 @@ class TSDemuxer implements Demuxer {
         case id3Id:
           if (stt) {
             if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
-              parseID3PES(pes);
+              this._parseID3PES(pes);
             }
 
             id3Data = { data: [], size: 0 };
@@ -340,12 +334,12 @@ class TSDemuxer implements Demuxer {
     };
   }
 
-  // TODO: re-check TS syncOffset before demuxing
   flush () {
     const { remainderData } = this;
+    this.remainderData = null;
     let result;
     if (remainderData) {
-      result = this.demux(remainderData, this.contiguous, -1);
+      result = this.demux(remainderData, this.contiguous, -1, false, true);
     } else {
       result = {
         audioTrack: this._audioTrack,
@@ -355,7 +349,6 @@ class TSDemuxer implements Demuxer {
       };
     }
     this.extractRemainingSamples(result);
-    this.remainderData = null;
     return result;
   }
 
@@ -366,7 +359,7 @@ class TSDemuxer implements Demuxer {
     const id3Data = id3Track.pesData;
     // try to parse last PES packets
     let pes;
-    if (avcData && (pes = this._parsePES(avcData)) && pes.pts !== undefined) {
+    if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
       this._parseAVCPES(pes, true);
       avcTrack.pesData = null;
     } else {
@@ -374,7 +367,7 @@ class TSDemuxer implements Demuxer {
       avcTrack.pesData = avcData;
     }
 
-    if (audioData && (pes = this._parsePES(audioData)) && pes.pts !== undefined) {
+    if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
       if (audioTrack.isAAC) {
         this._parseAACPES(pes);
       } else {
@@ -391,7 +384,7 @@ class TSDemuxer implements Demuxer {
       audioTrack.pesData = audioData;
     }
 
-    if (id3Data && (pes = this._parsePES(id3Data)) && pes.pts !== undefined) {
+    if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
       this._parseID3PES(pes);
       id3Track.pesData = null;
     } else {
@@ -434,199 +427,6 @@ class TSDemuxer implements Demuxer {
   destroy () {
     this._initPTS = this._initDTS = null;
     this._duration = 0;
-  }
-
-  _parsePAT (data, offset) {
-    // skip the PSI header and parse the first PMT entry
-    return (data[offset + 10] & 0x1F) << 8 | data[offset + 11];
-    // logger.log('PMT PID:'  + this._pmtId);
-  }
-
-  _parsePMT (data, offset, mpegSupported, isSampleAes) {
-    const result = { audio: -1, avc: -1, id3: -1, isAAC: true };
-    const sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
-    const tableEnd = offset + 3 + sectionLength - 4;
-    // to determine where the table is, we have to figure out how
-    // long the program info descriptors are
-    const programInfoLength = (data[offset + 10] & 0x0f) << 8 | data[offset + 11];
-    // advance the offset to the first entry in the mapping table
-    offset += 12 + programInfoLength;
-    while (offset < tableEnd) {
-      const pid = (data[offset + 1] & 0x1F) << 8 | data[offset + 2];
-      switch (data[offset]) {
-      case 0xcf: // SAMPLE-AES AAC
-        if (!isSampleAes) {
-          logger.log('unknown stream type:' + data[offset]);
-          break;
-        }
-        /* falls through */
-
-        // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
-      case 0x0f:
-        // logger.log('AAC PID:'  + pid);
-        if (result.audio === -1) {
-          result.audio = pid;
-        }
-
-        break;
-
-        // Packetized metadata (ID3)
-      case 0x15:
-        // logger.log('ID3 PID:'  + pid);
-        if (result.id3 === -1) {
-          result.id3 = pid;
-        }
-
-        break;
-
-      case 0xdb: // SAMPLE-AES AVC
-        if (!isSampleAes) {
-          logger.log('unknown stream type:' + data[offset]);
-          break;
-        }
-        /* falls through */
-
-        // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
-      case 0x1b:
-        // logger.log('AVC PID:'  + pid);
-        if (result.avc === -1) {
-          result.avc = pid;
-        }
-
-        break;
-
-        // ISO/IEC 11172-3 (MPEG-1 audio)
-        // or ISO/IEC 13818-3 (MPEG-2 halved sample rate audio)
-      case 0x03:
-      case 0x04:
-        // logger.log('MPEG PID:'  + pid);
-        if (!mpegSupported) {
-          logger.log('MPEG audio found, not supported in this browser for now');
-        } else if (result.audio === -1) {
-          result.audio = pid;
-          result.isAAC = false;
-        }
-        break;
-
-      case 0x24:
-        logger.warn('HEVC stream type found, not supported for now');
-        break;
-
-      default:
-        // logger.log('unknown stream type:' + data[offset]);
-        break;
-      }
-      // move to the next table entry
-      // skip past the elementary stream descriptors, if present
-      offset += ((data[offset + 3] & 0x0F) << 8 | data[offset + 4]) + 5;
-    }
-    return result;
-  }
-
-  _parsePES (stream) {
-    let i = 0;
-    let frag;
-    let pesFlags;
-    let pesLen;
-    let pesHdrLen;
-    let pesData;
-    let pesPts;
-    let pesDts;
-    let payloadStartOffset;
-    const data = stream.data;
-    // safety check
-    if (!stream || stream.size === 0) {
-      return null;
-    }
-
-    // we might need up to 19 bytes to read PES header
-    // if first chunk of data is less than 19 bytes, let's merge it with following ones until we get 19 bytes
-    // usually only one merge is needed (and this is rare ...)
-    while (data[0].length < 19 && data.length > 1) {
-      const newData = new Uint8Array(data[0].length + data[1].length);
-      newData.set(data[0]);
-      newData.set(data[1], data[0].length);
-      data[0] = newData;
-      data.splice(1, 1);
-    }
-    // retrieve PTS/DTS from first fragment
-    frag = data[0];
-    const pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
-    if (pesPrefix === 1) {
-      pesLen = (frag[4] << 8) + frag[5];
-      // if PES parsed length is not zero and greater than total received length, stop parsing. PES might be truncated
-      // minus 6 : PES header size
-      if (pesLen && pesLen > stream.size - 6) {
-        return null;
-      }
-
-      pesFlags = frag[7];
-      if (pesFlags & 0xC0) {
-        /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
-            as PTS / DTS is 33 bit we cannot use bitwise operator in JS,
-            as Bitwise operators treat their operands as a sequence of 32 bits */
-        pesPts = (frag[9] & 0x0E) * 536870912 +// 1 << 29
-          (frag[10] & 0xFF) * 4194304 +// 1 << 22
-          (frag[11] & 0xFE) * 16384 +// 1 << 14
-          (frag[12] & 0xFF) * 128 +// 1 << 7
-          (frag[13] & 0xFE) / 2;
-        // check if greater than 2^32 -1
-        if (pesPts > 4294967295) {
-          // decrement 2^33
-          pesPts -= 8589934592;
-        }
-        if (pesFlags & 0x40) {
-          pesDts = (frag[14] & 0x0E) * 536870912 +// 1 << 29
-            (frag[15] & 0xFF) * 4194304 +// 1 << 22
-            (frag[16] & 0xFE) * 16384 +// 1 << 14
-            (frag[17] & 0xFF) * 128 +// 1 << 7
-            (frag[18] & 0xFE) / 2;
-          // check if greater than 2^32 -1
-          if (pesDts > 4294967295) {
-            // decrement 2^33
-            pesDts -= 8589934592;
-          }
-          if (pesPts - pesDts > 60 * 90000) {
-            logger.warn(`${Math.round((pesPts - pesDts) / 90000)}s delta between PTS and DTS, align them`);
-            pesPts = pesDts;
-          }
-        } else {
-          pesDts = pesPts;
-        }
-      }
-      pesHdrLen = frag[8];
-      // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
-      payloadStartOffset = pesHdrLen + 9;
-
-      stream.size -= payloadStartOffset;
-      // reassemble PES packet
-      pesData = new Uint8Array(stream.size);
-      for (let j = 0, dataLen = data.length; j < dataLen; j++) {
-        frag = data[j];
-        let len = frag.byteLength;
-        if (payloadStartOffset) {
-          if (payloadStartOffset > len) {
-            // trim full frag if PES header bigger than frag
-            payloadStartOffset -= len;
-            continue;
-          } else {
-            // trim partial frag if PES header smaller than frag
-            frag = frag.subarray(payloadStartOffset);
-            len -= payloadStartOffset;
-            payloadStartOffset = 0;
-          }
-        }
-        pesData.set(frag, i);
-        i += len;
-      }
-      if (pesLen) {
-        // payload size : remove PES header + PES extension
-        pesLen -= pesHdrLen + 3;
-      }
-      return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
-    } else {
-      return null;
-    }
   }
 
   pushAccessUnit (avcSample, avcTrack) {
@@ -1177,6 +977,199 @@ class TSDemuxer implements Demuxer {
 
   _parseID3PES (pes) {
     this._id3Track.samples.push(pes);
+  }
+}
+
+function parsePAT (data, offset) {
+  // skip the PSI header and parse the first PMT entry
+  return (data[offset + 10] & 0x1F) << 8 | data[offset + 11];
+  // logger.log('PMT PID:'  + this._pmtId);
+}
+
+function parsePMT (data, offset, mpegSupported, isSampleAes) {
+  const result = { audio: -1, avc: -1, id3: -1, isAAC: true };
+  const sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
+  const tableEnd = offset + 3 + sectionLength - 4;
+  // to determine where the table is, we have to figure out how
+  // long the program info descriptors are
+  const programInfoLength = (data[offset + 10] & 0x0f) << 8 | data[offset + 11];
+  // advance the offset to the first entry in the mapping table
+  offset += 12 + programInfoLength;
+  while (offset < tableEnd) {
+    const pid = (data[offset + 1] & 0x1F) << 8 | data[offset + 2];
+    switch (data[offset]) {
+    case 0xcf: // SAMPLE-AES AAC
+      if (!isSampleAes) {
+        logger.log('unknown stream type:' + data[offset]);
+        break;
+      }
+      /* falls through */
+
+      // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
+    case 0x0f:
+      // logger.log('AAC PID:'  + pid);
+      if (result.audio === -1) {
+        result.audio = pid;
+      }
+
+      break;
+
+      // Packetized metadata (ID3)
+    case 0x15:
+      // logger.log('ID3 PID:'  + pid);
+      if (result.id3 === -1) {
+        result.id3 = pid;
+      }
+
+      break;
+
+    case 0xdb: // SAMPLE-AES AVC
+      if (!isSampleAes) {
+        logger.log('unknown stream type:' + data[offset]);
+        break;
+      }
+      /* falls through */
+
+      // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
+    case 0x1b:
+      // logger.log('AVC PID:'  + pid);
+      if (result.avc === -1) {
+        result.avc = pid;
+      }
+
+      break;
+
+      // ISO/IEC 11172-3 (MPEG-1 audio)
+      // or ISO/IEC 13818-3 (MPEG-2 halved sample rate audio)
+    case 0x03:
+    case 0x04:
+      // logger.log('MPEG PID:'  + pid);
+      if (!mpegSupported) {
+        logger.log('MPEG audio found, not supported in this browser for now');
+      } else if (result.audio === -1) {
+        result.audio = pid;
+        result.isAAC = false;
+      }
+      break;
+
+    case 0x24:
+      logger.warn('HEVC stream type found, not supported for now');
+      break;
+
+    default:
+      // logger.log('unknown stream type:' + data[offset]);
+      break;
+    }
+    // move to the next table entry
+    // skip past the elementary stream descriptors, if present
+    offset += ((data[offset + 3] & 0x0F) << 8 | data[offset + 4]) + 5;
+  }
+  return result;
+}
+
+function parsePES (stream) {
+  let i = 0;
+  let frag;
+  let pesFlags;
+  let pesLen;
+  let pesHdrLen;
+  let pesData;
+  let pesPts;
+  let pesDts;
+  let payloadStartOffset;
+  const data = stream.data;
+  // safety check
+  if (!stream || stream.size === 0) {
+    return null;
+  }
+
+  // we might need up to 19 bytes to read PES header
+  // if first chunk of data is less than 19 bytes, let's merge it with following ones until we get 19 bytes
+  // usually only one merge is needed (and this is rare ...)
+  while (data[0].length < 19 && data.length > 1) {
+    const newData = new Uint8Array(data[0].length + data[1].length);
+    newData.set(data[0]);
+    newData.set(data[1], data[0].length);
+    data[0] = newData;
+    data.splice(1, 1);
+  }
+  // retrieve PTS/DTS from first fragment
+  frag = data[0];
+  const pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
+  if (pesPrefix === 1) {
+    pesLen = (frag[4] << 8) + frag[5];
+    // if PES parsed length is not zero and greater than total received length, stop parsing. PES might be truncated
+    // minus 6 : PES header size
+    if (pesLen && pesLen > stream.size - 6) {
+      return null;
+    }
+
+    pesFlags = frag[7];
+    if (pesFlags & 0xC0) {
+      /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
+          as PTS / DTS is 33 bit we cannot use bitwise operator in JS,
+          as Bitwise operators treat their operands as a sequence of 32 bits */
+      pesPts = (frag[9] & 0x0E) * 536870912 +// 1 << 29
+        (frag[10] & 0xFF) * 4194304 +// 1 << 22
+        (frag[11] & 0xFE) * 16384 +// 1 << 14
+        (frag[12] & 0xFF) * 128 +// 1 << 7
+        (frag[13] & 0xFE) / 2;
+      // check if greater than 2^32 -1
+      if (pesPts > 4294967295) {
+        // decrement 2^33
+        pesPts -= 8589934592;
+      }
+      if (pesFlags & 0x40) {
+        pesDts = (frag[14] & 0x0E) * 536870912 +// 1 << 29
+          (frag[15] & 0xFF) * 4194304 +// 1 << 22
+          (frag[16] & 0xFE) * 16384 +// 1 << 14
+          (frag[17] & 0xFF) * 128 +// 1 << 7
+          (frag[18] & 0xFE) / 2;
+        // check if greater than 2^32 -1
+        if (pesDts > 4294967295) {
+          // decrement 2^33
+          pesDts -= 8589934592;
+        }
+        if (pesPts - pesDts > 60 * 90000) {
+          logger.warn(`${Math.round((pesPts - pesDts) / 90000)}s delta between PTS and DTS, align them`);
+          pesPts = pesDts;
+        }
+      } else {
+        pesDts = pesPts;
+      }
+    }
+    pesHdrLen = frag[8];
+    // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
+    payloadStartOffset = pesHdrLen + 9;
+
+    stream.size -= payloadStartOffset;
+    // reassemble PES packet
+    pesData = new Uint8Array(stream.size);
+    for (let j = 0, dataLen = data.length; j < dataLen; j++) {
+      frag = data[j];
+      let len = frag.byteLength;
+      if (payloadStartOffset) {
+        if (payloadStartOffset > len) {
+          // trim full frag if PES header bigger than frag
+          payloadStartOffset -= len;
+          continue;
+        } else {
+          // trim partial frag if PES header smaller than frag
+          frag = frag.subarray(payloadStartOffset);
+          len -= payloadStartOffset;
+          payloadStartOffset = 0;
+        }
+      }
+      pesData.set(frag, i);
+      i += len;
+    }
+    if (pesLen) {
+      // payload size : remove PES header + PES extension
+      pesLen -= pesHdrLen + 3;
+    }
+    return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
+  } else {
+    return null;
   }
 }
 

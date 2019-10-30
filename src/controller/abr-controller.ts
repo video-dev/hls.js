@@ -5,7 +5,7 @@
  */
 
 import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
+import { BufferHelper, Bufferable } from '../utils/buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
@@ -13,43 +13,44 @@ import Fragment from '../loader/fragment';
 import { LoaderStats } from '../types/loader';
 import LevelDetails from '../loader/level-details';
 import Hls from '../hls';
-import { FragLoadingData, MediaAttachedData, FragLoadedData, FragBufferedData, ErrorData } from '../types/events';
+import { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
 
 const { performance } = self;
 
 class AbrController {
   protected hls: Hls;
-  private _media: HTMLMediaElement | null = null;
   private lastLoadedFragLevel: number = 0;
   private _nextAutoLevel: number = -1;
   private timer?: number;
-  private _bwEstimator: any | null = null;
+  private readonly _bwEstimator: EwmaBandWidthEstimator;
   private onCheck: Function = this._abandonRulesCheck.bind(this);
   private fragCurrent: Fragment | null = null;
   private bitrateTestDelay: number = 0;
 
   constructor (hls: Hls) {
     this.hls = hls;
+
+    const config = hls.config;
+    this._bwEstimator = new EwmaBandWidthEstimator(config.abrEwmaSlowVoD, config.abrEwmaFastVoD, config.abrEwmaDefaultEstimate);
+
     this._registerListeners();
   }
 
   private _registerListeners () {
     const { hls } = this;
-    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.on(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.on(Events.ERROR, this.onError, this);
   }
 
   private _unregisterListeners () {
     const { hls } = this;
-    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
   }
 
@@ -58,44 +59,22 @@ class AbrController {
     this.clearTimer();
   }
 
-  onMediaAttached (data: MediaAttachedData) {
-    this._media = data.media;
-  }
-
-  onMediaDetached () {
-    this._media = null;
-  }
-
-  onFragLoading (data: FragLoadingData) {
+  private onFragLoading (data: FragLoadingData) {
     const frag = data.frag;
     if (frag.type === 'main') {
       if (!this.timer) {
         this.fragCurrent = frag;
         this.timer = setInterval(this.onCheck, 100);
       }
+    }
+  }
 
-      // lazy init of BwEstimator, rationale is that we use different params for Live/VoD
-      // so we need to wait for stream manifest / playlist type to instantiate it.
-      if (!this._bwEstimator) {
-        const hls = this.hls;
-        const config = hls.config;
-        const level = hls.levels[frag.level];
-        let isLive = false;
-        if (level.details) {
-          isLive = level.details.live;
-        }
-
-        let ewmaFast;
-        let ewmaSlow;
-        if (isLive) {
-          ewmaFast = config.abrEwmaFastLive;
-          ewmaSlow = config.abrEwmaSlowLive;
-        } else {
-          ewmaFast = config.abrEwmaFastVoD;
-          ewmaSlow = config.abrEwmaSlowVoD;
-        }
-        this._bwEstimator = new EwmaBandWidthEstimator(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
-      }
+  private onLevelLoaded (data: LevelLoadedData) {
+    const config = this.hls.config;
+    if (data.details.live) {
+      this._bwEstimator.update(config.abrEwmaSlowLive, config.abrEwmaFastLive);
+    } else {
+      this._bwEstimator.update(config.abrEwmaSlowVoD, config.abrEwmaFastVoD);
     }
   }
 
@@ -105,9 +84,9 @@ class AbrController {
       TODO: Can we enhance this method when progressively streaming?
       TODO: Lots of magic numbers, are any suitable for configuration?
     */
-  _abandonRulesCheck () {
-    const { fragCurrent: frag, hls, _media: media } = this;
-    const { autoLevelEnabled, config } = hls;
+  private _abandonRulesCheck () {
+    const { fragCurrent: frag, hls } = this;
+    const { autoLevelEnabled, config, media } = hls;
     if (!frag || !media) {
       return;
     }
@@ -173,14 +152,9 @@ class AbrController {
     if (fragLevelNextLoadedDelay >= fragLoadedDelay) {
       return;
     }
-    let bwEstimate = this._bwEstimator.getEstimate();
-    if (Number.isFinite(bwEstimate)) {
-      bwEstimate = (bwEstimate / 1024).toFixed(3);
-    } else {
-      bwEstimate = 'Unknown';
-    }
+    const bwEstimate: number = this._bwEstimator.getEstimate();
     logger.warn(`Fragment ${frag.sn} of level ${frag.level} is loading too slowly and will cause an underbuffer; aborting and switching to level ${nextLoadLevel}
-      Current BW estimate: ${bwEstimate} Kb/s
+      Current BW estimate: ${Number.isFinite(bwEstimate) ? (bwEstimate / 1024).toFixed(3) : 'Unknown'} Kb/s
       Estimated load time for current fragment: ${fragLoadedDelay.toFixed(3)} s
       Estimated load time for the next fragment: ${fragLevelNextLoadedDelay.toFixed(3)} s
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s`);
@@ -188,10 +162,10 @@ class AbrController {
     this._bwEstimator.sample(requestDelay, stats.loaded);
     loader.abort();
     this.clearTimer();
-    hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
+    hls.emit(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
   }
 
-  onFragLoaded (data: FragLoadedData) {
+  private onFragLoaded (data: FragLoadedData) {
     const frag = data.frag;
     const stats = frag.stats;
     if (frag.type === 'main' && Number.isFinite(frag.sn as number)) {
@@ -217,7 +191,7 @@ class AbrController {
     }
   }
 
-  onFragBuffered (data: FragBufferedData) {
+  private onFragBuffered (data: FragBufferedData) {
     const frag = data.frag;
     const stats = frag.stats;
 
@@ -242,7 +216,7 @@ class AbrController {
     }
   }
 
-  onError (data: ErrorData) {
+  private onError (data: ErrorData) {
     // stop timer in case of frag loading error
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:
@@ -279,17 +253,17 @@ class AbrController {
   }
 
   get _nextABRAutoLevel () {
-    const { fragCurrent, hls, lastLoadedFragLevel: currentLevel, _media: video } = this;
-    const { maxAutoLevel, levels, config, minAutoLevel } = hls;
+    const { fragCurrent, hls, lastLoadedFragLevel: currentLevel } = this;
+    const { maxAutoLevel, levels, config, minAutoLevel, media } = hls;
     const currentFragDuration = fragCurrent ? fragCurrent.duration : 0;
-    const pos = (video ? video.currentTime : 0);
+    const pos = (media ? media.currentTime : 0);
 
-    // playbackRate is the absolute value of the playback rate; if video.playbackRate is 0, we use 1 to load as
+    // playbackRate is the absolute value of the playback rate; if media.playbackRate is 0, we use 1 to load as
     // if we're playing back at the normal rate.
-    const playbackRate = ((video && (video.playbackRate !== 0)) ? Math.abs(video.playbackRate) : 1.0);
+    const playbackRate = ((media && (media.playbackRate !== 0)) ? Math.abs(media.playbackRate) : 1.0);
     const avgbw = this._bwEstimator ? this._bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate;
     // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
-    const bufferStarvationDelay = (BufferHelper.bufferInfo(video, pos, config.maxBufferHole).end - pos) / playbackRate;
+    const bufferStarvationDelay = (BufferHelper.bufferInfo(media as Bufferable, pos, config.maxBufferHole).end - pos) / playbackRate;
 
     // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
     let bestLevel = this._findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
@@ -324,7 +298,7 @@ class AbrController {
     }
   }
 
-  _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Array<any>): number {
+  private _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Array<any>): number {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
 
