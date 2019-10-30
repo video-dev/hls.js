@@ -17,6 +17,7 @@ import SampleAesDecrypter from './sample-aes';
 // import Hex from '../utils/hex';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { utf8ArrayToStr } from './id3';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -691,9 +692,7 @@ class TSDemuxer {
             endOfCaptions = true;
 
             if (payloadSize > 16) {
-              let uuidStrArray = [];
-              let userDataPayloadBytes = [];
-
+              const uuidStrArray = [];
               for (i = 0; i < 16; i++) {
                 uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
 
@@ -701,17 +700,18 @@ class TSDemuxer {
                   uuidStrArray.push('-');
                 }
               }
-
-              for (i = 16; i < payloadSize; i++) {
-                userDataPayloadBytes.push(expGolombDecoder.readUByte());
+              const length = payloadSize - 16;
+              const userDataPayloadBytes = new Uint8Array(length);
+              for (i = 0; i < length; i++) {
+                userDataPayloadBytes[i] = expGolombDecoder.readUByte();
               }
 
               this._insertSampleInOrder(this._txtTrack.samples, {
                 pts: pes.pts,
                 payloadType: payloadType,
                 uuid: uuidStrArray.join(''),
-                userData: String.fromCharCode.apply(null, userDataPayloadBytes),
-                userDataBytes: userDataPayloadBytes
+                userDataBytes: userDataPayloadBytes,
+                userData: utf8ArrayToStr(userDataPayloadBytes.buffer)
               });
             }
           } else if (payloadSize < expGolombDecoder.bytesAvailable) {
