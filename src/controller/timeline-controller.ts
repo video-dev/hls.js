@@ -294,6 +294,7 @@ class TimelineController extends EventHandler {
         if (!currentTrack.cues.getCueById(cue.id)) {
           try {
             currentTrack.addCue(cue);
+            if (!currentTrack.cues.getCueById(cue.id)) throw new Error('browser which doesnt throw error when cues structure is invalid');
           } catch (err) {
             const textTrackCue = new (window as any).TextTrackCue(cue.startTime, cue.endTime, cue.text);
             textTrackCue.id = cue.id;
