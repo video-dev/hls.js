@@ -13,7 +13,7 @@ type BufferTimeRange = {
   end: number
 };
 
-type Bufferable = {
+export type Bufferable = {
   buffered: TimeRanges
 };
 

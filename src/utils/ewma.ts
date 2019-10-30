@@ -10,11 +10,11 @@ class EWMA {
   private totalWeight_: number;
 
   //  About half of the estimated value will be from the last |halfLife| samples by weight.
-  constructor (halfLife: number) {
+  constructor (halfLife: number, estimate: number = 0, weight: number = 0) {
     // Larger values of alpha expire historical data more slowly.
     this.alpha_ = halfLife ? Math.exp(Math.log(0.5) / halfLife) : 0;
-    this.estimate_ = 0;
-    this.totalWeight_ = 0;
+    this.estimate_ = estimate;
+    this.totalWeight_ = weight;
   }
 
   sample (weight: number, value: number) {

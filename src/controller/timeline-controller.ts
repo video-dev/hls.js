@@ -448,11 +448,12 @@ class TimelineController {
     const { frag } = data;
     if (frag.type === 'subtitle') {
       if (!Number.isFinite(this.initPTS[frag.cc])) {
-        this.unparsedVttFrags.push(data as FragLoadedData);
+        this.unparsedVttFrags.push(data as unknown as FragLoadedData);
         return;
       }
 
-      this.onFragLoaded(data as FragLoadedData);
+      debugger;
+      this.onFragLoaded(data as unknown as FragLoadedData);
     }
   }
 

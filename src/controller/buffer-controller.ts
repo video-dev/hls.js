@@ -149,7 +149,7 @@ export default class BufferController extends EventHandler {
       this.tracks = {};
     }
 
-    this.hls.trigger(Events.MEDIA_DETACHED);
+    this.hls.emit(Events.MEDIA_DETACHED);
   }
 
   onBufferReset () {
@@ -220,7 +220,7 @@ export default class BufferController extends EventHandler {
           timeRanges[type] = sourceBuffer[type].buffered;
         }
         this.appendError = 0;
-        this.hls.trigger(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, chunkMeta });
+        this.hls.emit(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, chunkMeta });
       },
       onError: (err) => {
         // in case any error occured while appending, put back segment in segments table
@@ -249,7 +249,7 @@ export default class BufferController extends EventHandler {
             event.fatal = true;
           }
         }
-        hls.trigger(Events.ERROR, event);
+        hls.emit(Events.ERROR, event);
       }
     };
     operationQueue.append(operation, type as SourceBufferName);
@@ -260,7 +260,7 @@ export default class BufferController extends EventHandler {
     const flushOperation = (type): BufferOperation => ({
       execute: this.removeExecutor.bind(this, type, data.startOffset, data.endOffset),
       onComplete: () => {
-        this.hls.trigger(Events.BUFFER_FLUSHED);
+        this.hls.emit(Events.BUFFER_FLUSHED);
       },
       onError: (e) => {
         logger.warn(`[buffer-controller]: Failed to remove from ${type} SourceBuffer`, e);
@@ -290,7 +290,7 @@ export default class BufferController extends EventHandler {
     logger.log('[buffer-controller]: All fragment chunks received, enqueueing operation to signal fragment buffered');
     const onUnblocked = () => {
       frag.stats.buffering.end = self.performance.now();
-      this.hls.trigger(Events.FRAG_BUFFERED, { frag, stats: frag.stats, id: frag.type });
+      this.hls.emit(Events.FRAG_BUFFERED, { frag, stats: frag.stats, id: frag.type });
     };
     this.blockBuffers(onUnblocked, buffersAppendedTo);
     this.flushLiveBackBuffer();
@@ -487,24 +487,29 @@ export default class BufferController extends EventHandler {
           };
         } catch (err) {
           logger.error(`error while trying to add sourceBuffer:${err.message}`);
-          this.hls.trigger(Events.ERROR, {
+          this.hls.emit(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_ADD_CODEC_ERROR,
             fatal: false,
-            err,
+            error: err,
             mimeType: mimeType
           });
         }
       }
     }
-    this.hls.trigger(Events.BUFFER_CREATED, { tracks: this.tracks });
+    this.hls.emit(Events.BUFFER_CREATED, { tracks: this.tracks });
   }
 
   // Keep as arrow functions so that we can directly reference these functions directly as event listeners
   private _onMediaSourceOpen = () => {
     const { hls, media, mediaSource } = this;
     logger.log('media source opened');
-    hls.trigger(Events.MEDIA_ATTACHED, { media });
+    if (media) {
+      hls.emit(Events.MEDIA_ATTACHED, { media });
+    } else {
+      logger.log('[buffer-controller]: Media source opened, and no media was attached');
+    }
+
     if (mediaSource) {
       // once received, don't listen anymore to sourceopen event
       mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
@@ -533,7 +538,7 @@ export default class BufferController extends EventHandler {
     logger.error(`[buffer-controller]: ${type} SourceBuffer error`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // SourceBuffer errors are not necessarily fatal; if so, the HTMLMediaElement will fire an error event
-    this.hls.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false });
+    this.hls.emit(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false });
     // updateend is always fired after error, so we'll allow that to shift the current operation off of the queue
     const operation = this.operationQueue.current(type);
     if (operation) {
