@@ -897,7 +897,7 @@ export default class StreamController extends BaseStreamController {
       this.bufferFragmentData(audio, frag, chunkMeta);
     }
 
-    if (id3) {
+    if (id3 && id3.samples && id3.samples.length) {
       const emittedID3: any = id3;
       emittedID3.frag = frag;
       emittedID3.id = id;
