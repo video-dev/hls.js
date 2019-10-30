@@ -38,6 +38,7 @@ export class Level {
   public height: number;
   public id: number;
   public loadError: number = 0;
+  public loaded?: any;
   public name: string | undefined;
   public realBitrate: number = 0;
   public textGroupIds?: string[];

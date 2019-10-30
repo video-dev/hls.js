@@ -388,7 +388,7 @@ class PlaylistLoader {
         fatal: false,
         url: url,
         reason: 'no fragments found in level',
-        level: typeof context.level === "number" ? context.level : undefined
+        level: typeof context.level === 'number' ? context.level : undefined
       });
       return;
     }
