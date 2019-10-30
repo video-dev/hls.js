@@ -887,7 +887,7 @@ export default class StreamController extends BaseStreamController {
         this.backtrack(frag, video.startPTS);
         return;
       } else {
-        frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, video.startPTS, video.endPTS, video.startDTS, video.endDTS);
+        frag.setElementaryStreamInfo(video.type as ElementaryStreamTypes, video.startPTS, video.endPTS, video.startDTS, video.endDTS);
         this.bufferFragmentData(video, frag, chunkMeta);
       }
     }
