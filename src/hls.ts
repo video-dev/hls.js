@@ -182,11 +182,6 @@ export default class Hls implements HlsEventEmitter {
     return this._emitter.emit(event, ...args);
   }
 
-  // This is a proxy for emit that is temporary to keep stuff compiling
-  trigger<E extends Events> (event: E, ...args: Parameters<HlsListeners[E]>): boolean {
-    return this._emitter.emit(event, ...args);
-  }
-
   listenerCount<E extends Events> (event: E): number {
     return this._emitter.listenerCount(event);
   }

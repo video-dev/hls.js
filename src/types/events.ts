@@ -147,13 +147,14 @@ export interface CuesParsedData {
   track: string
 }
 
+interface NonNativeTextTrack {
+  label: any
+  kind: string
+  default: boolean
+}
+
 export interface NonNativeTextTracksData {
-  tracks: Array<{
-    _id: string
-    label: any
-    kind: string
-    default: boolean
-  }>
+  tracks: Array<NonNativeTextTrack>
 }
 
 export interface InitPTSFoundData {
@@ -176,11 +177,19 @@ export interface FragLoadedData {
 export interface FragDecryptedData {
   frag: Fragment
   payload: ArrayBuffer
+  stats: {
+    tstart: number
+    tdecrypt: number
+  }
 }
 
 // TODO: What are samples type?
 export interface FragParsingUserdataData {
   samples: Array<any>
+}
+
+export interface FragBufferedData {
+  frag: Fragment
 }
 
 export interface FPSDropLevelCappingData {

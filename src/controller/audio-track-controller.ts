@@ -100,7 +100,7 @@ class AudioTrackController extends EventHandler {
   protected onManifestParsed (data: ManifestParsedData): void {
     const tracks = this.tracks = data.audioTracks || [];
     const audioTracksUpdated: AudioTracksUpdated = { audioTracks: tracks };
-    this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
+    this.hls.emit(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
   }
 
   /**
@@ -244,7 +244,7 @@ class AudioTrackController extends EventHandler {
     this._trackId = newId;
 
     const { url, type, id } = audioTrack;
-    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
+    this.hls.emit(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
     this._loadTrackDetailsIfNeeded(audioTrack);
   }
 
@@ -297,7 +297,7 @@ class AudioTrackController extends EventHandler {
     if (!trackFound) {
       logger.error(`[audio-track-controller]: No track found for running audio group-ID: ${this.audioGroupId}`);
 
-      this.hls.trigger(Events.ERROR, {
+      this.hls.emit(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true
@@ -316,7 +316,7 @@ class AudioTrackController extends EventHandler {
       const { url, id } = audioTrack;
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
-      this.hls.trigger(Events.AUDIO_TRACK_LOADING, { url, id });
+      this.hls.emit(Events.AUDIO_TRACK_LOADING, { url, id });
     }
   }
 
