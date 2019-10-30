@@ -876,8 +876,10 @@ export default class StreamController extends BaseStreamController {
         this._bufferInitSegment(level, initSegment.tracks, frag, chunkMeta);
         hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
       }
+
+      // This would be nice if Number.isFinite acted as a typeguard, but it doesn't. See: https://github.com/Microsoft/TypeScript/issues/10038
       if (Number.isFinite(initSegment.initPTS as number)) {
-        hls.trigger(Events.INIT_PTS_FOUND, { frag, id, initPTS: initSegment.initPTS });
+        hls.trigger(Events.INIT_PTS_FOUND, { frag, id, initPTS: initSegment.initPTS as number });
       }
     }
 
