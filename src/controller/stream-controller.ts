@@ -887,7 +887,7 @@ export default class StreamController extends BaseStreamController {
         this.backtrack(frag, video.startPTS);
         return;
       } else {
-        frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, video.startPTS, video.endPTS, video.startDTS, video.endDTS);
+        frag.setElementaryStreamInfo(video.type as ElementaryStreamTypes, video.startPTS, video.endPTS, video.startDTS, video.endDTS);
         this.bufferFragmentData(video, frag, chunkMeta);
       }
     }
@@ -897,7 +897,7 @@ export default class StreamController extends BaseStreamController {
       this.bufferFragmentData(audio, frag, chunkMeta);
     }
 
-    if (id3) {
+    if (id3 && id3.samples && id3.samples.length) {
       const emittedID3: any = id3;
       emittedID3.frag = frag;
       emittedID3.id = id;
