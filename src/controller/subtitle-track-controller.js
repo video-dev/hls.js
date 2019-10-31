@@ -76,7 +76,7 @@ class SubtitleTrackController extends EventHandler {
     textTracks.forEach((track) => {
       clearCurrentCues(track);
     });
-    // Disable all subtitle tracks before detachment so when reattached only the
+    // Disable all subtitle tracks before detachment so when reattached only tracks in that content are enabled.
     this.subtitleTrack = -1;
     this.media = null;
   }
