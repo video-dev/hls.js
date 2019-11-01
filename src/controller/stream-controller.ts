@@ -30,6 +30,7 @@ export default class StreamController extends BaseStreamController {
   private fragPlaying: Fragment | null = null;
   private previouslyPaused: boolean = false;
   private immediateSwitch: boolean = false;
+  private onvplaying: Function | null = null;
   private onvseeking: Function | null = null;
   private onvseeked: Function | null = null;
   private onvended: Function | null = null;
@@ -257,6 +258,10 @@ export default class StreamController extends BaseStreamController {
     }
   }
 
+  getAppendedFrag (position) {
+    return this.fragmentTracker.getAppendedFrag(position, PlaylistLoader.LevelType.MAIN);
+  }
+
   getBufferedFrag (position) {
     return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
   }
@@ -331,7 +336,7 @@ export default class StreamController extends BaseStreamController {
     if (media && media.readyState) {
       let fetchdelay;
       let nextBufferedFrag;
-      const fragPlayingCurrent = this.getBufferedFrag(media.currentTime);
+      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
       if (fragPlayingCurrent && fragPlayingCurrent.startPTS > 1) {
         // flush buffer preceding current fragment (flush until current fragment start offset)
         // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
@@ -384,9 +389,11 @@ export default class StreamController extends BaseStreamController {
 
   onMediaAttached (data) {
     const media = this.media = this.mediaBuffer = data.media;
+    this.onvplaying = this.onMediaPlaying.bind(this);
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvseeked = this.onMediaSeeked.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
+    media.addEventListener('playing', this.onvplaying);
     media.addEventListener('seeking', this.onvseeking);
     media.addEventListener('seeked', this.onvseeked);
     media.addEventListener('ended', this.onvended);
@@ -417,14 +424,20 @@ export default class StreamController extends BaseStreamController {
     }
     // remove video listeners
     if (media) {
+      media.removeEventListener('playing', this.onvplaying);
       media.removeEventListener('seeking', this.onvseeking);
       media.removeEventListener('seeked', this.onvseeked);
       media.removeEventListener('ended', this.onvended);
-      this.onvseeking = this.onvseeked = this.onvended = null;
+      this.onvplaying = this.onvseeking = this.onvseeked = this.onvended = null;
     }
     this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
     this.stopLoad();
+  }
+
+  onMediaPlaying () {
+    // tick to speed up FRAG_CHANGED triggering
+    this.tick();
   }
 
   onMediaSeeked () {
@@ -434,7 +447,7 @@ export default class StreamController extends BaseStreamController {
       this.log(`Media seeked to ${currentTime.toFixed(3)}`);
     }
 
-    // tick to speed up FRAGMENT_PLAYING triggering
+    // tick to speed up FRAG_CHANGED triggering
     this.tick();
   }
 
@@ -982,7 +995,7 @@ export default class StreamController extends BaseStreamController {
   private checkFragmentChanged () {
     const video = this.media;
     let fragPlayingCurrent;
-    if (video && video.readyState && video.seeking === false) {
+    if (video && video.readyState > 1 && video.seeking === false) {
       const currentTime = video.currentTime;
       /* if video element is in seeked state, currentTime can only increase.
         (assuming that playback rate is positive ...)
@@ -992,14 +1005,14 @@ export default class StreamController extends BaseStreamController {
       */
 
       if (BufferHelper.isBuffered(video, currentTime)) {
-        fragPlayingCurrent = this.getBufferedFrag(currentTime);
+        fragPlayingCurrent = this.getAppendedFrag(currentTime);
       } else if (BufferHelper.isBuffered(video, currentTime + 0.1)) {
         /* ensure that FRAG_CHANGED event is triggered at startup,
           when first video frame is displayed and playback is paused.
           add a tolerance of 100ms, in case current position is not buffered,
           check if current pos+100ms is buffered and use that buffer range
           for FRAG_CHANGED event reporting */
-        fragPlayingCurrent = this.getBufferedFrag(currentTime + 0.1);
+        fragPlayingCurrent = this.getAppendedFrag(currentTime + 0.1);
       }
       if (fragPlayingCurrent) {
         const fragPlaying = fragPlayingCurrent;
@@ -1032,9 +1045,9 @@ export default class StreamController extends BaseStreamController {
   get currentLevel () {
     const media = this.media;
     if (media) {
-      const frag = this.getBufferedFrag(media.currentTime);
-      if (frag) {
-        return frag.level;
+      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
+      if (fragPlayingCurrent) {
+        return fragPlayingCurrent.level;
       }
     }
     return -1;
@@ -1044,7 +1057,8 @@ export default class StreamController extends BaseStreamController {
     const media = this.media;
     if (media) {
       // first get end range of current fragment
-      return this.followingBufferedFrag(this.getBufferedFrag(media.currentTime));
+      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
+      return this.followingBufferedFrag(fragPlayingCurrent);
     } else {
       return null;
     }

@@ -3,6 +3,7 @@ import Event from '../events';
 import Fragment from '../loader/fragment';
 import { SourceBufferName } from '../types/buffer';
 import { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../types/fragment-tracker';
+import { PlaylistLevelType } from '../types/loader';
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -12,6 +13,7 @@ export const FragmentState = {
 };
 
 export class FragmentTracker extends EventHandler {
+  private activeFragment: Fragment | null = null;
   private fragments: Partial<Record<string, FragmentEntity>> = Object.create(null);
   private timeRanges: { [key in SourceBufferName]: TimeRanges } = Object.create(null);
   private bufferPadding: number = 0.2;
@@ -34,13 +36,29 @@ export class FragmentTracker extends EventHandler {
   }
 
   /**
-   * Return a Fragment that match the position and levelType.
+   * Return a Fragment with an appended range that matches the position and levelType.
    * If not found any Fragment, return null
    * @param {number} position
    * @param {LevelType} levelType
    * @returns {Fragment|null}
    */
-  getBufferedFrag (position: number, levelType) : Fragment | null {
+  getAppendedFrag (position: number, levelType: PlaylistLevelType) : Fragment | null {
+    const { activeFragment } = this;
+    if (activeFragment && activeFragment.start <= position && position <= activeFragment.appendedPTS) {
+      return activeFragment;
+    }
+    return this.getBufferedFrag(position, levelType);
+  }
+
+  /**
+   * Return a buffered Fragment that matches the position and levelType.
+   * A buffered Fragment is one whose loading, parsing and appending is done (completed or "partial" meaning aborted).
+   * If not found any Fragment, return null
+   * @param {number} position
+   * @param {LevelType} levelType
+   * @returns {Fragment|null}
+   */
+  getBufferedFrag (position: number, levelType: PlaylistLevelType) : Fragment | null {
     const { fragments } = this;
     const bufferedFrags = Object.keys(fragments).filter(key => {
       const fragmentEntity = fragments[key];
@@ -249,11 +267,16 @@ export class FragmentTracker extends EventHandler {
    * Fires when the buffer is updated
    */
   onBufferAppended (e): void {
+    const { frag, timeRanges } = e;
+    this.activeFragment = frag;
     // Store the latest timeRanges loaded in the buffer
-    this.timeRanges = e.timeRanges;
-    Object.keys(this.timeRanges).forEach(elementaryStream => {
-      const timeRange = this.timeRanges[elementaryStream];
+    this.timeRanges = timeRanges;
+    Object.keys(timeRanges).forEach(elementaryStream => {
+      const timeRange = timeRanges[elementaryStream];
       this.detectEvictedFragments(elementaryStream, timeRange);
+      for (let i = 0; i < timeRange.length; i++) {
+        frag.appendedPTS = Math.max(timeRange.end(i), frag.appendedPTS || 0);
+      }
     });
   }
 
