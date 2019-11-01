@@ -77,7 +77,7 @@ export function updateFragPTSDTS (details: LevelDetails, frag: Fragment, startPT
   const drift = startPTS - frag.start;
   frag.start = frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
-  frag.endPTS = endPTS;
+  frag.endPTS = frag.appendedPTS = endPTS;
   frag.startDTS = startDTS;
   frag.endDTS = endDTS;
   frag.duration = endPTS - startPTS;
