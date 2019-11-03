@@ -13,7 +13,7 @@ const TIME_UNIT_REGEX = /^(\d*(?:\.\d*)?)(h|m|s|ms|f|t)$/;
 
 export function parseIMSC1 (payload: ArrayBuffer, syncPTS: number, callBack: (cues: Array<VTTCue>) => any, errorCallBack: (error: Error) => any) {
   const results = findBox(new Uint8Array(payload), ['mdat']);
-  if (results === null || results.length === 0) {
+  if (results.length === 0) {
     errorCallBack(new Error('Could not parse IMSC1 mdat'));
     return;
   }

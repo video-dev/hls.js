@@ -220,7 +220,7 @@ export default class BufferController extends EventHandler {
           timeRanges[type] = sourceBuffer[type].buffered;
         }
         this.appendError = 0;
-        this.hls.emit(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, chunkMeta });
+        this.hls.emit(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, frag, chunkMeta });
       },
       onError: (err) => {
         // in case any error occured while appending, put back segment in segments table
@@ -279,11 +279,15 @@ export default class BufferController extends EventHandler {
     const { frag } = data;
     const buffersAppendedTo: Array<SourceBufferName> = [];
 
-    if (frag.elementaryStreams[ElementaryStreamTypes.AUDIO]) {
-      buffersAppendedTo.push('audio');
-    }
-    if (frag.elementaryStreams[ElementaryStreamTypes.VIDEO]) {
-      buffersAppendedTo.push('video');
+    if (frag.elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO]) {
+      buffersAppendedTo.push('audiovideo');
+    } else {
+      if (frag.elementaryStreams[ElementaryStreamTypes.AUDIO]) {
+        buffersAppendedTo.push('audio');
+      }
+      if (frag.elementaryStreams[ElementaryStreamTypes.VIDEO]) {
+        buffersAppendedTo.push('video');
+      }
     }
     console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
 
