@@ -1,29 +1,48 @@
 import { Events } from '../events';
-import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 import { computeReloadInterval } from './level-helper';
 import { MediaPlaylist } from '../types/media-playlist';
 import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdated } from '../types/events';
+import { ComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
-class SubtitleTrackController extends EventHandler {
+class SubtitleTrackController implements ComponentAPI {
+  private hls: Hls;
   private tracks: MediaPlaylist[];
   private trackId: number = -1;
   private media: HTMLMediaElement | null = null;
   private stopped: boolean = true;
-  private subtitleDisplay: boolean = true; // Enable/disable subtitle display rendering
   private queuedDefaultTrack?: number;
   private trackChangeListener: () => void = () => this._onTextTracksChanged();
   private useTextTrackPolling: boolean = false;
   private subtitlePollingInterval: number = -1;
   private timer: number | null = null;
 
-  constructor (hls) {
-    super(hls,
-      Events.MEDIA_ATTACHED,
-      Events.MEDIA_DETACHING,
-      Events.MANIFEST_LOADED,
-      Events.SUBTITLE_TRACK_LOADED);
+  public subtitleDisplay: boolean = true; // Enable/disable subtitle display rendering
+
+  constructor (hls: Hls) {
+    this.hls = hls;
     this.tracks = [];
+
+    this._registerListeners();
+  }
+
+  public destroy () {
+    this._unregisterListeners();
+  }
+
+  private _registerListeners () {
+    this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    this.hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    this.hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    this.hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
+  }
+
+  private _unregisterListeners () {
+    this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    this.hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
   }
 
   // Listen for subtitle track change, then extract the current track ID.

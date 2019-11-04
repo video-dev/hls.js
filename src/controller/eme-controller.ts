@@ -3,14 +3,14 @@
  *
  * DRM support for Hls.js
  */
-
-import EventHandler from '../event-handler';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
 import { EMEControllerConfig } from '../config';
 import { KeySystems, MediaKeyFunc } from '../utils/mediakeys-helper';
+import Hls from '../hls';
+import { ComponentAPI } from '../types/component-api';
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
@@ -79,7 +79,8 @@ interface MediaKeysListItem {
  * @class
  * @constructor
  */
-class EMEController extends EventHandler {
+class EMEController implements ComponentAPI {
+  private hls: Hls;
   private _widevineLicenseUrl?: string;
   private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
   private _emeEnabled: boolean;
@@ -95,18 +96,32 @@ class EMEController extends EventHandler {
      * @constructs
      * @param {Hls} hls Our Hls.js instance
      */
-  constructor (hls) {
-    super(hls,
-      Events.MEDIA_ATTACHED,
-      Events.MEDIA_DETACHED,
-      Events.MANIFEST_PARSED
-    );
+  constructor (hls: Hls) {
+    this.hls = hls;
     this._config = hls.config;
 
     this._widevineLicenseUrl = this._config.widevineLicenseUrl;
     this._licenseXhrSetup = this._config.licenseXhrSetup;
     this._emeEnabled = this._config.emeEnabled;
     this._requestMediaKeySystemAccess = this._config.requestMediaKeySystemAccessFunc;
+
+    this._registerListeners();
+  }
+
+  public destroy () {
+    this._unregisterListeners();
+  }
+
+  private _registerListeners () {
+    this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    this.hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+  }
+
+  private _unregisterListeners () {
+    this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    this.hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
   }
 
   /**
@@ -258,7 +273,7 @@ class EMEController extends EventHandler {
       const keysListItem = this._mediaKeysList[0];
       if (!keysListItem || !keysListItem.mediaKeys) {
         logger.error('Fatal: Media is encrypted but no CDM access or no keys have been obtained yet');
-        this.hls.trigger(Events.ERROR, {
+        this.hls.emit(Events.ERROR, {
           type: ErrorTypes.KEY_SYSTEM_ERROR,
           details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
           fatal: true
@@ -281,7 +296,7 @@ class EMEController extends EventHandler {
     const keysListItem = this._mediaKeysList[0];
     if (!keysListItem) {
       logger.error('Fatal: Media is encrypted but not any key-system access has been obtained yet');
-      this.hls.trigger(Events.ERROR, {
+      this.hls.emit(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
         fatal: true
@@ -297,7 +312,7 @@ class EMEController extends EventHandler {
     const keySession = keysListItem.mediaKeysSession;
     if (!keySession) {
       logger.error('Fatal: Media is encrypted but no key-session existing');
-      this.hls.trigger(Events.ERROR, {
+      this.hls.emit(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
         fatal: true
@@ -308,7 +323,7 @@ class EMEController extends EventHandler {
     // initData is null if the media is not CORS-same-origin
     if (!initData) {
       logger.warn('Fatal: initData required for generating a key session is null');
-      this.hls.trigger(Events.ERROR, {
+      this.hls.emit(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_INIT_DATA,
         fatal: true
@@ -325,7 +340,7 @@ class EMEController extends EventHandler {
       })
       .catch((err) => {
         logger.error('Error generating key-session request:', err);
-        this.hls.trigger(Events.ERROR, {
+        this.hls.emit(Events.ERROR, {
           type: ErrorTypes.KEY_SYSTEM_ERROR,
           details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
           fatal: false
@@ -393,7 +408,7 @@ class EMEController extends EventHandler {
         logger.error(`License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`);
         this._requestLicenseFailureCount++;
         if (this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES) {
-          this.hls.trigger(Events.ERROR, {
+          this.hls.emit(Events.ERROR, {
             type: ErrorTypes.KEY_SYSTEM_ERROR,
             details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
             fatal: true
@@ -459,7 +474,7 @@ class EMEController extends EventHandler {
     const keysListItem = this._mediaKeysList[0];
     if (!keysListItem) {
       logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
-      this.hls.trigger(Events.ERROR, {
+      this.hls.emit(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
         fatal: true
@@ -475,7 +490,7 @@ class EMEController extends EventHandler {
       xhr.send(challenge);
     } catch (e) {
       logger.error(`Failure requesting DRM license: ${e}`);
-      this.hls.trigger(Events.ERROR, {
+      this.hls.emit(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
         fatal: true

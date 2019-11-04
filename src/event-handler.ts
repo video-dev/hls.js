@@ -29,7 +29,7 @@ class EventHandler {
     this.registerListeners();
   }
 
-  protected destroy () {
+  public destroy () {
     this.onHandlerDestroying();
     this.unregisterListeners();
     this.onHandlerDestroyed();

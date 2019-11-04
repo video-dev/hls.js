@@ -20,6 +20,12 @@ import { Events, HlsEventEmitter, HlsListeners } from './events';
 import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
 import { MediaPlaylist } from './types/media-playlist';
+import AudioTrackController from './controller/audio-track-controller';
+import SubtitleTrackController from './controller/subtitle-track-controller';
+import EMEController from './controller/eme-controller';
+import CapLevelController from './controller/cap-level-controller';
+import AbrController from './controller/abr-controller';
+import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 
 /**
  * @module Hls
@@ -30,17 +36,19 @@ export default class Hls implements HlsEventEmitter {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
+  private coreComponents: ComponentAPI[];
+  private networkControllers: NetworkComponentAPI[];
+
   private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
-  private abrController: any;
-  private capLevelController: any;
-  private levelController: any;
-  private streamController: any;
-  private networkControllers: any[];
-  private audioTrackController: any;
-  private subtitleTrackController: any;
-  private emeController: any;
-  private coreComponents: any[];
+  private abrController: AbrController;
+  private capLevelController: CapLevelController;
+  private levelController: LevelController;
+  private streamController: StreamController;
+  private audioTrackController: AudioTrackController;
+  private subtitleTrackController: SubtitleTrackController;
+  private emeController: EMEController;
+
   private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
@@ -287,7 +295,7 @@ export default class Hls implements HlsEventEmitter {
    * @type {Level[]}
    */
   get levels (): Array<Level> {
-    return this.levelController.levels;
+    return this.levelController.levels ? this.levelController.levels : [];
   }
 
   /**
@@ -446,7 +454,7 @@ export default class Hls implements HlsEventEmitter {
    * @type {number}
    */
   get bandwidthEstimate (): number {
-    const bwEstimator = this.abrController._bwEstimator;
+    const bwEstimator = this.abrController.bwEstimator;
     return bwEstimator ? bwEstimator.getEstimate() : NaN;
   }
 
@@ -483,8 +491,9 @@ export default class Hls implements HlsEventEmitter {
    */
   get minAutoLevel (): number {
     const { levels, config: { minAutoBitrate } } = this;
-    const len = levels ? levels.length : 0;
+    if (!levels) return 0;
 
+    const len = levels.length;
     for (let i = 0; i < len; i++) {
       const levelNextBitrate = levels[i].realBitrate
         ? Math.max(levels[i].realBitrate, levels[i].bitrate)
@@ -567,7 +576,7 @@ export default class Hls implements HlsEventEmitter {
   /**
    * @type {Seconds}
    */
-  get liveSyncPosition (): number {
+  get liveSyncPosition (): number | null {
     return this.streamController.liveSyncPosition;
   }
 

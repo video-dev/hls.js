@@ -14,24 +14,26 @@ import { LoaderStats } from '../types/loader';
 import LevelDetails from '../loader/level-details';
 import Hls from '../hls';
 import { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
+import { ComponentAPI } from '../types/component-api';
 
 const { performance } = self;
 
-class AbrController {
+class AbrController implements ComponentAPI {
   protected hls: Hls;
   private lastLoadedFragLevel: number = 0;
   private _nextAutoLevel: number = -1;
   private timer?: number;
-  private readonly _bwEstimator: EwmaBandWidthEstimator;
   private onCheck: Function = this._abandonRulesCheck.bind(this);
   private fragCurrent: Fragment | null = null;
   private bitrateTestDelay: number = 0;
+
+  public readonly bwEstimator: EwmaBandWidthEstimator;
 
   constructor (hls: Hls) {
     this.hls = hls;
 
     const config = hls.config;
-    this._bwEstimator = new EwmaBandWidthEstimator(config.abrEwmaSlowVoD, config.abrEwmaFastVoD, config.abrEwmaDefaultEstimate);
+    this.bwEstimator = new EwmaBandWidthEstimator(config.abrEwmaSlowVoD, config.abrEwmaFastVoD, config.abrEwmaDefaultEstimate);
 
     this._registerListeners();
   }
@@ -72,9 +74,9 @@ class AbrController {
   private onLevelLoaded (data: LevelLoadedData) {
     const config = this.hls.config;
     if (data.details.live) {
-      this._bwEstimator.update(config.abrEwmaSlowLive, config.abrEwmaFastLive);
+      this.bwEstimator.update(config.abrEwmaSlowLive, config.abrEwmaFastLive);
     } else {
-      this._bwEstimator.update(config.abrEwmaSlowVoD, config.abrEwmaFastVoD);
+      this.bwEstimator.update(config.abrEwmaSlowVoD, config.abrEwmaFastVoD);
     }
   }
 
@@ -152,14 +154,14 @@ class AbrController {
     if (fragLevelNextLoadedDelay >= fragLoadedDelay) {
       return;
     }
-    const bwEstimate: number = this._bwEstimator.getEstimate();
+    const bwEstimate: number = this.bwEstimator.getEstimate();
     logger.warn(`Fragment ${frag.sn} of level ${frag.level} is loading too slowly and will cause an underbuffer; aborting and switching to level ${nextLoadLevel}
       Current BW estimate: ${Number.isFinite(bwEstimate) ? (bwEstimate / 1024).toFixed(3) : 'Unknown'} Kb/s
       Estimated load time for current fragment: ${fragLoadedDelay.toFixed(3)} s
       Estimated load time for the next fragment: ${fragLevelNextLoadedDelay.toFixed(3)} s
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s`);
     hls.nextLoadLevel = nextLoadLevel;
-    this._bwEstimator.sample(requestDelay, stats.loaded);
+    this.bwEstimator.sample(requestDelay, stats.loaded);
     loader.abort();
     this.clearTimer();
     hls.emit(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
@@ -207,8 +209,8 @@ class AbrController {
     // rationale is that buffer appending only happens once media is attached. This can happen when config.startFragPrefetch
     // is used. If we used buffering in that case, our BW estimate sample will be very large.
     const fragLoadingProcessingMs = stats.parsing.end - stats.loading.start;
-    this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
-    stats.bwEstimate = this._bwEstimator.getEstimate();
+    this.bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+    stats.bwEstimate = this.bwEstimator.getEstimate();
     if (frag.bitrateTest) {
       this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
     } else {
@@ -236,7 +238,7 @@ class AbrController {
   // return next auto level
   get nextAutoLevel () {
     const forcedAutoLevel = this._nextAutoLevel;
-    const bwEstimator = this._bwEstimator;
+    const bwEstimator = this.bwEstimator;
     // in case next auto level has been forced, and bw not available or not reliable, return forced value
     if (forcedAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate())) {
       return forcedAutoLevel;
@@ -261,7 +263,7 @@ class AbrController {
     // playbackRate is the absolute value of the playback rate; if media.playbackRate is 0, we use 1 to load as
     // if we're playing back at the normal rate.
     const playbackRate = ((media && (media.playbackRate !== 0)) ? Math.abs(media.playbackRate) : 1.0);
-    const avgbw = this._bwEstimator ? this._bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate;
+    const avgbw = this.bwEstimator ? this.bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate;
     // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
     const bufferStarvationDelay = (BufferHelper.bufferInfo(media as Bufferable, pos, config.maxBufferHole).end - pos) / playbackRate;
 
