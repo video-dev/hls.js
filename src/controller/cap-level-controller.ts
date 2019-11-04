@@ -3,12 +3,13 @@
 */
 
 import { Events } from '../events';
-import EventHandler from '../event-handler';
 import { Level } from '../types/level';
 import { ManifestParsedData, BufferCodecsData, MediaAttachingData, FPSDropLevelCappingData, LevelsUpdatedData } from '../types/events';
 import StreamController from './stream-controller';
+import { ComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
-class CapLevelController extends EventHandler {
+class CapLevelController implements ComponentAPI {
   public autoLevelCapping: number;
   public firstLevel: number;
   public levels: Array<Level>;
@@ -16,34 +17,51 @@ class CapLevelController extends EventHandler {
   public restrictedLevels: Array<number>;
   public timer: number | undefined;
 
+  private hls: Hls;
   private streamController?: StreamController;
 
-  constructor (hls) {
-    super(hls,
-      Events.FPS_DROP_LEVEL_CAPPING,
-      Events.MEDIA_ATTACHING,
-      Events.MANIFEST_PARSED,
-      Events.LEVELS_UPDATED,
-      Events.BUFFER_CODECS,
-      Events.MEDIA_DETACHING);
-
+  constructor (hls: Hls) {
+    this.hls = hls;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.levels = [];
     this.firstLevel = -1;
     this.media = null;
     this.restrictedLevels = [];
     this.timer = undefined;
+
+    this._registerListeners();
   }
 
   setStreamController (streamController: StreamController) {
     this.streamController = streamController;
   }
 
-  destroy () {
+  public destroy () {
+    this._unregisterListener();
     if (this.hls.config.capLevelToPlayerSize) {
       this.media = null;
       this.stopCapping();
     }
+  }
+
+  private _registerListeners () {
+    const { hls } = this;
+    hls.on(Events.FPS_DROP_LEVEL_CAPPING, this.onFpsDropLevelCapping, this);
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.on(Events.BUFFER_CODECS, this.onBufferCodecs, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+  }
+
+  private _unregisterListener () {
+    const { hls } = this;
+    hls.off(Events.FPS_DROP_LEVEL_CAPPING, this.onFpsDropLevelCapping, this);
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.off(Events.BUFFER_CODECS, this.onBufferCodecs, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
   }
 
   onFpsDropLevelCapping (data: FPSDropLevelCappingData) {

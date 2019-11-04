@@ -1,7 +1,7 @@
 import { BufferHelper } from '../utils/buffer-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { Events } from '../events';
-import { FragmentState } from './fragment-tracker';
+import { FragmentState, FragmentTracker } from './fragment-tracker';
 import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import PlaylistLoader from '../loader/playlist-loader';
 import TimeRanges from '../utils/time-ranges';
@@ -16,10 +16,12 @@ import LevelDetails from '../loader/level-details';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
 import { LevelUpdatedData, BufferAppendingEventPayload } from '../types/events';
+import Hls from '../hls';
+import { NetworkComponentAPI } from '../types/component-api';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
-export default class StreamController extends BaseStreamController {
+export default class StreamController extends BaseStreamController implements NetworkComponentAPI {
   private audioCodecSwap: boolean = false;
   private bitrateTest: boolean = false;
   private gapController: GapController | null = null;
@@ -41,28 +43,48 @@ export default class StreamController extends BaseStreamController {
 
   protected readonly logPrefix = '[stream-controller]';
 
-  constructor (hls, fragmentTracker) {
-    super(hls,
-      Events.MEDIA_ATTACHED,
-      Events.MEDIA_DETACHING,
-      Events.MANIFEST_LOADING,
-      Events.MANIFEST_PARSED,
-      Events.LEVEL_LOADED,
-      Events.KEY_LOADED,
-      Events.FRAG_LOAD_EMERGENCY_ABORTED,
-      Events.ERROR,
-      Events.AUDIO_TRACK_SWITCHING,
-      Events.AUDIO_TRACK_SWITCHED,
-      Events.BUFFER_CREATED,
-      Events.BUFFER_FLUSHED,
-      Events.LEVELS_UPDATED,
-      Events.FRAG_BUFFERED
-    );
-
+  constructor (hls: Hls, fragmentTracker: FragmentTracker) {
+    super(hls);
     this.fragmentLoader = new FragmentLoader(hls.config);
     this.config = hls.config;
     this.fragmentTracker = fragmentTracker;
     this.state = State.STOPPED;
+  }
+
+  private _registerListeners () {
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
+    hls.on(Events.FRAG_LOAD_EMERGENCY_ABORTED, this.onFragLoadEmergencyAborted, this);
+    hls.on(Events.ERROR, this.onError, this);
+    hls.on(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
+    hls.on(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
+    hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
+    hls.on(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
+    hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+  }
+
+  protected _unregisterListeners () {
+    const { hls } = this;
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
+    hls.off(Events.FRAG_LOAD_EMERGENCY_ABORTED, this.onFragLoadEmergencyAborted, this);
+    hls.off(Events.ERROR, this.onError, this);
+    hls.off(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
+    hls.off(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
+    hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
+    hls.off(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
+    hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
   startLoad (startPosition): void {

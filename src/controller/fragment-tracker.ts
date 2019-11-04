@@ -1,9 +1,10 @@
-import EventHandler from '../event-handler';
 import { Events } from '../events';
 import Fragment from '../loader/fragment';
 import { SourceBufferName } from '../types/buffer';
 import { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../types/fragment-tracker';
 import { PlaylistLevelType } from '../types/loader';
+import { ComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -12,27 +13,37 @@ export const FragmentState = {
   OK: 'OK'
 };
 
-export class FragmentTracker extends EventHandler {
+export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;
   private fragments: Partial<Record<string, FragmentEntity>> = Object.create(null);
   private timeRanges: { [key in SourceBufferName]: TimeRanges } = Object.create(null);
   private bufferPadding: number = 0.2;
-  private config: any;
+  private hls: Hls;
 
-  constructor (hls) {
-    super(hls,
-      Events.BUFFER_APPENDED,
-      Events.FRAG_BUFFERED,
-      Events.FRAG_LOADED
-    );
-    this.config = hls.config;
+  constructor (hls: Hls) {
+    this.hls = hls;
+
+    this._registerListeners();
   }
 
-  destroy (): void {
+  private _registerListeners () {
+    const { hls } = this;
+    hls.on(Events.BUFFER_APPENDED, this.onBufferAppended, this);
+    hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
+  }
+
+  private _unregisterListeners () {
+    const { hls } = this;
+    hls.off(Events.BUFFER_APPENDED, this.onBufferAppended, this);
+    hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
+  }
+
+  public destroy (): void {
     this.fragments = Object.create(null);
     this.timeRanges = Object.create(null);
-    this.config = null;
-    super.destroy();
+    this._unregisterListeners();
   }
 
   /**
