@@ -7,19 +7,20 @@
 import { logger } from './utils/logger';
 import { ErrorTypes, ErrorDetails } from './errors';
 import Event from './events';
+import Hls from './hls';
 
 const FORBIDDEN_EVENT_NAMES = {
-  'hlsEventGeneric': true,
-  'hlsHandlerDestroying': true,
-  'hlsHandlerDestroyed': true
+  hlsEventGeneric: true,
+  hlsHandlerDestroying: true,
+  hlsHandlerDestroyed: true
 };
 
 class EventHandler {
-  hls: any;
-  handledEvents: any[];
-  useGenericHandler: boolean;
+  protected hls: Hls;
+  private handledEvents: any[];
+  private useGenericHandler: boolean;
 
-  constructor (hls: any, ...events: any[]) {
+  constructor (hls: Hls, ...events: any[]) {
     this.hls = hls;
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
@@ -28,20 +29,20 @@ class EventHandler {
     this.registerListeners();
   }
 
-  destroy () {
+  protected destroy () {
     this.onHandlerDestroying();
     this.unregisterListeners();
     this.onHandlerDestroyed();
   }
 
-  onHandlerDestroying () {}
-  onHandlerDestroyed () {}
+  protected onHandlerDestroying () {}
+  protected onHandlerDestroyed () {}
 
-  isEventHandler () {
+  private isEventHandler () {
     return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
   }
 
-  registerListeners () {
+  private registerListeners () {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function (event) {
         if (FORBIDDEN_EVENT_NAMES[event]) {
@@ -53,7 +54,7 @@ class EventHandler {
     }
   }
 
-  unregisterListeners () {
+  private unregisterListeners () {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function (event) {
         this.hls.off(event, this.onEvent);
@@ -64,13 +65,13 @@ class EventHandler {
   /**
    * arguments: event (string), data (any)
    */
-  onEvent (event: string, data: any) {
+  private onEvent (event: string, data: any) {
     this.onEventGeneric(event, data);
   }
 
-  onEventGeneric (event: string, data: any) {
-    let eventToFunction = function (event: string, data: any) {
-      let funcName = 'on' + event.replace('hls', '');
+  private onEventGeneric (event: string, data: any) {
+    const eventToFunction = function (event: string, data: any) {
+      const funcName = 'on' + event.replace('hls', '');
       if (typeof this[funcName] !== 'function') {
         throw new Error(`Event ${event} has no generic handler in this ${this.constructor.name} class (tried ${funcName})`);
       }

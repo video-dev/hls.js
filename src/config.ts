@@ -1,22 +1,18 @@
-/**
- * HLS config
- */
-
 import AbrController from './controller/abr-controller';
+import AudioStreamController from './controller/audio-stream-controller';
+import AudioTrackController from './controller/audio-track-controller';
 import BufferController from './controller/buffer-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-import XhrLoader from './utils/xhr-loader';
-// import FetchLoader from './utils/fetch-loader';
-
-import AudioTrackController from './controller/audio-track-controller';
-import AudioStreamController from './controller/audio-stream-controller';
-
-import * as Cues from './utils/cues';
 import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
-import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import EMEController from './controller/eme-controller';
+
+import XhrLoader from './utils/xhr-loader';
+import FetchLoader, { fetchSupported } from './utils/fetch-loader';
+import * as Cues from './utils/cues';
+import { SubtitleStreamController } from './controller/subtitle-stream-controller';
+import { logger } from './utils/logger';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
@@ -113,12 +109,14 @@ type StreamControllerConfig = {
   maxMaxBufferLength: number,
 
   startFragPrefetch: boolean,
+  testBandwidth: boolean
 };
 
 type TimelineControllerConfig = {
   cueHandler: any, // TODO(typescript-cues): Type once file is done
   enableCEA708Captions: boolean,
   enableWebVTT: boolean,
+  enableIMSC1: boolean,
   captionsTextTrack1Label: string,
   captionsTextTrack1LanguageCode: string,
   captionsTextTrack2Label: string,
@@ -129,7 +127,7 @@ type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean,
 };
 
-type HlsConfig =
+export type HlsConfig =
   {
     debug: boolean,
     enableWorker: boolean,
@@ -152,6 +150,8 @@ type HlsConfig =
     bufferController: typeof BufferController,
     capLevelController: any, // TODO(typescript-caplevelcontroller): Type once file is done
     fpsController: any, // TODO(typescript-fpscontroller): Type once file is done
+    renderNatively: boolean,
+    progressive: boolean
   } &
   ABRControllerConfig &
   BufferControllerConfig &
@@ -166,6 +166,9 @@ type HlsConfig =
   Partial<TimelineControllerConfig> &
   TSDemuxerConfig;
 
+// If possible, keep hlsDefaultConfig shallow
+// It is cloned whenever a new Hls instance is created, by keeping the config
+// shallow the properties are cloned, and we don't end up manipulating the default
 export const hlsDefaultConfig: HlsConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
@@ -259,9 +262,51 @@ function timelineConfig (): TimelineControllerConfig {
     cueHandler: Cues, // used by timeline-controller
     enableCEA708Captions: true, // used by timeline-controller
     enableWebVTT: true, // used by timeline-controller
+    enableIMSC1: true, // used by timeline-controller
     captionsTextTrack1Label: 'English', // used by timeline-controller
     captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
     captionsTextTrack2Label: 'Spanish', // used by timeline-controller
     captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
   };
+}
+
+export function mergeConfig (defaultConfig, passedConfig) {
+  if ((passedConfig.liveSyncDurationCount || passedConfig.liveMaxLatencyDurationCount) && (passedConfig.liveSyncDuration || passedConfig.liveMaxLatencyDuration)) {
+    throw new Error('Illegal hls.js passedConfig: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+  }
+
+  for (const prop in defaultConfig) {
+    if (prop in passedConfig) continue;
+    passedConfig[prop] = defaultConfig[prop];
+  }
+
+  if (passedConfig.liveMaxLatencyDurationCount !== void 0 && passedConfig.liveMaxLatencyDurationCount <= passedConfig.liveSyncDurationCount) {
+    throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
+  }
+
+  if (passedConfig.liveMaxLatencyDuration !== void 0 && (passedConfig.liveMaxLatencyDuration <= passedConfig.liveSyncDuration || passedConfig.liveSyncDuration === void 0)) {
+    throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
+  }
+}
+
+const canStreamProgressively = fetchSupported();
+export function setStreamingMode (config, allowProgressive) {
+  const currentLoader = config.loader;
+  if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
+    // If a developer has configured their own loader, respect that choice
+    logger.log('[config]: Custom loader detected, cannot enable progressive streaming');
+    config.progressive = false;
+    return;
+  }
+
+  if (allowProgressive && canStreamProgressively) {
+    config.loader = FetchLoader;
+    config.progressive = true;
+    config.enableSoftwareAES = true;
+    logger.log('[config]: Progressive streaming enabled, using FetchLoader');
+  } else {
+    config.loader = XhrLoader;
+    config.progressive = false;
+    logger.log('[config]: Progressive streaming disabled, using XhrLoader');
+  }
 }

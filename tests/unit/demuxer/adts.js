@@ -376,8 +376,7 @@ describe('appendFrame', function () {
   it('should append the found sample to track and return some useful information', function () {
     const track = {
       samplerate: 64000,
-      samples: [],
-      len: 0
+      samples: []
     };
     const data = new Uint8Array(new ArrayBuffer(16));
     data[0] = 0xff;
@@ -398,8 +397,7 @@ describe('appendFrame', function () {
   it('should not append sample if `parseFrameHeader` fails', function () {
     const track = {
       samplerate: 64000,
-      samples: [],
-      len: 0
+      samples: []
     };
     const data = new Uint8Array(new ArrayBuffer(12));
     data[0] = 0xff;

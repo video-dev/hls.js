@@ -12,11 +12,11 @@ const mergeConfig = merge(webpackConfig, {
     rules: [
       {
         test: /\.(ts|js)$/,
-        exclude: path.resolve(__dirname, 'node_modules'),
+        exclude: /(node_modules|tests)/,
         enforce: 'post',
         use: [
           {
-            loader: 'coverage-istanbul-loader',
+            loader: 'istanbul-instrumenter-loader',
             options: {
               esModules: true
             }
@@ -29,19 +29,23 @@ const mergeConfig = merge(webpackConfig, {
 
 module.exports = function (config) {
   config.set({
-    // frameworks to use
+    //  frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
     frameworks: ['mocha', 'sinon-chai'],
 
     // list of files / patterns to load in the browser
     // https://github.com/webpack-contrib/karma-webpack#alternative-usage
-    files: ['tests/index.js'],
+    files: [{
+      pattern: 'tests/index.js',
+      watched: false
+    }],
 
     // list of files to exclude
     exclude: [],
 
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
+    // node_modules must not be webpacked or else Karma will fail to load frameworks
     preprocessors: {
       'tests/index.js': ['webpack', 'sourcemap']
     },
@@ -98,8 +102,8 @@ module.exports = function (config) {
     // HTTP Server options
     // allows tester to pass certs and keys for testing EME over https
     httpsServerOptions: process.env.KARMA_SSL ? {
-      key: fs.readFileSync('server.key', 'utf8'), // user must set the path to their SSL key
-      cert: fs.readFileSync('server.cert', 'utf8') // user must set the path to their SSL cert
+      key: fs.readFileSync(path.resolve(__dirname, 'server.key'), 'utf8'), // user must set the path to their SSL key
+      cert: fs.readFileSync(path.resolve(__dirname, 'server.cert'), 'utf8') // user must set the path to their SSL cert
     } : {}
   });
 };

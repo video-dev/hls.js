@@ -1,5 +1,3 @@
-import { getSelfScope } from '../utils/get-self-scope';
-
 /**
  * ID3 parser
  */
@@ -107,6 +105,10 @@ class ID3 {
     return size;
   }
 
+  static canParse (data, offset) {
+    return ID3.isHeader(data, offset) && ID3._readSize(data, offset + 6) + 10 <= data.length - offset;
+  }
+
   /**
    * Searches for the Elementary Stream timestamp found in the ID3 data chunk
    * @param {Uint8Array} data - Block of data containing one or more ID3 tags
@@ -142,7 +144,7 @@ class ID3 {
     const size = ID3._readSize(data, 4);
 
     // skip frame id, size, and flags
-    let offset = 10;
+    const offset = 10;
 
     return { type, size, data: data.subarray(offset, offset + size) };
   }
@@ -352,9 +354,8 @@ class ID3 {
 let decoder;
 
 function getTextDecoder () {
-  const global = getSelfScope(); // safeguard for code that might run both on worker and main thread
-  if (!decoder && typeof global.TextDecoder !== 'undefined') {
-    decoder = new global.TextDecoder('utf-8');
+  if (!decoder && typeof self.TextDecoder !== 'undefined') {
+    decoder = new self.TextDecoder('utf-8');
   }
 
   return decoder;

@@ -1,4 +1,4 @@
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities, alignPDT } from '../../../src/utils/discontinuities';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignPDT } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,
@@ -99,7 +99,7 @@ describe('level-helper', function () {
       }
     };
 
-    let details = {
+    const details = {
       fragments: [
         {
           start: 0,
@@ -130,7 +130,7 @@ describe('level-helper', function () {
       hasProgramDateTime: true
     };
 
-    let detailsExpected = {
+    const detailsExpected = {
       fragments: [
         {
           start: 70,

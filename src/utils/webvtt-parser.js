@@ -8,9 +8,9 @@ const startsWith = function (inputString, searchString, position) {
 
 const cueString2millis = function (timeString) {
   let ts = parseInt(timeString.substr(-3));
-  let secs = parseInt(timeString.substr(-6, 2));
-  let mins = parseInt(timeString.substr(-9, 2));
-  let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
+  const secs = parseInt(timeString.substr(-6, 2));
+  const mins = parseInt(timeString.substr(-9, 2));
+  const hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
   if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {
     throw Error(`Malformed X-TIMESTAMP-MAP: Local:${timeString}`);
@@ -61,26 +61,26 @@ const calculateOffset = function (vttCCs, cc, presentationTime) {
 const WebVTTParser = {
   parse: function (vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
     // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
-    let re = /\r\n|\n\r|\n|\r/g;
+    const re = /\r\n|\n\r|\n|\r/g;
     // Uint8Array.prototype.reduce is not implemented in IE11
-    let vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
+    const vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
 
     let cueTime = '00:00.000';
     let mpegTs = 0;
     let localTime = 0;
     let presentationTime = 0;
-    let cues = [];
+    const cues = [];
     let parsingError;
     let inHeader = true;
     let timestampMap = false;
     // let VTTCue = VTTCue || window.TextTrackCue;
 
     // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
-    let parser = new VTTParser();
+    const parser = new VTTParser();
 
     parser.oncue = function (cue) {
       // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
-      let currCC = vttCCs[cc];
+      const currCC = vttCCs[cc];
       let cueOffset = vttCCs.ccOffset;
 
       // Update offsets for new discontinuities

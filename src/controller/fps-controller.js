@@ -6,7 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { logger } from '../utils/logger';
 
-const { performance } = window;
+const { performance } = self;
 
 class FPSController extends EventHandler {
   constructor (hls) {
@@ -24,7 +24,7 @@ class FPSController extends EventHandler {
   onMediaAttaching (data) {
     const config = this.hls.config;
     if (config.capLevelOnFPSDrop) {
-      const video = this.video = data.media instanceof window.HTMLVideoElement ? data.media : null;
+      const video = this.video = data.media instanceof self.HTMLVideoElement ? data.media : null;
       if (typeof video.getVideoPlaybackQuality === 'function') {
         this.isVideoPlaybackQualityAvailable = true;
       }
@@ -35,14 +35,14 @@ class FPSController extends EventHandler {
   }
 
   checkFPS (video, decodedFrames, droppedFrames) {
-    let currentTime = performance.now();
+    const currentTime = performance.now();
     if (decodedFrames) {
       if (this.lastTime) {
-        let currentPeriod = currentTime - this.lastTime,
-          currentDropped = droppedFrames - this.lastDroppedFrames,
-          currentDecoded = decodedFrames - this.lastDecodedFrames,
-          droppedFPS = 1000 * currentDropped / currentPeriod,
-          hls = this.hls;
+        const currentPeriod = currentTime - this.lastTime;
+        const currentDropped = droppedFrames - this.lastDroppedFrames;
+        const currentDecoded = decodedFrames - this.lastDecodedFrames;
+        const droppedFPS = 1000 * currentDropped / currentPeriod;
+        const hls = this.hls;
         hls.trigger(Event.FPS_DROP, { currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames });
         if (droppedFPS > 0) {
           // logger.log('checkFPS : droppedFPS/decodedFPS:' + droppedFPS/(1000 * currentDecoded / currentPeriod));
@@ -68,7 +68,7 @@ class FPSController extends EventHandler {
     const video = this.video;
     if (video) {
       if (this.isVideoPlaybackQualityAvailable) {
-        let videoPlaybackQuality = video.getVideoPlaybackQuality();
+        const videoPlaybackQuality = video.getVideoPlaybackQuality();
         this.checkFPS(video, videoPlaybackQuality.totalVideoFrames, videoPlaybackQuality.droppedVideoFrames);
       } else {
         this.checkFPS(video, video.webkitDecodedFrameCount, video.webkitDroppedFrameCount);

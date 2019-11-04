@@ -158,8 +158,8 @@ Let's
 
   <video id="video"></video>
   <script>
-    var video = document.getElementById('video');
     if (Hls.isSupported()) {
+      var video = document.getElementById('video');
       var hls = new Hls();
       // bind them together
       hls.attachMedia(video);
@@ -347,6 +347,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fpsController: FPSController,
       timelineController: TimelineController,
       enableWebVTT: true,
+      enableIMSC1: true,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
       maxAudioFramesDrift: 1,
@@ -1457,7 +1458,7 @@ Full list of errors is described below:
   - `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE` - raised after hls.js seeks over a buffer hole to unstuck the playback,
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE`, fatal : `false`, hole : hole duration }
   - `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL` - raised when playback is stuck although currentTime is in a buffered area
-    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `true` }
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL`, fatal : `true` }
 
 ### Key System Errors
 
