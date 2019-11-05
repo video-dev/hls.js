@@ -10,6 +10,7 @@ import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { MediaPlaylist } from '../types/media-playlist';
 import Hls from '../hls';
 import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData, InitPTSFoundData } from '../types/events';
+import { ComponentAPI } from '../types/component-api';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -19,7 +20,7 @@ function intersection (x1, x2, y1, y2) {
   return Math.min(x2, y2) - Math.max(x1, y1);
 }
 
-class TimelineController {
+class TimelineController implements ComponentAPI {
   private hls: Hls;
   private media: HTMLMediaElement | null = null;
   private config: HlsConfig;
@@ -352,7 +353,7 @@ class TimelineController {
     if (frag.type === 'main') {
       const sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
-      if (sn !== this.lastSn + 1) {
+      if (sn !== lastSn + 1) {
         if (cea608Parser) {
           cea608Parser.reset();
         }
@@ -452,7 +453,6 @@ class TimelineController {
         return;
       }
 
-      debugger;
       this.onFragLoaded(data as unknown as FragLoadedData);
     }
   }
