@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
-import { FragmentState } from './fragment-tracker';
+import { FragmentState, FragmentTracker } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { mergeSubtitlePlaylists } from './level-helper';
@@ -23,6 +23,8 @@ import {
 import { Level } from '../types/level';
 import Fragment from '../loader/fragment';
 import LevelDetails from '../loader/level-details';
+import { ComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
 const { performance } = self;
 
@@ -33,8 +35,9 @@ interface TimeRange {
   end: number
 }
 
-export class SubtitleStreamController extends BaseStreamController {
+export class SubtitleStreamController extends BaseStreamController implements ComponentAPI {
   protected levels: Array<Level> = [];
+
   private currentTrackId: number = -1;
   private decrypter: Decrypter;
   private tracksBuffered: Array<TimeRange[]>;
@@ -42,18 +45,8 @@ export class SubtitleStreamController extends BaseStreamController {
   private lastAVStart: number = 0;
   private readonly _onMediaSeeking: () => void;
 
-  constructor (hls, fragmentTracker) {
-    super(hls,
-      Events.MEDIA_ATTACHED,
-      Events.MEDIA_DETACHING,
-      Events.ERROR,
-      Events.KEY_LOADED,
-      Events.SUBTITLE_TRACKS_UPDATED,
-      Events.SUBTITLE_TRACK_SWITCH,
-      Events.SUBTITLE_TRACK_LOADED,
-      Events.SUBTITLE_FRAG_PROCESSED,
-      Events.LEVEL_UPDATED);
-
+  constructor (hls: Hls, fragmentTracker: FragmentTracker) {
+    super(hls);
     this.config = hls.config;
     this.decrypter = new Decrypter(hls, hls.config);
     this.fragCurrent = null;
@@ -64,6 +57,32 @@ export class SubtitleStreamController extends BaseStreamController {
     this.tracksBuffered = [];
     this.fragmentLoader = new FragmentLoader(hls.config);
     this._onMediaSeeking = this.onMediaSeeking.bind(this);
+  }
+
+  private _registerListeners () {
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.ERROR, this.onError, this);
+    hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
+    hls.on(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
+    hls.on(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
+    hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
+    hls.on(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
+    hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
+  }
+
+  private _unregisterListeners () {
+    const { hls } = this;
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.ERROR, this.onError, this);
+    hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
+    hls.off(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
+    hls.off(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
+    hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
+    hls.off(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
+    hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
   }
 
   onHandlerDestroyed () {
@@ -192,7 +211,7 @@ export class SubtitleStreamController extends BaseStreamController {
       // decrypt the subtitles
       this.decrypter.webCryptoDecrypt(new Uint8Array(payload), decryptData.key.buffer, decryptData.iv.buffer).then((decryptedData) => {
         const endTime = performance.now();
-        hls.trigger(Events.FRAG_DECRYPTED, {
+        hls.emit(Events.FRAG_DECRYPTED, {
           frag,
           payload: decryptedData,
           stats: {
@@ -252,7 +271,7 @@ export class SubtitleStreamController extends BaseStreamController {
       if (foundFrag && foundFrag.encrypted) {
         logger.log(`Loading key for ${foundFrag.sn}`);
         this.state = State.KEY_LOADING;
-        this.hls.trigger(Events.KEY_LOADING, { frag: foundFrag });
+        this.hls.emit(Events.KEY_LOADING, { frag: foundFrag });
       } else if (foundFrag && fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
         // only load if fragment is not loaded
         this.fragCurrent = foundFrag;

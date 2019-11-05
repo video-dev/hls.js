@@ -49,6 +49,8 @@ export default class StreamController extends BaseStreamController implements Ne
     this.config = hls.config;
     this.fragmentTracker = fragmentTracker;
     this.state = State.STOPPED;
+
+    this._registerListeners();
   }
 
   private _registerListeners () {
@@ -87,7 +89,11 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
-  startLoad (startPosition): void {
+  protected onHandlerDestroying () {
+    this._unregisterListeners();
+  }
+
+  startLoad (startPosition: number): void {
     if (this.levels) {
       const { lastCurrentTime, hls } = this;
       this.stopLoad();
@@ -745,7 +751,7 @@ export default class StreamController extends BaseStreamController implements Ne
       break;
     case ErrorDetails.BUFFER_FULL_ERROR:
       // if in appending state
-      if (data.parent === 'main' && (this.state === State.PARSING || this.state === State.PARSED)) {
+      if (data.parent === 'main' && (this.state === State.PARSING || this.state === State.PARSED)) {
         // reduce max buf len if current position is buffered
         if (mediaBuffered) {
           this._reduceMaxBufferLength(this.config.maxBufferLength);
