@@ -51,7 +51,7 @@ export default class GapController {
       return;
     }
 
-    if (media.ended || !media.buffered.length || media.readyState === 4) {
+    if (media.paused || media.ended || media.playbackRate === 0 || !media.buffered.length) {
       return;
     }
 
@@ -63,8 +63,8 @@ export default class GapController {
     // Allow some slack time to for small stalls to resolve themselves
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
 
-    if (!this.moved && !media.seeking && !media.paused && media.buffered.length) {
-      if (bufferInfo.nextStart) {
+    if (!this.moved) {
+      if (!media.seeking && bufferInfo.nextStart) {
         logger.warn(`skipping start gap, adjusting currentTime from ${currentTime} to ${bufferInfo.nextStart}`);
         this.moved = true;
         media.currentTime = bufferInfo.nextStart;

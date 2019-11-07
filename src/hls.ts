@@ -458,11 +458,7 @@ export default class Hls extends Observer {
     const len = levels ? levels.length : 0;
 
     for (let i = 0; i < len; i++) {
-      const levelNextBitrate = levels[i].realBitrate
-        ? Math.max(levels[i].realBitrate, levels[i].bitrate)
-        : levels[i].bitrate;
-
-      if (levelNextBitrate > minAutoBitrate) {
+      if (levels[i].maxBitrate > minAutoBitrate) {
         return i;
       }
     }
