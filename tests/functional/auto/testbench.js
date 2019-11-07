@@ -87,7 +87,17 @@ function startStream (streamUrl, config, callback) {
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        video.play();
+        var playPromise = video.play();
+        if (playPromise) {
+          playPromise.catch(function (error) {
+            console.log('video.play() failed with error:', error);
+            if (error.name === 'NotAllowedError') {
+              console.log('Attempting to play with video muted');
+              video.muted = true;
+              return video.play();
+            }
+          });
+        }
       });
       hls.on(Hls.Events.ERROR, function (event, data) {
         if (data.fatal) {
