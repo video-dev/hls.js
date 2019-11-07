@@ -1225,8 +1225,14 @@ class StreamController extends EventHandler {
             loadError=1;
           }
           let config = this.config;
-          // keep retrying / don't raise fatal network error if current position is buffered or if in automode with current level not 0
-          if (loadError <= config.fragLoadingMaxRetry || mediaBuffered || (frag.autoLevel && frag.level)) {
+          // HTTP 4XX is a non-recoverable error; retrying is useless
+          var fatalResponseCode = data.response && data.response.code >= 400 && data.response.code < 499;
+          if (
+            // always retry if in automode with current level not 0: we can switch down
+            (frag.autoLevel && frag.level) ||
+            // otherwise, keep retrying non-4XX requests up to limit or if current position is buffered
+            (!fatalResponseCode && (loadError <= config.fragLoadingMaxRetry || mediaBuffered))
+          ) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
@@ -1243,7 +1249,8 @@ class StreamController extends EventHandler {
             }
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
-            logger.error(`mediaController: ${data.details} reaches max retry, redispatch as fatal ...`);
+            var explanation = fatalResponseCode ? `with HTTP ${data.response.code}` : 'reaches max retry';
+            logger.error(`mediaController: ${data.details} ${explanation}, redispatch as fatal ...`);
             // redispatch same error but with fatal set to true
             data.fatal = true;
             this.hls.trigger(Event.ERROR, data);

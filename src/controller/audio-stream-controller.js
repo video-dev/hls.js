@@ -749,7 +749,9 @@ class AudioStreamController extends EventHandler {
             loadError=1;
           }
           let config = this.config;
-          if (loadError <= config.fragLoadingMaxRetry) {
+          // HTTP 4XX is a non-recoverable error; retrying is useless
+          var fatalResponseCode = data.response && data.response.code >= 400 && data.response.code < 499;
+          if (loadError <= config.fragLoadingMaxRetry && !fatalResponseCode) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
@@ -760,7 +762,8 @@ class AudioStreamController extends EventHandler {
             // retry loading state
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
-            logger.error(`audioStreamController: ${data.details} reaches max retry, redispatch as fatal ...`);
+            var explanation = fatalResponseCode ? `with HTTP ${data.response.code}` : 'reaches max retry';
+            logger.error(`audioStreamController: ${data.details} ${explanation}, redispatch as fatal ...`);
             // redispatch same error but with fatal set to true
             data.fatal = true;
             this.hls.trigger(Event.ERROR, data);
