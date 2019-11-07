@@ -13,6 +13,7 @@ describe('LevelController', function () {
   beforeEach(function () {
     hls = new HlsMock({}, sandbox);
     levelController = new LevelController(hls);
+    levelController.onParsedComplete = () => {};
     triggerSpy = hls.trigger;
   });
 
@@ -55,6 +56,7 @@ describe('LevelController', function () {
       id: 2,
       level: 1,
       loadError: 0,
+      loaded: undefined,
       name: '240',
       realBitrate: 0,
       textGroupIds: undefined,
