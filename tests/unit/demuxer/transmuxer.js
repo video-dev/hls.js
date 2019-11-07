@@ -120,7 +120,7 @@ describe('TransmuxerInterface tests', function () {
     });
   });
 
-  it.only('pushes data to demuxer with no worker', function () {
+  it('pushes data to demuxer with no worker', function () {
     const config = { enableWorker: false }; // Option debug : true crashes mocha
     const hls = {
       trigger: function () {
