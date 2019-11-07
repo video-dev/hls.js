@@ -110,17 +110,19 @@ class AudioTrackController extends EventHandler {
    */
   protected onAudioTrackLoaded (data: TrackLoadedData): void {
     const { id, details } = data;
+    const currentTrack = this.tracks[id];
+    const curDetails = currentTrack.details;
 
     if (id >= this.tracks.length) {
       logger.warn('[audio-track-controller]: Invalid audio track id:', id);
       return;
     }
 
+    currentTrack.details = data.details;
     logger.log(`[audio-track-controller]: audioTrack ${id} loaded [${details.startSN},${details.endSN}]`);
 
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
-      const curDetails = this.tracks[id].details;
       details.updated = (!curDetails || details.endSN !== curDetails.endSN || details.url !== curDetails.url);
       details.availabilityDelay = curDetails && curDetails.availabilityDelay;
       const reloadInterval = computeReloadInterval(details, data.stats);
