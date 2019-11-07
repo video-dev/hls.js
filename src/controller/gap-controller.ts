@@ -2,17 +2,28 @@ import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Event from '../events';
 import { logger } from '../utils/logger';
+import Hls from '../hls';
+import { HlsConfig } from '../config';
+import { FragmentTracker } from './fragment-tracker';
 
 const stallDebounceInterval = 250;
 const jumpThreshold = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 
 export default class GapController {
+  private config: HlsConfig;
+  private media: HTMLMediaElement;
+  private fragmentTracker: FragmentTracker;
+  private hls: Hls;
+  private nudgeRetry: number = 0;
+  private stallReported: boolean = false;
+  private stalled: number | null = null;
+  private moved: boolean = false;
+
   constructor (config, media, fragmentTracker, hls) {
     this.config = config;
     this.media = media;
     this.fragmentTracker = fragmentTracker;
     this.hls = hls;
-    this.stallReported = false;
   }
 
   /**
@@ -21,23 +32,26 @@ export default class GapController {
    * @param lastCurrentTime
    * @param buffered
    */
-  poll (lastCurrentTime, buffered) {
-    const { config, media } = this;
+  public poll (lastCurrentTime: number) {
+    const { config, media, stalled } = this;
     const currentTime = media.currentTime;
-    const tnow = self.performance.now();
+    const tnow: number = self.performance.now();
 
     if (currentTime !== lastCurrentTime) {
-      // The playhead is now moving, but was previously stalled
-      if (this.stallReported) {
-        logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(tnow - this.stalled)}ms`);
-        this.stallReported = false;
+      this.moved = true;
+      if (stalled !== null) {
+        // The playhead is now moving, but was previously stalled
+        if (this.stallReported) {
+          logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(tnow - stalled)}ms`);
+          this.stallReported = false;
+        }
+        this.stalled = null;
+        this.nudgeRetry = 0;
       }
-      this.stalled = null;
-      this.nudgeRetry = 0;
       return;
     }
 
-    if (media.ended || !media.buffered.length || media.readyState > 2) {
+    if (media.ended || !media.buffered.length || media.readyState === 4) {
       return;
     }
 
@@ -47,12 +61,24 @@ export default class GapController {
 
     // The playhead isn't moving but it should be
     // Allow some slack time to for small stalls to resolve themselves
-    const stalledDuration = tnow - this.stalled;
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
-    if (!this.stalled) {
+
+    if (!this.moved && !media.seeking && !media.paused && media.buffered.length) {
+      if (bufferInfo.nextStart) {
+        logger.warn(`skipping start gap, adjusting currentTime from ${currentTime} to ${bufferInfo.nextStart}`);
+        this.moved = true;
+        media.currentTime = bufferInfo.nextStart;
+      }
+      return;
+    }
+
+    if (stalled === null) {
       this.stalled = tnow;
       return;
-    } else if (stalledDuration >= stallDebounceInterval) {
+    }
+
+    const stalledDuration = tnow - stalled;
+    if (!media.seeking && stalledDuration >= stallDebounceInterval) {
       // Report stalling after trying to fix
       this._reportStall(bufferInfo.len);
     }
@@ -66,7 +92,7 @@ export default class GapController {
    * @param stalledDuration - The amount of time Hls.js has been stalling for.
    * @private
    */
-  _tryFixBufferStall (bufferInfo, stalledDuration) {
+  private _tryFixBufferStall (bufferInfo, stalledDuration) {
     const { config, fragmentTracker, media } = this;
     const currentTime = media.currentTime;
 
@@ -91,7 +117,7 @@ export default class GapController {
    * @param bufferLen - The playhead distance from the end of the current buffer segment.
    * @private
    */
-  _reportStall (bufferLen) {
+  private _reportStall (bufferLen) {
     const { hls, media, stallReported } = this;
     if (!stallReported) {
       // Report stalled error once
@@ -111,7 +137,7 @@ export default class GapController {
    * @param partial - The partial fragment found at the current time (where playback is stalling).
    * @private
    */
-  _trySkipBufferHole (partial) {
+  private _trySkipBufferHole (partial) {
     const { hls, media } = this;
     const currentTime = media.currentTime;
     let lastEndTime = 0;
@@ -139,10 +165,10 @@ export default class GapController {
    * Attempts to fix buffer stalls by advancing the mediaElement's current time by a small amount.
    * @private
    */
-  _tryNudgeBuffer () {
+  private _tryNudgeBuffer () {
     const { config, hls, media } = this;
     const currentTime = media.currentTime;
-    const nudgeRetry = (this.nudgeRetry || 0) + 1;
+    const nudgeRetry = this.nudgeRetry + 1;
     this.nudgeRetry = nudgeRetry;
 
     if (nudgeRetry < config.nudgeMaxRetry) {

@@ -758,7 +758,7 @@ export default class StreamController extends BaseStreamController {
   // Checks the health of the buffer and attempts to resolve playback stalls.
   private checkBuffer () {
     const { media, gapController } = this;
-    if (!media || !media.readyState) {
+    if (!media || !gapController || !media.readyState) {
       // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
@@ -773,7 +773,7 @@ export default class StreamController extends BaseStreamController {
       this.immediateLevelSwitchEnd();
     } else {
       // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
-      gapController.poll(this.lastCurrentTime, media.buffered);
+      gapController.poll(this.lastCurrentTime);
     }
 
     this.lastCurrentTime = media.currentTime;
