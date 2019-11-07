@@ -9,6 +9,7 @@ import { logger } from '../utils/logger';
 import { isCodecType, CodecType } from '../utils/codecs';
 import { MediaPlaylist, AudioGroup, MediaPlaylistType } from '../types/media-playlist';
 import { PlaylistLevelType } from '../types/loader';
+import { LevelAttributes } from '../types/level';
 
 /**
  * M3U8 parser
@@ -113,7 +114,7 @@ export default class M3U8Parser {
     let id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
-      const attrs = new AttrList(result[1]);
+      const attrs = new AttrList(result[1]) as LevelAttributes;
       if (attrs.TYPE === type) {
         const media: MediaPlaylist = {
           attrs,

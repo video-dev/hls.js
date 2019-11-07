@@ -419,8 +419,7 @@ export default class Hls extends Observer {
    * @type {number}
    */
   get bandwidthEstimate (): number {
-    const bwEstimator = this.abrController._bwEstimator;
-    return bwEstimator ? bwEstimator.getEstimate() : NaN;
+    return this.abrController._bwEstimator.getEstimate();
   }
 
   /**

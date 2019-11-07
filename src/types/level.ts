@@ -18,14 +18,22 @@ export interface LevelParsed {
 
 export interface LevelAttributes {
   AUDIO?: string
+  AUTOSELECT?: string
   'AVERAGE-BANDWIDTH'?: string
-  SUBTITLES?: string
   BANDWIDTH?: string
+  BYTERANGE?: string
   'CLOSED-CAPTIONS'?: string
   CODECS?: string
+  DEFAULT?: string
+  FORCED?: string
   'FRAME-RATE'?: string
+  LANGUAGE?: string
+  NAME?: string
   'PROGRAM-ID'?: string
   RESOLUTION?: string
+  SUBTITLES?: string
+  TYPE?: string
+  URI?: string
 }
 
 export class Level {
