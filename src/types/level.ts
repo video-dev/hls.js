@@ -69,4 +69,8 @@ export class Level {
     this.videoCodec = data.videoCodec;
     this.unknownCodecs = data.unknownCodecs;
   }
+
+  get maxBitrate (): number {
+    return Math.max(this.realBitrate, this.bitrate);
+  }
 }

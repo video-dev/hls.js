@@ -92,44 +92,6 @@ describe('AudioTrackController', function () {
     });
   });
 
-  describe('onAudioTrackLoaded', function () {
-    it('should not set the track details from the event data and clear the timer for a non-live track', function () {
-      const details = {
-        live: false,
-        targetduration: 100
-      };
-
-      audioTrackController.tracks = tracks;
-      audioTrackController.canLoad = true;
-
-      audioTrackController.onAudioTrackLoaded({
-        id: 0,
-        details
-      });
-
-      expect(audioTrackController.tracks[0].details).to.equal(undefined);
-      expect(audioTrackController.timer).to.equal(null);
-    });
-
-    it('should not set the track details from the event data and set the timer for a live track', function () {
-      const details = {
-        live: true,
-        targetduration: 100
-      };
-
-      audioTrackController.tracks = tracks;
-      audioTrackController.canLoad = true;
-
-      audioTrackController.onAudioTrackLoaded({
-        id: 0,
-        details
-      });
-
-      expect(audioTrackController.tracks[0].details).to.equal(undefined);
-      expect(audioTrackController.timer).to.be.a('number');
-    });
-  });
-
   describe('onAudioTrackSwitched', function () {
     it('should update the current audioGroupId', function () {
       audioTrackController.tracks = tracks;
