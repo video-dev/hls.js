@@ -243,8 +243,25 @@ export default class BaseStreamController extends TaskLoop {
     };
 
     const level = (this.levels as Array<Level>)[frag.level];
+    const details = level.details as LevelDetails;
+    const media = this.mediaBuffer || this.media;
+    const currentTime = media ? media.currentTime : null;
+    const bufferInfo = BufferHelper.bufferInfo(media, currentTime, this.config.maxBufferHole);
+    const maxBitrate = level.maxBitrate || 0;
 
-    return this.fragmentLoader.load(frag, progressCallback, level.maxBitrate)
+    let bitsToBuffer: number = 0;
+    if (bufferInfo.len === 0) {
+      // Attempt to buffer 3 seconds of content when no buffer is available
+      bitsToBuffer = maxBitrate * 3;
+    } else if (details.live || (bufferInfo.end - this.media.currentTime) < details.levelTargetDuration * 2) {
+      // Buffer up to one second at a time
+      bitsToBuffer = Math.min(maxBitrate, this.hls.bandwidthEstimate * 0.05);
+    } else {
+      // Load the whole fragment without progress updates
+      bitsToBuffer = Infinity;
+    }
+
+    return this.fragmentLoader.load(frag, progressCallback, Math.round(bitsToBuffer / 8))
       .catch(errorHandler);
   }
 

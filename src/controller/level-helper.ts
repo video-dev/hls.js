@@ -212,7 +212,7 @@ export function adjustSliding (oldPlaylist: LevelDetails, newPlaylist: LevelDeta
 }
 
 export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderStats): number {
-  const reloadInterval = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration);
+  const reloadInterval = 1000 * newDetails.levelTargetDuration;
   const reloadIntervalAfterMiss = reloadInterval / 2;
   const timeSinceLastModified = newDetails.lastModified ? +new Date() - newDetails.lastModified : 0;
   const useLastModified = timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;

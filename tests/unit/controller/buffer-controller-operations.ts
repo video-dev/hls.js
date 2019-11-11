@@ -12,6 +12,7 @@ import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import Fragment, { ElementaryStreamTypes } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import LevelDetails from '../../../src/loader/level-details';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -353,15 +354,14 @@ describe('BufferController SourceBuffer operation queueing', function () {
   describe('onLevelUpdated', function () {
     let data;
     beforeEach(function () {
+      const details = Object.assign(new LevelDetails(''), {
+        averagetargetduration: 6,
+        live: true,
+        totalduration: 5,
+        fragments: [{ start: 5 }]
+      });
       mockMediaSource.duration = 0;
-      data = {
-        details: {
-          averagetargetduration: 6,
-          live: true,
-          totalduration: 5,
-          fragments: [{ start: 5 }]
-        }
-      };
+      data = { details };
     });
 
     it('exits early if the fragments array is empty', function () {

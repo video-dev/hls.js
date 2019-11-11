@@ -19,7 +19,7 @@ export default class FragmentLoader {
     this.config = config;
   }
 
-  load (frag: Fragment, onProgress?: FragmentLoadProgressCallback, bitrate?: number): Promise<FragLoadSuccessResult | LoadError> {
+  load (frag: Fragment, onProgress?: FragmentLoadProgressCallback, highWaterMark?: number): Promise<FragLoadSuccessResult | LoadError> {
     if (!frag.url) {
       return Promise.reject(new LoadError(null, 'Fragment does not have a url'));
     }
@@ -52,13 +52,12 @@ export default class FragmentLoader {
       loaderContext.rangeEnd = end;
     }
 
-    const bytesPerSecond: number = (bitrate ? bitrate / 8 : 0) | 0;
     const loaderConfig: LoaderConfiguration = {
       timeout: config.fragLoadingTimeOut,
       maxRetry: 0,
       retryDelay: 0,
       maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-      highWaterMark: Math.max(bytesPerSecond, MIN_CHUNK_SIZE)
+      highWaterMark: Math.max(highWaterMark || 0, MIN_CHUNK_SIZE)
     };
 
     return new Promise((resolve, reject) => {
