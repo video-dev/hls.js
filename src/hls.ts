@@ -107,7 +107,7 @@ export default class Hls extends Observer {
 
     // network controllers
     const levelController = this.levelController = new LevelController(this);
-    // FIXME: FragmentTracker must be defined before StreamController because the order of event handling is important
+    // FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
 

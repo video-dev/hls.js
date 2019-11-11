@@ -332,7 +332,9 @@ export default class M3U8Parser {
       totalduration -= frag.duration;
     }
     level.totalduration = totalduration;
-    level.averagetargetduration = totalduration / level.fragments.length;
+    if (totalduration > 0 && level.fragments.length) {
+      level.averagetargetduration = totalduration / level.fragments.length;
+    }
     level.endSN = currentSN - 1;
     level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
     level.endCC = discontinuityCounter;
