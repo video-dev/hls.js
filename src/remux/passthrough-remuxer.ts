@@ -1,5 +1,5 @@
 import { InitSegmentData, RemuxedTrack, Remuxer, RemuxerResult } from '../types/remuxer';
-import { getDuration, getStartDTS, offsetStartDTS, parseInitSegment } from '../utils/mp4-tools';
+import { getDuration, getStartDTS, offsetStartDTS, parseInitSegment, InitData } from '../utils/mp4-tools';
 import { TrackSet } from '../types/track';
 import { logger } from '../utils/logger';
 
@@ -7,7 +7,7 @@ class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
-  private initData?: any;
+  private initData?: InitData;
   private initPTS?: number;
   private initTracks?: TrackSet;
   private lastEndDTS: number | null = null;
@@ -38,7 +38,7 @@ class PassThroughRemuxer implements Remuxer {
       this.initData = undefined;
       return;
     }
-    const initData = this.initData = parseInitSegment(initSegment) as any;
+    const initData = this.initData = parseInitSegment(initSegment);
 
     // default audio codec if nothing specified
     // TODO : extract that from initsegment
@@ -50,7 +50,7 @@ class PassThroughRemuxer implements Remuxer {
       videoCodec = 'avc1.42e01e';
     }
 
-    const tracks = {} as TrackSet;
+    const tracks: TrackSet = {};
     if (initData.audio && initData.video) {
       tracks.audiovideo = {
         container: 'video/mp4',
@@ -101,7 +101,7 @@ class PassThroughRemuxer implements Remuxer {
       this.generateInitSegment(data);
       initData = this.initData;
     }
-    if (!initData.length) {
+    if (!initData || !initData.length) {
       // We can't remux if the initSegment could not be generated
       logger.warn('[passthrough-remuxer.ts]: Failed to generate initSegment.');
       return result;

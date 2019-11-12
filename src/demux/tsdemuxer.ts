@@ -201,10 +201,11 @@ class TSDemuxer implements Demuxer {
       };
     }
 
-    const syncOffset = TSDemuxer._syncOffset(data);
+    const syncOffset = Math.max(0, TSDemuxer._syncOffset(data));
+
     len -= (len + syncOffset) % 188;
     if (len < data.byteLength && !flush) {
-      this.remainderData = new Uint8Array(data.buffer, len, data.byteLength - len);
+      this.remainderData = new Uint8Array(data.buffer, len, data.buffer.byteLength - len);
     }
 
     // loop through TS packets

@@ -19,7 +19,6 @@ import {
 import { LevelUpdatedData, BufferAppendingEventPayload } from '../types/events';
 
 const MediaSource = getMediaSource();
-const DEFAULT_TARGET_DURATION = 10;
 
 export default class BufferController extends EventHandler {
   // the value that we have set mediasource.duration to
@@ -220,7 +219,7 @@ export default class BufferController extends EventHandler {
           timeRanges[type] = sourceBuffer[type].buffered;
         }
         this.appendError = 0;
-        this.hls.trigger(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, chunkMeta });
+        this.hls.trigger(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, frag, chunkMeta });
       },
       onError: (err) => {
         // in case any error occured while appending, put back segment in segments table
@@ -279,11 +278,15 @@ export default class BufferController extends EventHandler {
     const { frag } = data;
     const buffersAppendedTo: Array<SourceBufferName> = [];
 
-    if (frag.elementaryStreams[ElementaryStreamTypes.AUDIO]) {
-      buffersAppendedTo.push('audio');
-    }
-    if (frag.elementaryStreams[ElementaryStreamTypes.VIDEO]) {
-      buffersAppendedTo.push('video');
+    if (frag.elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO]) {
+      buffersAppendedTo.push('audiovideo');
+    } else {
+      if (frag.elementaryStreams[ElementaryStreamTypes.AUDIO]) {
+        buffersAppendedTo.push('audio');
+      }
+      if (frag.elementaryStreams[ElementaryStreamTypes.VIDEO]) {
+        buffersAppendedTo.push('video');
+      }
     }
     console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
 
@@ -327,7 +330,7 @@ export default class BufferController extends EventHandler {
     if (!details.fragments.length) {
       return;
     }
-    this._levelTargetDuration = details.averagetargetduration || details.targetduration || DEFAULT_TARGET_DURATION;
+    this._levelTargetDuration = details.levelTargetDuration;
     this._live = details.live;
 
     const levelDuration = details.totalduration + details.fragments[0].start;

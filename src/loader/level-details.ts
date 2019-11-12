@@ -1,5 +1,7 @@
 import Fragment from './fragment';
 
+const DEFAULT_TARGET_DURATION = 10;
+
 export default class LevelDetails {
   public PTSKnown?: boolean;
   public availabilityDelay?: number; // Manifest reload synchronization
@@ -29,5 +31,9 @@ export default class LevelDetails {
 
   get hasProgramDateTime (): boolean {
     return !!this.fragments[0] && Number.isFinite(this.fragments[0].programDateTime as number);
+  }
+
+  get levelTargetDuration (): number {
+    return this.averagetargetduration || this.targetduration || DEFAULT_TARGET_DURATION;
   }
 }

@@ -25,8 +25,12 @@ class EwmaBandWidthEstimator {
 
   update (slow: number, fast: number) {
     const { slow_, fast_ } = this;
-    this.slow_ = new EWMA(slow, slow_.getEstimate(), slow_.getTotalWeight());
-    this.fast_ = new EWMA(fast, fast_.getEstimate(), fast_.getTotalWeight());
+    if (this.slow_.halfLife !== slow) {
+      this.slow_ = new EWMA(slow, slow_.getEstimate(), slow_.getTotalWeight());
+    }
+    if (this.fast_.halfLife !== fast) {
+      this.fast_ = new EWMA(fast, fast_.getEstimate(), fast_.getTotalWeight());
+    }
   }
 
   sample (durationMs: number, numBytes: number) {

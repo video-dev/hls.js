@@ -112,26 +112,33 @@ describe('checkBuffer', function () {
     let mockMedia;
     let reportStallSpy;
     let lastCurrentTime;
-    let buffered;
+
     beforeEach(function () {
       mockMedia = {
         buffered: {
-          length: 1
+          length: 1,
+          start () {
+            return 0;
+          },
+          end () {
+            return 10;
+          }
         }
       };
       gapController.media = mockMedia;
       reportStallSpy = sandbox.spy(gapController, '_reportStall');
-      buffered = mockMedia.buffered;
     });
 
     function setStalling () {
+      gapController.moved = true;
       mockMedia.paused = false;
-      mockMedia.readyState = 1;
+      mockMedia.readyState = 2;
       mockMedia.currentTime = 4;
       lastCurrentTime = 4;
     }
 
     function setNotStalling () {
+      gapController.moved = true;
       mockMedia.paused = false;
       mockMedia.readyState = 4;
       mockMedia.currentTime = 5;
@@ -141,13 +148,13 @@ describe('checkBuffer', function () {
     it('should try to fix a stall if expected to be playing', function () {
       const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
       setStalling();
-      gapController.poll(lastCurrentTime, buffered);
+      gapController.poll(lastCurrentTime);
 
       // The first poll call made while stalling just sets stall flags
       expect(gapController.stalled).to.be.a('number');
       expect(gapController.stallReported).to.be.false;
 
-      gapController.poll(lastCurrentTime, buffered);
+      gapController.poll(lastCurrentTime);
       expect(fixStallStub).to.have.been.calledOnce;
     });
 
@@ -157,7 +164,7 @@ describe('checkBuffer', function () {
       gapController.nudgeRetry = 1;
       gapController.stalled = 4200;
       const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
-      gapController.poll(lastCurrentTime, buffered);
+      gapController.poll(lastCurrentTime);
 
       expect(gapController.stalled).to.not.exist;
       expect(gapController.nudgeRetry).to.equal(0);
@@ -170,11 +177,18 @@ describe('checkBuffer', function () {
       const clock = sandbox.useFakeTimers(0);
       clock.tick(250);
       gapController.stalled = 1;
-      gapController.poll(lastCurrentTime, buffered);
+      gapController.poll(lastCurrentTime);
       expect(reportStallSpy).to.not.have.been.called;
       clock.tick(251);
-      gapController.poll(lastCurrentTime, buffered);
+      gapController.poll(lastCurrentTime);
       expect(reportStallSpy).to.have.been.calledOnce;
+    });
+
+    it('should skip any initial gap when not having played yet', function () {
+      mockMedia.currentTime = 0;
+      mockMedia.buffered.start = () => 0.9;
+      gapController.poll(0);
+      expect(mockMedia.currentTime).to.equal(0.9);
     });
   });
 });

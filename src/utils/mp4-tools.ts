@@ -1,13 +1,14 @@
 import { sliceUint8 } from './typed-array';
+import { ElementaryStreamTypes } from '../loader/fragment';
 
 // Todo: Optimize by using loops instead of array methods
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
-export function bin2str (buffer) {
+export function bin2str (buffer): string {
   return String.fromCharCode.apply(null, buffer);
 }
 
-export function readUint16 (buffer, offset) {
+export function readUint16 (buffer, offset): number {
   if (buffer.data) {
     offset += buffer.start;
     buffer = buffer.data;
@@ -19,7 +20,7 @@ export function readUint16 (buffer, offset) {
   return val < 0 ? 65536 + val : val;
 }
 
-export function readUint32 (buffer, offset) {
+export function readUint32 (buffer, offset): number {
   if (buffer.data) {
     offset += buffer.start;
     buffer = buffer.data;
@@ -44,7 +45,7 @@ export function writeUint32 (buffer, offset, value) {
 }
 
 // Find the data for a box specified by its path
-export function findBox (data, path): any {
+export function findBox (data, path): Array<any> {
   let results = [] as Array<any>;
   let i;
   let size;
@@ -65,7 +66,7 @@ export function findBox (data, path): any {
 
   if (!path.length) {
     // short-circuit the search for empty paths
-    return null;
+    return results;
   }
 
   for (i = start; i < end;) {
@@ -94,17 +95,18 @@ export function findBox (data, path): any {
 }
 
 export function parseSegmentIndex (initSegment) {
-  const moov = findBox(initSegment, ['moov'])[0];
+  const moovBox = findBox(initSegment, ['moov']);
+  const moov = moovBox ? moovBox[0] : null;
   const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
 
-  let sidx = findBox(initSegment, ['sidx']);
+  const sidxBox = findBox(initSegment, ['sidx']);
 
-  if (!sidx || !sidx[0]) {
+  if (!sidxBox || !sidxBox[0]) {
     return null;
   }
 
   const references: any[] = [];
-  sidx = sidx[0];
+  const sidx = sidxBox[0];
 
   const version = sidx.data[0];
 
@@ -196,11 +198,26 @@ export function parseSegmentIndex (initSegment) {
  * moov > trak > mdia > hdlr
  * ```
  * @param init {Uint8Array} the bytes of the init segment
- * @return {object} a hash of track type to timescale values or null if
+ * @return {InitData} a hash of track type to timescale values or null if
  * the init segment is malformed.
  */
-export function parseInitSegment (initSegment) {
-  const result = [] as Array<any>;
+
+interface InitDataTrack {
+  timescale: number,
+  id: number,
+  codec: string
+}
+
+type HdlrType = ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO;
+
+export interface InitData extends Array<any> {
+  [index: number]: { timescale: number, type: HdlrType };
+  audio?: InitDataTrack
+  video?: InitDataTrack
+}
+
+export function parseInitSegment (initSegment): InitData {
+  const result: InitData = [];
   const traks = findBox(initSegment, ['moov', 'trak']);
 
   traks.forEach(trak => {
@@ -219,16 +236,17 @@ export function parseInitSegment (initSegment) {
         const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
         if (hdlr) {
           const hdlrType = bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
-          const type = { soun: 'audio', vide: 'video' }[hdlrType];
+          const type: HdlrType = { soun: ElementaryStreamTypes.AUDIO, vide: ElementaryStreamTypes.VIDEO }[hdlrType];
           if (type) {
-            // extract codec info. TODO : parse codec details to be able to build MIME type
-            let codecBox = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);
-            if (codecBox.length) {
-              codecBox = codecBox[0];
-              const codecType = bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
+            // TODO: Parse codec details to be able to build MIME type.
+            const codexBoxes = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);
+            let codec;
+            if (codexBoxes.length) {
+              const codecBox = codexBoxes[0];
+              codec = bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
             }
-            result[trackId] = { timescale: timescale, type: type };
-            result[type] = { timescale: timescale, id: trackId };
+            result[trackId] = { timescale, type };
+            result[type] = { timescale, id: trackId, codec };
           }
         }
       }
@@ -303,14 +321,14 @@ export function getStartDTS (initData, fragment) {
  */
 export function getDuration (data, initData) {
   let rawDuration = 0;
-  let duration = 0;
+  let totalDuration = 0;
+  let videoDuration = 0;
   const trafs = findBox(data, ['moof', 'traf']);
   for (let i = 0; i < trafs.length; i++) {
     const traf = trafs[i];
     // There is only one tfhd & trun per traf
     const tfhd = findBox(traf, ['tfhd'])[0];
     const trun = findBox(traf, ['trun'])[0];
-
     const tfhdFlags = readUint32(tfhd, 0);
     let sampleDuration;
     if (tfhdFlags & 0x000008) {
@@ -330,17 +348,25 @@ export function getDuration (data, initData) {
     }
 
     const id = readUint32(tfhd, 4);
-    const scale = initData[id].timescale || 90e3;
-    duration += rawDuration / scale;
+    const track = initData[id];
+    const scale = track.timescale || 90e3;
+    totalDuration += rawDuration / scale;
+    if (track && track.type === ElementaryStreamTypes.VIDEO) {
+      videoDuration += rawDuration / scale;
+    }
   }
-  if (duration === 0) {
+  if (totalDuration === 0) {
     // If duration samples are not available in the traf use sidx subsegment_duration
     const sidx = parseSegmentIndex(data);
     if (sidx && sidx.references) {
       return sidx.references.reduce((dur, ref) => dur + ref.info.duration || 0, 0);
     }
   }
-  return duration;
+  if (videoDuration) {
+    // Only return duration of the video track. We don't want the combined duration of video and audio.
+    return videoDuration;
+  }
+  return totalDuration;
 }
 
 /*

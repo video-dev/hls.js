@@ -19,7 +19,7 @@ describe('BufferOperationQueue tests', function () {
     video: {
       updating: false
     }
-  } as SourceBuffers;
+  } as any as SourceBuffers;
 
   beforeEach(function () {
     operationQueue = new BufferOperationQueue(sbMock);

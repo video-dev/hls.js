@@ -90,15 +90,17 @@ class SubtitleTrackController extends EventHandler {
     const { id, details } = data;
     const { trackId, tracks } = this;
     const currentTrack = tracks[trackId];
+    const curDetails = currentTrack.details;
+
     if (id >= tracks.length || id !== trackId || !currentTrack || this.stopped) {
       this._clearReloadTimer();
       return;
     }
 
+    currentTrack.details = data.details;
     logger.log(`[subtitle-track-controller]: subtitle track ${id} loaded [${details.startSN},${details.endSN}]`);
 
     if (details.live) {
-      const curDetails = currentTrack.details;
       details.updated = (!curDetails || details.endSN !== curDetails.endSN || details.url !== curDetails.url);
       details.availabilityDelay = curDetails && curDetails.availabilityDelay;
       const reloadInterval = computeReloadInterval(details, data.stats);

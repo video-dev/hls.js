@@ -82,7 +82,7 @@ class FetchLoader implements Loader<LoaderContext> {
       stats.loading.first = Math.max(performance.now(), stats.loading.start);
       stats.total = parseInt(response.headers.get('Content-Length') || '0');
 
-      if (onProgress) {
+      if (onProgress && Number.isFinite(config.highWaterMark)) {
         this.loadProgressively(response, stats, context, config.highWaterMark, onProgress);
       }
 
@@ -100,6 +100,10 @@ class FetchLoader implements Loader<LoaderContext> {
         url: response.url,
         data: responseData
       };
+
+      if (onProgress && !Number.isFinite(config.highWaterMark)) {
+        onProgress(stats, context, responseData, response);
+      }
 
       callbacks.onSuccess(loaderResponse, stats, context, response);
     }).catch((error) => {
