@@ -102,9 +102,7 @@ class AbrController extends EventHandler {
 
     const { levels, minAutoLevel } = hls;
     const level = levels[frag.level];
-
-    const levelBitrate = Math.max(level.realBitrate, level.bitrate);
-    const expectedLen = stats.total || Math.max(stats.loaded, Math.round(frag.duration * levelBitrate / 8));
+    const expectedLen = stats.total || Math.max(stats.loaded, Math.round(frag.duration * level.maxBitrate / 8));
     const loadRate = Math.max(1, stats.bwEstimate ? (stats.bwEstimate / 8) : (stats.loaded * 1000 / requestDelay));
     // fragLoadDelay is an estimate of the time (in seconds) it will take to buffer the entire fragment
     const fragLoadedDelay = (expectedLen - stats.loaded) / loadRate;
@@ -126,7 +124,7 @@ class AbrController extends EventHandler {
       // compute time to load next fragment at lower level
       // 0.8 : consider only 80% of current bw to be conservative
       // 8 = bits per byte (bps/Bps)
-      const levelNextBitrate = Math.max(levels[nextLoadLevel].realBitrate, levels[nextLoadLevel].bitrate);
+      const levelNextBitrate = levels[nextLoadLevel].maxBitrate;
       fragLevelNextLoadedDelay = frag.duration * levelNextBitrate / (8 * 0.8 * loadRate);
 
       if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
@@ -308,7 +306,7 @@ class AbrController extends EventHandler {
         adjustedbw = bwUpFactor * currentBw;
       }
 
-      const bitrate: number = Math.max(levels[i].realBitrate, levels[i].bitrate);
+      const bitrate: number = levels[i].maxBitrate;
       const fetchDuration: number = bitrate * avgDuration / adjustedbw;
 
       logger.trace(`level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ${i}/${Math.round(adjustedbw)}/${bitrate}/${avgDuration}/${maxFetchDuration}/${fetchDuration}`);

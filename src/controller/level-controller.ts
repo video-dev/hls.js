@@ -160,7 +160,7 @@ export default class LevelController extends EventHandler {
       }
 
       // Audio is only alternate if manifest include a URI along with the audio group tag
-      this.hls.trigger(Event.MANIFEST_PARSED, {
+      const edata: ManifestParsedData = {
         levels,
         audioTracks,
         firstLevel: this._firstLevel,
@@ -168,7 +168,8 @@ export default class LevelController extends EventHandler {
         audio: audioCodecFound,
         video: videoCodecFound,
         altAudio: audioTracks.some(t => !!t.url)
-      } as ManifestParsedData);
+      };
+      this.hls.trigger(Event.MANIFEST_PARSED, edata);
 
       this.onParsedComplete();
     } else {

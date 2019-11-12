@@ -107,7 +107,7 @@ export default class Hls extends Observer {
 
     // network controllers
     const levelController = this.levelController = new LevelController(this);
-    // FIXME: FragmentTracker must be defined before StreamController because the order of event handling is important
+    // FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
     const streamController = this.streamController = new StreamController(this, fragmentTracker);
 
@@ -419,8 +419,7 @@ export default class Hls extends Observer {
    * @type {number}
    */
   get bandwidthEstimate (): number {
-    const bwEstimator = this.abrController._bwEstimator;
-    return bwEstimator ? bwEstimator.getEstimate() : NaN;
+    return this.abrController._bwEstimator.getEstimate();
   }
 
   /**
@@ -459,11 +458,7 @@ export default class Hls extends Observer {
     const len = levels ? levels.length : 0;
 
     for (let i = 0; i < len; i++) {
-      const levelNextBitrate = levels[i].realBitrate
-        ? Math.max(levels[i].realBitrate, levels[i].bitrate)
-        : levels[i].bitrate;
-
-      if (levelNextBitrate > minAutoBitrate) {
+      if (levels[i].maxBitrate > minAutoBitrate) {
         return i;
       }
     }
