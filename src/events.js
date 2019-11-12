@@ -104,7 +104,9 @@ const HlsEvents = {
   // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length } }
   KEY_LOADED: 'hlsKeyLoaded',
   // fired upon stream controller state transitions - data: { previousState, nextState }
-  STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
+  STREAM_STATE_TRANSITION: 'hlsStreamStateTransition',
+  // fired when the live back buffer is reached defined by the liveBackBufferLength config option - data : { bufferEnd: number }
+  LIVE_BACK_BUFFER_REACHED: 'hlsLiveBackBufferReached'
 };
 
 export default HlsEvents;
