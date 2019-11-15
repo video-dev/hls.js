@@ -1,5 +1,7 @@
 import Fragment from './fragment';
 
+const DEFAULT_TARGET_DURATION = 10;
+
 export default class LevelDetails {
   public PTSKnown?: boolean;
   public availabilityDelay?: number; // Manifest reload synchronization
@@ -19,6 +21,7 @@ export default class LevelDetails {
   public totalduration: number = 0;
   public type: string | null = null;
   public updated?: boolean; // Manifest reload synchronization
+  public misses: number = 0;
   public url: string;
   public version: number | null = null;
 
@@ -27,7 +30,26 @@ export default class LevelDetails {
     this.url = baseUrl;
   }
 
+  reloaded (previous: LevelDetails | undefined) {
+    if (!previous) {
+      this.updated = true;
+      return;
+    }
+    const updated = (this.endSN !== previous.endSN || this.url !== previous.url);
+    if (updated) {
+      this.misses = Math.floor(previous.misses * 0.6);
+    } else {
+      this.misses = previous.misses + 1;
+    }
+    this.updated = updated;
+    this.availabilityDelay = previous.availabilityDelay;
+  }
+
   get hasProgramDateTime (): boolean {
     return !!this.fragments[0] && Number.isFinite(this.fragments[0].programDateTime as number);
+  }
+
+  get levelTargetDuration (): number {
+    return this.averagetargetduration || this.targetduration || DEFAULT_TARGET_DURATION;
   }
 }

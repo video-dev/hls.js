@@ -3,11 +3,6 @@ import EwmaBandWidthEstimator from '../../../src/utils/ewma-bandwidth-estimator'
 import Hls from '../../../src/hls';
 
 describe('AbrController', function () {
-  it('should return null if _bwEstimator is not specified', function () {
-    const hls = new Hls();
-    expect(hls.abrController._bwEstimator).to.be.null;
-  });
-
   it('should return correct next auto level', function () {
     const hls = new Hls({ maxStarvationDelay: 4 });
     hls.levelController._levels = [

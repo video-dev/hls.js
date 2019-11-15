@@ -18,14 +18,22 @@ export interface LevelParsed {
 
 export interface LevelAttributes {
   AUDIO?: string
+  AUTOSELECT?: string
   'AVERAGE-BANDWIDTH'?: string
-  SUBTITLES?: string
   BANDWIDTH?: string
+  BYTERANGE?: string
   'CLOSED-CAPTIONS'?: string
   CODECS?: string
+  DEFAULT?: string
+  FORCED?: string
   'FRAME-RATE'?: string
+  LANGUAGE?: string
+  NAME?: string
   'PROGRAM-ID'?: string
   RESOLUTION?: string
+  SUBTITLES?: string
+  TYPE?: string
+  URI?: string
 }
 
 export class Level {
@@ -60,5 +68,9 @@ export class Level {
     this.audioCodec = data.audioCodec;
     this.videoCodec = data.videoCodec;
     this.unknownCodecs = data.unknownCodecs;
+  }
+
+  get maxBitrate (): number {
+    return Math.max(this.realBitrate, this.bitrate);
   }
 }

@@ -20,7 +20,6 @@ import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
 const MediaSource = getMediaSource();
-const DEFAULT_TARGET_DURATION = 10;
 
 export default class BufferController implements ComponentAPI {
   // the value that we have set mediasource.duration to
@@ -356,7 +355,7 @@ export default class BufferController implements ComponentAPI {
     if (!details.fragments.length) {
       return;
     }
-    this._levelTargetDuration = details.averagetargetduration || details.targetduration || DEFAULT_TARGET_DURATION;
+    this._levelTargetDuration = details.levelTargetDuration;
     this._live = details.live;
 
     const levelDuration = details.totalduration + details.fragments[0].start;

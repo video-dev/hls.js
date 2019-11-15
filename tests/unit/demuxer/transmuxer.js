@@ -9,7 +9,7 @@ describe('TransmuxerInterface tests', function () {
   it('can construct without a worker', function () {
     const config = { enableWorker: false }; // Option debug : true crashes mocha
     const hls = {
-      trigger: function () {},
+      emit: function () {},
       config: config
     };
     const id = 'main';
@@ -17,7 +17,7 @@ describe('TransmuxerInterface tests', function () {
 
     expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
-    expect(transmuxerInterface.observer.trigger).to.exist;
+    expect(transmuxerInterface.observer.emit).to.exist;
     expect(transmuxerInterface.observer.off).to.exist;
     expect(transmuxerInterface.transmuxer).to.exist;
   });
@@ -25,7 +25,7 @@ describe('TransmuxerInterface tests', function () {
   it('can construct with a worker', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
     const hls = {
-      trigger: function () {},
+      emit: function () {},
       config: config
     };
     const id = 'main';
@@ -34,7 +34,7 @@ describe('TransmuxerInterface tests', function () {
     expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
 
-    expect(transmuxerInterface.observer.trigger, 'trigger exists').to.exist;
+    expect(transmuxerInterface.observer.emit, 'emit exists').to.exist;
     expect(transmuxerInterface.observer.off, 'off exists').to.exist;
     expect(transmuxerInterface.worker, 'worker exists').to.exist;
   });
@@ -42,7 +42,7 @@ describe('TransmuxerInterface tests', function () {
   it('can destroy a transmuxer worker', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
     const hls = {
-      trigger: function () {},
+      emit: function () {},
       config: config
     };
     const id = 'main';
@@ -57,7 +57,7 @@ describe('TransmuxerInterface tests', function () {
   it('can destroy an inline transmuxer', function () {
     const config = { enableWorker: false }; // Option debug : true crashes mocha
     const hls = {
-      trigger: function () {},
+      emit: function () {},
       config: config
     };
     const id = 'main';
@@ -72,7 +72,7 @@ describe('TransmuxerInterface tests', function () {
   it('pushes data to a transmuxer worker', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
     const hls = {
-      trigger: function () {},
+      emit: function () {},
       config: config
     };
     const id = 'main';
@@ -120,10 +120,10 @@ describe('TransmuxerInterface tests', function () {
     });
   });
 
-  it.only('pushes data to demuxer with no worker', function () {
+  it('pushes data to demuxer with no worker', function () {
     const config = { enableWorker: false }; // Option debug : true crashes mocha
     const hls = {
-      trigger: function () {
+      emit: function () {
       },
       config: config
     };
@@ -169,7 +169,7 @@ describe('TransmuxerInterface tests', function () {
   it('sends worker generic message', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
     const hls = {
-      trigger: function (event, data) {},
+      emit: function (event, data) {},
       config: config
     };
     const transmuxerInterface = new TransmuxerInterface(hls, 'main');
@@ -195,7 +195,7 @@ describe('TransmuxerInterface tests', function () {
   it('Handles the init event', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
     const hls = {
-      trigger: function (event, data) {},
+      emit: function (event, data) {},
       config: config
     };
     const transmuxerInterface = new TransmuxerInterface(hls, 'main');
