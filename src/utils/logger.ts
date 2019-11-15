@@ -33,7 +33,7 @@ let exportedLogger: ILogger = fakeLogger;
 //   return msg;
 // }
 
-function consolePrintFn(type: string): ILogFunction {
+function consolePrintFn (type: string): ILogFunction {
   const func: ILogFunction = self.console[type];
   if (func) {
     return func.bind(self.console, `[${type}] >`);
@@ -41,13 +41,13 @@ function consolePrintFn(type: string): ILogFunction {
   return noop;
 }
 
-function exportLoggerFunctions(debugConfig: boolean | ILogger, ...functions: string[]): void {
+function exportLoggerFunctions (debugConfig: boolean | ILogger, ...functions: string[]): void {
   functions.forEach(function (type) {
     exportedLogger[type] = debugConfig[type] ? debugConfig[type].bind(debugConfig) : consolePrintFn(type);
   });
 }
 
-export function enableLogs(debugConfig: boolean | ILogger): void {
+export function enableLogs (debugConfig: boolean | ILogger): void {
   // check that console is available
   if ((self.console && debugConfig === true) || typeof debugConfig === 'object') {
     exportLoggerFunctions(debugConfig,
@@ -69,6 +69,6 @@ export function enableLogs(debugConfig: boolean | ILogger): void {
   } else {
     exportedLogger = fakeLogger;
   }
-};
+}
 
 export const logger: ILogger = exportedLogger;

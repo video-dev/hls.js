@@ -111,6 +111,6 @@ enum HlsEvents {
   KEY_LOADING = 'hlsKeyLoading',
   // fired when a decrypt key loading is completed - data = { frag  = fragment object, payload  = key payload, stats  = { trequest, tfirst, tload, length } }
   KEY_LOADED = 'hlsKeyLoaded'
-};
+}
 
 export default HlsEvents;
