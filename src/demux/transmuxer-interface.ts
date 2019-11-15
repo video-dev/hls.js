@@ -42,7 +42,7 @@ export default class TransmuxerInterface {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
-      hls.trigger(ev, data);
+      hls.emit(ev, data);
     };
 
     // forward events to main thread
@@ -66,7 +66,7 @@ export default class TransmuxerInterface {
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
-          hls.trigger(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
+          hls.emit(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
         };
         worker.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
@@ -204,7 +204,7 @@ export default class TransmuxerInterface {
       data.data = data.data || {};
       data.data.frag = this.frag;
       data.data.id = this.id;
-      hls.trigger(data.event, data.data);
+      hls.emit(data.event, data.data);
       break;
     }
     }

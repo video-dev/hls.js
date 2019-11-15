@@ -13,7 +13,7 @@ describe('LevelController', function () {
   beforeEach(function () {
     hls = new HlsMock({}, sandbox);
     levelController = new LevelController(hls);
-    triggerSpy = hls.trigger;
+    triggerSpy = hls.emit;
   });
 
   afterEach(function () {
