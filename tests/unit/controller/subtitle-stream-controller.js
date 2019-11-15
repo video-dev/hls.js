@@ -12,7 +12,7 @@ const mediaMock = {
 };
 
 const tracksMock = [
-  { id: 0, details: {} },
+  { id: 0, details: { url: '' } },
   { id: 1 }
 ];
 
@@ -41,7 +41,9 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should update tracks list', function () {
-      expect(subtitleStreamController.levels).to.equal(tracksMock);
+      expect(subtitleStreamController.levels).to.have.lengthOf(2);
+      expect(subtitleStreamController.levels[0]).to.deep.include(tracksMock[0]);
+      expect(subtitleStreamController.levels[1]).to.deep.include(tracksMock[1]);
     });
   });
 

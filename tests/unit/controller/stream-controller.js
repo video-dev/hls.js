@@ -133,8 +133,11 @@ describe('StreamController', function () {
     let triggerSpy;
     let frag;
     beforeEach(function () {
+      streamController.levels = [{ bitrate: 500000 }];
       triggerSpy = sinon.spy(hls, 'trigger');
       frag = new Fragment();
+      frag.level = 0;
+      frag.url = 'file';
     });
 
     function assertLoadingState (frag) {

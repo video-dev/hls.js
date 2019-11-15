@@ -2,6 +2,7 @@ import SubtitleTrackController from '../../../src/controller/subtitle-track-cont
 import Hls from '../../../src/hls';
 import sinon from 'sinon';
 import LoadStats from '../../../src/loader/load-stats';
+import LevelDetails from '../../../src/loader/level-details';
 
 describe('SubtitleTrackController', function () {
   let subtitleTrackController;
@@ -196,23 +197,27 @@ describe('SubtitleTrackController', function () {
       });
 
       it('does not set the reload timer if the stopped flag is set', function () {
+        const details = new LevelDetails('');
         subtitleTrackController.stopped = true;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.not.exist;
       });
 
       it('sets the live reload timer if the level is live', function () {
+        const details = new LevelDetails('');
         subtitleTrackController.stopped = false;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.exist;
       });
 
       it('stops the live reload timer if the level is not live', function () {
+        const details = new LevelDetails('');
+        details.live = false;
         subtitleTrackController.trackId = 1;
         subtitleTrackController.timer = setTimeout(() => {}, 0);
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.not.exist;
       });
     });

@@ -92,44 +92,6 @@ describe('AudioTrackController', function () {
     });
   });
 
-  describe('onAudioTrackLoaded', function () {
-    it('should not set the track details from the event data and clear the timer for a non-live track', function () {
-      const details = {
-        live: false,
-        targetduration: 100
-      };
-
-      audioTrackController.tracks = tracks;
-      audioTrackController.canLoad = true;
-
-      audioTrackController.onAudioTrackLoaded({
-        id: 0,
-        details
-      });
-
-      expect(audioTrackController.tracks[0].details).to.equal(undefined);
-      expect(audioTrackController.timer).to.equal(null);
-    });
-
-    it('should not set the track details from the event data and set the timer for a live track', function () {
-      const details = {
-        live: true,
-        targetduration: 100
-      };
-
-      audioTrackController.tracks = tracks;
-      audioTrackController.canLoad = true;
-
-      audioTrackController.onAudioTrackLoaded({
-        id: 0,
-        details
-      });
-
-      expect(audioTrackController.tracks[0].details).to.equal(undefined);
-      expect(audioTrackController.timer).to.be.a('number');
-    });
-  });
-
   describe('onAudioTrackSwitched', function () {
     it('should update the current audioGroupId', function () {
       audioTrackController.tracks = tracks;
@@ -142,7 +104,7 @@ describe('AudioTrackController', function () {
     });
   });
 
-  describe('onLevelLoaded', function () {
+  describe('onLevelLoading', function () {
     it('should reselect the current track and trigger AUDIO_TRACK_SWITCHING eventually', function (done) {
       hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, (event, data) => {
         done();
@@ -173,7 +135,7 @@ describe('AudioTrackController', function () {
       // current track name
       const audioTrackName = tracks[audioTrackController.audioTrack].name;
 
-      audioTrackController.onLevelLoaded(levelLoadedEvent);
+      audioTrackController.onLevelLoading(levelLoadedEvent);
 
       // group has switched
       expect(audioTrackController.audioGroupId).to.equal(newGroupId);
@@ -203,65 +165,7 @@ describe('AudioTrackController', function () {
 
       audioTrackController.tracks = [trackWithUrl];
 
-      audioTrackController.onLevelLoaded({
-        level: 0
-      });
-
-      expect(needsTrackLoading).to.have.been.calledOnce;
-      expect(needsTrackLoading).to.have.been.calledWith(trackWithUrl);
-      expect(needsTrackLoading.firstCall.returnValue).to.be.true;
-      expect(audioTrackLoadingCallback).to.have.been.calledOnce;
-    });
-
-    it('should not attempt to load audio tracks without a url', function () {
-      const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
-      const audioTrackLoadingCallback = sinon.spy();
-      const trackWithOutUrl = tracks[0];
-
-      hls.on(Hls.Events.AUDIO_TRACK_LOADING, audioTrackLoadingCallback);
-
-      hls.levelController = {
-        levels: [{
-          urlId: 0,
-          audioGroupIds: ['1']
-        }]
-      };
-
-      audioTrackController.tracks = tracks;
-
-      audioTrackController.onLevelLoaded({
-        level: 0
-      });
-
-      expect(needsTrackLoading).to.have.been.calledOnce;
-      expect(needsTrackLoading).to.have.been.calledWith(trackWithOutUrl);
-      expect(needsTrackLoading.firstCall.returnValue).to.be.false;
-      expect(audioTrackLoadingCallback).to.not.have.been.called;
-    });
-
-    it('should load audio tracks with a url', function () {
-      const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
-      const audioTrackLoadingCallback = sinon.spy();
-      const trackWithUrl = {
-        groupId: '1',
-        id: 0,
-        name: 'A',
-        default: true,
-        url: './trackA.m3u8'
-      };
-
-      hls.on(Hls.Events.AUDIO_TRACK_LOADING, audioTrackLoadingCallback);
-
-      hls.levelController = {
-        levels: [{
-          urlId: 0,
-          audioGroupIds: ['1']
-        }]
-      };
-
-      audioTrackController.tracks = [trackWithUrl];
-
-      audioTrackController.onLevelLoaded({
+      audioTrackController.onLevelLoading({
         level: 0
       });
 
@@ -288,14 +192,13 @@ describe('AudioTrackController', function () {
 
       audioTrackController.tracks = tracks;
 
-      audioTrackController.onLevelLoaded({
+      audioTrackController.onLevelLoading({
         level: 0
       });
 
       expect(needsTrackLoading).to.have.been.calledOnce;
       expect(needsTrackLoading).to.have.been.calledWith(trackWithOutUrl);
       expect(needsTrackLoading.firstCall.returnValue).to.be.false;
-
       expect(audioTrackLoadingCallback).to.not.have.been.called;
     });
   });

@@ -161,7 +161,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   onSubtitleTrackSwitch (data: TrackSwitchedData) {
     this.currentTrackId = data.id;
 
-    if (!this.levels || this.currentTrackId === -1) {
+    if (!this.levels.length || this.currentTrackId === -1) {
       this.clearInterval();
       return;
     }
@@ -177,7 +177,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   onSubtitleTrackLoaded (data: TrackLoadedData) {
     const { id, details } = data;
     const { currentTrackId, levels } = this;
-    if (!levels || !details) {
+    if (!levels.length || !details) {
       return;
     }
     const currentTrack: Level = levels[currentTrackId];
@@ -236,7 +236,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
 
     if (this.state === State.IDLE) {
       const { config, currentTrackId, fragmentTracker, media, levels } = this;
-      if (!levels || !levels[currentTrackId] || !levels[currentTrackId].details) {
+      if (!levels.length || !levels[currentTrackId] || !levels[currentTrackId].details) {
         return;
       }
 

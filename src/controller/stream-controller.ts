@@ -59,6 +59,7 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
     hls.on(Events.FRAG_LOAD_EMERGENCY_ABORTED, this.onFragLoadEmergencyAborted, this);
@@ -195,7 +196,7 @@ export default class StreamController extends BaseStreamController implements Ne
       return;
     }
     // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-    const levelBitrate = levelInfo.bitrate;
+    const levelBitrate = levelInfo.maxBitrate;
     let maxBufLen;
     if (levelBitrate) {
       maxBufLen = Math.max(8 * config.maxBufferSize / levelBitrate, config.maxBufferLength);
@@ -222,7 +223,7 @@ export default class StreamController extends BaseStreamController implements Ne
     // if level info not retrieved yet, switch state and wait for level retrieval
     // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
     // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
-    if (!levelDetails || (levelDetails.live && this.levelLastLoaded !== level)) {
+    if (!levelDetails || this.state === State.WAITING_LEVEL || (levelDetails.live && this.levelLastLoaded !== level)) {
       this.state = State.WAITING_LEVEL;
       return;
     }
@@ -376,7 +377,7 @@ export default class StreamController extends BaseStreamController implements Ne
         const nextLevel = levels[nextLevelId];
         const fragLastKbps = this.fragLastKbps;
         if (fragLastKbps && this.fragCurrent) {
-          fetchdelay = this.fragCurrent.duration * nextLevel.bitrate / (1000 * fragLastKbps) + 1;
+          fetchdelay = this.fragCurrent.duration * nextLevel.maxBitrate / (1000 * fragLastKbps) + 1;
         } else {
           fetchdelay = 0;
         }
@@ -513,6 +514,10 @@ export default class StreamController extends BaseStreamController implements Ne
 
     this.levels = data.levels;
     this.startFragRequested = false;
+  }
+
+  onLevelLoading () {
+    this.state = State.WAITING_LEVEL;
   }
 
   onLevelLoaded (data) {
@@ -786,7 +791,7 @@ export default class StreamController extends BaseStreamController implements Ne
   // Checks the health of the buffer and attempts to resolve playback stalls.
   private checkBuffer () {
     const { media, gapController } = this;
-    if (!media || !media.readyState) {
+    if (!media || !gapController || !media.readyState) {
       // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
@@ -801,7 +806,7 @@ export default class StreamController extends BaseStreamController implements Ne
       this.immediateLevelSwitchEnd();
     } else {
       // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
-      gapController.poll(this.lastCurrentTime, media.buffered);
+      gapController.poll(this.lastCurrentTime);
     }
 
     this.lastCurrentTime = media.currentTime;
@@ -852,7 +857,7 @@ export default class StreamController extends BaseStreamController implements Ne
     // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
     const startPosition = media.seeking ? currentTime : this.startPosition;
     // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
-    if (currentTime !== startPosition) {
+    if (currentTime !== startPosition && startPosition >= 0) {
       // if startPosition not buffered, let's seek to buffered.start(0)
       this.log(`Target start position not buffered, seek to buffered.start(0) ${startPosition} from current time ${currentTime} `);
       media.currentTime = startPosition;
