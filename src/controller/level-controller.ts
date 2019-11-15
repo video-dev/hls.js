@@ -215,8 +215,7 @@ export default class LevelController extends EventHandler {
           // check if we need to load playlist for this level
           if (!levelDetails || levelDetails.live) {
             // level not retrieved yet, or live playlist we need to (re)load it
-            const urlId = level.urlId;
-            hls.trigger(Event.LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
+            this.loadLevel();
           }
         } else {
           // invalid level id given, trigger error
@@ -407,6 +406,8 @@ export default class LevelController extends EventHandler {
       throw new Error('Levels are not set');
     }
     const curLevel = this._levels[level];
+    const curDetails = curLevel.details;
+    curLevel.details = details;
     // reset level load error counter on successful level loaded only if there is no issues with fragments
     if (!curLevel.fragmentError) {
       curLevel.loadError = 0;
@@ -414,9 +415,7 @@ export default class LevelController extends EventHandler {
     }
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
-      const curDetails = curLevel.details;
-      details.updated = (!curDetails || details.endSN !== curDetails.endSN || details.url !== curDetails.url);
-      details.availabilityDelay = curDetails && curDetails.availabilityDelay;
+      details.reloaded(curDetails);
       const reloadInterval = computeReloadInterval(details, data.stats);
       logger.log(`[level-controller]: live playlist ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
       this.timer = self.setTimeout(() => this.loadLevel(), reloadInterval);

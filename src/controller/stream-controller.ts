@@ -47,6 +47,7 @@ export default class StreamController extends BaseStreamController {
       Event.MEDIA_DETACHING,
       Event.MANIFEST_LOADING,
       Event.MANIFEST_PARSED,
+      Event.LEVEL_LOADING,
       Event.LEVEL_LOADED,
       Event.KEY_LOADED,
       Event.FRAG_LOAD_EMERGENCY_ABORTED,
@@ -194,7 +195,7 @@ export default class StreamController extends BaseStreamController {
     // if level info not retrieved yet, switch state and wait for level retrieval
     // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
     // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
-    if (!levelDetails || (levelDetails.live && this.levelLastLoaded !== level)) {
+    if (!levelDetails || this.state === State.WAITING_LEVEL || (levelDetails.live && this.levelLastLoaded !== level)) {
       this.state = State.WAITING_LEVEL;
       return;
     }
@@ -485,6 +486,10 @@ export default class StreamController extends BaseStreamController {
 
     this.levels = data.levels;
     this.startFragRequested = false;
+  }
+
+  onLevelLoading () {
+    this.state = State.WAITING_LEVEL;
   }
 
   onLevelLoaded (data) {
