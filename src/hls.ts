@@ -126,6 +126,8 @@ export default class Hls implements HlsEventEmitter {
 
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
+    // fpsController uses streamController to switch when frames are being dropped
+    fpsController.setStreamController(streamController);
 
     const networkControllers = [
       levelController,
