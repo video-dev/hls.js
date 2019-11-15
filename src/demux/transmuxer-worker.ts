@@ -6,15 +6,7 @@ import { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 
 export default function TransmuxerWorker (self) {
-  const observer = new EventEmitter() as any;
-  observer.trigger = (event, data) => {
-    observer.emit(event, event, ...data);
-  };
-
-  observer.off = (event, ...data) => {
-    observer.removeListener(event, ...data);
-  };
-
+  const observer = new EventEmitter();
   const forwardMessage = (ev, data) => {
     self.postMessage({ event: ev, data: data });
   };

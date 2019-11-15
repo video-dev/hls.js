@@ -57,6 +57,8 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     this.tracksBuffered = [];
     this.fragmentLoader = new FragmentLoader(hls.config);
     this._onMediaSeeking = this.onMediaSeeking.bind(this);
+
+    this._registerListeners();
   }
 
   private _registerListeners () {
@@ -88,6 +90,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   onHandlerDestroyed () {
     delete this.fragmentTracker;
     this.state = State.STOPPED;
+    this._unregisterListeners();
     super.onHandlerDestroyed();
   }
 
