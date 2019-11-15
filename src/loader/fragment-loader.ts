@@ -9,7 +9,7 @@ import {
   LoaderCallbacks
 } from '../types/loader';
 
-const MIN_CHUNK_SIZE = Math.pow(2, 15); // 32kb
+const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
 export default class FragmentLoader {
   private readonly config: any;

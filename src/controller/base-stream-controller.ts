@@ -254,8 +254,8 @@ export default class BaseStreamController extends TaskLoop {
       // Attempt to buffer 3 seconds of content when no buffer is available
       bitsToBuffer = maxBitrate * 3;
     } else if (details.live || (bufferInfo.end - this.media.currentTime) < details.levelTargetDuration * 2) {
-      // Buffer up to one second at a time
-      bitsToBuffer = Math.min(maxBitrate, this.hls.bandwidthEstimate * 0.05);
+      // Buffer at least one second at a time
+      bitsToBuffer = Math.min(maxBitrate, Math.round(this.hls.bandwidthEstimate * 0.05));
     } else {
       // Load the whole fragment without progress updates
       bitsToBuffer = Infinity;

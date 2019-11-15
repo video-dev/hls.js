@@ -226,9 +226,10 @@ export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderSt
     if (useLastModified) {
       // estimate = 'miss round trip';
       // We should have had a hit so try again in the time it takes to get a response,
-      // but no less than ~1/4 second. After 4 retries, at least 1.1 seconds will have gone by.
-      const minRetry = 283;
-      estimatedTimeUntilUpdate = Math.max(Math.min(reloadIntervalAfterMiss, roundTrip), minRetry);
+      // but no less than 1/3 second.
+      const minRetry = 333 * newDetails.misses;
+      estimatedTimeUntilUpdate = Math.max(Math.min(reloadIntervalAfterMiss, roundTrip * 2), minRetry);
+      newDetails.availabilityDelay = (newDetails.availabilityDelay || 0) + estimatedTimeUntilUpdate;
     } else {
       // estimate = 'miss half average';
       // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
@@ -240,11 +241,8 @@ export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderSt
     // estimate = 'next modified date';
     // Get the closest we've been to timeSinceLastModified on update
     availabilityDelay = Math.min(availabilityDelay || reloadInterval / 2, timeSinceLastModified);
-    // TODO: Network controllers should maintain this and other stats, rather than passing it from one level details to then next after each response
     newDetails.availabilityDelay = availabilityDelay;
-    // TODO: Back off from reloading too close to the time the server is expected to update,  rather than using this hardcoded value
-    const minAvailabilityDelay = 1000;
-    estimatedTimeUntilUpdate = Math.max(availabilityDelay / 2, minAvailabilityDelay) + reloadInterval - timeSinceLastModified;
+    estimatedTimeUntilUpdate = availabilityDelay + reloadInterval - timeSinceLastModified;
   } else {
     estimatedTimeUntilUpdate = reloadInterval - roundTrip;
   }
