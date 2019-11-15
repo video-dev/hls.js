@@ -56,7 +56,7 @@ describe('AudioTrackController', function () {
 
   describe('onManifestParsed', function () {
     it('should set the audioTracks contained in the event data and trigger AUDIO_TRACKS_UPDATED', function (done) {
-      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (data) => {
         expect(data.audioTracks).to.equal(tracks);
         expect(audioTrackController.tracks).to.equal(tracks);
         done();
@@ -68,7 +68,7 @@ describe('AudioTrackController', function () {
     });
 
     it('should set the audioTracks contained in the event data (nullable) to an empty array and trigger AUDIO_TRACKS_UPDATED', function (done) {
-      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (data) => {
         expect(data.audioTracks).to.be.empty;
         expect(audioTrackController.tracks).to.be.empty;
         done();
@@ -106,7 +106,7 @@ describe('AudioTrackController', function () {
 
   describe('onLevelLoading', function () {
     it('should reselect the current track and trigger AUDIO_TRACK_SWITCHING eventually', function (done) {
-      hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, (event, data) => {
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, (data) => {
         done();
       });
 

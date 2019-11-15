@@ -2,7 +2,7 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { computeReloadInterval } from './level-helper';
 import { MediaPlaylist } from '../types/media-playlist';
-import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdated } from '../types/events';
+import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdatedData } from '../types/events';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
@@ -85,7 +85,7 @@ class SubtitleTrackController implements ComponentAPI {
   protected onManifestLoaded (data: ManifestLoadedData): void {
     const subtitleTracks = data.subtitles || [];
     this.tracks = subtitleTracks;
-    const subtitleTracksUpdated: SubtitleTracksUpdated = { subtitleTracks };
+    const subtitleTracksUpdated: SubtitleTracksUpdatedData = { subtitleTracks };
     this.hls.emit(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
     // loop through available subtitle tracks and autoselect default if needed

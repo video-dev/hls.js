@@ -13,7 +13,7 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import Fragment from '../loader/fragment';
 import FragmentLoader, { FragLoadSuccessResult, FragmentLoadProgressCallback } from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
-import { BufferAppendingEventPayload } from '../types/events';
+import { BufferAppendingData } from '../types/events';
 import { Level } from '../types/level';
 import { RemuxedTrack } from '../types/remuxer';
 import Hls from '../hls';
@@ -328,7 +328,7 @@ export default class BaseStreamController extends TaskLoop {
       return;
     }
 
-    const segment: BufferAppendingEventPayload = { type: data.type, data: buffer, frag, chunkMeta };
+    const segment: BufferAppendingData = { type: data.type, data: buffer, frag, chunkMeta };
     this.hls.emit(Events.BUFFER_APPENDING, segment);
     this.tick();
   }

@@ -15,7 +15,7 @@ import {
   SourceBufferName,
   SourceBufferListeners
 } from '../types/buffer';
-import { LevelUpdatedData, BufferAppendingEventPayload } from '../types/events';
+import { LevelUpdatedData, BufferAppendingData } from '../types/events';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
@@ -214,7 +214,7 @@ export default class BufferController implements ComponentAPI {
     }
   }
 
-  onBufferAppending (eventData: BufferAppendingEventPayload) {
+  onBufferAppending (eventData: BufferAppendingData) {
     const { hls, operationQueue } = this;
     const { data, type, frag, chunkMeta } = eventData;
     const chunkStats = chunkMeta.buffering[type];

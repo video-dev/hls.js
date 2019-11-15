@@ -3,9 +3,40 @@ import LevelDetails from '../loader/level-details';
 import { Level, LevelParsed } from './level';
 import { MediaPlaylist } from './media-playlist';
 import { LoaderStats } from './loader';
-import { Track } from './track';
+import { Track, TrackSet } from './track';
 import { SourceBufferName } from './buffer';
 import { ChunkMetadata } from './transmuxer';
+import LoadStats from '../loader/load-stats';
+
+export interface MediaAttachingData {
+  media: HTMLMediaElement
+}
+
+export interface MediaAttachedData {
+  media: HTMLMediaElement;
+}
+
+export interface BufferCodecsData {
+  video?: Track
+  audio?: Track
+}
+
+export interface BufferAppendingData {
+  type: SourceBufferName;
+  data: Uint8Array;
+  frag: Fragment;
+  chunkMeta: ChunkMetadata
+}
+
+export interface BufferEOSData {
+  type: SourceBufferName
+}
+
+export interface BufferFlushingData {
+  startOffset: number
+  endOffset: number
+  type: SourceBufferName
+}
 
 export interface ManifestLoadingData {
   url: string
@@ -29,6 +60,14 @@ export interface ManifestParsedData {
   audio: boolean
   video: boolean
   altAudio: boolean
+}
+
+export interface LevelSwitchingData extends Level {
+  level: number;
+}
+
+export interface LevelSwitchedData {
+  level: any
 }
 
 export interface TrackLoadingData {
@@ -56,6 +95,15 @@ export interface LevelUpdatedData {
   level: number
 }
 
+export interface AudioTrackSwitchingData {
+  url: any
+  type: any
+  id: any
+}
+
+export interface AudioTrackSwitchedData {
+}
+
 export interface AudioTrackLoadingData {
   url: string;
   id: number | null;
@@ -72,8 +120,12 @@ export interface AudioTracksUpdated {
   audioTracks: MediaPlaylist[]
 }
 
-export interface SubtitleTracksUpdated {
+export interface SubtitleTracksUpdatedData {
   subtitleTracks: MediaPlaylist[]
+}
+
+export interface SubtitleTrackSwitchData {
+  id: number
 }
 
 export interface SubtitleTrackLoadingData {
@@ -97,19 +149,8 @@ export interface SubtitleFragProcessed {
   frag: Fragment
 }
 
-export interface MediaAttachingData {
-  media: HTMLMediaElement
-}
-
-export interface MediaAttachedData {
-  media: HTMLMediaElement;
-}
-
-export interface BufferAppendingEventPayload {
-  type: SourceBufferName;
-  data: Uint8Array;
-  frag: Fragment;
-  chunkMeta: ChunkMetadata
+export interface FragChangedData {
+  frag: any;
 }
 
 export interface ErrorData {
@@ -129,10 +170,6 @@ export interface ErrorData {
   reason?: string
   response?: any
   url?: string
-}
-
-export interface BufferCodecsData {
-  video: Track
 }
 
 export interface SubtitleFragProcessedData {
@@ -183,13 +220,23 @@ export interface FragDecryptedData {
   }
 }
 
+export interface FragParsingInitSegmentData {
+
+}
+
 // TODO: What are samples type?
 export interface FragParsingUserdataData {
   samples: Array<any>
 }
 
-export interface FragBufferedData {
+export interface FragParsingMetadataData {
   frag: Fragment
+}
+
+export interface FragBufferedData {
+  stats: LoadStats
+  frag: Fragment
+  id: string
 }
 
 export interface FPSDropLevelCappingData {
@@ -198,4 +245,12 @@ export interface FPSDropLevelCappingData {
 
 export interface LevelsUpdatedData {
   levels: Array<Level>
+}
+
+export interface KeyLoadingData {
+  frag: Fragment
+}
+
+export interface KeyLoadedData {
+  frag: Fragment
 }
