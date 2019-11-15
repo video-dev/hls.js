@@ -97,7 +97,7 @@ export default class GapController {
       // Report stalled error once
       this.stallReported = true;
       logger.warn(`Playback stalling at @${media.currentTime} due to low buffer`);
-      hls.trigger(Events.ERROR, {
+      hls.emit(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: false,
@@ -122,7 +122,7 @@ export default class GapController {
         media.currentTime = Math.max(startTime, media.currentTime + 0.1);
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${media.currentTime}`);
         this.stalled = null;
-        hls.trigger(Events.ERROR, {
+        hls.emit(Events.ERROR, {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
           fatal: false,
@@ -150,14 +150,14 @@ export default class GapController {
       logger.log(`adjust currentTime from ${currentTime} to ${targetTime}`);
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
       media.currentTime = targetTime;
-      hls.trigger(Events.ERROR, {
+      hls.emit(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
         fatal: false
       });
     } else {
       logger.error(`still stuck in high buffer @${currentTime} after ${config.nudgeMaxRetry}, raise fatal error`);
-      hls.trigger(Events.ERROR, {
+      hls.emit(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: true

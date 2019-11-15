@@ -182,7 +182,7 @@ describe('TransmuxerInterface tests', function () {
       }
     };
 
-    hls.trigger = function (event, data) {
+    hls.emit = function (event, data) {
       expect(event).to.equal(evt.data.event);
       expect(data).to.equal(evt.data.data);
       expect(transmuxerInterface.frag).to.equal(evt.data.data.frag);
