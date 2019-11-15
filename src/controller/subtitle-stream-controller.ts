@@ -16,7 +16,7 @@ import {
   LevelUpdatedData,
   MediaAttachedData,
   SubtitleFragProcessed,
-  SubtitleTracksUpdated,
+  SubtitleTracksUpdatedData,
   TrackLoadedData,
   TrackSwitchedData
 } from '../types/events';
@@ -152,7 +152,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   }
 
   // Got all new subtitle levels.
-  onSubtitleTracksUpdated ({ subtitleTracks }: SubtitleTracksUpdated) {
+  onSubtitleTracksUpdated ({ subtitleTracks }: SubtitleTracksUpdatedData) {
     logger.log('subtitle levels updated');
     this.tracksBuffered = [];
     this.levels = subtitleTracks.map(mediaPlaylist => new Level(mediaPlaylist));

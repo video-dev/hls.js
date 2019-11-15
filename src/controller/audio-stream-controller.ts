@@ -11,7 +11,7 @@ import FragmentLoader from '../loader/fragment-loader';
 import ChunkCache from '../demux/chunk-cache';
 import LevelDetails from '../loader/level-details';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import { BufferAppendingEventPayload, TrackLoadedData, AudioTracksUpdated } from '../types/events';
+import { BufferAppendingData, TrackLoadedData, AudioTracksUpdated } from '../types/events';
 import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
 import Hls from '../hls';
@@ -627,7 +627,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     this.log(`Audio, container:${track.container}, codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
     const initSegment = track.initSegment;
     if (initSegment) {
-      const segment: BufferAppendingEventPayload = { type: 'audio', data: initSegment, frag, chunkMeta };
+      const segment: BufferAppendingData = { type: 'audio', data: initSegment, frag, chunkMeta };
       this.hls.emit(Events.BUFFER_APPENDING, segment);
     }
     // trigger handler right now

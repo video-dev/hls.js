@@ -1,33 +1,41 @@
 /*
  * Decrypt key Loader
 */
-
 import { Events } from '../events';
-import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import Hls from '../hls';
 import Fragment from './fragment';
 import { LoaderStats, LoaderResponse, LoaderContext, LoaderConfiguration, LoaderCallbacks } from '../types/loader';
-
-interface OnKeyLoadingPayload {
-  frag: Fragment
-}
+import { ComponentAPI } from '../types/component-api';
+import { KeyLoadingData } from '../types/events';
 
 interface KeyLoaderContext extends LoaderContext {
   frag: Fragment
 }
 
-export default class KeyLoader extends EventHandler {
+export default class KeyLoader implements ComponentAPI {
+  private hls: Hls;
   public loaders = {};
   public decryptkey: Uint8Array | null = null;
   public decrypturl: string | null = null;
 
   constructor (hls: Hls) {
-    super(hls, Events.KEY_LOADING);
+    this.hls = hls;
+
+    this._registerListeners();
+  }
+
+  private _registerListeners () {
+    this.hls.on(Events.KEY_LOADED, this.onKeyLoading, this);
+  }
+
+  private _unregisterListeners () {
+    this.hls.off(Events.KEY_LOADED, this.onKeyLoading);
   }
 
   destroy (): void {
+    this._unregisterListeners();
     for (const loaderName in this.loaders) {
       const loader = this.loaders[loaderName];
       if (loader) {
@@ -35,11 +43,9 @@ export default class KeyLoader extends EventHandler {
       }
     }
     this.loaders = {};
-
-    super.destroy();
   }
 
-  onKeyLoading (data: OnKeyLoadingPayload) {
+  onKeyLoading (data: KeyLoadingData) {
     const { frag } = data;
     const type = frag.type;
     const loader = this.loaders[type];

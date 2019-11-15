@@ -15,7 +15,7 @@ import { Level } from '../types/level';
 import LevelDetails from '../loader/level-details';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
-import { LevelUpdatedData, BufferAppendingEventPayload } from '../types/events';
+import { LevelUpdatedData, BufferAppendingData, LevelLoadedData, ManifestParsedData, MediaAttachingData, MediaAttachedData, AudioTrackSwitchingData } from '../types/events';
 import Hls from '../hls';
 import { NetworkComponentAPI } from '../types/component-api';
 
@@ -32,10 +32,10 @@ export default class StreamController extends BaseStreamController implements Ne
   private fragPlaying: Fragment | null = null;
   private previouslyPaused: boolean = false;
   private immediateSwitch: boolean = false;
-  private onvplaying: Function | null = null;
-  private onvseeking: Function | null = null;
-  private onvseeked: Function | null = null;
-  private onvended: Function | null = null;
+  private onvplaying: EventListener | null = null;
+  private onvseeking: EventListener | null = null;
+  private onvseeked: EventListener | null = null;
+  private onvended: EventListener | null = null;
   private fragLastKbps: number = 0;
   private stalled: boolean = false;
   private audioCodecSwitch: boolean = false;
@@ -416,16 +416,16 @@ export default class StreamController extends BaseStreamController implements Ne
     this.hls.emit(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  onMediaAttached (data) {
+  onMediaAttached (data: MediaAttachedData) {
     const media = this.media = this.mediaBuffer = data.media;
     this.onvplaying = this.onMediaPlaying.bind(this);
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvseeked = this.onMediaSeeked.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
-    media.addEventListener('playing', this.onvplaying);
-    media.addEventListener('seeking', this.onvseeking);
-    media.addEventListener('seeked', this.onvseeked);
-    media.addEventListener('ended', this.onvended);
+    media.addEventListener('playing', this.onvplaying as EventListener);
+    media.addEventListener('seeking', this.onvseeking as EventListener);
+    media.addEventListener('seeked', this.onvseeked as EventListener);
+    media.addEventListener('ended', this.onvended as EventListener);
     const config = this.config;
     if (this.levels && config.autoStartLoad) {
       this.hls.startLoad(config.startPosition);
@@ -490,7 +490,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.fragPlaying = null;
   }
 
-  onManifestParsed (data) {
+  onManifestParsed (data: ManifestParsedData) {
     let aac = false;
     let heaac = false;
     let codec;
@@ -520,7 +520,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.state = State.WAITING_LEVEL;
   }
 
-  onLevelLoaded (data) {
+  onLevelLoaded (data: LevelLoadedData) {
     const { levels } = this;
     const newLevelId = data.level;
     const newDetails = data.details;
@@ -545,8 +545,7 @@ export default class StreamController extends BaseStreamController implements Ne
     // override level info
     curLevel.details = newDetails;
     this.levelLastLoaded = newLevelId;
-    const levelUpdatedData: LevelUpdatedData = { details: newDetails, level: newLevelId };
-    this.hls.emit(Events.LEVEL_UPDATED, levelUpdatedData);
+    this.hls.emit(Events.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
     if (!this.startFragRequested) {
       this.setStartPosition(newDetails, sliding);
@@ -603,7 +602,7 @@ export default class StreamController extends BaseStreamController implements Ne
     );
   }
 
-  onAudioTrackSwitching (data) {
+  onAudioTrackSwitching (data: AudioTrackSwitchingData) {
     // if any URL found on new audio track, it is an alternate audio track
     const altAudio = !!data.url;
     const trackId = data.id;
@@ -1007,8 +1006,7 @@ export default class StreamController extends BaseStreamController implements Ne
       const initSegment = track.initSegment;
       this.log(`Main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
       if (initSegment) {
-        const segment: BufferAppendingEventPayload = { type: trackName as SourceBufferName, data: initSegment, frag, chunkMeta };
-        this.hls.emit(Events.BUFFER_APPENDING, segment);
+        this.hls.emit(Events.BUFFER_APPENDING, { type: trackName as SourceBufferName, data: initSegment, frag, chunkMeta });
       }
     });
     // trigger handler right now

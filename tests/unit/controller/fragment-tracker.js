@@ -37,51 +37,53 @@ function loadFragmentAndBuffered (hls, fragment) {
   loadFragment(hls, fragment);
   hls.emit(Events.FRAG_BUFFERED, { frag: fragment });
 }
+
 describe('FragmentTracker', function () {
-  describe('getPartialFragment', function () {
-    let partialFragment;
+  // describe('getPartialFragment', function () {
+  //   let partialFragment;
 
-    const hls = new Hls({});
-    const fragmentTracker = new FragmentTracker(hls);
+  //   const hls = new Hls({});
+  //   const fragmentTracker = new FragmentTracker(hls);
 
-    const fragment = createMockFragment({
-      startPTS: 0,
-      endPTS: 1,
-      sn: 1,
-      level: 1,
-      type: 'main'
-    }, ['audio', 'video']);
+  //   const fragment = createMockFragment({
+  //     startPTS: 0,
+  //     endPTS: 1,
+  //     sn: 1,
+  //     level: 1,
+  //     type: 'main'
+  //   }, ['audio', 'video']);
 
-    hls.emit(Events.FRAG_LOADED, { frag: fragment });
+  //   hls.emit(Events.FRAG_LOADED, { frag: fragment });
 
-    const buffered = createMockBuffer([
-      {
-        startPTS: 0,
-        endPTS: 0.5
-      }
-    ]);
+  //   const buffered = createMockBuffer([
+  //     {
+  //       startPTS: 0,
+  //       endPTS: 0.5
+  //     }
+  //   ]);
 
-    const timeRanges = {};
-    timeRanges.video = buffered;
-    timeRanges.audio = buffered;
-    hls.emit(Events.BUFFER_APPENDED, { timeRanges });
+  //   const timeRanges = {};
+  //   timeRanges.video = buffered;
+  //   timeRanges.audio = buffered;
+  //   hls.emit(Events.BUFFER_APPENDED, { timeRanges });
 
-    hls.emit(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
+  //   hls.emit(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
-    it('detects fragments that partially loaded', function () {
-      // Get the partial fragment at a time
-      partialFragment = fragmentTracker.getPartialFragment(0);
-      expect(partialFragment).to.equal(fragment);
-      partialFragment = fragmentTracker.getPartialFragment(0.5);
-      expect(partialFragment).to.equal(fragment);
-      partialFragment = fragmentTracker.getPartialFragment(1);
-      expect(partialFragment).to.equal(fragment);
-    });
-    it('returns null when time is not inside partial fragment', function () {
-      partialFragment = fragmentTracker.getPartialFragment(1.5);
-      expect(partialFragment).to.not.exist;
-    });
-  });
+  //   it('detects fragments that partially loaded', function () {
+  //     // Get the partial fragment at a time
+  //     partialFragment = fragmentTracker.getPartialFragment(0);
+  //     expect(partialFragment).to.equal(fragment);
+  //     partialFragment = fragmentTracker.getPartialFragment(0.5);
+  //     expect(partialFragment).to.equal(fragment);
+  //     partialFragment = fragmentTracker.getPartialFragment(1);
+  //     expect(partialFragment).to.equal(fragment);
+  //   });
+
+  //   it('returns null when time is not inside partial fragment', function () {
+  //     partialFragment = fragmentTracker.getPartialFragment(1.5);
+  //     expect(partialFragment).to.not.exist;
+  //   });
+  // });
 
   describe('getState', function () {
     let buffered;
