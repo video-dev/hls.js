@@ -191,7 +191,7 @@ class AbrController implements ComponentAPI {
     }
   }
 
-  private onFragBuffered (data: FragBufferedData) {
+  private onFragBuffered (data: Omit<FragBufferedData, 'id'>) {
     const frag = data.frag;
     const stats = frag.stats;
 

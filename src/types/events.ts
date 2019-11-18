@@ -2,7 +2,7 @@ import Fragment from '../loader/fragment';
 import LevelDetails from '../loader/level-details';
 import { Level, LevelParsed } from './level';
 import { MediaPlaylist } from './media-playlist';
-import { LoaderStats } from './loader';
+import { LoaderStats, PlaylistLevelType } from './loader';
 import { Track, TrackSet } from './track';
 import { SourceBufferName } from './buffer';
 import { ChunkMetadata } from './transmuxer';
@@ -21,11 +21,26 @@ export interface BufferCodecsData {
   audio?: Track
 }
 
+export interface BufferCreatedData {
+  tracks: TrackSet
+}
+
 export interface BufferAppendingData {
   type: SourceBufferName;
   data: Uint8Array;
   frag: Fragment;
   chunkMeta: ChunkMetadata
+}
+
+export interface BufferAppendedData {
+  chunkMeta: ChunkMetadata
+  frag: Fragment
+  parent: PlaylistLevelType
+  timeRanges: {
+    audio?: TimeRanges
+    video?: TimeRanges
+    audiovideo?: TimeRanges
+  }
 }
 
 export interface BufferEOSData {
@@ -95,6 +110,15 @@ export interface LevelUpdatedData {
   level: number
 }
 
+export interface LevelPTSUpdatedData {
+  details: any,
+  level: Level,
+  drift: number,
+  type: string,
+  start: any,
+  end: any
+}
+
 export interface AudioTrackSwitchingData {
   url: any
   type: any
@@ -111,12 +135,12 @@ export interface AudioTrackLoadingData {
 
 export interface AudioTrackLoadedData {
   details: any; // LevelDetails type?
-  id: number | null;
+  id: number;
   stats: LoaderStats;
   networkDetails: unknown;
 }
 
-export interface AudioTracksUpdated {
+export interface AudioTracksUpdatedData {
   audioTracks: MediaPlaylist[]
 }
 
@@ -151,6 +175,17 @@ export interface SubtitleFragProcessed {
 
 export interface FragChangedData {
   frag: any;
+}
+
+export interface FPSDropData {
+  currentDropped: number
+  currentDecoded: number
+  totalDroppedFrames: number
+}
+
+export interface FPSDropLevelCappingData {
+  droppedLevel: number
+  level: number
 }
 
 export interface ErrorData {
@@ -204,6 +239,11 @@ export interface FragLoadingData {
   frag: Fragment
 }
 
+export interface FragLoadEmergencyAbortedData {
+  frag: Fragment
+  stats: LoaderStats
+}
+
 export interface FragLoadedData {
   frag: Fragment
   networkDetails: any
@@ -233,14 +273,14 @@ export interface FragParsingMetadataData {
   frag: Fragment
 }
 
+export interface FragParsedData {
+  frag: Fragment
+}
+
 export interface FragBufferedData {
   stats: LoadStats
   frag: Fragment
   id: string
-}
-
-export interface FPSDropLevelCappingData {
-  droppedLevel: number
 }
 
 export interface LevelsUpdatedData {

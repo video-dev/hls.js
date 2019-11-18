@@ -55,7 +55,7 @@ export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number
   }
 }
 
-export function updateFragPTSDTS (details: LevelDetails, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
+export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
   // update frag PTS/DTS
   let maxStartPTS = startPTS;
   if (Number.isFinite(frag.startPTS)) {

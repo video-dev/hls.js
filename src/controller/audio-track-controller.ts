@@ -7,9 +7,10 @@ import {
   TrackSwitchedData,
   TrackLoadedData,
   ManifestParsedData,
-  AudioTracksUpdated,
+  AudioTracksUpdatedData,
   ErrorData,
-  LevelLoadingData
+  LevelLoadingData,
+  AudioTrackLoadedData
 } from '../types/events';
 import { NetworkComponentAPI } from '../types/component-api';
 import Hls from '../hls';
@@ -114,7 +115,7 @@ class AudioTrackController implements NetworkComponentAPI {
    */
   protected onManifestParsed (data: ManifestParsedData): void {
     const tracks = this.tracks = data.audioTracks || [];
-    const audioTracksUpdated: AudioTracksUpdated = { audioTracks: tracks };
+    const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks: tracks };
     this.hls.emit(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
   }
 
@@ -123,7 +124,7 @@ class AudioTrackController implements NetworkComponentAPI {
    *
    * Set-up metadata update interval task for live-mode streams.
    */
-  protected onAudioTrackLoaded (data: TrackLoadedData): void {
+  protected onAudioTrackLoaded (data: AudioTrackLoadedData): void {
     const { id, details } = data;
     const currentTrack = this.tracks[id];
     const curDetails = currentTrack.details;
