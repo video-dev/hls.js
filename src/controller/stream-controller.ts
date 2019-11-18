@@ -930,7 +930,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
     // Avoid buffering if backtracking this fragment
     if (video) {
-      if (_hasDroppedFrames(frag, video.dropped, level.details.startSN)) {
+      if (level.details && _hasDroppedFrames(frag, video.dropped, level.details.startSN)) {
         this.backtrack(frag, video.startPTS);
         return;
       } else {

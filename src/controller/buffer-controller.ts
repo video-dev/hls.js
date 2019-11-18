@@ -15,7 +15,7 @@ import {
   SourceBufferName,
   SourceBufferListeners
 } from '../types/buffer';
-import { LevelUpdatedData, BufferAppendingData } from '../types/events';
+import { LevelUpdatedData, BufferAppendingData, MediaAttachingData, ManifestParsedData, BufferCodecsData, LevelPTSUpdatedData } from '../types/events';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
@@ -104,7 +104,7 @@ export default class BufferController implements ComponentAPI {
     };
   }
 
-  onManifestParsed (data: { altAudio: boolean }) {
+  onManifestParsed (data: ManifestParsedData) {
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
@@ -113,7 +113,7 @@ export default class BufferController implements ComponentAPI {
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
-  onMediaAttaching (data: { media: HTMLMediaElement }) {
+  onMediaAttaching (data: MediaAttachingData) {
     const media = this.media = data.media;
     if (media && MediaSource) {
       const ms = this.mediaSource = new MediaSource();
@@ -197,15 +197,15 @@ export default class BufferController implements ComponentAPI {
     this._initSourceBuffer();
   }
 
-  onBufferCodecs (tracks: TrackSet) {
+  onBufferCodecs (data: BufferCodecsData) {
     // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
     // if sourcebuffers already created, do nothing ...
     if (Object.keys(this.sourceBuffer).length) {
       return;
     }
 
-    Object.keys(tracks).forEach(trackName => {
-      this.pendingTracks[trackName] = tracks[trackName];
+    Object.keys(data).forEach(trackName => {
+      this.pendingTracks[trackName] = data[trackName];
     });
 
     this.bufferCodecEventsExpected = Math.max(this.bufferCodecEventsExpected - 1, 0);
@@ -373,7 +373,7 @@ export default class BufferController implements ComponentAPI {
   // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
   // event if SB is in updating state.
   // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
-  onLevelPtsUpdated (data: { type: SourceBufferName, start: number }) {
+  onLevelPtsUpdated (data: LevelPTSUpdatedData) {
     const { operationQueue, sourceBuffer, tracks } = this;
     const type = data.type;
     const audioTrack = tracks.audio;

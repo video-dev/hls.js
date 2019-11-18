@@ -1,4 +1,5 @@
-import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData, AudioTrackLoadingData, AudioTrackLoadedData, SubtitleTrackLoadedData, SubtitleTrackLoadingData, ErrorData, AudioTrackSwitchingData, AudioTrackSwitchedData, KeyLoadedData, KeyLoadingData, SubtitleTrackSwitchData, SubtitleTracksUpdatedData, LevelSwitchedData, FragChangedData, BufferAppendingData, BufferCodecsData, FragParsingMetadataData, FragParsingInitSegmentData, FragBufferedData, BufferFlushingData, BufferEOSData, LevelSwitchingData } from './types/events';
+import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData, AudioTrackLoadingData, AudioTrackLoadedData, SubtitleTrackLoadedData, SubtitleTrackLoadingData, ErrorData, AudioTrackSwitchingData, AudioTrackSwitchedData, KeyLoadedData, KeyLoadingData, SubtitleTrackSwitchData, SubtitleTracksUpdatedData, LevelSwitchedData, FragChangedData, BufferAppendingData, BufferCodecsData, FragParsingMetadataData, FragParsingInitSegmentData, FragBufferedData, BufferFlushingData, BufferEOSData, LevelSwitchingData, FPSDropLevelCappingData, FPSDropData, BufferCreatedData, BufferAppendedData, LevelPTSUpdatedData, FragParsedData, AudioTracksUpdatedData, FragLoadEmergencyAbortedData } from './types/events';
+import LoadStats from './loader/load-stats';
 
 /**
  * @readonly
@@ -80,7 +81,7 @@ export enum Events {
   // fired when a fragment loading starts - data: { frag : fragment object }
   FRAG_LOADING = 'hlsFragLoading',
   // fired when a fragment loading is progressing - data: { frag : fragment object, { trequest, tfirst, loaded } }
-  FRAG_LOAD_PROGRESS = 'hlsFragLoadProgress',
+  // FRAG_LOAD_PROGRESS = 'hlsFragLoadProgress',
   // Identifier for fragment load aborting for emergency switch down - data: { frag : fragment object }
   FRAG_LOAD_EMERGENCY_ABORTED = 'hlsFragLoadEmergencyAborted',
   // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length } }
@@ -94,7 +95,7 @@ export enum Events {
   // fired when parsing id3 is completed - data: { id : demuxer id, frag: fragment object, samples : [ id3 samples pes ] }
   FRAG_PARSING_METADATA = 'hlsFragParsingMetadata',
   // fired when data have been extracted from fragment - data: { id : demuxer id, frag: fragment object, data1 : moof MP4 box or TS fragments, data2 : mdat MP4 box or null}
-  FRAG_PARSING_DATA = 'hlsFragParsingData',
+  // FRAG_PARSING_DATA = 'hlsFragParsingData',
   // fired when fragment parsing is completed - data: { id : demuxer id, frag: fragment object }
   FRAG_PARSED = 'hlsFragParsed',
   // fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer - data: { id : demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length, bwEstimate } }
@@ -115,21 +116,19 @@ export enum Events {
   KEY_LOADED = 'hlsKeyLoaded',
 }
 
-type TodoEventType = (...args: never[]) => void;
-
 export interface HlsListeners {
   [Events.MEDIA_ATTACHING]: (data: MediaAttachingData) => void
   [Events.MEDIA_ATTACHED]: (data: MediaAttachedData) => void
   [Events.MEDIA_DETACHING]: () => void
   [Events.MEDIA_DETACHED]: () => void
-  [Events.BUFFER_RESET]: TodoEventType
+  [Events.BUFFER_RESET]: () => void
   [Events.BUFFER_CODECS]: (data: BufferCodecsData) => void
-  [Events.BUFFER_CREATED]: TodoEventType
+  [Events.BUFFER_CREATED]: (data: BufferCreatedData) => void
   [Events.BUFFER_APPENDING]: (data: BufferAppendingData) => void
-  [Events.BUFFER_APPENDED]: TodoEventType
+  [Events.BUFFER_APPENDED]: (data: BufferAppendedData) => void
   [Events.BUFFER_EOS]: (data: BufferEOSData) => void
   [Events.BUFFER_FLUSHING]: (data: BufferFlushingData) => void
-  [Events.BUFFER_FLUSHED]: TodoEventType
+  [Events.BUFFER_FLUSHED]: () => void
   [Events.MANIFEST_LOADING]: (data: ManifestLoadingData) => void
   [Events.MANIFEST_LOADED]: (data: ManifestLoadedData) => void
   [Events.MANIFEST_PARSED]: (data: ManifestParsedData) => void
@@ -138,15 +137,15 @@ export interface HlsListeners {
   [Events.LEVEL_LOADING]: (data: LevelLoadingData) => void
   [Events.LEVEL_LOADED]: (data: LevelLoadedData) => void
   [Events.LEVEL_UPDATED]: (data: LevelUpdatedData) => void
-  [Events.LEVEL_PTS_UPDATED]: TodoEventType
+  [Events.LEVEL_PTS_UPDATED]: (data: LevelPTSUpdatedData) => void
   [Events.LEVELS_UPDATED]: (data: LevelsUpdatedData) => void
-  [Events.AUDIO_TRACKS_UPDATED]: TodoEventType
+  [Events.AUDIO_TRACKS_UPDATED]: (data: AudioTracksUpdatedData) => void
   [Events.AUDIO_TRACK_SWITCHING]: (data: AudioTrackSwitchingData) => void
   [Events.AUDIO_TRACK_SWITCHED]: (data: AudioTrackSwitchedData) => void
   [Events.AUDIO_TRACK_LOADING]: (data: AudioTrackLoadingData) => void
   [Events.AUDIO_TRACK_LOADED]: (data: AudioTrackLoadedData) => void
   [Events.SUBTITLE_TRACKS_UPDATED]: (data: SubtitleTracksUpdatedData) => void
-  [Events.SUBTITLE_TRACKS_CLEARED]: TodoEventType
+  [Events.SUBTITLE_TRACKS_CLEARED]: () => void
   [Events.SUBTITLE_TRACK_SWITCH]: (data: SubtitleTrackSwitchData) => void
   [Events.SUBTITLE_TRACK_LOADING]: (data: SubtitleTrackLoadingData) => void
   [Events.SUBTITLE_TRACK_LOADED]: (data: SubtitleTrackLoadedData) => void
@@ -155,19 +154,19 @@ export interface HlsListeners {
   [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (data: NonNativeTextTracksData) => void
   [Events.INIT_PTS_FOUND]: (data: InitPTSFoundData) => void
   [Events.FRAG_LOADING]: (data: FragLoadingData) => void
-  [Events.FRAG_LOAD_PROGRESS]: TodoEventType
-  [Events.FRAG_LOAD_EMERGENCY_ABORTED]: TodoEventType
+  // [Events.FRAG_LOAD_PROGRESS]: TodoEventType
+  [Events.FRAG_LOAD_EMERGENCY_ABORTED]: (data: FragLoadEmergencyAbortedData) => void
   [Events.FRAG_LOADED]: (data: FragLoadedData) => void
   [Events.FRAG_DECRYPTED]: (data: FragDecryptedData) => void
   [Events.FRAG_PARSING_INIT_SEGMENT]: (data: FragParsingInitSegmentData) => void
   [Events.FRAG_PARSING_USERDATA]: (data: FragParsingUserdataData) => void
   [Events.FRAG_PARSING_METADATA]: (data: FragParsingMetadataData) => void
-  [Events.FRAG_PARSING_DATA]: TodoEventType
-  [Events.FRAG_PARSED]: TodoEventType
+  // [Events.FRAG_PARSING_DATA]: TodoEventType
+  [Events.FRAG_PARSED]: (data: FragParsedData) => void
   [Events.FRAG_BUFFERED]: (data: FragBufferedData) => void
   [Events.FRAG_CHANGED]: (data: FragChangedData) => void
-  [Events.FPS_DROP]: TodoEventType
-  [Events.FPS_DROP_LEVEL_CAPPING]: TodoEventType
+  [Events.FPS_DROP]: (data: FPSDropData) => void
+  [Events.FPS_DROP_LEVEL_CAPPING]: (data: FPSDropLevelCappingData) => void
   [Events.ERROR]: (data: ErrorData) => void
   [Events.DESTROYING]: () => void
   [Events.KEY_LOADING]: (data: KeyLoadingData) => void

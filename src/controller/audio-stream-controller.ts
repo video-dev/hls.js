@@ -11,7 +11,7 @@ import FragmentLoader from '../loader/fragment-loader';
 import ChunkCache from '../demux/chunk-cache';
 import LevelDetails from '../loader/level-details';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import { BufferAppendingData, TrackLoadedData, AudioTracksUpdated } from '../types/events';
+import { BufferAppendingData, TrackLoadedData, AudioTracksUpdatedData, MediaAttachingData } from '../types/events';
 import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
 import Hls from '../hls';
@@ -23,9 +23,9 @@ const TICK_INTERVAL = 100; // how often to tick in ms
 
 class AudioStreamController extends BaseStreamController implements ComponentAPI {
   private retryDate: number = 0;
-  private onvseeking: Function | null = null;
-  private onvseeked: Function | null = null;
-  private onvended: Function | null = null;
+  private onvseeking: EventListener | null = null;
+  private onvseeked: EventListener | null = null;
+  private onvended: EventListener | null = null;
   private videoBuffer: any | null = null;
   private initPTS: any = [];
   private videoTrackCC: number = -1;
@@ -279,12 +279,12 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
   }
 
-  onMediaAttached (data) {
+  onMediaAttached (data: MediaAttachingData) {
     const media = this.media = this.mediaBuffer = data.media;
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
-    media.addEventListener('seeking', this.onvseeking);
-    media.addEventListener('ended', this.onvended);
+    media.addEventListener('seeking', this.onvseeking as EventListener);
+    media.addEventListener('ended', this.onvended as EventListener);
     const config = this.config;
     if (this.levels && config.autoStartLoad) {
       this.startLoad(config.startPosition);
@@ -309,7 +309,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     this.stopLoad();
   }
 
-  onAudioTracksUpdated ({ audioTracks }: AudioTracksUpdated) {
+  onAudioTracksUpdated ({ audioTracks }: AudioTracksUpdatedData) {
     this.log('Audio tracks updated');
     this.levels = audioTracks.map(mediaPlaylist => new Level(mediaPlaylist));
   }

@@ -212,7 +212,11 @@ export default class BaseStreamController extends TaskLoop {
         stats.parsing.start = stats.buffering.start = self.performance.now();
         stats.parsing.end = stats.buffering.end = self.performance.now();
         // TODO: set id from calling class
-        hls.emit(Events.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
+
+        // Silence FRAG_BUFFERED event if fragCurrent is null
+        if (fragCurrent) {
+          hls.emit(Events.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
+        }
         this.tick();
       });
   }
@@ -291,7 +295,7 @@ export default class BaseStreamController extends TaskLoop {
     this.hls.emit(Events.FRAG_PARSED, { frag });
   }
 
-  protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, level: any } | null {
+  protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, level: Level } | null {
     const { fragCurrent, levels } = this;
     const { level, sn } = chunkMeta;
     if (!levels || !levels[level]) {
@@ -592,7 +596,7 @@ export default class BaseStreamController extends TaskLoop {
     this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer & resetting nextLoadPosition to ${this.nextLoadPosition}`);
   }
 
-  private updateLevelTiming (frag: Fragment, currentLevel) {
+  private updateLevelTiming (frag: Fragment, currentLevel: Level) {
     const { details } = currentLevel;
     Object.keys(frag.elementaryStreams).forEach(type => {
       const info = frag.elementaryStreams[type];

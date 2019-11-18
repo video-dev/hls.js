@@ -5,6 +5,7 @@ import { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../typ
 import { PlaylistLevelType } from '../types/loader';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
+import { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -16,7 +17,10 @@ export const FragmentState = {
 export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;
   private fragments: Partial<Record<string, FragmentEntity>> = Object.create(null);
-  private timeRanges: { [key in SourceBufferName]: TimeRanges } = Object.create(null);
+  private timeRanges: {
+    [key in SourceBufferName]?: TimeRanges
+  } | null = Object.create(null);
+
   private bufferPadding: number = 0.2;
   private hls: Hls;
 
@@ -132,6 +136,10 @@ export class FragmentTracker implements ComponentAPI {
    */
   detectPartialFragments (fragment: Fragment) : void {
     const { timeRanges, fragments } = this;
+    if (!timeRanges) {
+      return;
+    }
+
     const fragKey = getFragmentKey(fragment);
     const fragmentEntity = fragments[fragKey];
     if (!fragmentEntity) {
@@ -259,11 +267,11 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Fires when a fragment loading is completed
    */
-  onFragLoaded (e): void {
+  onFragLoaded (e: FragLoadedData): void {
     const fragment = e.frag;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
-    if (!Number.isFinite(fragment.sn) || fragment.bitrateTest) {
+    if (!Number.isFinite(fragment.sn as number) || fragment.bitrateTest) {
       return;
     }
 
@@ -277,7 +285,7 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Fires when the buffer is updated
    */
-  onBufferAppended (e): void {
+  onBufferAppended (e: BufferAppendedData): void {
     const { frag, timeRanges } = e;
     this.activeFragment = frag;
     // Store the latest timeRanges loaded in the buffer
@@ -294,7 +302,7 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Fires after a fragment has been loaded into the source buffer
    */
-  onFragBuffered (e): void {
+  onFragBuffered (e: FragBufferedData): void {
     this.detectPartialFragments(e.frag);
   }
 
