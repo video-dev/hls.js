@@ -189,7 +189,23 @@ export default class Hls implements HlsEventEmitter {
   }
 
   emit<E extends Events> (event: E, ...args: Parameters<HlsListeners[E]>): boolean {
-    return this._emitter.emit(event, ...args);
+    if (this.config.debug) {
+      return this._emitter.emit(event, ...args);
+    } else {
+      try {
+        return this._emitter.emit(event, ...args);
+      } catch(e) {
+        logger.error("An internal error happened while handling event " + event + ". Error message: \"" + e.message + "\". Here is a stacktrace:", e);
+        this.emit(Events.ERROR, {
+          type: ErrorTypes.OTHER_ERROR,
+          details: ErrorDetails.INTERNAL_EXCEPTION,
+          fatal: false,
+          event: event,
+          error: e
+        });
+        return true
+      }
+    }
   }
 
   listenerCount<E extends Events> (event: E): number {
