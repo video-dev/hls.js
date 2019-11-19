@@ -16,7 +16,6 @@ const browserConfig = {
   version: 'latest',
   name: 'chrome'
 };
-let browserDescription = browserConfig.name;
 
 /**
  * @type {webdriver.ThenableWebDriver}
@@ -43,6 +42,8 @@ if (onTravis) {
   browserConfig.name = UA;
   browserConfig.platform = OS;
 }
+
+let browserDescription = browserConfig.name;
 
 if (browserConfig.version) {
   browserDescription += ` (${browserConfig.version})`;
