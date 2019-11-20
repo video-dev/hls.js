@@ -95,22 +95,16 @@ class ID3TrackController extends EventHandler {
   }
 
   onLiveBackBufferReached ({ bufferEnd }) {
-    if (!this.id3Track || !this.id3Track.cues || !this.id3Track.cues.length) {
+    const { id3Track } = this;
+    if (!id3Track || !id3Track.cues || !id3Track.cues.length) {
       return;
     }
-    const foundCue = getClosestCue(this.id3Track.cues, bufferEnd);
+    const foundCue = getClosestCue(id3Track.cues, bufferEnd);
     if (!foundCue) {
       return;
     }
-
-    let removeCues = true;
-    while (removeCues) {
-      const cue = this.id3Track.cues[0];
-      if (!this.id3Track.cues.length || cue.id === foundCue.id) {
-        removeCues = false;
-        return;
-      }
-      this.id3Track.removeCue(cue);
+    while (id3Track.cues[0] !== foundCue) {
+      id3Track.removeCue(id3Track.cues[0]);
     }
   }
 }

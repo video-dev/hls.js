@@ -488,8 +488,9 @@ class BufferController extends EventHandler {
           // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
           // time will lead to playback freezing)
           // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
-          this.removeBufferRange(bufferType, sb, 0, targetBackBufferPosition);
-          this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });
+          if (this.removeBufferRange(bufferType, sb, 0, targetBackBufferPosition)) {
+            this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });
+          }
         }
       }
     }
