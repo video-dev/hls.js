@@ -361,18 +361,14 @@ class StreamController extends BaseStreamController {
       fragNextLoad = fragments[fragmentIndexRange - 1];
     }
 
-    if (!fragNextLoad) {
-      return null;
-    }
-
-    {
+    if (fragNextLoad) {
       const curSNIdx = fragNextLoad.sn - levelDetails.startSN;
       const sameLevel = fragPreviousLoad && fragNextLoad.level === fragPreviousLoad.level;
       const prevSnFrag = fragments[curSNIdx - 1];
       const nextSnFrag = fragments[curSNIdx + 1];
 
       // logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-      if (fragPreviousLoad && fragNextLoad.sn === fragPreviousLoad.sn) { // Q: why not use FragmentTracker to determine this condition?
+      if (fragPreviousLoad && fragNextLoad.sn === fragPreviousLoad.sn) {
         if (sameLevel && !fragNextLoad.backtracked) {
           if (fragNextLoad.sn < levelDetails.endSN) {
             let deltaPTS = fragPreviousLoad.deltaPTS;
@@ -385,7 +381,7 @@ class StreamController extends BaseStreamController {
               logger.warn('Previous fragment was dropped with large PTS gap between audio and video. Maybe fragment is not starting with a keyframe? Loading previous one to try to overcome this');
             } else {
               fragNextLoad = nextSnFrag;
-              logger.log(`Re-loading fragment with SN: ${fragNextLoad.sn}`); // Q: why?
+              logger.log(`Re-loading fragment with SN: ${fragNextLoad.sn}`);
             }
           } else {
             fragNextLoad = null;
@@ -402,7 +398,7 @@ class StreamController extends BaseStreamController {
             fragNextLoad.dropped = 0;
             if (prevSnFrag) {
               fragNextLoad = prevSnFrag;
-              fragNextLoad.backtracked = true; // Q: why are we setting this flag to true, since it has to be true so we even reach this code?
+              fragNextLoad.backtracked = true;
             } else if (curSNIdx) {
               // can't backtrack on very first fragment
               fragNextLoad = null;
@@ -457,7 +453,7 @@ class StreamController extends BaseStreamController {
     if (this.state !== nextState) {
       const previousState = this.state;
       this._state = nextState;
-      logger.log(`main stream-controller state-transition: ${previousState}->${nextState}`);
+      logger.log(`main stream-controller: ${previousState}->${nextState}`);
       this.hls.trigger(Event.STREAM_STATE_TRANSITION, { previousState, nextState });
     }
   }
@@ -681,10 +677,6 @@ class StreamController extends BaseStreamController {
       this.startPosition = this.lastCurrentTime = 0;
     }
 
-    // release gap-controller
-    this.gapController.destroy();
-    this.gapController = null;
-
     // reset fragment backtracked flag
     let levels = this.levels;
     if (levels) {
@@ -712,7 +704,8 @@ class StreamController extends BaseStreamController {
   }
 
   onMediaSeeked () {
-    const media = this.media, currentTime = media ? media.currentTime : undefined;
+    const media = this.media;
+    const currentTime = media ? media.currentTime : undefined;
     if (Number.isFinite(currentTime)) {
       logger.log(`media seeked to ${currentTime.toFixed(3)}`);
     }

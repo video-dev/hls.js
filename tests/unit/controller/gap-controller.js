@@ -2,7 +2,7 @@ import sinon from 'sinon';
 
 import Hls from '../../../src/hls';
 
-import GapController, { STALL_MINIMUM_DURATION_MS, STALL_HANDLING_RETRY_PERIOD_MS } from '../../../src/controller/gap-controller';
+import GapController, { STALL_MINIMUM_DURATION_MS } from '../../../src/controller/gap-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 
 import Event from '../../../src/events';
@@ -115,6 +115,7 @@ describe('GapController', function () {
 
   describe('media clock polling', function () {
     const TIMER_STEP_MS = 1234;
+    const STALL_HANDLING_RETRY_PERIOD_MS = 1000;
 
     let mockMedia;
     let mockTimeRanges;
@@ -143,7 +144,7 @@ describe('GapController', function () {
       // note that the initial current time
       // is within the range of buffered data info
       mockMedia = {
-        currentTime: 100,
+        currentTime: 0,
         paused: false,
         readyState: 4,
         buffered: mockTimeRanges,
@@ -173,16 +174,15 @@ describe('GapController', function () {
 
       const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
 
-      expect(gapController.hasPlayed).to.equal(false);
+      expect(gapController.moved).to.equal(false);
 
-      // we need to play a bit to get past the hasPlayed check
+      // we need to play a bit to get past the moved check
       tickMediaClock();
-      // check the hasPlayed flag has turned true
-      expect(gapController.hasPlayed).to.equal(true);
+      // check the moved flag has turned true
+      expect(gapController.moved).to.equal(true);
 
       // check that stall detection flags are still reset
-      expect(gapController.stallDetectedAtTime).to.equal(null);
-      expect(gapController.stallHandledAtTime).to.equal(null);
+      expect(gapController.stalled).to.equal(null);
       expect(gapController.stallReported).to.equal(false);
 
       // set stalling and tick media again
@@ -190,30 +190,36 @@ describe('GapController', function () {
       tickMediaClock();
 
       // check that stall has been detected
-      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
-      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
+      expect(gapController.stalled).to.equal(TIMER_STEP_MS);
       // check that stall has not been flagged reported
       expect(gapController.stallReported).to.equal(false);
+
+      expect(reportStallSpy).to.not.have.been.called;
+      expect(fixStallStub).to.not.have.been.called;
 
       wallClock.tick(STALL_MINIMUM_DURATION_MS / 2);
       tickMediaClock();
 
       // if stall was only sustained for below min duration, flags should be unchanged
       // and no stall reported yet
-      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
-      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
+      expect(gapController.stalled).to.equal(TIMER_STEP_MS);
       expect(gapController.stallReported).to.equal(false);
+      // nudge is attempted
+      expect(fixStallStub).to.have.been.calledOnce;
 
       // more polling calls may happen without sys clock changing necessarily
-      // the internal state should be imutated
       tickMediaClock();
+      // nudge is attempted
+      expect(fixStallStub).to.have.been.calledTwice;
+
       tickMediaClock();
 
       // if stall was only sustained for below min duration, flags should be unchanged
       // and no stall reported yet
-      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
-      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
+      expect(gapController.stalled).to.equal(TIMER_STEP_MS);
       expect(gapController.stallReported).to.equal(false);
+      // nudge is attempted
+      expect(fixStallStub).to.have.been.calledThrice;
 
       // advance wall clock above threshold and tick media clock
       wallClock.tick(STALL_MINIMUM_DURATION_MS / 2);
@@ -221,44 +227,37 @@ describe('GapController', function () {
 
       // now more time has passed than the min stall duration
       // which is threshold for reporting
-      // inital detection time stays imuted
-      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
-      // the handling timestamp gets updated
-      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS + STALL_MINIMUM_DURATION_MS);
+      // initial detection time is unchanged
+      expect(gapController.stalled).to.equal(TIMER_STEP_MS);
       expect(gapController.stallReported).to.equal(true);
-
       expect(reportStallSpy).to.have.been.calledOnce;
-      expect(fixStallStub).to.have.been.calledOnce;
+      expect(fixStallStub).to.have.callCount(4);
 
       tickMediaClock();
       tickMediaClock();
       wallClock.tick(STALL_HANDLING_RETRY_PERIOD_MS / 2);
       tickMediaClock();
 
-      // if the wall clock doesn't advance beyond the retry time
-      // we should not call the specific handlers to fix stalls again
-      expect(reportStallSpy).to.have.been.calledOnce;
-      expect(fixStallStub).to.have.been.calledOnce;
+      expect(reportStallSpy).to.have.been.callCount(4);
+      expect(fixStallStub).to.have.callCount(7);
 
       wallClock.tick(STALL_HANDLING_RETRY_PERIOD_MS / 2);
       tickMediaClock();
 
-      expect(reportStallSpy).to.have.been.calledTwice;
-      expect(fixStallStub).to.have.been.calledTwice;
+      expect(reportStallSpy).to.have.been.callCount(5);
+      expect(fixStallStub).to.have.callCount(8);
     });
 
     it('should reset stall flags when no longer stalling', function () {
       gapController.stallReported = true;
       gapController.nudgeRetry = 1;
-      gapController.stallDetectedAtTime = 4200;
-      gapController.stallHandledAtTime = 4201;
+      gapController.stalled = 4200;
 
       const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
 
       gapController.poll(lastCurrentTime);
 
-      expect(gapController.stallDetectedAtTime).to.equal(null);
-      expect(gapController.stallHandledAtTime).to.equal(null);
+      expect(gapController.stalled).to.equal(null);
       expect(gapController.nudgeRetry).to.equal(0);
       expect(gapController.stallReported).to.equal(false);
 
@@ -267,40 +266,31 @@ describe('GapController', function () {
       expect(fixStallStub).to.have.not.been.called;
     });
 
-    it('should detect when media is (not) playable and detect stalls respectively', function () {
+    it('should not detect stalls when ended, unbuffered or seeking', function () {
       wallClock.tick(TIMER_STEP_MS);
 
-      // we need to play a bit to get past the hasPlayed check
+      // we need to play a bit to get past the moved check
       tickMediaClock();
 
       isStalling = true;
-
-      // we need a readyState > 2 to expect media to playback
-      mockMedia.readyState = 2;
-
-      tickMediaClock();
-      expect(gapController.stallDetectedAtTime).to.equal(null);
-      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
-
-      mockMedia.readyState = 4;
       mockMedia.ended = true;
 
       tickMediaClock();
-      expect(gapController.stallDetectedAtTime).to.equal(null);
+      expect(gapController.stalled).to.equal(null, 'ended');
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
 
       mockMedia.ended = false;
       mockMedia.buffered.length = 0;
 
       tickMediaClock();
-      expect(gapController.stallDetectedAtTime).to.equal(null);
+      expect(gapController.stalled).to.equal(null, 'empty buffer');
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
 
       mockMedia.buffered.length = mockTimeRangesData.length;
       mockMedia.seeking = true;
 
       // tickMediaClock(100)
-      expect(gapController.stallDetectedAtTime).to.equal(null);
+      expect(gapController.stalled).to.equal(null, 'seeking');
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
     });
 
@@ -309,42 +299,24 @@ describe('GapController', function () {
 
       tickMediaClock();
 
-      expect(gapController.hasPlayed).to.equal(true);
-      expect(gapController.stallDetectedAtTime).to.equal(null);
-      expect(gapController.stallHandledAtTime).to.equal(null);
+      expect(gapController.moved).to.equal(true);
+      expect(gapController.stalled).to.equal(null);
 
       mockMedia.paused = true;
       isStalling = true;
 
       tickMediaClock();
 
-      expect(gapController.stallDetectedAtTime).to.equal(null);
-      expect(gapController.stallHandledAtTime).to.equal(null);
+      expect(gapController.stalled).to.equal(null);
 
       mockMedia.paused = false;
 
       tickMediaClock();
 
-      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
-      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
+      expect(gapController.stalled).to.equal(TIMER_STEP_MS);
     });
 
-    it('should handle a stall when getting a waiting event and media clock is on buffered time-range', function () {
-      wallClock.tick(TIMER_STEP_MS);
-
-      tickMediaClock();
-
-      expect(gapController.hasPlayed).to.equal(true);
-      expect(gapController.stallDetectedAtTime).to.equal(null);
-      expect(gapController.stallHandledAtTime).to.equal(null);
-
-      gapController._onMediaElWaiting();
-
-      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
-      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
-    });
-
-    it('should detect/handle stalls also when media never played yet (regardless if paused flag is set or not)', function () {
+    it('should jump start gaps', function () {
       wallClock.tick(TIMER_STEP_MS);
 
       // set stalling from the start
@@ -352,19 +324,9 @@ describe('GapController', function () {
 
       tickMediaClock();
 
-      expect(gapController.hasPlayed).to.equal(false);
-      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
-      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS);
-
-      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
-
-      mockMedia.paused = true;
-
-      tickMediaClock();
-
-      expect(gapController.hasPlayed).to.equal(false);
-      expect(gapController.stallDetectedAtTime).to.equal(TIMER_STEP_MS);
-      expect(gapController.stallHandledAtTime).to.equal(TIMER_STEP_MS + 2 * STALL_HANDLING_RETRY_PERIOD_MS);
+      expect(gapController.moved).to.equal(true);
+      expect(mockMedia.currentTime).to.equal(100);
+      expect(gapController.stalled).to.equal(null);
     });
 
     it('should skip any initial gap when not having played yet', function () {
