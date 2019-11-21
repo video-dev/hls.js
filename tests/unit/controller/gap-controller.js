@@ -2,7 +2,7 @@ import sinon from 'sinon';
 
 import Hls from '../../../src/hls';
 
-import GapController, { STALL_MINIMUM_DURATION_MS } from '../../../src/controller/gap-controller';
+import GapController, { STALL_MINIMUM_DURATION_MS, SKIP_BUFFER_RANGE_START } from '../../../src/controller/gap-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 
 import Event from '../../../src/events';
@@ -316,20 +316,7 @@ describe('GapController', function () {
       expect(gapController.stalled).to.equal(TIMER_STEP_MS);
     });
 
-    it('should jump start gaps', function () {
-      wallClock.tick(TIMER_STEP_MS);
-
-      // set stalling from the start
-      isStalling = true;
-
-      tickMediaClock();
-
-      expect(gapController.moved).to.equal(true);
-      expect(mockMedia.currentTime).to.equal(100);
-      expect(gapController.stalled).to.equal(null);
-    });
-
-    it('should skip any initial gap when not having played yet', function () {
+    it('should skip any initial gap before playing', function () {
       wallClock.tick(TIMER_STEP_MS);
 
       mockMedia.currentTime = 0;
@@ -338,7 +325,9 @@ describe('GapController', function () {
 
       tickMediaClock();
 
-      expect(mockMedia.currentTime).to.equal(100);
+      expect(gapController.moved).to.equal(true);
+      expect(mockMedia.currentTime).to.equal(100 + SKIP_BUFFER_RANGE_START);
+      expect(gapController.stalled).to.equal(null);
     });
   });
 });

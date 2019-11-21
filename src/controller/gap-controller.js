@@ -6,6 +6,7 @@ import { logger } from '../utils/logger';
 export const STALL_MINIMUM_DURATION_MS = 250;
 export const JUMP_THRESHOLD_SECONDS = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 export const SKIP_BUFFER_HOLE_STEP_SECONDS = 0.1;
+export const SKIP_BUFFER_RANGE_START = 0.05;
 
 export default class GapController {
   constructor (config, media, fragmentTracker, hls) {
@@ -58,10 +59,9 @@ export default class GapController {
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
 
     if (!this.moved) {
-      if (!media.seeking && bufferInfo.nextStart) {
-        logger.warn(`skipping start gap, adjusting currentTime from ${currentTime} to ${bufferInfo.nextStart}`);
+      if (!media.seeking && (bufferInfo.nextStart || bufferInfo.start > currentTime)) {
         this.moved = true;
-        media.currentTime = bufferInfo.nextStart;
+        this._trySkipBufferHole(null);
       }
       return;
     }
@@ -146,18 +146,21 @@ export default class GapController {
     let lastEndTime = 0;
     // Check if currentTime is between unbuffered regions of partial fragments
     for (let i = 0; i < media.buffered.length; i++) {
-      let startTime = media.buffered.start(i);
+      const startTime = media.buffered.start(i);
       if (currentTime >= lastEndTime && currentTime < startTime) {
-        media.currentTime = Math.max(startTime, media.currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS);
-        logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${media.currentTime}`);
+        const targetTime = Math.max(startTime + SKIP_BUFFER_RANGE_START, media.currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS);
+        media.currentTime = targetTime;
+        logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`);
         this.stalled = null;
-        hls.trigger(Event.ERROR, {
-          type: ErrorTypes.MEDIA_ERROR,
-          details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
-          fatal: false,
-          reason: `fragment loaded with buffer holes, seeking from ${currentTime} to ${media.currentTime}`,
-          frag: partial
-        });
+        if (partial) {
+          hls.trigger(Event.ERROR, {
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+            fatal: false,
+            reason: `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
+            frag: partial
+          });
+        }
         return;
       }
       lastEndTime = media.buffered.end(i);
