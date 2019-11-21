@@ -64,8 +64,8 @@ export default class GapController {
       return;
     }
 
-    // The playhead isn't moving but it should be
-    // Allow some slack time to for small stalls to resolve themselves
+    // Skip start gaps if we haven't played, but the last poll detected the start of a stall
+    // The addition poll gives the browser a chance to jump the gap for us
     if (!this.moved && this.stalled) {
       if (!seeking && (bufferInfo.nextStart || bufferInfo.start > currentTime)) {
         this._trySkipBufferHole(null);
