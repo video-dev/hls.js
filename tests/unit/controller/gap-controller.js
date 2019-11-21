@@ -128,7 +128,7 @@ describe('GapController', function () {
     beforeEach(function () {
       wallClock = sandbox.useFakeTimers(0);
       isStalling = false;
-      mockTimeRangesData = [[100, 200], [400, 500]];
+      mockTimeRangesData = [[0.1, 0.2], [0.4, 0.5]];
       mockTimeRanges = {
         length: mockTimeRangesData.length,
         start (index) {
@@ -334,7 +334,7 @@ describe('GapController', function () {
 
       expect(gapController.moved).to.equal(true);
       expect(gapController.stalled).to.equal(null);
-      expect(mockMedia.currentTime).to.equal(100 + SKIP_BUFFER_RANGE_START);
+      expect(mockMedia.currentTime).to.equal(0.1 + SKIP_BUFFER_RANGE_START);
     });
   });
 });
