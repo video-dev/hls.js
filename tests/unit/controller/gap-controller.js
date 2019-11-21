@@ -146,6 +146,7 @@ describe('GapController', function () {
       mockMedia = {
         currentTime: 0,
         paused: false,
+        seeking: false,
         readyState: 4,
         buffered: mockTimeRanges,
         addEventListener () {}
@@ -316,7 +317,7 @@ describe('GapController', function () {
       expect(gapController.stalled).to.equal(TIMER_STEP_MS);
     });
 
-    it('should skip any initial gap before playing', function () {
+    it('should skip any initial gap before playing on the second poll (so that Chrome can jump the gap first)', function () {
       wallClock.tick(TIMER_STEP_MS);
 
       mockMedia.currentTime = 0;
@@ -325,9 +326,15 @@ describe('GapController', function () {
 
       tickMediaClock();
 
+      expect(gapController.moved).to.equal(false);
+      expect(gapController.stalled).to.equal(1234);
+      expect(mockMedia.currentTime).to.equal(0);
+
+      tickMediaClock();
+
       expect(gapController.moved).to.equal(true);
-      expect(mockMedia.currentTime).to.equal(100 + SKIP_BUFFER_RANGE_START);
       expect(gapController.stalled).to.equal(null);
+      expect(mockMedia.currentTime).to.equal(100 + SKIP_BUFFER_RANGE_START);
     });
   });
 });

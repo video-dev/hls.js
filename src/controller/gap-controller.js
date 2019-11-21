@@ -46,33 +46,41 @@ export default class GapController {
       return;
     }
 
+    // The playhead should not be moving
     if (media.paused || media.ended || media.playbackRate === 0 || !media.buffered.length) {
       return;
     }
 
-    if (media.seeking && BufferHelper.isBuffered(media, currentTime)) {
+    // Waiting for seeking in a buffered range to complete
+    const seeking = media.seeking;
+    if (seeking && BufferHelper.isBuffered(media, currentTime)) {
+      return;
+    }
+
+    const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
+
+    // There is no playable buffer (seeked, waiting for buffer)
+    if (bufferInfo.len === 0 && !bufferInfo.nextStart) {
       return;
     }
 
     // The playhead isn't moving but it should be
     // Allow some slack time to for small stalls to resolve themselves
-    const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
-
-    if (!this.moved) {
-      if (!media.seeking && (bufferInfo.nextStart || bufferInfo.start > currentTime)) {
-        this.moved = true;
+    if (!this.moved && this.stalled) {
+      if (!seeking && (bufferInfo.nextStart || bufferInfo.start > currentTime)) {
         this._trySkipBufferHole(null);
       }
       return;
     }
 
-    if (stalled === null) {
+    // Start tracking stall time
+    if (!seeking && stalled === null) {
       this.stalled = tnow;
       return;
     }
 
     const stalledDuration = tnow - stalled;
-    if (!media.seeking && stalledDuration >= STALL_MINIMUM_DURATION_MS) {
+    if (!seeking && stalledDuration >= STALL_MINIMUM_DURATION_MS) {
       // Report stalling after trying to fix
       this._reportStall(bufferInfo.len);
     }
@@ -149,9 +157,10 @@ export default class GapController {
       const startTime = media.buffered.start(i);
       if (currentTime >= lastEndTime && currentTime < startTime) {
         const targetTime = Math.max(startTime + SKIP_BUFFER_RANGE_START, media.currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS);
-        media.currentTime = targetTime;
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`);
+        this.moved = true;
         this.stalled = null;
+        media.currentTime = targetTime;
         if (partial) {
           hls.trigger(Event.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
