@@ -5,6 +5,7 @@ import { logger } from '../utils/logger';
 
 export const STALL_MINIMUM_DURATION_MS = 250;
 export const JUMP_THRESHOLD_SECONDS = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
+export const MAX_START_GAP_JUMP = 2.0;
 export const SKIP_BUFFER_HOLE_STEP_SECONDS = 0.1;
 export const SKIP_BUFFER_RANGE_START = 0.05;
 
@@ -69,7 +70,7 @@ export default class GapController {
     if (!this.moved && this.stalled) {
       // Jump start gaps within jump threshold
       const startJump = Math.max(bufferInfo.nextStart || 0, ((bufferInfo.start || 0) - currentTime));
-      if (!seeking && startJump > 0 && startJump <= JUMP_THRESHOLD_SECONDS) {
+      if (!seeking && startJump > 0 && startJump <= MAX_START_GAP_JUMP) {
         this._trySkipBufferHole(null);
       }
       return;
@@ -104,10 +105,12 @@ export default class GapController {
     if (partial) {
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
-      this._trySkipBufferHole(partial);
+      const targetTime = this._trySkipBufferHole(partial);
       // we return here in this case, meaning
       // the branch below only executes when we don't handle a partial fragment
-      return;
+      if (targetTime) {
+        return;
+      }
     }
 
     // if we haven't had to skip over a buffer hole of a partial fragment
@@ -157,7 +160,7 @@ export default class GapController {
     // Check if currentTime is between unbuffered regions of partial fragments
     for (let i = 0; i < media.buffered.length; i++) {
       const startTime = media.buffered.start(i);
-      if (currentTime >= lastEndTime && currentTime < startTime) {
+      if (currentTime + JUMP_THRESHOLD_SECONDS >= lastEndTime && currentTime < startTime) {
         const targetTime = Math.max(startTime + SKIP_BUFFER_RANGE_START, media.currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS);
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`);
         this.moved = true;
@@ -172,10 +175,11 @@ export default class GapController {
             frag: partial
           });
         }
-        return;
+        return targetTime;
       }
       lastEndTime = media.buffered.end(i);
     }
+    return 0;
   }
 
   /**
