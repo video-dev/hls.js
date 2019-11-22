@@ -1,5 +1,5 @@
 import Hls from '../../../src/hls';
-import GapController from '../../../src/controller/gap-controller';
+import GapController, { SKIP_BUFFER_RANGE_START } from '../../../src/controller/gap-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import Event from '../../../src/events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
@@ -184,11 +184,12 @@ describe('checkBuffer', function () {
       expect(reportStallSpy).to.have.been.calledOnce;
     });
 
-    it('should skip any initial gap when not having played yet', function () {
+    it('should skip any initial gap when not having played yet on second poll', function () {
       mockMedia.currentTime = 0;
       mockMedia.buffered.start = () => 0.9;
       gapController.poll(0);
-      expect(mockMedia.currentTime).to.equal(0.9);
+      gapController.poll(0);
+      expect(mockMedia.currentTime).to.equal(0.9 + SKIP_BUFFER_RANGE_START);
     });
   });
 });

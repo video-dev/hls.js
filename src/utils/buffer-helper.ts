@@ -17,6 +17,13 @@ export type Bufferable = {
   buffered: TimeRanges
 };
 
+export type BufferInfo = {
+  len: number,
+  start: number,
+  end: number,
+  nextStart?: number,
+};
+
 export class BufferHelper {
   /**
    * Return true if `media`'s buffered include `position`
@@ -46,12 +53,7 @@ export class BufferHelper {
     media: Bufferable,
     pos: number,
     maxHoleDuration: number
-  ): {
-    len: number,
-    start: number,
-    end: number,
-    nextStart?: number,
-  } {
+  ): BufferInfo {
     try {
       if (media) {
         const vbuffered = media.buffered;
