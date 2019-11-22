@@ -696,7 +696,6 @@ export default class MP4Remuxer implements Remuxer {
       return;
     }
 
-  
     const samples: Array<any> = [];
     for (let i = 0; i < nbSamples; i++) {
       const stamp = startDTS + i * frameDuration;
