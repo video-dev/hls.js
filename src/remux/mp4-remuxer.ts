@@ -7,6 +7,7 @@ import { InitSegmentData, Remuxer, RemuxerResult, RemuxedMetadata, RemuxedTrack 
 import { DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../types/demuxer';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
+import Fragment from '../loader/fragment';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
@@ -61,7 +62,7 @@ export default class MP4Remuxer implements Remuxer {
     this.ISGenerated = false;
   }
 
-  remux (audioTrack: DemuxedAudioTrack, videoTrack: DemuxedAvcTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset, accurateTimeOffset) : RemuxerResult {
+  remux (audioTrack: DemuxedAudioTrack, videoTrack: DemuxedAvcTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset: number, accurateTimeOffset: boolean) : RemuxerResult {
     let video;
     let audio;
     let initSegment;
@@ -673,20 +674,20 @@ export default class MP4Remuxer implements Remuxer {
     return audioData;
   }
 
-  remuxEmptyAudio (track: DemuxedAudioTrack, timeOffset, contiguous, videoData) : RemuxedTrack | undefined {
-    const inputTimeScale = track.inputTimeScale;
-    const mp4timeScale = track.samplerate ? track.samplerate : inputTimeScale;
-    const scaleFactor = inputTimeScale / mp4timeScale;
-    const nextAudioPts = this.nextAudioPts;
+  remuxEmptyAudio (track: DemuxedAudioTrack, timeOffset: number, contiguous: boolean, videoData: Fragment) : RemuxedTrack | undefined {
+    const inputTimeScale: number = track.inputTimeScale;
+    const mp4timeScale: number = track.samplerate ? track.samplerate : inputTimeScale;
+    const scaleFactor: number = inputTimeScale / mp4timeScale;
+    const nextAudioPts: number | null = this.nextAudioPts;
     // sync with video's timestamp
-    const startDTS = (nextAudioPts !== null ? nextAudioPts : videoData.startDTS * inputTimeScale) + this._initDTS;
-    const endDTS = videoData.endDTS * inputTimeScale + this._initDTS;
+    const startDTS: number = (nextAudioPts !== null ? nextAudioPts : videoData.startDTS * inputTimeScale) + this._initDTS;
+    const endDTS: number = videoData.endDTS * inputTimeScale + this._initDTS;
     // one sample's duration value
-    const frameDuration = scaleFactor * AAC_SAMPLES_PER_FRAME;
+    const frameDuration: number = scaleFactor * AAC_SAMPLES_PER_FRAME;
     // samples count of this segment's duration
-    const nbSamples = Math.ceil((endDTS - startDTS) / frameDuration);
+    const nbSamples: number = Math.ceil((endDTS - startDTS) / frameDuration);
     // silent frame
-    const silentFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
+    const silentFrame: Uint8Array | undefined = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
 
     logger.warn('[mp4-remuxer]: remux empty Audio');
     // Can't remux if we can't generate a silent frame...
@@ -695,7 +696,8 @@ export default class MP4Remuxer implements Remuxer {
       return;
     }
 
-    const samples = [] as Array<any>;
+  
+    const samples: Array<any> = [];
     for (let i = 0; i < nbSamples; i++) {
       const stamp = startDTS + i * frameDuration;
       samples.push({ unit: silentFrame, pts: stamp, dts: stamp });
