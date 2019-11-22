@@ -3,7 +3,7 @@
  */
 
 class AAC {
-  static getSilentFrame (codec, channelCount) {
+  static getSilentFrame (codec?: string, channelCount?: number): Uint8Array | undefined {
     switch (codec) {
     case 'mp4a.40.2':
       if (channelCount === 1) {
@@ -35,7 +35,7 @@ class AAC {
       }
       break;
     }
-    return null;
+    return undefined;
   }
 }
 
