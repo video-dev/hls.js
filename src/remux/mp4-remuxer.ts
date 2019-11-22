@@ -438,9 +438,9 @@ export default class MP4Remuxer implements Remuxer {
     return data;
   }
 
-  remuxAudio (track, timeOffset: number, contiguous: boolean, accurateTimeOffset: boolean): RemuxedTrack | undefined {
+  remuxAudio (track: DemuxedAudioTrack, timeOffset: number, contiguous: boolean, accurateTimeOffset: boolean): RemuxedTrack | undefined {
     const inputTimeScale: number = track.inputTimeScale;
-    const mp4timeScale: number = track.samplerate;
+    const mp4timeScale: number = track.samplerate ? track.samplerate : inputTimeScale;
     const scaleFactor: number = inputTimeScale / mp4timeScale;
     const mp4SampleDuration: number = track.isAAC ? AAC_SAMPLES_PER_FRAME : MPEG_AUDIO_SAMPLE_PER_FRAME;
     const inputSampleDuration: number = mp4SampleDuration * scaleFactor;
@@ -673,7 +673,7 @@ export default class MP4Remuxer implements Remuxer {
     return audioData;
   }
 
-  remuxEmptyAudio (track, timeOffset, contiguous, videoData) : RemuxedTrack | undefined {
+  remuxEmptyAudio (track: DemuxedAudioTrack, timeOffset, contiguous, videoData) : RemuxedTrack | undefined {
     const inputTimeScale = track.inputTimeScale;
     const mp4timeScale = track.samplerate ? track.samplerate : inputTimeScale;
     const scaleFactor = inputTimeScale / mp4timeScale;
