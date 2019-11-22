@@ -19,6 +19,7 @@ export default class GapController {
     this.stallReported = false;
     this.stalled = null;
     this.moved = false;
+    this.seeking = false;
   }
 
   /**
@@ -29,8 +30,11 @@ export default class GapController {
    */
   poll (lastCurrentTime) {
     const { config, media, stalled } = this;
-    const currentTime = media.currentTime;
     const tnow = self.performance.now();
+    const { currentTime, seeking } = media;
+    const seeked = this.seeking && !seeking;
+
+    this.seeking = seeking;
 
     // The playhead is moving, no-op
     if (currentTime !== lastCurrentTime) {
@@ -47,13 +51,17 @@ export default class GapController {
       return;
     }
 
+    // Clear stalled state after seeked so that we don't report stalls coming out of a seek
+    if (seeked) {
+      this.stalled = null;
+    }
+
     // The playhead should not be moving
     if (media.paused || media.ended || media.playbackRate === 0 || !media.buffered.length) {
       return;
     }
 
     // Waiting for seeking in a buffered range to complete
-    const seeking = media.seeking;
     if (seeking && BufferHelper.isBuffered(media, currentTime)) {
       return;
     }
@@ -77,7 +85,7 @@ export default class GapController {
     }
 
     // Start tracking stall time
-    if (!seeking && stalled === null) {
+    if (stalled === null) {
       this.stalled = tnow;
       return;
     }
@@ -119,7 +127,7 @@ export default class GapController {
     // to start playing properly.
     if (bufferInfo.len > JUMP_THRESHOLD_SECONDS &&
       stalledDurationMs > config.highBufferWatchdogPeriod * 1000) {
-      logger.log('Trying to nudge playhead over buffer-hole');
+      logger.warn('Trying to nudge playhead over buffer-hole');
       // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
       // We only try to jump the hole if it's under the configured size
       // Reset stalled so to rearm watchdog timer
@@ -195,7 +203,7 @@ export default class GapController {
     if (nudgeRetry < config.nudgeMaxRetry) {
       const targetTime = currentTime + nudgeRetry * config.nudgeOffset;
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
-      logger.log(`Nudging 'currentTime' from ${currentTime} to ${targetTime}`);
+      logger.warn(`Nudging 'currentTime' from ${currentTime} to ${targetTime}`);
       media.currentTime = targetTime;
 
       hls.trigger(Event.ERROR, {
