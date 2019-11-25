@@ -183,5 +183,11 @@ module.exports = {
   altAudioAndTracks: {
     url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
     description: 'Alternate audio tracks, and multiple VTT tracks'
+  },
+  altAudioWithPdtAndStartGap: {
+    url: 'https://playertest.longtailvideo.com/adaptive/hls-test-streams/test-audio-pdt/playlist.m3u8',
+    description: 'PDT before each segment, 1.59s start gap',
+    abr: true,
+    startSeek: true
   }
 };

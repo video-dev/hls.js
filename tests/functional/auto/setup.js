@@ -221,6 +221,36 @@ async function testIsPlayingVOD (url, config) {
   expect(result.playing).to.be.true;
 }
 
+async function testSeekBackToStart (url, config) {
+  const result = await browser.executeAsyncScript(
+    (url, config) => {
+      let callback = arguments[arguments.length - 1];
+      window.startStream(url, config, callback);
+      const video = window.video;
+      video.ontimeupdate = function () {
+        if (video.currentTime > 0 && !video.paused) {
+          window.setTimeout(function () {
+            video.onseeked = function () {
+              delete video.onseeked;
+              video.ontimeupdate = function () {
+                if (video.currentTime > 0 && !video.paused) {
+                  delete video.ontimeupdate;
+                  callback({ playing: true });
+                }
+              };
+            };
+            video.currentTime = 0;
+            delete video.ontime;
+          }, 500);
+        }
+      };
+    },
+    url,
+    config
+  );
+  expect(result.playing).to.be.true;
+}
+
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
   beforeEach(async function () {
     // high timeout because sometimes getSession() takes a while
@@ -329,6 +359,13 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         `should receive video loadeddata event for ${stream.description}`,
         testLoadedData.bind(null, url, config)
       );
+
+      if (stream.startSeek) {
+        it(
+          `seek back to start and play for ${stream.description}`,
+          testSeekBackToStart.bind(null, url, config)
+        );
+      }
 
       if (stream.abr) {
         it(
