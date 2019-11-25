@@ -89,8 +89,10 @@ describe('SubtitleStreamController', function () {
       const details = { foo: 'bar' };
       subtitleStreamController.currentTrackId = 1;
       hls.emit(Events.SUBTITLE_TRACK_LOADED, {
-        id: 1, details
+        id: 1,
+        details: details
       });
+      console.log(subtitleStreamController.levels)
       expect(subtitleStreamController.levels[1].details).to.equal(details);
       expect(subtitleStreamController.setInterval).to.have.been.calledOnce;
     });

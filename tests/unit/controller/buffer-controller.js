@@ -157,7 +157,7 @@ describe('BufferController tests', function () {
       let video = document.createElement('video');
       bufferController.onMediaAttaching({ media: video });
 
-      hls.on(Hls.Events.BUFFER_CREATED, (_, data) => {
+      hls.on(Hls.Events.BUFFER_CREATED, (data) => {
         const tracks = data.tracks;
         expect(bufferController.pendingTracks).to.not.equal(tracks);
         expect(bufferController.tracks).to.equal(tracks);
