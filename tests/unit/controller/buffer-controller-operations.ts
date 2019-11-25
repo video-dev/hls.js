@@ -79,7 +79,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
 
     operationQueue = new BufferOperationQueue(bufferController.sourceBuffer);
     bufferController.operationQueue = operationQueue;
-    triggerSpy = sandbox.spy(hls, 'trigger');
+    triggerSpy = sandbox.spy(hls, 'emit');
     shiftAndExecuteNextSpy = sandbox.spy(operationQueue, 'shiftAndExecuteNext');
     queueAppendBlockerSpy = sandbox.spy(operationQueue, 'appendBlocker');
   });
@@ -198,7 +198,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;
       expect(flushLiveBackBufferSpy).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
-        hls.on(Events.FRAG_BUFFERED, (event, data) => {
+        hls.on(Events.FRAG_BUFFERED, (data) => {
           try {
             expect(data.frag, 'The frag emitted in FRAG_BUFFERED should be the frag passed in onFragParsed').to.equal(frag);
             expect(data.id, 'The id of the event should be equal to the frag type').to.equal(frag.type);

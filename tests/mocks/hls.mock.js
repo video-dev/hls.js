@@ -7,6 +7,7 @@ const sinon = require('sinon');
  */
 const publicMethods = [
   'trigger',
+  'emit',
   'on',
   'off',
   'destroy',

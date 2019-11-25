@@ -2,6 +2,7 @@ import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
 import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
+import Hls from '../../../src/hls';
 
 const sinon = require('sinon');
 
@@ -75,7 +76,7 @@ describe('EMEController', function () {
     }, 0);
   });
 
-  it('should trigger key system error when bad encrypted data is received', function (done) {
+  it('should emit key system error when bad encrypted data is received', function (done) {
     const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
@@ -98,8 +99,8 @@ describe('EMEController', function () {
     media.emit('encrypted', badData);
 
     setTimeout(function () {
-      expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
-      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+      expect(emeController.hls.emit.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
+      expect(emeController.hls.emit.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
       done();
     }, 0);
   });

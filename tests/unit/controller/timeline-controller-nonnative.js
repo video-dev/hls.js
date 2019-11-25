@@ -31,7 +31,7 @@ describe('Non-Native TimelineController functions', function () {
   });
 
   it('fires the NON_NATIVE_TEXT_TRACKS_FOUND event', function (done) {
-    hls.on(Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND, (event, data) => {
+    hls.on(Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND, (data) => {
       const track = data.tracks[0];
       expect(track.kind).to.equal('captions');
       expect(track.default).to.equal(false);
@@ -44,7 +44,7 @@ describe('Non-Native TimelineController functions', function () {
   });
 
   it('does not create a non native track if the track does not have any defined properties', function () {
-    const triggerSpy = sinon.spy(hls, 'trigger');
+    const triggerSpy = sinon.spy(hls, 'emit');
     timelineController.createNonNativeTrack('foo');
     expect(triggerSpy).to.have.not.been.called;
   });
