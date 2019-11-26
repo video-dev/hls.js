@@ -1,4 +1,4 @@
-import {sortObject, copyTextToClipboard} from './demo-utils'
+import { sortObject, copyTextToClipboard } from './demo-utils';
 
 const STORAGE_KEYS = {
   Editor_Persistence: 'hlsjs:config-editor-persist',
@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
 };
 
 const testStreams = require('../tests/test-streams');
-const defaultTestStreamUrl = testStreams['bbb'].url;
+const defaultTestStreamUrl = testStreams.bbb.url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl))
 
 let demoConfig = getURLParam('demoConfig', null)
@@ -243,7 +243,7 @@ function loadSelectedStream() {
     trimEventHistory();
   });
 
-  hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function(event, data) {
+  hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (data) {
     showCanvas();
     var event = {
       time: performance.now() - events.t0,
@@ -253,11 +253,11 @@ function loadSelectedStream() {
     trimEventHistory();
   });
 
-  hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
-    //console.log("Id3 samples ", data.samples);
+  hls.on(Hls.Events.FRAG_PARSING_METADATA, function (data) {
+    // console.log("Id3 samples ", data.samples);
   });
 
-  hls.on(Hls.Events.LEVEL_SWITCHING, function(event, data) {
+  hls.on(Hls.Events.LEVEL_SWITCHING, function (data) {
     events.level.push({
       time   : performance.now() - events.t0,
       id     : data.level,
@@ -267,7 +267,7 @@ function loadSelectedStream() {
     updateLevelInfo();
   });
 
-  hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+  hls.on(Hls.Events.MANIFEST_PARSED, function (data) {
     var event = {
       type    : 'manifest',
       name    : '',
@@ -283,7 +283,7 @@ function loadSelectedStream() {
     refreshCanvas();
   });
 
-  hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+  hls.on(Hls.Events.MANIFEST_PARSED, function (data) {
     logStatus('No of quality levels found: ' + hls.levels.length);
     logStatus('Manifest successfully loaded');
     stats = {
@@ -294,12 +294,12 @@ function loadSelectedStream() {
     updateLevelInfo();
   });
 
-  hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function(event, data) {
+  hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function (data) {
     logStatus('No of audio tracks found: ' + data.audioTracks.length);
     updateAudioTrackInfo();
   });
 
-  hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, function(event, data) {
+  hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, function (data) {
     logStatus('Audio track switching...');
     updateAudioTrackInfo();
     var event = {
@@ -312,7 +312,7 @@ function loadSelectedStream() {
     lastAudioTrackSwitchingIdx = events.video.length-1;
   });
 
-  hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function(event, data) {
+  hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function (data) {
     logStatus('Audio track switched');
     updateAudioTrackInfo();
     var event = {
@@ -328,7 +328,7 @@ function loadSelectedStream() {
     trimEventHistory();
   });
 
-  hls.on(Hls.Events.LEVEL_LOADED, function(event, data) {
+  hls.on(Hls.Events.LEVEL_LOADED, function (data) {
     events.isLive = data.details.live;
     var event = {
       type    : 'level',
@@ -357,7 +357,7 @@ function loadSelectedStream() {
     refreshCanvas();
   });
 
-  hls.on(Hls.Events.AUDIO_TRACK_LOADED, function(event, data) {
+  hls.on(Hls.Events.AUDIO_TRACK_LOADED, function (data) {
     events.isLive = data.details.live;
     var event = {
       type    : 'audio track',
@@ -375,7 +375,7 @@ function loadSelectedStream() {
     refreshCanvas();
   });
 
-  hls.on(Hls.Events.FRAG_BUFFERED, function(event, data) {
+  hls.on(Hls.Events.FRAG_BUFFERED, function (data) {
     var event = {
       type    : data.frag.type + ' fragment',
       id      : data.frag.level,
@@ -450,7 +450,7 @@ function loadSelectedStream() {
     stats.autoLevelCappingLast = hls.autoLevelCapping;
   });
 
-  hls.on(Hls.Events.LEVEL_SWITCHED, function(event, data) {
+  hls.on(Hls.Events.LEVEL_SWITCHED, function (data) {
     var event = {
       time: performance.now() - events.t0,
       type: 'level switched',
@@ -462,7 +462,7 @@ function loadSelectedStream() {
     updateLevelInfo();
   });
 
-  hls.on(Hls.Events.FRAG_CHANGED, function(event, data) {
+  hls.on(Hls.Events.FRAG_CHANGED, function (data) {
     var event = {
       time: performance.now() - events.t0,
       type: 'frag changed',
@@ -513,17 +513,17 @@ function loadSelectedStream() {
     this.levelLastAuto = autoLevel;
   });
 
-  hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, function(event, data) {
+  hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, function (data) {
     if (stats) {
-      if (stats.fragLoadEmergencyAborted === undefined)
-      {stats.fragLoadEmergencyAborted = 1;}
-      else
-      {stats.fragLoadEmergencyAborted++;}
-
+      if (stats.fragLoadEmergencyAborted === undefined) {
+        stats.fragLoadEmergencyAborted = 1;
+      } else {
+        stats.fragLoadEmergencyAborted++;
+      }
     }
   });
 
-  hls.on(Hls.Events.FRAG_DECRYPTED, function(event, data) {
+  hls.on(Hls.Events.FRAG_DECRYPTED, function (data) {
     if (!stats.fragDecrypted) {
       stats.fragDecrypted = 0;
       this.totalDecryptTime = 0;
@@ -534,7 +534,7 @@ function loadSelectedStream() {
     stats.fragAvgDecryptTime = this.totalDecryptTime / stats.fragDecrypted;
   });
 
-  hls.on(Hls.Events.ERROR, function(event, data) {
+  hls.on(Hls.Events.ERROR, function (data) {
     console.warn('Error event:', data);
     switch(data.details) {
       case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
@@ -598,7 +598,8 @@ function loadSelectedStream() {
       default:
         break;
     }
-    if(data.fatal) {
+
+    if (data.fatal) {
       console.error('Fatal error :' + data.details);
       switch(data.type) {
         case Hls.ErrorTypes.MEDIA_ERROR:
@@ -613,14 +614,17 @@ function loadSelectedStream() {
           break;
       }
     }
-    if(!stats) {
+
+    if (!stats) {
       stats = {};
     }
+
     // track all errors independently
-    if (stats[data.details] === undefined)
-    {stats[data.details] = 1;}
-    else
-    {stats[data.details] += 1;}
+    if (stats[data.details] === undefined) {
+      stats[data.details] = 1;
+    } else {
+      stats[data.details] += 1;
+    }
 
     // track fatal error
     if (data.fatal) {
@@ -633,17 +637,17 @@ function loadSelectedStream() {
     $('#statisticsOut').text(JSON.stringify(sortObject(stats), null, '\t'));
   });
 
-  hls.on(Hls.Events.BUFFER_CREATED, function(event, data) {
+  hls.on(Hls.Events.BUFFER_CREATED, function (data) {
     tracks = data.tracks;
   });
 
-  hls.on(Hls.Events.BUFFER_APPENDING, function(event, data) {
+  hls.on(Hls.Events.BUFFER_APPENDING, function (data) {
     if (dumpfMP4) {
       fmp4Data[data.type].push(data.data);
     }
   });
 
-  hls.on(Hls.Events.FPS_DROP, function(event, data) {
+  hls.on(Hls.Events.FPS_DROP, function (data) {
     let evt = {
       time: performance.now() - events.t0,
       type: 'frame drop',
@@ -652,10 +656,11 @@ function loadSelectedStream() {
     events.video.push(evt);
     trimEventHistory();
     if (stats) {
-      if (stats.fpsDropEvent === undefined)
-      {stats.fpsDropEvent = 1;}
-      else
-      {stats.fpsDropEvent++;}
+      if (stats.fpsDropEvent === undefined) {
+        stats.fpsDropEvent = 1;
+      } else {
+        stats.fpsDropEvent++;
+      }
 
       stats.fpsTotalDroppedFrames = data.totalDroppedFrames;
     }
