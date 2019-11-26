@@ -23,7 +23,7 @@
                 enableCEA708Captions: true
             });
 
-            hls.on(Hls.Events.ERROR, function(event, data) {
+            hls.on(Hls.Events.ERROR, function(data) {
                 console.warn('ERROR', data);
             });
 
@@ -34,7 +34,7 @@
                     hls.loadSource(url);
                 }
 
-                function onParsed(event, data) {
+                function onParsed(data) {
                     hls.off(Hls.Events.MANIFEST_PARSED, onParsed);
                     hls.startLoad(time);
                     if (time !== undefined) {

@@ -99,7 +99,7 @@ function startStream (streamUrl, config, callback) {
           });
         }
       });
-      hls.on(Hls.Events.ERROR, function (event, data) {
+      hls.on(Hls.Events.ERROR, function (data) {
         if (data.fatal) {
           console.log('hlsjs fatal error :' + data.details);
           if (data.details === Hls.ErrorDetails.INTERNAL_EXCEPTION) {

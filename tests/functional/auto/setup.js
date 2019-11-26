@@ -101,7 +101,7 @@ async function testSmoothSwitch (url, config) {
       video.onloadeddata = () => {
         self.switchToHighestLevel('next');
       };
-      self.hls.on(self.Hls.Events.LEVEL_SWITCHED, (event, data) => {
+      self.hls.on(self.Hls.Events.LEVEL_SWITCHED, (data) => {
         const currentTime = video.currentTime;
         if (data.level === self.hls.levels.length - 1) {
           console.log(`[log] > switched on level: ${data.level}`);
