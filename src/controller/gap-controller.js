@@ -64,7 +64,7 @@ export default class GapController {
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
     const isBuffered = bufferInfo.len > 0;
 
-    // There is no playable buffer (seeked, waiting for buffer)
+    // There is no playable buffer (waiting for buffer append)
     if (!isBuffered && !bufferInfo.nextStart) {
       return;
     }
