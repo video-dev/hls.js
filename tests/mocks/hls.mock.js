@@ -6,7 +6,6 @@ const sinon = require('sinon');
  * All public methods of Hls instance
  */
 const publicMethods = [
-  'trigger',
   'emit',
   'on',
   'off',
@@ -34,7 +33,7 @@ export default class HlsMock {
   }
 
   getEventData (n) {
-    const event = this.trigger.getCall(n).args;
+    const event = this.emit.getCall(n).args;
     return { name: event[0], payload: event[1] };
   }
 

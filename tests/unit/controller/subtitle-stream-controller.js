@@ -92,7 +92,6 @@ describe('SubtitleStreamController', function () {
         id: 1,
         details: details
       });
-      console.log(subtitleStreamController.levels)
       expect(subtitleStreamController.levels[1].details).to.equal(details);
       expect(subtitleStreamController.setInterval).to.have.been.calledOnce;
     });
