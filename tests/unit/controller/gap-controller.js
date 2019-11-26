@@ -16,7 +16,7 @@ describe('checkBuffer', function () {
     media = document.createElement('video');
     config = hls.config;
     gapController = new GapController(config, media, new FragmentTracker(hls), hls);
-    triggerSpy = sinon.spy(hls, 'trigger');
+    triggerSpy = sinon.spy(hls, 'emit');
   });
 
   afterEach(function () {
