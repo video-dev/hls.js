@@ -16,9 +16,15 @@ import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { DemuxedAvcTrack, DemuxedAudioTrack, DemuxedTrack, Demuxer, DemuxerResult } from '../types/demuxer';
+import {
+  DemuxedAvcTrack,
+  DemuxedAudioTrack,
+  DemuxedTrack,
+  Demuxer,
+  DemuxerResult,
+  ElementaryStreamData
+} from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
-import { sliceUint8 } from '../utils/typed-array';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -327,12 +333,15 @@ class TSDemuxer implements Demuxer {
     audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
 
-    return {
+    const result = {
       audioTrack,
       avcTrack,
       id3Track,
       textTrack: this._txtTrack
     };
+
+    this.extractRemainingSamples(result);
+    return result;
   }
 
   flush () {
