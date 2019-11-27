@@ -27,11 +27,11 @@ export default class KeyLoader implements ComponentAPI {
   }
 
   private _registerListeners () {
-    this.hls.on(Events.KEY_LOADED, this.onKeyLoading, this);
+    this.hls.on(Events.KEY_LOADING, this.onKeyLoading, this);
   }
 
   private _unregisterListeners () {
-    this.hls.off(Events.KEY_LOADED, this.onKeyLoading);
+    this.hls.off(Events.KEY_LOADING, this.onKeyLoading);
   }
 
   destroy (): void {
