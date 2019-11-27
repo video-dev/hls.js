@@ -218,7 +218,7 @@ export default class MP4Remuxer implements Remuxer {
     }
   }
 
-  remuxVideo (track: DemuxedTrack, timeOffset, contiguous, audioTrackLength, accurateTimeOffset) : RemuxedTrack | undefined {
+  remuxVideo (track: DemuxedAvcTrack, timeOffset, contiguous, audioTrackLength, accurateTimeOffset) : RemuxedTrack | undefined {
     const timeScale: number = track.inputTimeScale;
     const inputSamples: Array<any> = track.samples;
     const outputSamples: Array<Mp4Sample> = [];
@@ -269,6 +269,8 @@ export default class MP4Remuxer implements Remuxer {
 
     const firstSample = inputSamples[0];
     let firstDTS = Math.max(firstSample.dts, 0);
+    let firstPTS = Math.max(firstSample.pts, 0);
+
     // Check timestamp continuity across consecutive fragments, and modify timing in order to remove gaps or overlaps.
     const millisecondDelta = Math.round((firstDTS - nextAvcDts) / 90);
     if (contiguous) {
@@ -281,7 +283,7 @@ export default class MP4Remuxer implements Remuxer {
 
         // remove hole/gap : set DTS to next expected DTS
         firstSample.dts = firstDTS = nextAvcDts;
-        firstSample.pts = Math.max(firstSample.pts - millisecondDelta, nextAvcDts);
+        firstSample.pts = firstPTS = Math.max(firstSample.pts - millisecondDelta, nextAvcDts);
         // offset PTS as well, ensure that PTS is smaller or equal than new DTS
         logger.log(`[mp4-remuxer]: Video/PTS/DTS adjusted: ${Math.round(firstSample.pts / 90)}/${Math.round(firstDTS / 90)}, delta:${millisecondDelta} ms`);
       }
@@ -290,14 +292,7 @@ export default class MP4Remuxer implements Remuxer {
     // compute lastPTS/lastDTS
     const lastSample = inputSamples[inputSamples.length - 1];
     const lastDTS = Math.max(lastSample.dts, 0);
-
-    let minPTS = Infinity;
-    let maxPTS = 0;
-    for (let i = 0; i < inputSamples.length; i++) {
-      const sample = inputSamples[i];
-      minPTS = Math.min(sample.pts, minPTS);
-      maxPTS = Math.max(sample.pts, maxPTS);
-    }
+    const lastPTS = Math.max(lastSample.pts, 0, lastDTS);
 
     // on Safari let's signal the same sample duration for all samples
     // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
@@ -379,7 +374,7 @@ export default class MP4Remuxer implements Remuxer {
             // If so, playback would potentially get stuck, so we artificially inflate
             // the duration of the last frame to minimize any potential gap between segments.
             const gapTolerance = Math.floor(config.maxBufferHole * timeScale);
-            const deltaToFrameEnd = (audioTrackLength ? minPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
+            const deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
             if (deltaToFrameEnd > gapTolerance) {
               // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
               // frame overlap. maxBufferHole should be >> lastFrameDuration anyway.
@@ -420,8 +415,8 @@ export default class MP4Remuxer implements Remuxer {
     const data = {
       data1: moof,
       data2: mdat,
-      startPTS: minPTS / timeScale,
-      endPTS: (maxPTS + mp4SampleDuration) / timeScale,
+      startPTS: firstPTS / timeScale,
+      endPTS: (lastPTS + mp4SampleDuration) / timeScale,
       startDTS: firstDTS / timeScale,
       endDTS: nextAvcDts / timeScale,
       type,
