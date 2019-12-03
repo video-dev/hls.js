@@ -13,7 +13,9 @@ describe('checkBuffer', function () {
 
   beforeEach(function () {
     const hls = new Hls({});
-    media = document.createElement('video');
+    media = {
+      currentTime: 0
+    };
     config = hls.config;
     gapController = new GapController(config, media, new FragmentTracker(hls), hls);
     triggerSpy = sinon.spy(hls, 'trigger');
@@ -70,10 +72,21 @@ describe('checkBuffer', function () {
 
   describe('_tryFixBufferStall', function () {
     it('should nudge when stalling close to the buffer end', function () {
-      const mockBufferInfo = { len: 1 };
+      const mockBufferInfo = { len: 0.5, nextStart: 1 };
+      const mockBufferWithHoles = { len: 1 };
       const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
-      gapController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
+      gapController._tryFixBufferStall(mockBufferInfo, mockBufferWithHoles, mockStallDuration);
+      expect(nudgeStub).to.have.been.calledOnce;
+    });
+
+    it('should nudge when in between buffered ranges', function () {
+      media.currentTime = 4;
+      const mockBufferInfo = { len: 0, nextStart: 4.08 };
+      const mockBufferWithHoles = { len: 5 };
+      const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
+      const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
+      gapController._tryFixBufferStall(mockBufferInfo, mockBufferWithHoles, mockStallDuration);
       expect(nudgeStub).to.have.been.calledOnce;
     });
 
@@ -81,15 +94,15 @@ describe('checkBuffer', function () {
       const mockBufferInfo = { len: 1 };
       const mockStallDuration = (config.highBufferWatchdogPeriod / 2) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
-      gapController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
+      gapController._tryFixBufferStall(mockBufferInfo, mockBufferInfo, mockStallDuration);
       expect(nudgeStub).to.have.not.been.called;
     });
 
-    it('should not nudge when too far from the buffer end', function () {
+    it('should not nudge when too close to the buffer end', function () {
       const mockBufferInfo = { len: 0.25 };
       const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
-      gapController._tryFixBufferStall(mockBufferInfo, mockStallDuration);
+      gapController._tryFixBufferStall(mockBufferInfo, mockBufferInfo, mockStallDuration);
       expect(nudgeStub).to.have.not.been.called;
     });
 
