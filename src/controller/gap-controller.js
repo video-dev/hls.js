@@ -29,9 +29,9 @@ export default class GapController {
    */
   poll (lastCurrentTime) {
     const { config, media, stalled } = this;
-    const tnow = self.performance.now();
     const { currentTime, seeking } = media;
     const seeked = this.seeking && !seeking;
+    const beginSeek = !this.seeking && seeking;
 
     this.seeking = seeking;
 
@@ -41,7 +41,8 @@ export default class GapController {
       if (stalled !== null) {
         // The playhead is now moving, but was previously stalled
         if (this.stallReported) {
-          logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(tnow - stalled)}ms`);
+          const stalledDuration = self.performance.now() - stalled;
+          logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(stalledDuration)}ms`);
           this.stallReported = false;
         }
         this.stalled = null;
@@ -50,8 +51,8 @@ export default class GapController {
       return;
     }
 
-    // Clear stalled state after seeked so that we don't report stalls coming out of a seek
-    if (seeked) {
+    // Clear stalled state when beginning or finishing seeking so that we don't report stalls coming out of a seek
+    if (beginSeek || seeked) {
       this.stalled = null;
     }
 
@@ -62,27 +63,30 @@ export default class GapController {
 
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
     const isBuffered = bufferInfo.len > 0;
+    const nextStart = bufferInfo.nextStart || 0;
 
     // There is no playable buffer (waiting for buffer append)
-    if (!isBuffered && !bufferInfo.nextStart) {
+    if (!isBuffered && !nextStart) {
       return;
     }
 
     if (seeking) {
-      if (isBuffered) {
-        // Waiting for seeking in a buffered range to complete
+      // Waiting for seeking in a buffered range to complete
+      const hasEnoughBuffer = bufferInfo.len > MAX_START_GAP_JUMP;
+      // Next buffered range is too far ahead to jump to while still seeking
+      const noBufferGap = !nextStart || nextStart - currentTime > MAX_START_GAP_JUMP;
+      if (hasEnoughBuffer || noBufferGap) {
         return;
-      } else if (bufferInfo.nextStart < MAX_START_GAP_JUMP) {
-        // Reset moved state when seeking back to a point before a start gap
-        this.moved = false;
       }
+      // Reset moved state when seeking to a point in or before a gap
+      this.moved = false;
     }
 
     // Skip start gaps if we haven't played, but the last poll detected the start of a stall
     // The addition poll gives the browser a chance to jump the gap for us
     if (!this.moved && this.stalled) {
       // Jump start gaps within jump threshold
-      const startJump = Math.max(bufferInfo.nextStart || 0, ((bufferInfo.start || 0) - currentTime));
+      const startJump = Math.max(nextStart, bufferInfo.start || 0) - currentTime;
       if (startJump > 0 && startJump <= MAX_START_GAP_JUMP) {
         this._trySkipBufferHole(null);
         return;
@@ -90,6 +94,7 @@ export default class GapController {
     }
 
     // Start tracking stall time
+    const tnow = self.performance.now();
     if (stalled === null) {
       this.stalled = tnow;
       return;
