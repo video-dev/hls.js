@@ -4,7 +4,6 @@ import Event from '../events';
 import { logger } from '../utils/logger';
 
 export const STALL_MINIMUM_DURATION_MS = 250;
-export const JUMP_THRESHOLD_SECONDS = 0.5; // tolerance needed as some browsers stalls playback before reaching buffered range end
 export const MAX_START_GAP_JUMP = 2.0;
 export const SKIP_BUFFER_HOLE_STEP_SECONDS = 0.1;
 export const SKIP_BUFFER_RANGE_START = 0.05;
@@ -61,7 +60,7 @@ export default class GapController {
       return;
     }
 
-    const bufferInfo = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
+    const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
     const isBuffered = bufferInfo.len > 0;
 
     // There is no playable buffer (waiting for buffer append)
@@ -102,7 +101,8 @@ export default class GapController {
       this._reportStall(bufferInfo.len);
     }
 
-    this._tryFixBufferStall(bufferInfo, stalledDuration);
+    const bufferedWithHoles = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
+    this._tryFixBufferStall(bufferedWithHoles, stalledDuration);
   }
 
   /**
@@ -131,7 +131,7 @@ export default class GapController {
     // we may just have to "nudge" the playlist as the browser decoding/rendering engine
     // needs to cross some sort of threshold covering all source-buffers content
     // to start playing properly.
-    if (bufferInfo.len > JUMP_THRESHOLD_SECONDS &&
+    if (bufferInfo.len > config.maxBufferHole &&
       stalledDurationMs > config.highBufferWatchdogPeriod * 1000) {
       logger.warn('Trying to nudge playhead over buffer-hole');
       // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
@@ -168,13 +168,13 @@ export default class GapController {
    * @private
    */
   _trySkipBufferHole (partial) {
-    const { hls, media } = this;
+    const { config, hls, media } = this;
     const currentTime = media.currentTime;
     let lastEndTime = 0;
     // Check if currentTime is between unbuffered regions of partial fragments
     for (let i = 0; i < media.buffered.length; i++) {
       const startTime = media.buffered.start(i);
-      if (currentTime + JUMP_THRESHOLD_SECONDS >= lastEndTime && currentTime < startTime) {
+      if (currentTime + config.maxBufferHole >= lastEndTime && currentTime < startTime) {
         const targetTime = Math.max(startTime + SKIP_BUFFER_RANGE_START, media.currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS);
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`);
         this.moved = true;
