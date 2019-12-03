@@ -37,7 +37,7 @@ export default class GapController {
    * @param {number} lastCurrentTime Previously read playhead position
    */
   public poll (lastCurrentTime: number) {
-    const { media, stalled } = this;
+    const { config, media, stalled } = this;
     const tnow = self.performance.now();
     const { currentTime, seeking } = media;
     const seeked = this.seeking && !seeking;
@@ -111,7 +111,8 @@ export default class GapController {
       this._reportStall(bufferInfo.len);
     }
 
-    this._tryFixBufferStall(bufferInfo, stalledDuration);
+    const bufferedWithHoles = BufferHelper.bufferInfo(media, currentTime, config.maxBufferHole);
+    this._tryFixBufferStall(bufferInfo, bufferedWithHoles, stalledDuration);
   }
 
   /**
@@ -120,7 +121,7 @@ export default class GapController {
    * @param stalledDurationMs - The amount of time Hls.js has been stalling for.
    * @private
    */
-  private _tryFixBufferStall (bufferInfo: BufferInfo, stalledDurationMs: number) {
+  private _tryFixBufferStall (bufferInfo: BufferInfo, bufferedWithHoles: BufferInfo, stalledDurationMs: number) {
     const { config, fragmentTracker, media } = this;
     const currentTime = media.currentTime;
 
@@ -140,14 +141,16 @@ export default class GapController {
     // we may just have to "nudge" the playlist as the browser decoding/rendering engine
     // needs to cross some sort of threshold covering all source-buffers content
     // to start playing properly.
-    if (bufferInfo.len <= config.maxBufferHole &&
-      stalledDurationMs > config.highBufferWatchdogPeriod * 1000) {
-      logger.warn('Trying to nudge playhead over buffer-hole');
-      // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
-      // We only try to jump the hole if it's under the configured size
-      // Reset stalled so to rearm watchdog timer
-      this.stalled = null;
-      this._tryNudgeBuffer();
+    if (stalledDurationMs > config.highBufferWatchdogPeriod * 1000) {
+      if (bufferedWithHoles.len > config.maxBufferHole ||
+        bufferInfo.len === 0 && bufferInfo.nextStart && bufferInfo.nextStart < config.maxBufferHole) {
+        logger.warn('Trying to nudge playhead over buffer-hole');
+        // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
+        // We only try to jump the hole if it's under the configured size
+        // Reset stalled so to rearm watchdog timer
+        this.stalled = null;
+        this._tryNudgeBuffer();
+      }
     }
   }
 
