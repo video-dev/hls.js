@@ -89,7 +89,7 @@ async function testLoadedData (url, config) {
     url,
     config
   );
-  expect(result.code).to.equal('loadeddata');
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
 }
 
 async function testSmoothSwitch (url, config) {
@@ -121,7 +121,7 @@ async function testSmoothSwitch (url, config) {
     url,
     config
   );
-  expect(result.code).to.be.true;
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals(true);
 }
 
 async function testSeekOnLive (url, config) {
@@ -142,7 +142,7 @@ async function testSeekOnLive (url, config) {
     url,
     config
   );
-  expect(result.code).to.equal('seeked');
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('seeked');
 }
 
 async function testSeekOnVOD (url, config) {
@@ -163,7 +163,7 @@ async function testSeekOnVOD (url, config) {
     url,
     config
   );
-  expect(result.code).to.equal('ended');
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
 }
 
 async function testSeekEndVOD (url, config) {
@@ -184,7 +184,7 @@ async function testSeekEndVOD (url, config) {
     url,
     config
   );
-  expect(result.code).to.equal('ended');
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
 }
 
 async function testIsPlayingVOD (url, config) {
@@ -218,7 +218,37 @@ async function testIsPlayingVOD (url, config) {
     url,
     config
   );
-  expect(result.playing).to.be.true;
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('playing').which.is.true;
+}
+
+async function testSeekBackToStart (url, config) {
+  const result = await browser.executeAsyncScript(
+    (url, config) => {
+      const callback = arguments[arguments.length - 1];
+      self.startStream(url, config, callback);
+      const video = self.video;
+      video.ontimeupdate = function () {
+        if (video.currentTime > 0 && !video.paused) {
+          self.setTimeout(function () {
+            video.onseeked = function () {
+              delete video.onseeked;
+              video.ontimeupdate = function () {
+                if (video.currentTime > 0 && !video.paused) {
+                  delete video.ontimeupdate;
+                  callback({ playing: true });
+                }
+              };
+            };
+            video.currentTime = 0;
+            delete video.ontime;
+          }, 500);
+        }
+      };
+    },
+    url,
+    config
+  );
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('playing').which.is.true;
 }
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
@@ -329,6 +359,13 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         `should receive video loadeddata event for ${stream.description}`,
         testLoadedData.bind(null, url, config)
       );
+
+      if (stream.startSeek) {
+        it(
+          `seek back to start and play for ${stream.description}`,
+          testSeekBackToStart.bind(null, url, config)
+        );
+      }
 
       if (stream.abr) {
         it(
