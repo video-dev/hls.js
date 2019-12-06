@@ -499,6 +499,9 @@ class TSDemuxer {
       // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
       payloadStartOffset = pesHdrLen + 9;
 
+      if (stream.size <= payloadStartOffset) {
+        return null;
+      }
       stream.size -= payloadStartOffset;
       // reassemble PES packet
       pesData = new Uint8Array(stream.size);
