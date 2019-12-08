@@ -146,7 +146,7 @@ module.exports = {
     blacklist_ua: ['firefox', 'safari', 'internet explorer']
   },
   {
-    widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
+    widevineLicenseUrl: 'http://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }
   ),
@@ -187,5 +187,11 @@ module.exports = {
   muxedFmp4: {
     url: 'https://s3.amazonaws.com/qa.jwplayer.com/hlsjs/muxed-fmp4/hls.m3u8',
     description: 'Muxed av fmp4 - appended to "audiovideo" SourceBuffer'
+  },
+  altAudioWithPdtAndStartGap: {
+    url: 'https://playertest.longtailvideo.com/adaptive/hls-test-streams/test-audio-pdt/playlist.m3u8',
+    description: 'PDT before each segment, 1.59s start gap',
+    abr: true,
+    startSeek: true
   }
 };

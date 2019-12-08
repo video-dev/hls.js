@@ -38,6 +38,9 @@ export default class BufferController extends EventHandler {
   // The number of BUFFER_CODEC events received before any sourceBuffers are created
   public bufferCodecEventsExpected: number = 0;
 
+  // The total number of BUFFER_CODEC events received
+  private _bufferCodecEventsTotal: number = 0;
+
   // A reference to the attached media element
   public media: HTMLMediaElement | null = null;
 
@@ -84,7 +87,7 @@ export default class BufferController extends EventHandler {
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    this.bufferCodecEventsExpected = data.altAudio ? 2 : 1;
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = data.altAudio ? 2 : 1;
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
@@ -144,6 +147,7 @@ export default class BufferController extends EventHandler {
       this.mediaSource = null;
       this.media = null;
       this._objectUrl = null;
+      this.bufferCodecEventsExpected = this._bufferCodecEventsTotal;
       this.pendingTracks = {};
       this.tracks = {};
     }
@@ -381,8 +385,9 @@ export default class BufferController extends EventHandler {
   }
 
   flushLiveBackBuffer () {
+    // clear back buffer for live only
     const { hls, _levelTargetDuration, _live, media, sourceBuffer } = this;
-    if (!media || !_live || !_levelTargetDuration) {
+    if (!media || !_live || _levelTargetDuration === null) {
       return;
     }
 
@@ -391,20 +396,25 @@ export default class BufferController extends EventHandler {
       return;
     }
 
-    const targetBackBufferPosition = media.currentTime - Math.max(liveBackBufferLength, _levelTargetDuration);
+    const currentTime = media.currentTime;
+    const targetBackBufferPosition = currentTime - Math.max(liveBackBufferLength, _levelTargetDuration);
     this.getSourceBufferTypes().forEach((type: SourceBufferName) => {
-      const buffered = sourceBuffer[type]!.buffered;
-      // when target buffer start exceeds actual buffer start
-      if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
-        // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
-        // time will lead to playback freezing)
-        // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
-        logger.log(`[buffer-controller]: Enqueueing operation to flush ${type} back buffer`);
-        this.onBufferFlushing({
-          startOffset: 0,
-          endOffset: targetBackBufferPosition,
-          type
-        });
+      const sb = sourceBuffer[type];
+      if (sb) {
+        const buffered = sb.buffered;
+        // when target buffer start exceeds actual buffer start
+        if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
+          this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });
+          // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
+          // time will lead to playback freezing)
+          // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
+          logger.log(`[buffer-controller]: Enqueueing operation to flush ${type} back buffer`);
+          this.onBufferFlushing({
+            startOffset: 0,
+            endOffset: targetBackBufferPosition,
+            type
+          });
+        }
       }
     });
   }
