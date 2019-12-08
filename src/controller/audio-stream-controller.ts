@@ -278,6 +278,7 @@ class AudioStreamController extends BaseStreamController {
     }
     this.media = this.mediaBuffer = this.videoBuffer = null;
     this.loadedmetadata = false;
+    this.fragmentTracker.removeAllFragments();
     this.stopLoad();
   }
 

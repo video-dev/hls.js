@@ -228,7 +228,7 @@ class EMEController extends EventHandler {
     logger.log('Got EME message event, creating license request');
 
     this._requestLicense(message, (data: ArrayBuffer) => {
-      logger.log('Received license data, updating key-session');
+      logger.log(`Received license data (length: ${data ? data.byteLength : data}), updating key-session`);
       keySession.update(data);
     });
   }

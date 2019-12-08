@@ -3,7 +3,7 @@
 set -ev
 
 echo "travis_fold:start:npm_install"
-npm install
+npm ci
 echo "travis_fold:end:npm_install"
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
@@ -52,7 +52,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run type-check
   npm run build
   npm run build:types
-  
+
   if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
     npm run test:unit
     if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
