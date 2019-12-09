@@ -1,6 +1,19 @@
-function noop (...args) {}
+interface ILogFunction {
+  (message?: any, ...optionalParams: any[]): void;
+}
 
-const fakeLogger = {
+interface ILogger {
+  trace: ILogFunction,
+  debug: ILogFunction,
+  log: ILogFunction,
+  warn: ILogFunction,
+  info: ILogFunction,
+  error: ILogFunction
+}
+
+const noop: ILogFunction = function (...args: any[]): void { };
+
+const fakeLogger: ILogger = {
   trace: noop,
   debug: noop,
   log: noop,
@@ -9,7 +22,7 @@ const fakeLogger = {
   error: noop
 };
 
-let exportedLogger = fakeLogger;
+let exportedLogger: ILogger = fakeLogger;
 
 // let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
@@ -20,21 +33,21 @@ let exportedLogger = fakeLogger;
 //   return msg;
 // }
 
-function consolePrintFn (type) {
-  const func = self.console[type];
+function consolePrintFn (type: string): ILogFunction {
+  const func: ILogFunction = self.console[type];
   if (func) {
     return func.bind(self.console, `[${type}] >`);
   }
   return noop;
 }
 
-function exportLoggerFunctions (debugConfig, ...functions) {
+function exportLoggerFunctions (debugConfig: boolean | ILogger, ...functions: string[]): void {
   functions.forEach(function (type) {
     exportedLogger[type] = debugConfig[type] ? debugConfig[type].bind(debugConfig) : consolePrintFn(type);
   });
 }
 
-export const enableLogs = function (debugConfig) {
+export function enableLogs (debugConfig: boolean | ILogger): void {
   // check that console is available
   if ((self.console && debugConfig === true) || typeof debugConfig === 'object') {
     exportLoggerFunctions(debugConfig,
@@ -56,6 +69,6 @@ export const enableLogs = function (debugConfig) {
   } else {
     exportedLogger = fakeLogger;
   }
-};
+}
 
-export const logger = exportedLogger;
+export const logger: ILogger = exportedLogger;
