@@ -110,7 +110,9 @@ enum HlsEvents {
   // fired when a decrypt key loading starts - data = { frag  = fragment object }
   KEY_LOADING = 'hlsKeyLoading',
   // fired when a decrypt key loading is completed - data = { frag  = fragment object, payload  = key payload, stats  = { trequest, tfirst, tload, length } }
-  KEY_LOADED = 'hlsKeyLoaded'
+  KEY_LOADED = 'hlsKeyLoaded',
+  // fired when the live back buffer is reached defined by the liveBackBufferLength config option - data : { bufferEnd: number }
+  LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached'
 }
 
 export default HlsEvents;

@@ -93,10 +93,10 @@ export default class GapController {
 
     // Skip start gaps if we haven't played, but the last poll detected the start of a stall
     // The addition poll gives the browser a chance to jump the gap for us
-    if (!this.moved && this.stalled) {
+    if (!this.moved && this.stalled !== null) {
       // Jump start gaps within jump threshold
       const startJump = Math.max(nextStart, bufferInfo.start || 0) - currentTime;
-      if (!seeking && startJump > 0 && startJump <= MAX_START_GAP_JUMP) {
+      if (startJump > 0 && startJump <= MAX_START_GAP_JUMP) {
         this._trySkipBufferHole(null);
         return;
       }
