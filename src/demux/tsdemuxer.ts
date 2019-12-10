@@ -21,10 +21,10 @@ import {
   DemuxedAudioTrack,
   DemuxedTrack,
   Demuxer,
-  DemuxerResult,
-  ElementaryStreamData
+  DemuxerResult
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
+import { utf8ArrayToStr } from '../demux/id3';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -589,8 +589,6 @@ class TSDemuxer implements Demuxer {
 
             if (payloadSize > 16) {
               const uuidStrArray: Array<string> = [];
-              const userDataPayloadBytes: Array<number> = [];
-
               for (i = 0; i < 16; i++) {
                 uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
 
@@ -598,16 +596,17 @@ class TSDemuxer implements Demuxer {
                   uuidStrArray.push('-');
                 }
               }
-
-              for (i = 16; i < payloadSize; i++) {
-                userDataPayloadBytes.push(expGolombDecoder.readUByte());
+              const length = payloadSize - 16;
+              const userDataPayloadBytes = new Uint8Array(length);
+              for (i = 0; i < length; i++) {
+                userDataPayloadBytes[i] = expGolombDecoder.readUByte();
               }
 
               this._insertSampleInOrder(this._txtTrack.samples, {
                 pts: pes.pts,
                 payloadType: payloadType,
                 uuid: uuidStrArray.join(''),
-                userData: String.fromCharCode.apply(null, userDataPayloadBytes),
+                userData: utf8ArrayToStr(userDataPayloadBytes.buffer),
                 userDataBytes: userDataPayloadBytes
               });
             }
@@ -1151,7 +1150,9 @@ function parsePES (stream) {
     pesHdrLen = frag[8];
     // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
     payloadStartOffset = pesHdrLen + 9;
-
+    if (stream.size <= payloadStartOffset) {
+      return null;
+    }
     stream.size -= payloadStartOffset;
     // reassemble PES packet
     pesData = new Uint8Array(stream.size);

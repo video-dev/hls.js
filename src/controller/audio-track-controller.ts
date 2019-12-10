@@ -107,6 +107,8 @@ class AudioTrackController extends EventHandler {
    * Store track details of loaded track in our data-model.
    *
    * Set-up metadata update interval task for live-mode streams.
+   *
+   * @param {*} data
    */
   protected onAudioTrackLoaded (data: TrackLoadedData): void {
     const { id, details } = data;
