@@ -715,7 +715,8 @@ class StreamController extends BaseStreamController {
     this.hls.trigger(Event.BUFFER_RESET);
     this.fragmentTracker.removeAllFragments();
     this.stalled = false;
-    this.startPosition = this.lastCurrentTime = -1;
+    this.startPosition = -1;
+    this.lastCurrentTime = 0;
   }
 
   onManifestParsed (data) {
