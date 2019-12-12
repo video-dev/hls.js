@@ -289,7 +289,11 @@ class TimelineController extends EventHandler {
         if (!currentTrack.cues.getCueById(cue.id)) {
           try {
             currentTrack.addCue(cue);
+            if (!currentTrack.cues.getCueById(cue.id)) {
+              throw new Error(`addCue is failed for: ${cue}`);
+            }
           } catch (err) {
+            logger.debug(`Failed occurred on adding cues: ${err}`);
             const textTrackCue = new (window as any).TextTrackCue(cue.startTime, cue.endTime, cue.text);
             textTrackCue.id = cue.id;
             currentTrack.addCue(textTrackCue);
