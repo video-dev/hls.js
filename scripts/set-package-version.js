@@ -57,7 +57,7 @@ function getCommitHash() {
 }
 
 function getLatestVersionTag() {
-  let commitish = '';
+  let commitish = 'HEAD';
   while(true) {
     const tag = exec('git describe --abbrev=0 --match="v*" ' + commitish);
     if (!tag) {
