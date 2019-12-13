@@ -6,10 +6,8 @@ echo "travis_fold:start:npm_install"
 npm ci
 echo "travis_fold:end:npm_install"
 
-git fetch --tags --all --verbose
-git log --no-walk --tags --pretty="%h %d %s" --decorate=full
-git tag --sort=-v:refname
-git tag
+git fetch --tags
+node ./scripts/set-package-version.js
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
   echo "travis_fold:start:lint"

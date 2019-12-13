@@ -7,6 +7,9 @@ const packageJson = require('../package.json');
 const TRAVIS_MODE = process.env.TRAVIS_MODE;
 let newVersion = '';
 
+console.log('!!', getLatestVersionTag());
+process.exit(0);
+
 try {
   if (TRAVIS_MODE === 'release') {
     // write the version field in the package json to the version in the git tag
