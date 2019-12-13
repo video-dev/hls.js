@@ -4,11 +4,11 @@ const fs = require('fs');
 const versionParser = require('./version-parser.js');
 const packageJson = require('../package.json');
 
-const TRAVIS_MODE = process.env.TRAVIS_MODE;
-let newVersion = '';
-
 console.log('!!', getLatestVersionTag());
 process.exit(0);
+
+const TRAVIS_MODE = process.env.TRAVIS_MODE;
+let newVersion = '';
 
 try {
   if (TRAVIS_MODE === 'release') {
@@ -60,20 +60,18 @@ function getCommitHash() {
 }
 
 function getLatestVersionTag() {
-  const tags = exec('git tag --sort=-v:refname').split('\n').map((tag) => tag.trim());
-  
-  let tag;
-  tags.some((_tag) => {
-    if (versionParser.isValidStableVersion(_tag)) {
-      tag = _tag;
-      return true;
+  let commitish = '';
+  while(true) {
+    const tag = exec('git describe --abbrev=0 --match="v*" ' + commitish);
+    if (!tag) {
+      throw new Error('Could not find tag.');
     }
-    return false;
-  });
-  if (!tag) {
-    throw new Error('Could not find tag.');
+    if (versionParser.isValidStableVersion(tag)) {
+      return tag;
+    }
+    // next time search older tags than this one
+    commitish = tag + '~1';
   }
-  return tag;
 }
 
 function exec(cmd) {
