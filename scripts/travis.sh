@@ -6,6 +6,11 @@ echo "travis_fold:start:npm_install"
 npm ci
 echo "travis_fold:end:npm_install"
 
+git fetch --tags --all --verbose
+git log --no-walk --tags --pretty="%h %d %s" --decorate=full
+git tag --sort=-v:refname
+git tag
+
 if [ "${TRAVIS_MODE}" = "build" ]; then
   echo "travis_fold:start:lint"
   npm run lint
@@ -47,10 +52,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
     # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
     git fetch --unshallow
   fi
-  git fetch --tags --all --verbose
-  git log --no-walk --tags --pretty="%h %d %s" --decorate=full
-  git tag --sort=-v:refname
-  git tag
+
   node ./scripts/set-package-version.js
   npm run lint
   npm run type-check
