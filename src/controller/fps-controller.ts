@@ -16,11 +16,14 @@ class FPSController implements ComponentAPI {
   private isVideoPlaybackQualityAvailable: boolean = false;
   private timer?: number;
   private video: HTMLVideoElement | null = null;
-  private lastTime: any;
-  private lastDroppedFrames: number = 0;
-  private lastDecodedFrames: number = 0;
+  private lastFPSData?: {
+    currentTime: number,
+    droppedFrames: number,
+    decodedFrames: number
+  }
+
   // stream controller must be provided as a dependency!
-  private streamController!: StreamController;
+  private streamController!: StreamController
 
   constructor (hls: Hls) {
     this.hls = hls;
@@ -66,10 +69,10 @@ class FPSController implements ComponentAPI {
   checkFPS (video: HTMLVideoElement, decodedFrames: number, droppedFrames: number) {
     const currentTime = performance.now();
     if (decodedFrames) {
-      if (this.lastTime) {
-        const currentPeriod = currentTime - this.lastTime;
-        const currentDropped = droppedFrames - this.lastDroppedFrames;
-        const currentDecoded = decodedFrames - this.lastDecodedFrames;
+      if (this.lastFPSData) {
+        const currentPeriod = currentTime - this.lastFPSData.currentTime;
+        const currentDropped = droppedFrames - this.lastFPSData.droppedFrames;
+        const currentDecoded = decodedFrames - this.lastFPSData.decodedFrames;
         const droppedFPS = 1000 * currentDropped / currentPeriod;
         const hls = this.hls;
         hls.trigger(Events.FPS_DROP, { currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames });
@@ -87,9 +90,7 @@ class FPSController implements ComponentAPI {
           }
         }
       }
-      this.lastTime = currentTime;
-      this.lastDroppedFrames = droppedFrames;
-      this.lastDecodedFrames = decodedFrames;
+      this.lastFPSData = { currentTime, droppedFrames, decodedFrames };
     }
   }
 
