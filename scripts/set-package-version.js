@@ -57,18 +57,20 @@ function getCommitHash() {
 }
 
 function getLatestVersionTag() {
-  let commitish = 'HEAD';
-  while(true) {
-    const tag = exec('git describe --abbrev=0 --match="v*" ' + commitish);
-    if (!tag) {
-      throw new Error('Could not find tag.');
+  const tags = exec('git tag --sort=-v:refname').split('\n').map((tag) => tag.trim());
+  
+  let tag;
+  tags.some((_tag) => {
+    if (versionParser.isValidStableVersion(_tag)) {
+      tag = _tag;
+      return true;
     }
-    if (versionParser.isValidStableVersion(tag)) {
-      return tag;
-    }
-    // next time search older tags than this one
-    commitish = tag + '~1';
+    return false;
+  });
+  if (!tag) {
+    throw new Error('Could not find tag.');
   }
+  return tag;
 }
 
 function exec(cmd) {
