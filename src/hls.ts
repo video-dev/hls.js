@@ -120,6 +120,7 @@ export default class Hls extends Observer {
 
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
+    fpsController.setStreamController(streamController);
 
     const networkControllers = [
       levelController,
