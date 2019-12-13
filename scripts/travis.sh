@@ -47,6 +47,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
     # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
     git fetch --unshallow
   fi
+  git tag
   node ./scripts/set-package-version.js
   npm run lint
   npm run type-check
