@@ -47,6 +47,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
     # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
     git fetch --unshallow
   fi
+  git remote -v
   git fetch origin 'refs/tags/*:refs/tags/*'
   git log --no-walk --tags --pretty="%h %d %s" --decorate=full
   git tag --sort=-v:refname
