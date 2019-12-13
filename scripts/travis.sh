@@ -6,6 +6,7 @@ echo "travis_fold:start:npm_install"
 npm ci
 echo "travis_fold:end:npm_install"
 
+node ./scripts/set-package-version.js
 git fetch --tags
 node ./scripts/set-package-version.js
 
