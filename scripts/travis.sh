@@ -13,7 +13,6 @@ if [ "${TRAVIS_MODE}" = "build" ]; then
   echo "travis_fold:start:build"
   npm run type-check
   npm run build
-  npm run build:types
   echo "travis_fold:end:build"
   echo "travis_fold:start:docs"
   npm run docs
