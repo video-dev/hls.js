@@ -50,7 +50,6 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run lint
   npm run type-check
   npm run build:ci
-  npm run build:types
 
   if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
     npm run test:unit
