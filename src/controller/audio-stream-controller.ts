@@ -106,23 +106,23 @@ class AudioStreamController extends BaseStreamController {
       break;
     case State.WAITING_TRACK: {
       const { levels, trackId } = this;
-      if (levels && levels[trackId] && levels[trackId].details) {
+      if (levels?.[trackId]?.details) {
         // check if playlist is already loaded
         this.state = State.WAITING_INIT_PTS;
       }
       break;
     }
-    case State.FRAG_LOADING_WAITING_RETRY:
+    case State.FRAG_LOADING_WAITING_RETRY: {
       const now = performance.now();
       const retryDate = this.retryDate;
-      const isSeeking = media && media.seeking;
       // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-      if (!retryDate || (now >= retryDate) || isSeeking) {
+      if (!retryDate || (now >= retryDate) || media?.seeking) {
         this.log('RetryDate reached, switch back to IDLE state');
         this.state = State.IDLE;
       }
       break;
-    case State.WAITING_INIT_PTS:
+    }
+    case State.WAITING_INIT_PTS: {
       const videoTrackCC = this.videoTrackCC;
       if (Number.isFinite(this.initPTS[videoTrackCC])) {
         // Ensure we don't get stuck in the WAITING_INIT_PTS state if the waiting frag CC doesn't match any initPTS
@@ -145,6 +145,7 @@ class AudioStreamController extends BaseStreamController {
         }
       }
       break;
+    }
     default:
       break;
     }
@@ -265,7 +266,7 @@ class AudioStreamController extends BaseStreamController {
 
   onMediaDetaching () {
     const media = this.media;
-    if (media && media.ended) {
+    if (media?.ended) {
       this.log('MSE detaching and video ended, reset startPosition');
       this.startPosition = this.lastCurrentTime = 0;
     }
@@ -293,7 +294,7 @@ class AudioStreamController extends BaseStreamController {
     this.trackId = data.id;
     const { fragCurrent, transmuxer } = this;
 
-    if (fragCurrent && fragCurrent.loader) {
+    if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
     }
     this.fragCurrent = null;
@@ -448,7 +449,7 @@ class AudioStreamController extends BaseStreamController {
 
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:
-    case ErrorDetails.FRAG_LOAD_TIMEOUT:
+    case ErrorDetails.FRAG_LOAD_TIMEOUT: {
       const frag = data.frag;
       // don't handle frag error not related to audio fragment
       if (frag && frag.type !== 'audio') {
@@ -480,6 +481,7 @@ class AudioStreamController extends BaseStreamController {
         }
       }
       break;
+    }
     case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
     case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
     case ErrorDetails.KEY_LOAD_ERROR:
@@ -555,7 +557,7 @@ class AudioStreamController extends BaseStreamController {
       this.completeAudioSwitch();
     }
 
-    if (initSegment && initSegment.tracks) {
+    if (initSegment?.tracks) {
       this._bufferInitSegment(initSegment.tracks, frag, chunkMeta);
       hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
       // Only flush audio from old audio tracks when PTS is known on new audio track

@@ -455,7 +455,7 @@ export default class BaseStreamController extends TaskLoop {
           }
         } else if (frag.backtracked) {
           // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
-          if (nextFrag && nextFrag.backtracked) {
+          if (nextFrag?.backtracked) {
             this.warn(`Already backtracked from fragment ${nextFrag.sn}, will not backtrack to fragment ${frag.sn}. Loading fragment ${nextFrag.sn}`);
             frag = nextFrag;
           } else {
@@ -486,7 +486,7 @@ export default class BaseStreamController extends TaskLoop {
       const liveSyncPosition = this._liveSyncPosition = this.computeLivePosition(start, targetDuration, totalDuration);
       this.log(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
       this.nextLoadPosition = liveSyncPosition;
-      if (media && media.readyState && media.duration > liveSyncPosition) {
+      if (media?.readyState && media.duration > liveSyncPosition) {
         media.currentTime = liveSyncPosition;
       }
       return liveSyncPosition;
