@@ -67,7 +67,7 @@ export default class LevelController extends EventHandler {
       levels.forEach(level => {
         level.loadError = 0;
         const levelDetails = level.details;
-        if (levelDetails && levelDetails.live) {
+        if (levelDetails?.live) {
           level.details = undefined;
         }
       });
@@ -504,7 +504,7 @@ export default class LevelController extends EventHandler {
       return false;
     }).map((level, index) => {
       const { details } = level;
-      if (details && details.fragments) {
+      if (details?.fragments) {
         details.fragments.forEach((fragment) => {
           fragment.level = index;
         });
