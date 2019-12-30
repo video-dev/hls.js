@@ -241,6 +241,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `#EXT-X-ENDLIST` (Live playlist)
   - `#EXT-X-MEDIA-SEQUENCE`
   - `#EXT-X-TARGETDURATION`
+  - `#EXT-X-CONTINUITY`
   - `#EXT-X-DISCONTINUITY`
   - `#EXT-X-DISCONTINUITY-SEQUENCE`
   - `#EXT-X-BYTERANGE`
@@ -248,6 +249,8 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `#EXT-X-KEY` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4)
   - `#EXT-X-PROGRAM-DATE-TIME` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.2.6)
   - `EXT-X-START:TIME-OFFSET=x` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.5.2)
+  - `#EXT-X-PREFETCH`
+  - `#EXT-X-PREFETCH-DISCONTINUITY`
 
 ## License
 
