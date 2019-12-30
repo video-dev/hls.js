@@ -216,9 +216,9 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Adaptive streaming
     - Manual & Auto Quality Switching
       - 3 Quality Switching modes are available (controllable through API means)
-      	- Instant switching (immediate quality switch at current video position)
-      	- Smooth switching (quality switch for next loaded fragment)
-      	- Bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
+        - Instant switching (immediate quality switch at current video position)
+        - Smooth switching (quality switch for next loaded fragment)
+        - Bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
       - In Auto-Quality mode, emergency switch down in case bandwidth is suddenly dropping to minimize buffering.
   - Accurate Seeking on VoD & Live (not limited to fragment or keyframe boundary)
   - Ability to seek in buffer and back buffer without redownloading segments
