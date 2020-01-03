@@ -77,8 +77,8 @@ export default class Fragment {
   // LHLS prefetch flag
   public prefetch?: boolean;
   // Set by `updateFragPTSDTS` in level-helper
-  public deltaPTS?: number;
-  public maxStartPTS?: number;
+  public deltaDTS?: number;
+  public maxStart?: number;
   // Load/parse timing information
   public stats: LoadStats = new LoadStats();
   public urlId: number = 0;

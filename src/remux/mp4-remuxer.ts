@@ -4,7 +4,7 @@ import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { InitSegmentData, Remuxer, RemuxerResult, RemuxedMetadata, RemuxedTrack } from '../types/remuxer';
-import { DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../types/demuxer';
+import { AvcSample, DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../types/demuxer';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
 import Fragment from '../loader/fragment';
@@ -220,10 +220,10 @@ export default class MP4Remuxer implements Remuxer {
 
   remuxVideo (track: DemuxedAvcTrack, timeOffset, contiguous, audioTrackLength, accurateTimeOffset) : RemuxedTrack | undefined {
     const timeScale: number = track.inputTimeScale;
-    const inputSamples: Array<any> = track.samples;
+    const inputSamples: Array<AvcSample> = track.samples;
     const outputSamples: Array<Mp4Sample> = [];
     const nbSamples: number = inputSamples.length;
-    const initPTS: number = this._initPTS;
+    const initDTS: number = this._initDTS;
     let nextAvcDts = this.nextAvcDts;
     let offset = 8;
     let mp4SampleDuration!: number;
@@ -238,7 +238,7 @@ export default class MP4Remuxer implements Remuxer {
       //  - less than 200 ms PTS gaps (timeScale/5)
       contiguous = contiguous || (inputSamples.length && nextAvcDts &&
                      ((accurateTimeOffset && Math.abs(timeOffset - nextAvcDts / timeScale) < 0.1) ||
-                      Math.abs((inputSamples[0].pts - nextAvcDts - initPTS)) < timeScale / 5)
+                      Math.abs((inputSamples[0].pts - nextAvcDts - initDTS)) < timeScale / 5)
       );
     }
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
@@ -251,20 +251,20 @@ export default class MP4Remuxer implements Remuxer {
     // PTS is coded on 33bits, and can loop from -2^32 to 2^32
     // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
     inputSamples.forEach(function (sample) {
-      sample.pts = PTSNormalize(sample.pts - initPTS, nextAvcDts);
-      sample.dts = PTSNormalize(sample.dts - initPTS, nextAvcDts);
+      sample.pts = PTSNormalize(sample.pts - initDTS, nextAvcDts);
+      sample.dts = PTSNormalize(sample.dts - initDTS, nextAvcDts);
     });
 
-    // Sort video samples by DTS
-    inputSamples.sort((a, b) => a.dts - b.dts);
-
     // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
-    const PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), -18000), 0);
-    if (PTSDTSshift < 0) {
-      logger.log(`[mp4-remuxer]: PTS < DTS detected in video samples, shifting DTS by ${Math.round(PTSDTSshift / 90)} ms to overcome this issue`);
-      for (let i = 0; i < inputSamples.length; i++) {
-        inputSamples[i].dts += PTSDTSshift;
+    const PTSDTSshift = inputSamples.reduce((prev, curr) => {
+      const diff = curr.pts - curr.dts;
+      if (diff < 0) {
+        curr.pts = curr.dts;
       }
+      return Math.min(prev, diff);
+    }, 0);
+    if (PTSDTSshift < 0) {
+      logger.log(`[mp4-remuxer]: PTS < DTS by ${Math.round(PTSDTSshift / 90)} detected in video samples, shifting PTS to overcome this issue`);
     }
 
     const firstSample = inputSamples[0];
@@ -409,8 +409,9 @@ export default class MP4Remuxer implements Remuxer {
     console.assert(mp4SampleDuration !== undefined, 'mp4SampleDuration must be computed');
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     this.nextAvcDts = nextAvcDts = lastDTS + mp4SampleDuration;
-    track.samples = outputSamples;
-    const moof = MP4.moof(track.sequenceNumber++, firstDTS, track);
+    const moof = MP4.moof(track.sequenceNumber++, firstDTS, Object.assign(track, {
+      samples: outputSamples
+    }));
     const type: SourceBufferName = 'video';
     const data = {
       data1: moof,
@@ -440,7 +441,7 @@ export default class MP4Remuxer implements Remuxer {
     const scaleFactor: number = inputTimeScale / mp4timeScale;
     const mp4SampleDuration: number = track.isAAC ? AAC_SAMPLES_PER_FRAME : MPEG_AUDIO_SAMPLE_PER_FRAME;
     const inputSampleDuration: number = mp4SampleDuration * scaleFactor;
-    const initPTS: number = this._initPTS;
+    const initDTS: number = this._initDTS;
     const rawMPEG: boolean = !track.isAAC && this.typeSupported.mpeg;
     const outputSamples: Array<Mp4Sample> = [];
 
@@ -461,12 +462,12 @@ export default class MP4Remuxer implements Remuxer {
     // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
     contiguous = contiguous || (inputSamples.length && nextAudioPts &&
                    ((accurateTimeOffset && Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1) ||
-                    Math.abs((inputSamples[0].pts - nextAudioPts - initPTS)) < 20 * inputSampleDuration)
+                    Math.abs((inputSamples[0].pts - nextAudioPts - initDTS)) < 20 * inputSampleDuration)
     ) as boolean;
 
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
-      sample.pts = sample.dts = PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale);
+      sample.pts = sample.dts = PTSNormalize(sample.pts - initDTS, timeOffset * inputTimeScale);
     });
 
     // filter out sample with negative PTS that are not playable anyway

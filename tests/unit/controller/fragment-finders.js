@@ -88,7 +88,7 @@ describe('Fragment finders', function () {
       const frag = {
         start: 0.2,
         duration: 0.1,
-        deltaPTS: 0.1
+        deltaDTS: 0.1
       };
       const actual = fragmentWithinToleranceTest(0, tolerance, frag);
       expect(actual).to.equal(0);
@@ -177,7 +177,7 @@ describe('Fragment finders', function () {
         programDateTime: pdtBufferEnd + 200,
         endProgramDateTime: pdtBufferEnd + 300,
         duration: 0.1,
-        deltaPTS: 0.1
+        deltaDTS: 0.1
       };
       const actual = pdtWithinToleranceTest(pdtBufferEnd, tolerance, frag);
       expect(actual).to.be.true;

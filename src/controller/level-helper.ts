@@ -56,30 +56,30 @@ export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number
 }
 
 export function updateFragPTSDTS (details: LevelDetails, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
-  let maxStartPTS = startPTS;
+  let maxStart = startPTS;
   if (Number.isFinite(frag.startPTS)) {
     // delta PTS between audio and video
-    const deltaPTS = Math.abs(frag.startPTS - startPTS);
-    if (!Number.isFinite(frag.deltaPTS as number)) {
-      frag.deltaPTS = deltaPTS;
+    const deltaDTS = Math.abs(frag.startDTS - startDTS);
+    if (!Number.isFinite(frag.deltaDTS as number)) {
+      frag.deltaDTS = deltaDTS;
     } else {
-      frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS as number);
+      frag.deltaDTS = Math.max(deltaDTS, frag.deltaDTS as number);
     }
 
-    maxStartPTS = Math.max(startPTS, frag.startPTS);
+    maxStart = Math.max(startDTS, frag.startDTS);
     startPTS = Math.min(startPTS, frag.startPTS);
     endPTS = Math.max(endPTS, frag.endPTS);
     startDTS = Math.min(startDTS, frag.startDTS);
     endDTS = Math.max(endDTS, frag.endDTS);
   }
 
-  const drift = startPTS - frag.start;
-  frag.start = frag.startPTS = startPTS;
-  frag.maxStartPTS = maxStartPTS;
+  const drift = startDTS - frag.start;
+  frag.start = frag.startDTS = startDTS;
+  frag.maxStart = maxStart;
   frag.endPTS = frag.appendedPTS = endPTS;
-  frag.startDTS = startDTS;
+  frag.startPTS = startPTS;
   frag.endDTS = endDTS;
-  frag.duration = endPTS - startPTS;
+  frag.duration = endDTS - startDTS;
   console.assert(frag.duration > 0, 'Fragment should have a positive duration', frag);
 
   const sn = frag.sn as number; // 'initSegment'

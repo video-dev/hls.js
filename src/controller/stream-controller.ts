@@ -338,10 +338,10 @@ export default class StreamController extends BaseStreamController {
       let fetchdelay;
       let nextBufferedFrag;
       const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
-      if (fragPlayingCurrent && fragPlayingCurrent.startPTS > 1) {
+      if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
         // flush buffer preceding current fragment (flush until current fragment start offset)
         // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-        this.flushMainBuffer(0, fragPlayingCurrent.startPTS - 1);
+        this.flushMainBuffer(0, fragPlayingCurrent.start - 1);
       }
       if (!media.paused && levels) {
         // add a safety delay of 1s
@@ -370,10 +370,10 @@ export default class StreamController extends BaseStreamController {
           }
 
           this.fragCurrent = null;
-          // start flush position is the start PTS of next buffered frag.
-          // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
-          // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
-          this.flushMainBuffer(nextBufferedFrag.maxStartPTS, Number.POSITIVE_INFINITY);
+          // start flush position is the start DTS of next buffered frag.
+          // we use frag.maxStart which is max(audio startDTS, video startDTS).
+          // in case there is a small DTS Delta between audio and video, using maxStart avoids flushing last samples from current fragment
+          this.flushMainBuffer(nextBufferedFrag.maxStart, Number.POSITIVE_INFINITY);
         }
       }
     }
