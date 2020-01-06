@@ -76,6 +76,13 @@ module.exports = {
       'never'
     ],
 
+    'no-restricted-globals': [2,
+      {
+        'name': 'SourceBuffer',
+        'message': 'Use `self.SourceBuffer`'
+      }
+    ],
+
     'no-restricted-properties': [2,
       { 'property': 'findIndex' },  // Intended to block usage of Array.prototype.findIndex
       { 'property': 'find' }        // Intended to block usage of Array.prototype.find
