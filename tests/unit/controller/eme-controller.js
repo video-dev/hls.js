@@ -68,7 +68,7 @@ describe('EMEController', function () {
 
     emeController.onManifestParsed({ levels: fakeLevels });
 
-    setTimeout(function () {
+    self.setTimeout(function () {
       expect(media.setMediaKeys.callCount).to.equal(0);
       expect(reqMediaKsAccessSpy.callCount).to.equal(1);
       done();
@@ -97,7 +97,7 @@ describe('EMEController', function () {
 
     media.emit('encrypted', badData);
 
-    setTimeout(function () {
+    self.setTimeout(function () {
       expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
       expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
       done();
