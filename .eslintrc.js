@@ -106,7 +106,7 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': 1,
     'no-console': 1,
     'no-fallthrough': 1,
-    'no-case-declarations': 1,
+    'no-case-declarations': 2,
     'no-irregular-whitespace': 1,
     'no-self-assign': 1,
     'new-cap': 1,
