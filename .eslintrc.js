@@ -77,13 +77,18 @@ module.exports = {
       {
         'name': 'window',
         'message': 'Use `self` instead of `window` to access the global context everywhere (including workers).'
-      }
-    ],
-
-    'no-restricted-globals': [2,
+      },
       {
         'name': 'SourceBuffer',
         'message': 'Use `self.SourceBuffer`'
+      },
+      {
+        'name': 'setTimeout',
+        'message': 'Use `self.setTimeout`'
+      },
+      {
+        'name': 'setInterval',
+        'message': 'Use `self.setInterval`'
       }
     ],
 
@@ -115,7 +120,7 @@ module.exports = {
     'no-useless-catch': 2,
     'lines-between-class-members': 2,
     'no-prototype-builtins': 0,
-    '@typescript-eslint/consistent-type-assertions': [ 2, 
+    '@typescript-eslint/consistent-type-assertions': [ 2,
       {
         'assertionStyle': 'as',
         'objectLiteralTypeAssertions': 'never'
