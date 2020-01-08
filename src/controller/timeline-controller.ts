@@ -329,7 +329,7 @@ class TimelineController extends EventHandler {
 
   onFragLoaded (data: { frag: Fragment, payload: any }) {
     const { frag, payload } = data;
-    const { cea608Parser, initPTS, lastSn, unparsedVttFrags } = this;
+    const { cea608Parser, initPTS, unparsedVttFrags } = this;
     if (frag.type === 'main') {
       const sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack

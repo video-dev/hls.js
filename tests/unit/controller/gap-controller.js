@@ -1,5 +1,5 @@
 import Hls from '../../../src/hls';
-import GapController, { SKIP_BUFFER_RANGE_START, STALL_MINIMUM_DURATION_MS } from '../../../src/controller/gap-controller';
+import GapController, { SKIP_BUFFER_RANGE_START } from '../../../src/controller/gap-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import Event from '../../../src/events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';

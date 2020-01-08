@@ -97,7 +97,7 @@ module.exports = {
     'no-var': 1,
     'no-empty': 1,
     'no-mixed-operators': 1,
-    'no-unused-vars': 1,
+    'no-unused-vars': 2,
     '@typescript-eslint/no-unused-vars': 1,
     'no-console': 1,
     'no-fallthrough': 1,

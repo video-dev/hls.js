@@ -100,7 +100,7 @@ describe('FragmentLoader tests', function () {
   });
 
   it('handles fragment load timeouts', function () {
-    let abortSpy;
+    // let abortSpy;
     return new Promise((resolve, reject) => {
       fragmentLoader.load(frag)
         .then(() => {
@@ -122,7 +122,7 @@ describe('FragmentLoader tests', function () {
         });
       const loaderInstance = fragmentLoader.loader;
       expect(loaderInstance).to.be.instanceOf(MockXhr);
-      abortSpy = sinon.spy(loaderInstance.abort);
+      // abortSpy = sinon.spy(loaderInstance.abort);
       loaderInstance.callbacks.onTimeout(response, context, networkDetails);
     });
   });
