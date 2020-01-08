@@ -281,7 +281,7 @@ class TSDemuxer implements Demuxer {
 
           pmtId = this._pmtId = parsePAT(data, offset);
           break;
-        case pmtId:
+        case pmtId: {
           if (stt) {
             offset += data[offset] + 1;
           }
@@ -317,6 +317,7 @@ class TSDemuxer implements Demuxer {
           }
           pmtParsed = this.pmtParsed = true;
           break;
+        }
         case 17:
         case 0x1fff:
           break;
