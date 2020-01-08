@@ -12,7 +12,7 @@ if [ "${TRAVIS_MODE}" = "build" ]; then
   echo "travis_fold:end:lint"
   echo "travis_fold:start:build"
   npm run type-check
-  npm run build
+  npm run build:ci
   npm run build:types
   echo "travis_fold:end:build"
   echo "travis_fold:start:docs"
@@ -24,7 +24,7 @@ if [ "${TRAVIS_MODE}" = "build" ]; then
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
   npm run test:unit
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
-  npm run build
+  npm run build:ci
   n=0
   maxRetries=1
   until [ $n -ge ${maxRetries} ]
@@ -50,8 +50,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   node ./scripts/set-package-version.js
   npm run lint
   npm run type-check
-  npm run build
-  npm run build:types
+  npm run build:ci
 
   if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
     npm run test:unit
