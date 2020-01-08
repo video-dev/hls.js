@@ -296,7 +296,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
             browser.manage().setTimeouts({ script: 75000 }),
             browser.getSession()
           ]);
-          console.log(`Retrieved session in ${Date.now() - start}ms`);
+          console.log(`Retrieved session in ${Date.now() - start}ms. timeouts ${timeouts}`);
           if (onTravis) {
             console.log(
               `Job URL: https://saucelabs.com/jobs/${session.getId()}`
@@ -388,7 +388,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           `should seek 5s from end and receive video ended event for ${stream.description}`,
           testSeekOnVOD.bind(null, url, config)
         );
-        // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
+        it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
       }
     }
   }
