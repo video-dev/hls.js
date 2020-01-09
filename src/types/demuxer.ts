@@ -46,6 +46,21 @@ export interface DemuxedAvcTrack extends DemuxedTrack {
   pps?: Array<number>
   sps?: Array<number>
   naluState?: number
+  samples: Array<AvcSample>
+}
+
+export interface AvcSample {
+  dts: number
+  pts: number
+  key: boolean
+  frame: boolean
+  units: Array<AvcSampleUnit>,
+  debug: string
+  length: number
+}
+
+export interface AvcSampleUnit {
+  data: Uint8Array;
 }
 
 export interface ElementaryStreamData {
