@@ -184,7 +184,7 @@ class TSDemuxer {
         switch (pid) {
         case avcId:
           if (stt) {
-            if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
+            if (avcData && (pes = parsePES(avcData))) {
               parseAVCPES(pes, false);
             }
 
@@ -197,7 +197,7 @@ class TSDemuxer {
           break;
         case audioId:
           if (stt) {
-            if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
+            if (audioData && (pes = parsePES(audioData))) {
               if (audioTrack.isAAC) {
                 parseAACPES(pes);
               } else {
@@ -213,7 +213,7 @@ class TSDemuxer {
           break;
         case id3Id:
           if (stt) {
-            if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
+            if (id3Data && (pes = parsePES(id3Data))) {
               parseID3PES(pes);
             }
 
@@ -279,7 +279,7 @@ class TSDemuxer {
       }
     }
     // try to parse last PES packets
-    if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
+    if (avcData && (pes = parsePES(avcData))) {
       parseAVCPES(pes, true);
       avcTrack.pesData = null;
     } else {
@@ -287,7 +287,7 @@ class TSDemuxer {
       avcTrack.pesData = avcData;
     }
 
-    if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
+    if (audioData && (pes = parsePES(audioData))) {
       if (audioTrack.isAAC) {
         parseAACPES(pes);
       } else {
@@ -304,7 +304,7 @@ class TSDemuxer {
       audioTrack.pesData = audioData;
     }
 
-    if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
+    if (id3Data && (pes = parsePES(id3Data))) {
       parseID3PES(pes);
       id3Track.pesData = null;
     } else {
@@ -537,6 +537,18 @@ class TSDemuxer {
     if (avcSample.units.length && avcSample.frame) {
       const samples = avcTrack.samples;
       const nbSamples = samples.length;
+      // if sample does not have PTS/DTS, patch with last sample PTS/DTS
+      if (isNaN(avcSample.pts)) {
+        if (nbSamples) {
+          const lastSample = samples[nbSamples - 1];
+          avcSample.pts = lastSample.pts;
+          avcSample.dts = lastSample.dts;
+        } else {
+          // dropping samples, no timestamp found
+          avcTrack.dropped++;
+          return;
+        }
+      }
       // only push AVC sample if starting with a keyframe is not mandatory OR
       //    if keyframe already found in this fragment OR
       //       keyframe found in last fragment (track.sps) AND
