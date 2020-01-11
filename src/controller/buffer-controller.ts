@@ -252,7 +252,7 @@ export default class BufferController implements ComponentAPI {
         const event = {
           type: ErrorTypes.MEDIA_ERROR,
           parent: frag.type,
-          details: '',
+          details: ErrorDetails.BUFFER_APPEND_ERROR,
           err,
           fatal: false
         };

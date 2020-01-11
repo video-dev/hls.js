@@ -41,7 +41,7 @@ describe('LevelController', function () {
 
     const nextLevel = 1;
 
-    levelController.onManifestLoaded(data);
+    levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
     // First triggers "hlsManifestParsed"
     levelController.level = nextLevel;
     // Then triggers "levelSwitching"
@@ -70,7 +70,7 @@ describe('LevelController', function () {
 
   describe('onManifestLoaded handler', function () {
     it('should trigger an error when no levels are found in the manifest', function () {
-      levelController.onManifestLoaded({
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         audioTracks: [],
         levels: [],
         networkDetails: '',
@@ -104,7 +104,7 @@ describe('LevelController', function () {
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       };
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         altAudio: false,
@@ -131,7 +131,7 @@ describe('LevelController', function () {
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       };
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
       expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         altAudio: true,
         audio: false,
@@ -158,7 +158,7 @@ describe('LevelController', function () {
 
     it('signals video if there is a videoCodec signaled', function () {
       data.levels[0].videoCodec = 'avc1.42e01e';
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Events.MANIFEST_PARSED);
@@ -169,7 +169,7 @@ describe('LevelController', function () {
 
     it('signals audio if there is an audioCodec signaled', function () {
       data.levels[0].audioCodec = 'mp4a.40.5';
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Events.MANIFEST_PARSED);
@@ -184,7 +184,7 @@ describe('LevelController', function () {
           AUDIO: true
         }
       }];
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Events.MANIFEST_PARSED);
@@ -217,7 +217,7 @@ describe('LevelController', function () {
         }
       ];
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Events.MANIFEST_PARSED);
@@ -249,7 +249,7 @@ describe('LevelController', function () {
         }
       ];
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
       expect(name).to.equal(Events.MANIFEST_PARSED);

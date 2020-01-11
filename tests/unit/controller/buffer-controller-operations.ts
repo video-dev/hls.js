@@ -150,7 +150,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
           chunkMeta
         };
 
-        bufferController.onBufferAppending(data);
+        bufferController.onBufferAppending(Events.BUFFER_APPENDING, data);
         expect(queueAppendSpy, 'The append operation should have been enqueued').to.have.callCount(i + 1);
 
         buffer.dispatchEvent(new Event('updateend'));
@@ -173,7 +173,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       const queueAppendSpy = sandbox.spy(operationQueue, 'append');
       queueNames.forEach((name, i) => {
         bufferController.sourceBuffer = {};
-        bufferController.onBufferAppending({
+        bufferController.onBufferAppending(Events.BUFFER_APPENDING, {
           type: name,
           data: new Uint8Array(),
           frag: new Fragment(),
@@ -194,11 +194,11 @@ describe('BufferController SourceBuffer operation queueing', function () {
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
       frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 
-      bufferController.onFragParsed({ frag });
+      bufferController.onFragParsed(Events.FRAG_PARSED, { frag });
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;
       expect(flushLiveBackBufferSpy).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
-        hls.on(Events.FRAG_BUFFERED, (data) => {
+        hls.on(Events.FRAG_BUFFERED, (event, data) => {
           try {
             expect(data.frag, 'The frag emitted in FRAG_BUFFERED should be the frag passed in onFragParsed').to.equal(frag);
             expect(data.id, 'The id of the event should be equal to the frag type').to.equal(frag.type);
@@ -227,7 +227,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     });
 
     it('flushes audio and video buffers if no type arg is specified', function () {
-      bufferController.onBufferFlushing({
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
         startOffset: 0,
         endOffset: 10
       });
@@ -247,7 +247,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
 
     it('dequeues the remove operation if the SourceBuffer does not exist during the operation', function () {
       bufferController.sourceBuffer = {};
-      bufferController.onBufferFlushing({
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
         startOffset: 0,
         endOffset: Infinity
       });
@@ -258,7 +258,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
 
     it('dequeues the remove operation if the requested remove range is not valid', function () {
       // Does not flush if start greater than end
-      bufferController.onBufferFlushing({
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
         startOffset: 9001,
         endOffset: 9000
       });
@@ -314,7 +314,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       bufferController.flushLiveBackBuffer();
       expect(bufferFlushingSpy).to.have.been.calledTwice;
       queueNames.forEach(name => {
-        expect(bufferFlushingSpy, `onBufferFlushing should have been called for the ${name} SourceBuffer`).to.have.been.calledWith({ startOffset: 0, endOffset: 20, type: name });
+        expect(bufferFlushingSpy, `onBufferFlushing should have been called for the ${name} SourceBuffer`).to.have.been.calledWith(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 20, type: name });
       });
     });
 
@@ -323,7 +323,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       hls.config.liveBackBufferLength = 5;
       bufferController.flushLiveBackBuffer();
       queueNames.forEach(name => {
-        expect(bufferFlushingSpy, `onBufferFlushing should have been called for the ${name} SourceBuffer`).to.have.been.calledWith({ startOffset: 0, endOffset: 15, type: name });
+        expect(bufferFlushingSpy, `onBufferFlushing should have been called for the ${name} SourceBuffer`).to.have.been.calledWith(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 15, type: name });
       });
     });
 
@@ -366,13 +366,13 @@ describe('BufferController SourceBuffer operation queueing', function () {
 
     it('exits early if the fragments array is empty', function () {
       data.details.fragments = [];
-      bufferController.onLevelUpdated(data);
+      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(bufferController._levelTargetDuration, '_levelTargetDuration').to.be.null;
       expect(bufferController._live, '_live').to.be.false;
     });
 
     it('updates class properties based on level data', function () {
-      bufferController.onLevelUpdated(data);
+      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(bufferController._levelTargetDuration, '_levelTargetDuration').to.equal(6);
       expect(bufferController._live, '_live').to.be.true;
 
@@ -380,25 +380,25 @@ describe('BufferController SourceBuffer operation queueing', function () {
       delete data.details.averagetargetduration;
       data.details.targetduration = 7;
       data.details.live = false;
-      bufferController.onLevelUpdated(data);
+      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(bufferController._levelTargetDuration, '_levelTargetDuration').to.equal(7);
       expect(bufferController._live, '_live').to.be.false;
 
       // Defaults to 10 if no duration is provided
       delete data.details.targetduration;
-      bufferController.onLevelUpdated(data);
+      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(bufferController._levelTargetDuration, '_levelTargetDuration').to.equal(10);
     });
 
     it('enqueues a blocking operation which updates the MediaSource duration', function () {
-      bufferController.onLevelUpdated(data);
+      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;
       // Updating the duration is aync and has no event to signal completion, so we are unable to test for it directly
     });
 
     it('synchronously updates the duration if no SourceBuffers exist', function () {
       bufferController.sourceBuffer = {};
-      bufferController.onLevelUpdated(data);
+      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(queueAppendBlockerSpy).to.have.not.been.called;
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(10);
       expect(bufferController._msDuration, '_msDuration').to.equal(10);
@@ -408,7 +408,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
   describe('onBufferEos', function () {
     it('marks the ExtendedSourceBuffer as ended', function () {
       // No type arg ends both SourceBuffers
-      bufferController.onBufferEos({ });
+      bufferController.onBufferEos(Events.BUFFER_EOS, {});
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;
       queueNames.forEach(type => {
         const buffer = bufferController.sourceBuffer[type];
