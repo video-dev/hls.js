@@ -5,7 +5,6 @@ import { computeReloadInterval } from './level-helper';
 import { MediaPlaylist } from '../types/media-playlist';
 import {
   TrackSwitchedData,
-  TrackLoadedData,
   ManifestParsedData,
   AudioTracksUpdatedData,
   ErrorData,
@@ -123,6 +122,8 @@ class AudioTrackController implements NetworkComponentAPI {
    * Store track details of loaded track in our data-model.
    *
    * Set-up metadata update interval task for live-mode streams.
+   *
+   * @param {*} data
    */
   protected onAudioTrackLoaded (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void {
     const { id, details } = data;

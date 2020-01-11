@@ -217,7 +217,7 @@ describe('SubtitleTrackController', function () {
         const details = new LevelDetails('');
         details.live = false;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.timer = setTimeout(() => {}, 0);
+        subtitleTrackController.timer = self.setTimeout(() => {}, 0);
         subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, { id: 1, details, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.not.exist;
       });

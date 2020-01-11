@@ -2,7 +2,6 @@ import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
 import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
-import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
 
 const sinon = require('sinon');
@@ -70,7 +69,7 @@ describe('EMEController', function () {
 
     emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: fakeLevels });
 
-    setTimeout(function () {
+    self.setTimeout(function () {
       expect(media.setMediaKeys.callCount).to.equal(0);
       expect(reqMediaKsAccessSpy.callCount).to.equal(1);
       done();
@@ -99,7 +98,7 @@ describe('EMEController', function () {
 
     media.emit('encrypted', badData);
 
-    setTimeout(function () {
+    self.setTimeout(function () {
       expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
       expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
       done();

@@ -2,8 +2,6 @@ import AudioStreamController from '../../../src/controller/audio-stream-controll
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
 
-const sinon = require('sinon');
-
 describe('AudioStreamController', function () {
   const tracks = [{
     groupId: '1',

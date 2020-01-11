@@ -66,7 +66,7 @@ class AbrController implements ComponentAPI {
     if (frag.type === 'main') {
       if (!this.timer) {
         this.fragCurrent = frag;
-        this.timer = setInterval(this.onCheck, 100);
+        this.timer = self.setInterval(this.onCheck, 100);
       }
     }
   }

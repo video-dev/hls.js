@@ -423,7 +423,6 @@ export default class LevelController implements NetworkComponentAPI {
     }
     const curLevel = this._levels[level];
     const curDetails = curLevel.details;
-    curLevel.details = details;
     // reset level load error counter on successful level loaded only if there is no issues with fragments
     if (!curLevel.fragmentError) {
       curLevel.loadError = 0;

@@ -306,6 +306,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
     this.media = this.mediaBuffer = this.videoBuffer = null;
     this.loadedmetadata = false;
+    this.fragmentTracker.removeAllFragments();
     this.stopLoad();
   }
 
@@ -475,7 +476,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
 
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:
-    case ErrorDetails.FRAG_LOAD_TIMEOUT:
+    case ErrorDetails.FRAG_LOAD_TIMEOUT: {
       const frag = data.frag;
       // don't handle frag error not related to audio fragment
       if (frag && frag.type !== 'audio') {
@@ -507,6 +508,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
         }
       }
       break;
+    }
     case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
     case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
     case ErrorDetails.KEY_LOAD_ERROR:

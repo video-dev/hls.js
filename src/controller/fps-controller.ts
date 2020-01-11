@@ -48,7 +48,6 @@ class FPSController implements ComponentAPI {
 
   onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     const config = this.hls.config;
-
     if (config.capLevelOnFPSDrop) {
       const video = data.media instanceof self.HTMLVideoElement ? data.media : null;
       this.video = video;
@@ -56,8 +55,8 @@ class FPSController implements ComponentAPI {
         this.isVideoPlaybackQualityAvailable = true;
       }
 
-      clearInterval(this.timer);
-      this.timer = self.setInterval(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);
+      self.clearInterval(this.timer);
+      this.timer = self.setTimeout(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);
     }
   }
 

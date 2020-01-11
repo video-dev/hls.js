@@ -1,6 +1,7 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { computeReloadInterval } from './level-helper';
+import { clearCurrentCues } from '../utils/texttrack-utils';
 import { MediaPlaylist } from '../types/media-playlist';
 import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdatedData } from '../types/events';
 import { ComponentAPI } from '../types/component-api';
@@ -78,6 +79,17 @@ class SubtitleTrackController implements ComponentAPI {
       this.media.textTracks.removeEventListener('change', this.trackChangeListener);
     }
 
+    if (Number.isFinite(this.subtitleTrack)) {
+      this.queuedDefaultTrack = this.subtitleTrack;
+    }
+
+    const textTracks = filterSubtitleTracks(this.media.textTracks);
+    // Clear loaded cues on media detachment from tracks
+    textTracks.forEach((track) => {
+      clearCurrentCues(track);
+    });
+    // Disable all subtitle tracks before detachment so when reattached only tracks in that content are enabled.
+    this.subtitleTrack = -1;
     this.media = null;
   }
 
