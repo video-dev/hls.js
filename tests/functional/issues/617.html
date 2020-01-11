@@ -34,7 +34,7 @@
                     hls.loadSource(url);
                 }
 
-                function onParsed(data) {
+                function onParsed(event, data) {
                     hls.off(Hls.Events.MANIFEST_PARSED, onParsed);
                     hls.startLoad(time);
                     if (time !== undefined) {
