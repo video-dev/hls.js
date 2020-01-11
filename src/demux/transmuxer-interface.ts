@@ -7,6 +7,7 @@ import { getMediaSource } from '../utils/mediasource-helper';
 import { EventEmitter } from 'eventemitter3';
 import Fragment from '../loader/fragment';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
+import Hls from '../hls';
 
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
@@ -18,7 +19,7 @@ class Observer extends EventEmitter {
 }
 
 export default class TransmuxerInterface {
-  private hls: any;
+  private hls: Hls;
   private id: any;
   private observer: Observer | null;
   private frag?: Fragment;
@@ -30,7 +31,7 @@ export default class TransmuxerInterface {
 
   private currentTransmuxSession: ChunkMetadata | null = null;
 
-  constructor (hls, id, onTransmuxComplete, onFlush) {
+  constructor (hls: Hls, id, onTransmuxComplete, onFlush) {
     this.hls = hls;
     this.id = id;
     this.onTransmuxComplete = onTransmuxComplete;
@@ -42,7 +43,7 @@ export default class TransmuxerInterface {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
-      hls.emit(ev, data);
+      hls.trigger(ev, data);
     };
 
     // forward events to main thread
@@ -66,7 +67,7 @@ export default class TransmuxerInterface {
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
-          hls.emit(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
+          hls.trigger(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
         };
         worker.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
@@ -204,7 +205,7 @@ export default class TransmuxerInterface {
       data.data = data.data || {};
       data.data.frag = this.frag;
       data.data.id = this.id;
-      hls.emit(data.event, data.data);
+      hls.trigger(data.event, data.data);
       break;
     }
     }

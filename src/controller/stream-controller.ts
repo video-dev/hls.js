@@ -15,7 +15,7 @@ import { Level } from '../types/level';
 import LevelDetails from '../loader/level-details';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
-import { LevelUpdatedData, BufferAppendingData, LevelLoadedData, ManifestParsedData, MediaAttachingData, MediaAttachedData, AudioTrackSwitchingData } from '../types/events';
+import { LevelUpdatedData, BufferAppendingData, LevelLoadedData, ManifestParsedData, MediaAttachingData, MediaAttachedData, AudioTrackSwitchingData, LevelsUpdatedData, AudioTrackSwitchedData, BufferCreatedData, ErrorData } from '../types/events';
 import Hls from '../hls';
 import { NetworkComponentAPI } from '../types/component-api';
 
@@ -234,7 +234,7 @@ export default class StreamController extends BaseStreamController implements Ne
         data.type = 'video';
       }
 
-      this.hls.emit(Events.BUFFER_EOS, data);
+      this.hls.trigger(Events.BUFFER_EOS, data);
       this.state = State.ENDED;
       return;
     }
@@ -255,7 +255,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
   _loadKey (frag: Fragment) {
     this.state = State.KEY_LOADING;
-    this.hls.emit(Events.KEY_LOADING, { frag });
+    this.hls.trigger(Events.KEY_LOADING, { frag });
   }
 
   _loadFragment (frag: Fragment) {
@@ -413,10 +413,10 @@ export default class StreamController extends BaseStreamController implements Ne
     const flushScope: any = { startOffset: startOffset, endOffset: endOffset, type: this.altAudio ? 'video' : null };
     // Reset load errors on flush
     this.fragLoadError = 0;
-    this.hls.emit(Events.BUFFER_FLUSHING, flushScope);
+    this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  onMediaAttached (data: MediaAttachedData) {
+  onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachedData) {
     const media = this.media = this.mediaBuffer = data.media;
     this.onvplaying = this.onMediaPlaying.bind(this);
     this.onvseeking = this.onMediaSeeking.bind(this);
@@ -483,14 +483,14 @@ export default class StreamController extends BaseStreamController implements Ne
   onManifestLoading () {
     // reset buffer on manifest loading
     this.log('Trigger BUFFER_RESET');
-    this.hls.emit(Events.BUFFER_RESET);
+    this.hls.trigger(Events.BUFFER_RESET);
     this.fragmentTracker.removeAllFragments();
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
     this.fragPlaying = null;
   }
 
-  onManifestParsed (data: ManifestParsedData) {
+  onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData) {
     let aac = false;
     let heaac = false;
     let codec;
@@ -520,7 +520,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.state = State.WAITING_LEVEL;
   }
 
-  onLevelLoaded (data: LevelLoadedData) {
+  onLevelLoaded (event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     const { levels } = this;
     const newLevelId = data.level;
     const newDetails = data.details;
@@ -545,7 +545,7 @@ export default class StreamController extends BaseStreamController implements Ne
     // override level info
     curLevel.details = newDetails;
     this.levelLastLoaded = newLevelId;
-    this.hls.emit(Events.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
+    this.hls.trigger(Events.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
     if (!this.startFragRequested) {
       this.setStartPosition(newDetails, sliding);
@@ -602,7 +602,7 @@ export default class StreamController extends BaseStreamController implements Ne
     );
   }
 
-  onAudioTrackSwitching (data: AudioTrackSwitchingData) {
+  onAudioTrackSwitching (event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) {
     // if any URL found on new audio track, it is an alternate audio track
     const altAudio = !!data.url;
     const trackId = data.id;
@@ -631,13 +631,13 @@ export default class StreamController extends BaseStreamController implements Ne
       }
       const hls = this.hls;
       // switching to main audio, flush all audio and trigger track switched
-      hls.emit(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
-      hls.emit(Events.AUDIO_TRACK_SWITCHED, { id: trackId });
+      hls.trigger(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
+      hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: trackId });
       this.altAudio = false;
     }
   }
 
-  onAudioTrackSwitched (data) {
+  onAudioTrackSwitched (event: Events.AUDIO_TRACK_SWITCHED, data: AudioTrackSwitchedData) {
     const trackId = data.id;
     const altAudio = !!this.hls.audioTracks[trackId].url;
     if (altAudio) {
@@ -652,7 +652,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.tick();
   }
 
-  onBufferCreated (data) {
+  onBufferCreated (event: Events.BUFFER_CREATED, data: BufferCreatedData) {
     const tracks = data.tracks;
     let mediaTrack;
     let name;
@@ -664,7 +664,10 @@ export default class StreamController extends BaseStreamController implements Ne
         mediaTrack = track;
         // keep video source buffer reference
         if (type === 'video') {
-          this.videoBuffer = tracks[type].buffer;
+          const videoTrack = tracks[type];
+          if (videoTrack) {
+            this.videoBuffer = videoTrack.buffer;
+          }
         }
       } else {
         alternate = true;
@@ -678,7 +681,7 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  onFragBuffered (data: { frag: Fragment }) {
+  onFragBuffered (event: Events.FRAG_BUFFERED, data: { frag: Fragment }) {
     const { frag } = data;
     if (frag && frag.type !== 'main') {
       return;
@@ -699,7 +702,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.tick();
   }
 
-  onError (data) {
+  onError (event: Events.ERROR, data: ErrorData) {
     const frag = data.frag || this.fragCurrent;
     // don't handle frag error not related to main fragment
     if (frag && frag.type !== 'main') {
@@ -719,6 +722,7 @@ export default class StreamController extends BaseStreamController implements Ne
         if ((this.fragLoadError + 1) <= this.config.fragLoadingMaxRetry) {
           // exponential backoff capped to config.fragLoadingMaxRetryTimeout
           const delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
+          // @ts-ignore - frag is potentially null according to TS here
           this.warn(`Fragment ${frag.sn} of level ${frag.level} failed to load, retrying in ${delay}ms`);
           this.retryDate = self.performance.now() + delay;
           // retry loading state
@@ -837,7 +841,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.fragPrevious = null;
   }
 
-  onLevelsUpdated (data) {
+  onLevelsUpdated (event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {
     this.levels = data.levels;
   }
 
@@ -894,7 +898,7 @@ export default class StreamController extends BaseStreamController implements Ne
         const stats = frag.stats;
         // Bitrate tests fragments are neither parsed nor buffered
         stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = self.performance.now();
-        hls.emit(Events.FRAG_BUFFERED, { stats, frag, id: 'main' });
+        hls.trigger(Events.FRAG_BUFFERED, { stats, frag, id: 'main' });
         this.tick();
       });
   }
@@ -919,12 +923,12 @@ export default class StreamController extends BaseStreamController implements Ne
     if (initSegment) {
       if (initSegment.tracks) {
         this._bufferInitSegment(level, initSegment.tracks, frag, chunkMeta);
-        hls.emit(Events.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
+        hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
       }
 
       // This would be nice if Number.isFinite acted as a typeguard, but it doesn't. See: https://github.com/Microsoft/TypeScript/issues/10038
       if (Number.isFinite(initSegment.initPTS as number)) {
-        hls.emit(Events.INIT_PTS_FOUND, { frag, id, initPTS: initSegment.initPTS as number });
+        hls.trigger(Events.INIT_PTS_FOUND, { frag, id, initPTS: initSegment.initPTS as number });
       }
     }
 
@@ -948,13 +952,13 @@ export default class StreamController extends BaseStreamController implements Ne
       const emittedID3: any = id3;
       emittedID3.frag = frag;
       emittedID3.id = id;
-      hls.emit(Events.FRAG_PARSING_METADATA, emittedID3);
+      hls.trigger(Events.FRAG_PARSING_METADATA, emittedID3);
     }
     if (text) {
       const emittedText: any = text;
       emittedText.frag = frag;
       emittedText.id = id;
-      hls.emit(Events.FRAG_PARSING_USERDATA, emittedText);
+      hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
     }
   }
 
@@ -999,14 +1003,14 @@ export default class StreamController extends BaseStreamController implements Ne
       video.levelCodec = currentLevel.videoCodec;
       video.id = 'main';
     }
-    this.hls.emit(Events.BUFFER_CODECS, tracks);
+    this.hls.trigger(Events.BUFFER_CODECS, tracks);
     // loop through tracks that are going to be provided to bufferController
     Object.keys(tracks).forEach(trackName => {
       const track = tracks[trackName];
       const initSegment = track.initSegment;
       this.log(`Main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
       if (initSegment) {
-        this.hls.emit(Events.BUFFER_APPENDING, { type: trackName as SourceBufferName, data: initSegment, frag, chunkMeta });
+        this.hls.trigger(Events.BUFFER_APPENDING, { type: trackName as SourceBufferName, data: initSegment, frag, chunkMeta });
       }
     });
     // trigger handler right now
@@ -1050,10 +1054,10 @@ export default class StreamController extends BaseStreamController implements Ne
       if (fragPlayingCurrent) {
         const fragPlaying = fragPlayingCurrent;
         if (fragPlaying !== this.fragPlaying) {
-          this.hls.emit(Events.FRAG_CHANGED, { frag: fragPlaying });
+          this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlaying });
           const fragPlayingLevel = fragPlaying.level;
           if (!this.fragPlaying || this.fragPlaying.level !== fragPlayingLevel) {
-            this.hls.emit(Events.LEVEL_SWITCHED, { level: fragPlayingLevel });
+            this.hls.trigger(Events.LEVEL_SWITCHED, { level: fragPlayingLevel });
           }
 
           this.fragPlaying = fragPlaying;

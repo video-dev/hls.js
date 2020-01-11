@@ -46,7 +46,7 @@ class FPSController implements ComponentAPI {
     this.isVideoPlaybackQualityAvailable = false;
   }
 
-  onMediaAttaching (data: MediaAttachingData) {
+  onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     const config = this.hls.config;
 
     if (config.capLevelOnFPSDrop) {
@@ -70,7 +70,7 @@ class FPSController implements ComponentAPI {
         const currentDecoded = decodedFrames - this.lastDecodedFrames;
         const droppedFPS = 1000 * currentDropped / currentPeriod;
         const hls = this.hls;
-        hls.emit(Events.FPS_DROP, { currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames });
+        hls.trigger(Events.FPS_DROP, { currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames });
         if (droppedFPS > 0) {
           // logger.log('checkFPS : droppedFPS/decodedFPS:' + droppedFPS/(1000 * currentDecoded / currentPeriod));
           if (currentDropped > hls.config.fpsDroppedMonitoringThreshold * currentDecoded) {
@@ -78,7 +78,7 @@ class FPSController implements ComponentAPI {
             logger.warn('drop FPS ratio greater than max allowed value for currentLevel: ' + currentLevel);
             if (currentLevel > 0 && (hls.autoLevelCapping === -1 || hls.autoLevelCapping >= currentLevel)) {
               currentLevel = currentLevel - 1;
-              hls.emit(Events.FPS_DROP_LEVEL_CAPPING, { level: currentLevel, droppedLevel: hls.currentLevel });
+              hls.trigger(Events.FPS_DROP_LEVEL_CAPPING, { level: currentLevel, droppedLevel: hls.currentLevel });
               hls.autoLevelCapping = currentLevel;
               this.streamController.nextLevelSwitch();
             }

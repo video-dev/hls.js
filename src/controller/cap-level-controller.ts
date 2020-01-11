@@ -64,18 +64,18 @@ class CapLevelController implements ComponentAPI {
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
   }
 
-  onFpsDropLevelCapping (data: FPSDropLevelCappingData) {
+  onFpsDropLevelCapping (event: Events.FPS_DROP_LEVEL_CAPPING, data: FPSDropLevelCappingData) {
     // Don't add a restricted level more than once
     if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels)) {
       this.restrictedLevels.push(data.droppedLevel);
     }
   }
 
-  onMediaAttaching (data: MediaAttachingData) {
+  onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     this.media = data.media instanceof HTMLVideoElement ? data.media : null;
   }
 
-  onManifestParsed (data: ManifestParsedData) {
+  onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData) {
     const hls = this.hls;
     this.restrictedLevels = [];
     this.levels = data.levels;
@@ -88,7 +88,7 @@ class CapLevelController implements ComponentAPI {
 
   // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
   // to the first level
-  onBufferCodecs (data: BufferCodecsData) {
+  onBufferCodecs (event: Events.BUFFER_CODECS, data: BufferCodecsData) {
     const hls = this.hls;
     if (hls.config.capLevelToPlayerSize && data.video) {
       // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
@@ -96,7 +96,7 @@ class CapLevelController implements ComponentAPI {
     }
   }
 
-  onLevelsUpdated (data: LevelsUpdatedData) {
+  onLevelsUpdated (event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {
     this.levels = data.levels;
   }
 

@@ -126,6 +126,7 @@ export interface AudioTrackSwitchingData {
 }
 
 export interface AudioTrackSwitchedData {
+  id: any
 }
 
 export interface AudioTrackLoadingData {
@@ -205,6 +206,7 @@ export interface ErrorData {
   reason?: string
   response?: any
   url?: string
+  parent?: PlaylistLevelType
 }
 
 export interface SubtitleFragProcessedData {

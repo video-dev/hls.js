@@ -11,7 +11,7 @@ import FragmentLoader from '../loader/fragment-loader';
 import ChunkCache from '../demux/chunk-cache';
 import LevelDetails from '../loader/level-details';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import { BufferAppendingData, TrackLoadedData, AudioTracksUpdatedData, MediaAttachingData } from '../types/events';
+import { BufferAppendingData, TrackLoadedData, AudioTracksUpdatedData, MediaAttachingData, FragBufferedData, BufferCreatedData, AudioTrackSwitchingData } from '../types/events';
 import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
 import Hls from '../hls';
@@ -81,7 +81,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
   }
 
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
-  onInitPtsFound ({ frag, initPTS }) {
+  onInitPtsFound (event: Events.INIT_PTS_FOUND, { frag, initPTS }) {
     // Always update the new INIT PTS
     // Can change due level switch
     const cc = frag.cc;
@@ -243,7 +243,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
 
     if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
-      hls.emit(Events.BUFFER_EOS, { type: 'audio' });
+      hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
       this.state = State.ENDED;
       return;
     }
@@ -272,14 +272,14 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     if (frag.encrypted) {
       this.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
       this.state = State.KEY_LOADING;
-      hls.emit(Events.KEY_LOADING, { frag: frag });
+      hls.trigger(Events.KEY_LOADING, { frag: frag });
     } else {
       this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferInfo.end.toFixed(3)}`);
       this.loadFragment(frag);
     }
   }
 
-  onMediaAttached (data: MediaAttachingData) {
+  onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachingData) {
     const media = this.media = this.mediaBuffer = data.media;
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
@@ -309,12 +309,12 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     this.stopLoad();
   }
 
-  onAudioTracksUpdated ({ audioTracks }: AudioTracksUpdatedData) {
+  onAudioTracksUpdated (event: Events.AUDIO_TRACKS_UPDATED, { audioTracks }: AudioTracksUpdatedData) {
     this.log('Audio tracks updated');
     this.levels = audioTracks.map(mediaPlaylist => new Level(mediaPlaylist));
   }
 
-  onAudioTrackSwitching (data) {
+  onAudioTrackSwitching (event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) {
     // if any URL found on new audio track, it is an alternate audio track
     const altAudio = !!data.url;
     this.trackId = data.id;
@@ -347,7 +347,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     this.tick();
   }
 
-  onAudioTrackLoaded (data: TrackLoadedData) {
+  onAudioTrackLoaded (event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData) {
     const { levels } = this;
     const { details: newDetails, id: trackId } = data;
     if (!levels) {
@@ -434,7 +434,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     this.loadedmetadata = false;
   }
 
-  onBufferCreated (data) {
+  onBufferCreated (event: Events.BUFFER_CREATED, data: BufferCreatedData) {
     const audioTrack = data.tracks.audio;
     if (audioTrack) {
       this.mediaBuffer = audioTrack.buffer;
@@ -444,7 +444,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
   }
 
-  onFragBuffered (data: { frag: Fragment }) {
+  onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     const { frag } = data;
     if (frag && frag.type !== 'audio') {
       return;
@@ -460,7 +460,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     this.log(`Buffered fragment ${frag.sn} of level ${frag.level}. PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}], Buffered: ${TimeRanges.toString(media.buffered)}`);
     if (this.audioSwitch && frag.sn !== 'initSegment') {
       this.audioSwitch = false;
-      this.hls.emit(Events.AUDIO_TRACK_SWITCHED, { id: this.trackId });
+      this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: this.trackId });
     }
     this.state = State.IDLE;
     this.tick();
@@ -540,7 +540,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
           this.warn('Buffer full error also media.currentTime is not buffered, flush audio buffer');
           this.fragCurrent = null;
           // flush everything
-          this.hls.emit(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
+          this.hls.trigger(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
         }
       }
       break;
@@ -584,7 +584,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
 
     if (initSegment && initSegment.tracks) {
       this._bufferInitSegment(initSegment.tracks, frag, chunkMeta);
-      hls.emit(Events.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
+      hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
       // Only flush audio from old audio tracks when PTS is known on new audio track
     }
     if (audio) {
@@ -596,13 +596,13 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       const emittedID3: any = id3;
       emittedID3.frag = frag;
       emittedID3.id = id;
-      hls.emit(Events.FRAG_PARSING_METADATA, emittedID3);
+      hls.trigger(Events.FRAG_PARSING_METADATA, emittedID3);
     }
     if (text) {
       const emittedText: any = text;
       emittedText.frag = frag;
       emittedText.id = id;
-      hls.emit(Events.FRAG_PARSING_USERDATA, emittedText);
+      hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
     }
   }
 
@@ -623,12 +623,12 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
 
     track.levelCodec = track.codec;
     track.id = 'audio';
-    this.hls.emit(Events.BUFFER_CODECS, tracks);
+    this.hls.trigger(Events.BUFFER_CODECS, tracks);
     this.log(`Audio, container:${track.container}, codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
     const initSegment = track.initSegment;
     if (initSegment) {
       const segment: BufferAppendingData = { type: 'audio', data: initSegment, frag, chunkMeta };
-      this.hls.emit(Events.BUFFER_APPENDING, segment);
+      this.hls.trigger(Events.BUFFER_APPENDING, segment);
     }
     // trigger handler right now
     this.tick();
@@ -662,14 +662,14 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     const { hls, media, trackId } = this;
     if (media) {
       this.warn('Switching audio track : flushing all audio');
-      hls.emit(Events.BUFFER_FLUSHING, {
+      hls.trigger(Events.BUFFER_FLUSHING, {
         startOffset: 0,
         endOffset: Number.POSITIVE_INFINITY,
         type: 'audio'
       });
     }
     this.audioSwitch = false;
-    hls.emit(Events.AUDIO_TRACK_SWITCHED, { id: trackId });
+    hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: trackId });
   }
 }
 export default AudioStreamController;

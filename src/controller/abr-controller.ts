@@ -61,7 +61,7 @@ class AbrController implements ComponentAPI {
     this.clearTimer();
   }
 
-  private onFragLoading (data: FragLoadingData) {
+  private onFragLoading (event: Events.FRAG_LOADING, data: FragLoadingData) {
     const frag = data.frag;
     if (frag.type === 'main') {
       if (!this.timer) {
@@ -71,7 +71,7 @@ class AbrController implements ComponentAPI {
     }
   }
 
-  private onLevelLoaded (data: LevelLoadedData) {
+  private onLevelLoaded (event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     const config = this.hls.config;
     if (data.details.live) {
       this.bwEstimator.update(config.abrEwmaSlowLive, config.abrEwmaFastLive);
@@ -162,10 +162,10 @@ class AbrController implements ComponentAPI {
     this.bwEstimator.sample(requestDelay, stats.loaded);
     loader.abort();
     this.clearTimer();
-    hls.emit(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
+    hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
   }
 
-  private onFragLoaded (data: FragLoadedData) {
+  private onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData) {
     const frag = data.frag;
     const stats = frag.stats;
     if (frag.type === 'main' && Number.isFinite(frag.sn as number)) {
@@ -186,12 +186,12 @@ class AbrController implements ComponentAPI {
         level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
       }
       if (frag.bitrateTest) {
-        this.onFragBuffered(data);
+        this.onFragBuffered(Events.FRAG_BUFFERED, data);
       }
     }
   }
 
-  private onFragBuffered (data: Omit<FragBufferedData, 'id'>) {
+  private onFragBuffered (event: Events.FRAG_BUFFERED, data: Omit<FragBufferedData, 'id'>) {
     const frag = data.frag;
     const stats = frag.stats;
 
@@ -216,7 +216,7 @@ class AbrController implements ComponentAPI {
     }
   }
 
-  private onError (data: ErrorData) {
+  private onError (event: Events.ERROR, data: ErrorData) {
     // stop timer in case of frag loading error
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:

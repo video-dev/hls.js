@@ -11,6 +11,7 @@ import { EMEControllerConfig } from '../config';
 import { KeySystems, MediaKeyFunc } from '../utils/mediakeys-helper';
 import Hls from '../hls';
 import { ComponentAPI } from '../types/component-api';
+import { MediaAttachedData, ManifestParsedData } from '../types/events';
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
@@ -273,7 +274,7 @@ class EMEController implements ComponentAPI {
       const keysListItem = this._mediaKeysList[0];
       if (!keysListItem || !keysListItem.mediaKeys) {
         logger.error('Fatal: Media is encrypted but no CDM access or no keys have been obtained yet');
-        this.hls.emit(Events.ERROR, {
+        this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.KEY_SYSTEM_ERROR,
           details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
           fatal: true
@@ -296,7 +297,7 @@ class EMEController implements ComponentAPI {
     const keysListItem = this._mediaKeysList[0];
     if (!keysListItem) {
       logger.error('Fatal: Media is encrypted but not any key-system access has been obtained yet');
-      this.hls.emit(Events.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
         fatal: true
@@ -312,7 +313,7 @@ class EMEController implements ComponentAPI {
     const keySession = keysListItem.mediaKeysSession;
     if (!keySession) {
       logger.error('Fatal: Media is encrypted but no key-session existing');
-      this.hls.emit(Events.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
         fatal: true
@@ -323,7 +324,7 @@ class EMEController implements ComponentAPI {
     // initData is null if the media is not CORS-same-origin
     if (!initData) {
       logger.warn('Fatal: initData required for generating a key session is null');
-      this.hls.emit(Events.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_INIT_DATA,
         fatal: true
@@ -340,7 +341,7 @@ class EMEController implements ComponentAPI {
       })
       .catch((err) => {
         logger.error('Error generating key-session request:', err);
-        this.hls.emit(Events.ERROR, {
+        this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.KEY_SYSTEM_ERROR,
           details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
           fatal: false
@@ -408,7 +409,7 @@ class EMEController implements ComponentAPI {
         logger.error(`License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`);
         this._requestLicenseFailureCount++;
         if (this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES) {
-          this.hls.emit(Events.ERROR, {
+          this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.KEY_SYSTEM_ERROR,
             details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
             fatal: true
@@ -474,7 +475,7 @@ class EMEController implements ComponentAPI {
     const keysListItem = this._mediaKeysList[0];
     if (!keysListItem) {
       logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
-      this.hls.emit(Events.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
         fatal: true
@@ -490,7 +491,7 @@ class EMEController implements ComponentAPI {
       xhr.send(challenge);
     } catch (e) {
       logger.error(`Failure requesting DRM license: ${e}`);
-      this.hls.emit(Events.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
         fatal: true
@@ -498,7 +499,7 @@ class EMEController implements ComponentAPI {
     }
   }
 
-  onMediaAttached (data: { media: HTMLMediaElement; }) {
+  onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachedData) {
     if (!this._emeEnabled) {
       return;
     }
@@ -518,14 +519,17 @@ class EMEController implements ComponentAPI {
     }
   }
 
-  // TODO: Use manifest types here when they are defined
-  onManifestParsed (data: any) {
+  onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData) {
     if (!this._emeEnabled) {
       return;
     }
 
-    const audioCodecs = data.levels.map((level) => level.audioCodec);
-    const videoCodecs = data.levels.map((level) => level.videoCodec);
+    const audioCodecs = data.levels.map((level) => level.audioCodec).filter(
+      (audioCodec: string | undefined): audioCodec is string => !!audioCodec
+    );
+    const videoCodecs = data.levels.map((level) => level.videoCodec).filter(
+      (videoCodec: string | undefined): videoCodec is string => !!videoCodec
+    );
 
     this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
   }

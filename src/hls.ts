@@ -26,13 +26,14 @@ import EMEController from './controller/eme-controller';
 import CapLevelController from './controller/cap-level-controller';
 import AbrController from './controller/abr-controller';
 import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
+import { Tail } from './types/tuples';
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls implements HlsEventEmitter {
+export default class Hls {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
@@ -177,7 +178,7 @@ export default class Hls implements HlsEventEmitter {
           listener.apply(context, args);
         } catch (e) {
           logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
-          this.emit(Events.ERROR, {
+          this.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: false,
@@ -198,7 +199,7 @@ export default class Hls implements HlsEventEmitter {
           listener.apply(context, args);
         } catch (e) {
           logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
-          this.emit(Events.ERROR, {
+          this.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: false,
@@ -222,8 +223,8 @@ export default class Hls implements HlsEventEmitter {
     return this._emitter.listeners(event);
   }
 
-  emit<E extends Events> (event: E, ...args: Parameters<HlsListeners[E]>): boolean {
-    return this._emitter.emit(event, ...args);
+  trigger<E extends Events> (event: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean {
+    return this._emitter.emit(event, event, ...args);
   }
 
   listenerCount<E extends Events> (event: E): number {
@@ -235,7 +236,7 @@ export default class Hls implements HlsEventEmitter {
    */
   destroy () {
     logger.log('destroy');
-    this.emit(Events.DESTROYING);
+    this.trigger(Events.DESTROYING);
     this.detachMedia();
     this.coreComponents.concat(this.networkControllers).forEach(component => {
       component.destroy();
@@ -252,7 +253,7 @@ export default class Hls implements HlsEventEmitter {
   attachMedia (media: HTMLMediaElement) {
     logger.log('attachMedia');
     this._media = media;
-    this.emit(Events.MEDIA_ATTACHING, { media: media });
+    this.trigger(Events.MEDIA_ATTACHING, { media: media });
   }
 
   /**
@@ -260,7 +261,7 @@ export default class Hls implements HlsEventEmitter {
    */
   detachMedia () {
     logger.log('detachMedia');
-    this.emit(Events.MEDIA_DETACHING);
+    this.trigger(Events.MEDIA_DETACHING);
     this._media = null;
   }
 
@@ -273,7 +274,7 @@ export default class Hls implements HlsEventEmitter {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    this.emit(Events.MANIFEST_LOADING, { url: url });
+    this.trigger(Events.MANIFEST_LOADING, { url: url });
   }
 
   /**

@@ -99,8 +99,8 @@ describe('EMEController', function () {
     media.emit('encrypted', badData);
 
     setTimeout(function () {
-      expect(emeController.hls.emit.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
-      expect(emeController.hls.emit.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+      expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
+      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
       done();
     }, 0);
   });

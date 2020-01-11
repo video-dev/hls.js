@@ -14,7 +14,7 @@ describe('LevelController', function () {
     hls = new HlsMock({}, sandbox);
     levelController = new LevelController(hls);
     levelController.onParsedComplete = () => {};
-    triggerSpy = hls.emit;
+    triggerSpy = hls.trigger;
   });
 
   afterEach(function () {

@@ -154,7 +154,7 @@ class PlaylistLoader {
     this.destroyInternalLoaders();
   }
 
-  private onManifestLoading (data: ManifestLoadingData) {
+  private onManifestLoading (event: Events.MANIFEST_LOADING, data: ManifestLoadingData) {
     const { url } = data;
     this.load({
       id: null,
@@ -165,7 +165,7 @@ class PlaylistLoader {
     });
   }
 
-  private onLevelLoading (data: LevelLoadingData) {
+  private onLevelLoading (event: Events.LEVEL_LOADING, data: LevelLoadingData) {
     const { id, level, url } = data;
     this.load({
       id,
@@ -176,7 +176,7 @@ class PlaylistLoader {
     });
   }
 
-  private onAudioTrackLoading (data: AudioTrackLoadingData) {
+  private onAudioTrackLoading (event: Events.AUDIO_TRACK_LOADING, data: AudioTrackLoadingData) {
     const { id, url } = data;
     this.load({
       id,
@@ -187,7 +187,7 @@ class PlaylistLoader {
     });
   }
 
-  private onSubtitleTrackLoading (data: SubtitleTrackLoadingData) {
+  private onSubtitleTrackLoading (event: Events.SUBTITLE_TRACK_LOADING, data: SubtitleTrackLoadingData) {
     const { id, url } = data;
     this.load({
       id,
@@ -349,7 +349,7 @@ class PlaylistLoader {
       }
     }
 
-    hls.emit(Events.MANIFEST_LOADED, {
+    hls.trigger(Events.MANIFEST_LOADED, {
       levels,
       audioTracks,
       subtitles,
@@ -382,7 +382,7 @@ class PlaylistLoader {
     levelDetails.lastModified = Math.max(+(mtime as Date), +(encoded as Date));
 
     if (!levelDetails.fragments.length) {
-      hls.emit(Events.ERROR, {
+      hls.trigger(Events.ERROR, {
         type: ErrorTypes.NETWORK_ERROR,
         details: ErrorDetails.LEVEL_EMPTY_ERROR,
         fatal: false,
@@ -406,7 +406,7 @@ class PlaylistLoader {
         url
       };
 
-      hls.emit(Events.MANIFEST_LOADED, {
+      hls.trigger(Events.MANIFEST_LOADED, {
         levels: [singleLevel],
         audioTracks: [],
         url,
@@ -463,7 +463,7 @@ class PlaylistLoader {
   }
 
   private _handleManifestParsingError (response: LoaderResponse, context, reason, networkDetails): void {
-    this.hls.emit(Events.ERROR, {
+    this.hls.trigger(Events.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
       fatal: context.type === PlaylistContextType.MANIFEST,
@@ -519,7 +519,7 @@ class PlaylistLoader {
       errorData.response = response;
     }
 
-    this.hls.emit(Events.ERROR, errorData);
+    this.hls.trigger(Events.ERROR, errorData);
   }
 
   private _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context, networkDetails): void {
@@ -532,7 +532,7 @@ class PlaylistLoader {
 
     const canHaveLevels = canHaveQualityLevels(context.type);
     if (canHaveLevels) {
-      this.hls.emit(Events.LEVEL_LOADED, {
+      this.hls.trigger(Events.LEVEL_LOADED, {
         details: levelDetails,
         level: level || 0,
         id: id || 0,
@@ -542,7 +542,7 @@ class PlaylistLoader {
     } else {
       switch (type) {
       case PlaylistContextType.AUDIO_TRACK:
-        this.hls.emit(Events.AUDIO_TRACK_LOADED, {
+        this.hls.trigger(Events.AUDIO_TRACK_LOADED, {
           details: levelDetails,
           id,
           stats,
@@ -550,7 +550,7 @@ class PlaylistLoader {
         });
         break;
       case PlaylistContextType.SUBTITLE_TRACK:
-        this.hls.emit(Events.SUBTITLE_TRACK_LOADED, {
+        this.hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
           id,
           stats,
