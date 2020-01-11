@@ -18,7 +18,8 @@ if (demoConfig) {
 
 const hlsjsDefaults = {
   debug: true,
-  enableWorker: true
+  enableWorker: true,
+  liveBackBufferLength: 60 * 15
 };
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);

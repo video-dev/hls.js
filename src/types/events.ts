@@ -300,3 +300,7 @@ export interface KeyLoadingData {
 export interface KeyLoadedData {
   frag: Fragment
 }
+
+export interface LiveBackBufferData {
+  bufferEnd: number
+}

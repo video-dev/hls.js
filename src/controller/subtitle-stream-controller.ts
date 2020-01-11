@@ -95,9 +95,12 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   }
 
   onSubtitleFragProcessed (event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessed) {
-    const { frag } = data;
+    const { frag, success } = data;
     this.fragPrevious = frag;
     this.state = State.IDLE;
+    if (!success) {
+      return;
+    }
 
     const buffered = this.tracksBuffered[this.currentTrackId];
     if (!buffered) {
@@ -134,10 +137,16 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   }
 
   onMediaDetaching () {
-    if (this.media) {
-      this.media.removeEventListener('seeking', this._onMediaSeeking);
-      this.media = null;
+    if (!this.media) {
+      return;
     }
+    this.media.removeEventListener('seeking', this._onMediaSeeking);
+    this.fragmentTracker.removeAllFragments();
+    this.currentTrackId = -1;
+    this.levels.forEach((level: Level) => {
+      this.tracksBuffered[level.id] = [];
+    });
+    this.media = null;
     this.state = State.STOPPED;
   }
 

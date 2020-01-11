@@ -9,7 +9,7 @@
  *
  */
 
-import { Events, HlsListeners } from '../events';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { parseSegmentIndex } from '../utils/mp4-tools';
@@ -24,7 +24,7 @@ import {
   PlaylistLevelType,
   PlaylistLoaderContext
 } from '../types/loader';
-import { ManifestLoadingData, LevelLoadingData, TrackLoadingData, AudioTrackLoadingData, SubtitleTrackLoadingData } from '../types/events';
+import { ManifestLoadingData, LevelLoadingData, AudioTrackLoadingData, SubtitleTrackLoadingData } from '../types/events';
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 import Hls from '../hls';

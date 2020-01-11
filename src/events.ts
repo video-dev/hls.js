@@ -1,4 +1,4 @@
-import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData, AudioTrackLoadingData, AudioTrackLoadedData, SubtitleTrackLoadedData, SubtitleTrackLoadingData, ErrorData, AudioTrackSwitchingData, AudioTrackSwitchedData, KeyLoadedData, KeyLoadingData, SubtitleTrackSwitchData, SubtitleTracksUpdatedData, LevelSwitchedData, FragChangedData, BufferAppendingData, BufferCodecsData, FragParsingMetadataData, FragParsingInitSegmentData, FragBufferedData, BufferFlushingData, BufferEOSData, LevelSwitchingData, FPSDropLevelCappingData, FPSDropData, BufferCreatedData, BufferAppendedData, LevelPTSUpdatedData, FragParsedData, AudioTracksUpdatedData, FragLoadEmergencyAbortedData } from './types/events';
+import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData, AudioTrackLoadingData, AudioTrackLoadedData, SubtitleTrackLoadedData, SubtitleTrackLoadingData, ErrorData, AudioTrackSwitchingData, AudioTrackSwitchedData, KeyLoadedData, KeyLoadingData, SubtitleTrackSwitchData, SubtitleTracksUpdatedData, LevelSwitchedData, FragChangedData, BufferAppendingData, BufferCodecsData, FragParsingMetadataData, FragParsingInitSegmentData, FragBufferedData, BufferFlushingData, BufferEOSData, LevelSwitchingData, FPSDropLevelCappingData, FPSDropData, BufferCreatedData, BufferAppendedData, LevelPTSUpdatedData, FragParsedData, AudioTracksUpdatedData, FragLoadEmergencyAbortedData, LiveBackBufferData } from './types/events';
 import { Tail } from './types/tuples';
 
 /**
@@ -114,6 +114,8 @@ export enum Events {
   KEY_LOADING = 'hlsKeyLoading',
   // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length } }
   KEY_LOADED = 'hlsKeyLoaded',
+  // fired when the live back buffer is reached defined by the liveBackBufferLength config option - data : { bufferEnd: number }
+  LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached',
 }
 
 export interface HlsListeners {
@@ -171,6 +173,7 @@ export interface HlsListeners {
   [Events.DESTROYING]: (event: Events.DESTROYING) => void
   [Events.KEY_LOADING]: (event: Events.KEY_LOADING, data: KeyLoadingData) => void
   [Events.KEY_LOADED]: (event: Events.KEY_LOADED, data: KeyLoadedData) => void
+  [Events.LIVE_BACK_BUFFER_REACHED]: (event: Events.LIVE_BACK_BUFFER_REACHED, data: LiveBackBufferData) => void
 }
 export interface HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context): void

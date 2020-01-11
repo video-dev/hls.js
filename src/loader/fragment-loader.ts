@@ -1,11 +1,9 @@
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { logger } from '../utils/logger';
 import Fragment from './fragment';
 import {
   Loader,
   LoaderConfiguration,
   FragmentLoaderContext,
-  LoaderContext,
   LoaderCallbacks
 } from '../types/loader';
 

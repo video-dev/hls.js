@@ -463,7 +463,7 @@ class TimelineController implements ComponentAPI {
   }
 
   onFragParsingUserdata (event: Events.FRAG_PARSING_USERDATA, data: FragParsingUserdataData) {
-    if (!this.enabled || !this.config.enableCEA708Captions) {
+    if (!this.enabled || !this.cea608Parser) {
       return;
     }
 
