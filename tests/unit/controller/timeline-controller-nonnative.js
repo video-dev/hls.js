@@ -44,7 +44,7 @@ describe('Non-Native TimelineController functions', function () {
   });
 
   it('does not create a non native track if the track does not have any defined properties', function () {
-    const triggerSpy = sinon.spy(hls, 'emit');
+    const triggerSpy = sinon.spy(hls, 'trigger');
     timelineController.createNonNativeTrack('foo');
     expect(triggerSpy).to.have.not.been.called;
   });

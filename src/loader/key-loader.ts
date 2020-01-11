@@ -45,7 +45,7 @@ export default class KeyLoader implements ComponentAPI {
     this.loaders = {};
   }
 
-  onKeyLoading (data: KeyLoadingData) {
+  onKeyLoading (event: Events.KEY_LOADING, data: KeyLoadingData) {
     const { frag } = data;
     const type = frag.type;
     const loader = this.loaders[type];
@@ -98,7 +98,7 @@ export default class KeyLoader implements ComponentAPI {
     } else if (this.decryptkey) {
       // Return the key if it's already been loaded
       frag.decryptdata.key = this.decryptkey;
-      this.hls.emit(Events.KEY_LOADED, { frag: frag });
+      this.hls.trigger(Events.KEY_LOADED, { frag: frag });
     }
   }
 
@@ -113,7 +113,7 @@ export default class KeyLoader implements ComponentAPI {
     // detach fragment loader on load success
     frag.loader = undefined;
     delete this.loaders[frag.type];
-    this.hls.emit(Events.KEY_LOADED, { frag: frag });
+    this.hls.trigger(Events.KEY_LOADED, { frag: frag });
   }
 
   loaderror (response: LoaderResponse, context: KeyLoaderContext) {
@@ -124,7 +124,7 @@ export default class KeyLoader implements ComponentAPI {
     }
 
     delete this.loaders[frag.type];
-    this.hls.emit(Events.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag, response });
+    this.hls.trigger(Events.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag, response });
   }
 
   loadtimeout (stats: LoaderStats, context: KeyLoaderContext) {
@@ -135,6 +135,6 @@ export default class KeyLoader implements ComponentAPI {
     }
 
     delete this.loaders[frag.type];
-    this.hls.emit(Events.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
+    this.hls.trigger(Events.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
   }
 }

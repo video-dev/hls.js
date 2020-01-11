@@ -267,8 +267,8 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Fires when a fragment loading is completed
    */
-  onFragLoaded (e: FragLoadedData): void {
-    const fragment = e.frag;
+  onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData): void {
+    const fragment = data.frag;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
     if (!Number.isFinite(fragment.sn as number) || fragment.bitrateTest) {
@@ -285,8 +285,8 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Fires when the buffer is updated
    */
-  onBufferAppended (e: BufferAppendedData): void {
-    const { frag, timeRanges } = e;
+  onBufferAppended (event: Events.BUFFER_APPENDED, data: BufferAppendedData): void {
+    const { frag, timeRanges } = data;
     this.activeFragment = frag;
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = timeRanges;
@@ -302,8 +302,8 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Fires after a fragment has been loaded into the source buffer
    */
-  onFragBuffered (e: FragBufferedData): void {
-    this.detectPartialFragments(e.frag);
+  onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData): void {
+    this.detectPartialFragments(data.frag);
   }
 
   /**

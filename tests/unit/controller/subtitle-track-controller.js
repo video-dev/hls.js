@@ -94,7 +94,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH', function () {
-      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'emit');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
 
@@ -103,7 +103,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track has no details', function () {
-      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'emit');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
 
@@ -112,7 +112,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should not trigger SUBTITLE_TRACK_LOADING if the track has details and is not live', function () {
-      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'emit');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 1;
       subtitleTrackController.subtitleTrack = 0;
 
@@ -121,7 +121,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
-      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'emit');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
 
@@ -129,7 +129,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {
-      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'emit');
+      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 2;
 

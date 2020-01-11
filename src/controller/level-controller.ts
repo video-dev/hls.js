@@ -99,7 +99,7 @@ export default class LevelController implements NetworkComponentAPI {
     this.clearTimer();
   }
 
-  protected onManifestLoaded (data: ManifestLoadedData): void {
+  protected onManifestLoaded (event: Events.MANIFEST_LOADED, data: ManifestLoadedData): void {
     let levels: Level[] = [];
     let audioTracks: MediaPlaylist[] = [];
     let bitrateStart: number | undefined;
@@ -185,11 +185,11 @@ export default class LevelController implements NetworkComponentAPI {
         video: videoCodecFound,
         altAudio: audioTracks.some(t => !!t.url)
       };
-      this.hls.emit(Events.MANIFEST_PARSED, edata);
+      this.hls.trigger(Events.MANIFEST_PARSED, edata);
 
       this.onParsedComplete();
     } else {
-      this.hls.emit(Events.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
         fatal: true,
@@ -221,7 +221,7 @@ export default class LevelController implements NetworkComponentAPI {
           if (this.currentLevelIndex !== newLevel) {
             logger.log(`[level-controller]: switching to level ${newLevel}`);
             this.currentLevelIndex = newLevel;
-            hls.emit(Events.LEVEL_SWITCHING, Object.assign({}, levels[newLevel], {
+            hls.trigger(Events.LEVEL_SWITCHING, Object.assign({}, levels[newLevel], {
               level: newLevel
             }));
           }
@@ -235,7 +235,7 @@ export default class LevelController implements NetworkComponentAPI {
           }
         } else {
           // invalid level id given, trigger error
-          hls.emit(Events.ERROR, {
+          hls.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.LEVEL_SWITCH_ERROR,
             level: newLevel,
@@ -289,7 +289,7 @@ export default class LevelController implements NetworkComponentAPI {
     this._startLevel = newLevel;
   }
 
-  protected onError (data: ErrorData) {
+  protected onError (event: Events.ERROR, data: ErrorData) {
     if (data.fatal) {
       if (data.type === ErrorTypes.NETWORK_ERROR) {
         this.clearTimer();
@@ -398,7 +398,7 @@ export default class LevelController implements NetworkComponentAPI {
   }
 
   // reset errors on the successful load of a fragment
-  protected onFragLoaded ({ frag }: FragLoadedData) {
+  protected onFragLoaded (event: Events.FRAG_LOADED, { frag }: FragLoadedData) {
     if (frag !== undefined && frag.type === 'main') {
       if (!this._levels) {
         throw new Error('Levels are not set');
@@ -412,7 +412,7 @@ export default class LevelController implements NetworkComponentAPI {
     }
   }
 
-  protected onLevelLoaded (data: LevelLoadedData) {
+  protected onLevelLoaded (event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     const { level, details } = data;
     // only process level loaded events matching with expected level
     if (level !== this.currentLevelIndex) {
@@ -440,7 +440,7 @@ export default class LevelController implements NetworkComponentAPI {
     }
   }
 
-  protected onAudioTrackSwitched (data: TrackSwitchedData) {
+  protected onAudioTrackSwitched (event: Events.AUDIO_TRACK_SWITCHED, data: TrackSwitchedData) {
     const audioGroupId = this.hls.audioTracks[data.id].groupId;
 
     const currentLevel = this.hls.levels[this.currentLevelIndex as number];
@@ -484,7 +484,7 @@ export default class LevelController implements NetworkComponentAPI {
         // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
         // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
 
-        this.hls.emit(Events.LEVEL_LOADING, { url, level, id });
+        this.hls.trigger(Events.LEVEL_LOADING, { url, level, id });
       }
     }
   }
@@ -530,6 +530,6 @@ export default class LevelController implements NetworkComponentAPI {
     });
     this._levels = levels;
 
-    this.hls.emit(Events.LEVELS_UPDATED, { levels });
+    this.hls.trigger(Events.LEVELS_UPDATED, { levels });
   }
 }

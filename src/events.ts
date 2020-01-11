@@ -1,5 +1,5 @@
 import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData, AudioTrackLoadingData, AudioTrackLoadedData, SubtitleTrackLoadedData, SubtitleTrackLoadingData, ErrorData, AudioTrackSwitchingData, AudioTrackSwitchedData, KeyLoadedData, KeyLoadingData, SubtitleTrackSwitchData, SubtitleTracksUpdatedData, LevelSwitchedData, FragChangedData, BufferAppendingData, BufferCodecsData, FragParsingMetadataData, FragParsingInitSegmentData, FragBufferedData, BufferFlushingData, BufferEOSData, LevelSwitchingData, FPSDropLevelCappingData, FPSDropData, BufferCreatedData, BufferAppendedData, LevelPTSUpdatedData, FragParsedData, AudioTracksUpdatedData, FragLoadEmergencyAbortedData } from './types/events';
-import LoadStats from './loader/load-stats';
+import { Tail } from './types/tuples';
 
 /**
  * @readonly
@@ -117,60 +117,60 @@ export enum Events {
 }
 
 export interface HlsListeners {
-  [Events.MEDIA_ATTACHING]: (data: MediaAttachingData) => void
-  [Events.MEDIA_ATTACHED]: (data: MediaAttachedData) => void
-  [Events.MEDIA_DETACHING]: () => void
-  [Events.MEDIA_DETACHED]: () => void
-  [Events.BUFFER_RESET]: () => void
-  [Events.BUFFER_CODECS]: (data: BufferCodecsData) => void
-  [Events.BUFFER_CREATED]: (data: BufferCreatedData) => void
-  [Events.BUFFER_APPENDING]: (data: BufferAppendingData) => void
-  [Events.BUFFER_APPENDED]: (data: BufferAppendedData) => void
-  [Events.BUFFER_EOS]: (data: BufferEOSData) => void
-  [Events.BUFFER_FLUSHING]: (data: BufferFlushingData) => void
-  [Events.BUFFER_FLUSHED]: () => void
-  [Events.MANIFEST_LOADING]: (data: ManifestLoadingData) => void
-  [Events.MANIFEST_LOADED]: (data: ManifestLoadedData) => void
-  [Events.MANIFEST_PARSED]: (data: ManifestParsedData) => void
-  [Events.LEVEL_SWITCHING]: (data: LevelSwitchingData) => void
-  [Events.LEVEL_SWITCHED]: (data: LevelSwitchedData) => void
-  [Events.LEVEL_LOADING]: (data: LevelLoadingData) => void
-  [Events.LEVEL_LOADED]: (data: LevelLoadedData) => void
-  [Events.LEVEL_UPDATED]: (data: LevelUpdatedData) => void
-  [Events.LEVEL_PTS_UPDATED]: (data: LevelPTSUpdatedData) => void
-  [Events.LEVELS_UPDATED]: (data: LevelsUpdatedData) => void
-  [Events.AUDIO_TRACKS_UPDATED]: (data: AudioTracksUpdatedData) => void
-  [Events.AUDIO_TRACK_SWITCHING]: (data: AudioTrackSwitchingData) => void
-  [Events.AUDIO_TRACK_SWITCHED]: (data: AudioTrackSwitchedData) => void
-  [Events.AUDIO_TRACK_LOADING]: (data: AudioTrackLoadingData) => void
-  [Events.AUDIO_TRACK_LOADED]: (data: AudioTrackLoadedData) => void
-  [Events.SUBTITLE_TRACKS_UPDATED]: (data: SubtitleTracksUpdatedData) => void
-  [Events.SUBTITLE_TRACKS_CLEARED]: () => void
-  [Events.SUBTITLE_TRACK_SWITCH]: (data: SubtitleTrackSwitchData) => void
-  [Events.SUBTITLE_TRACK_LOADING]: (data: SubtitleTrackLoadingData) => void
-  [Events.SUBTITLE_TRACK_LOADED]: (data: SubtitleTrackLoadedData) => void
-  [Events.SUBTITLE_FRAG_PROCESSED]: (data: SubtitleFragProcessedData) => void
-  [Events.CUES_PARSED]: (data: CuesParsedData) => void
-  [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (data: NonNativeTextTracksData) => void
-  [Events.INIT_PTS_FOUND]: (data: InitPTSFoundData) => void
-  [Events.FRAG_LOADING]: (data: FragLoadingData) => void
+  [Events.MEDIA_ATTACHING]: (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) => void
+  [Events.MEDIA_ATTACHED]: (event: Events.MEDIA_ATTACHED, data: MediaAttachedData) => void
+  [Events.MEDIA_DETACHING]: (event: Events.MEDIA_DETACHING) => void
+  [Events.MEDIA_DETACHED]: (event: Events.MEDIA_DETACHED) => void
+  [Events.BUFFER_RESET]: (event: Events.BUFFER_RESET) => void
+  [Events.BUFFER_CODECS]: (event: Events.BUFFER_CODECS, data: BufferCodecsData) => void
+  [Events.BUFFER_CREATED]: (event: Events.BUFFER_CREATED, data: BufferCreatedData) => void
+  [Events.BUFFER_APPENDING]: (event: Events.BUFFER_APPENDING, data: BufferAppendingData) => void
+  [Events.BUFFER_APPENDED]: (event: Events.BUFFER_APPENDED, data: BufferAppendedData) => void
+  [Events.BUFFER_EOS]: (event: Events.BUFFER_EOS, data: BufferEOSData) => void
+  [Events.BUFFER_FLUSHING]: (event: Events.BUFFER_FLUSHING, data: BufferFlushingData) => void
+  [Events.BUFFER_FLUSHED]: (event: Events.BUFFER_FLUSHED) => void
+  [Events.MANIFEST_LOADING]: (event: Events.MANIFEST_LOADING, data: ManifestLoadingData) => void
+  [Events.MANIFEST_LOADED]: (event: Events.MANIFEST_LOADED, data: ManifestLoadedData) => void
+  [Events.MANIFEST_PARSED]: (event: Events.MANIFEST_PARSED, data: ManifestParsedData) => void
+  [Events.LEVEL_SWITCHING]: (event: Events.LEVEL_SWITCHING, data: LevelSwitchingData) => void
+  [Events.LEVEL_SWITCHED]: (event: Events.LEVEL_SWITCHED, data: LevelSwitchedData) => void
+  [Events.LEVEL_LOADING]: (event: Events.LEVEL_LOADING, data: LevelLoadingData) => void
+  [Events.LEVEL_LOADED]: (event: Events.LEVEL_LOADED, data: LevelLoadedData) => void
+  [Events.LEVEL_UPDATED]: (event: Events.LEVEL_UPDATED, data: LevelUpdatedData) => void
+  [Events.LEVEL_PTS_UPDATED]: (event: Events.LEVEL_PTS_UPDATED, data: LevelPTSUpdatedData) => void
+  [Events.LEVELS_UPDATED]: (event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) => void
+  [Events.AUDIO_TRACKS_UPDATED]: (event: Events.AUDIO_TRACKS_UPDATED, data: AudioTracksUpdatedData) => void
+  [Events.AUDIO_TRACK_SWITCHING]: (event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) => void
+  [Events.AUDIO_TRACK_SWITCHED]: (event: Events.AUDIO_TRACK_SWITCHED, data: AudioTrackSwitchedData) => void
+  [Events.AUDIO_TRACK_LOADING]: (event: Events.AUDIO_TRACK_LOADING, data: AudioTrackLoadingData) => void
+  [Events.AUDIO_TRACK_LOADED]: (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData) => void
+  [Events.SUBTITLE_TRACKS_UPDATED]: (event: Events.SUBTITLE_TRACKS_UPDATED, data: SubtitleTracksUpdatedData) => void
+  [Events.SUBTITLE_TRACKS_CLEARED]: (event: Events.SUBTITLE_TRACKS_CLEARED) => void
+  [Events.SUBTITLE_TRACK_SWITCH]: (event: Events.SUBTITLE_TRACK_SWITCH, data: SubtitleTrackSwitchData) => void
+  [Events.SUBTITLE_TRACK_LOADING]: (event: Events.SUBTITLE_TRACK_LOADING, data: SubtitleTrackLoadingData) => void
+  [Events.SUBTITLE_TRACK_LOADED]: (event: Events.SUBTITLE_TRACK_LOADED, data: SubtitleTrackLoadedData) => void
+  [Events.SUBTITLE_FRAG_PROCESSED]: (event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessedData) => void
+  [Events.CUES_PARSED]: (event: Events.CUES_PARSED, data: CuesParsedData) => void
+  [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (event: Events.NON_NATIVE_TEXT_TRACKS_FOUND, data: NonNativeTextTracksData) => void
+  [Events.INIT_PTS_FOUND]: (event: Events.INIT_PTS_FOUND, data: InitPTSFoundData) => void
+  [Events.FRAG_LOADING]: (event: Events.FRAG_LOADING, data: FragLoadingData) => void
   // [Events.FRAG_LOAD_PROGRESS]: TodoEventType
-  [Events.FRAG_LOAD_EMERGENCY_ABORTED]: (data: FragLoadEmergencyAbortedData) => void
-  [Events.FRAG_LOADED]: (data: FragLoadedData) => void
-  [Events.FRAG_DECRYPTED]: (data: FragDecryptedData) => void
-  [Events.FRAG_PARSING_INIT_SEGMENT]: (data: FragParsingInitSegmentData) => void
-  [Events.FRAG_PARSING_USERDATA]: (data: FragParsingUserdataData) => void
-  [Events.FRAG_PARSING_METADATA]: (data: FragParsingMetadataData) => void
+  [Events.FRAG_LOAD_EMERGENCY_ABORTED]: (event: Events.FRAG_LOAD_EMERGENCY_ABORTED, data: FragLoadEmergencyAbortedData) => void
+  [Events.FRAG_LOADED]: (event: Events.FRAG_LOADED, data: FragLoadedData) => void
+  [Events.FRAG_DECRYPTED]: (event: Events.FRAG_DECRYPTED, data: FragDecryptedData) => void
+  [Events.FRAG_PARSING_INIT_SEGMENT]: (event: Events.FRAG_PARSING_INIT_SEGMENT, data: FragParsingInitSegmentData) => void
+  [Events.FRAG_PARSING_USERDATA]: (event: Events.FRAG_PARSING_USERDATA, data: FragParsingUserdataData) => void
+  [Events.FRAG_PARSING_METADATA]: (event: Events.FRAG_PARSING_METADATA, data: FragParsingMetadataData) => void
   // [Events.FRAG_PARSING_DATA]: TodoEventType
-  [Events.FRAG_PARSED]: (data: FragParsedData) => void
-  [Events.FRAG_BUFFERED]: (data: FragBufferedData) => void
-  [Events.FRAG_CHANGED]: (data: FragChangedData) => void
-  [Events.FPS_DROP]: (data: FPSDropData) => void
-  [Events.FPS_DROP_LEVEL_CAPPING]: (data: FPSDropLevelCappingData) => void
-  [Events.ERROR]: (data: ErrorData) => void
-  [Events.DESTROYING]: () => void
-  [Events.KEY_LOADING]: (data: KeyLoadingData) => void
-  [Events.KEY_LOADED]: (data: KeyLoadedData) => void
+  [Events.FRAG_PARSED]: (event: Events.FRAG_PARSED, data: FragParsedData) => void
+  [Events.FRAG_BUFFERED]: (event: Events.FRAG_BUFFERED, data: FragBufferedData) => void
+  [Events.FRAG_CHANGED]: (event: Events.FRAG_CHANGED, data: FragChangedData) => void
+  [Events.FPS_DROP]: (event: Events.FPS_DROP, data: FPSDropData) => void
+  [Events.FPS_DROP_LEVEL_CAPPING]: (event: Events.FPS_DROP_LEVEL_CAPPING, data: FPSDropLevelCappingData) => void
+  [Events.ERROR]: (event: Events.ERROR, data: ErrorData) => void
+  [Events.DESTROYING]: (event: Events.DESTROYING) => void
+  [Events.KEY_LOADING]: (event: Events.KEY_LOADING, data: KeyLoadingData) => void
+  [Events.KEY_LOADED]: (event: Events.KEY_LOADED, data: KeyLoadedData) => void
 }
 export interface HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context): void
@@ -180,6 +180,6 @@ export interface HlsEventEmitter {
   off<E extends keyof HlsListeners, Context = undefined> (event: E, listener?: HlsListeners[E], context?: Context, once?: boolean): void
 
   listeners<E extends keyof HlsListeners> (event: E): HlsListeners[E][]
-  emit<E extends keyof HlsListeners> (event: E, ...args: Parameters<HlsListeners[E]>): boolean
+  emit<E extends keyof HlsListeners> (event: E, name: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean
   listenerCount<E extends keyof HlsListeners> (event: E): number
 }

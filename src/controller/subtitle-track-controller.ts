@@ -46,7 +46,7 @@ class SubtitleTrackController implements ComponentAPI {
   }
 
   // Listen for subtitle track change, then extract the current track ID.
-  protected onMediaAttached (data: MediaAttachedData): void {
+  protected onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void {
     this.media = data.media;
     if (!this.media) {
       return;
@@ -82,11 +82,11 @@ class SubtitleTrackController implements ComponentAPI {
   }
 
   // Fired whenever a new manifest is loaded.
-  protected onManifestLoaded (data: ManifestLoadedData): void {
+  protected onManifestLoaded (event: Events.MANIFEST_LOADED, data: ManifestLoadedData): void {
     const subtitleTracks = data.subtitles || [];
     this.tracks = subtitleTracks;
     const subtitleTracksUpdated: SubtitleTracksUpdatedData = { subtitleTracks };
-    this.hls.emit(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
+    this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
     // loop through available subtitle tracks and autoselect default if needed
     // TODO: improve selection logic to handle forced, etc
@@ -105,7 +105,7 @@ class SubtitleTrackController implements ComponentAPI {
     });
   }
 
-  protected onSubtitleTrackLoaded (data: TrackLoadedData): void {
+  protected onSubtitleTrackLoaded (event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void {
     const { id, details } = data;
     const { trackId, tracks } = this;
     const currentTrack = tracks[trackId];
@@ -173,7 +173,7 @@ class SubtitleTrackController implements ComponentAPI {
       return;
     }
     logger.log(`[subtitle-track-controller]: Loading subtitle track ${trackId}`);
-    hls.emit(Events.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
+    hls.trigger(Events.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
   }
 
   /**
@@ -217,7 +217,7 @@ class SubtitleTrackController implements ComponentAPI {
 
     this.trackId = newId;
     logger.log(`[subtitle-track-controller]: Switching to subtitle track ${newId}`);
-    hls.emit(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
+    hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
     this._loadCurrentTrack();
   }
 

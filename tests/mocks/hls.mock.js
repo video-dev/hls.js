@@ -6,7 +6,7 @@ const sinon = require('sinon');
  * All public methods of Hls instance
  */
 const publicMethods = [
-  'emit',
+  'trigger',
   'on',
   'off',
   'destroy',

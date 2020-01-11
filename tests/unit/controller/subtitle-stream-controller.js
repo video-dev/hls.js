@@ -35,7 +35,7 @@ describe('SubtitleStreamController', function () {
 
   describe('onSubtitleTracksUpdate', function () {
     beforeEach(function () {
-      hls.emit(Events.SUBTITLE_TRACKS_UPDATED, {
+      hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, {
         subtitleTracks: tracksMock
       });
     });
@@ -53,7 +53,7 @@ describe('SubtitleStreamController', function () {
       subtitleStreamController.clearInterval = sinon.spy();
       subtitleStreamController.setInterval = sinon.spy();
 
-      hls.emit(Events.SUBTITLE_TRACK_SWITCH, {
+      hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
         id: 0
       });
     });
@@ -64,14 +64,14 @@ describe('SubtitleStreamController', function () {
 
     it('should call clearInterval if no tracks present', function () {
       subtitleStreamController.levels = [];
-      hls.emit(Events.SUBTITLE_TRACK_SWITCH, {
+      hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
         id: 0
       });
       expect(subtitleStreamController.clearInterval).to.have.been.calledOnce;
     });
 
     it('should call clearInterval if new track id === -1', function () {
-      hls.emit(Events.SUBTITLE_TRACK_SWITCH, {
+      hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
         id: -1
       });
       expect(subtitleStreamController.clearInterval).to.have.been.calledOnce;
@@ -88,7 +88,7 @@ describe('SubtitleStreamController', function () {
     it('should handle the event if the data matches the current track', function () {
       const details = { foo: 'bar' };
       subtitleStreamController.currentTrackId = 1;
-      hls.emit(Events.SUBTITLE_TRACK_LOADED, {
+      hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 1,
         details: details
       });
@@ -99,7 +99,7 @@ describe('SubtitleStreamController', function () {
     it('should ignore the event if the data does not match the current track', function () {
       const details = { foo: 'bar' };
       subtitleStreamController.currentTrackId = 0;
-      hls.emit(Events.SUBTITLE_TRACK_LOADED, {
+      hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 1, details
       });
       expect(subtitleStreamController.levels[0].details).to.not.equal(details);
@@ -110,7 +110,7 @@ describe('SubtitleStreamController', function () {
       subtitleStreamController.levels = [];
       subtitleStreamController.trackId = 0;
       const details = { foo: 'bar' };
-      hls.emit(Events.SUBTITLE_TRACK_LOADED, {
+      hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 0, details
       });
       expect(subtitleStreamController.levels[0]).to.not.exist;
@@ -120,12 +120,12 @@ describe('SubtitleStreamController', function () {
 
   describe('onLevelLoaded', function () {
     it('records the start time of the last known A/V track', function () {
-      hls.emit(Events.LEVEL_UPDATED, {
+      hls.trigger(Events.LEVEL_UPDATED, {
         details: { fragments: [{ start: 5 }] }
       });
       expect(subtitleStreamController.lastAVStart).to.equal(5);
 
-      hls.emit(Events.LEVEL_UPDATED, {
+      hls.trigger(Events.LEVEL_UPDATED, {
         details: { fragments: [] }
       });
       expect(subtitleStreamController.lastAVStart).to.equal(0);

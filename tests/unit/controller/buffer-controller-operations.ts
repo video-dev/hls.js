@@ -6,7 +6,7 @@ import Hls from '../../../src/hls';
 import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import BufferController from '../../../src/controller/buffer-controller';
 import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
-import { BufferAppendingEventPayload } from '../../../src/types/events';
+import { BufferAppendingData } from '../../../src/types/events';
 import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import Fragment, { ElementaryStreamTypes } from '../../../src/loader/fragment';
@@ -79,7 +79,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
 
     operationQueue = new BufferOperationQueue(bufferController.sourceBuffer);
     bufferController.operationQueue = operationQueue;
-    triggerSpy = sandbox.spy(hls, 'emit');
+    triggerSpy = sandbox.spy(hls, 'trigger');
     shiftAndExecuteNextSpy = sandbox.spy(operationQueue, 'shiftAndExecuteNext');
     queueAppendBlockerSpy = sandbox.spy(operationQueue, 'appendBlocker');
   });
@@ -143,7 +143,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
         const frag = new Fragment();
         frag.type = PlaylistLevelType.MAIN;
         const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
-        const data: BufferAppendingEventPayload = {
+        const data: BufferAppendingData = {
           type: name,
           data: segmentData,
           frag,

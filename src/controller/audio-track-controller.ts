@@ -113,10 +113,10 @@ class AudioTrackController implements NetworkComponentAPI {
    *
    * Trigger AUDIO_TRACKS_UPDATED event.
    */
-  protected onManifestParsed (data: ManifestParsedData): void {
+  protected onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData): void {
     const tracks = this.tracks = data.audioTracks || [];
     const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks: tracks };
-    this.hls.emit(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
+    this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
   }
 
   /**
@@ -124,7 +124,7 @@ class AudioTrackController implements NetworkComponentAPI {
    *
    * Set-up metadata update interval task for live-mode streams.
    */
-  protected onAudioTrackLoaded (data: AudioTrackLoadedData): void {
+  protected onAudioTrackLoaded (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void {
     const { id, details } = data;
     const currentTrack = this.tracks[id];
     const curDetails = currentTrack.details;
@@ -177,7 +177,7 @@ class AudioTrackController implements NetworkComponentAPI {
    *
    * Quality-levels should update to that group ID in this case.
    */
-  protected onAudioTrackSwitched (data: TrackSwitchedData): void {
+  protected onAudioTrackSwitched (event: Events.AUDIO_TRACK_SWITCHED, data: TrackSwitchedData): void {
     const audioGroupId = this.tracks[data.id].groupId;
     if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
       this.audioGroupId = audioGroupId;
@@ -191,7 +191,7 @@ class AudioTrackController implements NetworkComponentAPI {
    * If group-ID got update, we re-select the appropriate audio-track with this group-ID matching the currently
    * selected one (based on NAME property).
    */
-  protected onLevelLoading (data: LevelLoadingData): void {
+  protected onLevelLoading (event: Events.LEVEL_LOADING, data: LevelLoadingData): void {
     const levelInfo = this.hls.levels[data.level];
 
     if (!levelInfo.audioGroupIds) {
@@ -205,7 +205,7 @@ class AudioTrackController implements NetworkComponentAPI {
     }
   }
 
-  protected onError (data: ErrorData): void {
+  protected onError (event: Events.ERROR, data: ErrorData): void {
     // Only handle network errors
     if (data.type !== ErrorTypes.NETWORK_ERROR) {
       return;
@@ -261,7 +261,7 @@ class AudioTrackController implements NetworkComponentAPI {
     this._trackId = newId;
 
     const { url, type, id } = audioTrack;
-    this.hls.emit(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
+    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
     this._loadTrackDetailsIfNeeded(audioTrack);
   }
 
@@ -314,7 +314,7 @@ class AudioTrackController implements NetworkComponentAPI {
     if (!trackFound) {
       logger.error(`[audio-track-controller]: No track found for running audio group-ID: ${this.audioGroupId}`);
 
-      this.hls.emit(Events.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true
@@ -333,7 +333,7 @@ class AudioTrackController implements NetworkComponentAPI {
       const { url, id } = audioTrack;
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
-      this.hls.emit(Events.AUDIO_TRACK_LOADING, { url, id });
+      this.hls.trigger(Events.AUDIO_TRACK_LOADING, { url, id });
     }
   }
 
