@@ -3,6 +3,7 @@ import HlsMock from '../../mocks/hls.mock';
 import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
 import Hls from '../../../src/hls';
+import { Events } from '../../../src/events';
 
 const sinon = require('sinon');
 
@@ -43,8 +44,8 @@ describe('EMEController', function () {
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
     });
 
-    emeController.onMediaAttached({ media });
-    emeController.onManifestParsed({ media });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, { media });
 
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
@@ -62,12 +63,12 @@ describe('EMEController', function () {
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
     });
 
-    emeController.onMediaAttached({ media });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
 
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
 
-    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: fakeLevels });
 
     setTimeout(function () {
       expect(media.setMediaKeys.callCount).to.equal(0);
@@ -93,8 +94,8 @@ describe('EMEController', function () {
       initData: 'bad data'
     };
 
-    emeController.onMediaAttached({ media });
-    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: fakeLevels });
 
     media.emit('encrypted', badData);
 

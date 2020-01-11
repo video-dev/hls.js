@@ -7,6 +7,7 @@ import { Track, TrackSet } from './track';
 import { SourceBufferName } from './buffer';
 import { ChunkMetadata } from './transmuxer';
 import LoadStats from '../loader/load-stats';
+import { ErrorDetails, ErrorTypes } from '../errors';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement
@@ -190,8 +191,8 @@ export interface FPSDropLevelCappingData {
 }
 
 export interface ErrorData {
-  type: string // TODO: string enum of ErrorTypes values
-  details: string // TODO: string enum of ErrorDetails values
+  type: ErrorTypes
+  details: ErrorDetails
   fatal: boolean
   buffer?: number
   bytes?: number
@@ -207,6 +208,9 @@ export interface ErrorData {
   response?: any
   url?: string
   parent?: PlaylistLevelType
+  err?: { // comes from transmuxer interface
+    message: string;
+  }
 }
 
 export interface SubtitleFragProcessedData {
