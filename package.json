@@ -68,7 +68,7 @@
     "babel-loader": "8.0.4",
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.2.0",
-    "chromedriver": "78.0.1",
+    "chromedriver": "^79.0.0",
     "eslint": "^6.4.0",
     "eslint-config-standard": "^14.1.0",
     "eslint-plugin-import": "^2.18.2",
