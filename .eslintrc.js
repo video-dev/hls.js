@@ -125,7 +125,7 @@ module.exports = {
       'files': ['*.ts'],
       'rules': {
         'no-unused-vars': 0,
-        '@typescript-eslint/no-unused-vars': 2,
+        '@typescript-eslint/no-unused-vars': 1,
         '@typescript-eslint/prefer-optional-chain': 2,
         '@typescript-eslint/consistent-type-assertions': [ 2,
           {
