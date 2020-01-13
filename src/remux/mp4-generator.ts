@@ -2,9 +2,65 @@
  * Generate MP4 Box
 */
 
+type MP4Types = {
+  avc1: number[],
+  avcC: number[],
+  btrt: number[],
+  dinf: number[],
+  dref: number[],
+  esds: number[],
+  ftyp: number[],
+  hdlr: number[],
+  mdat: number[],
+  mdhd: number[],
+  mdia: number[],
+  mfhd: number[],
+  minf: number[],
+  moof: number[],
+  moov: number[],
+  mp4a: number[],
+  '.mp3': number[],
+  mvex: number[],
+  mvhd: number[],
+  pasp: number[],
+  sdtp: number[],
+  stbl: number[],
+  stco: number[],
+  stsc: number[],
+  stsd: number[],
+  stsz: number[],
+  stts: number[],
+  tfdt: number[],
+  tfhd: number[],
+  traf: number[],
+  trak: number[],
+  trun: number[],
+  trex: number[],
+  tkhd: number[],
+  vmhd: number[],
+  smhd: number[]
+}
+
+type HdlrTypes = {
+  video: Uint8Array,
+  audio: Uint8Array
+}
+
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
 class MP4 {
+  public static types: MP4Types;
+  private static HDLR_TYPES: HdlrTypes;
+  private static STTS: Uint8Array;
+  private static STSC: Uint8Array;
+  private static STCO: Uint8Array;
+  private static STSZ: Uint8Array;
+  private static VMHD: Uint8Array;
+  private static SMHD: Uint8Array;
+  private static STSD: Uint8Array;
+  private static FTYP: Uint8Array;
+  private static DINF: Uint8Array;
+
   static init () {
     MP4.types = {
       avc1: [], // codingname
@@ -45,7 +101,7 @@ class MP4 {
       smhd: []
     };
 
-    let i;
+    let i: string;
     for (i in MP4.types) {
       if (MP4.types.hasOwnProperty(i)) {
         MP4.types[i] = [
@@ -140,7 +196,7 @@ class MP4 {
     MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, dref));
   }
 
-  static box (type) {
+  static box (type, ...args: Uint8Array[]) {
     const payload = Array.prototype.slice.call(arguments, 1);
     let size = 8;
     let i = payload.length;
@@ -231,7 +287,7 @@ class MP4 {
  */
   static moov (tracks) {
     let i = tracks.length;
-    const boxes = [];
+    const boxes: Uint8Array[] = [];
 
     while (i--) {
       boxes[i] = MP4.trak(tracks[i]);
@@ -242,13 +298,13 @@ class MP4 {
 
   static mvex (tracks) {
     let i = tracks.length;
-    const boxes = [];
+    const boxes: Uint8Array[] = [];
 
     while (i--) {
       boxes[i] = MP4.trex(tracks[i]);
     }
 
-    return MP4.box.apply(null, [MP4.types.mvex].concat(boxes));
+    return MP4.box.apply(null, [MP4.types.mvex, ...boxes]);
   }
 
   static mvhd (timescale, duration) {
@@ -320,8 +376,8 @@ class MP4 {
   }
 
   static avc1 (track) {
-    let sps = [];
-    let pps = [];
+    let sps: number[] = [];
+    let pps: number[] = [];
     let i;
     let data;
     let len;
