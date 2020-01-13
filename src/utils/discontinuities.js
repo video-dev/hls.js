@@ -1,4 +1,3 @@
-import BinarySearch from './binary-search';
 import { logger } from '../utils/logger';
 
 export function findFirstFragWithCC (fragments, cc) {

@@ -62,7 +62,7 @@ HttpServer.createServer({
   root: './'
 }).listen(8000, hostname);
 
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const wait = ms => new Promise(resolve => self.setTimeout(resolve, ms));
 async function retry (attempt, numAttempts = 5, interval = 2000) {
   try {
     return await attempt();
@@ -166,26 +166,26 @@ async function testSeekOnVOD (url, config) {
   expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
 }
 
-async function testSeekEndVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      const callback = arguments[arguments.length - 1];
-      self.startStream(url, config, callback);
-      const video = self.video;
-      video.onloadeddata = function () {
-        self.setTimeout(function () {
-          video.currentTime = video.duration;
-        }, 5000);
-      };
-      video.onended = function () {
-        callback({ code: 'ended', logs: self.logString });
-      };
-    },
-    url,
-    config
-  );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
-}
+// async function testSeekEndVOD (url, config) {
+//   const result = await browser.executeAsyncScript(
+//     (url, config) => {
+//       const callback = arguments[arguments.length - 1];
+//       self.startStream(url, config, callback);
+//       const video = self.video;
+//       video.onloadeddata = function () {
+//         self.setTimeout(function () {
+//           video.currentTime = video.duration;
+//         }, 5000);
+//       };
+//       video.onended = function () {
+//         callback({ code: 'ended', logs: self.logString });
+//       };
+//     },
+//     url,
+//     config
+//   );
+//   expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
+// }
 
 async function testIsPlayingVOD (url, config) {
   const result = await browser.executeAsyncScript(
@@ -296,7 +296,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
             browser.manage().setTimeouts({ script: 75000 }),
             browser.getSession()
           ]);
-          console.log(`Retrieved session in ${Date.now() - start}ms`);
+          console.log(`Retrieved session in ${Date.now() - start}ms. timeouts ${timeouts}`);
           if (onTravis) {
             console.log(
               `Job URL: https://saucelabs.com/jobs/${session.getId()}`
@@ -388,6 +388,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           `should seek 5s from end and receive video ended event for ${stream.description}`,
           testSeekOnVOD.bind(null, url, config)
         );
+        // TODO: Seeking to or past VOD duration should result in the video ending
         // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
       }
     }

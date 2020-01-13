@@ -34,16 +34,19 @@ export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number
   if (Number.isFinite(fragToPTS)) {
     // update fragment duration.
     // it helps to fix drifts between playlist reported duration and fragment real duration
+    let duration: number = 0;
+    let frag: Fragment;
     if (toIdx > fromIdx) {
-      fragFrom.duration = fragToPTS - fragFrom.start;
-      if (fragFrom.duration < 0) {
-        logger.warn(`negative duration computed for frag ${fragFrom.sn},level ${fragFrom.level}, there should be some duration drift between playlist and fragment!`);
-      }
+      duration = fragToPTS - fragFrom.start;
+      frag = fragFrom;
     } else {
-      fragTo.duration = fragFrom.start - fragToPTS;
-      if (fragTo.duration < 0) {
-        logger.warn(`negative duration computed for frag ${fragTo.sn},level ${fragTo.level}, there should be some duration drift between playlist and fragment!`);
-      }
+      duration = fragFrom.start - fragToPTS;
+      frag = fragTo;
+    }
+    console.assert(duration > 0,
+      `duration of ${duration} computed for frag ${frag.sn}, level ${frag.level}, there should be some duration drift between playlist and fragment!`);
+    if (frag.duration !== duration) {
+      frag.duration = duration;
     }
   } else {
     // we dont know startPTS[toIdx]

@@ -30,7 +30,7 @@ class FPSController extends EventHandler {
       }
 
       clearInterval(this.timer);
-      this.timer = setInterval(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);
+      this.timer = self.setTimeout(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);
     }
   }
 

@@ -1,7 +1,6 @@
 /**
  * MP4 demuxer
  */
-import { logger } from '../utils/logger';
 import { Demuxer, DemuxerResult, DemuxedTrack } from '../types/demuxer';
 import { findBox, segmentValidRange, appendUint8Array } from '../utils/mp4-tools';
 import { dummyTrack } from './dummy-demuxed-track';
