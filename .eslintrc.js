@@ -77,6 +77,18 @@ module.exports = {
       {
         'name': 'window',
         'message': 'Use `self` instead of `window` to access the global context everywhere (including workers).'
+      },
+      {
+        'name': 'SourceBuffer',
+        'message': 'Use `self.SourceBuffer`'
+      },
+      {
+        'name': 'setTimeout',
+        'message': 'Use `self.setTimeout`'
+      },
+      {
+        'name': 'setInterval',
+        'message': 'Use `self.setInterval`'
       }
     ],
 
@@ -90,10 +102,10 @@ module.exports = {
     'no-var': 1,
     'no-empty': 1,
     'no-mixed-operators': 1,
-    'no-unused-vars': 1,
+    'no-unused-vars': 2,
     'no-console': 1,
     'no-fallthrough': 1,
-    'no-case-declarations': 1,
+    'no-case-declarations': 2,
     'no-irregular-whitespace': 1,
     'no-self-assign': 1,
     'new-cap': 1,
@@ -113,7 +125,7 @@ module.exports = {
       'files': ['*.ts'],
       'rules': {
         'no-unused-vars': 0,
-        '@typescript-eslint/no-unused-vars': 1,
+        '@typescript-eslint/no-unused-vars': 2,
         '@typescript-eslint/prefer-optional-chain': 2,
         '@typescript-eslint/consistent-type-assertions': [ 2,
           {

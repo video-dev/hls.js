@@ -338,10 +338,10 @@ export default class StreamController extends BaseStreamController {
       let fetchdelay;
       let nextBufferedFrag;
       const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
-      if (fragPlayingCurrent && fragPlayingCurrent.startPTS > 1) {
+      if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
         // flush buffer preceding current fragment (flush until current fragment start offset)
         // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-        this.flushMainBuffer(0, fragPlayingCurrent.startPTS - 1);
+        this.flushMainBuffer(0, fragPlayingCurrent.start - 1);
       }
       if (!media.paused && levels) {
         // add a safety delay of 1s

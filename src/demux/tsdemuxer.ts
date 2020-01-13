@@ -21,7 +21,8 @@ import {
   DemuxedAudioTrack,
   DemuxedTrack,
   Demuxer,
-  DemuxerResult
+  DemuxerResult,
+  AvcSample
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
@@ -64,7 +65,7 @@ class TSDemuxer implements Demuxer {
   private _id3Track!: DemuxedTrack;
   private _txtTrack!: DemuxedTrack;
   private aacOverFlow: any;
-  private avcSample: any;
+  private avcSample: AvcSample | null = null;
   private remainderData: Uint8Array | null = null;
 
   constructor (observer, config, typeSupported) {
@@ -234,7 +235,7 @@ class TSDemuxer implements Demuxer {
         switch (pid) {
         case avcId:
           if (stt) {
-            if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
+            if (avcData && (pes = parsePES(avcData))) {
               this._parseAVCPES(pes, false);
             }
 
@@ -247,7 +248,7 @@ class TSDemuxer implements Demuxer {
           break;
         case audioId:
           if (stt) {
-            if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
+            if (audioData && (pes = parsePES(audioData))) {
               if (audioTrack.isAAC) {
                 this._parseAACPES(pes);
               } else {
@@ -263,7 +264,7 @@ class TSDemuxer implements Demuxer {
           break;
         case id3Id:
           if (stt) {
-            if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
+            if (id3Data && (pes = parsePES(id3Data))) {
               this._parseID3PES(pes);
             }
 
@@ -281,7 +282,7 @@ class TSDemuxer implements Demuxer {
 
           pmtId = this._pmtId = parsePAT(data, offset);
           break;
-        case pmtId:
+        case pmtId: {
           if (stt) {
             offset += data[offset] + 1;
           }
@@ -317,6 +318,7 @@ class TSDemuxer implements Demuxer {
           }
           pmtParsed = this.pmtParsed = true;
           break;
+        }
         case 17:
         case 0x1fff:
           break;
@@ -369,7 +371,7 @@ class TSDemuxer implements Demuxer {
     const id3Data = id3Track.pesData;
     // try to parse last PES packets
     let pes;
-    if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
+    if (avcData && (pes = parsePES(avcData))) {
       this._parseAVCPES(pes, true);
       avcTrack.pesData = null;
     } else {
@@ -377,7 +379,7 @@ class TSDemuxer implements Demuxer {
       avcTrack.pesData = avcData;
     }
 
-    if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
+    if (audioData && (pes = parsePES(audioData))) {
       if (audioTrack.isAAC) {
         this._parseAACPES(pes);
       } else {
@@ -394,7 +396,7 @@ class TSDemuxer implements Demuxer {
       audioTrack.pesData = audioData;
     }
 
-    if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
+    if (id3Data && (pes = parsePES(id3Data))) {
       this._parseID3PES(pes);
       id3Track.pesData = null;
     } else {
@@ -441,6 +443,20 @@ class TSDemuxer implements Demuxer {
 
   pushAccessUnit (avcSample, avcTrack) {
     if (avcSample.units.length && avcSample.frame) {
+      // if sample does not have PTS/DTS, patch with last sample PTS/DTS
+      if (isNaN(avcSample.pts)) {
+        const samples = avcTrack.samples;
+        const nbSamples = samples.length;
+        if (nbSamples) {
+          const lastSample = samples[nbSamples - 1];
+          avcSample.pts = lastSample.pts;
+          avcSample.dts = lastSample.dts;
+        } else {
+          // dropping samples, no timestamp found
+          avcTrack.dropped++;
+          return;
+        }
+      }
       avcTrack.samples.push(avcSample);
     }
     if (avcSample.debug.length) {
@@ -451,7 +467,7 @@ class TSDemuxer implements Demuxer {
   _parseAVCPES (pes, last) {
     // logger.log('parse new PES');
     const track = this._avcTrack;
-    const units = this._parseAVCNALu(pes.data) as Array<any>;
+    const units = this._parseAVCNALu(pes.data);
     const debug = false;
     let expGolombDecoder;
     let avcSample = this.avcSample;
@@ -459,9 +475,6 @@ class TSDemuxer implements Demuxer {
     let spsfound = false;
     let i;
     const pushAccessUnit = this.pushAccessUnit.bind(this);
-    const createAVCSample = function (key, pts, dts, debug) {
-      return { key: key, pts: pts, dts: dts, units: [], debug: debug };
-    };
     // free pes.data to save up some memory
     pes.data = null;
 
@@ -726,7 +739,7 @@ class TSDemuxer implements Demuxer {
     return lastUnit;
   }
 
-  _parseAVCNALu (array) {
+  _parseAVCNALu (array): Array<any> {
     const len = array.byteLength;
     const track = this._avcTrack;
     let state = track.naluState || 0;
@@ -987,6 +1000,18 @@ class TSDemuxer implements Demuxer {
   _parseID3PES (pes) {
     this._id3Track.samples.push(pes);
   }
+}
+
+function createAVCSample (key: boolean, pts: number, dts: number, debug: string): AvcSample {
+  return {
+    key,
+    frame: false,
+    pts,
+    dts,
+    units: [],
+    debug,
+    length: 0
+  };
 }
 
 function parsePAT (data, offset) {

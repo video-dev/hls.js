@@ -61,6 +61,7 @@ export default class BaseStreamController extends TaskLoop {
 
   protected onTickEnd () {}
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public startLoad (startPosition: number) : void {}
 
   public stopLoad () {
@@ -217,6 +218,7 @@ export default class BaseStreamController extends TaskLoop {
     return frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected _handleFragmentLoadComplete (frag: Fragment, payload: ArrayBuffer | Uint8Array) {
     const { transmuxer } = this;
     if (!transmuxer) {
@@ -227,6 +229,7 @@ export default class BaseStreamController extends TaskLoop {
     transmuxer.flush(chunkMeta);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected _handleFragmentLoadProgress (frag: Fragment, payload: ArrayBuffer | Uint8Array) {}
 
   protected _doFragLoad (frag: Fragment, progressCallback?: FragmentLoadProgressCallback) {
