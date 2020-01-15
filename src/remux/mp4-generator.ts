@@ -196,8 +196,7 @@ class MP4 {
     MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, dref));
   }
 
-  static box (type, ...args: Uint8Array[]) {
-    const payload = Array.prototype.slice.call(arguments, 1);
+  static box (type, ...payload: Uint8Array[]) {
     let size = 8;
     let i = payload.length;
     const len = i;
