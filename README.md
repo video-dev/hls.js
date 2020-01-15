@@ -69,13 +69,13 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
     hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED,function() {
       video.play();
-  });
- }
- // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
- // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element through the `src` property.
- // This is using the built-in support of the plain video element, without using hls.js.
- // Note: it would be more normal to wait on the 'canplay' event below however on Safari (where you are most likely to find built-in HLS support) the video.src URL must be on the user-driven
- // white-list before a 'canplay' event will be emitted; the last video event that can be reliably listened-for when the URL is not on the white-list is 'loadedmetadata'.
+    });
+  }
+  // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
+  // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element through the `src` property.
+  // This is using the built-in support of the plain video element, without using hls.js.
+  // Note: it would be more normal to wait on the 'canplay' event below however on Safari (where you are most likely to find built-in HLS support) the video.src URL must be on the user-driven
+  // white-list before a 'canplay' event will be emitted; the last video event that can be reliably listened-for when the URL is not on the white-list is 'loadedmetadata'.
   else if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8';
     video.addEventListener('loadedmetadata',function() {
@@ -216,9 +216,9 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Adaptive streaming
     - Manual & Auto Quality Switching
       - 3 Quality Switching modes are available (controllable through API means)
-      	- Instant switching (immediate quality switch at current video position)
-      	- Smooth switching (quality switch for next loaded fragment)
-      	- Bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
+        - Instant switching (immediate quality switch at current video position)
+        - Smooth switching (quality switch for next loaded fragment)
+        - Bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
       - In Auto-Quality mode, emergency switch down in case bandwidth is suddenly dropping to minimize buffering.
   - Accurate Seeking on VoD & Live (not limited to fragment or keyframe boundary)
   - Ability to seek in buffer and back buffer without redownloading segments
@@ -241,6 +241,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `#EXT-X-ENDLIST` (Live playlist)
   - `#EXT-X-MEDIA-SEQUENCE`
   - `#EXT-X-TARGETDURATION`
+  - `#EXT-X-CONTINUITY`
   - `#EXT-X-DISCONTINUITY`
   - `#EXT-X-DISCONTINUITY-SEQUENCE`
   - `#EXT-X-BYTERANGE`
@@ -248,6 +249,8 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `#EXT-X-KEY` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4)
   - `#EXT-X-PROGRAM-DATE-TIME` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.2.6)
   - `EXT-X-START:TIME-OFFSET=x` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.5.2)
+  - `#EXT-X-PREFETCH`
+  - `#EXT-X-PREFETCH-DISCONTINUITY`
 
 ## License
 
