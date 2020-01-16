@@ -2,45 +2,6 @@
  * Generate MP4 Box
 */
 
-type MP4Types = {
-  avc1: number[],
-  avcC: number[],
-  btrt: number[],
-  dinf: number[],
-  dref: number[],
-  esds: number[],
-  ftyp: number[],
-  hdlr: number[],
-  mdat: number[],
-  mdhd: number[],
-  mdia: number[],
-  mfhd: number[],
-  minf: number[],
-  moof: number[],
-  moov: number[],
-  mp4a: number[],
-  '.mp3': number[],
-  mvex: number[],
-  mvhd: number[],
-  pasp: number[],
-  sdtp: number[],
-  stbl: number[],
-  stco: number[],
-  stsc: number[],
-  stsd: number[],
-  stsz: number[],
-  stts: number[],
-  tfdt: number[],
-  tfhd: number[],
-  traf: number[],
-  trak: number[],
-  trun: number[],
-  trex: number[],
-  tkhd: number[],
-  vmhd: number[],
-  smhd: number[]
-}
-
 type HdlrTypes = {
   video: Uint8Array,
   audio: Uint8Array
@@ -49,7 +10,7 @@ type HdlrTypes = {
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
 class MP4 {
-  public static types: MP4Types;
+  public static types: Record<string, number[]>;
   private static HDLR_TYPES: HdlrTypes;
   private static STTS: Uint8Array;
   private static STSC: Uint8Array;
