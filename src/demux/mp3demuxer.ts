@@ -52,6 +52,9 @@ class MP3Demuxer extends BaseAudioDemuxer {
   }
 
   appendFrame (track, data, offset) {
+    if (!this.initPTS) {
+      return undefined;
+    }
     return MpegAudio.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
   }
 }
