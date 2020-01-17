@@ -7,10 +7,11 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import {
   DemuxedAudioTrack
 } from '../types/demuxer';
+import { Observer } from '../observer';
 
 import Event from '../events';
 
-export function getAudioConfig (observer, data, offset: number, audioCodec: string) {
+export function getAudioConfig (observer: Observer, data: Uint8Array, offset: number, audioCodec: string) {
   let adtsObjectType: number; // :int
   let adtsExtensionSampleingIndex: number; // :int
   let adtsChanelConfig: number; // :int
@@ -190,7 +191,7 @@ export function probe (data: Uint8Array, offset: number): boolean {
   return false;
 }
 
-export function initTrackConfig (track: DemuxedAudioTrack, observer, data: Uint8Array, offset: number, audioCodec: string): void {
+export function initTrackConfig (track: DemuxedAudioTrack, observer: Observer, data: Uint8Array, offset: number, audioCodec: string): void {
   if (!track.samplerate) {
     const config = getAudioConfig(observer, data, offset, audioCodec);
     if (!config) {
