@@ -930,6 +930,11 @@ class TSDemuxer implements Demuxer {
     }
 
     ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
+
+    if (!track.samplerate) {
+      return;
+    }
+
     frameIndex = 0;
     const frameDuration = ADTS.getFrameDuration(track.samplerate);
 

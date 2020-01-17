@@ -4,14 +4,17 @@
  */
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import {
+  DemuxedAudioTrack
+} from '../types/demuxer';
 
 import Event from '../events';
 
-export function getAudioConfig (observer, data, offset, audioCodec) {
-  let adtsObjectType; // :int
-  let adtsExtensionSampleingIndex; // :int
-  let adtsChanelConfig; // :int
-  let config;
+export function getAudioConfig (observer, data, offset: number, audioCodec: string) {
+  let adtsObjectType: number; // :int
+  let adtsExtensionSampleingIndex: number; // :int
+  let adtsChanelConfig: number; // :int
+  let config: number[];
   const userAgent = navigator.userAgent.toLowerCase();
   const manifestCodec = audioCodec;
   const adtsSampleingRates = [
@@ -130,25 +133,25 @@ export function getAudioConfig (observer, data, offset, audioCodec) {
   return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: ('mp4a.40.' + adtsObjectType), manifestCodec: manifestCodec };
 }
 
-export function isHeaderPattern (data, offset) {
+export function isHeaderPattern (data: Uint8Array, offset: number): boolean {
   return data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0;
 }
 
-export function getHeaderLength (data, offset) {
+export function getHeaderLength (data: Uint8Array, offset: number): number {
   return (data[offset + 1] & 0x01 ? 7 : 9);
 }
 
-export function getFullFrameLength (data, offset) {
+export function getFullFrameLength (data: Uint8Array, offset: number): number {
   return ((data[offset + 3] & 0x03) << 11) |
     (data[offset + 4] << 3) |
     ((data[offset + 5] & 0xE0) >>> 5);
 }
 
-export function canGetFrameLength (data, offset) {
+export function canGetFrameLength (data: Uint8Array, offset: number): boolean {
   return offset + 5 < data.length;
 }
 
-export function isHeader (data, offset) {
+export function isHeader (data: Uint8Array, offset: number): boolean {
   // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
   // Layer bits (position 14 and 15) in header should be always 0 for ADTS
   // More info https://wiki.multimedia.cx/index.php?title=ADTS
@@ -159,7 +162,7 @@ export function isHeader (data, offset) {
   return false;
 }
 
-export function canParse (data, offset) {
+export function canParse (data: Uint8Array, offset: number): boolean {
   return (
     canGetFrameLength(data, offset) &&
     isHeaderPattern(data, offset) &&
@@ -167,7 +170,7 @@ export function canParse (data, offset) {
   );
 }
 
-export function probe (data, offset) {
+export function probe (data: Uint8Array, offset: number): boolean {
   // same as isHeader but we also check that ADTS frame follows last ADTS frame
   // or end of data is reached
   if (isHeader(data, offset)) {
@@ -187,9 +190,13 @@ export function probe (data, offset) {
   return false;
 }
 
-export function initTrackConfig (track, observer, data, offset, audioCodec) {
+export function initTrackConfig (track: DemuxedAudioTrack, observer, data: Uint8Array, offset: number, audioCodec: string): void {
   if (!track.samplerate) {
     const config = getAudioConfig(observer, data, offset, audioCodec);
+    if (!config) {
+      return;
+    }
+
     track.config = config.config;
     track.samplerate = config.samplerate;
     track.channelCount = config.channelCount;
@@ -199,11 +206,11 @@ export function initTrackConfig (track, observer, data, offset, audioCodec) {
   }
 }
 
-export function getFrameDuration (samplerate) {
+export function getFrameDuration (samplerate: number): number {
   return 1024 * 90000 / samplerate;
 }
 
-export function parseFrameHeader (data, offset, pts, frameIndex, frameDuration) {
+export function parseFrameHeader (data: Uint8Array, offset: number, pts: number, frameIndex: number, frameDuration: number) {
   const length = data.length;
 
   // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
@@ -221,7 +228,11 @@ export function parseFrameHeader (data, offset, pts, frameIndex, frameDuration) 
   return undefined;
 }
 
-export function appendFrame (track, data, offset, pts, frameIndex) {
+export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number) {
+  if (!track.samplerate) {
+    return undefined;
+  }
+
   const frameDuration = getFrameDuration(track.samplerate);
   const header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
   if (header) {
