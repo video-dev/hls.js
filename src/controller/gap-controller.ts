@@ -83,7 +83,8 @@ export default class GapController {
       // Waiting for seeking in a buffered range to complete
       const hasEnoughBuffer = bufferInfo.len > MAX_START_GAP_JUMP;
       // Next buffered range is too far ahead to jump to while still seeking
-      const noBufferGap = !nextStart || nextStart - currentTime > MAX_START_GAP_JUMP;
+      const noBufferGap = !nextStart ||
+        (nextStart - currentTime > MAX_START_GAP_JUMP && !this.fragmentTracker.getPartialFragment(currentTime));
       if (hasEnoughBuffer || noBufferGap) {
         return;
       }
