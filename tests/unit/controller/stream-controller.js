@@ -305,4 +305,30 @@ describe('StreamController', function () {
       });
     });
   });
+
+  describe('computeLivePosition', function () {
+    it('should return the current live sync position according to liveSyncDuration', function () {
+      streamController.config.liveSyncDuration = 2;
+      const levelDetails = { totalduration: 20 };
+      const liveSyncPosition = streamController.computeLivePosition(8, levelDetails);
+      expect(liveSyncPosition).to.equal(26);
+    });
+
+    it('should return the current live sync position according to liveSyncDurationCount', function () {
+      streamController.config.liveSyncDurationCount = 2;
+      const levelDetails = { totalduration: 20, targetduration: 0.5 };
+      const liveSyncPosition = streamController.computeLivePosition(8, levelDetails);
+      expect(liveSyncPosition).to.equal(27);
+    });
+
+    it('should not return value that is less than the video current time', function () {
+      streamController.media = {
+        currentTime: 25
+      };
+      streamController.config.liveSyncDuration = 1;
+      const levelDetails = { totalduration: 14 };
+      const liveSyncPosition = streamController.computeLivePosition(8, levelDetails);
+      expect(liveSyncPosition).to.equal(25);
+    });
+  });
 });
