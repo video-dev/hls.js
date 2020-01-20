@@ -24,17 +24,19 @@ class FPSController implements ComponentAPI {
 
   constructor (hls: Hls) {
     this.hls = hls;
+
+    this.registerListeners();
   }
 
   public setStreamController (streamController: StreamController) {
     this.streamController = streamController;
   }
 
-  private _registerListeners () {
+  protected registerListeners () {
     this.hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
   }
 
-  private _unregisterListeners () {
+  protected unregisterListeners () {
     this.hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching);
   }
 
@@ -43,10 +45,11 @@ class FPSController implements ComponentAPI {
       clearInterval(this.timer);
     }
 
+    this.unregisterListeners();
     this.isVideoPlaybackQualityAvailable = false;
   }
 
-  onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
+  protected onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     const config = this.hls.config;
     if (config.capLevelOnFPSDrop) {
       const video = data.media instanceof self.HTMLVideoElement ? data.media : null;
