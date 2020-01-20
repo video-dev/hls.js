@@ -141,7 +141,7 @@ export type HlsConfig =
     // EME
     emeController?: typeof EMEController,
 
-    abrController: any, // TODO(typescript-abrcontroller): Type once file is done
+    abrController: typeof AbrController,
     bufferController: typeof BufferController,
     capLevelController: typeof CapLevelController,
     fpsController: typeof FPSController,

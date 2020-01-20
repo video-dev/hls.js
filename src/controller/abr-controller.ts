@@ -35,10 +35,10 @@ class AbrController implements ComponentAPI {
     const config = hls.config;
     this.bwEstimator = new EwmaBandWidthEstimator(config.abrEwmaSlowVoD, config.abrEwmaFastVoD, config.abrEwmaDefaultEstimate);
 
-    this._registerListeners();
+    this.registerListeners();
   }
 
-  private _registerListeners () {
+  protected registerListeners () {
     const { hls } = this;
     hls.on(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
@@ -47,7 +47,7 @@ class AbrController implements ComponentAPI {
     hls.on(Events.ERROR, this.onError, this);
   }
 
-  private _unregisterListeners () {
+  protected unregisterListeners () {
     const { hls } = this;
     hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
@@ -56,12 +56,12 @@ class AbrController implements ComponentAPI {
     hls.off(Events.ERROR, this.onError, this);
   }
 
-  destroy () {
-    this._unregisterListeners();
+  public destroy () {
+    this.unregisterListeners();
     this.clearTimer();
   }
 
-  private onFragLoading (event: Events.FRAG_LOADING, data: FragLoadingData) {
+  protected onFragLoading (event: Events.FRAG_LOADING, data: FragLoadingData) {
     const frag = data.frag;
     if (frag.type === 'main') {
       if (!this.timer) {
@@ -71,7 +71,7 @@ class AbrController implements ComponentAPI {
     }
   }
 
-  private onLevelLoaded (event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  protected onLevelLoaded (event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     const config = this.hls.config;
     if (data.details.live) {
       this.bwEstimator.update(config.abrEwmaSlowLive, config.abrEwmaFastLive);
@@ -165,7 +165,7 @@ class AbrController implements ComponentAPI {
     hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
   }
 
-  private onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData) {
+  protected onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData) {
     const frag = data.frag;
     const stats = frag.stats;
     if (frag.type === 'main' && Number.isFinite(frag.sn as number)) {
@@ -191,7 +191,7 @@ class AbrController implements ComponentAPI {
     }
   }
 
-  private onFragBuffered (event: Events.FRAG_BUFFERED, data: Omit<FragBufferedData, 'id'>) {
+  protected onFragBuffered (event: Events.FRAG_BUFFERED, data: Omit<FragBufferedData, 'id'>) {
     const frag = data.frag;
     const stats = frag.stats;
 
@@ -216,7 +216,7 @@ class AbrController implements ComponentAPI {
     }
   }
 
-  private onError (event: Events.ERROR, data: ErrorData) {
+  protected onError (event: Events.ERROR, data: ErrorData) {
     // stop timer in case of frag loading error
     switch (data.details) {
     case ErrorDetails.FRAG_LOAD_ERROR:
