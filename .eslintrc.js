@@ -103,7 +103,6 @@ module.exports = {
     'no-empty': 1,
     'no-mixed-operators': 1,
     'no-unused-vars': 2,
-    '@typescript-eslint/no-unused-vars': 1,
     'no-console': 1,
     'no-fallthrough': 1,
     'no-case-declarations': 2,
@@ -119,12 +118,22 @@ module.exports = {
     'no-void': 0,
     'no-useless-catch': 2,
     'lines-between-class-members': 2,
-    'no-prototype-builtins': 0,
-    '@typescript-eslint/consistent-type-assertions': [ 2,
-      {
-        'assertionStyle': 'as',
-        'objectLiteralTypeAssertions': 'never'
+    'no-prototype-builtins': 0
+  },
+  'overrides': [
+    {
+      'files': ['*.ts'],
+      'rules': {
+        'no-unused-vars': 0,
+        '@typescript-eslint/no-unused-vars': 1,
+        '@typescript-eslint/prefer-optional-chain': 2,
+        '@typescript-eslint/consistent-type-assertions': [ 2,
+          {
+            'assertionStyle': 'as',
+            'objectLiteralTypeAssertions': 'never'
+          }
+        ]
       }
-    ]
-  }
+    }
+  ]
 };
