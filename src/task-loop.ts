@@ -1,6 +1,3 @@
-import EventHandler from './event-handler';
-import Hls from './hls';
-
 /**
  * Sub-class specialization of EventHandler base class.
  *
@@ -29,26 +26,28 @@ import Hls from './hls';
  * we are limiting the task execution per call stack to exactly one, but scheduling/post-poning further
  * task processing on the next main loop iteration (also known as "next tick" in the Node/JS runtime lingo).
  */
-
-export default class TaskLoop extends EventHandler {
+export default class TaskLoop {
   private readonly _boundTick: () => void;
   private _tickTimer: number | null = null;
   private _tickInterval: number | null = null;
   private _tickCallCount = 0;
 
-  constructor (hls: Hls, ...events: string[]) {
-    super(hls, ...events);
+  constructor () {
     this._boundTick = this.tick.bind(this);
   }
 
-  /**
-   * @override
-   */
+  public destroy () {
+    this.onHandlerDestroying();
+    this.onHandlerDestroyed();
+  }
+
   protected onHandlerDestroying () {
     // clear all timers before unregistering from event bus
     this.clearNextTick();
     this.clearInterval();
   }
+
+  protected onHandlerDestroyed () {}
 
   /**
    * @returns {boolean}

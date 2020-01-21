@@ -1,6 +1,6 @@
 import AAC from './aac-helper';
 import MP4 from './mp4-generator';
-import Event from '../events';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { InitSegmentData, Remuxer, RemuxerResult, RemuxedMetadata, RemuxedTrack } from '../types/remuxer';
@@ -334,7 +334,7 @@ export default class MP4Remuxer implements Remuxer {
     try {
       mdat = new Uint8Array(mdatSize);
     } catch (err) {
-      this.observer.trigger(Event.ERROR, { type: ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: `fail allocating video mdat ${mdatSize}` });
+      this.observer.trigger(Events.ERROR, { type: ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: `fail allocating video mdat ${mdatSize}` });
       return;
     }
     const view = new DataView(mdat.buffer);
@@ -593,7 +593,7 @@ export default class MP4Remuxer implements Remuxer {
           try {
             mdat = new Uint8Array(mdatSize);
           } catch (err) {
-            this.observer.trigger(Event.ERROR, {
+            this.observer.trigger(Events.ERROR, {
               type: ErrorTypes.MUX_ERROR,
               details: ErrorDetails.REMUX_ALLOC_ERROR,
               fatal: false,

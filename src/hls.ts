@@ -16,31 +16,40 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
-import HlsEvents from './events';
-
-import { Observer } from './observer';
+import { Events, HlsEventEmitter, HlsListeners } from './events';
+import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
 import { MediaPlaylist } from './types/media-playlist';
+import AudioTrackController from './controller/audio-track-controller';
+import SubtitleTrackController from './controller/subtitle-track-controller';
+import EMEController from './controller/eme-controller';
+import CapLevelController from './controller/cap-level-controller';
+import AbrController from './controller/abr-controller';
+import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
+import { Tail } from './types/tuples';
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls extends Observer {
+export default class Hls {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
+  private coreComponents: ComponentAPI[];
+  private networkControllers: NetworkComponentAPI[];
+
+  private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
-  private abrController: any;
-  private capLevelController: any;
-  private levelController: any;
-  private streamController: any;
-  private networkControllers: any[];
-  private audioTrackController: any;
-  private subtitleTrackController: any;
-  private emeController: any;
-  private coreComponents: any[];
+  private abrController: AbrController;
+  private capLevelController: CapLevelController;
+  private levelController: LevelController;
+  private streamController: StreamController;
+  private audioTrackController: AudioTrackController;
+  private subtitleTrackController: SubtitleTrackController;
+  private emeController: EMEController;
+
   private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
@@ -53,7 +62,7 @@ export default class Hls extends Observer {
   }
 
   static get Events () {
-    return HlsEvents;
+    return Events;
   }
 
   static get ErrorTypes () {
@@ -86,8 +95,6 @@ export default class Hls extends Observer {
    * @param {HlsConfig} config
    */
   constructor (userConfig: Partial<HlsConfig> = {}) {
-    super();
-
     const defaultConfig = Hls.DefaultConfig;
     mergeConfig(defaultConfig, userConfig);
     const config = this.config = userConfig as HlsConfig;
@@ -120,6 +127,8 @@ export default class Hls extends Observer {
 
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
+    // fpsController uses streamController to switch when frames are being dropped
+    fpsController.setStreamController(streamController);
 
     const networkControllers = [
       levelController,
@@ -159,12 +168,75 @@ export default class Hls extends Observer {
     return null;
   }
 
+  // Delegate the EventEmitter through the public API of Hls.js
+  on<E extends Events, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
+    this._emitter.on(event, (...args: unknown[]) => {
+      if (this.config.debug) {
+        listener.apply(context, args);
+      } else {
+        try {
+          listener.apply(context, args);
+        } catch (e) {
+          logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
+          this.trigger(Events.ERROR, {
+            type: ErrorTypes.OTHER_ERROR,
+            details: ErrorDetails.INTERNAL_EXCEPTION,
+            fatal: false,
+            event: event,
+            error: e
+          });
+        }
+      }
+    }, context);
+  }
+
+  once<E extends Events, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
+    this._emitter.once(event, (...args: unknown[]) => {
+      if (this.config.debug) {
+        listener.apply(context, args);
+      } else {
+        try {
+          listener.apply(context, args);
+        } catch (e) {
+          logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
+          this.trigger(Events.ERROR, {
+            type: ErrorTypes.OTHER_ERROR,
+            details: ErrorDetails.INTERNAL_EXCEPTION,
+            fatal: false,
+            event: event,
+            error: e
+          });
+        }
+      }
+    }, context);
+  }
+
+  removeAllListeners<E extends Events> (event?: E | undefined) {
+    this._emitter.removeAllListeners(event);
+  }
+
+  off<E extends Events, Context = undefined> (event: E, listener?: HlsListeners[E] | undefined, context?: Context, once?: boolean | undefined) {
+    this._emitter.off(event, listener, context, once);
+  }
+
+  listeners<E extends Events> (event: E): HlsListeners[E][] {
+    return this._emitter.listeners(event);
+  }
+
+  trigger<E extends Events> (event: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean {
+    return this._emitter.emit(event, event, ...args);
+  }
+
+  listenerCount<E extends Events> (event: E): number {
+    return this._emitter.listenerCount(event);
+  }
+
   /**
    * Dispose of the instance
    */
   destroy () {
     logger.log('destroy');
-    this.trigger(HlsEvents.DESTROYING);
+    this.trigger(Events.DESTROYING);
     this.detachMedia();
     this.coreComponents.concat(this.networkControllers).forEach(component => {
       component.destroy();
@@ -181,7 +253,7 @@ export default class Hls extends Observer {
   attachMedia (media: HTMLMediaElement) {
     logger.log('attachMedia');
     this._media = media;
-    this.trigger(HlsEvents.MEDIA_ATTACHING, { media: media });
+    this.trigger(Events.MEDIA_ATTACHING, { media: media });
   }
 
   /**
@@ -189,7 +261,7 @@ export default class Hls extends Observer {
    */
   detachMedia () {
     logger.log('detachMedia');
-    this.trigger(HlsEvents.MEDIA_DETACHING);
+    this.trigger(Events.MEDIA_DETACHING);
     this._media = null;
   }
 
@@ -202,7 +274,7 @@ export default class Hls extends Observer {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(HlsEvents.MANIFEST_LOADING, { url: url });
+    this.trigger(Events.MANIFEST_LOADING, { url: url });
   }
 
   /**
@@ -260,7 +332,7 @@ export default class Hls extends Observer {
    * @type {Level[]}
    */
   get levels (): Array<Level> {
-    return this.levelController.levels;
+    return this.levelController.levels ? this.levelController.levels : [];
   }
 
   /**
@@ -419,7 +491,7 @@ export default class Hls extends Observer {
    * @type {number}
    */
   get bandwidthEstimate (): number {
-    return this.abrController._bwEstimator.getEstimate();
+    return this.abrController.bwEstimator.getEstimate();
   }
 
   /**
@@ -455,8 +527,9 @@ export default class Hls extends Observer {
    */
   get minAutoLevel (): number {
     const { levels, config: { minAutoBitrate } } = this;
-    const len = levels ? levels.length : 0;
+    if (!levels) return 0;
 
+    const len = levels.length;
     for (let i = 0; i < len; i++) {
       if (levels[i].maxBitrate > minAutoBitrate) {
         return i;
@@ -535,7 +608,7 @@ export default class Hls extends Observer {
   /**
    * @type {Seconds}
    */
-  get liveSyncPosition (): number {
+  get liveSyncPosition (): number | null {
     return this.streamController.liveSyncPosition;
   }
 

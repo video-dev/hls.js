@@ -1,5 +1,6 @@
 import AudioStreamController from '../../../src/controller/audio-stream-controller';
 import Hls from '../../../src/hls';
+import { Events } from '../../../src/events';
 
 describe('AudioStreamController', function () {
   const tracks = [{
@@ -55,7 +56,7 @@ describe('AudioStreamController', function () {
       audioStreamController.levels = tracks;
       audioStreamController.tick = () => {};
 
-      audioStreamController.onAudioTrackLoaded({
+      audioStreamController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {
         id: 0,
         details
       });

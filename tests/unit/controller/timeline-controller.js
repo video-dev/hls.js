@@ -1,5 +1,6 @@
 import TimelineController from '../../../src/controller/timeline-controller';
 import Hls from '../../../src/hls';
+import { Events } from '../../../src/events';
 
 describe('TimelineController', function () {
   let timelineController;
@@ -16,7 +17,7 @@ describe('TimelineController', function () {
   it('should set default track to showing when displaySubtitles is true', function () {
     hls.subtitleTrackController = { subtitleDisplay: true };
 
-    timelineController.onManifestLoaded({
+    timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
       subtitles: [{ id: 0 }, { id: 1, default: true }]
     });
 
@@ -27,7 +28,7 @@ describe('TimelineController', function () {
   it('should set default track to hidden when displaySubtitles is false', function () {
     hls.subtitleTrackController = { subtitleDisplay: false };
 
-    timelineController.onManifestLoaded({
+    timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
       subtitles: [{ id: 0 }, { id: 1, default: true }]
     });
 
@@ -39,7 +40,7 @@ describe('TimelineController', function () {
     it('should reuse text track when track order is same between manifests', function () {
       hls.subtitleTrackController = { subtitleDisplay: false };
 
-      timelineController.onManifestLoaded({
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
         subtitles: [{ id: 0, name: 'en' }, { id: 1, name: 'ru' }]
       });
 
@@ -52,7 +53,7 @@ describe('TimelineController', function () {
       expect(timelineController.media.textTracks[1].label).to.equal('ru');
       expect(timelineController.media.textTracks.length).to.equal(2);
 
-      timelineController.onManifestLoaded({
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
         subtitles: [{ id: 0, name: 'en' }, { id: 1, name: 'ru' }]
       });
 
@@ -69,7 +70,7 @@ describe('TimelineController', function () {
     it('should reuse text track when track order is not same between manifests', function () {
       hls.subtitleTrackController = { subtitleDisplay: false };
 
-      timelineController.onManifestLoaded({
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
         subtitles: [{ id: 0, name: 'en' }, { id: 1, name: 'ru' }]
       });
 
@@ -82,7 +83,7 @@ describe('TimelineController', function () {
       expect(timelineController.media.textTracks[1].label).to.equal('ru');
       expect(timelineController.media.textTracks.length).to.equal(2);
 
-      timelineController.onManifestLoaded({
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
         subtitles: [{ id: 0, name: 'ru' }, { id: 1, name: 'en' }]
       });
 

@@ -1,34 +1,53 @@
-import Event from '../events';
-import EventHandler from '../event-handler';
+import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { computeReloadInterval } from './level-helper';
 import { clearCurrentCues } from '../utils/texttrack-utils';
 import { MediaPlaylist } from '../types/media-playlist';
-import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdated } from '../types/events';
+import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdatedData } from '../types/events';
+import { ComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
-class SubtitleTrackController extends EventHandler {
+class SubtitleTrackController implements ComponentAPI {
+  private hls: Hls;
   private tracks: MediaPlaylist[];
   private trackId: number = -1;
-  private media: HTMLVideoElement | null = null;
+  private media: HTMLMediaElement | null = null;
   private stopped: boolean = true;
-  private subtitleDisplay: boolean = true; // Enable/disable subtitle display rendering
   private queuedDefaultTrack?: number;
   private trackChangeListener: () => void = () => this._onTextTracksChanged();
   private useTextTrackPolling: boolean = false;
   private subtitlePollingInterval: number = -1;
   private timer: number | null = null;
 
-  constructor (hls) {
-    super(hls,
-      Event.MEDIA_ATTACHED,
-      Event.MEDIA_DETACHING,
-      Event.MANIFEST_LOADED,
-      Event.SUBTITLE_TRACK_LOADED);
+  public subtitleDisplay: boolean = true; // Enable/disable subtitle display rendering
+
+  constructor (hls: Hls) {
+    this.hls = hls;
     this.tracks = [];
+
+    this._registerListeners();
+  }
+
+  public destroy () {
+    this._unregisterListeners();
+  }
+
+  private _registerListeners () {
+    this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    this.hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    this.hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    this.hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
+  }
+
+  private _unregisterListeners () {
+    this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    this.hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
   }
 
   // Listen for subtitle track change, then extract the current track ID.
-  protected onMediaAttached (data: MediaAttachedData): void {
+  protected onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void {
     this.media = data.media;
     if (!this.media) {
       return;
@@ -75,11 +94,11 @@ class SubtitleTrackController extends EventHandler {
   }
 
   // Fired whenever a new manifest is loaded.
-  protected onManifestLoaded (data: ManifestLoadedData): void {
+  protected onManifestLoaded (event: Events.MANIFEST_LOADED, data: ManifestLoadedData): void {
     const subtitleTracks = data.subtitles || [];
     this.tracks = subtitleTracks;
-    const subtitleTracksUpdated: SubtitleTracksUpdated = { subtitleTracks };
-    this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
+    const subtitleTracksUpdated: SubtitleTracksUpdatedData = { subtitleTracks };
+    this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
     // loop through available subtitle tracks and autoselect default if needed
     // TODO: improve selection logic to handle forced, etc
@@ -98,7 +117,7 @@ class SubtitleTrackController extends EventHandler {
     });
   }
 
-  protected onSubtitleTrackLoaded (data: TrackLoadedData): void {
+  protected onSubtitleTrackLoaded (event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void {
     const { id, details } = data;
     const { trackId, tracks } = this;
     const currentTrack = tracks[trackId];
@@ -166,7 +185,7 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
     logger.log(`[subtitle-track-controller]: Loading subtitle track ${trackId}`);
-    hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
+    hls.trigger(Events.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
   }
 
   /**
@@ -210,7 +229,7 @@ class SubtitleTrackController extends EventHandler {
 
     this.trackId = newId;
     logger.log(`[subtitle-track-controller]: Switching to subtitle track ${newId}`);
-    hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
+    hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
     this._loadCurrentTrack();
   }
 

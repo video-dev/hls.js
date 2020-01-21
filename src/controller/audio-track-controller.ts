@@ -1,17 +1,18 @@
-import Event from '../events';
+import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { computeReloadInterval } from './level-helper';
-import EventHandler from '../event-handler';
 import { MediaPlaylist } from '../types/media-playlist';
 import {
   TrackSwitchedData,
-  TrackLoadedData,
   ManifestParsedData,
-  LevelLoadedData,
-  AudioTracksUpdated,
-  ErrorData
+  AudioTracksUpdatedData,
+  ErrorData,
+  LevelLoadingData,
+  AudioTrackLoadedData
 } from '../types/events';
+import { NetworkComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
 /**
  * @class AudioTrackController
@@ -34,14 +35,14 @@ import {
  * @fires ERROR
  *
  */
-class AudioTrackController extends EventHandler {
+class AudioTrackController implements NetworkComponentAPI {
   /**
    * @private
    * If should select tracks according to default track attribute
    * @member {boolean} _selectDefaultTrack
    */
   private _selectDefaultTrack: boolean = true;
-
+  private hls: Hls;
   private _trackId: number = -1;
 
   private canLoad: boolean = false;
@@ -65,21 +66,35 @@ class AudioTrackController extends EventHandler {
    */
   public audioGroupId: string | null = null;
 
-  constructor (hls) {
-    super(hls,
-      Event.MANIFEST_LOADING,
-      Event.MANIFEST_PARSED,
-      Event.AUDIO_TRACK_LOADED,
-      Event.AUDIO_TRACK_SWITCHED,
-      Event.LEVEL_LOADING,
-      Event.ERROR
-    );
-
+  constructor (hls: Hls) {
+    this.hls = hls;
     this.tracks = [];
     this.trackIdBlacklist = Object.create(null);
+    this._registerListeners();
   }
 
-  protected onHandlerDestroying (): void {
+  private _registerListeners () {
+    const { hls } = this;
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.on(Events.AUDIO_TRACK_LOADED, this.onAudioTrackLoaded, this);
+    hls.on(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
+    hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
+    hls.on(Events.ERROR, this.onError, this);
+  }
+
+  private _unregisterListeners () {
+    const { hls } = this;
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.off(Events.AUDIO_TRACK_LOADED, this.onAudioTrackLoaded, this);
+    hls.off(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
+    hls.off(Events.LEVEL_LOADING, this.onLevelLoading, this);
+    hls.off(Events.ERROR, this.onError, this);
+  }
+
+  public destroy () {
+    this._unregisterListeners();
     this.clearTimer();
   }
 
@@ -97,10 +112,10 @@ class AudioTrackController extends EventHandler {
    *
    * Trigger AUDIO_TRACKS_UPDATED event.
    */
-  protected onManifestParsed (data: ManifestParsedData): void {
+  protected onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData): void {
     const tracks = this.tracks = data.audioTracks || [];
-    const audioTracksUpdated: AudioTracksUpdated = { audioTracks: tracks };
-    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
+    const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks: tracks };
+    this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
   }
 
   /**
@@ -110,7 +125,7 @@ class AudioTrackController extends EventHandler {
    *
    * @param {*} data
    */
-  protected onAudioTrackLoaded (data: TrackLoadedData): void {
+  protected onAudioTrackLoaded (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void {
     const { id, details } = data;
     const currentTrack = this.tracks[id];
     const curDetails = currentTrack.details;
@@ -163,7 +178,7 @@ class AudioTrackController extends EventHandler {
    *
    * Quality-levels should update to that group ID in this case.
    */
-  protected onAudioTrackSwitched (data: TrackSwitchedData): void {
+  protected onAudioTrackSwitched (event: Events.AUDIO_TRACK_SWITCHED, data: TrackSwitchedData): void {
     const audioGroupId = this.tracks[data.id].groupId;
     if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
       this.audioGroupId = audioGroupId;
@@ -177,7 +192,7 @@ class AudioTrackController extends EventHandler {
    * If group-ID got update, we re-select the appropriate audio-track with this group-ID matching the currently
    * selected one (based on NAME property).
    */
-  protected onLevelLoading (data: LevelLoadedData): void {
+  protected onLevelLoading (event: Events.LEVEL_LOADING, data: LevelLoadingData): void {
     const levelInfo = this.hls.levels[data.level];
 
     if (!levelInfo.audioGroupIds) {
@@ -191,7 +206,7 @@ class AudioTrackController extends EventHandler {
     }
   }
 
-  protected onError (data: ErrorData): void {
+  protected onError (event: Events.ERROR, data: ErrorData): void {
     // Only handle network errors
     if (data.type !== ErrorTypes.NETWORK_ERROR) {
       return;
@@ -247,7 +262,7 @@ class AudioTrackController extends EventHandler {
     this._trackId = newId;
 
     const { url, type, id } = audioTrack;
-    this.hls.trigger(Event.AUDIO_TRACK_SWITCHING, { id, type, url });
+    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
     this._loadTrackDetailsIfNeeded(audioTrack);
   }
 
@@ -300,7 +315,7 @@ class AudioTrackController extends EventHandler {
     if (!trackFound) {
       logger.error(`[audio-track-controller]: No track found for running audio group-ID: ${this.audioGroupId}`);
 
-      this.hls.trigger(Event.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true
@@ -319,7 +334,7 @@ class AudioTrackController extends EventHandler {
       const { url, id } = audioTrack;
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
-      this.hls.trigger(Event.AUDIO_TRACK_LOADING, { url, id });
+      this.hls.trigger(Events.AUDIO_TRACK_LOADING, { url, id });
     }
   }
 

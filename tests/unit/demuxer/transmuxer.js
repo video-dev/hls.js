@@ -17,7 +17,7 @@ describe('TransmuxerInterface tests', function () {
 
     expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
-    expect(transmuxerInterface.observer.trigger).to.exist;
+    expect(transmuxerInterface.observer.emit).to.exist;
     expect(transmuxerInterface.observer.off).to.exist;
     expect(transmuxerInterface.transmuxer).to.exist;
   });
@@ -34,7 +34,7 @@ describe('TransmuxerInterface tests', function () {
     expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
 
-    expect(transmuxerInterface.observer.trigger, 'trigger exists').to.exist;
+    expect(transmuxerInterface.observer.emit, 'emit exists').to.exist;
     expect(transmuxerInterface.observer.off, 'off exists').to.exist;
     expect(transmuxerInterface.worker, 'worker exists').to.exist;
   });
