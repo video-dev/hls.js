@@ -144,7 +144,7 @@ export default class StreamController extends BaseStreamController implements Ne
       break;
     case State.WAITING_LEVEL: {
       const { levels, level } = this;
-      if (levels && levels[level] && levels[level].details) {
+      if (levels?.[level]?.details) {
         // Details is set after the playlist has been loaded
         this.state = State.IDLE;
         break;
@@ -325,7 +325,7 @@ export default class StreamController extends BaseStreamController implements Ne
       this.previouslyPaused = previouslyPaused;
     }
     const fragCurrent = this.fragCurrent;
-    if (fragCurrent && fragCurrent.loader) {
+    if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
     }
 
@@ -341,7 +341,7 @@ export default class StreamController extends BaseStreamController implements Ne
    */
   immediateLevelSwitchEnd () {
     const media = this.media;
-    if (media && media.buffered.length) {
+    if (media?.buffered.length) {
       this.immediateSwitch = false;
       if (BufferHelper.isBuffered(media, media.currentTime)) {
         // only nudge if currentTime is buffered
@@ -362,7 +362,7 @@ export default class StreamController extends BaseStreamController implements Ne
   nextLevelSwitch () {
     const { levels, media } = this;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
-    if (media && media.readyState) {
+    if (media?.readyState) {
       let fetchdelay;
       let nextBufferedFrag;
       const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
@@ -393,7 +393,7 @@ export default class StreamController extends BaseStreamController implements Ne
         if (nextBufferedFrag) {
           // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
           const fragCurrent = this.fragCurrent;
-          if (fragCurrent && fragCurrent.loader) {
+          if (fragCurrent?.loader) {
             fragCurrent.loader.abort();
           }
 
@@ -436,7 +436,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
   onMediaDetaching () {
     const { levels, media } = this;
-    if (media && media.ended) {
+    if (media?.ended) {
       this.log('MSE detaching and video ended, reset startPosition');
       this.startPosition = this.lastCurrentTime = 0;
     }
@@ -578,7 +578,7 @@ export default class StreamController extends BaseStreamController implements Ne
     const videoCodec = currentLevel.videoCodec;
 
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
-    const accurateTimeOffset = !(media && media.seeking) && (details.PTSKnown || !details.live);
+    const accurateTimeOffset = !(media?.seeking) && (details.PTSKnown || !details.live);
     const initSegmentData = details.initSegment ? details.initSegment.data : [];
     const audioCodec = this._getAudioCodec(currentLevel);
 
@@ -615,7 +615,7 @@ export default class StreamController extends BaseStreamController implements Ne
         this.mediaBuffer = this.media;
         const fragCurrent = this.fragCurrent;
         // we need to refill audio buffer from main: cancel any frag loading to speed up audio switch
-        if (fragCurrent && fragCurrent.loader) {
+        if (fragCurrent?.loader) {
           this.log('Switching to main audio track, cancel main fragment load');
           fragCurrent.loader.abort();
         }
@@ -948,7 +948,7 @@ export default class StreamController extends BaseStreamController implements Ne
       this.bufferFragmentData(audio, frag, chunkMeta);
     }
 
-    if (id3 && id3.samples && id3.samples.length) {
+    if (id3?.samples?.length) {
       const emittedID3: any = id3;
       emittedID3.frag = frag;
       emittedID3.id = id;

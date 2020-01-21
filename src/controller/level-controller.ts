@@ -83,7 +83,7 @@ export default class LevelController implements NetworkComponentAPI {
       levels.forEach(level => {
         level.loadError = 0;
         const levelDetails = level.details;
-        if (levelDetails && levelDetails.live) {
+        if (levelDetails?.live) {
           level.details = undefined;
         }
       });
@@ -520,7 +520,7 @@ export default class LevelController implements NetworkComponentAPI {
       return false;
     }).map((level, index) => {
       const { details } = level;
-      if (details && details.fragments) {
+      if (details?.fragments) {
         details.fragments.forEach((fragment) => {
           fragment.level = index;
         });
