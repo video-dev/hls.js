@@ -335,8 +335,8 @@ export class FragmentTracker implements ComponentAPI {
 
 function isPartial (fragmentEntity: FragmentEntity): boolean {
   return fragmentEntity.buffered &&
-    ((fragmentEntity.range.video !== undefined && fragmentEntity.range.video.partial) ||
-      (fragmentEntity.range.audio !== undefined && fragmentEntity.range.audio.partial));
+    (fragmentEntity.range.video?.partial ||
+      fragmentEntity.range.audio?.partial);
 }
 
 function getFragmentKey (fragment: Fragment): string {

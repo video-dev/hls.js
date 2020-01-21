@@ -180,7 +180,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
 
     // Check if track has the necessary details to load fragments
     const currentTrack = this.levels[this.currentTrackId];
-    if (currentTrack && currentTrack.details) {
+    if (currentTrack?.details) {
       this.setInterval(TICK_INTERVAL);
     }
   }
@@ -280,7 +280,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
         foundFrag = fragments[fragLen - 1];
       }
 
-      if (foundFrag && foundFrag.encrypted) {
+      if (foundFrag?.encrypted) {
         logger.log(`Loading key for ${foundFrag.sn}`);
         this.state = State.KEY_LOADING;
         this.hls.trigger(Events.KEY_LOADING, { frag: foundFrag });
