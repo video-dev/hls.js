@@ -1,33 +1,41 @@
 /*
  * Decrypt key Loader
 */
-
-import Event from '../events';
-import EventHandler from '../event-handler';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import Hls from '../hls';
 import Fragment from './fragment';
 import { LoaderStats, LoaderResponse, LoaderContext, LoaderConfiguration, LoaderCallbacks } from '../types/loader';
-
-interface OnKeyLoadingPayload {
-  frag: Fragment
-}
+import { ComponentAPI } from '../types/component-api';
+import { KeyLoadingData } from '../types/events';
 
 interface KeyLoaderContext extends LoaderContext {
   frag: Fragment
 }
 
-export default class KeyLoader extends EventHandler {
+export default class KeyLoader implements ComponentAPI {
+  private hls: Hls;
   public loaders = {};
   public decryptkey: Uint8Array | null = null;
   public decrypturl: string | null = null;
 
   constructor (hls: Hls) {
-    super(hls, Event.KEY_LOADING);
+    this.hls = hls;
+
+    this._registerListeners();
+  }
+
+  private _registerListeners () {
+    this.hls.on(Events.KEY_LOADING, this.onKeyLoading, this);
+  }
+
+  private _unregisterListeners () {
+    this.hls.off(Events.KEY_LOADING, this.onKeyLoading);
   }
 
   destroy (): void {
+    this._unregisterListeners();
     for (const loaderName in this.loaders) {
       const loader = this.loaders[loaderName];
       if (loader) {
@@ -35,11 +43,9 @@ export default class KeyLoader extends EventHandler {
       }
     }
     this.loaders = {};
-
-    super.destroy();
   }
 
-  onKeyLoading (data: OnKeyLoadingPayload) {
+  onKeyLoading (event: Events.KEY_LOADING, data: KeyLoadingData) {
     const { frag } = data;
     const type = frag.type;
     const loader = this.loaders[type];
@@ -92,7 +98,7 @@ export default class KeyLoader extends EventHandler {
     } else if (this.decryptkey) {
       // Return the key if it's already been loaded
       frag.decryptdata.key = this.decryptkey;
-      this.hls.trigger(Event.KEY_LOADED, { frag: frag });
+      this.hls.trigger(Events.KEY_LOADED, { frag: frag });
     }
   }
 
@@ -107,7 +113,7 @@ export default class KeyLoader extends EventHandler {
     // detach fragment loader on load success
     frag.loader = undefined;
     delete this.loaders[frag.type];
-    this.hls.trigger(Event.KEY_LOADED, { frag: frag });
+    this.hls.trigger(Events.KEY_LOADED, { frag: frag });
   }
 
   loaderror (response: LoaderResponse, context: KeyLoaderContext) {
@@ -118,7 +124,7 @@ export default class KeyLoader extends EventHandler {
     }
 
     delete this.loaders[frag.type];
-    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag, response });
+    this.hls.trigger(Events.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag, response });
   }
 
   loadtimeout (stats: LoaderStats, context: KeyLoaderContext) {
@@ -129,6 +135,6 @@ export default class KeyLoader extends EventHandler {
     }
 
     delete this.loaders[frag.type];
-    this.hls.trigger(Event.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
+    this.hls.trigger(Events.ERROR, { type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag });
   }
 }

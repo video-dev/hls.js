@@ -1,4 +1,4 @@
-import Event from '../events';
+import { Events, HlsEventEmitter } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
@@ -37,7 +37,7 @@ muxConfig.forEach(({ demux }) => {
 });
 
 export default class Transmuxer {
-  private observer: any;
+  private observer: HlsEventEmitter;
   private typeSupported: any;
   private config: any;
   private vendor: any;
@@ -50,7 +50,7 @@ export default class Transmuxer {
   private currentTransmuxState!: TransmuxState;
   private cache: ChunkCache = new ChunkCache();
 
-  constructor (observer, typeSupported, config, vendor) {
+  constructor (observer: HlsEventEmitter, typeSupported, config, vendor) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
@@ -176,7 +176,7 @@ export default class Transmuxer {
     if (!demuxer || !remuxer) {
       // If probing failed, and each demuxer saw enough bytes to be able to probe, then Hls.js has been given content its not able to handle
       if (bytesSeen >= minProbeByteLength) {
-        observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
+        observer.emit(Events.ERROR, Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
       }
       stats.executeEnd = now();
       return [emptyResult(chunkMeta)];

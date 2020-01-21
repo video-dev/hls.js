@@ -1,5 +1,4 @@
-import Event from '../events';
-import EventHandler from '../event-handler';
+import { Events } from '../events';
 import Cea608Parser, { CaptionScreen } from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
@@ -8,8 +7,10 @@ import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 import Fragment from '../loader/fragment';
 import { HlsConfig } from '../config';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
-import { ManifestLoadedData } from '../types/events';
 import { MediaPlaylist } from '../types/media-playlist';
+import Hls from '../hls';
+import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData, InitPTSFoundData } from '../types/events';
+import { ComponentAPI } from '../types/component-api';
 
 function canReuseVttTextTrack (inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
@@ -19,7 +20,8 @@ function intersection (x1, x2, y1, y2) {
   return Math.min(x2, y2) - Math.max(x1, y1);
 }
 
-class TimelineController extends EventHandler {
+class TimelineController implements ComponentAPI {
+  private hls: Hls;
   private media: HTMLMediaElement | null = null;
   private config: HlsConfig;
   private enabled: boolean = true;
@@ -27,7 +29,7 @@ class TimelineController extends EventHandler {
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
-  private unparsedVttFrags: Array<{frag: Fragment, payload: any}> = [];
+  private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private cueRanges: { [trackName: string]: Array<any> } = {};
   private captionsTracks: { [trackName: string]: any } = {};
   private captionsProperties: any;
@@ -36,19 +38,7 @@ class TimelineController extends EventHandler {
   private prevCC: number = -1;
   private vttCCs: any = null;
 
-  constructor (hls) {
-    super(hls, Event.MEDIA_ATTACHING,
-      Event.MEDIA_DETACHING,
-      Event.FRAG_PARSING_USERDATA,
-      Event.FRAG_DECRYPTED,
-      Event.MANIFEST_LOADING,
-      Event.MANIFEST_LOADED,
-      Event.FRAG_LOADED,
-      Event.INIT_PTS_FOUND,
-      Event.FRAG_PARSING_INIT_SEGMENT,
-      Event.SUBTITLE_TRACKS_CLEARED
-    );
-
+  constructor (hls: Hls) {
     this.hls = hls;
     this.config = hls.config;
     this.Cues = hls.config.cueHandler;
@@ -79,6 +69,36 @@ class TimelineController extends EventHandler {
       const channel4 = new OutputFilter(this, 'textTrack4');
       this.cea608Parser = new Cea608Parser(channel1, channel2, channel3, channel4);
     }
+
+    this._registerListeners();
+  }
+
+  private _registerListeners (): void {
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata, this);
+    hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
+    hls.on(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment, this);
+    hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
+  }
+
+  private _unregisterListeners (): void {
+    const { hls } = this;
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata, this);
+    hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
+    hls.off(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment, this);
+    hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
   }
 
   addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen) {
@@ -110,12 +130,12 @@ class TimelineController extends EventHandler {
         this.captionsTracks[trackName].addCue(cue);
       });
     } else {
-      this.hls.trigger(Event.CUES_PARSED, { type: 'captions', cues: cues, track: trackName });
+      this.hls.trigger(Events.CUES_PARSED, { type: 'captions', cues: cues, track: trackName });
     }
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
-  onInitPtsFound (data: { id: string, frag: Fragment, initPTS: number}) {
+  onInitPtsFound (event: Events.INIT_PTS_FOUND, data: InitPTSFoundData) {
     const { frag, id, initPTS } = data;
     const { unparsedVttFrags } = this;
     if (id === 'main') {
@@ -127,7 +147,8 @@ class TimelineController extends EventHandler {
     if (unparsedVttFrags.length) {
       this.unparsedVttFrags = [];
       unparsedVttFrags.forEach(frag => {
-        this.onFragLoaded(frag);
+        // TODO: This can be either FragLoadedData or FragDecryptedData
+        this.onFragLoaded(Events.FRAG_LOADED, frag as FragLoadedData);
       });
     }
   }
@@ -184,13 +205,12 @@ class TimelineController extends EventHandler {
     }
     const label = props.label;
     const track = {
-      _id: trackName,
       label,
       kind: 'captions',
       default: false
     };
     captionsTracks[trackName] = track;
-    this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
+    this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
   }
 
   createTextTrack (kind: TextTrackKind, label?: string, lang?: string): TextTrack | undefined {
@@ -202,10 +222,10 @@ class TimelineController extends EventHandler {
   }
 
   destroy () {
-    super.destroy();
+    this._unregisterListeners();
   }
 
-  onMediaAttaching (data: { media: HTMLMediaElement }) {
+  onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     this.media = data.media;
     this._cleanTracks();
   }
@@ -252,7 +272,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  onManifestLoaded (data: ManifestLoadedData) {
+  onManifestLoaded (event: Events.MANIFEST_LOADED, data: ManifestLoadedData) {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
@@ -305,7 +325,7 @@ class TimelineController extends EventHandler {
             default: track.default
           };
         });
-        this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
+        this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
       }
     }
 
@@ -327,28 +347,26 @@ class TimelineController extends EventHandler {
     }
   }
 
-  onFragLoaded (data: { frag: Fragment, payload: any }) {
+  onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData) {
     const { frag, payload } = data;
-    const { cea608Parser, initPTS, unparsedVttFrags } = this;
+    const { cea608Parser, initPTS, lastSn, unparsedVttFrags } = this;
     if (frag.type === 'main') {
       const sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
-      if (sn !== this.lastSn + 1) {
+      if (sn !== lastSn + 1) {
         if (cea608Parser) {
           cea608Parser.reset();
         }
       }
       this.lastSn = sn as number;
-    } // eslint-disable-line brace-style
-    // If fragment is subtitle type, parse as WebVTT.
-    else if (frag.type === 'subtitle') {
+    } else if (frag.type === 'subtitle') { // If fragment is subtitle type, parse as WebVTT.
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
         if (!Number.isFinite(initPTS[frag.cc])) {
           unparsedVttFrags.push(data);
           if (this.initPTS.length) {
             // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
-            this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag, error: new Error('Missing initial subtitle PTS') });
+            this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: false, frag, error: new Error('Missing initial subtitle PTS') });
           }
           return;
         }
@@ -370,37 +388,37 @@ class TimelineController extends EventHandler {
         }
       } else {
         // In case there is no payload, finish unsuccessfully.
-        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag, error: new Error('Empty subtitle payload') });
+        this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: false, frag, error: new Error('Empty subtitle payload') });
       }
     }
   }
 
-  _parseIMSC1 (frag, payload) {
+  private _parseIMSC1 (frag: Fragment, payload: ArrayBuffer) {
     const hls = this.hls;
     parseIMSC1(payload, this.initPTS[frag.cc], (cues) => {
       this._appendCues(cues, frag.level);
-      hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
+      hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     }, (error) => {
       logger.log(`Failed to parse IMSC1: ${error}`);
-      hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
+      hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
     });
   }
 
-  _parseVTTs (frag, payload, vttCCs) {
+  private _parseVTTs (frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
     const hls = this.hls;
     // Parse the WebVTT file contents.
     WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
       this._appendCues(cues, frag.level);
-      hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
+      hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     }, (error) => {
       this._fallbackToIMSC1(frag, payload);
       // Something went wrong while parsing. Trigger event with success false.
       logger.log(`Failed to parse VTT cue: ${error}`);
-      hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
+      hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
     });
   }
 
-  _fallbackToIMSC1 (frag, payload) {
+  private _fallbackToIMSC1 (frag: Fragment, payload: ArrayBuffer) {
     // If textCodec is unknown, try parsing as IMSC1. Set textCodec based on the result
     const trackPlaylistMedia = this.tracks[frag.level];
     if (!trackPlaylistMedia.textCodec) {
@@ -413,7 +431,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  _appendCues (cues, fragLevel) {
+  private _appendCues (cues, fragLevel) {
     const hls = this.hls;
     if (this.config.renderNatively) {
       const textTrack = this.textTracks[fragLevel];
@@ -423,19 +441,19 @@ class TimelineController extends EventHandler {
     } else {
       const currentTrack = this.tracks[fragLevel];
       const track = currentTrack.default ? 'default' : 'subtitles' + fragLevel;
-      hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues, track });
+      hls.trigger(Events.CUES_PARSED, { type: 'subtitles', cues, track });
     }
   }
 
-  onFragDecrypted (data: { frag: Fragment, payload: any}) {
+  onFragDecrypted (event: Events.FRAG_DECRYPTED, data: FragDecryptedData) {
     const { frag } = data;
     if (frag.type === 'subtitle') {
       if (!Number.isFinite(this.initPTS[frag.cc])) {
-        this.unparsedVttFrags.push(data);
+        this.unparsedVttFrags.push(data as unknown as FragLoadedData);
         return;
       }
 
-      this.onFragLoaded(data);
+      this.onFragLoaded(Events.FRAG_LOADED, data as unknown as FragLoadedData);
     }
   }
 
@@ -444,7 +462,7 @@ class TimelineController extends EventHandler {
     this.captionsTracks = {};
   }
 
-  onFragParsingUserdata (data: { samples: Array<any> }) {
+  onFragParsingUserdata (event: Events.FRAG_PARSING_USERDATA, data: FragParsingUserdataData) {
     if (!this.enabled || !this.cea608Parser) {
       return;
     }
@@ -466,7 +484,7 @@ class TimelineController extends EventHandler {
     // If we receive this event, we have not received an onInitPtsFound event. This happens when the video track has no samples (but has audio)
     // In order to have captions display, which requires an initPTS, we assume one of 90000
     if (typeof this.initPTS === 'undefined') {
-      this.onInitPtsFound({ id: '', frag: new Fragment(), initPTS: 90000 });
+      this.onInitPtsFound(Events.INIT_PTS_FOUND, { id: '', frag: new Fragment(), initPTS: 90000 });
     }
   }
 

@@ -1,6 +1,7 @@
 import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import BufferController from '../../../src/controller/buffer-controller';
+import { Events } from '../../../src/events';
 
 describe('BufferController tests', function () {
   let hls;
@@ -24,13 +25,13 @@ describe('BufferController tests', function () {
 
     it('flushes a specific type when provided a type', function () {
       const spy = sandbox.spy(bufferController.operationQueue, 'append');
-      bufferController.onBufferFlushing({ startOffset: 0, endOffset: 10, type: 'video' });
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 10, type: 'video' });
       expect(spy).to.have.been.calledOnce;
     });
 
     it('flushes all source buffers when buffer flush event type is undefined', function () {
       const spy = sandbox.spy(bufferController.operationQueue, 'append');
-      bufferController.onBufferFlushing({ startOffset: 0, endOffset: 10 });
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 10 });
       expect(spy).to.have.been.calledTwice;
     });
   });
@@ -155,9 +156,9 @@ describe('BufferController tests', function () {
       bufferController.createSourceBuffers.restore();
 
       let video = document.createElement('video');
-      bufferController.onMediaAttaching({ media: video });
+      bufferController.onMediaAttaching(Events.MEDIA_ATTACHING, { media: video });
 
-      hls.on(Hls.Events.BUFFER_CREATED, (_, data) => {
+      hls.on(Hls.Events.BUFFER_CREATED, (event, data) => {
         const tracks = data.tracks;
         expect(bufferController.pendingTracks).to.not.equal(tracks);
         expect(bufferController.tracks).to.equal(tracks);
@@ -171,12 +172,12 @@ describe('BufferController tests', function () {
     });
 
     it('expects one bufferCodec event by default', function () {
-      bufferController.onManifestParsed({});
+      bufferController.onManifestParsed(Events.MANIFEST_PARSED, {});
       expect(bufferController.bufferCodecEventsExpected).to.equal(1);
     });
 
     it('expects two bufferCodec events if altAudio is signaled', function () {
-      bufferController.onManifestParsed({ altAudio: true });
+      bufferController.onManifestParsed(Events.MANIFEST_PARSED, { altAudio: true });
       expect(bufferController.bufferCodecEventsExpected).to.equal(2);
     });
 
@@ -214,11 +215,11 @@ describe('BufferController tests', function () {
       bufferController.mediaSource = { readyState: 'open' };
       bufferController.bufferCodecEventsExpected = 2;
 
-      bufferController.onBufferCodecs({});
+      bufferController.onBufferCodecs(Events.BUFFER_CODECS, {});
       expect(checkPendingTracksSpy).to.have.been.calledOnce;
       expect(bufferController.bufferCodecEventsExpected).to.equal(1);
 
-      bufferController.onBufferCodecs({});
+      bufferController.onBufferCodecs(Events.BUFFER_CODECS, {});
       expect(checkPendingTracksSpy).to.have.been.calledTwice;
       expect(bufferController.bufferCodecEventsExpected).to.equal(0);
     });
@@ -227,10 +228,10 @@ describe('BufferController tests', function () {
       bufferController.sourceBuffer = {};
       bufferController.mediaSource = { readyState: 'open', removeEventListener: sandbox.stub() };
 
-      bufferController.onManifestParsed({ altAudio: true });
+      bufferController.onManifestParsed(Events.MANIFEST_PARSED, { altAudio: true });
       bufferController._onMediaSourceOpen();
-      bufferController.onBufferCodecs({ audio: {} });
-      bufferController.onBufferCodecs({ video: {} });
+      bufferController.onBufferCodecs(Events.BUFFER_CODECS, { audio: {} });
+      bufferController.onBufferCodecs(Events.BUFFER_CODECS, { video: {} });
 
       expect(createSbStub).to.have.been.calledOnce;
       expect(createSbStub).to.have.been.calledWith({ audio: {}, video: {} });

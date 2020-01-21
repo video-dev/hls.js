@@ -1,7 +1,7 @@
 import Hls from '../../../src/hls';
 import GapController, { SKIP_BUFFER_RANGE_START } from '../../../src/controller/gap-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
-import Event from '../../../src/events';
+import { Events } from '../../../src/events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
 
 describe('GapController', function () {
@@ -33,7 +33,7 @@ describe('GapController', function () {
         expect(media.currentTime).to.equal(expected);
       }
 
-      expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
+      expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
         fatal: false
@@ -44,7 +44,7 @@ describe('GapController', function () {
       config.nudgeMaxRetry = 0;
       gapController._tryNudgeBuffer();
       expect(media.currentTime).to.equal(0);
-      expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
+      expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: true
@@ -55,7 +55,7 @@ describe('GapController', function () {
   describe('_reportStall', function () {
     it('should report a stall with the current buffer length if it has not already been reported', function () {
       gapController._reportStall(42);
-      expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
+      expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: false,

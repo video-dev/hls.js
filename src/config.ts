@@ -141,10 +141,10 @@ export type HlsConfig =
     // EME
     emeController?: typeof EMEController,
 
-    abrController: any, // TODO(typescript-abrcontroller): Type once file is done
+    abrController: typeof AbrController,
     bufferController: typeof BufferController,
-    capLevelController: any, // TODO(typescript-caplevelcontroller): Type once file is done
-    fpsController: any, // TODO(typescript-fpscontroller): Type once file is done
+    capLevelController: typeof CapLevelController,
+    fpsController: typeof FPSController,
     renderNatively: boolean,
     progressive: boolean
   } &

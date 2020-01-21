@@ -1,5 +1,6 @@
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
+import { Events } from '../../../src/events';
 
 const sinon = require('sinon');
 
@@ -62,7 +63,7 @@ describe('AudioTrackController', function () {
         done();
       });
 
-      audioTrackController.onManifestParsed({
+      audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
         audioTracks: tracks
       });
     });
@@ -74,7 +75,7 @@ describe('AudioTrackController', function () {
         done();
       });
 
-      audioTrackController.onManifestParsed({
+      audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
         audioTracks: null
       });
     });
@@ -96,7 +97,7 @@ describe('AudioTrackController', function () {
     it('should update the current audioGroupId', function () {
       audioTrackController.tracks = tracks;
       audioTrackController.audioGroupId = '2';
-      audioTrackController.onAudioTrackSwitched({
+      audioTrackController.onAudioTrackSwitched(Events.AUDIO_TRACK_SWITCHED, {
         id: 1
       });
 
@@ -135,7 +136,7 @@ describe('AudioTrackController', function () {
       // current track name
       const audioTrackName = tracks[audioTrackController.audioTrack].name;
 
-      audioTrackController.onLevelLoading(levelLoadedEvent);
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, levelLoadedEvent);
 
       // group has switched
       expect(audioTrackController.audioGroupId).to.equal(newGroupId);
@@ -165,7 +166,7 @@ describe('AudioTrackController', function () {
 
       audioTrackController.tracks = [trackWithUrl];
 
-      audioTrackController.onLevelLoading({
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
       });
 
@@ -192,7 +193,7 @@ describe('AudioTrackController', function () {
 
       audioTrackController.tracks = tracks;
 
-      audioTrackController.onLevelLoading({
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
       });
 
@@ -207,24 +208,24 @@ describe('AudioTrackController', function () {
     it('should clear interval (only) on fatal network errors', function () {
       audioTrackController.timer = 1000;
 
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR
       });
 
       expect(audioTrackController.timer).to.equal(1000);
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
 
       expect(audioTrackController.timer).to.equal(1000);
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: false
       });
 
       expect(audioTrackController.timer).to.equal(1000);
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
@@ -237,19 +238,19 @@ describe('AudioTrackController', function () {
       const currentTrackId = 4;
       audioTrackController._trackId = currentTrackId;
       audioTrackController.tracks = tracks;
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
 
       expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
 
       expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,

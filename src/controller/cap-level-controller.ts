@@ -2,13 +2,14 @@
  * cap stream level to media size dimension controller
 */
 
-import Event from '../events';
-import EventHandler from '../event-handler';
+import { Events } from '../events';
 import { Level } from '../types/level';
 import { ManifestParsedData, BufferCodecsData, MediaAttachingData, FPSDropLevelCappingData, LevelsUpdatedData } from '../types/events';
 import StreamController from './stream-controller';
+import { ComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
-class CapLevelController extends EventHandler {
+class CapLevelController implements ComponentAPI {
   public autoLevelCapping: number;
   public firstLevel: number;
   public levels: Array<Level>;
@@ -16,48 +17,65 @@ class CapLevelController extends EventHandler {
   public restrictedLevels: Array<number>;
   public timer: number | undefined;
 
+  private hls: Hls;
   private streamController?: StreamController;
 
-  constructor (hls) {
-    super(hls,
-      Event.FPS_DROP_LEVEL_CAPPING,
-      Event.MEDIA_ATTACHING,
-      Event.MANIFEST_PARSED,
-      Event.LEVELS_UPDATED,
-      Event.BUFFER_CODECS,
-      Event.MEDIA_DETACHING);
-
+  constructor (hls: Hls) {
+    this.hls = hls;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.levels = [];
     this.firstLevel = -1;
     this.media = null;
     this.restrictedLevels = [];
     this.timer = undefined;
+
+    this.registerListeners();
   }
 
-  setStreamController (streamController: StreamController) {
+  public setStreamController (streamController: StreamController) {
     this.streamController = streamController;
   }
 
-  destroy () {
+  public destroy () {
+    this.unregisterListener();
     if (this.hls.config.capLevelToPlayerSize) {
       this.media = null;
       this.stopCapping();
     }
   }
 
-  onFpsDropLevelCapping (data: FPSDropLevelCappingData) {
+  protected registerListeners () {
+    const { hls } = this;
+    hls.on(Events.FPS_DROP_LEVEL_CAPPING, this.onFpsDropLevelCapping, this);
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.on(Events.BUFFER_CODECS, this.onBufferCodecs, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+  }
+
+  protected unregisterListener () {
+    const { hls } = this;
+    hls.off(Events.FPS_DROP_LEVEL_CAPPING, this.onFpsDropLevelCapping, this);
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.off(Events.BUFFER_CODECS, this.onBufferCodecs, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+  }
+
+  protected onFpsDropLevelCapping (event: Events.FPS_DROP_LEVEL_CAPPING, data: FPSDropLevelCappingData) {
     // Don't add a restricted level more than once
     if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels)) {
       this.restrictedLevels.push(data.droppedLevel);
     }
   }
 
-  onMediaAttaching (data: MediaAttachingData) {
+  protected onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     this.media = data.media instanceof HTMLVideoElement ? data.media : null;
   }
 
-  onManifestParsed (data: ManifestParsedData) {
+  protected onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData) {
     const hls = this.hls;
     this.restrictedLevels = [];
     this.levels = data.levels;
@@ -70,7 +88,7 @@ class CapLevelController extends EventHandler {
 
   // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
   // to the first level
-  onBufferCodecs (data: BufferCodecsData) {
+  protected onBufferCodecs (event: Events.BUFFER_CODECS, data: BufferCodecsData) {
     const hls = this.hls;
     if (hls.config.capLevelToPlayerSize && data.video) {
       // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
@@ -78,11 +96,11 @@ class CapLevelController extends EventHandler {
     }
   }
 
-  onLevelsUpdated (data: LevelsUpdatedData) {
+  protected onLevelsUpdated (event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {
     this.levels = data.levels;
   }
 
-  onMediaDetaching () {
+  protected onMediaDetaching () {
     this.stopCapping();
   }
 

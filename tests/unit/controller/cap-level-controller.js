@@ -1,6 +1,7 @@
 import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import CapLevelController from '../../../src/controller/cap-level-controller';
+import { Events } from '../../../src/events';
 
 const levels = [
   {
@@ -104,20 +105,20 @@ describe('CapLevelController', function () {
     });
 
     it('starts capping on BUFFER_CODECS only if video is found', function () {
-      capLevelController.onBufferCodecs({ video: {} });
+      capLevelController.onBufferCodecs(Events.BUFFER_CODECS, { video: {} });
       expect(startCappingSpy.calledOnce).to.be.true;
     });
 
     it('does not start capping on BUFFER_CODECS if video is not found', function () {
-      capLevelController.onBufferCodecs({ audio: {} });
+      capLevelController.onBufferCodecs(Events.BUFFER_CODECS, { audio: {} });
       expect(startCappingSpy.notCalled).to.be.true;
     });
 
     it('starts capping if the video codec was found after the audio codec', function () {
-      capLevelController.onBufferCodecs({ audio: {} });
+      capLevelController.onBufferCodecs(Events.BUFFER_CODECS, { audio: {} });
       expect(startCappingSpy.notCalled).to.be.true;
 
-      capLevelController.onBufferCodecs({ video: {} });
+      capLevelController.onBufferCodecs(Events.BUFFER_CODECS, { video: {} });
       expect(startCappingSpy.calledOnce).to.be.true;
     });
 
@@ -128,19 +129,19 @@ describe('CapLevelController', function () {
         firstLevel: 0
       };
 
-      capLevelController.onManifestParsed(data);
+      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, data);
       expect(capLevelController.levels).to.equal(data.levels);
       expect(capLevelController.firstLevel).to.equal(data.firstLevel);
       expect(capLevelController.restrictedLevels).to.be.empty;
     });
 
     it('should start capping in MANIFEST_PARSED if a video codec was signaled in the manifest', function () {
-      capLevelController.onManifestParsed({ video: {} });
+      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, { video: {} });
       expect(startCappingSpy.calledOnce).to.be.true;
     });
 
     it('does not start capping on MANIFEST_PARSED if no video codec was signaled in the manifest', function () {
-      capLevelController.onManifestParsed({ levels: [{}], altAudio: true });
+      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, { levels: [{}], altAudio: true });
       expect(startCappingSpy.notCalled).to.be.true;
     });
 
@@ -154,7 +155,7 @@ describe('CapLevelController', function () {
         streamController = hls.streamController;
 
         nextLevelSwitchSpy = sinon.spy(streamController, 'nextLevelSwitch');
-        capLevelController.onManifestParsed({ levels, video: {} });
+        capLevelController.onManifestParsed(Events.MANIFEST_PARSED, { levels, video: {} });
       });
 
       it('continues capping without second timer', function () {
