@@ -48,7 +48,7 @@ export enum Events {
   LEVEL_UPDATED = 'hlsLevelUpdated',
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED = 'hlsLevelPtsUpdated',
-  // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
+  // fired to notify that levels have changed after removing a level - data: { levels : [available quality levels] }
   LEVELS_UPDATED = 'hlsLevelsUpdated',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
   AUDIO_TRACKS_UPDATED = 'hlsAudioTracksUpdated',
