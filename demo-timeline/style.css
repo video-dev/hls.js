@@ -105,7 +105,6 @@ select option {
   display: flex;
   flex-direction: column;
   border: 1px solid #606060;
-  height: 150px;
   min-height: 150px;
   min-width: 20em;
   max-width: calc(100% - 2px);
