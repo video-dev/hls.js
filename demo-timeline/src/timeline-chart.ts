@@ -1,162 +1,118 @@
 import Chart from 'chart.js';
 import 'chartjs-plugin-zoom';
-import { Events } from '../../src/events';
-import {
-  AudioTrackLoadedData,
-  AudioTracksUpdatedData,
-  BufferAppendedData,
-  BufferCreatedData,
-  FragBufferedData,
-  FragChangedData,
-  FragParsedData,
-  InitPTSFoundData,
-  LevelLoadedData,
-  LevelPTSUpdatedData,
-  LevelUpdatedData,
-  ManifestLoadedData,
-  ManifestParsedData,
-  SubtitleTrackLoadedData,
-  SubtitleTracksUpdatedData
-} from '../../src/types/events';
+import { LevelParsed } from '../../src/types/level';
+import { MediaPlaylist } from '../../src/types/media-playlist';
+import { TrackSet } from '../../src/types/track';
 
-let chart: Chart;
-let rafDebounceRequestId = -1;
+export class TimelineChart {
+  private chart: Chart;
+  private rafDebounceRequestId: number = -1;
 
-export function setup () {
-  const canvas = document.querySelector('#timeline-chart') as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'horizontalBar',
-    data: {
-      labels: ['1'],
-      datasets: [{
-        data: [[0, 167.999999]]
-      }]
-    },
-    options: getChartOptions()
-  });
+  constructor (canvas: HTMLCanvasElement, chartJsOptions?: any) {
+    const ctx = canvas.getContext('2d');
+    const chart = this.chart = new Chart(ctx, {
+      type: 'horizontalBar',
+      data: {
+        labels: ['1'],
+        datasets: [{
+          data: [[0, 167.999999]]
+        }]
+      },
+      options: Object.assign(getChartOptions(), chartJsOptions)
+    });
 
-  // Parse custom dataset
-  Object.keys(chart.scales).forEach((axis) => {
-    const scale = chart.scales[axis];
-    scale._parseValue = function (value) {
-      var start, end, min, max;
+    // Parse custom dataset (Fragment)
+    Object.keys(chart.scales).forEach((axis) => {
+      const scale = chart.scales[axis];
+      scale._parseValue = function (value: number[] | any) {
+        let start, end, min, max;
 
-      if (Array.isArray(value)) {
-        start = +this.getRightValue(value[0]);
-        end = +this.getRightValue(value[1]);
-        min = Math.min(start, end);
-        max = Math.max(start, end);
-      } else {
-        start = +this.getRightValue(value.start);
-        end = +this.getRightValue(value.start + value.duration);
-        min = Math.min(start, end);
-        max = Math.max(start, end);
-      }
+        if (Array.isArray(value)) {
+          start = +this.getRightValue(value[0]);
+          end = +this.getRightValue(value[1]);
+          min = Math.min(start, end);
+          max = Math.max(start, end);
+        } else {
+          start = +this.getRightValue(value.start);
+          end = +this.getRightValue(value.start + value.duration);
+          min = Math.min(start, end);
+          max = Math.max(start, end);
+        }
 
-      return {
-        min,
-        max,
-        start,
-        end
+        return {
+          min,
+          max,
+          start,
+          end
+        };
       };
-    };
-  });
+    });
+  }
 
-  setupCheapResponsiveListeners(chart);
-}
-
-export function updatePlayer (hls) {
-  hls.on(Events.MANIFEST_LOADING, function () {
-    const { labels, datasets } = chart.data;
+  reset () {
+    const { labels, datasets } = this.chart.data;
 
     labels.length = 0;
     datasets.length = 0;
-    resize(chart, datasets);
-  });
+    this.resize(datasets);
+  }
 
-  hls.on(Events.MANIFEST_LOADED, function (eventName, data: ManifestLoadedData) {
-    const { levels, audioTracks, subtitles } = data;
-    const { labels, datasets } = chart.data;
+  update () {
+    this.chart.update({
+      duration: 0,
+      lazy: true
+    });
+  }
 
-    levels.forEach((level) => {
-      labels.push(`${level.attrs.RESOLUTION}@${level.attrs.BANDWIDTH} (${level.name})`);
+  resize (datasets?) {
+    if (datasets) {
+      this.chart.canvas.parentNode.style.height = `${datasets.length * 35}px`;
+    }
+    self.cancelAnimationFrame(this.rafDebounceRequestId);
+    this.rafDebounceRequestId = self.requestAnimationFrame(() => this.chart.resize());
+  }
+
+  updateLevels (levels: LevelParsed[]) {
+    const { labels, datasets } = this.chart.data;
+    levels.forEach((level, i) => {
+      labels.push(getLevelName(level, i));
       datasets.push({
         data: [],
         categoryPercentage: 1,
         url: level.url
       });
     });
-    audioTracks.forEach((level) => {
-      labels.push(`${level.name}/${level.lang} (${level.attrs['GROUP-ID']})`);
-      datasets.push({
-        data: [],
-        categoryPercentage: 1,
-        url: level.url
-      });
-    });
-    subtitles.forEach((level) => {
-      labels.push(`${level.name}/${level.lang} (${level.attrs['GROUP-ID']})`);
-      datasets.push({
-        data: [],
-        categoryPercentage: 1,
-        url: level.url
-      });
-    });
-    resize(chart, datasets);
-  });
-  // hls.on(Events.MANIFEST_PARSED, function (eventName, data: ManifestParsedData) {
-  //   console.log(eventName, data);
-  // });
+    this.resize(datasets);
+  }
 
-  // hls.on(Events.LEVELS_UPDATED, function (eventName, data) {
-  //   // A level was removed
-  //   // { levels: [] }
-  //   console.log(eventName, data);
-  // });
-  hls.on(Events.LEVEL_LOADED, function (eventName, data: LevelLoadedData) {
-    console.log(eventName, data);
-  });
-  hls.on(Events.LEVEL_UPDATED, function (eventName, data: LevelUpdatedData) {
-    console.log(eventName, data);
-  });
-  // // LEVEL_SWITCHED
-  // hls.on(Events.LEVEL_PTS_UPDATED, function (eventName, data: LevelPTSUpdatedData) {
-  //   console.log(eventName, data);
-  // });
-  //
-  // hls.on(Events.AUDIO_TRACKS_UPDATED, function (eventName, data: AudioTracksUpdatedData) {
-  //   console.log(eventName, data);
-  // });
-  // hls.on(Events.AUDIO_TRACK_LOADED, function (eventName, data: AudioTrackLoadedData) {
-  //   console.log(eventName, data);
-  // });
-  // // AUDIO_TRACK_SWITCHED
-  //
-  // hls.on(Events.SUBTITLE_TRACKS_UPDATED, function (eventName, data: SubtitleTracksUpdatedData) {
-  //   console.log(eventName, data);
-  // });
-  // hls.on(Events.SUBTITLE_TRACK_LOADED, function (eventName, data: SubtitleTrackLoadedData) {
-  //   console.log(eventName, data);
-  // });
-  // // SUBTITLE_TRACK_SWITCH
-  //
-  // hls.on(Events.INIT_PTS_FOUND, function (eventName, data: InitPTSFoundData) {
-  //   console.log(eventName, data);
-  // });
-  //
-  // hls.on(Events.FRAG_PARSED, function (eventName, data: FragParsedData) {
-  //   console.log(eventName, data);
-  // });
-  // hls.on(Events.FRAG_BUFFERED, function (eventName, data: FragBufferedData) {
-  //   console.log(eventName, data);
-  // });
-  // hls.on(Events.FRAG_CHANGED, function (eventName, data: FragChangedData) {
-  //   console.log(eventName, data);
-  // });
-  //
-  hls.on(Events.BUFFER_CREATED, function (eventName, { tracks }: BufferCreatedData) {
-    const { labels, datasets } = chart.data;
+  updateAudioTracks (audioTracks: MediaPlaylist[]) {
+    const { labels, datasets } = this.chart.data;
+    audioTracks.forEach((track, i) => {
+      labels.push(getAudioTrackName(track, i));
+      datasets.push({
+        data: [],
+        categoryPercentage: 1,
+        url: track.url
+      });
+    });
+    this.resize(datasets);
+  }
+
+  updateSubtitles (subtitles: MediaPlaylist[]) {
+    const { labels, datasets } = this.chart.data;
+    subtitles.forEach((track, i) => {
+      labels.push(getSubtitlesName(track, i));
+      datasets.push({
+        data: [],
+        categoryPercentage: 1,
+        url: track.url
+      });
+    });
+    this.resize(datasets);
+  }
+
+  updateSourceBuffers (tracks: TrackSet, media: HTMLMediaElement) {
+    const { labels, datasets } = this.chart.data;
     const trackTypes = Object.keys(tracks).sort((type) => type === 'video' ? 1 : -1);
     const mediaBufferData = [];
 
@@ -166,7 +122,8 @@ export function updatePlayer (hls) {
       const sourceBuffer = track.buffer;
       const backgroundColor = {
         video: 'rgba(0, 0, 255, 0.2)',
-        audio: 'rgba(128, 128, 0, 0.2)'
+        audio: 'rgba(128, 128, 0, 0.2)',
+        audiovideo: 'rgba(128, 128, 255, 0.2)'
       }[type];
       labels.unshift(`${type} buffer (${track.id})`);
       datasets.unshift({
@@ -175,10 +132,10 @@ export function updatePlayer (hls) {
         backgroundColor,
         sourceBuffer
       });
-      sourceBuffer.onupdate = function () {
+      sourceBuffer.onupdate = () => {
         replaceTimeRangeTuples(sourceBuffer.buffered, data);
-        replaceTimeRangeTuples(hls.media.buffered, mediaBufferData);
-        update(chart);
+        replaceTimeRangeTuples(media.buffered, mediaBufferData);
+        this.update();
       };
     });
 
@@ -187,21 +144,38 @@ export function updatePlayer (hls) {
       data: mediaBufferData,
       categoryPercentage: 0.5,
       backgroundColor: 'rgba(0, 255, 0, 0.2)',
-      media: hls.media
+      media
     });
 
-    resize(chart, datasets);
-  });
-  // hls.on(Events.BUFFER_APPENDED, function (eventName, data: BufferAppendedData) {
-  //   console.log(eventName, data);
-  // });
-  // hls.on(Events.BUFFER_FLUSHED, function (eventName) {
-  //   console.log(eventName);
-  // });
+    this.resize(datasets);
+  }
+}
 
-  hls.on(Events.ERROR, function (eventName, data) {
-    console.error(data);
-  });
+function getLevelName (level: LevelParsed, index: number) {
+  let label = '(main playlist)';
+  if (level.attrs.BANDWIDTH) {
+    label = `${getMainLevelAttribute(level)}@${level.attrs.BANDWIDTH}`;
+    if (level.name) {
+      label = `${label} (${level.name})`;
+    }
+  } else if (level.name) {
+    label = level.name;
+  }
+  return `${label} L-${index}`;
+}
+
+function getMainLevelAttribute (level: LevelParsed) {
+  return level.attrs.RESOLUTION || level.attrs.CODECS || level.attrs.AUDIO;
+}
+
+function getAudioTrackName (track: MediaPlaylist, index: number) {
+  const label = track.lang ? `${track.name}/${track.lang}` : track.name;
+  return `${label} (${track.attrs['GROUP-ID']}) A-${index}`;
+}
+
+function getSubtitlesName (track: MediaPlaylist, index: number) {
+  const label = track.lang ? `${track.name}/${track.lang}` : track.name;
+  return `${label} (${track.attrs['GROUP-ID']}) S-${index}`;
 }
 
 function replaceTimeRangeTuples (timeRanges, data) {
@@ -230,7 +204,7 @@ function getChartOptions () {
       display: false
     },
     maintainAspectRatio: false,
-    responsive: false,
+
     responsiveAnimationDuration: 0,
     scales: {
       // TODO: additional xAxes for PTS and PDT
@@ -282,6 +256,8 @@ Chart.controllers.horizontalBar.prototype.calculateBarIndexPixels = function (da
   };
 };
 
+// TODO: Draw currentTime on chart after each chart update
+
 // TODO: Custom draw method for Fragments and TimeRanges
 Chart.controllers.horizontalBar.prototype.draw = function () {
   const chart = this.chart;
@@ -299,26 +275,3 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
   }
   Chart.helpers.canvas.unclipArea(chart.ctx);
 };
-
-function setupCheapResponsiveListeners (chart) {
-  self.onresize = () => resize(chart);
-  if (self.screen?.orientation) {
-    self.screen.orientation.addEventListener('change', self.onresize);
-  }
-  resize(chart);
-}
-
-function update (chart) {
-  chart.update({
-    duration: 0,
-    lazy: true
-  });
-}
-
-function resize (chart, datasets?) {
-  if (datasets) {
-    chart.canvas.parentNode.style.height = `${datasets.length * 35}px`;
-  }
-  self.cancelAnimationFrame(rafDebounceRequestId);
-  rafDebounceRequestId = self.requestAnimationFrame(() => chart.resize());
-}

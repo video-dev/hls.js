@@ -1,18 +1,18 @@
 import testStreams from '../../tests/test-streams';
 import { searchParams } from './search-params';
-import { updateStreamUrl, updateVideoWidth } from './player';
+import { Player } from './player';
 
-export function setup () {
-  setupStreamSelectAndInput();
-  setupVideoSize();
+export function setup (player: Player) {
+  setupStreamSelectAndInput(player);
+  setupVideoSize(player);
 }
 
-function setupStreamSelectAndInput () {
+function setupStreamSelectAndInput (player) {
   const streamSelect = document.querySelector('#streamSelect') as HTMLSelectElement;
   const streamInput = document.querySelector('#streamURL') as HTMLInputElement;
 
   streamInput.value = searchParams.src;
-  updateStreamUrl(streamInput.value);
+  player.setUrl(streamInput.value);
 
   Object.keys(testStreams).forEach((key) => {
     const stream = testStreams[key];
@@ -29,15 +29,15 @@ function setupStreamSelectAndInput () {
       return;
     }
     streamInput.value = selected.url;
-    updateStreamUrl(streamInput.value);
+    player.setUrl(streamInput.value);
   };
 
   streamInput.oninput = function () {
-    updateStreamUrl(streamInput.value);
+    player.setUrl(streamInput.value);
   };
 }
 
-function setupVideoSize () {
+function setupVideoSize (player) {
   const video = document.querySelector('#video') as HTMLMediaElement;
   const videoSize = document.querySelector('#videoSize') as HTMLSelectElement;
 
@@ -52,6 +52,6 @@ function setupVideoSize () {
   }
   videoSize.oninput = function () {
     video.style.width = videoSize.value;
-    updateVideoWidth(videoSize.value);
+    player.setWidth(videoSize.value);
   };
 }
