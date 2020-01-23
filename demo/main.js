@@ -1073,6 +1073,7 @@ function updateAudioTrackInfo () {
   let html1 = '';
   const audioTrackId = hls.audioTrack;
   const len = hls.audioTracks.length;
+  const track = hls.audioTracks[audioTrackId];
 
   for (let i = 0; i < len; i++) {
     html1 += buttonTemplate;
@@ -1084,6 +1085,8 @@ function updateAudioTrackInfo () {
 
     html1 += 'onclick="hls.audioTrack=' + i + '">' + hls.audioTracks[i].name + '</button>';
   }
+
+  $('#audioTrackLabel').text(track ? (track.lang || track.name) : 'None selected');
   $('#audioTrackControl').html(html1);
 }
 

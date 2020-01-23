@@ -22,8 +22,6 @@ const createDefinePlugin = (type) => {
 };
 
 const basePlugins = [
-  new webpack.optimize.ModuleConcatenationPlugin(),
-  new webpack.optimize.OccurrenceOrderPlugin(),
   new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }) // SSR/Node.js guard
 ];
 const mainPlugins = [...basePlugins, createDefinePlugin('main')];
@@ -213,6 +211,17 @@ const multiConfig = [
       libraryTarget: 'umd',
       libraryExport: 'default',
       globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
+    },
+    plugins: mainPlugins,
+    devtool: 'source-map'
+  },
+  {
+    name: 'timeline',
+    entry: './demo-timeline/src/index',
+    mode: 'development',
+    output: {
+      filename: 'index.js',
+      path: path.resolve(__dirname, 'demo-timeline/dist')
     },
     plugins: mainPlugins,
     devtool: 'source-map'
