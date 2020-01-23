@@ -158,53 +158,37 @@ export function updatePlayer (hls) {
   hls.on(Events.BUFFER_CREATED, function (eventName, { tracks }: BufferCreatedData) {
     const { labels, datasets } = chart.data;
     const trackTypes = Object.keys(tracks).sort((type) => type === 'video' ? 1 : -1);
-    console.log(eventName, tracks);
+    const mediaBufferData = [];
+
     trackTypes.forEach((type) => {
       const track = tracks[type];
       const data = [];
       const sourceBuffer = track.buffer;
+      const backgroundColor = {
+        video: 'rgba(0, 0, 255, 0.2)',
+        audio: 'rgba(128, 128, 0, 0.2)'
+      }[type];
       labels.unshift(`${type} buffer (${track.id})`);
       datasets.unshift({
         data,
         categoryPercentage: 0.5,
+        backgroundColor,
         sourceBuffer
       });
-      // TODO: buffered to timeRange tuple
       sourceBuffer.onupdate = function () {
-        const { buffered } = sourceBuffer;
-        data.length = 0;
-        for (let i = 0; i < buffered.length; i++) {
-          data.push([buffered.start(i), buffered.end(i)]);
-        }
-        // TODO: updateChart
-        chart.update({
-          duration: 0,
-          lazy: true
-        });
+        replaceTimeRangeTuples(sourceBuffer.buffered, data);
+        replaceTimeRangeTuples(hls.media.buffered, mediaBufferData);
+        update(chart);
       };
     });
 
-    if (trackTypes.length > 1) {
-      const data = [];
-      labels.unshift('media buffer');
-      datasets.unshift({
-        data,
-        categoryPercentage: 0.5,
-        media: hls.media
-      });
-      // TODO: buffered to timeRange tuple
-      hls.media.onprogress = function () {
-        const { buffered } = hls.media;
-        data.length = 0;
-        for (let i = 0; i < buffered.length; i++) {
-          data.push([buffered.start(i), buffered.end(i)]);
-        }
-        chart.update({
-          duration: 0,
-          lazy: true
-        });
-      };
-    }
+    labels.unshift('media buffer');
+    datasets.unshift({
+      data: mediaBufferData,
+      categoryPercentage: 0.5,
+      backgroundColor: 'rgba(0, 255, 0, 0.2)',
+      media: hls.media
+    });
 
     resize(chart, datasets);
   });
@@ -218,6 +202,14 @@ export function updatePlayer (hls) {
   hls.on(Events.ERROR, function (eventName, data) {
     console.error(data);
   });
+}
+
+function replaceTimeRangeTuples (timeRanges, data) {
+  data.length = 0;
+  const { length } = timeRanges;
+  for (let i = 0; i < length; i++) {
+    data.push([timeRanges.start(i), timeRanges.end(i)]);
+  }
 }
 
 function getChartOptions () {
@@ -241,6 +233,7 @@ function getChartOptions () {
     responsive: false,
     responsiveAnimationDuration: 0,
     scales: {
+      // TODO: additional xAxes for PTS and PDT
       xAxes: [{
         ticks: {
           beginAtZero: true
@@ -313,6 +306,13 @@ function setupCheapResponsiveListeners (chart) {
     self.screen.orientation.addEventListener('change', self.onresize);
   }
   resize(chart);
+}
+
+function update (chart) {
+  chart.update({
+    duration: 0,
+    lazy: true
+  });
 }
 
 function resize (chart, datasets?) {
