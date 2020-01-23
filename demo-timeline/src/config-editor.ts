@@ -1,10 +1,9 @@
 import ace from '../libs/ace';
 import '../libs/theme-github';
 import '../libs/mode-json';
-
 import { searchParams } from './search-params';
 import { Storage } from './local-storage';
-import { updateConfig } from './player';
+import { Player } from './player';
 
 const hlsjsDefaults = {
   debug: true,
@@ -12,8 +11,9 @@ const hlsjsDefaults = {
   liveBackBufferLength: 60 * 15
 };
 
-export function setup (id) {
+export function setup (id: string, player: Player) {
   const persistEditorCheckBox = document.querySelector('#config-persistence') as HTMLInputElement;
+  const applyButton = document.querySelector('#config-apply') as HTMLButtonElement;
 
   const jsonEditor = ace.edit(id);
   jsonEditor.setTheme('ace/theme/github');
@@ -29,7 +29,7 @@ export function setup (id) {
     Object.assign(config, Storage.config);
   }
 
-  updateConfig(config);
+  player.setConfig(config);
 
   const json = JSON.stringify(config, null, 2);
   jsonEditor.session.setValue(json);
@@ -51,13 +51,12 @@ export function setup (id) {
       if (Storage.persistEditor) {
         Storage.config = config;
       }
-      updateConfig(config);
+      player.setConfig(config);
     } catch (error) {
       console.warn(error);
     }
   };
 
-  const applyButton = document.querySelector('#config-apply') as HTMLButtonElement;
   applyButton.onclick = applyConfig;
 
   jsonEditor.commands.addCommand({
