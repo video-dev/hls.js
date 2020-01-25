@@ -107,7 +107,6 @@ export class Player {
       this.chart.updateLevelOrTrack(details);
     });
 
-
     hls.on(Events.SUBTITLE_TRACK_LOADED, (eventName, { details }: SubtitleTrackLoadedData) => {
       this.chart.updateLevelOrTrack(details);
     });
