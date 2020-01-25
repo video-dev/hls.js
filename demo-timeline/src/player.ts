@@ -1,6 +1,14 @@
 import { TimelineChart } from './timeline-chart';
 import { Events } from '../../src/events';
-import { BufferCreatedData, LevelLoadedData, LevelUpdatedData, ManifestLoadedData } from '../../src/types/events';
+import {
+  AudioTrackLoadedData,
+  AudioTracksUpdatedData, BufferAppendedData,
+  BufferCreatedData, FragBufferedData, FragChangedData, FragLoadingData, FragParsedData,
+  LevelLoadedData, LevelPTSUpdatedData,
+  LevelsUpdatedData,
+  LevelUpdatedData,
+  ManifestLoadedData, SubtitleTrackLoadedData, SubtitleTracksUpdatedData
+} from '../../src/types/events';
 
 const Hls = self.Hls;
 
@@ -70,69 +78,69 @@ export class Player {
 
     hls.on(Events.MANIFEST_LOADED, (eventName, data: ManifestLoadedData) => {
       const { levels, audioTracks, subtitles = [] } = data;
+      this.chart.removeType('level');
+      this.chart.removeType('audioTrack');
+      this.chart.removeType('subtitleTrack');
       this.chart.updateLevels(levels);
       this.chart.updateAudioTracks(audioTracks);
-      this.chart.updateSubtitles(subtitles);
+      this.chart.updateSubtitleTracks(subtitles);
     });
 
-    // hls.on(Events.MANIFEST_PARSED, (eventName, data: ManifestParsedData) {
+    hls.on(Events.LEVELS_UPDATED, (eventName, { levels }: LevelsUpdatedData) => {
+      this.chart.removeType('level');
+      this.chart.updateLevels(levels);
+    });
+    // Events.LEVEL_LOADED
+    hls.on(Events.LEVEL_UPDATED, (eventName, { details, level }: LevelUpdatedData) => {
+      this.chart.updateLevelOrTrack(details);
+    });
+
+    hls.on(Events.AUDIO_TRACKS_UPDATED, (eventName, { audioTracks }: AudioTracksUpdatedData) => {
+      this.chart.removeType('audioTrack');
+      this.chart.updateAudioTracks(audioTracks);
+    });
+    hls.on(Events.SUBTITLE_TRACKS_UPDATED, (eventName, { subtitleTracks }: SubtitleTracksUpdatedData) => {
+      this.chart.removeType('subtitleTrack');
+      this.chart.updateSubtitleTracks(subtitleTracks);
+    });
+    hls.on(Events.AUDIO_TRACK_LOADED, (eventName, { details }: AudioTrackLoadedData) => {
+      this.chart.updateLevelOrTrack(details);
+    });
+
+
+    hls.on(Events.SUBTITLE_TRACK_LOADED, (eventName, { details }: SubtitleTrackLoadedData) => {
+      this.chart.updateLevelOrTrack(details);
+    });
+
+    // LEVEL_SWITCHED
+    // AUDIO_TRACK_SWITCHED
+    // SUBTITLE_TRACK_SWITCH
+
+    hls.on(Events.LEVEL_PTS_UPDATED, (eventName, data: LevelPTSUpdatedData) => {
+      this.chart.updateLevelOrTrack(data.details);
+    });
+    // hls.on(Events.INIT_PTS_FOUND, (eventName, data: InitPTSFoundData) => {
     //   console.log(eventName, data);
     // });
 
-    // hls.on(Events.LEVELS_UPDATED, (eventName, data) {
-    //   // A level was removed
-    //   // { levels: [] }
-    //   console.log(eventName, data);
+    // hls.on(Events.FRAG_LOADING, (eventName, data: FragLoadingData) => {
+    //   this.chart.updateFragment(data);
     // });
-    hls.on(Events.LEVEL_LOADED, (eventName, data: LevelLoadedData) => {
-      console.log(eventName, data);
-    });
-    hls.on(Events.LEVEL_UPDATED, (eventName, data: LevelUpdatedData) => {
-      console.log(eventName, data);
-    });
-    // // LEVEL_SWITCHED
-    // hls.on(Events.LEVEL_PTS_UPDATED, (eventName, data: LevelPTSUpdatedData) {
-    //   console.log(eventName, data);
+    // hls.on(Events.FRAG_PARSED, (eventName, data: FragParsedData) => {
+    //   this.chart.updateFragment(data);
     // });
-    //
-    // hls.on(Events.AUDIO_TRACKS_UPDATED, (eventName, data: AudioTracksUpdatedData) {
-    //   console.log(eventName, data);
+    // hls.on(Events.FRAG_CHANGED, (eventName, data: FragChangedData) => {
+    //   this.chart.resize();
     // });
-    // hls.on(Events.AUDIO_TRACK_LOADED, (eventName, data: AudioTrackLoadedData) {
-    //   console.log(eventName, data);
-    // });
-    // // AUDIO_TRACK_SWITCHED
-    //
-    // hls.on(Events.SUBTITLE_TRACKS_UPDATED, (eventName, data: SubtitleTracksUpdatedData) {
-    //   console.log(eventName, data);
-    // });
-    // hls.on(Events.SUBTITLE_TRACK_LOADED, (eventName, data: SubtitleTrackLoadedData) {
-    //   console.log(eventName, data);
-    // });
-    // // SUBTITLE_TRACK_SWITCH
-    //
-    // hls.on(Events.INIT_PTS_FOUND, (eventName, data: InitPTSFoundData) {
-    //   console.log(eventName, data);
-    // });
-    //
-    // hls.on(Events.FRAG_PARSED, (eventName, data: FragParsedData) {
-    //   console.log(eventName, data);
-    // });
-    // hls.on(Events.FRAG_BUFFERED, (eventName, data: FragBufferedData) {
-    //   console.log(eventName, data);
-    // });
-    // hls.on(Events.FRAG_CHANGED, (eventName, data: FragChangedData) {
-    //   console.log(eventName, data);
-    // });
-    //
+
     hls.on(Events.BUFFER_CREATED, (eventName, { tracks }: BufferCreatedData) => {
       this.chart.updateSourceBuffers(tracks, hls.media);
     });
-    // hls.on(Events.BUFFER_APPENDED, (eventName, data: BufferAppendedData) {
-    //   console.log(eventName, data);
+    // hls.on(Events.BUFFER_APPENDED, (eventName, data: BufferAppendedData) => {
+    //   this.chart.update();
     // });
-    // hls.on(Events.BUFFER_FLUSHED, (eventName) {
-    //   console.log(eventName);
+    // hls.on(Events.BUFFER_FLUSHED, (eventName) => {
+    //   this.chart.resize();
     // });
 
     hls.on(Events.ERROR, (eventName, data) => {

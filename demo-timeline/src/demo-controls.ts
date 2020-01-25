@@ -54,4 +54,5 @@ function setupVideoSize (player) {
     video.style.width = videoSize.value;
     player.setWidth(videoSize.value);
   };
+  player.setWidth(searchParams.width);
 }
