@@ -7,6 +7,7 @@ declare global {
   interface Window {
     Hls: any;
     hls: any;
+    chart: any;
   }
 }
 
