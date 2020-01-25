@@ -16,12 +16,18 @@ export class TimelineChart {
     const chart = this.chart = self.chart = new Chart(ctx, {
       type: 'horizontalBar',
       data: {
-        labels: ['1'],
-        datasets: [{
-          data: [[0, 167.999999]]
-        }]
+        labels: [],
+        datasets: []
       },
-      options: Object.assign(getChartOptions(), chartJsOptions)
+      options: Object.assign(getChartOptions(), chartJsOptions),
+      plugins: [{
+        afterRender: function () {
+          if (self.hls?.media?.ontimeupdate) {
+            ctx.imageDataBuffer = null;
+            self.hls.media.ontimeupdate(null);
+          }
+        }
+      }]
     });
     chart.onClick = (event) => {
       console.log('chart.onClick', event);
@@ -42,9 +48,6 @@ export class TimelineChart {
     canvas.ondblclick = function () {
       chart.resetZoom();
     };
-
-    // Prevent rendering on mousemove (with options.hover.mode: null)
-    chart.animating = true;
 
     // Parse custom dataset (Fragment)
     Object.keys(chart.scales).forEach((axis) => {
@@ -208,6 +211,14 @@ export class TimelineChart {
       media
     });
 
+    media.ontimeupdate = () => {
+      const chart = this.chart;
+      const scale = chart.scales['x-axis-0'];
+      const ctx: CanvasRenderingContext2D = chart.ctx;
+      const chartArea: { left, top, right, bottom } = chart.chartArea;
+      const x = scale.getPixelForValue(media.currentTime);
+      drawLineX(ctx, x, chartArea);
+    };
     this.resize(datasets);
   }
 }
@@ -258,6 +269,9 @@ function getChartOptions () {
         borderColor: 'rgba(20, 20, 20, 1)'
       }
     },
+    events: [
+      'click', 'touchstart'
+    ],
     hover: {
       mode: null,
       animationDuration: 0
@@ -298,7 +312,7 @@ function getChartOptions () {
         },
         zoom: {
           enabled: true,
-          speed: 0.05,
+          speed: 0.1,
           mode: 'x',
           rangeMin: {
             x: 0, y: null
@@ -345,9 +359,6 @@ Chart.controllers.horizontalBar.prototype.calculateBarIndexPixels = function (da
   };
 };
 
-// TODO: Draw currentTime on chart after each chart update
-
-// TODO: Custom draw method for Fragments and TimeRanges
 Chart.controllers.horizontalBar.prototype.draw = function () {
   const chart = this.chart;
   const scale = this._getValueScale();
@@ -402,7 +413,6 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
         }
       }
       if (drawText) {
-        // ctx.save();
         const start = val.start; // obj.start;
         ctx.fillStyle = 'rgb(0, 0, 0)';
         if (stats) {
@@ -415,12 +425,12 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
         const fixedPoint = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
         const startString = fixedPoint ? start.toFixed(fixedPoint).replace(/\.0$/, '..') : start.toString();
         ctx.fillText(startString, bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
-        // ctx.restore();
         drawTextCount++;
       }
       drawCount++;
     }
   }
+
   Chart.helpers.canvas.unclipArea(chart.ctx);
   // if (drawCount) {
   //   console.warn('rects drawn', drawCount);
@@ -429,6 +439,29 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
   //   console.log('text drawn', drawTextCount);
   // }
 };
+
+function drawLineX (ctx, x, chartArea) {
+  if (!ctx.imageDataBuffer) {
+    const devicePixelRatio = self.devicePixelRatio || 1;
+    ctx.imageDataBuffer = ctx.getImageData(0, 0, chartArea.right * devicePixelRatio, chartArea.bottom * devicePixelRatio);
+  } else {
+    ctx.restore();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, chartArea.right, chartArea.bottom);
+    ctx.putImageData(ctx.imageDataBuffer, 0, 0);
+  }
+  if (x > chartArea.left && x < chartArea.right) {
+    ctx.restore();
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
 
 function scaleParseValue (value: number[] | any) {
   let start, end, min, max;
