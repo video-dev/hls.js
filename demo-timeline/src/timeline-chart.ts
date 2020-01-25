@@ -78,7 +78,12 @@ export class TimelineChart {
 
   reset () {
     const { labels, datasets } = this.chart.data;
-    this.maxZoom = 60;
+    const scale = this.chart.scales[X_AXIS_SECONDS];
+    scale.options.ticks.min = 0;
+    scale.options.ticks.max = 60;
+    if (this.chart.config?.options?.plugins?.zoom?.zoom?.rangeMax) {
+      this.chart.config.options.plugins.zoom.zoom.rangeMax.x = 60;
+    }
     labels.length = 0;
     datasets.length = 0;
     this.resize(datasets);
@@ -93,7 +98,10 @@ export class TimelineChart {
 
   resize (datasets?) {
     if (datasets?.length) {
-      this.chart.canvas.parentNode.style.height = `${datasets.length * 35}px`;
+      const scale = this.chart.scales[X_AXIS_SECONDS];
+      const { top } = this.chart.chartArea;
+      const height = top + datasets.reduce((val, dataset) => val + dataset.barThickness, 0) + scale.height;
+      this.chart.canvas.parentNode.style.height = `${height}px`;
     }
     self.cancelAnimationFrame(this.rafDebounceRequestId);
     this.rafDebounceRequestId = self.requestAnimationFrame(() => {
@@ -105,14 +113,11 @@ export class TimelineChart {
     const { labels, datasets } = this.chart.data;
     levels.forEach((level, i) => {
       labels.push(getLevelName(level, level.level || level.id || i));
-      datasets.push({
-        data: [],
-        xAxisID: X_AXIS_SECONDS,
-        categoryPercentage: 1,
+      datasets.push(datasetWithDefaults({
         url: level.url,
         trackType: 'level',
         level: level.level
-      });
+      }));
       if (level.details) {
         this.updateLevelOrTrack(level.details);
       }
@@ -124,14 +129,11 @@ export class TimelineChart {
     const { labels, datasets } = this.chart.data;
     audioTracks.forEach((track, i) => {
       labels.push(getAudioTrackName(track, i));
-      datasets.push({
-        data: [],
-        xAxisID: X_AXIS_SECONDS,
-        categoryPercentage: 1,
+      datasets.push(datasetWithDefaults({
         url: track.url,
         trackType: 'audioTrack',
         audioTrack: i
-      });
+      }));
       if (track.details) {
         this.updateLevelOrTrack(track.details);
       }
@@ -143,14 +145,11 @@ export class TimelineChart {
     const { labels, datasets } = this.chart.data;
     subtitles.forEach((track, i) => {
       labels.push(getSubtitlesName(track, i));
-      datasets.push({
-        data: [],
-        xAxisID: X_AXIS_SECONDS,
-        categoryPercentage: 1,
+      datasets.push(datasetWithDefaults({
         url: track.url,
         trackType: 'subtitleTrack',
         subtitleTrack: i
-      });
+      }));
       if (track.details) {
         this.updateLevelOrTrack(track.details);
       }
@@ -233,12 +232,12 @@ export class TimelineChart {
         audiovideo: 'rgba(128, 128, 255, 0.2)'
       }[type];
       labels.unshift(`${type} buffer (${track.id})`);
-      datasets.unshift({
+      datasets.unshift(datasetWithDefaults({
         data,
         categoryPercentage: 0.5,
         backgroundColor,
         sourceBuffer
-      });
+      }));
       sourceBuffer.onupdate = () => {
         try {
           replaceTimeRangeTuples(sourceBuffer.buffered, data);
@@ -252,12 +251,12 @@ export class TimelineChart {
     });
 
     labels.unshift('media buffer');
-    datasets.unshift({
+    datasets.unshift(datasetWithDefaults({
       data: mediaBufferData,
       categoryPercentage: 0.5,
       backgroundColor: 'rgba(0, 255, 0, 0.2)',
       media
-    });
+    }));
 
     media.ontimeupdate = () => this.drawCurrentTime();
 
@@ -265,9 +264,9 @@ export class TimelineChart {
   }
 
   drawCurrentTime () {
-    if (self.hls?.media) {
+    const chart = this.chart;
+    if (self.hls?.media && chart.data.datasets.length) {
       const currentTime = self.hls.media.currentTime;
-      const chart = this.chart;
       const scale = chart.scales[X_AXIS_SECONDS];
       const ctx: CanvasRenderingContext2D = chart.ctx;
       const chartArea: { left, top, right, bottom } = chart.chartArea;
@@ -277,7 +276,8 @@ export class TimelineChart {
       this.drawLineX(ctx, x, chartArea);
       if (x > chartArea.left && x < chartArea.right) {
         ctx.fillStyle = 'rgba(0, 0, 255, 0.9)';
-        ctx.fillText(hhmmss(currentTime, 5), x + 2, chartArea.top + 32, 100);
+        const y = chartArea.top + chart.data.datasets[0].barThickness + 1;
+        ctx.fillText(hhmmss(currentTime, 5), x + 2, y, 100);
       }
       ctx.restore();
     }
@@ -301,6 +301,15 @@ export class TimelineChart {
       ctx.stroke();
     }
   }
+}
+
+function datasetWithDefaults (options) {
+  return Object.assign({
+    data: [],
+    xAxisID: X_AXIS_SECONDS,
+    barThickness: 35,
+    categoryPercentage: 1
+  }, options);
 }
 
 function getLevelName (level: LevelParsed, index: number) {
