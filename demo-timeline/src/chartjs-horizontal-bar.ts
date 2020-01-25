@@ -5,7 +5,7 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (da
   const chart = this.chart;
   const scale = this._getValueScale();
   const datasets = chart.data.datasets;
-  // const metasets = scale._getMatchingVisibleMetas(this._type);
+  scale._parseValue = scaleParseValue;
   const value = scale._parseValue(datasets[datasetIndex].data[index]);
   const start = value.start === undefined ? 0 : value.max >= 0 && value.min >= 0 ? value.min : value.max;
   const length = value.start === undefined ? value.end : value.max >= 0 && value.min >= 0 ? value.max - value.min : value.min - value.max;
@@ -22,9 +22,9 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (da
 };
 
 Chart.controllers.horizontalBar.prototype.calculateBarIndexPixels = function (datasetIndex, index, ruler, options) {
-  const rowHeight = 35;
+  const rowHeight = options.barThickness;
   const size = rowHeight * options.categoryPercentage;
-  const center = datasetIndex * rowHeight + (rowHeight / 2);
+  const center = ruler.start + (datasetIndex * rowHeight + (rowHeight / 2));
   return {
     base: center - size / 2,
     head: center + size / 2,
@@ -47,6 +47,7 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
   const ctx: CanvasRenderingContext2D = chart.ctx;
   const chartArea: { left, top, right, bottom } = chart.chartArea;
   Chart.helpers.canvas.clipArea(ctx, chartArea);
+  const range = scale.getValueForPixel(chartArea.right) - scale.getValueForPixel(chartArea.left);
   const lineHeight = Math.ceil(ctx.measureText('0').actualBoundingBoxAscent) + 2;
   for (let i = 0; i < len; ++i) {
     const rect = rects[i];
@@ -66,12 +67,12 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
         if (drawText) {
           view.borderWidth = 1;
           if (i === 0) {
-            view.borderSkipped = null;
+            view.borderSkipped = false;
           }
-        } else {
+        } else if (range > 300) {
           view.borderWidth = 0;
-          view.backgroundColor = `rgba(0, 0, 0, ${0.1 + (i % 2) / 4})`;
         }
+        view.backgroundColor = `rgba(0, 0, 0, ${0.05 + (i % 2) / 12})`;
       }
       rect.draw();
       if (isFragment) {
@@ -165,7 +166,7 @@ export function hhmmss (value, fixedDigits) {
   const m = ((value / 60) | 0) % 60;
   const s = value % 60;
   return `${h}:${pad(m, 2)}:${pad(s.toFixed(fixedDigits), fixedDigits ? (fixedDigits + 3) : 2)}`
-    .replace(/^(?:0+:?)*(\d.*?)\.?0*$/, '$1');
+    .replace(/^(?:0+:?)*(\d.*?)(?:\.0*)?$/, '$1');
 }
 
 function pad (str, length) {
