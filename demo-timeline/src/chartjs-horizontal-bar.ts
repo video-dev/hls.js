@@ -93,8 +93,8 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
           ctx.fillText(snLabel, bounds.x + bounds.w - textWidth, bounds.y + lineHeight, bounds.w - 4);
         }
         const float = start !== (start | 0);
-        const fixedPoint = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
-        const startString = fixedPoint ? start.toFixed(fixedPoint).replace(/\.0$/, '..') : start.toString();
+        const fixedDigits = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
+        const startString = hhmmss(start, fixedDigits);
         ctx.fillText(startString, bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
       }
     }
@@ -158,4 +158,20 @@ function boundingRects (vm) {
     w: right - left,
     h: bottom - top
   };
+}
+
+export function hhmmss (value, fixedDigits) {
+  const h = (value / 3600) | 0;
+  const m = ((value / 60) | 0) % 60;
+  const s = value % 60;
+  return `${h}:${pad(m, 2)}:${pad(s.toFixed(fixedDigits), fixedDigits ? (fixedDigits + 3) : 2)}`
+    .replace(/^(?:0+:?)*(\d.*?)\.?0*$/, '$1');
+}
+
+function pad (str, length) {
+  str = '' + str;
+  while (str.length < length) {
+    str = '0' + str;
+  }
+  return str;
 }
