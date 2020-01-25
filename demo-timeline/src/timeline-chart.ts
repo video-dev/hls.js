@@ -1,12 +1,14 @@
 import Chart from 'chart.js';
 import 'chartjs-plugin-zoom';
-import { applyChartInstanceOverrides } from './chartjs-horizontal-bar';
+import { applyChartInstanceOverrides, hhmmss } from './chartjs-horizontal-bar';
 import { Level, LevelParsed } from '../../src/types/level';
 import { MediaPlaylist } from '../../src/types/media-playlist';
 import { TrackSet } from '../../src/types/track';
 import LevelDetails from '../../src/loader/level-details';
 import { FragChangedData } from '../../src/types/events';
 import Fragment from '../../src/loader/fragment';
+
+const X_AXIS_SECONDS = 'x-axis-seconds';
 
 export class TimelineChart {
   private chart: Chart;
@@ -24,10 +26,8 @@ export class TimelineChart {
       options: Object.assign(getChartOptions(), chartJsOptions),
       plugins: [{
         afterRender: () => {
-          if (self.hls?.media?.ontimeupdate) {
-            this.imageDataBuffer = null;
-            self.hls.media.ontimeupdate(null);
-          }
+          this.imageDataBuffer = null;
+          this.drawCurrentTime();
         }
       }]
     });
@@ -42,7 +42,7 @@ export class TimelineChart {
         const obj = dataset.data[element[0]._index];
         console.log(obj);
         if (self.hls?.media) {
-          const scale = chart.scales['x-axis-0'];
+          const scale = chart.scales[X_AXIS_SECONDS];
           const pos = Chart.helpers.getRelativePosition(event, chart);
           const time = scale.getValueForPixel(pos.x);
           self.hls.media.currentTime = time;
@@ -54,7 +54,7 @@ export class TimelineChart {
       const chartArea: { left, top, right, bottom } = chart.chartArea;
       const element = chart.getElementAtEvent(event);
       const pos = Chart.helpers.getRelativePosition(event, chart);
-      const scale = chart.scales['x-axis-0'];
+      const scale = chart.scales[X_AXIS_SECONDS];
       const range = scale.max - scale.min;
       const newDiff = range * (event.getModifierState('Shift') ? -1.0 : 0.5);
       const minPercent = (scale.getValueForPixel(pos.x) - scale.min) / range;
@@ -107,6 +107,7 @@ export class TimelineChart {
       labels.push(getLevelName(level, level.level || level.id || i));
       datasets.push({
         data: [],
+        xAxisID: X_AXIS_SECONDS,
         categoryPercentage: 1,
         url: level.url,
         trackType: 'level',
@@ -125,6 +126,7 @@ export class TimelineChart {
       labels.push(getAudioTrackName(track, i));
       datasets.push({
         data: [],
+        xAxisID: X_AXIS_SECONDS,
         categoryPercentage: 1,
         url: track.url,
         trackType: 'audioTrack',
@@ -143,6 +145,7 @@ export class TimelineChart {
       labels.push(getSubtitlesName(track, i));
       datasets.push({
         data: [],
+        xAxisID: X_AXIS_SECONDS,
         categoryPercentage: 1,
         url: track.url,
         trackType: 'subtitleTrack',
@@ -256,15 +259,28 @@ export class TimelineChart {
       media
     });
 
-    media.ontimeupdate = () => {
+    media.ontimeupdate = () => this.drawCurrentTime();
+
+    this.resize(datasets);
+  }
+
+  drawCurrentTime () {
+    if (self.hls?.media) {
+      const currentTime = self.hls.media.currentTime;
       const chart = this.chart;
-      const scale = chart.scales['x-axis-0'];
+      const scale = chart.scales[X_AXIS_SECONDS];
       const ctx: CanvasRenderingContext2D = chart.ctx;
       const chartArea: { left, top, right, bottom } = chart.chartArea;
-      const x = scale.getPixelForValue(media.currentTime);
+      const x = scale.getPixelForValue(currentTime);
+      ctx.restore();
+      ctx.save();
       this.drawLineX(ctx, x, chartArea);
-    };
-    this.resize(datasets);
+      if (x > chartArea.left && x < chartArea.right) {
+        ctx.fillStyle = 'rgba(0, 0, 255, 0.9)';
+        ctx.fillText(hhmmss(currentTime, 5), x + 2, chartArea.top + 32, 100);
+      }
+      ctx.restore();
+    }
   }
 
   drawLineX (ctx, x, chartArea) {
@@ -272,21 +288,17 @@ export class TimelineChart {
       const devicePixelRatio = self.devicePixelRatio || 1;
       this.imageDataBuffer = ctx.getImageData(0, 0, chartArea.right * devicePixelRatio, chartArea.bottom * devicePixelRatio);
     } else {
-      ctx.restore();
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, chartArea.right, chartArea.bottom);
       ctx.putImageData(this.imageDataBuffer, 0, 0);
     }
     if (x > chartArea.left && x < chartArea.right) {
-      ctx.restore();
-      ctx.save();
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';
       ctx.beginPath();
       ctx.moveTo(x, chartArea.top);
       ctx.lineTo(x, chartArea.bottom);
       ctx.stroke();
-      ctx.restore();
     }
   }
 }
@@ -353,8 +365,18 @@ function getChartOptions () {
     scales: {
       // TODO: additional xAxes for PTS and PDT
       xAxes: [{
+        id: X_AXIS_SECONDS,
         ticks: {
-          beginAtZero: true
+          beginAtZero: true,
+          sampleSize: 0,
+          maxRotation: 0,
+          callback: (tickValue, i, ticks) => {
+            if (i === 0 || i === ticks.length - 1) {
+              return tickValue ? '' : '0';
+            } else {
+              return hhmmss(tickValue, 2);
+            }
+          }
         }
       }],
       yAxes: [{
