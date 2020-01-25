@@ -10,6 +10,7 @@ import Fragment from '../../src/loader/fragment';
 export class TimelineChart {
   private chart: Chart;
   private rafDebounceRequestId: number = -1;
+  private imageDataBuffer: ImageData | null = null;
 
   constructor (canvas: HTMLCanvasElement, chartJsOptions?: any) {
     const ctx = canvas.getContext('2d');
@@ -21,33 +22,36 @@ export class TimelineChart {
       },
       options: Object.assign(getChartOptions(), chartJsOptions),
       plugins: [{
-        afterRender: function () {
+        afterRender: () => {
           if (self.hls?.media?.ontimeupdate) {
-            ctx.imageDataBuffer = null;
+            this.imageDataBuffer = null;
             self.hls.media.ontimeupdate(null);
           }
         }
       }]
     });
-    chart.onClick = (event) => {
-      console.log('chart.onClick', event);
-    };
 
-    canvas.onmousedown = function (event) {
-      const elements = chart.getElementsAtEvent(event);
-      console.log('onmousedown', event, elements);
+    // Log object on click and seek to position
+    canvas.onclick = (event) => {
+      const element = chart.getElementAtEvent(event);
+      if (element.length) {
+        const dataset = chart.data.datasets[element[0]._datasetIndex];
+        const obj = dataset.data[element[0]._index];
+        console.log(obj);
+        if (self.hls?.media) {
+          const scale = chart.scales['x-axis-0'];
+          const pos = Chart.helpers.getRelativePosition(event, chart);
+          const time = scale.getValueForPixel(pos.x);
+          self.hls.media.currentTime = time;
+        }
+      }
     };
-
-    // TODO: prevent zoom over y axis labels
-    // canvas.onwheel = function (event) {
-    //   const elements = chart.getElementsAtEvent(event);
-    //   console.log('onwheel', elements);
-    //   event.stopPropagation();
-    // };
 
     canvas.ondblclick = function () {
       chart.resetZoom();
     };
+
+    // TODO: Prevent zoom over y axis labels
 
     // Parse custom dataset (Fragment)
     Object.keys(chart.scales).forEach((axis) => {
@@ -72,7 +76,7 @@ export class TimelineChart {
   }
 
   resize (datasets?) {
-    if (datasets) {
+    if (datasets?.length) {
       this.chart.canvas.parentNode.style.height = `${datasets.length * 35}px`;
     }
     self.cancelAnimationFrame(this.rafDebounceRequestId);
@@ -217,9 +221,32 @@ export class TimelineChart {
       const ctx: CanvasRenderingContext2D = chart.ctx;
       const chartArea: { left, top, right, bottom } = chart.chartArea;
       const x = scale.getPixelForValue(media.currentTime);
-      drawLineX(ctx, x, chartArea);
+      this.drawLineX(ctx, x, chartArea);
     };
     this.resize(datasets);
+  }
+
+  drawLineX (ctx, x, chartArea) {
+    if (!this.imageDataBuffer) {
+      const devicePixelRatio = self.devicePixelRatio || 1;
+      this.imageDataBuffer = ctx.getImageData(0, 0, chartArea.right * devicePixelRatio, chartArea.bottom * devicePixelRatio);
+    } else {
+      ctx.restore();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, chartArea.right, chartArea.bottom);
+      ctx.putImageData(this.imageDataBuffer, 0, 0);
+    }
+    if (x > chartArea.left && x < chartArea.right) {
+      ctx.restore();
+      ctx.save();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';
+      ctx.beginPath();
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 }
 
@@ -369,8 +396,6 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
     // View does not match dataset (wait for redraw)
     return;
   }
-  let drawCount = 0;
-  let drawTextCount = 0;
   const ctx: CanvasRenderingContext2D = chart.ctx;
   const chartArea: { left, top, right, bottom } = chart.chartArea;
   Chart.helpers.canvas.clipArea(ctx, chartArea);
@@ -419,55 +444,23 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
           const snLabel = 'sn: ' + obj.sn;
           const textWidth = Math.min(ctx.measureText(snLabel).width + 2, bounds.w - 2);
           ctx.fillText(snLabel, bounds.x + bounds.w - textWidth, bounds.y + lineHeight, bounds.w - 4);
-          drawTextCount++;
         }
         const float = start !== (start | 0);
         const fixedPoint = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
         const startString = fixedPoint ? start.toFixed(fixedPoint).replace(/\.0$/, '..') : start.toString();
         ctx.fillText(startString, bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
-        drawTextCount++;
       }
-      drawCount++;
     }
   }
 
   Chart.helpers.canvas.unclipArea(chart.ctx);
-  // if (drawCount) {
-  //   console.warn('rects drawn', drawCount);
-  // }
-  // if (drawTextCount) {
-  //   console.log('text drawn', drawTextCount);
-  // }
 };
-
-function drawLineX (ctx, x, chartArea) {
-  if (!ctx.imageDataBuffer) {
-    const devicePixelRatio = self.devicePixelRatio || 1;
-    ctx.imageDataBuffer = ctx.getImageData(0, 0, chartArea.right * devicePixelRatio, chartArea.bottom * devicePixelRatio);
-  } else {
-    ctx.restore();
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, chartArea.right, chartArea.bottom);
-    ctx.putImageData(ctx.imageDataBuffer, 0, 0);
-  }
-  if (x > chartArea.left && x < chartArea.right) {
-    ctx.restore();
-    ctx.save();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';
-    ctx.beginPath();
-    ctx.moveTo(x, chartArea.top);
-    ctx.lineTo(x, chartArea.bottom);
-    ctx.stroke();
-    ctx.restore();
-  }
-}
 
 function scaleParseValue (value: number[] | any) {
   let start, end, min, max;
 
   if (value === undefined) {
-    console.warn('value must be defined');
+    console.warn('Chart values undefined (update chart)');
     return {};
   }
 
