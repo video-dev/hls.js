@@ -169,7 +169,7 @@ export class TimelineChart {
   }
 
   updateLevelOrTrack (details: LevelDetails) {
-    const { totalduration, url } = details;
+    const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
     // eslint-disable-next-line no-restricted-properties
     const { data } = datasets.find(dataset => dataset.url === url);
@@ -179,7 +179,8 @@ export class TimelineChart {
       // (Make that a feature of hls.js v1.0.0 fragments)
       data.push(Object.assign({}, fragment));
     });
-    this.maxZoom = Math.max(totalduration, this.maxZoom);
+    const start = details.fragments?.length ? details.fragments[0].start : 0;
+    this.maxZoom = Math.max(start + totalduration + targetduration, this.maxZoom);
     this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
   }
 
