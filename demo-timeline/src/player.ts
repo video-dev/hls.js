@@ -2,12 +2,16 @@ import { TimelineChart } from './timeline-chart';
 import { Events } from '../../src/events';
 import {
   AudioTrackLoadedData,
-  AudioTracksUpdatedData, BufferAppendedData,
-  BufferCreatedData, FragBufferedData, FragChangedData, FragLoadingData, FragParsedData,
-  LevelLoadedData, LevelPTSUpdatedData,
+  AudioTracksUpdatedData,
+  BufferCreatedData,
+  FragChangedData,
+  FragParsedData,
+  LevelPTSUpdatedData,
   LevelsUpdatedData,
   LevelUpdatedData,
-  ManifestLoadedData, SubtitleTrackLoadedData, SubtitleTracksUpdatedData
+  ManifestLoadedData,
+  SubtitleTrackLoadedData,
+  SubtitleTracksUpdatedData
 } from '../../src/types/events';
 
 const Hls = self.Hls;
@@ -124,24 +128,31 @@ export class Player {
 
     // hls.on(Events.FRAG_LOADING, (eventName, data: FragLoadingData) => {
     //   this.chart.updateFragment(data);
+    //   // The loader stats have not yet been assigned to the fragment.
+    //   // Async update the fragment to get the new stats
+    //   self.setTimeout(() => {
+    //     this.chart.updateFragment(data);
+    //   });
     // });
-    // hls.on(Events.FRAG_PARSED, (eventName, data: FragParsedData) => {
-    //   this.chart.updateFragment(data);
-    // });
-    // hls.on(Events.FRAG_CHANGED, (eventName, data: FragChangedData) => {
-    //   this.chart.resize();
-    // });
+    hls.on(Events.FRAG_PARSED, (eventName, data: FragParsedData) => {
+      this.chart.updateFragment(data);
+    });
+    hls.on(Events.FRAG_CHANGED, (eventName, data: FragChangedData) => {
+      this.chart.updateFragment(data);
+    });
 
     hls.on(Events.BUFFER_CREATED, (eventName, { tracks }: BufferCreatedData) => {
       this.chart.updateSourceBuffers(tracks, hls.media);
     });
-    // hls.on(Events.BUFFER_APPENDED, (eventName, data: BufferAppendedData) => {
-    //   this.chart.update();
-    // });
-    // hls.on(Events.BUFFER_FLUSHED, (eventName) => {
-    //   this.chart.resize();
-    // });
-
+    hls.on(Events.BUFFER_APPENDING, () => {
+      this.chart.update();
+    });
+    hls.on(Events.BUFFER_APPENDED, () => {
+      this.chart.update();
+    });
+    hls.on(Events.BUFFER_FLUSHED, () => {
+      this.chart.update();
+    });
     hls.on(Events.ERROR, (eventName, data) => {
       console.error(data);
     });
