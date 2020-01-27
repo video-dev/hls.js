@@ -89,9 +89,19 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
         const start = val.start; // obj.start;
         ctx.fillStyle = 'rgb(0, 0, 0)';
         if (stats) {
-          const snLabel = 'sn: ' + obj.sn;
-          const textWidth = Math.min(ctx.measureText(snLabel).width + 2, bounds.w - 2);
-          ctx.fillText(snLabel, bounds.x + bounds.w - textWidth, bounds.y + lineHeight, bounds.w - 4);
+          const snBounds = Object.assign({}, bounds);
+          if (obj.cc) {
+            const ccLabel = `cc:${obj.cc}`;
+            const ccWidth = Math.min(ctx.measureText(ccLabel).width + 2, snBounds.w / 2 - 2);
+            if (ccWidth) {
+              ctx.fillText(ccLabel, snBounds.x + 2, snBounds.y + lineHeight, snBounds.w / 2 - 4);
+              snBounds.x += ccWidth;
+              snBounds.w -= ccWidth;
+            }
+          }
+          const snLabel = `sn: ${obj.sn}`;
+          const textWidth = Math.min(ctx.measureText(snLabel).width + 2, snBounds.w - 2);
+          ctx.fillText(snLabel, snBounds.x + snBounds.w - textWidth, snBounds.y + lineHeight, snBounds.w - 4);
         }
         const float = start !== (start | 0);
         const fixedDigits = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
