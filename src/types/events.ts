@@ -136,7 +136,7 @@ export interface AudioTrackLoadingData {
 }
 
 export interface AudioTrackLoadedData {
-  details: any; // LevelDetails type?
+  details: LevelDetails;
   id: number;
   stats: LoaderStats;
   networkDetails: unknown;
@@ -160,7 +160,7 @@ export interface SubtitleTrackLoadingData {
 }
 
 export interface SubtitleTrackLoadedData {
-  details: any; // LevelDetails type?
+  details: LevelDetails;
   id: number | null;
   stats: LoaderStats;
   networkDetails: unknown;
@@ -176,7 +176,7 @@ export interface SubtitleFragProcessed {
 }
 
 export interface FragChangedData {
-  frag: any;
+  frag: Fragment;
 }
 
 export interface FPSDropData {
