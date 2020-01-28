@@ -146,7 +146,7 @@ export default class M3U8Parser {
     return medias;
   }
 
-  static parseLevelPlaylist (string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number) {
+  static parseLevelPlaylist (string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number): LevelDetails {
     let currentSN = 0;
     let totalduration = 0;
     const level = new LevelDetails(baseurl);
