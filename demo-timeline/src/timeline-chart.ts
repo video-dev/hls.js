@@ -100,7 +100,7 @@ export class TimelineChart {
     if (datasets?.length) {
       const scale = this.chart.scales[X_AXIS_SECONDS];
       const { top } = this.chart.chartArea;
-      const height = top + datasets.reduce((val, dataset) => val + dataset.barThickness, 0) + scale.height;
+      const height = top + datasets.reduce((val, dataset) => val + dataset.barThickness, 0) + scale.height + 5;
       this.chart.canvas.parentNode.style.height = `${height}px`;
     }
     self.cancelAnimationFrame(this.rafDebounceRequestId);
