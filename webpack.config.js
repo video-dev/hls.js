@@ -221,7 +221,8 @@ const multiConfig = [
     mode: 'development',
     output: {
       filename: 'index.js',
-      path: path.resolve(__dirname, 'demo-timeline/dist')
+      path: path.resolve(__dirname, 'demo-timeline/dist'),
+      publicPath: '/demo-timeline/dist/'
     },
     plugins: mainPlugins,
     devtool: 'source-map'
