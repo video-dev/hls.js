@@ -212,7 +212,7 @@ export class TimelineChart {
     const levelDataSet = datasets.find(dataset => dataset.url === frag.baseurl);
     // eslint-disable-next-line no-restricted-properties
     const fragData = levelDataSet.data.find(fragData => fragData.relurl === frag.relurl);
-    if (fragData !== frag) {
+    if (fragData && fragData !== frag) {
       Object.assign(fragData, frag);
     }
     this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());

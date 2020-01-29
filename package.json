@@ -27,7 +27,7 @@
     "build:debug": "webpack --progress --env.debug --env.demo",
     "build:watch": "webpack --progress --env.debug --env.demo --watch",
     "build:types": "tsc --emitDeclarationOnly",
-    "dev": "webpack-dev-server --progress --env.debug --env.demo --port 8000",
+    "dev": "webpack-dev-server --progress --env.debug --env.demo --env.timeline --port 8000",
     "docs": "esdoc",
     "lint": "./scripts/lint.sh",
     "lint:fix": "./scripts/lint.sh --fix",
