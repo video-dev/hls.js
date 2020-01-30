@@ -98,7 +98,7 @@ class AudioTrackController extends TaskLoop {
    *
    * Set-up metadata update interval task for live-mode streams.
    *
-   * @param {} data
+   * @param {*} data
    */
   onAudioTrackLoaded (data) {
     if (data.id >= this.tracks.length) {

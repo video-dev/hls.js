@@ -2,7 +2,7 @@
 
 // Browser environment state
 var video;
-var logString;
+var logString = '';
 var hls;
 
 function setupConsoleLogRedirection () {
@@ -18,6 +18,7 @@ function setupConsoleLogRedirection () {
     line.appendChild(text);
     inner.appendChild(line);
 
+    // The empty log line at the beginning comes from a test in `enableLogs`.
     window.logString = logString += a + '\n';
   }
 
@@ -86,7 +87,17 @@ function startStream (streamUrl, config, callback) {
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        video.play();
+        var playPromise = video.play();
+        if (playPromise) {
+          playPromise.catch(function (error) {
+            console.log('video.play() failed with error:', error);
+            if (error.name === 'NotAllowedError') {
+              console.log('Attempting to play with video muted');
+              video.muted = true;
+              return video.play();
+            }
+          });
+        }
       });
       hls.on(Hls.Events.ERROR, function (event, data) {
         if (data.fatal) {

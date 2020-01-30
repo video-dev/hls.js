@@ -1,9 +1,8 @@
 'use strict';
 
 const fs = require('fs');
+const versionParser = require('./version-parser.js');
 const packageJson = require('../package.json');
-
-const VALID_VERSION_REGEX = /^v\d+\.\d+\.\d+$/;
 
 const TRAVIS_MODE = process.env.TRAVIS_MODE;
 let newVersion = '';
@@ -12,7 +11,7 @@ try {
   if (TRAVIS_MODE === 'release') {
     // write the version field in the package json to the version in the git tag
     const tag = process.env.TRAVIS_TAG;
-    if (!VALID_VERSION_REGEX.test(tag)) {
+    if (!versionParser.isValidVersion(tag)) {
       throw new Error('Unsuported tag for release: ' + tag);
     }
     // remove v
@@ -20,9 +19,6 @@ try {
   } else if (TRAVIS_MODE === 'releaseCanary' || TRAVIS_MODE === 'netlifyPr') {
     // bump patch in version from latest git tag
     let currentVersion = getLatestVersionTag();
-    if (!VALID_VERSION_REGEX.test(currentVersion)) {
-      throw new Error('Latest version tag invalid: ' + currentVersion);
-    }
     // remove v
     currentVersion = currentVersion.substring(1);
 
@@ -61,7 +57,18 @@ function getCommitHash() {
 }
 
 function getLatestVersionTag() {
-  return exec('git describe --abbrev=0 --match="v*"');
+  let commitish = '';
+  while(true) {
+    const tag = exec('git describe --abbrev=0 --match="v*" ' + commitish);
+    if (!tag) {
+      throw new Error('Could not find tag.');
+    }
+    if (versionParser.isValidStableVersion(tag)) {
+      return tag;
+    }
+    // next time search older tags than this one
+    commitish = tag + '~1';
+  }
 }
 
 function exec(cmd) {

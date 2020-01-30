@@ -6,14 +6,16 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
 import { logger } from '../utils/logger';
-import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import { sendAddTrackEvent, clearCurrentCues, getClosestCue } from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
   constructor (hls) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
-      Event.FRAG_PARSING_METADATA);
+      Event.FRAG_PARSING_METADATA,
+      Event.LIVE_BACK_BUFFER_REACHED
+    );
     this.id3Track = undefined;
     this.media = undefined;
   }
@@ -89,6 +91,20 @@ class ID3TrackController extends EventHandler {
           }
         }
       }
+    }
+  }
+
+  onLiveBackBufferReached ({ bufferEnd }) {
+    const { id3Track } = this;
+    if (!id3Track || !id3Track.cues || !id3Track.cues.length) {
+      return;
+    }
+    const foundCue = getClosestCue(id3Track.cues, bufferEnd);
+    if (!foundCue) {
+      return;
+    }
+    while (id3Track.cues[0] !== foundCue) {
+      id3Track.removeCue(id3Track.cues[0]);
     }
   }
 }

@@ -34,7 +34,7 @@ describe('LevelController', function () {
       ],
       networkDetails: '',
       subtitles: [],
-      url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8'
+      url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
     };
 
     let nextLevel = 1;
@@ -61,7 +61,7 @@ describe('LevelController', function () {
         levels: [],
         networkDetails: '',
         subtitles: [],
-        url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       });
 
       expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
@@ -87,7 +87,7 @@ describe('LevelController', function () {
         networkDetails: '',
         subtitles: [],
         stats: {},
-        url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       };
 
       levelController.onManifestLoaded(data);
@@ -114,7 +114,7 @@ describe('LevelController', function () {
         networkDetails: '',
         subtitles: [],
         stats: {},
-        url: 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       };
 
       levelController.onManifestLoaded(data);

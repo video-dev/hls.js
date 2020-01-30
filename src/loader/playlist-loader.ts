@@ -16,6 +16,7 @@ import { logger } from '../utils/logger';
 import { Loader, PlaylistContextType, PlaylistLoaderContext, PlaylistLevelType, LoaderCallbacks, LoaderResponse, LoaderStats, LoaderConfiguration } from '../types/loader';
 import MP4Demuxer from '../demux/mp4demuxer';
 import M3U8Parser from './m3u8-parser';
+import { AudioGroup } from '../types/media-playlist';
 
 const { performance } = window;
 
@@ -279,10 +280,9 @@ class PlaylistLoader extends EventHandler {
   // but with custom loaders it could be generic investigate this further when config is typed
   _handleMasterPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: unknown) {
     const hls = this.hls;
-    const string = response.data;
+    const string = response.data as string;
 
     const url = PlaylistLoader.getResponseUrl(response, context);
-
     const levels = M3U8Parser.parseMasterPlaylist(string, url);
     if (!levels.length) {
       this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
@@ -290,14 +290,13 @@ class PlaylistLoader extends EventHandler {
     }
 
     // multi level playlist, parse level info
-
-    const audioGroups = levels.map(level => ({
+    const audioGroups: Array<AudioGroup> = levels.map(level => ({
       id: level.attrs.AUDIO,
       codec: level.audioCodec
     }));
 
-    let audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
-    let subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    const audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
+    const subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -316,7 +315,11 @@ class PlaylistLoader extends EventHandler {
         logger.log('audio codec signaled in quality level, but no embedded audio track signaled, create one');
         audioTracks.unshift({
           type: 'main',
-          name: 'main'
+          name: 'main',
+          default: false,
+          autoselect: false,
+          forced: false,
+          id: -1
         });
       }
     }
@@ -339,11 +342,11 @@ class PlaylistLoader extends EventHandler {
     const url = PlaylistLoader.getResponseUrl(response, context);
 
     // if the values are null, they will result in the else conditional
-    const levelUrlId = Number.isFinite(id as number) ? id : 0;
-    const levelId = Number.isFinite(level as number) ? level : levelUrlId;
+    const levelUrlId = Number.isFinite(id as number) ? id as number : 0;
+    const levelId = Number.isFinite(level as number) ? level as number : levelUrlId;
 
     const levelType = PlaylistLoader.mapContextToLevelType(context);
-    const levelDetails = M3U8Parser.parseLevelPlaylist(response.data, url, levelId, levelType, levelUrlId);
+    const levelDetails = M3U8Parser.parseLevelPlaylist(response.data as string, url, levelId, levelType, levelUrlId);
 
     // set stats on level structure
     // TODO(jstackhouse): why? mixing concerns, is it just treated as value bag?

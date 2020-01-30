@@ -83,7 +83,15 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   onMediaDetaching () {
+    if (!this.media) {
+      return;
+    }
     this.media.removeEventListener('seeking', this._onMediaSeeking);
+    this.fragmentTracker.removeAllFragments();
+    this.currentTrackId = -1;
+    this.tracks.forEach((track) => {
+      this.tracksBuffered[track.id] = [];
+    });
     this.media = null;
     this.state = State.STOPPED;
   }
@@ -111,7 +119,7 @@ export class SubtitleStreamController extends BaseStreamController {
   onSubtitleTrackSwitch (data) {
     this.currentTrackId = data.id;
 
-    if (!this.tracks || this.currentTrackId === -1) {
+    if (!this.tracks || !this.tracks.length || this.currentTrackId === -1) {
       this.clearInterval();
       return;
     }
