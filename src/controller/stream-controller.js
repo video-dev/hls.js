@@ -47,6 +47,7 @@ class StreamController extends BaseStreamController {
     this._state = State.STOPPED;
     this.stallReported = false;
     this.gapController = null;
+    this.altAudio = false;
   }
 
   startLoad (startPosition) {
@@ -281,7 +282,7 @@ class StreamController extends BaseStreamController {
       let liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
       logger.log(`buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
       bufferEnd = liveSyncPosition;
-      if (media && media.readyState && media.duration > liveSyncPosition) {
+      if (media && !media.paused && media.readyState && media.duration > liveSyncPosition) {
         media.currentTime = liveSyncPosition;
       }
 
@@ -346,65 +347,68 @@ class StreamController extends BaseStreamController {
     return frag;
   }
 
-  _findFragment (start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
+  _findFragment (start, fragPreviousLoad, fragmentIndexRange, fragments, bufferEnd, end, levelDetails) {
     const config = this.hls.config;
-    let frag;
+    let fragNextLoad;
 
     if (bufferEnd < end) {
       const lookupTolerance = (bufferEnd > end - config.maxFragLookUpTolerance) ? 0 : config.maxFragLookUpTolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
-      frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
+      fragNextLoad = findFragmentByPTS(fragPreviousLoad, fragments, bufferEnd, lookupTolerance);
     } else {
       // reach end of playlist
-      frag = fragments[fragLen - 1];
+      fragNextLoad = fragments[fragmentIndexRange - 1];
     }
-    if (frag) {
-      const curSNIdx = frag.sn - levelDetails.startSN;
-      const sameLevel = fragPrevious && frag.level === fragPrevious.level;
-      const prevFrag = fragments[curSNIdx - 1];
-      const nextFrag = fragments[curSNIdx + 1];
+
+    if (fragNextLoad) {
+      const curSNIdx = fragNextLoad.sn - levelDetails.startSN;
+      const sameLevel = fragPreviousLoad && fragNextLoad.level === fragPreviousLoad.level;
+      const prevSnFrag = fragments[curSNIdx - 1];
+      const nextSnFrag = fragments[curSNIdx + 1];
+
       // logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-      if (fragPrevious && frag.sn === fragPrevious.sn) {
-        if (sameLevel && !frag.backtracked) {
-          if (frag.sn < levelDetails.endSN) {
-            let deltaPTS = fragPrevious.deltaPTS;
+      if (fragPreviousLoad && fragNextLoad.sn === fragPreviousLoad.sn) {
+        if (sameLevel && !fragNextLoad.backtracked) {
+          if (fragNextLoad.sn < levelDetails.endSN) {
+            let deltaPTS = fragPreviousLoad.deltaPTS;
             // if there is a significant delta between audio and video, larger than max allowed hole,
             // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
             // let's try to load previous fragment again to get last keyframe
             // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
-            if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped && curSNIdx) {
-              frag = prevFrag;
-              logger.warn('SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this');
+            if (deltaPTS && deltaPTS > config.maxBufferHole && fragPreviousLoad.dropped && curSNIdx) {
+              fragNextLoad = prevSnFrag;
+              logger.warn('Previous fragment was dropped with large PTS gap between audio and video. Maybe fragment is not starting with a keyframe? Loading previous one to try to overcome this');
             } else {
-              frag = nextFrag;
-              logger.log(`SN just loaded, load next one: ${frag.sn}`, frag);
+              fragNextLoad = nextSnFrag;
+              logger.log(`Re-loading fragment with SN: ${fragNextLoad.sn}`);
             }
           } else {
-            frag = null;
+            fragNextLoad = null;
           }
-        } else if (frag.backtracked) {
+        } else if (fragNextLoad.backtracked) {
           // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
-          if (nextFrag && nextFrag.backtracked) {
-            logger.warn(`Already backtracked from fragment ${nextFrag.sn}, will not backtrack to fragment ${frag.sn}. Loading fragment ${nextFrag.sn}`);
-            frag = nextFrag;
+          if (nextSnFrag && nextSnFrag.backtracked) {
+            logger.warn(`Already backtracked from fragment ${nextSnFrag.sn}, will not backtrack to fragment ${fragNextLoad.sn}. Loading fragment ${nextSnFrag.sn}`);
+            fragNextLoad = nextSnFrag;
           } else {
             // If a fragment has dropped frames and it's in a same level/sequence, load the previous fragment to try and find the keyframe
             // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
             logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
-            frag.dropped = 0;
-            if (prevFrag) {
-              frag = prevFrag;
-              frag.backtracked = true;
+            fragNextLoad.dropped = 0;
+            if (prevSnFrag) {
+              fragNextLoad = prevSnFrag;
+              fragNextLoad.backtracked = true;
             } else if (curSNIdx) {
               // can't backtrack on very first fragment
-              frag = null;
+              fragNextLoad = null;
             }
           }
         }
       }
     }
-    return frag;
+
+    return fragNextLoad;
   }
 
   _loadKey (frag) {
@@ -449,7 +453,7 @@ class StreamController extends BaseStreamController {
     if (this.state !== nextState) {
       const previousState = this.state;
       this._state = nextState;
-      logger.log(`main stream:${previousState}->${nextState}`);
+      logger.log(`main stream-controller: ${previousState}->${nextState}`);
       this.hls.trigger(Event.STREAM_STATE_TRANSITION, { previousState, nextState });
     }
   }
@@ -684,6 +688,7 @@ class StreamController extends BaseStreamController {
         }
       });
     }
+
     // remove video listeners
     if (media) {
       media.removeEventListener('seeking', this.onvseeking);
@@ -691,13 +696,16 @@ class StreamController extends BaseStreamController {
       media.removeEventListener('ended', this.onvended);
       this.onvseeking = this.onvseeked = this.onvended = null;
     }
+
+    this.fragmentTracker.removeAllFragments();
     this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
     this.stopLoad();
   }
 
   onMediaSeeked () {
-    const media = this.media, currentTime = media ? media.currentTime : undefined;
+    const media = this.media;
+    const currentTime = media ? media.currentTime : undefined;
     if (Number.isFinite(currentTime)) {
       logger.log(`media seeked to ${currentTime.toFixed(3)}`);
     }
@@ -735,6 +743,7 @@ class StreamController extends BaseStreamController {
       logger.log('both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC');
     }
 
+    this.altAudio = data.altAudio;
     this.levels = data.levels;
     this.startFragRequested = false;
     let config = this.config;
@@ -1303,7 +1312,7 @@ class StreamController extends BaseStreamController {
     // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
     const startPosition = media.seeking ? currentTime : this.startPosition;
     // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
-    if (currentTime !== startPosition) {
+    if (currentTime !== startPosition && startPosition >= 0) {
       // if startPosition not buffered, let's seek to buffered.start(0)
       logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time ${currentTime} `);
       media.currentTime = startPosition;

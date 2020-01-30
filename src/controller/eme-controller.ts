@@ -228,7 +228,7 @@ class EMEController extends EventHandler {
     logger.log('Got EME message event, creating license request');
 
     this._requestLicense(message, (data: ArrayBuffer) => {
-      logger.log('Received license data, updating key-session');
+      logger.log(`Received license data (length: ${data ? data.byteLength : data}), updating key-session`);
       keySession.update(data);
     });
   }
@@ -300,6 +300,17 @@ class EMEController extends EventHandler {
       this.hls.trigger(Event.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
+        fatal: true
+      });
+      return;
+    }
+
+    // initData is null if the media is not CORS-same-origin
+    if (!initData) {
+      logger.warn('Fatal: initData required for generating a key session is null');
+      this.hls.trigger(Event.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_NO_INIT_DATA,
         fatal: true
       });
       return;

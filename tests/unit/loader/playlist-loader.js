@@ -835,9 +835,9 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-PLAYLIST-TYPE:VOD
 #EXTINF:6.006,
-180724_Allison VLOG v3_00001.ts 
+180724_Allison VLOG v3_00001.ts
 #EXTINF:6.006,
-180724_Allison VLOG v3_00002.ts 
+180724_Allison VLOG v3_00002.ts
 #EXT-X-ENDLIST
     `;
     const result = M3U8Parser.parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
