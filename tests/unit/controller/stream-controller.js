@@ -305,20 +305,4 @@ describe('StreamController', function () {
       });
     });
   });
-
-  describe('computeLivePosition', function () {
-    it('should return the current live sync position according to liveSyncDuration', function () {
-      streamController.config.liveSyncDuration = 2;
-      const levelDetails = { totalduration: 20 };
-      const liveSyncPosition = streamController.computeLivePosition(8, levelDetails);
-      expect(liveSyncPosition).to.equal(26);
-    });
-
-    it('should return the current live sync position according to liveSyncDurationCount', function () {
-      streamController.config.liveSyncDurationCount = 2;
-      const levelDetails = { totalduration: 20, targetduration: 0.5 };
-      const liveSyncPosition = streamController.computeLivePosition(8, levelDetails);
-      expect(liveSyncPosition).to.equal(27);
-    });
-  });
 });
