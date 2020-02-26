@@ -320,15 +320,5 @@ describe('StreamController', function () {
       const liveSyncPosition = streamController.computeLivePosition(8, levelDetails);
       expect(liveSyncPosition).to.equal(27);
     });
-
-    it('should not return value that is less than the video current time', function () {
-      streamController.media = {
-        currentTime: 25
-      };
-      streamController.config.liveSyncDuration = 1;
-      const levelDetails = { totalduration: 14 };
-      const liveSyncPosition = streamController.computeLivePosition(8, levelDetails);
-      expect(liveSyncPosition).to.equal(25);
-    });
   });
 });
