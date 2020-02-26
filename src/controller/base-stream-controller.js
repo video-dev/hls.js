@@ -128,7 +128,6 @@ export default class BaseStreamController extends TaskLoop {
 
   computeLivePosition (sliding, levelDetails) {
     let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
-    const currentTime = this.media ? this.media.currentTime : null;
-    return Math.max(sliding + Math.max(0, levelDetails.totalduration - targetLatency), currentTime);
+    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
   }
 }
