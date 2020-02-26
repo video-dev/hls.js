@@ -335,15 +335,12 @@ class TSDemuxer implements Demuxer {
     audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
 
-    const result = {
+    return {
       audioTrack,
       avcTrack,
       id3Track,
       textTrack: this._txtTrack
     };
-
-    this.extractRemainingSamples(result);
-    return result;
   }
 
   flush () {
