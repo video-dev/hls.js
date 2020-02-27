@@ -5,7 +5,7 @@ import {
   ErrorDetails
 } from './errors';
 
-import { PlaylistLoader, LevelType } from './loader/playlist-loader';
+import { PlaylistLoader } from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import KeyLoader from './loader/key-loader';
 
@@ -21,6 +21,7 @@ import { hlsDefaultConfig, HlsConfig } from './config';
 import HlsEvents from './events';
 
 import { Observer } from './observer';
+import { PlaylistLevelType } from './types/loader';
 
 /**
  * @module Hls
@@ -743,10 +744,10 @@ export default class Hls extends Observer {
   _setPreferredMediaOptions (mediaType, name, language = null) {
     let tracks;
     switch (mediaType) {
-    case LevelType.AUDIO:
+    case PlaylistLevelType.AUDIO:
       tracks = this.getAudioGroupTracks();
       break;
-    case LevelType.SUBTITLE:
+    case PlaylistLevelType.SUBTITLE:
       tracks = this.getSubtitleGroupTracks();
       break;
     default:
@@ -763,10 +764,10 @@ export default class Hls extends Observer {
       })[0];
     if (trackOption) {
       switch (mediaType) {
-      case LevelType.AUDIO:
+      case PlaylistLevelType.AUDIO:
         this.audioTrack = trackOption.id;
         break;
-      case LevelType.SUBTITLE:
+      case PlaylistLevelType.SUBTITLE:
         this.subtitleTrack = trackOption.id;
         break;
       default:

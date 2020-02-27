@@ -21,15 +21,6 @@ import { AudioGroup } from '../types/media-playlist';
 const { performance } = window;
 
 /**
- * @enum {string}
- */
-export const LevelType = {
-  MAIN: 'main',
-  AUDIO: 'audio',
-  SUBTITLE: 'subtitle'
-};
-
-/**
  * @constructor
  */
 export class PlaylistLoader extends EventHandler {
@@ -304,8 +295,8 @@ export class PlaylistLoader extends EventHandler {
       codec: level.audioCodec
     }));
 
-    let audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
-    let subtitleTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    const audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
+    const subtitleTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
