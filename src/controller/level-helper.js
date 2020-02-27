@@ -8,8 +8,7 @@
  * */
 
 import { logger } from '../utils/logger';
-
-import { LevelType } from '../loader/playlist-loader';
+import { PlaylistLevelType } from '../types/loader';
 
 /**
  *
@@ -19,13 +18,13 @@ import { LevelType } from '../loader/playlist-loader';
  */
 export function addGroupId (level, type, id) {
   switch (type) {
-  case LevelType.AUDIO:
+  case PlaylistLevelType.AUDIO:
     if (!level.audioGroupIds) {
       level.audioGroupIds = [];
     }
     level.audioGroupIds.push(id);
     break;
-  case LevelType.SUBTITLE:
+  case PlaylistLevelType.SUBTITLE:
     if (!level.subtitleGroupIds) {
       level.subtitleGroupIds = [];
     }

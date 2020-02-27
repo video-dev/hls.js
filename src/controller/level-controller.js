@@ -8,7 +8,7 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, computeReloadInterval } from './level-helper';
-import { LevelType } from '../loader/playlist-loader';
+import { PlaylistLevelType } from '../types/loader';
 
 const { performance } = window;
 
@@ -106,12 +106,12 @@ export default class LevelController extends EventHandler {
       }
 
       if (level.attrs && level.attrs.AUDIO) {
-        addGroupId(levelFromSet || level, LevelType.AUDIO, level.attrs.AUDIO);
+        addGroupId(levelFromSet || level, PlaylistLevelType.AUDIO, level.attrs.AUDIO);
         audioCodecFound = true;
       }
 
       if (level.attrs && level.attrs.SUBTITLES) {
-        addGroupId(levelFromSet || level, LevelType.SUBTITLE, level.attrs.SUBTITLES);
+        addGroupId(levelFromSet || level, PlaylistLevelType.SUBTITLE, level.attrs.SUBTITLES);
       }
     });
 
