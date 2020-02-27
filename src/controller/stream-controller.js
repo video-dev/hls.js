@@ -52,21 +52,6 @@ class StreamController extends BaseStreamController {
     this.altAudio = false;
   }
 
-  /*
-  onHandlerDestroying () {
-    this.gapController.destroy();
-    this.gapController = null;
-    this.stopLoad();
-    super.onHandlerDestroying();
-  }
-
-  onHandlerDestroyed () {
-    this.state = State.STOPPED;
-    this.fragmentTracker = null;
-    super.onHandlerDestroyed();
-  }
-  */
-
   startLoad (startPosition) {
     if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime, hls = this.hls;

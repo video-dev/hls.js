@@ -330,43 +330,6 @@ class SubtitleTrackController extends TaskLoop {
   }
 
   /**
-   * @private
-   * This method is responsible for validating the subtitle index and periodically reloading if live.
-   * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
-   * @param newId - The id of the subtitle track to activate.
-   */
-  _setSubtitleTrack (newId) {
-    const { hls, tracks } = this;
-
-    // check if id valid
-    if (typeof newId !== 'number' || newId < -1 || newId >= tracks.length) {
-      logger.warn('Invalid id passed to subtitle-track controller');
-      return;
-    }
-
-    // stopping live reloading timer if any
-    this.clearInterval();
-    this.trackId = newId;
-
-    logger.log(`Now switching to subtitle track-id ${newId}`);
-    hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
-
-    // if we went to auto mode, we're done here
-    if (newId === -1) {
-      return;
-    }
-
-    // check if we need to refresh the playlist for this subtitle track
-    const subtitleTrack = tracks[newId];
-    const details = subtitleTrack.details;
-    if (!details || details.live) {
-      // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`(Re-)loading playlist for subtitle track ${newId}`);
-      hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: newId });
-    }
-  }
-
-  /**
    * Disables the old subtitleTrack and sets current mode on the next subtitleTrack.
    * This operates on the DOM textTracks.
    * A value of -1 will disable all subtitle tracks.
@@ -397,24 +360,28 @@ class SubtitleTrackController extends TaskLoop {
     }
   }
 
+
   /**
-     * This method is responsible for validating the subtitle index and periodically reloading if live.
-     * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
-     * @param newId - The id of the subtitle track to activate.
-     */
-  /*
-  _setSubtitleTrackInternal (newId) {
+   * @private
+   * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
+   * @param newId - The id of the subtitle track to activate.
+   */
+  _setSubtitleTrack (newId) {
     const { hls, tracks } = this;
+
     if (!Number.isFinite(newId) || newId < -1 || newId >= tracks.length) {
       return;
     }
 
+    // stopping live reloading timer if any
+    this.clearInterval();
     this.trackId = newId;
+
     logger.log(`Switching to subtitle track ${newId}`);
     hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
     this._loadCurrentTrack();
+
   }
-  */
 
   _onTextTracksChanged () {
     // Media is undefined when switching streams via loadSource()
@@ -436,11 +403,6 @@ class SubtitleTrackController extends TaskLoop {
 
     // Setting current subtitleTrack will invoke code.
     this.subtitleTrack = trackId;
-
-    /*
-    // Setting current subtitleTrack
-    this._setSubtitleTrack(trackId);
-    */
   }
 
   /**
