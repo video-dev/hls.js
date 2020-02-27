@@ -63,11 +63,11 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
-  if(Hls.isSupported()) {
+  if (Hls.isSupported()) {
     var hls = new Hls();
     hls.loadSource('https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8');
     hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED,function() {
+    hls.on(Hls.Events.MANIFEST_PARSED, function() {
       video.play();
     });
   }
@@ -78,7 +78,7 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
   // white-list before a 'canplay' event will be emitted; the last video event that can be reliably listened-for when the URL is not on the white-list is 'loadedmetadata'.
   else if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8';
-    video.addEventListener('loadedmetadata',function() {
+    video.addEventListener('loadedmetadata', function() {
       video.play();
     });
   }
