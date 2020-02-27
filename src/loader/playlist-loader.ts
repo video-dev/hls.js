@@ -21,25 +21,6 @@ import { AudioGroup } from '../types/media-playlist';
 const { performance } = window;
 
 /**
-<<<<<<< HEAD:src/loader/playlist-loader.ts
- * @constructor
- */
-class PlaylistLoader extends EventHandler {
-  private loaders: Partial<Record<PlaylistContextType, Loader<PlaylistLoaderContext>>> = {};
-
-=======
- * `type` property values for this loaders' context object
- * @enum
- *
- */
-const ContextType = {
-  MANIFEST: 'manifest',
-  LEVEL: 'level',
-  AUDIO_TRACK: 'audioTrack',
-  SUBTITLE_TRACK: 'subtitleTrack'
-};
-
-/**
  * @enum {string}
  */
 export const LevelType = {
@@ -52,7 +33,8 @@ export const LevelType = {
  * @constructor
  */
 export class PlaylistLoader extends EventHandler {
->>>>>>> feature/subtitle-backup-streams:src/loader/playlist-loader.js
+  private loaders: Partial<Record<PlaylistContextType, Loader<PlaylistLoaderContext>>> = {};
+
   /**
    * @constructs
    * @param {Hls} hls
@@ -322,13 +304,8 @@ export class PlaylistLoader extends EventHandler {
       codec: level.audioCodec
     }));
 
-<<<<<<< HEAD:src/loader/playlist-loader.ts
-    const audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
-    const subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
-=======
     let audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
     let subtitleTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
->>>>>>> feature/subtitle-backup-streams:src/loader/playlist-loader.js
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -493,7 +470,7 @@ export class PlaylistLoader extends EventHandler {
       details = (timeout ? ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT : ErrorDetails.AUDIO_TRACK_LOAD_ERROR);
       fatal = false;
       break;
-    case ContextType.SUBTITLE_TRACK:
+    case PlaylistContextType.SUBTITLE_TRACK:
       details = (timeout ? ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT : ErrorDetails.SUBTITLE_TRACK_LOAD_ERROR);
       fatal = false;
       break;

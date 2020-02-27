@@ -58,3 +58,15 @@ export function getClosestCue (cues: TextTrackCueList | TextTrackCue[], time: nu
   // No direct match was found, left or right element must be the closest. Check which one has the smallest diff.
   return (cues[left].endTime - time) < (time - cues[right].endTime) ? cues[left] : cues[right];
 }
+
+export function filterSubtitleTracks (textTrackList) {
+  let tracks = [];
+  for (let i = 0; i < textTrackList.length; i++) {
+    const track = textTrackList[i];
+    // Edge adds a track without a label; we don't want to use it
+    if (track.kind === 'subtitles' && track.label) {
+      tracks.push(textTrackList[i]);
+    }
+  }
+  return tracks;
+}

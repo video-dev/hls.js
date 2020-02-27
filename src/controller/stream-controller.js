@@ -7,9 +7,9 @@ import { BufferHelper } from '../utils/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { FragmentState } from './fragment-tracker';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
-import Fragment from '../loader/fragment';
+
 import { PlaylistLoader } from '../loader/playlist-loader';
 import * as LevelHelper from './level-helper';
 import TimeRanges from '../utils/time-ranges';

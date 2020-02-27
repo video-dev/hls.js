@@ -1,9 +1,9 @@
+
 import Event from '../events';
 import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
 import { computeReloadInterval } from './level-helper';
-import { clearCurrentCues } from '../utils/texttrack-utils';
-import { filterSubtitleTracks } from '../utils/texttrack-utils';
+import { clearCurrentCues, filterSubtitleTracks } from '../utils/texttrack-utils';
 import { ErrorDetails, ErrorTypes } from '../errors';
 
 /**
@@ -285,7 +285,7 @@ class SubtitleTrackController extends TaskLoop {
   set subtitleTrack (subtitleTrackId) {
     if (this.trackId !== subtitleTrackId) {
       this._toggleTrackModes(subtitleTrackId);
-  /*
+      /*
       this._setSubtitleTrackInternal(subtitleTrackId);
     }
   }
@@ -523,6 +523,7 @@ class SubtitleTrackController extends TaskLoop {
   }
 }
 
+/*
 function filterSubtitleTracks (textTrackList) {
   let tracks = [];
   for (let i = 0; i < textTrackList.length; i++) {
@@ -534,5 +535,6 @@ function filterSubtitleTracks (textTrackList) {
   }
   return tracks;
 }
+*/
 
 export default SubtitleTrackController;

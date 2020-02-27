@@ -453,6 +453,7 @@ export default class LevelController extends EventHandler {
     }
 
     if (currentLevel.subtitleGroupIds) {
+      // eslint-disable-next-line no-restricted-properties
       const urlId = currentLevel.subtitleGroupIds.findIndex((groupId) => groupId === subtitleGroupId);
       if (urlId !== currentLevel.urlId) {
         currentLevel.urlId = urlId;
