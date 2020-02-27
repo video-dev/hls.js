@@ -193,9 +193,13 @@ class AudioTrackController implements NetworkComponentAPI {
    * selected one (based on NAME property).
    */
   protected onLevelLoading (event: Events.LEVEL_LOADING, data: LevelLoadingData): void {
-    const levelInfo = this.hls.levels[data.level];
+    this._selectAudioGroup(data.level);
+  }
 
-    if (!levelInfo.audioGroupIds) {
+  private _selectAudioGroup (levelId: number) {
+    const levelInfo = this.hls.levels[levelId];
+
+    if (!levelInfo?.audioGroupIds) {
       return;
     }
 
