@@ -80,7 +80,7 @@ export default class TaskLoop extends EventHandler {
    * @returns {boolean} True when interval was cleared, false when none was set (no effect)
    */
   public clearInterval (): boolean {
-    if (this._tickInterval) {
+    if (this._tickInterval !== null) {
       self.clearInterval(this._tickInterval);
       this._tickInterval = null;
       return true;

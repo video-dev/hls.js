@@ -181,7 +181,7 @@ class SubtitleTrackController extends TaskLoop {
     const { trackId, tracks } = this;
     const currentTrack = tracks[trackId];
     if (id >= tracks.length || id !== trackId || !currentTrack || this.stopped) {
-      this._clearReloadTimer();
+      this.clearInterval();
       return;
     }
 
@@ -189,36 +189,12 @@ class SubtitleTrackController extends TaskLoop {
     if (details.live) {
       const reloadInterval = computeReloadInterval(currentTrack.details, details, data.stats.trequest);
       logger.log(`Reloading live subtitle playlist in ${reloadInterval}ms`);
-      this.timer = setTimeout(() => {
-        this._loadCurrentTrack();
-      }, reloadInterval);
+      this.clearInterval();
+      this.setInterval(reloadInterval);
     } else {
-      this._clearReloadTimer();
+      this.clearInterval();
     }
   }
-
-  /*
-  onSubtitleTrackLoaded (data) {
-    if (data.id < this.tracks.length) {
-      logger.log(`subtitle track ${data.id} loaded`);
-      this.tracks[data.id].details = data.details;
-
-      // check if current playlist is a live playlist
-      // and if we have already our reload interval setup
-      if (data.details.live && !this.hasInterval()) {
-        // if live playlist we will have to reload it periodically
-        // set reload period to playlist target duration
-        const updatePeriodMs = data.details.targetduration * 1000;
-        this.setInterval(updatePeriodMs);
-      }
-
-      if (!data.details.live && this.hasInterval()) {
-        // playlist is not live and timer is armed : stopping it
-        this.clearInterval();
-      }
-    }
-  }
-  */
 
   startLoad () {
     this.stopped = false;
@@ -279,20 +255,8 @@ class SubtitleTrackController extends TaskLoop {
   set subtitleTrack (subtitleTrackId) {
     if (this.trackId !== subtitleTrackId) {
       this._toggleTrackModes(subtitleTrackId);
-      /*
-      this._setSubtitleTrackInternal(subtitleTrackId);
-
-      /*
       this._setSubtitleTrack(subtitleTrackId);
       this._selectDefaultTrack = false;
-      */
-    }
-  }
-
-  _clearReloadTimer () {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
     }
   }
 
