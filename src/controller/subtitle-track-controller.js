@@ -80,7 +80,7 @@ class SubtitleTrackController extends TaskLoop {
   }
 
   doTick () {
-    this._updateTrack();
+    this._loadCurrentTrack();
   }
 
   // Listen for subtitle track change, then extract the current track ID.
@@ -90,14 +90,7 @@ class SubtitleTrackController extends TaskLoop {
       return;
     }
 
-    /*
     if (Number.isFinite(this.queuedDefaultTrack)) {
-      this.subtitleTrack = this.queuedDefaultTrack;
-      this.queuedDefaultTrack = null;
-    }
-    */
-
-    if (this._queuedDefaultTrack) {
       this._setSubtitleTrack(this._queuedDefaultTrack.id);
       this._queuedDefaultTrack = null;
     }
@@ -106,6 +99,7 @@ class SubtitleTrackController extends TaskLoop {
 
     this.useTextTrackPolling = !(this.media.textTracks && 'onchange' in this.media.textTracks);
     if (this.useTextTrackPolling) {
+      // FIXME
       /*
       this.subtitlePollingInterval = setInterval(() => {
         this.trackChangeListener();
@@ -203,16 +197,6 @@ class SubtitleTrackController extends TaskLoop {
     }
   }
 
-  startLoad () {
-    this.stopped = false;
-    this._loadCurrentTrack();
-  }
-
-  stopLoad () {
-    this.stopped = true;
-    this._clearReloadTimer();
-  }
-
   /*
   onSubtitleTrackLoaded (data) {
     if (data.id < this.tracks.length) {
@@ -235,6 +219,16 @@ class SubtitleTrackController extends TaskLoop {
     }
   }
   */
+
+  startLoad () {
+    this.stopped = false;
+    this._loadCurrentTrack();
+  }
+
+  stopLoad () {
+    this.stopped = true;
+    this._clearReloadTimer();
+  }
 
   onError (data) {
     // TODO: implement similar failure handling logic as in audio-track-controller
@@ -312,6 +306,22 @@ class SubtitleTrackController extends TaskLoop {
     hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
   }
 
+  _updateTrack () {
+    const trackId = this.trackId;
+    const subtitleTrack = this.tracks[trackId];
+    if (!subtitleTrack) {
+      return;
+    }
+
+    const details = subtitleTrack.details;
+    // check if we need to load playlist for this subtitle Track
+    if (!details || details.live) {
+      // track not retrieved yet, or live playlist we need to (re)load it
+      logger.log(`updating playlist for subtitle track ${trackId}`);
+      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
+    }
+  }
+
   /**
    * @private
    * Called when we want to reselect the track based on current environment params have been updated,
@@ -352,22 +362,6 @@ class SubtitleTrackController extends TaskLoop {
       this._setSubtitleTrack(selectedTrack.id);
     } else {
       this._queuedDefaultTrack = selectedTrack.id;
-    }
-  }
-
-  _updateTrack () {
-    const trackId = this.trackId;
-    const subtitleTrack = this.tracks[trackId];
-    if (!subtitleTrack) {
-      return;
-    }
-
-    const details = subtitleTrack.details;
-    // check if we need to load playlist for this subtitle Track
-    if (!details || details.live) {
-      // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`updating playlist for subtitle track ${trackId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
     }
   }
 
@@ -522,19 +516,5 @@ class SubtitleTrackController extends TaskLoop {
     this._setSubtitleTrack(newId);
   }
 }
-
-/*
-function filterSubtitleTracks (textTrackList) {
-  let tracks = [];
-  for (let i = 0; i < textTrackList.length; i++) {
-    const track = textTrackList[i];
-    // Edge adds a track without a label; we don't want to use it
-    if (track.kind === 'subtitles' && track.label) {
-      tracks.push(textTrackList[i]);
-    }
-  }
-  return tracks;
-}
-*/
 
 export default SubtitleTrackController;
