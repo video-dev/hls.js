@@ -270,22 +270,6 @@ class SubtitleTrackController extends TaskLoop {
     hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
   }
 
-  _updateTrack () {
-    const trackId = this.trackId;
-    const subtitleTrack = this.tracks[trackId];
-    if (!subtitleTrack) {
-      return;
-    }
-
-    const details = subtitleTrack.details;
-    // check if we need to load playlist for this subtitle Track
-    if (!details || details.live) {
-      // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`updating playlist for subtitle track ${trackId}`);
-      this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: subtitleTrack.url, id: trackId });
-    }
-  }
-
   /**
    * @private
    * Called when we want to reselect the track based on current environment params have been updated,
