@@ -9,6 +9,8 @@ import Event from '../events';
 import { FragmentState } from './fragment-tracker';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
+import Fragment from '../loader/fragment';
+import { PlaylistLoader } from '../loader/playlist-loader';
 import * as LevelHelper from './level-helper';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
@@ -49,6 +51,21 @@ class StreamController extends BaseStreamController {
     this.gapController = null;
     this.altAudio = false;
   }
+
+  /*
+  onHandlerDestroying () {
+    this.gapController.destroy();
+    this.gapController = null;
+    this.stopLoad();
+    super.onHandlerDestroying();
+  }
+
+  onHandlerDestroyed () {
+    this.state = State.STOPPED;
+    this.fragmentTracker = null;
+    super.onHandlerDestroyed();
+  }
+  */
 
   startLoad (startPosition) {
     if (this.levels) {
@@ -178,7 +195,7 @@ class StreamController extends BaseStreamController {
     // determine next candidate fragment to be loaded, based on current position and end of buffer position
     // ensure up to `config.maxMaxBufferLength` of buffer upfront
 
-    const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, config.maxBufferHole),
+    const bufferInfo = BufferHelper.mediaBufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, config.maxBufferHole),
       bufferLen = bufferInfo.len;
     // Stay idle if we are still with buffer margins
     if (bufferLen >= maxBufLen) {
@@ -845,6 +862,12 @@ class StreamController extends BaseStreamController {
       // then this means that we should be able to load a fragment at a higher quality level
       this.bitrateTest = false;
       this.stats = stats;
+
+      if (!details) {
+        logger.warn('Loaded fragment but level switch occured before');
+        this.state = State.IDLE;
+        return;
+      }
 
       logger.log(`Loaded ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}`);
       if (fragLoaded.bitrateTest && hls.nextLoadLevel) {

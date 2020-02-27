@@ -140,8 +140,8 @@ class AudioStreamController extends BaseStreamController {
       }
       let media = this.mediaBuffer ? this.mediaBuffer : this.media,
         videoBuffer = this.videoBuffer ? this.videoBuffer : this.media,
-        bufferInfo = BufferHelper.bufferInfo(media, pos, config.maxBufferHole),
-        mainBufferInfo = BufferHelper.bufferInfo(videoBuffer, pos, config.maxBufferHole),
+        bufferInfo = BufferHelper.mediaBufferInfo(media, pos, config.maxBufferHole),
+        mainBufferInfo = BufferHelper.mediaBufferInfo(videoBuffer, pos, config.maxBufferHole),
         bufferLen = bufferInfo.len,
         bufferEnd = bufferInfo.end,
         fragPrevious = this.fragPrevious,

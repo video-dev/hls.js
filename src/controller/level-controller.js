@@ -8,9 +8,13 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, computeReloadInterval } from './level-helper';
+import { LevelType } from '../loader/playlist-loader';
 
 const { performance } = window;
-let chromeOrFirefox;
+
+// FIXME: we should centralizes all usages of userAgent in codebase
+// in a module to do browser model detection (once)
+const chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
 export default class LevelController extends EventHandler {
   constructor (hls) {
@@ -18,6 +22,7 @@ export default class LevelController extends EventHandler {
       Event.MANIFEST_LOADED,
       Event.LEVEL_LOADED,
       Event.AUDIO_TRACK_SWITCHED,
+      Event.SUBTITLE_TRACK_SWITCH,
       Event.FRAG_LOADED,
       Event.ERROR);
 
@@ -25,8 +30,6 @@ export default class LevelController extends EventHandler {
     this.currentLevelIndex = null;
     this.manualLevelIndex = -1;
     this.timer = null;
-
-    chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
   }
 
   onHandlerDestroying () {
@@ -36,7 +39,7 @@ export default class LevelController extends EventHandler {
 
   clearTimer () {
     if (this.timer !== null) {
-      clearTimeout(this.timer);
+      window.clearTimeout(this.timer);
       this.timer = null;
     }
   }
@@ -69,16 +72,16 @@ export default class LevelController extends EventHandler {
 
   onManifestLoaded (data) {
     let levels = [];
-    let audioTracks = [];
     let bitrateStart;
     let levelSet = {};
     let levelFromSet = null;
     let videoCodecFound = false;
     let audioCodecFound = false;
+    let audioTracks = [];
+    let subtitleTracks = [];
 
     // regroup redundant levels together
     data.levels.forEach(level => {
-      const attributes = level.attrs;
       level.loadError = 0;
       level.fragmentError = false;
 
@@ -102,14 +105,13 @@ export default class LevelController extends EventHandler {
         levelFromSet.url.push(level.url);
       }
 
-      if (attributes) {
-        if (attributes.AUDIO) {
-          audioCodecFound = true;
-          addGroupId(levelFromSet || level, 'audio', attributes.AUDIO);
-        }
-        if (attributes.SUBTITLES) {
-          addGroupId(levelFromSet || level, 'text', attributes.SUBTITLES);
-        }
+      if (level.attrs && level.attrs.AUDIO) {
+        addGroupId(levelFromSet || level, LevelType.AUDIO, level.attrs.AUDIO);
+        audioCodecFound = true;
+      }
+
+      if (level.attrs && level.attrs.SUBTITLES) {
+        addGroupId(levelFromSet || level, LevelType.SUBTITLE, level.attrs.SUBTITLES);
       }
     });
 
@@ -150,6 +152,7 @@ export default class LevelController extends EventHandler {
       this.hls.trigger(Event.MANIFEST_PARSED, {
         levels,
         audioTracks,
+        subtitleTracks,
         firstLevel: this._firstLevel,
         stats: data.stats,
         audio: audioCodecFound,
@@ -323,6 +326,7 @@ export default class LevelController extends EventHandler {
         // exponential backoff capped to max retry timeout
         delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
         // Schedule level reload
+        this.clearTimer();
         this.timer = setTimeout(() => this.loadLevel(), delay);
         // boolean used to inform stream controller not to switch back to IDLE on non fatal error
         errorEvent.levelRetry = true;
@@ -398,6 +402,7 @@ export default class LevelController extends EventHandler {
     if (details.live) {
       const reloadInterval = computeReloadInterval(curLevel.details, details, data.stats.trequest);
       logger.log(`live playlist, reload in ${Math.round(reloadInterval)} ms`);
+      this.clearTimer();
       this.timer = setTimeout(() => this.loadLevel(), reloadInterval);
     } else {
       this.clearTimer();
@@ -405,6 +410,11 @@ export default class LevelController extends EventHandler {
   }
 
   onAudioTrackSwitched (data) {
+    // for case when we are disabling (setting to track-id -1 on API)
+    if (data.id < 0) {
+      return;
+    }
+
     const audioGroupId = this.hls.audioTracks[data.id].groupId;
 
     const currentLevel = this.hls.levels[this.currentLevelIndex];
@@ -429,6 +439,28 @@ export default class LevelController extends EventHandler {
     }
   }
 
+  onSubtitleTrackSwitch (data) {
+    // for case when we are disabling (setting to track-id -1 on API)
+    if (data.id < 0) {
+      return;
+    }
+
+    const subtitleGroupId = this.hls.subtitleTracks[data.id].groupId;
+
+    const currentLevel = this.hls.levels[this.currentLevelIndex];
+    if (!currentLevel) {
+      return;
+    }
+
+    if (currentLevel.subtitleGroupIds) {
+      const urlId = currentLevel.subtitleGroupIds.findIndex((groupId) => groupId === subtitleGroupId);
+      if (urlId !== currentLevel.urlId) {
+        currentLevel.urlId = urlId;
+        this.startLoad();
+      }
+    }
+  }
+
   loadLevel () {
     logger.debug('call to loadLevel');
 
@@ -445,6 +477,8 @@ export default class LevelController extends EventHandler {
 
         // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
         // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
+
+        this.clearTimer();
 
         this.hls.trigger(Event.LEVEL_LOADING, { url, level, id });
       }

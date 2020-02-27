@@ -199,6 +199,14 @@ export class SubtitleStreamController extends BaseStreamController {
       const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), media.currentTime, maxBufferHole);
       const { end: bufferEnd, len: bufferLen } = bufferedInfo;
 
+      /*
+      const maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+
+      const bufferedInfo = BufferHelper.bufferedRangesInfo(this._getBuffered(), this.media.currentTime, maxBufferHole);
+      const bufferEnd = bufferedInfo.end;
+      const bufferLen = bufferedInfo.len;
+      */
+
       const trackDetails = tracks[currentTrackId].details;
       const fragments = trackDetails.fragments;
       const fragLen = fragments.length;

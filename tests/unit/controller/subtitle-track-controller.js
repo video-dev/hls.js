@@ -1,4 +1,5 @@
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
+import { Observer } from '../../../src/observer';
 import Hls from '../../../src/hls';
 import sinon from 'sinon';
 
@@ -7,13 +8,20 @@ describe('SubtitleTrackController', function () {
   let videoElement;
   let sandbox;
 
-  beforeEach(function () {
-    const hls = new Hls({});
+  const fakeTracks = [
+    { id: 0, url: 'baz', details: { live: false }, groupId: 'B', name: 'Foo' },
+    { id: 1, url: 'bar', groupId: 'B', name: 'Bar' },
+    { id: 2, details: { live: true }, url: 'foo', groupId: 'A', name: 'Foo' },
+    { id: 3, details: { live: true }, url: 'foo', groupId: 'A', name: 'Bar' }
+  ];
+
+  beforeEach(() => {
+    const hls = new Observer();
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = [{ id: 0, url: 'baz', details: { live: false } }, { id: 1, url: 'bar' }, { id: 2, details: { live: true }, url: 'foo' }];
+    subtitleTrackController.tracks = fakeTracks;
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
@@ -33,9 +41,9 @@ describe('SubtitleTrackController', function () {
     });
   });
 
-  describe('onTextTrackChanged', function () {
-    it('should set subtitleTrack to -1 if disabled', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+  describe('onSubtitleTrackSwitch', () => {
+    it('should set subtitleTrack to -1 if disabled', () => {
+      assert.strictEqual(subtitleTrackController.subtitleTrack, -1);
 
       videoElement.textTracks[0].mode = 'disabled';
       subtitleTrackController._onTextTracksChanged();
@@ -117,7 +125,8 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
-      const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
+      const stopTimerSpy = sinon.spy(subtitleTrackController, 'clearInterval');
+      const triggerSpy = sinon.spy(subtitleTrackController.hls, 'trigger');
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
 
@@ -133,8 +142,8 @@ describe('SubtitleTrackController', function () {
       expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', { url: 'foo', id: 2 });
     });
 
-    it('should do nothing if called with out of bound indices', function () {
-      const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
+    it('should do nothing if called with out of bound indicies', function () {
+      const stopTimerSpy = sinon.spy(subtitleTrackController, 'clearInterval');
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
 
@@ -230,6 +239,120 @@ describe('SubtitleTrackController', function () {
         expect(subtitleTrackController.stopped).to.be.false;
         expect(loadCurrentTrackSpy).to.have.been.calledOnce;
       });
+    });
+  });
+
+  describe('onLevelLoaded', () => {
+    it('should reselect the current track and trigger SUBTITLE_TRACK_SWITCH eventually', (done) => {
+      const hls = new Hls();
+      const subtitleTrackController = new SubtitleTrackController(hls);
+
+      subtitleTrackController.tracks = fakeTracks;
+
+      hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH, (event, data) => {
+        done();
+      });
+
+      const levels = [
+        {
+          urlId: 1,
+          subtitleGroupIds: ['A', 'B']
+        }
+      ];
+
+      hls.levelController = {
+        levels
+      };
+
+      const levelLoadedEvent = {
+        level: 0
+      };
+
+      const newLevelInfo = levels[levelLoadedEvent.level];
+      const newGroupId = newLevelInfo.subtitleGroupIds[newLevelInfo.urlId];
+
+      subtitleTrackController.trackId = 0;
+      subtitleTrackController.subtitleTrack = 2;
+
+      // current track name
+      const subtitleTrackName = fakeTracks[subtitleTrackController.subtitleTrack].name;
+
+      subtitleTrackController.onLevelLoaded(levelLoadedEvent);
+
+      // group has switched
+      assert.strictEqual(subtitleTrackController.subtitleGroupId, newGroupId);
+
+      // name is still the same
+      assert.strictEqual(fakeTracks[subtitleTrackController.subtitleTrack].name, subtitleTrackName);
+    });
+  });
+
+  describe('onError', () => {
+    it('should clear interval (only) on fatal network errors', () => {
+      subtitleTrackController.setInterval(1000);
+
+      subtitleTrackController.onError({
+        type: Hls.ErrorTypes.MEDIA_ERROR
+      });
+
+      assert.strictEqual(subtitleTrackController.hasInterval(), true);
+
+      subtitleTrackController.onError({
+        type: Hls.ErrorTypes.MEDIA_ERROR,
+        fatal: true
+      });
+
+      assert.strictEqual(subtitleTrackController.hasInterval(), true);
+
+      subtitleTrackController.onError({
+        type: Hls.ErrorTypes.NETWORK_ERROR,
+        fatal: false
+      });
+
+      assert.strictEqual(subtitleTrackController.hasInterval(), true);
+
+      subtitleTrackController.onError({
+        type: Hls.ErrorTypes.NETWORK_ERROR,
+        fatal: true
+      });
+
+      // fatal network error clears interval
+      assert.strictEqual(subtitleTrackController.hasInterval(), false);
+    });
+
+    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', () => {
+      const currentTrackId = 3;
+
+      subtitleTrackController.tracks = fakeTracks;
+
+      subtitleTrackController.trackId = currentTrackId;
+
+      subtitleTrackController.onError({
+        type: Hls.ErrorTypes.MEDIA_ERROR,
+        fatal: true
+      });
+
+      assert.strictEqual(!!subtitleTrackController.trackIdBlacklist[currentTrackId], false);
+
+      subtitleTrackController.onError({
+        type: Hls.ErrorTypes.NETWORK_ERROR,
+        fatal: true
+      });
+
+      assert.strictEqual(!!subtitleTrackController.trackIdBlacklist[currentTrackId], false);
+
+      subtitleTrackController.onError({
+        type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.SUBTITLE_TRACK_LOAD_ERROR,
+        fatal: true,
+        context: {
+          id: 'foobarLoaderContextId'
+        }
+      });
+
+      assert.strictEqual(!!subtitleTrackController.trackIdBlacklist[currentTrackId], true);
+
+      assert.strictEqual(subtitleTrackController.subtitleTrack, 1);
     });
   });
 });

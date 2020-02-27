@@ -21,11 +21,38 @@ import { AudioGroup } from '../types/media-playlist';
 const { performance } = window;
 
 /**
+<<<<<<< HEAD:src/loader/playlist-loader.ts
  * @constructor
  */
 class PlaylistLoader extends EventHandler {
   private loaders: Partial<Record<PlaylistContextType, Loader<PlaylistLoaderContext>>> = {};
 
+=======
+ * `type` property values for this loaders' context object
+ * @enum
+ *
+ */
+const ContextType = {
+  MANIFEST: 'manifest',
+  LEVEL: 'level',
+  AUDIO_TRACK: 'audioTrack',
+  SUBTITLE_TRACK: 'subtitleTrack'
+};
+
+/**
+ * @enum {string}
+ */
+export const LevelType = {
+  MAIN: 'main',
+  AUDIO: 'audio',
+  SUBTITLE: 'subtitle'
+};
+
+/**
+ * @constructor
+ */
+export class PlaylistLoader extends EventHandler {
+>>>>>>> feature/subtitle-backup-streams:src/loader/playlist-loader.js
   /**
    * @constructs
    * @param {Hls} hls
@@ -295,8 +322,13 @@ class PlaylistLoader extends EventHandler {
       codec: level.audioCodec
     }));
 
+<<<<<<< HEAD:src/loader/playlist-loader.ts
     const audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
     const subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+=======
+    let audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
+    let subtitleTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+>>>>>>> feature/subtitle-backup-streams:src/loader/playlist-loader.js
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -327,7 +359,8 @@ class PlaylistLoader extends EventHandler {
     hls.trigger(Event.MANIFEST_LOADED, {
       levels,
       audioTracks,
-      subtitles,
+      subtitleTracks,
+      subtitles: subtitleTracks, // FIXME: `subtitles` not documented
       url,
       stats,
       networkDetails
@@ -365,6 +398,7 @@ class PlaylistLoader extends EventHandler {
       hls.trigger(Event.MANIFEST_LOADED, {
         levels: [singleLevel],
         audioTracks: [],
+        subtitleTracks: [],
         url,
         stats,
         networkDetails
@@ -459,8 +493,12 @@ class PlaylistLoader extends EventHandler {
       details = (timeout ? ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT : ErrorDetails.AUDIO_TRACK_LOAD_ERROR);
       fatal = false;
       break;
+    case ContextType.SUBTITLE_TRACK:
+      details = (timeout ? ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT : ErrorDetails.SUBTITLE_TRACK_LOAD_ERROR);
+      fatal = false;
+      break;
     default:
-      // details = ...?
+      logger.warn(`Handled network error for unknown context-type: ${context.type}`);
       fatal = false;
     }
 
@@ -526,5 +564,3 @@ class PlaylistLoader extends EventHandler {
     }
   }
 }
-
-export default PlaylistLoader;
