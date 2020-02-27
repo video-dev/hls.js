@@ -60,7 +60,7 @@ export function getClosestCue (cues: TextTrackCueList | TextTrackCue[], time: nu
 }
 
 export function filterSubtitleTracks (textTrackList) {
-  let tracks = [];
+  let tracks: any[] = [];
   for (let i = 0; i < textTrackList.length; i++) {
     const track = textTrackList[i];
     // Edge adds a track without a label; we don't want to use it

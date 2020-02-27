@@ -287,6 +287,11 @@ class SubtitleTrackController extends TaskLoop {
       this._toggleTrackModes(subtitleTrackId);
       /*
       this._setSubtitleTrackInternal(subtitleTrackId);
+
+      /*
+      this._setSubtitleTrack(subtitleTrackId);
+      this._selectDefaultTrack = false;
+      */
     }
   }
 
@@ -305,11 +310,6 @@ class SubtitleTrackController extends TaskLoop {
     }
     logger.log(`Loading subtitle track ${trackId}`);
     hls.trigger(Event.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
-  }
-  */
-      this._setSubtitleTrack(subtitleTrackId);
-      this._selectDefaultTrack = false;
-    }
   }
 
   /**
