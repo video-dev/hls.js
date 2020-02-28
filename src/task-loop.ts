@@ -2,35 +2,40 @@ import EventHandler from './event-handler';
 import Hls from './hls';
 
 /**
- * Sub-class specialization of EventHandler base class.
+ * TaskLoop serves as super-class to a number of core components
+ * that need to periodically schedule running "tick" like processing
+ * scheduled on the main loop.
  *
- * TaskLoop allows to schedule a task function being called (optionnaly repeatedly) on the main loop,
- * scheduled asynchroneously, avoiding recursive calls in the same tick.
+ * All of it's methods are supposed to be called by the subclasser itself,
+ * in order to manage its task process  scheduling, and or not intended for public usage.
  *
- * The task itself is implemented in `doTick`. It can be requested and called for single execution
- * using the `tick` method.
+ * Inheriting classes need to implement the `doTick` method,
+ * where any application specific process can be done.
  *
- * It will be assured that the task execution method (`tick`) only gets called once per main loop "tick",
- * no matter how often it gets requested for execution. Execution in further ticks will be scheduled accordingly.
+ * `doTick` is not supposed to be called directly.
  *
- * If further execution requests have already been scheduled on the next tick, it can be checked with `hasNextTick`,
- * and cancelled with `clearNextTick`.
+ * Instead, there is the `tick` method that will allow to schedule
+ * the `doTick` in a way that will avoid re-entrant (i.e recursive)
+ * calling of it.
  *
- * The task can be scheduled as an interval repeatedly with a period as parameter (see `setInterval`, `clearInterval`).
+ * 1) tick() invokes doTick().
  *
- * Sub-classes need to implement the `doTick` method which will effectively have the task execution routine.
+ * 2) When in the callstack of `doTick` implementation there is any further call to tick()
+ *    a further doTick() call is scheduled anyhow on the next main eventloop iteration
+ *    via setTimeout(,0).
  *
- * Further explanations:
+ * Calling to `tick` can be seen as requesting an execution frame for `doTick`
+ * on the main thread as early as possible.
  *
- * The baseclass has a `tick` method that will schedule the doTick call. It may be called synchroneously
- * only for a stack-depth of one. On re-entrant calls, sub-sequent calls are scheduled for next main loop ticks.
+ * The idea is, any repetitive "ticking" task can be implemented here, the task
+ * can "tick" itself, but we avoid locking the main thread with any endless re-entrant calls,
+ * but re-schedule as a timeout instead.
  *
- * When the task execution (`tick` method) is called in re-entrant way this is detected and
- * we are limiting the task execution per call stack to exactly one, but scheduling/post-poning further
- * task processing on the next main loop iteration (also known as "next tick" in the Node/JS runtime lingo).
+ * Also, TaskLoop provides a utility to schedule fixed interval tasks,
+ * by wrapping window.setInterval for convenience.
+ * See `setInterval`, `hasInterval` and `clearInterval`.
  */
-
-export default class TaskLoop extends EventHandler {
+export default abstract class TaskLoop extends EventHandler {
   private readonly _boundTick: () => void;
   private _tickTimer: number | null = null;
   private _tickInterval: number | null = null;
@@ -54,21 +59,21 @@ export default class TaskLoop extends EventHandler {
    * @returns {boolean}
    */
   public hasInterval (): boolean {
-    return !!this._tickInterval;
+    return this._tickInterval !== null;
   }
 
   /**
    * @returns {boolean}
    */
-  public hasNextTick (): boolean {
-    return !!this._tickTimer;
+  protected hasNextTick (): boolean {
+    return this._tickTimer !== null;
   }
 
   /**
    * @param {number} millis Interval time (ms)
    * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
    */
-  public setInterval (millis: number): boolean {
+  protected setInterval (millis: number): boolean {
     if (!this._tickInterval) {
       this._tickInterval = self.setInterval(this._boundTick, millis);
       return true;
@@ -79,7 +84,7 @@ export default class TaskLoop extends EventHandler {
   /**
    * @returns {boolean} True when interval was cleared, false when none was set (no effect)
    */
-  public clearInterval (): boolean {
+  protected clearInterval (): boolean {
     if (this._tickInterval !== null) {
       self.clearInterval(this._tickInterval);
       this._tickInterval = null;
@@ -91,7 +96,7 @@ export default class TaskLoop extends EventHandler {
   /**
    * @returns {boolean} True when timeout was cleared, false when none was set (no effect)
    */
-  public clearNextTick (): boolean {
+  protected clearNextTick (): boolean {
     if (this._tickTimer) {
       self.clearTimeout(this._tickTimer);
       this._tickTimer = null;
@@ -103,17 +108,15 @@ export default class TaskLoop extends EventHandler {
   /**
    * Will call the subclass doTick implementation in this main loop tick
    * or in the next one (via setTimeout(,0)) in case it has already been called
-   * in this tick (in case this is a re-entrant call).
+   * in this tick call (in case this is a re-entrant call).
    */
-  public tick (): void {
+  protected tick (): void {
     this._tickCallCount++;
     if (this._tickCallCount === 1) {
       this.doTick();
       // re-entrant call to tick from previous doTick call stack
       // -> schedule a call on the next main loop iteration to process this task processing request
-      if (this._tickCallCount > 1) {
-        // make sure only one timer exists at any time at max
-        this.clearNextTick();
+      if (this._tickCallCount > 1 && !this.hasNextTick()) {
         this._tickTimer = self.setTimeout(this._boundTick, 0);
       }
       this._tickCallCount = 0;
@@ -124,5 +127,5 @@ export default class TaskLoop extends EventHandler {
    * For subclass to implement task logic
    * @abstract
    */
-  protected doTick (): void {}
+  protected abstract doTick ();
 }
