@@ -1,8 +1,8 @@
 # Number of days of inactivity before an issue becomes stale
-daysUntilStale: 60
+daysUntilStale: 30
 
 # Number of days of inactivity before a stale issue is closed
-daysUntilClose: 30
+daysUntilClose: 7
 
 # Issues with these labels will never be considered stale
 exemptLabels:
@@ -13,6 +13,14 @@ exemptLabels:
   - Question
   - Needs Triage
 
+# Set to true to ignore issues in a project (defaults to false)
+exemptProjects: true
+
+# Set to true to ignore issues in a milestone (defaults to false)
+exemptMilestones: true
+
+# Set to true to ignore issues with an assignee (defaults to false)
+exemptAssignees: true
 
 # Label to use when marking an issue as stale
 staleLabel: Stale
@@ -22,6 +30,12 @@ markComment: >
   This issue has been automatically marked as stale because it has not had
   recent activity. It will be closed if no further activity occurs. Thank you
   for your contributions.
- 
+
 # Comment to post when closing a stale issue. Set to `false` to disable
-closeComment: false
+closeComment: >
+  This issue has been automatically closed because it has not had
+  recent activity. If this issue is still valid, please ping a maintainer and ask them to label it accordingly.
+  Thank you for your contributions.
+
+# Limit the number of actions per hour, from 1-30. Default is 30
+limitPerRun: 1
