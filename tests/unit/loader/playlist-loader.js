@@ -496,7 +496,22 @@ lo007ts`;
     let result = M3U8Parser.parseMasterPlaylistMedia(manifest, 'https://hls.ted.com/', 'AUDIO');
     expect(result.length, 1);
     expect(result[0]['autoselect']).to.be.true;
+    expect(result[0]['characteristics']).to.not.exist;
     expect(result[0]['default']).to.be.true;
+    expect(result[0]['forced']).to.be.false;
+    expect(result[0]['groupId']).to.equal('600k');
+    expect(result[0]['lang']).to.equal('eng');
+    expect(result[0]['name']).to.equal('Audio');
+    expect(result[0]['url']).to.equal('https://hls.ted.com/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank');
+  });
+  it('parses manifest with one audio track containing characteristics attribute', function () {
+    let manifest = `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="600k",LANGUAGE="eng",NAME="Audio",AUTOSELECT=YES,DEFAULT=NO,CHARACTERISTICS="public.accessibility.describes-video",URI="/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank",BANDWIDTH=614400`;
+    let result = M3U8Parser.parseMasterPlaylistMedia(manifest, 'https://hls.ted.com/', 'AUDIO');
+    expect(result.length, 1);
+    expect(result[0]['autoselect']).to.be.true;
+    expect(result[0]['characteristics']).to.equal('public.accessibility.describes-video');
+    expect(result[0]['default']).to.be.false;
     expect(result[0]['forced']).to.be.false;
     expect(result[0]['groupId']).to.equal('600k');
     expect(result[0]['lang']).to.equal('eng');

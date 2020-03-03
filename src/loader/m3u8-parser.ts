@@ -127,6 +127,10 @@ export default class M3U8Parser {
           lang: attrs.LANGUAGE
         };
 
+        if (attrs.CHARACTERISTICS) {
+          media.characteristics = attrs.CHARACTERISTICS;
+        }
+
         if (attrs.URI) {
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
         }
