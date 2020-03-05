@@ -22,7 +22,7 @@ import {
   DemuxedTrack,
   Demuxer,
   DemuxerResult,
-  AvcSample
+  AvcSample, DemuxedMetadataTrack
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
@@ -62,7 +62,7 @@ class TSDemuxer implements Demuxer {
 
   private _avcTrack!: DemuxedAvcTrack;
   private _audioTrack!: DemuxedAudioTrack;
-  private _id3Track!: DemuxedTrack;
+  private _id3Track!: DemuxedMetadataTrack;
   private _txtTrack!: DemuxedTrack;
   private aacOverFlow: any;
   private avcSample: AvcSample | null = null;

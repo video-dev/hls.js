@@ -4,9 +4,6 @@
     <meta charset="utf-8">
     <title>hls.js demo</title>
     <link rel="stylesheet" href="style.css">
-    <script type="application/javascript">
-        window.$ = document.querySelectorAll.bind(document);
-    </script>
   </head>
   <body>
   <div class="header-container">
@@ -79,19 +76,19 @@
             Playback:
           </span> -->
           <span>
-            <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].play()">Play</button>
-            <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].pause()">Pause</button>
+            <button type="button" class="btn btn-sm btn-info" onclick="document.querySelector('#video').play()">Play</button>
+            <button type="button" class="btn btn-sm btn-info" onclick="document.querySelector('#video').pause()">Pause</button>
           </span>
           <span>
-            <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime-=10">- 10 s</button>
-            <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime+=10">+ 10 s</button>
+            <button type="button" class="btn btn-sm btn-info" onclick="document.querySelector('#video').currentTime-=10">- 10 s</button>
+            <button type="button" class="btn btn-sm btn-info" onclick="document.querySelector('#video').currentTime+=10">+ 10 s</button>
           </span>
           <span>
-            <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=parseFloat($('#seek_pos')[0].value)">Seek to </button>
-            <input type="number" value="0" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=parseFloat($('#seek_pos')[0].value);}">
+            <button type="button" class="btn btn-sm btn-info" onclick="document.querySelector('#video').currentTime=parseFloat(document.querySelector('#seek_pos').value)">Seek to </button>
+            <input type="number" value="0" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){document.querySelector('#video').currentTime=parseFloat(document.querySelector('#seek_pos').value);}">
           </span>
           <span>
-            <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachMedia($('#video')[0])">Attach media</button>
+            <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachMedia(document.querySelector('#video'))">Attach media</button>
             <button type="button" class="btn btn-xs btn-warning" onclick="hls.detachMedia()">Detach media</button>
           </span>
           <span>

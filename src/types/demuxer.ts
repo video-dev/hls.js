@@ -49,6 +49,26 @@ export interface DemuxedAvcTrack extends DemuxedTrack {
   samples: Array<AvcSample>
 }
 
+export interface DemuxedMetadataTrack extends DemuxedTrack {
+  samples: MetadataSample[]
+}
+
+export interface DemuxedUserdataTrack extends DemuxedTrack {
+  samples: UserdataSample[]
+}
+
+export interface MetadataSample {
+  pts: number,
+  dts: number,
+  len: number,
+  data: Uint8Array;
+}
+
+export interface UserdataSample {
+  pts: number,
+  bytes: Uint8Array;
+}
+
 export interface AvcSample {
   dts: number
   pts: number

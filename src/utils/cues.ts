@@ -1,11 +1,15 @@
 import { fixLineBreaks } from './vttparser';
 import { CaptionScreen, Row } from './cea-608-parser';
 
-interface VTTCue extends TextTrackCue {
+export interface VTTCue extends TextTrackCue {
   new(start: number, end: number, cueText: string): VTTCue
   line: number
   align: string
   position: number
+  value: {
+    data: any
+    info: any
+  }
 }
 
 export function createCues (startTime: number, endTime: number, captionScreen: CaptionScreen) {

@@ -34,21 +34,24 @@ Chart.controllers.horizontalBar.prototype.calculateBarIndexPixels = function (da
 };
 
 Chart.controllers.horizontalBar.prototype.draw = function () {
-  const chart = this.chart;
-  const scale = this._getValueScale();
-  scale._parseValue = scaleParseValue;
   const rects = this.getMeta().data;
-  const dataset = this.getDataset();
   const len = rects.length;
+  const dataset = this.getDataset();
   if (len !== dataset.data.length) {
     // View does not match dataset (wait for redraw)
     return;
   }
+  const chart = this.chart;
+  const scale = this._getValueScale();
+  scale._parseValue = scaleParseValue;
   const ctx: CanvasRenderingContext2D = chart.ctx;
   const chartArea: { left, top, right, bottom } = chart.chartArea;
   Chart.helpers.canvas.clipArea(ctx, chartArea);
-  const range = scale.getValueForPixel(chartArea.right) - scale.getValueForPixel(chartArea.left);
-  const lineHeight = Math.ceil(ctx.measureText('0').actualBoundingBoxAscent) + 2;
+  if (!this.lineHeight) {
+    this.lineHeight = Math.ceil(ctx.measureText('0').actualBoundingBoxAscent) + 2;
+  }
+  const lineHeight = this.lineHeight;
+  let range = 0;
   for (let i = 0; i < len; ++i) {
     const rect = rects[i];
     const view = rect._view;
@@ -59,18 +62,25 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
     const obj = dataset.data[i];
     const val = scale._parseValue(obj);
     if (!isNaN(val.min) && !isNaN(val.max)) {
-      const { stats } = obj;
+      const { stats, dataType } = obj;
       const isFragment = !!stats;
+      const isCue = dataType === 'cue';
+      if (isCue) {
+        view.y += (view.height * 0.5 * (i % 2)) - (view.height * 0.25);
+      }
       const bounds = boundingRects(view);
       const drawText = bounds.w > lineHeight;
-      if (isFragment) {
+      if (isFragment || isCue) {
         if (drawText) {
           view.borderWidth = 1;
           if (i === 0) {
             view.borderSkipped = false;
           }
-        } else if (range > 300) {
-          view.borderWidth = 0;
+        } else {
+          range = range || scale.getValueForPixel(chartArea.right) - scale.getValueForPixel(chartArea.left);
+          if (range > 300 || isCue) {
+            view.borderWidth = 0;
+          }
         }
         view.backgroundColor = `rgba(0, 0, 0, ${0.05 + (i % 2) / 12})`;
       }
@@ -83,6 +93,11 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
         if (stats.loaded && stats.total) {
           ctx.fillStyle = 'rgba(50, 20, 100, 0.3)';
           ctx.fillRect(bounds.x, bounds.y, bounds.w * stats.loaded / stats.total, bounds.h);
+        }
+      } else if (isCue) {
+        if (obj.active) {
+          ctx.fillStyle = 'rgba(100, 100, 10, 0.4)';
+          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
         }
       }
       if (drawText) {
@@ -103,10 +118,15 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
           const textWidth = Math.min(ctx.measureText(snLabel).width + 2, snBounds.w - 2);
           ctx.fillText(snLabel, snBounds.x + snBounds.w - textWidth, snBounds.y + lineHeight, snBounds.w - 4);
         }
-        const float = start !== (start | 0);
-        const fixedDigits = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
-        const startString = hhmmss(start, fixedDigits);
-        ctx.fillText(startString, bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
+        if (isCue) {
+          const strLength = Math.min(30, Math.ceil(bounds.w / (lineHeight / 3)));
+          ctx.fillText(('' + obj.content).substr(0, strLength), bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
+        } else {
+          const float = start !== (start | 0);
+          const fixedDigits = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
+          const startString = hhmmss(start, fixedDigits);
+          ctx.fillText(startString, bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
+        }
       }
     }
   }
@@ -122,12 +142,15 @@ export function applyChartInstanceOverrides (chart) {
 }
 
 function scaleParseValue (value: number[] | any) {
-  let start, end, min, max;
-
   if (value === undefined) {
     console.warn('Chart values undefined (update chart)');
     return {};
   }
+
+  let start;
+  let end;
+  let min;
+  let max;
 
   if (Array.isArray(value)) {
     start = +this.getRightValue(value[0]);

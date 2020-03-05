@@ -8,6 +8,7 @@ import { SourceBufferName } from './buffer';
 import { ChunkMetadata } from './transmuxer';
 import LoadStats from '../loader/load-stats';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { MetadataSample, UserdataSample } from './demuxer';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement
@@ -270,13 +271,16 @@ export interface FragParsingInitSegmentData {
 
 }
 
-// TODO: What are samples type?
 export interface FragParsingUserdataData {
-  samples: Array<any>
+  id: string,
+  frag: Fragment,
+  samples: UserdataSample[]
 }
 
 export interface FragParsingMetadataData {
-  frag: Fragment
+  id: string,
+  frag: Fragment,
+  samples: MetadataSample[]
 }
 
 export interface FragParsedData {
