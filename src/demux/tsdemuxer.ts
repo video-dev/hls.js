@@ -11,7 +11,7 @@
 
 import * as ADTS from './adts';
 import * as MpegAudio from './mpegaudio';
-import { Events } from '../events';
+import { Events, HlsEventEmitter } from '../events';
 import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
 import { logger } from '../utils/logger';
@@ -26,6 +26,7 @@ import {
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
+import { HlsConfig } from '../config';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -45,8 +46,8 @@ const RemuxerTrackIdConfig = {
 class TSDemuxer implements Demuxer {
   static readonly minProbeByteLength = 188;
 
-  private readonly observer: any;
-  private readonly config: any;
+  private readonly observer: HlsEventEmitter;
+  private readonly config: HlsConfig;
   private typeSupported: any;
 
   private sampleAes: any = null;
@@ -68,7 +69,7 @@ class TSDemuxer implements Demuxer {
   private avcSample: AvcSample | null = null;
   private remainderData: Uint8Array | null = null;
 
-  constructor (observer, config, typeSupported) {
+  constructor (observer: HlsEventEmitter, config: HlsConfig, typeSupported) {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
@@ -327,7 +328,12 @@ class TSDemuxer implements Demuxer {
           break;
         }
       } else {
-        this.observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
+        this.observer.emit(Events.ERROR, Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_PARSING_ERROR,
+          fatal: false,
+          reason: 'TS packet did not start with 0x47'
+        });
       }
     }
 
@@ -920,7 +926,12 @@ class TSDemuxer implements Demuxer {
         fatal = true;
       }
       logger.warn(`parsing error:${reason}`);
-      this.observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
+      this.observer.emit(Events.ERROR, Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal,
+        reason
+      });
       if (fatal) {
         return;
       }

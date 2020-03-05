@@ -1,6 +1,6 @@
 import AAC from './aac-helper';
 import MP4 from './mp4-generator';
-import { Events } from '../events';
+import { Events, HlsEventEmitter } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import {
@@ -15,14 +15,15 @@ import { AvcSample, DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
 import Fragment from '../loader/fragment';
+import { HlsConfig } from '../config';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
 const MPEG_AUDIO_SAMPLE_PER_FRAME = 1152;
 
 export default class MP4Remuxer implements Remuxer {
-  private observer: any;
-  private config: any;
+  private observer: HlsEventEmitter;
+  private config: HlsConfig;
   private typeSupported: any;
   private ISGenerated: boolean = false;
   private _initPTS!: number;
@@ -34,7 +35,7 @@ export default class MP4Remuxer implements Remuxer {
   private isAudioContiguous: boolean = false;
   private isVideoContiguous: boolean = false;
 
-  constructor (observer, config, typeSupported, vendor = '') {
+  constructor (observer: HlsEventEmitter, config: HlsConfig, typeSupported, vendor = '') {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
@@ -341,7 +342,13 @@ export default class MP4Remuxer implements Remuxer {
     try {
       mdat = new Uint8Array(mdatSize);
     } catch (err) {
-      this.observer.trigger(Events.ERROR, { type: ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: `fail allocating video mdat ${mdatSize}` });
+      this.observer.emit(Events.ERROR, Events.ERROR, {
+        type: ErrorTypes.MUX_ERROR,
+        details: ErrorDetails.REMUX_ALLOC_ERROR,
+        fatal: false,
+        bytes: mdatSize,
+        reason: `fail allocating video mdat ${mdatSize}`
+      });
       return;
     }
     const view = new DataView(mdat.buffer);
@@ -600,7 +607,7 @@ export default class MP4Remuxer implements Remuxer {
           try {
             mdat = new Uint8Array(mdatSize);
           } catch (err) {
-            this.observer.trigger(Events.ERROR, {
+            this.observer.emit(Events.ERROR, Events.ERROR, {
               type: ErrorTypes.MUX_ERROR,
               details: ErrorDetails.REMUX_ALLOC_ERROR,
               fatal: false,
@@ -723,9 +730,6 @@ export default class MP4Remuxer implements Remuxer {
       sample.pts = ((sample.pts - initPTS) / inputTimeScale);
       sample.dts = ((sample.dts - initDTS) / inputTimeScale);
     }
-    this.observer.trigger(Events.FRAG_PARSING_METADATA, {
-      samples: track.samples
-    });
     const samples = track.samples;
     track.samples = [];
     return {

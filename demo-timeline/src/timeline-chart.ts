@@ -11,7 +11,7 @@ import Fragment from '../../src/loader/fragment';
 const X_AXIS_SECONDS = 'x-axis-seconds';
 
 export class TimelineChart {
-  private chart: Chart;
+  private readonly chart: Chart;
   private rafDebounceRequestId: number = -1;
   private imageDataBuffer: ImageData | null = null;
   private media: HTMLMediaElement | null = null;
@@ -298,7 +298,7 @@ export class TimelineChart {
     textTracks.addEventListener('addtrack', this.tracksChangeHandler);
     textTracks.addEventListener('removetrack', this.tracksChangeHandler);
     textTracks.addEventListener('change', this.tracksChangeHandler);
-
+    this.setTextTracks(textTracks);
     this.resize(datasets);
   }
 

@@ -14,6 +14,7 @@ import ChunkCache from './chunk-cache';
 import { appendUint8Array } from '../utils/mp4-tools';
 
 import { logger } from '../utils/logger';
+import { HlsConfig } from '../config';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -39,7 +40,7 @@ muxConfig.forEach(({ demux }) => {
 export default class Transmuxer {
   private observer: HlsEventEmitter;
   private typeSupported: any;
-  private config: any;
+  private config: HlsConfig;
   private vendor: any;
   private demuxer?: Demuxer;
   private remuxer?: Remuxer;
@@ -50,7 +51,7 @@ export default class Transmuxer {
   private currentTransmuxState!: TransmuxState;
   private cache: ChunkCache = new ChunkCache();
 
-  constructor (observer: HlsEventEmitter, typeSupported, config, vendor) {
+  constructor (observer: HlsEventEmitter, typeSupported, config: HlsConfig, vendor) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
@@ -176,7 +177,12 @@ export default class Transmuxer {
     if (!demuxer || !remuxer) {
       // If probing failed, and each demuxer saw enough bytes to be able to probe, then Hls.js has been given content its not able to handle
       if (bytesSeen >= minProbeByteLength) {
-        observer.emit(Events.ERROR, Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
+        observer.emit(Events.ERROR, Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_PARSING_ERROR,
+          fatal: true,
+          reason: 'no demux matching with content found'
+        });
       }
       stats.executeEnd = now();
       return [emptyResult(chunkMeta)];
