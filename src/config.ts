@@ -64,7 +64,7 @@ type LevelControllerConfig = {
   startLevel?: number
 };
 
-type MP4RemuxerConfig = {
+export type MP4RemuxerConfig = {
   stretchShortVideoTrack: boolean,
   maxAudioFramesDrift: number,
 };
