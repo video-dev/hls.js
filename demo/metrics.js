@@ -1,40 +1,28 @@
 function showMetrics()  {
-  if(metricsDisplayed) {
-    var width = window.innerWidth-30;
-    $('#bufferWindow_c')[0].width =
-      $('#bitrateTimerange_c')[0].width =
-      $('#bufferTimerange_c')[0].width =
-      $('#videoEvent_c')[0].width =
-      $('#metricsButton')[0].width =
-      $('#loadEvent_c')[0].width = width;
-    $('#bufferWindow_c').show();
-    $('#bitrateTimerange_c').show();
-    $('#bufferTimerange_c').show();
-    $('#videoEvent_c').show();
-    $('#metricsButton').show();
-    $('#loadEvent_c').show();
-  }
-}
-
-
-function toggleMetricsDisplay() {
-  metricsDisplayed = !metricsDisplayed;
-  if(metricsDisplayed) {
-    showMetrics();
-  } else {
-    hideMetrics();
-  }
+  metricsDisplayed = true;
+  var width = window.innerWidth - 30;
+  $('#bufferWindow_c')[0].width =
+    $('#bitrateTimerange_c')[0].width =
+    $('#bufferTimerange_c')[0].width =
+    $('#videoEvent_c')[0].width =
+    $('#metricsButton')[0].width =
+    $('#loadEvent_c')[0].width = width;
+  $('#bufferWindow_c').show();
+  $('#bitrateTimerange_c').show();
+  $('#bufferTimerange_c').show();
+  $('#videoEvent_c').show();
+  $('#metricsButton').show();
+  $('#loadEvent_c').show();
 }
 
 function hideMetrics()  {
-  if(!metricsDisplayed) {
-    $('#bufferWindow_c').hide();
-    $('#bitrateTimerange_c').hide();
-    $('#bufferTimerange_c').hide();
-    $('#videoEvent_c').hide();
-    $('#metricsButton').hide();
-    $('#loadEvent_c').hide();
-  }
+  metricsDisplayed = false;
+  $('#bufferWindow_c').hide();
+  $('#bitrateTimerange_c').hide();
+  $('#bufferTimerange_c').hide();
+  $('#videoEvent_c').hide();
+  $('#metricsButton').hide();
+  $('#loadEvent_c').hide();
 }
 
 function timeRangeSetSliding(duration) {
