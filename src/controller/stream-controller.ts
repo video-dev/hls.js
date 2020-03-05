@@ -15,7 +15,17 @@ import { Level } from '../types/level';
 import LevelDetails from '../loader/level-details';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
-import { LevelLoadedData, ManifestParsedData, MediaAttachedData, AudioTrackSwitchingData, LevelsUpdatedData, AudioTrackSwitchedData, BufferCreatedData, ErrorData } from '../types/events';
+import {
+  LevelLoadedData,
+  ManifestParsedData,
+  MediaAttachedData,
+  AudioTrackSwitchingData,
+  LevelsUpdatedData,
+  AudioTrackSwitchedData,
+  BufferCreatedData,
+  ErrorData,
+  FragParsingMetadataData, FragParsingUserdataData
+} from '../types/events';
 import Hls from '../hls';
 import { NetworkComponentAPI } from '../types/component-api';
 
@@ -949,15 +959,17 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     if (id3?.samples?.length) {
-      const emittedID3: any = id3;
-      emittedID3.frag = frag;
-      emittedID3.id = id;
+      const emittedID3: FragParsingMetadataData = Object.assign({
+        frag,
+        id
+      }, id3);
       hls.trigger(Events.FRAG_PARSING_METADATA, emittedID3);
     }
     if (text) {
-      const emittedText: any = text;
-      emittedText.frag = frag;
-      emittedText.id = id;
+      const emittedText: FragParsingUserdataData = Object.assign({
+        frag,
+        id
+      }, text);
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
     }
   }

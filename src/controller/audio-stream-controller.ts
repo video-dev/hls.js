@@ -11,7 +11,16 @@ import FragmentLoader from '../loader/fragment-loader';
 import ChunkCache from '../demux/chunk-cache';
 import LevelDetails from '../loader/level-details';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import { BufferAppendingData, TrackLoadedData, AudioTracksUpdatedData, MediaAttachingData, FragBufferedData, BufferCreatedData, AudioTrackSwitchingData } from '../types/events';
+import {
+  BufferAppendingData,
+  TrackLoadedData,
+  AudioTracksUpdatedData,
+  MediaAttachingData,
+  FragBufferedData,
+  BufferCreatedData,
+  AudioTrackSwitchingData,
+  FragParsingUserdataData, FragParsingMetadataData
+} from '../types/events';
 import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
 import Hls from '../hls';
@@ -593,16 +602,18 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       this.bufferFragmentData(audio, frag, chunkMeta);
     }
 
-    if (id3) {
-      const emittedID3: any = id3;
-      emittedID3.frag = frag;
-      emittedID3.id = id;
+    if (id3?.samples?.length) {
+      const emittedID3: FragParsingMetadataData = Object.assign({
+        frag,
+        id
+      }, id3);
       hls.trigger(Events.FRAG_PARSING_METADATA, emittedID3);
     }
     if (text) {
-      const emittedText: any = text;
-      emittedText.frag = frag;
-      emittedText.id = id;
+      const emittedText: FragParsingUserdataData = Object.assign({
+        frag,
+        id
+      }, text);
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
     }
   }

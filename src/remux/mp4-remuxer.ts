@@ -3,7 +3,14 @@ import MP4 from './mp4-generator';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import { InitSegmentData, Remuxer, RemuxerResult, RemuxedMetadata, RemuxedTrack } from '../types/remuxer';
+import {
+  InitSegmentData,
+  Remuxer,
+  RemuxerResult,
+  RemuxedMetadata,
+  RemuxedTrack,
+  RemuxedUserdata
+} from '../types/remuxer';
 import { AvcSample, DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../types/demuxer';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
@@ -408,7 +415,7 @@ export default class MP4Remuxer implements Remuxer {
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     this.nextAvcDts = nextAvcDts = lastDTS + mp4SampleDuration;
     this.isVideoContiguous = true;
-    const moof = MP4.moof(track.sequenceNumber++, firstDTS, Object.assign(track, {
+    const moof = MP4.moof(track.sequenceNumber++, firstDTS, Object.assign({}, track, {
       samples: outputSamples
     }));
     const type: SourceBufferName = 'video';
@@ -643,9 +650,9 @@ export default class MP4Remuxer implements Remuxer {
     this.nextAudioPts = nextAudioPts = lastPTS! + scaleFactor * lastSample.duration;
 
     // Set the track samples from inputSamples to outputSamples before remuxing
-    // TODO: Pass in as another arg so that the samples array can be of one type
-    track.samples = outputSamples;
-    const moof = rawMPEG ? new Uint8Array(0) : MP4.moof(track.sequenceNumber++, firstPTS! / scaleFactor, track);
+    const moof = rawMPEG ? new Uint8Array(0) : MP4.moof(track.sequenceNumber++, firstPTS! / scaleFactor, Object.assign({}, track, {
+      samples: outputSamples
+    }));
 
     // Clear the track samples. This also clears the samples array in the demuxer, since the reference is shared
     track.samples = [];
@@ -701,7 +708,7 @@ export default class MP4Remuxer implements Remuxer {
     return this.remuxAudio(track, timeOffset, contiguous, false);
   }
 
-  remuxID3 (track) : RemuxedMetadata | undefined {
+  remuxID3 (track: DemuxedTrack) : RemuxedMetadata | undefined {
     const length = track.samples.length;
     if (!length) {
       return;
@@ -716,6 +723,9 @@ export default class MP4Remuxer implements Remuxer {
       sample.pts = ((sample.pts - initPTS) / inputTimeScale);
       sample.dts = ((sample.dts - initDTS) / inputTimeScale);
     }
+    this.observer.trigger(Events.FRAG_PARSING_METADATA, {
+      samples: track.samples
+    });
     const samples = track.samples;
     track.samples = [];
     return {
@@ -723,7 +733,7 @@ export default class MP4Remuxer implements Remuxer {
     };
   }
 
-  remuxText (track) : RemuxedMetadata | undefined {
+  remuxText (track: DemuxedTrack) : RemuxedUserdata | undefined {
     const length = track.samples.length;
     if (!length) {
       return;
@@ -769,7 +779,7 @@ function PTSNormalize (value: number, reference: number | null): number {
   return value;
 }
 
-function dropSamplesUntilKeyframe (track: DemuxedTrack) : number {
+function dropSamplesUntilKeyframe (track: DemuxedAvcTrack) : number {
   const samples = track.samples;
   let dropIndex = 0;
   for (let i = 0; i < samples.length; i++) {

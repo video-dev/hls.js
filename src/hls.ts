@@ -22,6 +22,7 @@ import { Level } from './types/level';
 import { MediaPlaylist } from './types/media-playlist';
 import AudioTrackController from './controller/audio-track-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
+import ID3TrackController from './controller/id3-track-controller';
 import EMEController from './controller/eme-controller';
 import CapLevelController from './controller/cap-level-controller';
 import AbrController from './controller/abr-controller';
@@ -111,6 +112,7 @@ export default class Hls {
     const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
     const playListLoader = new PlaylistLoader(this);
     const keyLoader = new KeyLoader(this);
+    const id3TrackController = new ID3TrackController(this);
 
     // network controllers
     const levelController = this.levelController = new LevelController(this);
@@ -143,6 +145,7 @@ export default class Hls {
       bufferController,
       capLevelController,
       fpsController,
+      id3TrackController,
       fragmentTracker
     ];
 
