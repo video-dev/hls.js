@@ -24,7 +24,8 @@
         var hls = new Hls();
         hls.loadSource(stream);
         hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED,function() {
+        hls.on(Hls.Events.MEDIA_ATTACHED,function() {
+            video.muted = true;
             video.play();
         });
     }
