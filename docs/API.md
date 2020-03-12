@@ -64,6 +64,11 @@
   - [`captionsTextTrack1LanguageCode`](#captionstexttrack1languagecode)
   - [`captionsTextTrack2Label`](#captionstexttrack2label)
   - [`captionsTextTrack2LanguageCode`](#captionstexttrack2languagecode)
+  - [`captionsTextTrack3Label`](#captionsTextTrack3Label)
+  - [`captionsTextTrack3LanguageCode`](#captionsTextTrack3LanguageCode)
+  - [`captionsTextTrack4Label`](#captionsTextTrack4Label)
+  - [`captionsTextTrack4LanguageCode`](#captionsTextTrack4LanguageCode)
+  - [`renderNatively`](#renderNatively)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
@@ -879,6 +884,47 @@ RFC 3066 language code for the text track generated for CEA-708 captions track 2
 
 parameter should be a string
 
+### `captionsTextTrack3Label`
+
+(default: `Unknown CC`)
+
+Label for the text track generated for CEA-708 captions track 3. This is how it will appear in the browser's native menu for subtitles and captions.
+
+parameter should be a string
+
+### `captionsTextTrack3LanguageCode`
+
+(default: ``)
+
+RFC 3066 language code for the text track generated for CEA-708 captions track 3.
+
+parameter should be a string
+
+### `captionsTextTrack4Label`
+
+(default: `Unknown CC`)
+
+Label for the text track generated for CEA-708 captions track 4. This is how it will appear in the browser's native menu for subtitles and captions.
+
+parameter should be a string
+
+### `captionsTextTrack4LanguageCode`
+
+(default: ``)
+
+RFC 3066 language code for the text track generated for CEA-708 captions track 4.
+
+parameter should be a string
+
+### `renderNatively`
+
+(default: `true`)
+
+Whether or not render captions natively using the HTMLMediaElement's TextTracks. Disable native captions rendering
+when you want to handle rending of track and track cues using `NON_NATIVE_TEXT_TRACKS_FOUND` and `CUES_PARSED` events.
+
+parameter should be a boolean
+  
 ### `stretchShortVideoTrack`
 
 (default: `false`)

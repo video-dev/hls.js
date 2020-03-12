@@ -118,6 +118,11 @@ type TimelineControllerConfig = {
   captionsTextTrack1LanguageCode: string,
   captionsTextTrack2Label: string,
   captionsTextTrack2LanguageCode: string,
+  captionsTextTrack3Label: string,
+  captionsTextTrack3LanguageCode: string,
+  captionsTextTrack4Label: string,
+  captionsTextTrack4LanguageCode: string,
+  renderNatively: boolean,
 };
 
 type TSDemuxerConfig = {
@@ -259,6 +264,11 @@ function timelineConfig (): TimelineControllerConfig {
     captionsTextTrack1Label: 'English', // used by timeline-controller
     captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
     captionsTextTrack2Label: 'Spanish', // used by timeline-controller
-    captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
+    captionsTextTrack2LanguageCode: 'es', // used by timeline-controller
+    captionsTextTrack3Label: 'Unknown CC', // used by timeline-controller
+    captionsTextTrack3LanguageCode: '', // used by timeline-controller
+    captionsTextTrack4Label: 'Unknown CC', // used by timeline-controller
+    captionsTextTrack4LanguageCode: '', // used by timeline-controller
+    renderNatively: true
   };
 }
