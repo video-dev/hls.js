@@ -12,11 +12,12 @@ declare global {
 }
 
 function initDemo () {
+  const video = document.querySelector('#video') as HTMLMediaElement;
   const canvas = document.querySelector('#timeline-chart') as HTMLCanvasElement;
   const timelineChart = new TimelineChart(canvas, {
     responsive: false
   });
-  const player = new Player(timelineChart);
+  const player = new Player(timelineChart, video);
 
   // Chart.js responsive feature adds elements to the page for dealing with complex layouts
   // Since we're using 100% of the page width we can do this a lot cheaper

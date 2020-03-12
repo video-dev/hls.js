@@ -22,9 +22,11 @@ export class Player {
   private url: string | null = null;
   private width: number | null = null;
   private chart: TimelineChart;
+  private video: HTMLMediaElement;
 
-  constructor (chart: TimelineChart) {
+  constructor (chart: TimelineChart, video: HTMLMediaElement) {
     this.chart = chart;
+    this.video = video;
   }
 
   public setConfig (config) {
@@ -59,8 +61,6 @@ export class Player {
 
     updateStreamPermalink(this.config, this.width);
 
-    const video = document.querySelector('#video') as HTMLMediaElement;
-
     console.log('Using Hls.js config:', this.config);
     // Copy the config so that it's not mutated by Hls.js
     const configCopy = Object.assign({}, this.config);
@@ -70,7 +70,7 @@ export class Player {
 
     console.log(`Loading ${this.url}`);
     this.hls.loadSource(this.url);
-    this.hls.attachMedia(video);
+    this.hls.attachMedia(this.video);
   }
 
   private addChartEventListeners () {
