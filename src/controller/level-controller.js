@@ -9,7 +9,6 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, computeReloadInterval } from './level-helper';
 
-const { performance } = window;
 let chromeOrFirefox;
 
 export default class LevelController extends EventHandler {
@@ -464,5 +463,32 @@ export default class LevelController extends EventHandler {
     if (this.manualLevelIndex === -1) {
       this.hls.nextAutoLevel = nextLevel;
     }
+  }
+
+  removeLevel (levelIndex, urlId) {
+    const levels = this.levels.filter((level, index) => {
+      if (index !== levelIndex) {
+        return true;
+      }
+
+      if (level.url.length > 1 && urlId !== undefined) {
+        level.url = level.url.filter((url, id) => id !== urlId);
+        level.urlId = 0;
+        return true;
+      }
+      return false;
+    }).map((level, index) => {
+      const { details } = level;
+      if (details && details.fragments) {
+        details.fragments.forEach((fragment) => {
+          fragment.level = index;
+        });
+      }
+      return level;
+    });
+
+    this._levels = levels;
+
+    this.hls.trigger(Event.LEVELS_UPDATED, { levels });
   }
 }
