@@ -111,7 +111,7 @@ type StreamControllerConfig = {
 };
 
 type TimelineControllerConfig = {
-  cueHandler: any, // TODO(typescript-cues): Type once file is done
+  cueHandler: Cues.CuesInterface,
   enableCEA708Captions: boolean,
   enableWebVTT: boolean,
   captionsTextTrack1Label: string,
@@ -163,7 +163,7 @@ export type HlsConfig =
   MP4RemuxerConfig &
   PlaylistLoaderConfig &
   StreamControllerConfig &
-  Partial<TimelineControllerConfig> &
+  TimelineControllerConfig &
   TSDemuxerConfig;
 
 // If possible, keep hlsDefaultConfig shallow
@@ -252,15 +252,10 @@ export const hlsDefaultConfig: HlsConfig = {
 };
 
 function timelineConfig (): TimelineControllerConfig {
-  if (!__USE_SUBTITLES__) {
-    // intentionally doing this over returning Partial<TimelineControllerConfig> above
-    // this has the added nice property of still requiring the object below to completely define all props.
-    return {} as any;
-  }
   return {
     cueHandler: Cues, // used by timeline-controller
-    enableCEA708Captions: true, // used by timeline-controller
-    enableWebVTT: true, // used by timeline-controller
+    enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
+    enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
     captionsTextTrack1Label: 'English', // used by timeline-controller
     captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
     captionsTextTrack2Label: 'Spanish', // used by timeline-controller

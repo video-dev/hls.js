@@ -319,7 +319,9 @@ class PlaylistLoader extends EventHandler {
           default: false,
           autoselect: false,
           forced: false,
-          id: -1
+          id: -1,
+          attrs: {},
+          url: ''
         });
       }
     }

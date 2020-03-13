@@ -7,24 +7,46 @@ import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 import Fragment from '../loader/fragment';
 import { HlsConfig } from '../config';
+import { CuesInterface } from '../utils/cues';
+import { MediaPlaylist } from '../types/media-playlist';
+
+type TrackProperties = {
+  label: string,
+  languageCode: string
+};
+
+type VTTCCs = {
+  ccOffset: number,
+  presentationOffset: number,
+  [key: number]: {
+    start: number,
+    prevCC: number,
+    new: boolean
+  }
+};
 
 // TS todo: Reduce usage of any
 class TimelineController extends EventHandler {
   private media: HTMLMediaElement | null = null;
   private config: HlsConfig;
   private enabled: boolean = true;
-  private Cues: any;
+  private Cues: CuesInterface;
   private textTracks: Array<TextTrack> = [];
-  private tracks: Array<any> = [];
+  private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
-  private unparsedVttFrags: Array<{frag: Fragment, payload: any}> = [];
-  private cueRanges: Array<any> = [];
-  private captionsTracks: any = {};
-  private captionsProperties: any;
-  private cea608Parser!: Cea608Parser;
+  private unparsedVttFrags: Array<{ frag: Fragment, payload: any }> = [];
+  private cueRanges: Array<[number, number]> = [];
+  private captionsTracks: { [key: string]: TextTrack } = {};
+  private captionsProperties: {
+    textTrack1: TrackProperties
+    textTrack2: TrackProperties
+    textTrack3: TrackProperties
+    textTrack4: TrackProperties
+  };
+  private readonly cea608Parser!: Cea608Parser;
   private lastSn: number = -1;
   private prevCC: number = -1;
-  private vttCCs: any = null;
+  private vttCCs: VTTCCs = newVTTCCs();
 
   constructor (hls) {
     super(hls, Event.MEDIA_ATTACHING,
@@ -91,14 +113,8 @@ class TimelineController extends EventHandler {
     if (this.config.renderNatively) {
       this.Cues.newCue(this.captionsTracks[trackName], startTime, endTime, screen);
     } else {
-      const fakeTrack = {
-        cues: [],
-        addCue (cue) {
-          this.cues.pusj(cue);
-        }
-      };
-      this.Cues.newCue(fakeTrack, startTime, endTime, screen);
-      this.hls.trigger(Event.CUES_PARSED, { type: 'captions', cues: fakeTrack.cues, track: trackName });
+      const cues = this.Cues.newCue(null, startTime, endTime, screen);
+      this.hls.trigger(Event.CUES_PARSED, { type: 'captions', cues, track: trackName });
     }
   }
 
@@ -154,7 +170,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  createTextTrack (kind: TextTrackKind, label: string, lang: string): TextTrack | undefined {
+  createTextTrack (kind: TextTrackKind, label: string, lang?: string): TextTrack | undefined {
     const media = this.media;
     if (!media) {
       return;
@@ -182,13 +198,7 @@ class TimelineController extends EventHandler {
   onManifestLoading () {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
-    this.vttCCs = { // Detect discontinuity in subtitle manifests
-      ccOffset: 0,
-      presentationOffset: 0,
-      0: {
-        start: 0, prevCC: -1, new: false
-      }
-    };
+    this.vttCCs = newVTTCCs(); // Detect discontinuity in subtitle manifests
     this._cleanTracks();
   }
 
@@ -206,7 +216,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  onManifestLoaded (data: { subtitles: Array<any>, captions: Array<any> }) {
+  onManifestLoaded (data: { subtitles: Array<MediaPlaylist>, captions: Array<MediaPlaylist> }) {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
@@ -430,6 +440,18 @@ function canReuseVttTextTrack (inUseTrack, manifestTrack): boolean {
 
 function intersection (x1: number, x2: number, y1: number, y2: number): number {
   return Math.min(x2, y2) - Math.max(x1, y1);
+}
+
+function newVTTCCs (): VTTCCs {
+  return {
+    ccOffset: 0,
+    presentationOffset: 0,
+    0: {
+      start: 0,
+      prevCC: -1,
+      new: false
+    }
+  };
 }
 
 export default TimelineController;
