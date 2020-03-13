@@ -1136,7 +1136,7 @@ get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, 
 
 ### `hls.removeLevel(levelIndex, urlId)`
 
-Remove a loaded level from the list of levels, or a level url in from a list of level fallback urls.
+Remove a loaded level from the list of levels, or a level url in from a list of redundant level urls.
 This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user
 or hls.js can choose from.
 
@@ -1359,6 +1359,8 @@ Full list of errors is described below:
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT`, fatal : `true`, url : manifest URL, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_PARSING_ERROR` - raised when manifest parsing failed to find proper content
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_PARSING_ERROR`, fatal : `true`, url : manifest URL, reason : parsing error reason }
+  - `Hls.ErrorDetails.LEVEL_EMPTY_ERROR` - raised when loaded level contains no fragments
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_EMPTY_ERROR`, url: playlist URL, reason: error reason, level: index of the bad level }
   - `Hls.ErrorDetails.LEVEL_LOAD_ERROR` - raised when level loading fails because of a network error
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT` - raised when level loading fails because of a timeout

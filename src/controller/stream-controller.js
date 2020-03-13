@@ -28,6 +28,7 @@ class StreamController extends BaseStreamController {
       Event.MANIFEST_LOADING,
       Event.MANIFEST_PARSED,
       Event.LEVEL_LOADED,
+      Event.LEVELS_UPDATED,
       Event.KEY_LOADED,
       Event.FRAG_LOADED,
       Event.FRAG_LOAD_EMERGENCY_ABORTED,
@@ -1296,6 +1297,10 @@ class StreamController extends BaseStreamController {
     this.state = State.IDLE;
     // reset reference to frag
     this.fragPrevious = null;
+  }
+
+  onLevelsUpdated (data) {
+    this.levels = data.levels;
   }
 
   swapAudioCodec () {

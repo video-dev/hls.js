@@ -354,6 +354,18 @@ class PlaylistLoader extends EventHandler {
     // TODO(jstackhouse): why? mixing concerns, is it just treated as value bag?
     (levelDetails as any).tload = stats.tload;
 
+    if (!levelDetails.fragments.length) {
+      hls.trigger(Event.ERROR, {
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.LEVEL_EMPTY_ERROR,
+        fatal: false,
+        url: url,
+        reason: 'no fragments found in level',
+        level: typeof context.level === 'number' ? context.level : undefined
+      });
+      return;
+    }
+
     // We have done our first request (Manifest-type) and receive
     // not a master playlist but a chunk-list (track/level)
     // We fire the manifest-loaded event anyway with the parsed level-details
