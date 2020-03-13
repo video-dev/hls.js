@@ -336,7 +336,7 @@ export default class Hls extends Observer {
   }
 
   /**
-   * Remove a loaded level from the list of levels, or a level url in from a list of level fallback urls.
+   * Remove a loaded level from the list of levels, or a level url in from a list of redundant level urls.
    * This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user
    * or hls.js can choose from.
    *
