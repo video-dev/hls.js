@@ -19,6 +19,7 @@
 - [Fine Tuning](#fine-tuning)
   - [`Hls.DefaultConfig get/set`](#hlsdefaultconfig-getset)
   - [`capLevelToPlayerSize`](#capleveltoplayersize)
+  - [`capLevelOnFPSDrop`](#caplevelonfpsdrop)
   - [`debug`](#debug)
   - [`autoStartLoad`](#autostartload)
   - [`startPosition`](#startposition)
@@ -376,6 +377,13 @@ This configuration will be applied by default to all instances.
 
   - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height). If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
   - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
+
+### `capLevelOnFPSDrop`
+
+(default: `false`)
+
+  - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`, then the quality level is dropped and capped at this lower level.
+  - when set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
 ### `debug`
 
