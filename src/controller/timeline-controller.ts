@@ -110,7 +110,7 @@ class TimelineController extends EventHandler {
       ranges.push([startTime, endTime]);
     }
 
-    if (this.config.renderNatively) {
+    if (this.config.renderTextTracksNatively) {
       this.Cues.newCue(this.captionsTracks[trackName], startTime, endTime, screen);
     } else {
       const cues = this.Cues.newCue(null, startTime, endTime, screen);
@@ -227,7 +227,7 @@ class TimelineController extends EventHandler {
       const sameTracks = this.tracks && tracks && this.tracks.length === tracks.length;
       this.tracks = data.subtitles || [];
 
-      if (this.config.renderNatively) {
+      if (this.config.renderTextTracksNatively) {
         const inUseTracks = this.media ? this.media.textTracks : [];
 
         this.tracks.forEach((track, index) => {
@@ -344,7 +344,7 @@ class TimelineController extends EventHandler {
         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
         return;
       }
-      if (this.config.renderNatively) {
+      if (this.config.renderTextTracksNatively) {
         // Add cues and trigger event with success true.
         cues.forEach(cue => {
           // Sometimes there are cue overlaps on segmented vtts so the same

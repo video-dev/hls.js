@@ -122,7 +122,7 @@ type TimelineControllerConfig = {
   captionsTextTrack3LanguageCode: string,
   captionsTextTrack4Label: string,
   captionsTextTrack4LanguageCode: string,
-  renderNatively: boolean,
+  renderTextTracksNatively: boolean,
 };
 
 type TSDemuxerConfig = {
@@ -264,6 +264,6 @@ function timelineConfig (): TimelineControllerConfig {
     captionsTextTrack3LanguageCode: '', // used by timeline-controller
     captionsTextTrack4Label: 'Unknown CC', // used by timeline-controller
     captionsTextTrack4LanguageCode: '', // used by timeline-controller
-    renderNatively: true
+    renderTextTracksNatively: true
   };
 }
