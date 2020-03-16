@@ -68,7 +68,7 @@
   - [`captionsTextTrack3LanguageCode`](#captionsTextTrack3LanguageCode)
   - [`captionsTextTrack4Label`](#captionsTextTrack4Label)
   - [`captionsTextTrack4LanguageCode`](#captionsTextTrack4LanguageCode)
-  - [`renderNatively`](#renderNatively)
+  - [`renderTextTracksNatively`](#renderTextTracksNatively)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
@@ -916,7 +916,7 @@ RFC 3066 language code for the text track generated for CEA-708 captions track 4
 
 parameter should be a string
 
-### `renderNatively`
+### `renderTextTracksNatively`
 
 (default: `true`)
 
