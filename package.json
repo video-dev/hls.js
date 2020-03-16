@@ -26,7 +26,6 @@
     "lint": "./scripts/lint.sh",
     "lint:fix": "./scripts/lint.sh --fix",
     "lint:quiet": "./scripts/lint.sh --quiet",
-    "precommit": "./scripts/precommit.sh",
     "pretest": "npm run lint",
     "sanity-check": "npm run lint && npm run docs && npm run type-check && npm run build:types && npm run build && npm run test:unit",
     "start": "npm run dev",
@@ -36,6 +35,11 @@
     "test:func": "BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "./scripts/precommit.sh"
+    }
   },
   "dependencies": {
     "eventemitter3": "3.1.0",
