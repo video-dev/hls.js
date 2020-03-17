@@ -69,7 +69,7 @@
     "eslint-plugin-node": "^6.0.1",
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
-    "eslint-plugin-typescript": "^0.12.0",
+    "eslint-plugin-typescript": "^0.14.0",
     "http-server": "^0.12.1",
     "husky": "^4.2.3",
     "istanbul-instrumenter-loader": "^3.0.1",
