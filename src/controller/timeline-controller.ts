@@ -25,7 +25,6 @@ type VTTCCs = {
   }
 };
 
-// TS todo: Reduce usage of any
 class TimelineController extends EventHandler {
   private media: HTMLMediaElement | null = null;
   private config: HlsConfig;
@@ -34,9 +33,9 @@ class TimelineController extends EventHandler {
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
-  private unparsedVttFrags: Array<{ frag: Fragment, payload: any }> = [];
+  private unparsedVttFrags: Array<{ frag: Fragment, payload: ArrayBuffer }> = [];
   private cueRanges: Array<[number, number]> = [];
-  private captionsTracks: { [key: string]: TextTrack } = {};
+  private captionsTracks: Record<string, TextTrack> = {};
   private captionsProperties: {
     textTrack1: TrackProperties
     textTrack2: TrackProperties
@@ -49,7 +48,8 @@ class TimelineController extends EventHandler {
   private vttCCs: VTTCCs = newVTTCCs();
 
   constructor (hls) {
-    super(hls, Event.MEDIA_ATTACHING,
+    super(hls,
+      Event.MEDIA_ATTACHING,
       Event.MEDIA_DETACHING,
       Event.FRAG_PARSING_USERDATA,
       Event.FRAG_DECRYPTED,
@@ -290,7 +290,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  onFragLoaded (data: { frag: Fragment, payload: any }) {
+  onFragLoaded (data: { frag: Fragment, payload: ArrayBuffer }) {
     const { frag, payload } = data;
     const { cea608Parser, initPTS, lastSn, unparsedVttFrags } = this;
     if (frag.type === 'main') {
@@ -328,7 +328,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  _parseVTTs (frag: Fragment, payload) {
+  _parseVTTs (frag: Fragment, payload: ArrayBuffer) {
     const { hls, prevCC, textTracks, vttCCs } = this;
     if (!vttCCs[frag.cc]) {
       vttCCs[frag.cc] = { start: frag.start, prevCC, new: true };
@@ -396,7 +396,7 @@ class TimelineController extends EventHandler {
 
     // If the event contains captions (found in the bytes property), push all bytes into the parser immediately
     // It will create the proper timestamps based on the PTS value
-    const cea608Parser = this.cea608Parser as Cea608Parser;
+    const cea608Parser = this.cea608Parser;
     for (let i = 0; i < data.samples.length; i++) {
       const ccBytes = data.samples[i].bytes;
       if (ccBytes) {
