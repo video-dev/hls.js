@@ -85,7 +85,7 @@
     "netlify-cli": "^2.36.0",
     "selenium-webdriver": "^3.1.0",
     "sinon": "7.1.1",
-    "sinon-chai": "3.5.0",
+    "sinon-chai": "^3.5.0",
     "typescript": "^3.7.4",
     "typescript-eslint-parser": "^21.0.2",
     "webpack": "^4.27.1",
