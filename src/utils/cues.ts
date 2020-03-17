@@ -1,6 +1,10 @@
 import { fixLineBreaks } from './vttparser';
 import { CaptionScreen, Row } from './cea-608-parser';
 
+export interface CuesInterface {
+  newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[]
+}
+
 interface VTTCue extends TextTrackCue {
   new(start: number, end: number, cueText: string): VTTCue
   line: number
@@ -8,7 +12,8 @@ interface VTTCue extends TextTrackCue {
   position: number
 }
 
-export function newCue (track: TextTrack, startTime: number, endTime: number, captionScreen: CaptionScreen) {
+export function newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[] {
+  const result: VTTCue[] = [];
   let row: Row;
   // the type data states this is VTTCue, but it can potentially be a TextTrackCue on old browsers
   let cue: VTTCue;
@@ -59,7 +64,11 @@ export function newCue (track: TextTrack, startTime: number, endTime: number, ca
       cue.align = 'left';
       // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
       cue.position = Math.max(0, Math.min(100, 100 * (indent / 32)));
-      track.addCue(cue);
+      result.push(cue);
+      if (track) {
+        track.addCue(cue);
+      }
     }
   }
+  return result;
 }
