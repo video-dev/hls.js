@@ -200,6 +200,8 @@ class TimelineController extends EventHandler {
     this.prevCC = -1;
     this.vttCCs = newVTTCCs(); // Detect discontinuity in subtitle manifests
     this._cleanTracks();
+    this.tracks = [];
+    this.captionsTracks = {};
   }
 
   _cleanTracks () {
