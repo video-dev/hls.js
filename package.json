@@ -62,7 +62,7 @@
     "esdoc-ecmascript-proposal-plugin": "^1.0.0",
     "esdoc-standard-plugin": "^1.0.0",
     "esdoc-typescript-plugin": "^1.0.1",
-    "eslint": "^4.13.1",
+    "eslint": "^5.16.0",
     "eslint-config-standard": "^11.0.0",
     "eslint-plugin-import": "^2.9.0",
     "eslint-plugin-mocha": "^5.2.1",
