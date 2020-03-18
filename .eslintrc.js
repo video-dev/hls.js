@@ -22,7 +22,7 @@ module.exports = {
   ],
   'parser': '@typescript-eslint/parser',
   'plugins': [
-      'typescript'
+      '@typescript-eslint'
   ],
   'parserOptions': {
     'sourceType': 'module'
