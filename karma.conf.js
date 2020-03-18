@@ -20,6 +20,9 @@ const mergeConfig = merge(webpackConfig, {
         ]
       }
     ]
+  },
+  node: {
+    global: true
   }
 });
 
