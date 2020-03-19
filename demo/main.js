@@ -559,11 +559,17 @@ function loadSelectedStream () {
     case Hls.ErrorDetails.MANIFEST_PARSING_ERROR:
       logError('Error while parsing manifest:' + data.reason);
       break;
+    case Hls.ErrorDetails.LEVEL_EMPTY_ERROR:
+      logError('Loaded level contains no fragments ' + data.level + ' ' + data.url);
+      handleLevelError(data);
+      break;
     case Hls.ErrorDetails.LEVEL_LOAD_ERROR:
-      logError('Error while loading level playlist');
+      logError('Error while loading level playlist ' + data.context.level + ' ' + data.url);
+      handleLevelError(data);
       break;
     case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
-      logError('Timeout while loading level playlist');
+      logError('Timeout while loading level playlist ' + data.context.level + ' ' + data.url);
+      handleLevelError(data);
       break;
     case Hls.ErrorDetails.LEVEL_SWITCH_ERROR:
       logError('Error while trying to switch to level ' + data.level);
@@ -611,10 +617,10 @@ function loadSelectedStream () {
         handleMediaError();
         break;
       case Hls.ErrorTypes.NETWORK_ERROR:
-        logError('A network error occured');
+        logError('A network error occurred');
         break;
       default:
-        logError('An unrecoverable error occured');
+        logError('An unrecoverable error occurred');
         hls.destroy();
         break;
       }
@@ -767,6 +773,21 @@ function handleVideoEvent (evt) {
   }
 
   trimEventHistory();
+}
+
+function handleLevelError (data) {
+  var levelObj = data.context || data;
+  hls.removeLevel(levelObj.level, levelObj.urlId || 0);
+  if (!hls.levels.length) {
+    logError('All levels have been removed');
+    hls.destroy();
+    return;
+  }
+  // Trigger an immediate downswitch to the first level
+  // This is to handle the case where we start at an empty level, where switching to auto causes hlsjs to stall
+  hls.currentLevel = 0;
+  // Set the quality back to auto so that we return to optimal quality
+  hls.currentLevel = -1;
 }
 
 function handleMediaError () {
@@ -1269,11 +1290,10 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);
   }, chart);
-  // TODO: implement hls.removeLevel()
-  // hls.on(Hls.Events.LEVELS_UPDATED, (eventName, { levels }) => {
-  //   chart.removeType('level');
-  //   chart.updateLevels(levels);
-  // }, chart);
+  hls.on(Hls.Events.LEVELS_UPDATED, (eventName, { levels }) => {
+    chart.removeType('level');
+    chart.updateLevels(levels);
+  });
   hls.on(Hls.Events.LEVEL_UPDATED, (eventName, { details, level }) => {
     chart.updateLevelOrTrack(details);
   }, chart);

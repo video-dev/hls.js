@@ -11,6 +11,7 @@ class CapLevelController extends EventHandler {
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED,
+      Event.LEVELS_UPDATED,
       Event.BUFFER_CODECS,
       Event.MEDIA_DETACHING);
 
