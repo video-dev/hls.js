@@ -42,7 +42,7 @@
     }
   },
   "dependencies": {
-    "eventemitter3": "3.1.0",
+    "eventemitter3": "4.0.0",
     "url-toolkit": "^2.1.6"
   },
   "devDependencies": {
