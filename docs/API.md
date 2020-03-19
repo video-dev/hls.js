@@ -97,6 +97,7 @@
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
   - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
   - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
+  - [`hls.removeLevel(levelIndex, urlId)`](#hlsremoveLevel)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -1132,6 +1133,15 @@ Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in conf
 
 get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, `NaN` is returned.
 
+
+### `hls.removeLevel(levelIndex, urlId)`
+
+Remove a loaded level from the list of levels, or a level url in from a list of redundant level urls.
+This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user
+or hls.js can choose from.
+
+Modifying the levels this way will result in a `Hls.Events.LEVELS_UPDATED` event being triggered.
+
 ## Version Control
 
 ### `Hls.version`
@@ -1246,6 +1256,8 @@ Full list of Events is available below:
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level }
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment }
+  - `Hls.Events.LEVELS_UPDATED`  - fired when a level is removed after calling `removeLevel()`
+    -  data: { levels : [ available quality levels ] }
   - `Hls.Events.AUDIO_TRACKS_UPDATED`  - fired to notify that audio track lists has been updated
     -  data: { audioTracks : audioTracks }
   - `Hls.Events.AUDIO_TRACK_SWITCHING`  - fired when an audio track switching is requested
@@ -1347,6 +1359,8 @@ Full list of errors is described below:
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT`, fatal : `true`, url : manifest URL, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_PARSING_ERROR` - raised when manifest parsing failed to find proper content
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_PARSING_ERROR`, fatal : `true`, url : manifest URL, reason : parsing error reason }
+  - `Hls.ErrorDetails.LEVEL_EMPTY_ERROR` - raised when loaded level contains no fragments
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_EMPTY_ERROR`, url: playlist URL, reason: error reason, level: index of the bad level }
   - `Hls.ErrorDetails.LEVEL_LOAD_ERROR` - raised when level loading fails because of a network error
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT` - raised when level loading fails because of a timeout
