@@ -7,7 +7,7 @@ describe('BufferController tests', function () {
   let bufferController;
   let flushSpy;
   let removeStub;
-  const sandbox = sinon.sandbox.create();
+  const sandbox = sinon.createSandbox();
 
   beforeEach(function () {
     hls = new Hls({});
