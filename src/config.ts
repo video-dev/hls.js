@@ -108,6 +108,7 @@ type StreamControllerConfig = {
   maxMaxBufferLength: number,
 
   startFragPrefetch: boolean,
+  testBandwidth: boolean
 };
 
 type TimelineControllerConfig = {
@@ -240,6 +241,7 @@ export const hlsDefaultConfig: HlsConfig = {
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: void 0, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
+  testBandwidth: true,
 
   // Dynamic Modules
   ...timelineConfig(),
