@@ -303,6 +303,17 @@ describe('StreamController', function () {
         expect(streamController.level).to.equal(0);
         expect(streamController.bitrateTest).to.be.true;
       });
+
+      it('should not signal a bandwidth test if config.testBandwidth is false', function () {
+        streamController.startFragRequested = false;
+        hls.startLevel = -1;
+        hls.nextAutoLevel = 3;
+        hls.config.testBandwidth = false;
+
+        streamController.startLoad();
+        expect(streamController.level).to.equal(hls.nextAutoLevel);
+        expect(streamController.bitrateTest).to.be.false;
+      });
     });
   });
 });

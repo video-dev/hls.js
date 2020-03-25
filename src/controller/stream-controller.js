@@ -49,6 +49,7 @@ class StreamController extends BaseStreamController {
     this.stallReported = false;
     this.gapController = null;
     this.altAudio = false;
+    this.bitrateTest = false;
   }
 
   startLoad (startPosition) {
@@ -62,9 +63,13 @@ class StreamController extends BaseStreamController {
         // determine load level
         let startLevel = hls.startLevel;
         if (startLevel === -1) {
-          // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
-          startLevel = 0;
-          this.bitrateTest = true;
+          if (hls.config.testBandwidth) {
+            // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
+            startLevel = 0;
+            this.bitrateTest = true;
+          } else {
+            startLevel = hls.nextAutoLevel;
+          }
         }
         // set new level to playlist loader : this will trigger start level load
         // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
