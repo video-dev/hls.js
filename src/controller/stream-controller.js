@@ -243,7 +243,7 @@ class StreamController extends BaseStreamController {
           return;
         }
 
-        frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
+        frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments);
         // if it explicitely returns null don't load any fragment and exit function now
         if (frag === null) {
           return;
@@ -270,14 +270,20 @@ class StreamController extends BaseStreamController {
     }
   }
 
-  _ensureFragmentAtLivePoint (levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen) {
+  _ensureFragmentAtLivePoint (levelDetails, bufferEnd, start, end, fragPrevious, fragments) {
     const config = this.hls.config, media = this.media;
 
     let frag;
 
     // check if requested position is within seekable boundaries :
     // logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
-    let maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
+    let maxLatency = Infinity;
+
+    if (config.liveMaxLatencyDuration !== undefined) {
+      maxLatency = config.liveMaxLatencyDuration;
+    } else if (Number.isFinite(config.liveMaxLatencyDurationCount)) {
+      maxLatency = config.liveMaxLatencyDurationCount * levelDetails.targetduration;
+    }
 
     if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
       let liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
@@ -335,13 +341,6 @@ class StreamController extends BaseStreamController {
             }
           }
         }
-      }
-      if (!frag) {
-        /* we have no idea about which fragment should be loaded.
-           so let's load mid fragment. it will help computing playlist sliding and find the right one
-        */
-        frag = fragments[Math.min(fragLen - 1, Math.round(fragLen / 2))];
-        logger.log(`live playlist, switching playlist, unknown, load middle frag : ${frag.sn}`);
       }
     }
 
@@ -1157,7 +1156,10 @@ class StreamController extends BaseStreamController {
         this.hls.trigger(Event.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
         this.state = State.IDLE;
       }
-      this.tick();
+      // Do not tick when _seekToStartPos needs to be called as seeking to the start can fail on live streams at this point
+      if (this.loadedmetadata || this.startPosition <= 0) {
+        this.tick();
+      }
     }
   }
 
@@ -1311,15 +1313,16 @@ class StreamController extends BaseStreamController {
    * @private
    */
   _seekToStartPos () {
-    const { media } = this;
+    const { media, startPosition } = this;
     const currentTime = media.currentTime;
     // only adjust currentTime if different from startPosition or if startPosition not buffered
     // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-    const startPosition = media.seeking ? currentTime : this.startPosition;
-    // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
     if (currentTime !== startPosition && startPosition >= 0) {
-      // if startPosition not buffered, let's seek to buffered.start(0)
-      logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time ${currentTime} `);
+      if (media.seeking) {
+        logger.log(`could not seek to ${startPosition}, already seeking at ${currentTime}`);
+        return;
+      }
+      logger.log(`seek to target start position ${startPosition} from current time ${currentTime}. ready state ${media.readyState}`);
       media.currentTime = startPosition;
     }
   }
