@@ -12,7 +12,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
 import { FragmentState } from './fragment-tracker';
-import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
 const { performance } = window;
 
