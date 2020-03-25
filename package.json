@@ -12,6 +12,10 @@
     "url": "https://github.com/video-dev/hls.js/issues"
   },
   "main": "./dist/hls.js",
+  "files": [
+    "dist/**/*",
+    "src/**/*"
+  ],
   "publishConfig": {
     "access": "public"
   },
