@@ -266,6 +266,35 @@ chop/segment-5.ts
     expect(result.startTimeOffset).to.equal(10.3);
   });
 
+  it('parse AES encrypted URLS, with a com.apple.streamingkeydelivery KEYFORMAT', function () {
+    let level = `#EXTM3U
+#EXT-X-VERSION:1
+## Created with Unified Streaming Platform(version=1.6.7)
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-ALLOW-CACHE:NO
+#EXT-X-TARGETDURATION:11
+#EXT-X-KEY:METHOD=AES-128,URI="skd://assetid?keyId=1234",KEYFORMAT="com.apple.streamingkeydelivery"
+#EXTINF:11,no desc
+oceans_aes-audio=65000-video=236000-1.ts
+#EXTINF:7,no desc
+oceans_aes-audio=65000-video=236000-2.ts
+#EXTINF:7,no desc
+oceans_aes-audio=65000-video=236000-3.ts
+#EXT-X-ENDLIST`;
+    let result = M3U8Parser.parseLevelPlaylist(level, 'http://foo.com/adaptive/oceans_aes/oceans_aes.m3u8', 0);
+    expect(result.totalduration).to.equal(25);
+    expect(result.startSN).to.equal(1);
+    expect(result.targetduration).to.equal(11);
+    expect(result.live).to.be.false;
+    expect(result.fragments).to.have.lengthOf(3);
+    expect(result.fragments[0].cc).to.equal(0);
+    expect(result.fragments[0].duration).to.equal(11);
+    expect(result.fragments[0].title).to.equal('no desc');
+    expect(result.fragments[0].level).to.equal(0);
+    expect(result.fragments[0].url).to.equal('http://foo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=236000-1.ts');
+    expect(result.fragments[0].decryptdata).to.be.null;
+  });
+
   it('parse AES encrypted URLs, with implicit IV', function () {
     let level = `#EXTM3U
 #EXT-X-VERSION:1
