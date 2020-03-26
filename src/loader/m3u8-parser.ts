@@ -253,12 +253,19 @@ export default class M3U8Parser {
           discontinuityCounter = parseInt(value1);
           break;
         case 'KEY': {
-          // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+          // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
           const decryptparams = value1;
           const keyAttrs = new AttrList(decryptparams);
           const decryptmethod = keyAttrs.enumeratedString('METHOD');
           const decrypturi = keyAttrs.URI;
           const decryptiv = keyAttrs.hexadecimalInteger('IV');
+          // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
+          const decryptkeyformat = keyAttrs.KEYFORMAT || 'identity';
+
+          if (decryptkeyformat === 'com.apple.streamingkeydelivery') {
+            logger.warn('Keyformat com.apple.streamingkeydelivery is not supported');
+            continue;
+          }
 
           if (decryptmethod) {
             levelkey = new LevelKey(baseurl, decrypturi);
