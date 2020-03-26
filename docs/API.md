@@ -50,6 +50,7 @@
   - [`fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`](#fragloadingmaxretrytimeout--manifestloadingmaxretrytimeout--levelloadingmaxretrytimeout)
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
   - [`startFragPrefetch`](#startfragprefetch)
+  - [`testBandwidth`](#testBandwidth) 
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
@@ -335,6 +336,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fragLoadingRetryDelay: 1000,
       fragLoadingMaxRetryTimeout: 64000,
       startFragPrefetch: false,
+      testBandwidth: true,
       fpsDroppedMonitoringPeriod: 5000,
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 3,
@@ -629,6 +631,13 @@ Prefetch start fragment although media not attached.
 (default: `false`)
 
 Start prefetching start fragment although media not attached yet.
+
+### `testBandwidth`
+                  
+(default: `true`)
+
+Load the first fragment of the lowest level to establish a bandwidth estimate before selecting the first auto-level.
+Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
 
 ### `appendErrorMaxRetry`
 
