@@ -398,9 +398,17 @@ class AudioStreamController extends BaseStreamController {
     let altAudio = !!data.url;
     this.trackId = data.id;
 
+    if (this.fragCurrent) {
+      this.fragmentTracker.removeFragment(this.fragCurrent);
+    }
+    if (this.waitingFragment &&
+        this.waitingFragment.frag) {
+      this.fragmentTracker.removeFragment(this.waitingFragment.frag);
+    }
     this.fragCurrent = null;
-    this.state = State.PAUSED;
     this.waitingFragment = null;
+    this.state = State.PAUSED;
+
     // destroy useless demuxer when switching audio to main
     if (!altAudio) {
       if (this.demuxer) {
@@ -535,6 +543,8 @@ class AudioStreamController extends BaseStreamController {
           this.state = State.WAITING_INIT_PTS;
         }
       }
+    } else {
+      this.fragmentTracker.removeFragment(fragLoaded);
     }
     this.fragLoadError = 0;
   }
@@ -576,6 +586,8 @@ class AudioStreamController extends BaseStreamController {
         // trigger handler right now
         this.tick();
       }
+    } else {
+      this.fragmentTracker.removeFragment(fragNew);
     }
   }
 
@@ -654,6 +666,8 @@ class AudioStreamController extends BaseStreamController {
       }
       // trigger handler right now
       this.tick();
+    } else {
+      this.fragmentTracker.removeFragment(fragNew);
     }
   }
 
@@ -668,6 +682,8 @@ class AudioStreamController extends BaseStreamController {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
+    } else {
+      this.fragmentTracker.removeFragment(fragNew);
     }
   }
 
@@ -793,6 +809,9 @@ class AudioStreamController extends BaseStreamController {
           // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
           // in that case flush the whole audio buffer to recover
           logger.warn('AudioStreamController: buffer full error also media.currentTime is not buffered, flush audio buffer');
+          if (this.fragCurrent) {
+            this.fragmentTracker.removeFragment(this.fragCurrent);
+          }
           this.fragCurrent = null;
           // flush everything
           this.state = State.BUFFER_FLUSHING;
