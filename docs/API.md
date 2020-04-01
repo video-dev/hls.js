@@ -1408,7 +1408,8 @@ Full list of errors is described below:
   - `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE` - raised after hls.js seeks over a buffer hole to unstuck the playback,
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE`, fatal : `false`, hole : hole duration }
   - `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL` - raised when playback is stuck although currentTime is in a buffered area
-    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL`, fatal : `true` }
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL`, fatal : `true`|`false` }
+    - Not fatal for the first few nudges, but if we reach `config.nudgeMaxRetry` attempts and the player is still stalled, then `BUFFER_NUDGE_ON_STALL` is fatal
 
 ### Mux Errors
 
