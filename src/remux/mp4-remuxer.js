@@ -730,23 +730,24 @@ class MP4Remuxer {
   }
 
   remuxID3 (track) {
-    let length = track.samples.length, sample;
+    const length = track.samples.length;
+    if (!length) {
+      return;
+    }
     const inputTimeScale = track.inputTimeScale;
     const initPTS = this._initPTS;
     const initDTS = this._initDTS;
     // consume samples
-    if (length) {
-      for (let index = 0; index < length; index++) {
-        sample = track.samples[index];
-        // setting id3 pts, dts to relative time
-        // using this._initPTS and this._initDTS to calculate relative time
-        sample.pts = ((sample.pts - initPTS) / inputTimeScale);
-        sample.dts = ((sample.dts - initDTS) / inputTimeScale);
-      }
-      this.observer.trigger(Event.FRAG_PARSING_METADATA, {
-        samples: track.samples
-      });
+    for (let index = 0; index < length; index++) {
+      const sample = track.samples[index];
+      // setting id3 pts, dts to relative time
+      // using this._initPTS and this._initDTS to calculate relative time
+      sample.pts = ((sample.pts - initPTS) / inputTimeScale);
+      sample.dts = ((sample.dts - initDTS) / inputTimeScale);
     }
+    this.observer.trigger(Event.FRAG_PARSING_METADATA, {
+      samples: track.samples
+    });
 
     track.samples = [];
   }
