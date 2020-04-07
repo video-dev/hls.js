@@ -4,6 +4,7 @@
 export enum KeySystems {
   WIDEVINE = 'com.widevine.alpha',
   PLAYREADY = 'com.microsoft.playready',
+  FAIRPLAY = 'com.apple.fps.3_0'
 }
 
 export type MediaKeyFunc = (keySystem: KeySystems, supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>;

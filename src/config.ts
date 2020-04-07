@@ -51,7 +51,10 @@ export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
   widevineLicenseUrl?: string,
+  fairplayCertificateUrl?: string,
+  fairplayLicenseUrl?: string,
   drmSystemOptions: DRMSystemOptions,
+
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null,
 };
 
@@ -246,6 +249,8 @@ export const hlsDefaultConfig: HlsConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: void 0, // used by eme-controller
+  fairplayLicenseUrl: void 0, // used by eme-controller
+  fairplayCertificateUrl: void 0, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,

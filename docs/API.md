@@ -50,9 +50,9 @@
   - [`fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`](#fragloadingmaxretrytimeout--manifestloadingmaxretrytimeout--levelloadingmaxretrytimeout)
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
   - [`startFragPrefetch`](#startfragprefetch)
-  - [`testBandwidth`](#testBandwidth) 
-  - [`fpsDroppedMonitoringPeriod`](#fpsDroppedMonitoringPeriod) 
-  - [`fpsDroppedMonitoringThreshold`](#fpsDroppedMonitoringThreshold) 
+  - [`testBandwidth`](#testBandwidth)
+  - [`fpsDroppedMonitoringPeriod`](#fpsDroppedMonitoringPeriod)
+  - [`fpsDroppedMonitoringThreshold`](#fpsDroppedMonitoringThreshold)
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
@@ -91,7 +91,7 @@
   - [`widevineLicenseUrl`](#widevineLicenseUrl)
   - [`drmSystemOptions`](#drmSystemOptions)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
-        
+
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -380,6 +380,8 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       minAutoBitrate: 0,
       emeEnabled: false,
       widevineLicenseUrl: undefined,
+      fairplayLicenseUrl: undefined,
+      fairplayCertificateUrl: undefined,
       drmSystemOptions: {},
       requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess
   };
@@ -404,7 +406,7 @@ If dimensions between multiple levels are equal, the cap is chosen as the level 
 
 (default: `false`)
 
-  - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`, 
+  - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`,
 then the quality level is dropped and capped at this lower level.
   - when set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
@@ -652,7 +654,7 @@ Prefetch start fragment although media not attached.
 Start prefetching start fragment although media not attached yet.
 
 ### `testBandwidth`
-                  
+
 (default: `true`)
 
 Load the first fragment of the lowest level to establish a bandwidth estimate before selecting the first auto-level.
@@ -660,13 +662,13 @@ Disable this test if you'd like to provide your own estimate or use the default 
 
 ### `fpsDroppedMonitoringPeriod`
 
-(default: 5000) 
+(default: 5000)
 
 The period used by the default `fpsController` to observe `fpsDroppedMonitoringThreshold`.
 
 ### `fpsDroppedMonitoringThreshold`
 
-(default: 0.2) 
+(default: 0.2)
 
 The ratio of frames dropped to frames elapsed within `fpsDroppedMonitoringPeriod` needed for the default `fpsController` to emit an `FPS_DROP` event.
 
@@ -991,7 +993,7 @@ Whether or not render captions natively using the HTMLMediaElement's TextTracks.
 when you want to handle rending of track and track cues using `Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND` and `Hls.Events.CUES_PARSED` events.
 
 parameter should be a boolean
-  
+
 ### `stretchShortVideoTrack`
 
 (default: `false`)
@@ -1116,7 +1118,7 @@ Set to `true` to enable DRM key system access and license retrieval.
 
 (default: `undefined`)
 
-The Widevine license server URL. 
+The Widevine license server URL.
 
 ### `drmSystemOptions`
 
@@ -1137,7 +1139,7 @@ With the default argument, `''` will be specified for each option (_i.e. no spec
 
 (default: A function that returns the result of `window.navigator.requestMediaKeySystemAccess.bind(window.navigator)` or `null`)
 
-Allows for the customization of `window.navigator.requestMediaKeySystemAccess`. 
+Allows for the customization of `window.navigator.requestMediaKeySystemAccess`.
 
 ## Video Binding/Unbinding API
 
