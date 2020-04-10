@@ -898,22 +898,28 @@ interface PACData {
 
 class Cea608Parser {
   outputs: OutputFilter[];
-  channels: Cea608Channel[];
+  channels: Array<Cea608Channel | null>;
   currChNr: number | null;
   cmdHistory: CmdHistory;
   constructor (out1: OutputFilter, out2: OutputFilter, out3: OutputFilter, out4: OutputFilter) {
     this.outputs = [out1, out2];
-    this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2), new Cea608Channel(3, out3), new Cea608Channel(4, out4)];
+    this.channels = [
+      null,
+      new Cea608Channel(1, out1),
+      new Cea608Channel(2, out2),
+      new Cea608Channel(3, out3),
+      new Cea608Channel(4, out4)
+    ];
     this.currChNr = -1; // Will be 1 or 2
     this.cmdHistory = createCmdHistory();
   }
 
   getHandler (index: number) {
-    return this.channels[index].getHandler();
+    return (this.channels[index] as Cea608Channel).getHandler();
   }
 
   setHandler (index: number, newHandler: OutputFilter) {
-    this.channels[index].setHandler(newHandler);
+    (this.channels[index] as Cea608Channel).setHandler(newHandler);
   }
 
   /**
@@ -953,9 +959,10 @@ class Cea608Parser {
       if (!cmdFound) {
         charsFound = this.parseChars(a, b, field);
         if (charsFound) {
-          if (this.currChNr && this.currChNr >= 0) {
-            if (field === 3 && this.currChNr > 2 || field === 1 && this.currChNr < 3) {
-              const channel = this.channels[this.currChNr];
+          const currChNr = this.currChNr;
+          if (currChNr && currChNr > 0) {
+            if (field === 3 && currChNr > 2 || field === 1 && currChNr < 3) {
+              const channel = this.channels[currChNr] as Cea608Channel;
               channel.insertChars(charsFound);
             } else {
               logger.log('WARNING', 'The last seen channel number does not fall within the current field. ' +
@@ -996,7 +1003,7 @@ class Cea608Parser {
 
     let channel;
     if (chNr) {
-      channel = this.channels[chNr];
+      channel = this.channels[chNr] as Cea608Channel;
       if (b === 0x20) {
         channel.ccRCL();
       } else if (b === 0x21) {
@@ -1031,7 +1038,7 @@ class Cea608Parser {
         channel.ccEOC();
       }
     } else { // a == 0x17 || a == 0x1F
-      channel = this.channels[dataChannel!];
+      channel = this.channels[dataChannel!] as Cea608Channel;
       channel.ccTO(b - 0x20);
     }
     setLastCmd(a, b, cmdHistory[field]);
@@ -1057,7 +1064,7 @@ class Cea608Parser {
         logger.log('ERROR', 'Mismatch channel in midrow parsing');
         return false;
       }
-      const channel = this.channels[chNr];
+      const channel = this.channels[chNr] as Cea608Channel;
       channel.ccMIDROW(b);
       logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
       return true;
@@ -1099,7 +1106,7 @@ class Cea608Parser {
     } else { // 0x60 <= b <= 0x7F
       row = (dataChannel === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
     }
-    const channel = this.channels[chNr];
+    const channel = this.channels[chNr] as Cea608Channel;
     channel.setPAC(this.interpretPAC(row, b));
     setLastCmd(a, b, cmdHistory[field]);
     this.currChNr = chNr;
@@ -1199,7 +1206,7 @@ class Cea608Parser {
       }
     }
     const chNr: number = (a < 0x18) ? field : field + 1;
-    const channel: Cea608Channel = this.channels[chNr];
+    const channel: Cea608Channel = this.channels[chNr] as Cea608Channel;
     channel.setBkgData(bkgData);
     setLastCmd(a, b, this.cmdHistory[field]);
     return true;
@@ -1210,8 +1217,9 @@ class Cea608Parser {
    */
   reset () {
     for (let i = 0; i < Object.keys(this.channels).length; i++) {
-      if (this.channels[i]) {
-        this.channels[i].reset();
+      const channel = this.channels[i];
+      if (channel) {
+        channel.reset();
       }
     }
     this.cmdHistory = createCmdHistory();
@@ -1222,8 +1230,9 @@ class Cea608Parser {
    */
   cueSplitAtTime (t: number) {
     for (let i = 0; i < this.channels.length; i++) {
-      if (this.channels[i]) {
-        this.channels[i].cueSplitAtTime(t);
+      const channel = this.channels[i];
+      if (channel) {
+        channel.cueSplitAtTime(t);
       }
     }
   }

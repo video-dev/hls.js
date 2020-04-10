@@ -36,6 +36,7 @@ class TimelineController extends EventHandler {
   private unparsedVttFrags: Array<{ frag: Fragment, payload: ArrayBuffer }> = [];
   private cueRanges: Array<[number, number]> = [];
   private captionsTracks: Record<string, TextTrack> = {};
+  private nonNativeCaptionsTracks: Record<string, { _id?: string, label: string, kind: string, default: boolean }> = {};
   private captionsProperties: {
     textTrack1: TrackProperties
     textTrack2: TrackProperties
@@ -150,26 +151,55 @@ class TimelineController extends EventHandler {
   }
 
   createCaptionsTrack (trackName: string) {
-    const { captionsProperties, captionsTracks, media } = this;
-    if (!captionsTracks[trackName]) {
-      // Enable reuse of existing text track.
-      const existingTrack = this.getExistingTrack(trackName);
-      if (!existingTrack) {
-        const { label, languageCode } = captionsProperties[trackName];
-        const textTrack = this.createTextTrack('captions', label, languageCode);
-        if (textTrack) {
-          // Set a special property on the track so we know it's managed by Hls.js
-          textTrack[trackName] = true;
-          captionsTracks[trackName] = textTrack;
-        }
-      } else {
-        captionsTracks[trackName] = existingTrack;
-        clearCurrentCues(captionsTracks[trackName]);
-        sendAddTrackEvent(captionsTracks[trackName], media as HTMLMediaElement);
-      }
+    if (this.config.renderTextTracksNatively) {
+      this.createNativeTrack(trackName);
+    } else {
+      this.createNonNativeTrack(trackName);
     }
   }
 
+  createNativeTrack (trackName: string) {
+    if (this.captionsTracks[trackName]) {
+      return;
+    }
+    const { captionsProperties, captionsTracks, media } = this;
+    const { label, languageCode } = captionsProperties[trackName];
+    // Enable reuse of existing text track.
+    const existingTrack = this.getExistingTrack(trackName);
+    if (!existingTrack) {
+      const textTrack = this.createTextTrack('captions', label, languageCode);
+      if (textTrack) {
+        // Set a special property on the track so we know it's managed by Hls.js
+        textTrack[trackName] = true;
+        captionsTracks[trackName] = textTrack;
+      }
+    } else {
+      captionsTracks[trackName] = existingTrack;
+      clearCurrentCues(captionsTracks[trackName]);
+      sendAddTrackEvent(captionsTracks[trackName], media as HTMLMediaElement);
+    }
+  }
+
+  createNonNativeTrack (trackName: string) {
+    if (this.nonNativeCaptionsTracks[trackName]) {
+      return;
+    }
+    // Create a list of a single track for the provider to consume
+    const { nonNativeCaptionsTracks, captionsProperties } = this;
+    const props = captionsProperties[trackName];
+    if (!props) {
+      return;
+    }
+    const label = props.label as string;
+    const track = {
+      _id: trackName,
+      label,
+      kind: 'captions',
+      default: false
+    };
+    nonNativeCaptionsTracks[trackName] = track;
+    this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
+  }
   createTextTrack (kind: TextTrackKind, label: string, lang?: string): TextTrack | undefined {
     const media = this.media;
     if (!media) {
@@ -193,6 +223,7 @@ class TimelineController extends EventHandler {
       clearCurrentCues(captionsTracks[trackName]);
       delete captionsTracks[trackName];
     });
+    this.nonNativeCaptionsTracks = {};
   }
 
   onManifestLoading () {
@@ -202,6 +233,7 @@ class TimelineController extends EventHandler {
     this._cleanTracks();
     this.tracks = [];
     this.captionsTracks = {};
+    this.nonNativeCaptionsTracks = {};
   }
 
   _cleanTracks () {
