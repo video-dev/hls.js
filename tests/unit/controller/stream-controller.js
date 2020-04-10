@@ -168,32 +168,32 @@ describe('StreamController', function () {
 
     it('should load a complete fragment which has not been previously appended', function () {
       fragStateStub(FragmentState.NOT_LOADED);
-      streamController._loadFragment(frag);
+      streamController._loadFragment(frag, {}, 0, 0);
       assertLoadingState(frag);
     });
 
     it('should load a partial fragment', function () {
       fragStateStub(FragmentState.PARTIAL);
-      streamController._loadFragment(frag);
+      streamController._loadFragment(frag, {}, 0, 0);
       assertLoadingState(frag);
     });
 
     it('should load a frag which has backtracked', function () {
       fragStateStub(FragmentState.OK);
       frag.backtracked = true;
-      streamController._loadFragment(frag);
+      streamController._loadFragment(frag, {}, 0, 0);
       assertLoadingState(frag);
     });
 
     it('should not load a fragment which has completely & successfully loaded', function () {
       fragStateStub(FragmentState.OK);
-      streamController._loadFragment(frag);
+      streamController._loadFragment(frag, {}, 0, 0);
       assertNotLoadingState();
     });
 
     it('should not load a fragment while it is appending', function () {
       fragStateStub(FragmentState.APPENDING);
-      streamController._loadFragment(frag);
+      streamController._loadFragment(frag, {}, 0, 0);
       assertNotLoadingState();
     });
   });

@@ -266,11 +266,9 @@ class StreamController extends BaseStreamController {
 
     if (frag) {
       if (frag.encrypted) {
-        logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
-        this._loadKey(frag);
+        this._loadKey(frag, levelDetails);
       } else {
-        logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
-        this._loadFragment(frag);
+        this._loadFragment(frag, levelDetails, pos, bufferEnd);
       }
     }
   }
@@ -416,12 +414,13 @@ class StreamController extends BaseStreamController {
     return fragNextLoad;
   }
 
-  _loadKey (frag) {
+  _loadKey (frag, levelDetails) {
+    logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${this.level}`);
     this.state = State.KEY_LOADING;
     this.hls.trigger(Event.KEY_LOADING, { frag });
   }
 
-  _loadFragment (frag) {
+  _loadFragment (frag, levelDetails, pos, bufferEnd) {
     // Check if fragment is not loaded
     let fragState = this.fragmentTracker.getState(frag);
 
@@ -438,6 +437,8 @@ class StreamController extends BaseStreamController {
     if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
       frag.autoLevel = this.hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
+
+      logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${this.level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
 
       this.hls.trigger(Event.FRAG_LOADING, { frag });
       // lazy demuxer init, as this could take some time ... do it during frag loading
