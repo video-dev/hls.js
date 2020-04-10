@@ -159,27 +159,26 @@ export function isHeader (data, offset) {
 }
 
 export function probe (data, offset) {
-  // same as isHeader but we also check that at least 2 ADTS frames follow ADTS header at offset
-  for (var i = 0; i < 3; i++) {
-    if (!isHeader(data, offset)) {
-      return false;
-    }
-
+  // same as isHeader but we also check that ADTS frame follows last ADTS frame
+  // or end of data is reached
+  if (isHeader(data, offset)) {
     // ADTS header Length
     let headerLength = getHeaderLength(data, offset);
-    if (offset + headerLength > data.length) {
+    if (offset + headerLength >= data.length) {
       return false;
     }
-
     // ADTS frame Length
     let frameLength = getFullFrameLength(data, offset);
-    if (frameLength === 0) { // this may happen in any non-adts stream!
+    if (frameLength <= headerLength) {
       return false;
     }
 
-    offset = offset + frameLength;
+    let newOffset = offset + frameLength;
+    if (newOffset === data.length || (newOffset + 1 < data.length && isHeaderPattern(data, newOffset))) {
+      return true;
+    }
   }
-  return true;
+  return false;
 }
 
 export function initTrackConfig (track, observer, data, offset, audioCodec) {
