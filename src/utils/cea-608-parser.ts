@@ -899,7 +899,7 @@ interface PACData {
 class Cea608Parser {
   outputs: OutputFilter[];
   channels: Array<Cea608Channel | null>;
-  currChNr: number | null;
+  currChNr: 0 | 1 | 2 | 3 | 4 = 0; // Will be 1, 2, 3 or 4 when parsing captions
   cmdHistory: CmdHistory;
   constructor (out1: OutputFilter, out2: OutputFilter, out3: OutputFilter, out4: OutputFilter) {
     this.outputs = [out1, out2];
@@ -910,7 +910,6 @@ class Cea608Parser {
       new Cea608Channel(3, out3),
       new Cea608Channel(4, out4)
     ];
-    this.currChNr = -1; // Will be 1 or 2
     this.cmdHistory = createCmdHistory();
   }
 
@@ -1051,7 +1050,7 @@ class Cea608Parser {
    * @returns {Boolean}
    */
   parseMidrow (a: number, b: number, field: number) {
-    let chNr: number | null = null;
+    let chNr: number = 0;
 
     if (((a === 0x11) || (a === 0x19)) && b >= 0x20 && b <= 0x2f) {
       if (a === 0x11) {
@@ -1064,7 +1063,10 @@ class Cea608Parser {
         logger.log('ERROR', 'Mismatch channel in midrow parsing');
         return false;
       }
-      const channel = this.channels[chNr] as Cea608Channel;
+      const channel = this.channels[chNr];
+      if (!channel) {
+        return false;
+      }
       channel.ccMIDROW(b);
       logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
       return true;
@@ -1077,7 +1079,7 @@ class Cea608Parser {
    * @returns {Boolean} Tells if PAC found
    */
   parsePAC (a: number, b: number, field: number): boolean {
-    let chNr: number | null = null;
+    let chNr: number = 0;
     let row: number;
     const cmdHistory = this.cmdHistory;
 
@@ -1106,10 +1108,13 @@ class Cea608Parser {
     } else { // 0x60 <= b <= 0x7F
       row = (dataChannel === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
     }
-    const channel = this.channels[chNr] as Cea608Channel;
+    const channel = this.channels[chNr];
+    if (!channel) {
+      return false;
+    }
     channel.setPAC(this.interpretPAC(row, b));
     setLastCmd(a, b, cmdHistory[field]);
-    this.currChNr = chNr;
+    this.currChNr = chNr as 0 | 1 | 2 | 3 | 4;
     return true;
   }
 
@@ -1238,19 +1243,17 @@ class Cea608Parser {
   }
 }
 
-function getChannelNumber (ccData0: number): number | null {
-  let channel: number | null = null;
+function getChannelNumber (ccData0: number): 0 | 1 | 2 | 3 | 4 {
   if (ccData0 === 0x14) {
-    channel = 1;
+    return 1;
   } else if (ccData0 === 0x1C) {
-    channel = 2;
+    return 2;
   } else if (ccData0 === 0x15) {
-    channel = 3;
+    return 3;
   } else if (ccData0 === 0x1D) {
-    channel = 4;
+    return 4;
   }
-
-  return channel;
+  return 0;
 }
 
 function getDataChannel (ccData1: number, field: number): number | null {
