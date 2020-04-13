@@ -195,7 +195,7 @@ class TimelineController extends EventHandler {
       _id: trackName,
       label,
       kind: 'captions',
-      default: false
+      default: props.default || false
     };
     nonNativeCaptionsTracks[trackName] = track;
     this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
