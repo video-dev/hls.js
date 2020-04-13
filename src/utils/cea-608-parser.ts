@@ -914,12 +914,12 @@ class Cea608Parser {
     this.cmdHistory = createCmdHistory();
   }
 
-  getHandler (index: number) {
-    return (this.channels[index] as Cea608Channel).getHandler();
+  getHandler (channel: number) {
+    return (this.channels[channel] as Cea608Channel).getHandler();
   }
 
-  setHandler (index: number, newHandler: OutputFilter) {
-    (this.channels[index] as Cea608Channel).setHandler(newHandler);
+  setHandler (channel: number, newHandler: OutputFilter) {
+    (this.channels[channel] as Cea608Channel).setHandler(newHandler);
   }
 
   /**
