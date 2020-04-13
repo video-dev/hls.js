@@ -12,7 +12,17 @@ import { MediaPlaylist } from '../types/media-playlist';
 
 type TrackProperties = {
   label: string,
-  languageCode: string
+  languageCode: string,
+  media?: MediaPlaylist
+};
+
+type NonNativeCaptionsTrack = {
+  _id?: string,
+  label: string,
+  kind: string,
+  default: boolean,
+  closedCaptions?: MediaPlaylist,
+  subtitleTrack?: MediaPlaylist
 };
 
 type VTTCCs = {
@@ -36,7 +46,7 @@ class TimelineController extends EventHandler {
   private unparsedVttFrags: Array<{ frag: Fragment, payload: ArrayBuffer }> = [];
   private cueRanges: Array<[number, number]> = [];
   private captionsTracks: Record<string, TextTrack> = {};
-  private nonNativeCaptionsTracks: Record<string, { _id?: string, label: string, kind: string, default: boolean }> = {};
+  private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
   private captionsProperties: {
     textTrack1: TrackProperties
     textTrack2: TrackProperties
@@ -181,23 +191,20 @@ class TimelineController extends EventHandler {
   }
 
   createNonNativeTrack (trackName: string) {
-    if (this.nonNativeCaptionsTracks[trackName]) {
-      return;
-    }
     // Create a list of a single track for the provider to consume
-    const { nonNativeCaptionsTracks, captionsProperties } = this;
-    const props = captionsProperties[trackName];
-    if (!props) {
+    const trackProperties: TrackProperties = this.captionsProperties[trackName];
+    if (!trackProperties) {
       return;
     }
-    const label = props.label as string;
+    const label = trackProperties.label as string;
     const track = {
       _id: trackName,
       label,
       kind: 'captions',
-      default: props.default || false
+      default: trackProperties.media ? !!trackProperties.media.default : false,
+      closedCaptions: trackProperties.media
     };
-    nonNativeCaptionsTracks[trackName] = track;
+    this.nonNativeCaptionsTracks[trackName] = track;
     this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
   }
   createTextTrack (kind: TextTrackKind, label: string, lang?: string): TextTrack | undefined {
@@ -299,7 +306,8 @@ class TimelineController extends EventHandler {
           return {
             label: track.name,
             kind: track.type.toLowerCase(),
-            default: track.default
+            default: track.default,
+            subtitleTrack: track
           };
         });
         this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
@@ -309,17 +317,19 @@ class TimelineController extends EventHandler {
     if (this.config.enableCEA708Captions && data.captions) {
       data.captions.forEach(captionsTrack => {
         const instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(captionsTrack.instreamId as string);
-
         if (!instreamIdMatch) {
           return;
         }
-
         const trackName = `textTrack${instreamIdMatch[1]}`;
-        this.captionsProperties[trackName].label = captionsTrack.name;
-
-        if (captionsTrack.lang) { // optional attribute
-          this.captionsProperties[trackName].languageCode = captionsTrack.lang;
+        const trackProperties: TrackProperties = this.captionsProperties[trackName];
+        if (!trackProperties) {
+          return;
         }
+        trackProperties.label = captionsTrack.name;
+        if (captionsTrack.lang) { // optional attribute
+          trackProperties.languageCode = captionsTrack.lang;
+        }
+        trackProperties.media = captionsTrack;
       });
     }
   }
