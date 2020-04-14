@@ -1250,7 +1250,7 @@ Full list of Events is available below:
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL }
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
-    -  data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
+    -  data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}, sessionData: [parsed #EXT-X-SESSION-DATA]}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest }
   - `Hls.Events.LEVEL_SWITCHING`  - fired when a level switch is requested
