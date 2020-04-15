@@ -382,6 +382,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       widevineLicenseUrl: undefined,
       fairplayLicenseUrl: undefined,
       fairplayCertificateUrl: undefined,
+      fairplayCertificateData: undefined,
       drmSystemOptions: {},
       requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess
   };
@@ -1140,6 +1141,19 @@ With the default argument, `''` will be specified for each option (_i.e. no spec
 (default: A function that returns the result of `window.navigator.requestMediaKeySystemAccess.bind(window.navigator)` or `null`)
 
 Allows for the customization of `window.navigator.requestMediaKeySystemAccess`.
+
+### `fairplayCertificateUrl`
+
+(default: `undefined`)
+
+Fairplay certificate fetching URL
+`fairplayCertificateData` takes precedence over that parameter
+
+### `fairplayCertificateData`
+
+(default: `undefined`)
+Fairplay Certificate data to use configure MediaKeys (takes precedence over `fairplayCertificateUrl`)
+
 
 ## Video Binding/Unbinding API
 

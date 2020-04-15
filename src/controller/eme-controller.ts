@@ -111,6 +111,7 @@ class EMEController extends EventHandler {
   private _widevineLicenseUrl?: string;
   private _fairplayLicenseUrl?: string;
   private _fairplayCertificateUrl?: string;
+  private _fairplayCertificateData?: BufferSource;
   private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string, additionalData: LicenseXHRAdditionalData) => void;
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: MediaKeyFunc | null;
@@ -138,6 +139,7 @@ class EMEController extends EventHandler {
 
     this._widevineLicenseUrl = this._config.widevineLicenseUrl;
     this._fairplayLicenseUrl = this._config.fairplayLicenseUrl;
+    this._fairplayCertificateData = this._config.fairplayCertificateData;
     this._fairplayCertificateUrl = this._config.fairplayCertificateUrl;
     this._licenseXhrSetup = this._config.licenseXhrSetup;
     this._emeEnabled = this._config.emeEnabled;
@@ -224,16 +226,20 @@ class EMEController extends EventHandler {
 
         logger.log(`Media-keys created for key-system "${keySystem}"`);
 
-        if (keySystem === KeySystems.FAIRPLAY && this._fairplayCertificateUrl) {
-          return this._fetchCertificate(this._fairplayCertificateUrl).then(certificateData => {
-            mediaKeys.setServerCertificate(certificateData);
-          }).catch(() => {
-            this.hls.trigger(Event.ERROR, {
-              type: ErrorTypes.KEY_SYSTEM_ERROR,
-              details: ErrorDetails.KEY_SYSTEM_CERTIFICATE_REQUEST_FAILED,
-              fatal: true
-            });
-          }).then(() => mediaKeys);
+        if (keySystem === KeySystems.FAIRPLAY) {
+          if (this._fairplayCertificateData) {
+            mediaKeys.setServerCertificate(this._fairplayCertificateData);
+          } else if (this._fairplayCertificateUrl) {
+            return this._fetchCertificate(this._fairplayCertificateUrl).then(certificateData => {
+              mediaKeys.setServerCertificate(certificateData);
+            }).catch(() => {
+              this.hls.trigger(Event.ERROR, {
+                type: ErrorTypes.KEY_SYSTEM_ERROR,
+                details: ErrorDetails.KEY_SYSTEM_CERTIFICATE_REQUEST_FAILED,
+                fatal: true
+              });
+            }).then(() => mediaKeys);
+          }
         }
 
         return mediaKeys;
