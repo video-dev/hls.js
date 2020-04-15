@@ -898,22 +898,27 @@ interface PACData {
 
 class Cea608Parser {
   outputs: OutputFilter[];
-  channels: Cea608Channel[];
-  currChNr: number | null;
+  channels: Array<Cea608Channel | null>;
+  currChNr: 0 | 1 | 2 | 3 | 4 = 0; // Will be 1, 2, 3 or 4 when parsing captions
   cmdHistory: CmdHistory;
   constructor (out1: OutputFilter, out2: OutputFilter, out3: OutputFilter, out4: OutputFilter) {
     this.outputs = [out1, out2];
-    this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2), new Cea608Channel(3, out3), new Cea608Channel(4, out4)];
-    this.currChNr = -1; // Will be 1 or 2
+    this.channels = [
+      null,
+      new Cea608Channel(1, out1),
+      new Cea608Channel(2, out2),
+      new Cea608Channel(3, out3),
+      new Cea608Channel(4, out4)
+    ];
     this.cmdHistory = createCmdHistory();
   }
 
-  getHandler (index: number) {
-    return this.channels[index].getHandler();
+  getHandler (channel: number) {
+    return (this.channels[channel] as Cea608Channel).getHandler();
   }
 
-  setHandler (index: number, newHandler: OutputFilter) {
-    this.channels[index].setHandler(newHandler);
+  setHandler (channel: number, newHandler: OutputFilter) {
+    (this.channels[channel] as Cea608Channel).setHandler(newHandler);
   }
 
   /**
@@ -953,9 +958,10 @@ class Cea608Parser {
       if (!cmdFound) {
         charsFound = this.parseChars(a, b, field);
         if (charsFound) {
-          if (this.currChNr && this.currChNr >= 0) {
-            if (field === 3 && this.currChNr > 2 || field === 1 && this.currChNr < 3) {
-              const channel = this.channels[this.currChNr];
+          const currChNr = this.currChNr;
+          if (currChNr && currChNr > 0) {
+            if (field === 3 && currChNr > 2 || field === 1 && currChNr < 3) {
+              const channel = this.channels[currChNr] as Cea608Channel;
               channel.insertChars(charsFound);
             } else {
               logger.log('WARNING', 'The last seen channel number does not fall within the current field. ' +
@@ -996,7 +1002,7 @@ class Cea608Parser {
 
     let channel;
     if (chNr) {
-      channel = this.channels[chNr];
+      channel = this.channels[chNr] as Cea608Channel;
       if (b === 0x20) {
         channel.ccRCL();
       } else if (b === 0x21) {
@@ -1031,7 +1037,7 @@ class Cea608Parser {
         channel.ccEOC();
       }
     } else { // a == 0x17 || a == 0x1F
-      channel = this.channels[dataChannel!];
+      channel = this.channels[dataChannel!] as Cea608Channel;
       channel.ccTO(b - 0x20);
     }
     setLastCmd(a, b, cmdHistory[field]);
@@ -1044,7 +1050,7 @@ class Cea608Parser {
    * @returns {Boolean}
    */
   parseMidrow (a: number, b: number, field: number) {
-    let chNr: number | null = null;
+    let chNr: number = 0;
 
     if (((a === 0x11) || (a === 0x19)) && b >= 0x20 && b <= 0x2f) {
       if (a === 0x11) {
@@ -1058,6 +1064,9 @@ class Cea608Parser {
         return false;
       }
       const channel = this.channels[chNr];
+      if (!channel) {
+        return false;
+      }
       channel.ccMIDROW(b);
       logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
       return true;
@@ -1070,7 +1079,7 @@ class Cea608Parser {
    * @returns {Boolean} Tells if PAC found
    */
   parsePAC (a: number, b: number, field: number): boolean {
-    let chNr: number | null = null;
+    let chNr: number = 0;
     let row: number;
     const cmdHistory = this.cmdHistory;
 
@@ -1100,9 +1109,12 @@ class Cea608Parser {
       row = (dataChannel === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
     }
     const channel = this.channels[chNr];
+    if (!channel) {
+      return false;
+    }
     channel.setPAC(this.interpretPAC(row, b));
     setLastCmd(a, b, cmdHistory[field]);
-    this.currChNr = chNr;
+    this.currChNr = chNr as 0 | 1 | 2 | 3 | 4;
     return true;
   }
 
@@ -1199,7 +1211,7 @@ class Cea608Parser {
       }
     }
     const chNr: number = (a < 0x18) ? field : field + 1;
-    const channel: Cea608Channel = this.channels[chNr];
+    const channel: Cea608Channel = this.channels[chNr] as Cea608Channel;
     channel.setBkgData(bkgData);
     setLastCmd(a, b, this.cmdHistory[field]);
     return true;
@@ -1210,8 +1222,9 @@ class Cea608Parser {
    */
   reset () {
     for (let i = 0; i < Object.keys(this.channels).length; i++) {
-      if (this.channels[i]) {
-        this.channels[i].reset();
+      const channel = this.channels[i];
+      if (channel) {
+        channel.reset();
       }
     }
     this.cmdHistory = createCmdHistory();
@@ -1222,26 +1235,25 @@ class Cea608Parser {
    */
   cueSplitAtTime (t: number) {
     for (let i = 0; i < this.channels.length; i++) {
-      if (this.channels[i]) {
-        this.channels[i].cueSplitAtTime(t);
+      const channel = this.channels[i];
+      if (channel) {
+        channel.cueSplitAtTime(t);
       }
     }
   }
 }
 
-function getChannelNumber (ccData0: number): number | null {
-  let channel: number | null = null;
+function getChannelNumber (ccData0: number): 0 | 1 | 2 | 3 | 4 {
   if (ccData0 === 0x14) {
-    channel = 1;
+    return 1;
   } else if (ccData0 === 0x1C) {
-    channel = 2;
+    return 2;
   } else if (ccData0 === 0x15) {
-    channel = 3;
+    return 3;
   } else if (ccData0 === 0x1D) {
-    channel = 4;
+    return 4;
   }
-
-  return channel;
+  return 0;
 }
 
 function getDataChannel (ccData1: number, field: number): number | null {
