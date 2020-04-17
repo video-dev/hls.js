@@ -342,7 +342,7 @@ export function getDuration (data, initData) {
         sampleDuration = readUint32(tfhd, 8);
       }
       const sampleCount = readUint32(trun, 4);
-      rawDuration += sampleDuration * sampleCount;
+      rawDuration = sampleDuration * sampleCount;
     } else {
       rawDuration = computeRawDurationFromSamples(trun);
     }
