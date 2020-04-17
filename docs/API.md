@@ -379,6 +379,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxLoadingDelay: 4,
       minAutoBitrate: 0,
       emeEnabled: false,
+      emeGenerateLicenseChallengeFunc: undefined,
       widevineLicenseUrl: undefined,
       fairplayLicenseUrl: undefined,
       fairplayCertificateUrl: undefined,

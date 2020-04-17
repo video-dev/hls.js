@@ -10,7 +10,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
 import { DRMSystemOptions, EMEControllerConfig } from '../config';
-import { KeySystems, MediaKeyFunc } from '../utils/mediakeys-helper';
+import { KeySystems, MediaKeyFunc, GenerateLicenseChallengFunc } from '../utils/mediakeys-helper';
 
 import MP4Demuxer from '../demux/mp4demuxer';
 import Hex from '../utils/hex';
@@ -87,17 +87,13 @@ const getSupportedMediaKeySystemConfigurations = function (
   }
 };
 
-interface MediaKeysListItem {
+export interface MediaKeysListItem {
   mediaKeys?: MediaKeys,
   mediaKeysSession?: MediaKeySession,
   mediaKeysSessionInitialized: boolean;
   mediaKeySystemAccess: MediaKeySystemAccess;
   mediaKeySystemDomain: KeySystems;
-  mediaKeyId?: string,
-}
-
-interface LicenseXHRAdditionalData {
-  keyId?: string,
+  mediaKeyInitData?: BufferSource,
 }
 
 /**
@@ -112,8 +108,9 @@ class EMEController extends EventHandler {
   private _fairplayLicenseUrl?: string;
   private _fairplayCertificateUrl?: string;
   private _fairplayCertificateData?: BufferSource;
-  private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string, additionalData: LicenseXHRAdditionalData) => void;
+  private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string, keysListItem: MediaKeysListItem) => void;
   private _emeEnabled: boolean;
+  private _emeGenerateLicenseChallengeFunc: GenerateLicenseChallengFunc | null;
   private _requestMediaKeySystemAccess: MediaKeyFunc | null;
   private _drmSystemOptions: DRMSystemOptions;
 
@@ -145,6 +142,7 @@ class EMEController extends EventHandler {
     this._fairplayCertificateUrl = this._config.fairplayCertificateUrl;
     this._licenseXhrSetup = this._config.licenseXhrSetup;
     this._emeEnabled = this._config.emeEnabled;
+    this._emeGenerateLicenseChallengeFunc = this._config.emeGenerateLicenseChallengeFunc;
     this._requestMediaKeySystemAccess = this._config.requestMediaKeySystemAccessFunc;
     this._drmSystemOptions = hls.config.drmSystemOptions;
   }
@@ -203,6 +201,14 @@ class EMEController extends EventHandler {
     }
 
     return this._requestMediaKeySystemAccess;
+  }
+
+  get emeGenerateLicenseChallengeFunc () {
+    if (!this._emeGenerateLicenseChallengeFunc) {
+      throw new Error('No emeGenerateLicenseChallenge function configured');
+    }
+
+    return this._emeGenerateLicenseChallengeFunc;
   }
 
   /**
@@ -358,40 +364,6 @@ class EMEController extends EventHandler {
     }
   }
 
-  private _findKeyInSinf (initData: ArrayBuffer) : string | undefined {
-    const {
-      // sinfData is base64 encoded
-      sinf: [sinfData]
-    } = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(initData)));
-
-    // Got base64 encoded data from the JSON
-    const decodedSinfData = atob(sinfData);
-
-    // Got binary data from the decoding, we need to put it back into a binary array to do operations on it
-    const decodedSinfDataUint8View = new Uint8Array(decodedSinfData.length);
-
-    for (let i = 0; i < decodedSinfData.length; i++) {
-      decodedSinfDataUint8View[i] = decodedSinfData.charCodeAt(i);
-    }
-
-    // Get the "schi" box that contains the "tenc" box, that holds the keyId (still binary data)
-    const [tenc] = MP4Demuxer.findBox(decodedSinfDataUint8View, ['schi', 'tenc']);
-
-    if (!tenc) {
-      return;
-    }
-
-    const { start, data } = tenc;
-
-    /**
-     * tenc is a Uint8Array, meaning one item stores one byte
-     * tenc is made of
-     *  - 8 bytes IV
-     *  - 16 bytes keyId
-     */
-    return Hex.hexDump(data.subarray(start + 8, start + 24));
-  }
-
   /**
    * @private
    */
@@ -437,10 +409,7 @@ class EMEController extends EventHandler {
 
     logger.log(`Generating key-session request for "${initDataType}" init data type`);
     keysListItem.mediaKeysSessionInitialized = true;
-
-    if (initDataType === 'sinf') {
-        keysListItem.mediaKeyId = this._findKeyInSinf(initData);
-    }
+    keysListItem.mediaKeyInitData = initData;
 
     keySession.generateRequest(initDataType, initData)
       .then(() => {
@@ -492,16 +461,15 @@ class EMEController extends EventHandler {
 
     const xhr = new XMLHttpRequest();
     const licenseXhrSetup = this._licenseXhrSetup;
-    const xhrSetupData : LicenseXHRAdditionalData = { keyId: keysListItem.mediaKeyId };
 
     try {
       if (licenseXhrSetup) {
         try {
-          licenseXhrSetup(xhr, url, xhrSetupData);
+          licenseXhrSetup(xhr, url, keysListItem);
         } catch (e) {
           // let's try to open before running setup
           xhr.open('POST', url, true);
-          licenseXhrSetup(xhr, url, xhrSetupData);
+          licenseXhrSetup(xhr, url, keysListItem);
         }
       }
       // if licenseXhrSetup did not yet call open, let's do it now
@@ -560,46 +528,6 @@ class EMEController extends EventHandler {
 
   /**
    * @private
-   * @param {MediaKeysListItem} keysListItem
-   * @param {ArrayBuffer} keyMessage
-   * @returns {ArrayBuffer} Challenge data posted to license server
-   * @throws if KeySystem is unsupported
-   */
-  private _generateLicenseRequestChallenge (keysListItem: MediaKeysListItem, keyMessage: ArrayBuffer): ArrayBuffer {
-    switch (keysListItem.mediaKeySystemDomain) {
-    // case KeySystems.PLAYREADY:
-    // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
-    /*
-      if (this.licenseType !== this.LICENSE_TYPE_WIDEVINE) {
-        // For PlayReady CDMs, we need to dig the Challenge out of the XML.
-        var keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
-        if (keyMessageXml.getElementsByTagName('Challenge')[0]) {
-            challenge = atob(keyMessageXml.getElementsByTagName('Challenge')[0].childNodes[0].nodeValue);
-        } else {
-            throw 'Cannot find <Challenge> in key message';
-        }
-        var headerNames = keyMessageXml.getElementsByTagName('name');
-        var headerValues = keyMessageXml.getElementsByTagName('value');
-        if (headerNames.length !== headerValues.length) {
-            throw 'Mismatched header <name>/<value> pair in key message';
-        }
-        for (var i = 0; i < headerNames.length; i++) {
-            xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
-        }
-      }
-      break;
-    */
-    case KeySystems.WIDEVINE:
-    case KeySystems.FAIRPLAY:
-      // For Widevine CDMs, the challenge is the keyMessage.
-      return keyMessage;
-    }
-
-    throw new Error(`unsupported key-system: ${keysListItem.mediaKeySystemDomain}`);
-  }
-
-  /**
-   * @private
    * @param keyMessage
    * @param callback
    */
@@ -621,7 +549,7 @@ class EMEController extends EventHandler {
       const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
       const xhr = this._createLicenseXhr(keysListItem, keyMessage, callback);
       logger.log(`Sending license request to URL: ${url}`);
-      const challenge = this._generateLicenseRequestChallenge(keysListItem, keyMessage);
+      const challenge = this.emeGenerateLicenseChallengeFunc(keysListItem.mediaKeySystemDomain, keyMessage);
       xhr.send(challenge);
     } catch (e) {
       logger.error(`Failure requesting DRM license: ${e}`);
