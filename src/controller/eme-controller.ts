@@ -120,6 +120,7 @@ class EMEController extends EventHandler {
   private _config: EMEControllerConfig;
   private _mediaKeysList: MediaKeysListItem[] = [];
   private _media: HTMLMediaElement | null = null;
+  private _levels: any[] = [];
   private _hasSetMediaKeys: boolean = false;
   private _requestLicenseFailureCount: number = 0;
 
@@ -133,7 +134,8 @@ class EMEController extends EventHandler {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHED,
-      Event.MANIFEST_PARSED
+      Event.MANIFEST_PARSED,
+      Event.LEVEL_LOADED
     );
     this._config = hls.config;
 
@@ -182,7 +184,7 @@ class EMEController extends EventHandler {
     // This can throw, but is caught in event handler callpath
     const mediaKeySystemConfigs = getSupportedMediaKeySystemConfigurations(keySystem, audioCodecs, videoCodecs, this._drmSystemOptions);
 
-    logger.log('Requesting encrypted media key-system access');
+    logger.log('Requesting encrypted media key-system access', keySystem, mediaKeySystemConfigs);
 
     // expecting interface like window.navigator.requestMediaKeySystemAccess
     const keySystemAccessPromise = this.requestMediaKeySystemAccess(keySystem, mediaKeySystemConfigs);
@@ -668,18 +670,25 @@ class EMEController extends EventHandler {
     });
   }
 
-  // TODO: Use manifest types here when they are defined
   onManifestParsed (data: any) {
-    if (!this._emeEnabled) {
+    this._levels = data.levels;
+  }
+
+  // TODO: Use manifest types here when they are defined
+  onLevelLoaded ({ details, level: index }: any) {
+    const level = this._levels[index];
+
+    if (!this._emeEnabled || !details.key || !level) {
       return;
     }
 
-    const audioCodecs = data.levels.map((level) => level.audioCodec);
-    const videoCodecs = data.levels.map((level) => level.videoCodec);
+    let keySystem = KeySystems.WIDEVINE;
 
-    console.log(data.levels);
+    if (details.key.format === 'com.apple.streamingkeydelivery') {
+      keySystem = KeySystems.FAIRPLAY;
+    }
 
-    this._attemptKeySystemAccess(KeySystems.FAIRPLAY, audioCodecs, videoCodecs);
+    this._attemptKeySystemAccess(keySystem, [level.audioCodec], [level.videoCodec]);
   }
 }
 

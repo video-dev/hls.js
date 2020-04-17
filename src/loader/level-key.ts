@@ -5,6 +5,7 @@ export default class LevelKey {
 
   public baseuri: string;
   public reluri: string;
+  public format: string = 'identity';
   public method: string | null = null;
   public key: Uint8Array | null = null;
   public iv: Uint8Array | null = null;
