@@ -9,6 +9,7 @@ import { ChunkMetadata } from './transmuxer';
 import LoadStats from '../loader/load-stats';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { MetadataSample, UserdataSample } from './demuxer';
+import AttrList from '../utils/attr-list';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement
@@ -63,7 +64,8 @@ export interface ManifestLoadedData {
   audioTracks: MediaPlaylist[]
   captions?: MediaPlaylist[]
   levels: LevelParsed[]
-  networkDetails: any,
+  networkDetails: any
+  sessionData: Record<string, AttrList> | null
   stats: LoaderStats
   subtitles?: MediaPlaylist[]
   url: string

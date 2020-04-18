@@ -1,9 +1,7 @@
 import { Events } from '../events';
-import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues, getClosestCue } from '../utils/texttrack-utils';
 import ID3 from '../demux/id3';
 import { FragParsingMetadataData, LiveBackBufferData, MediaAttachedData } from '../types/events';
-import { VTTCue } from '../utils/cues';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
@@ -91,7 +89,7 @@ class ID3TrackController implements ComponentAPI {
     // Attempt to recreate Safari functionality by creating
     // WebKitDataCue objects when available and store the decoded
     // ID3 data in the value property of the cue
-    const Cue = (self.WebKitDataCue || self.VTTCue || self.TextTrackCue) as VTTCue;
+    const Cue = (self.WebKitDataCue || self.VTTCue || self.TextTrackCue) as any;
 
     for (let i = 0; i < samples.length; i++) {
       const frames = ID3.getID3Frames(samples[i].data);

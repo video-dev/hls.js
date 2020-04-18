@@ -6,7 +6,7 @@ import { Events } from '../../../src/events';
 describe('BufferController tests', function () {
   let hls;
   let bufferController;
-  const sandbox = sinon.sandbox.create();
+  const sandbox = sinon.createSandbox();
 
   beforeEach(function () {
     hls = new Hls({});
