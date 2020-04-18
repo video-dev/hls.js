@@ -8,7 +8,7 @@ describe('Non-Native TimelineController functions', function () {
 
   beforeEach(function () {
     hls = new Hls();
-    hls.config.renderNatively = false;
+    hls.config.renderTextTracksNatively = false;
     hls.config.enableWebVTT = true;
     timelineController = new TimelineController(hls);
     timelineController.media = document.createElement('video');
@@ -22,7 +22,7 @@ describe('Non-Native TimelineController functions', function () {
     expect(timelineController.createNativeTrack).to.be.a('function');
   });
 
-  it('calls createNonNativeTrack when renderNatively is false', function () {
+  it('calls createNonNativeTrack when renderTextTracksNatively is false', function () {
     const nonNativeSpy = sinon.spy();
     timelineController.createNonNativeTrack = nonNativeSpy;
 
@@ -36,7 +36,7 @@ describe('Non-Native TimelineController functions', function () {
       expect(track.kind).to.equal('captions');
       expect(track.default).to.equal(false);
       expect(track.label).to.equal(timelineController.captionsProperties.textTrack1.label);
-      expect(timelineController.captionsTracks.textTrack1).to.equal(track);
+      expect(timelineController.nonNativeCaptionsTracks.textTrack1).to.equal(track);
       done();
     });
 

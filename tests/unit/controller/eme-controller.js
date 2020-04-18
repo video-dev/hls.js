@@ -76,7 +76,7 @@ describe('EMEController', function () {
     }, 0);
   });
 
-  it('should emit key system error when bad encrypted data is received', function (done) {
+  it('should trigger key system error(s) when bad encrypted data is received', function (done) {
     const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
@@ -99,8 +99,9 @@ describe('EMEController', function () {
     media.emit('encrypted', badData);
 
     self.setTimeout(function () {
+      expect(emeController.hls.trigger).to.have.been.calledTwice;
       expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
-      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_SESSION);
       done();
     }, 0);
   });

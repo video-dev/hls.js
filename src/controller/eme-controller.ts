@@ -85,13 +85,15 @@ class EMEController implements ComponentAPI {
   private _widevineLicenseUrl?: string;
   private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
   private _emeEnabled: boolean;
-  private _requestMediaKeySystemAccess: MediaKeyFunc | null
+  private _requestMediaKeySystemAccess: MediaKeyFunc | null;
 
   private _config: EMEControllerConfig;
   private _mediaKeysList: MediaKeysListItem[] = [];
   private _media: HTMLMediaElement | null = null;
   private _hasSetMediaKeys: boolean = false;
   private _requestLicenseFailureCount: number = 0;
+
+  private mediaKeysPromise: Promise<MediaKeys> | null = null;
 
   /**
      * @constructs
@@ -159,13 +161,14 @@ class EMEController implements ComponentAPI {
     logger.log('Requesting encrypted media key-system access');
 
     // expecting interface like window.navigator.requestMediaKeySystemAccess
-    this.requestMediaKeySystemAccess(keySystem, mediaKeySystemConfigs)
-      .then((mediaKeySystemAccess) => {
-        this._onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess);
-      })
-      .catch((err) => {
-        logger.error(`Failed to obtain key-system "${keySystem}" access:`, err);
-      });
+    const keySystemAccessPromise = this.requestMediaKeySystemAccess(keySystem, mediaKeySystemConfigs);
+
+    this.mediaKeysPromise = keySystemAccessPromise.then((mediaKeySystemAccess) =>
+      this._onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess));
+
+    keySystemAccessPromise.catch((err) => {
+      logger.error(`Failed to obtain key-system "${keySystem}" access:`, err);
+    });
   }
 
   get requestMediaKeySystemAccess () {
@@ -182,7 +185,7 @@ class EMEController implements ComponentAPI {
      * @param {string} keySystem
      * @param {MediaKeySystemAccess} mediaKeySystemAccess https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess
      */
-  private _onMediaKeySystemAccessObtained (keySystem: KeySystems, mediaKeySystemAccess: MediaKeySystemAccess) {
+  private _onMediaKeySystemAccessObtained (keySystem: KeySystems, mediaKeySystemAccess: MediaKeySystemAccess): Promise<MediaKeys> {
     logger.log(`Access for key-system "${keySystem}" obtained`);
 
     const mediaKeysListItem: MediaKeysListItem = {
@@ -193,17 +196,22 @@ class EMEController implements ComponentAPI {
 
     this._mediaKeysList.push(mediaKeysListItem);
 
-    mediaKeySystemAccess.createMediaKeys()
+    const mediaKeysPromise = Promise.resolve().then(() => mediaKeySystemAccess.createMediaKeys())
       .then((mediaKeys) => {
         mediaKeysListItem.mediaKeys = mediaKeys;
 
         logger.log(`Media-keys created for key-system "${keySystem}"`);
 
         this._onMediaKeysCreated();
-      })
-      .catch((err) => {
-        logger.error('Failed to create media-keys:', err);
+
+        return mediaKeys;
       });
+
+    mediaKeysPromise.catch((err) => {
+      logger.error('Failed to create media-keys:', err);
+    });
+
+    return mediaKeysPromise;
   }
 
   /**
@@ -251,20 +259,37 @@ class EMEController implements ComponentAPI {
 
   /**
    * @private
-   * @param {string} initDataType
-   * @param {ArrayBuffer|null} initData
+   * @param e {MediaEncryptedEvent}
    */
   private _onMediaEncrypted = (e: MediaEncryptedEvent) => {
     logger.log(`Media is encrypted using "${e.initDataType}" init data type`);
 
-    this._attemptSetMediaKeys();
-    this._generateRequestWithPreferredKeySession(e.initDataType, e.initData);
+    if (!this.mediaKeysPromise) {
+      logger.error('Fatal: Media is encrypted but no CDM access or no keys have been requested');
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
+        fatal: true
+      });
+      return;
+    }
+
+    const finallySetKeyAndStartSession = (mediaKeys) => {
+      if (!this._media) {
+        return;
+      }
+      this._attemptSetMediaKeys(mediaKeys);
+      this._generateRequestWithPreferredKeySession(e.initDataType, e.initData);
+    };
+
+    // Could use `Promise.finally` but some Promise polyfills are missing it
+    this.mediaKeysPromise.then(finallySetKeyAndStartSession).catch(finallySetKeyAndStartSession);
   }
 
   /**
    * @private
    */
-  private _attemptSetMediaKeys () {
+  private _attemptSetMediaKeys (mediaKeys?: MediaKeys) {
     if (!this._media) {
       throw new Error('Attempted to set mediaKeys without first attaching a media element');
     }
