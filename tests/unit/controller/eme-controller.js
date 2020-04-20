@@ -75,6 +75,37 @@ describe('EMEController', function () {
     }, 0);
   });
 
+  it('should request keys with specified robustness options when `emeEnabled` is true', function (done) {
+    let reqMediaKsAccessSpy = sinon.spy(function () {
+      return Promise.resolve({
+        // Media-keys mock
+      });
+    });
+
+    setupEach({
+      emeEnabled: true,
+      drmSystemOptions: {
+        audioRobustness: 'HW_SECURE_ALL',
+        videoRobustness: 'HW_SECURE_ALL'
+      },
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+    });
+
+    emeController.onMediaAttached({ media });
+
+    expect(media.setMediaKeys.callCount).to.equal(0);
+    expect(reqMediaKsAccessSpy.callCount).to.equal(0);
+
+    emeController.onManifestParsed({ levels: fakeLevels });
+
+    setTimeout(function () {
+      const baseConfig = reqMediaKsAccessSpy.getCall(0).args[1][0];
+      expect(baseConfig.audioCapabilities[0]).to.have.property('robustness', 'HW_SECURE_ALL');
+      expect(baseConfig.videoCapabilities[0]).to.have.property('robustness', 'HW_SECURE_ALL');
+      done();
+    }, 0);
+  });
+
   it('should trigger key system error(s) when bad encrypted data is received', function (done) {
     let reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
