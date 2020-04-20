@@ -9,6 +9,7 @@ const MediaMock = function () {
   let media = new EventEmitter();
   media.setMediaKeys = sinon.spy();
   media.addEventListener = media.addListener.bind(media);
+  media.removeEventListener = media.removeListener.bind(media);
   return media;
 };
 
@@ -101,6 +102,35 @@ describe('EMEController', function () {
       expect(emeController.hls.trigger).to.have.been.calledTwice;
       expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
       expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_SESSION);
+      done();
+    }, 0);
+  });
+
+  it('should close all media key sessions and remove media keys when media is detached', function (done) {
+    let reqMediaKsAccessSpy = sinon.spy(function () {
+      return Promise.resolve({
+        // Media-keys mock
+      });
+    });
+    let keySessionCloseSpy = sinon.spy(() => Promise.resolve());
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+    });
+
+    emeController.onMediaAttached({ media });
+    emeController._mediaKeysList = [{
+      mediaKeysSession: {
+        close: keySessionCloseSpy
+      }
+    }];
+    emeController.onMediaDetached();
+
+    setTimeout(function () {
+      expect(keySessionCloseSpy.callCount).to.equal(1);
+      expect(emeController._mediaKeysList.length).to.equal(0);
+      expect(media.setMediaKeys.calledWith(null)).to.be.true;
       done();
     }, 0);
   });
