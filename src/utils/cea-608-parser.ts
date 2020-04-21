@@ -38,8 +38,8 @@ import OutputFilter from './output-filter';
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 /**
-     *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
-     */
+ *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
+ */
 
 const specialCea608CharsCodes = {
   0x2a: 0xe1, // lowercase a, acute accent
@@ -255,15 +255,15 @@ class PenState {
 
   isDefault () {
     return (this.foreground === 'white' && !this.underline && !this.italics &&
-                this.background === 'black' && !this.flash);
+      this.background === 'black' && !this.flash);
   }
 
   equals (other: PenState) {
     return ((this.foreground === other.foreground) &&
-                 (this.underline === other.underline) &&
-                 (this.italics === other.italics) &&
-                 (this.background === other.background) &&
-                 (this.flash === other.flash));
+      (this.underline === other.underline) &&
+      (this.italics === other.italics) &&
+      (this.background === other.background) &&
+      (this.flash === other.flash));
   }
 
   copy (newPenState: PenState) {
@@ -276,7 +276,7 @@ class PenState {
 
   toString (): string {
     return ('color=' + this.foreground + ', underline=' + this.underline + ', italics=' + this.italics +
-            ', background=' + this.background + ', flash=' + this.flash);
+      ', background=' + this.background + ', flash=' + this.flash);
   }
 }
 
@@ -368,8 +368,8 @@ export class Row {
   }
 
   /**
-     *  Set the cursor to a valid column.
-     */
+   *  Set the cursor to a valid column.
+   */
   setCursor (absPos: number) {
     if (this.pos !== absPos) {
       this.pos = absPos;
@@ -385,8 +385,8 @@ export class Row {
   }
 
   /**
-     * Move the cursor relative to current position.
-     */
+   * Move the cursor relative to current position.
+   */
   moveCursor (relPos: number) {
     const newPos = this.pos + relPos;
     if (relPos > 1) {
@@ -398,8 +398,8 @@ export class Row {
   }
 
   /**
-     * Backspace, move one step back and clear character.
-     */
+   * Backspace, move one step back and clear character.
+   */
   backSpace () {
     this.moveCursor(-1);
     this.chars[this.pos].setChar(' ', this.currPenState);
@@ -412,7 +412,7 @@ export class Row {
     const char = getCharForByte(byte);
     if (this.pos >= NR_COLS) {
       logger.log('ERROR', 'Cannot insert ' + byte.toString(16) +
-                        ' (' + char + ') at position ' + this.pos + '. Skipping it!');
+        ' (' + char + ') at position ' + this.pos + '. Skipping it!');
       return;
     }
     this.chars[this.pos].setChar(char, this.currPenState);
@@ -464,7 +464,7 @@ export class Row {
 /**
  * Keep a CEA-608 screen of 32x15 styled characters
  * @constructor
-*/
+ */
 export class CaptionScreen {
   rows: Row[];
   currRow: number;
@@ -529,8 +529,8 @@ export class CaptionScreen {
   }
 
   /**
-     * Insert a character (without styling) in the current row.
-     */
+   * Insert a character (without styling) in the current row.
+   */
   insertChar (char: number) {
     const row = this.rows[this.currRow];
     row.insertChar(char);
@@ -595,8 +595,8 @@ export class CaptionScreen {
   }
 
   /**
-     * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
-     */
+   * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
+   */
   setBkgData (bkgData: Partial<PenStyles>) {
     logger.log('INFO', 'bkgData = ' + JSON.stringify(bkgData));
     this.backSpace();
@@ -623,8 +623,8 @@ export class CaptionScreen {
   }
 
   /**
-    * Get all non-empty rows with as unicode text.
-    */
+   * Get all non-empty rows with as unicode text.
+   */
   getDisplayText (asOneRow?: boolean) {
     asOneRow = asOneRow || false;
     const displayText: string[] = [];
@@ -898,27 +898,32 @@ interface PACData {
 
 class Cea608Parser {
   outputs: OutputFilter[];
-  channels: Cea608Channel[];
-  currChNr: number | null;
+  channels: Array<Cea608Channel | null>;
+  currChNr: 0 | 1 | 2 | 3 | 4 = 0; // Will be 1, 2, 3 or 4 when parsing captions
   cmdHistory: CmdHistory;
   constructor (out1: OutputFilter, out2: OutputFilter, out3: OutputFilter, out4: OutputFilter) {
     this.outputs = [out1, out2];
-    this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2), new Cea608Channel(3, out3), new Cea608Channel(4, out4)];
-    this.currChNr = -1; // Will be 1 or 2
+    this.channels = [
+      null,
+      new Cea608Channel(1, out1),
+      new Cea608Channel(2, out2),
+      new Cea608Channel(3, out3),
+      new Cea608Channel(4, out4)
+    ];
     this.cmdHistory = createCmdHistory();
   }
 
-  getHandler (index: number) {
-    return this.channels[index].getHandler();
+  getHandler (channel: number) {
+    return (this.channels[channel] as Cea608Channel).getHandler();
   }
 
-  setHandler (index: number, newHandler: OutputFilter) {
-    this.channels[index].setHandler(newHandler);
+  setHandler (channel: number, newHandler: OutputFilter) {
+    (this.channels[channel] as Cea608Channel).setHandler(newHandler);
   }
 
   /**
-     * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
-     */
+   * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
+   */
   addData (t: number | null, byteList: number[], field: number) {
     let cmdFound: boolean;
     let a: number;
@@ -953,13 +958,14 @@ class Cea608Parser {
       if (!cmdFound) {
         charsFound = this.parseChars(a, b, field);
         if (charsFound) {
-          if (this.currChNr && this.currChNr >= 0) {
-            if (field === 3 && this.currChNr > 2 || field === 1 && this.currChNr < 3) {
-              const channel = this.channels[this.currChNr];
+          const currChNr = this.currChNr;
+          if (currChNr && currChNr > 0) {
+            if (field === 3 && currChNr > 2 || field === 1 && currChNr < 3) {
+              const channel = this.channels[currChNr] as Cea608Channel;
               channel.insertChars(charsFound);
             } else {
               logger.log('WARNING', 'The last seen channel number does not fall within the current field. ' +
-                      'Deferring character insertion until the field and channel match.');
+                'Deferring character insertion until the field and channel match.');
             }
           } else {
             logger.log('WARNING', 'No channel found yet. TEXT-MODE?');
@@ -968,15 +974,15 @@ class Cea608Parser {
       }
       if (!cmdFound && !charsFound) {
         logger.log('WARNING', 'Couldn\'t parse cleaned data ' + numArrayToHexArray([a, b]) +
-                            ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
+          ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
       }
     }
   }
 
   /**
-     * Parse Command.
-     * @returns {Boolean} Tells if a command was found
-     */
+   * Parse Command.
+   * @returns {Boolean} Tells if a command was found
+   */
   parseCmd (a: number, b: number, field: number) {
     const cmdHistory = this.cmdHistory;
     const chNr = getChannelNumber(a);
@@ -996,7 +1002,7 @@ class Cea608Parser {
 
     let channel;
     if (chNr) {
-      channel = this.channels[chNr];
+      channel = this.channels[chNr] as Cea608Channel;
       if (b === 0x20) {
         channel.ccRCL();
       } else if (b === 0x21) {
@@ -1031,7 +1037,7 @@ class Cea608Parser {
         channel.ccEOC();
       }
     } else { // a == 0x17 || a == 0x1F
-      channel = this.channels[dataChannel!];
+      channel = this.channels[dataChannel!] as Cea608Channel;
       channel.ccTO(b - 0x20);
     }
     setLastCmd(a, b, cmdHistory[field]);
@@ -1040,11 +1046,11 @@ class Cea608Parser {
   }
 
   /**
-     * Parse midrow styling command
-     * @returns {Boolean}
-     */
+   * Parse midrow styling command
+   * @returns {Boolean}
+   */
   parseMidrow (a: number, b: number, field: number) {
-    let chNr: number | null = null;
+    let chNr: number = 0;
 
     if (((a === 0x11) || (a === 0x19)) && b >= 0x20 && b <= 0x2f) {
       if (a === 0x11) {
@@ -1058,6 +1064,9 @@ class Cea608Parser {
         return false;
       }
       const channel = this.channels[chNr];
+      if (!channel) {
+        return false;
+      }
       channel.ccMIDROW(b);
       logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
       return true;
@@ -1066,11 +1075,11 @@ class Cea608Parser {
   }
 
   /**
-     * Parse Preable Access Codes (Table 53).
-     * @returns {Boolean} Tells if PAC found
-     */
+   * Parse Preable Access Codes (Table 53).
+   * @returns {Boolean} Tells if PAC found
+   */
   parsePAC (a: number, b: number, field: number): boolean {
-    let chNr: number | null = null;
+    let chNr: number = 0;
     let row: number;
     const cmdHistory = this.cmdHistory;
 
@@ -1100,16 +1109,19 @@ class Cea608Parser {
       row = (dataChannel === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
     }
     const channel = this.channels[chNr];
+    if (!channel) {
+      return false;
+    }
     channel.setPAC(this.interpretPAC(row, b));
     setLastCmd(a, b, cmdHistory[field]);
-    this.currChNr = chNr;
+    this.currChNr = chNr as 0 | 1 | 2 | 3 | 4;
     return true;
   }
 
   /**
-     * Interpret the second byte of the pac, and return the information.
-     * @returns {Object} pacData with style parameters.
-     */
+   * Interpret the second byte of the pac, and return the information.
+   * @returns {Object} pacData with style parameters.
+   */
   interpretPAC (row: number, byte: number): PACData {
     let pacIndex = byte;
     const pacData: PACData = { color: null, italics: false, indent: null, underline: false, row: row };
@@ -1133,9 +1145,9 @@ class Cea608Parser {
   }
 
   /**
-     * Parse characters.
-     * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
-     */
+   * Parse characters.
+   * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
+   */
   parseChars (a: number, b: number, field: number): number[] | null {
     let channelNr: number | null = null;
     let charCodes: number[] | null = null;
@@ -1173,9 +1185,9 @@ class Cea608Parser {
   }
 
   /**
-    * Parse extended background attributes as well as new foreground color black.
-    * @returns {Boolean} Tells if background attributes are found
-    */
+   * Parse extended background attributes as well as new foreground color black.
+   * @returns {Boolean} Tells if background attributes are found
+   */
   parseBackgroundAttributes (a: number, b: number, field: number): boolean {
     const case1 = (a === 0x10 || a === 0x18) && (b >= 0x20 && b <= 0x2f);
     const case2 = (a === 0x17 || a === 0x1f) && (b >= 0x2d && b <= 0x2f);
@@ -1199,49 +1211,49 @@ class Cea608Parser {
       }
     }
     const chNr: number = (a < 0x18) ? field : field + 1;
-    const channel: Cea608Channel = this.channels[chNr];
+    const channel: Cea608Channel = this.channels[chNr] as Cea608Channel;
     channel.setBkgData(bkgData);
     setLastCmd(a, b, this.cmdHistory[field]);
     return true;
   }
 
   /**
-     * Reset state of parser and its channels.
-     */
+   * Reset state of parser and its channels.
+   */
   reset () {
     for (let i = 0; i < Object.keys(this.channels).length; i++) {
-      if (this.channels[i]) {
-        this.channels[i].reset();
+      const channel = this.channels[i];
+      if (channel) {
+        channel.reset();
       }
     }
     this.cmdHistory = createCmdHistory();
   }
 
   /**
-     * Trigger the generation of a cue, and the start of a new one if displayScreens are not empty.
-     */
+   * Trigger the generation of a cue, and the start of a new one if displayScreens are not empty.
+   */
   cueSplitAtTime (t: number) {
     for (let i = 0; i < this.channels.length; i++) {
-      if (this.channels[i]) {
-        this.channels[i].cueSplitAtTime(t);
+      const channel = this.channels[i];
+      if (channel) {
+        channel.cueSplitAtTime(t);
       }
     }
   }
 }
 
-function getChannelNumber (ccData0: number): number | null {
-  let channel: number | null = null;
+function getChannelNumber (ccData0: number): 0 | 1 | 2 | 3 | 4 {
   if (ccData0 === 0x14) {
-    channel = 1;
+    return 1;
   } else if (ccData0 === 0x1C) {
-    channel = 2;
+    return 2;
   } else if (ccData0 === 0x15) {
-    channel = 3;
+    return 3;
   } else if (ccData0 === 0x1D) {
-    channel = 4;
+    return 4;
   }
-
-  return channel;
+  return 0;
 }
 
 function getDataChannel (ccData1: number, field: number): number | null {

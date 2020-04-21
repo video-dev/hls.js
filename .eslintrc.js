@@ -58,14 +58,14 @@ module.exports = {
 
     // limit code block and line length
     /*
-        "max-len": 1,
-        "max-statements": 1,
-        "max-depth": 1,
-        "max-nested-callbacks": 1,
-        "max-params": 1,
-        "max-statements": 1,
-        "max-statements-per-line": 1
-        */
+    "max-len": 1,
+    "max-statements": 1,
+    "max-depth": 1,
+    "max-nested-callbacks": 1,
+    "max-params": 1,
+    "max-statements": 1,
+    "max-statements-per-line": 1
+    */
 
     // loosening of code-quality rules we may want to fix later
     // (warnings for now)
