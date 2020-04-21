@@ -108,7 +108,7 @@ type StreamControllerConfig = {
 };
 
 type TimelineControllerConfig = {
-  cueHandler: any, // TODO(typescript-cues): Type once file is done
+  cueHandler: Cues.CuesInterface,
   enableCEA708Captions: boolean,
   enableWebVTT: boolean,
   enableIMSC1: boolean,
@@ -116,6 +116,11 @@ type TimelineControllerConfig = {
   captionsTextTrack1LanguageCode: string,
   captionsTextTrack2Label: string,
   captionsTextTrack2LanguageCode: string,
+  captionsTextTrack3Label: string,
+  captionsTextTrack3LanguageCode: string,
+  captionsTextTrack4Label: string,
+  captionsTextTrack4LanguageCode: string,
+  renderTextTracksNatively: boolean
 };
 
 type TSDemuxerConfig = {
@@ -145,7 +150,6 @@ export type HlsConfig =
     bufferController: typeof BufferController,
     capLevelController: typeof CapLevelController,
     fpsController: typeof FPSController,
-    renderNatively: boolean,
     progressive: boolean
   } &
   ABRControllerConfig &
@@ -158,7 +162,7 @@ export type HlsConfig =
   MP4RemuxerConfig &
   PlaylistLoaderConfig &
   StreamControllerConfig &
-  Partial<TimelineControllerConfig> &
+  TimelineControllerConfig &
   TSDemuxerConfig;
 
 // If possible, keep hlsDefaultConfig shallow
@@ -236,7 +240,6 @@ export const hlsDefaultConfig: HlsConfig = {
   widevineLicenseUrl: void 0, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
-  renderNatively: false,
   progressive: true,
 
   // Dynamic Modules
@@ -250,20 +253,20 @@ export const hlsDefaultConfig: HlsConfig = {
 };
 
 function timelineConfig (): TimelineControllerConfig {
-  if (!__USE_SUBTITLES__) {
-    // intentionally doing this over returning Partial<TimelineControllerConfig> above
-    // this has the added nice property of still requiring the object below to completely define all props.
-    return {} as any;
-  }
   return {
     cueHandler: Cues, // used by timeline-controller
-    enableCEA708Captions: true, // used by timeline-controller
-    enableWebVTT: true, // used by timeline-controller
-    enableIMSC1: true, // used by timeline-controller
+    enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
+    enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
+    enableIMSC1: __USE_SUBTITLES__, // used by timeline-controller
     captionsTextTrack1Label: 'English', // used by timeline-controller
     captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
     captionsTextTrack2Label: 'Spanish', // used by timeline-controller
-    captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
+    captionsTextTrack2LanguageCode: 'es', // used by timeline-controller
+    captionsTextTrack3Label: 'Unknown CC', // used by timeline-controller
+    captionsTextTrack3LanguageCode: '', // used by timeline-controller
+    captionsTextTrack4Label: 'Unknown CC', // used by timeline-controller
+    captionsTextTrack4LanguageCode: '', // used by timeline-controller
+    renderTextTracksNatively: true
   };
 }
 

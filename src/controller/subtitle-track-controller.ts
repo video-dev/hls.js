@@ -235,7 +235,7 @@ class SubtitleTrackController implements ComponentAPI {
 
   private _onTextTracksChanged (): void {
     // Media is undefined when switching streams via loadSource()
-    if (!this.media || !this.hls.config.renderNatively) {
+    if (!this.media || !this.hls.config.renderTextTracksNatively) {
       return;
     }
 
