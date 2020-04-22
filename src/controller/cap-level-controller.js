@@ -137,7 +137,7 @@ class CapLevelController extends EventHandler {
     let height = 0;
     const media = this.media;
     if (media) {
-      height = Math.max(media.height, media.clientHeight || media.offsetHeight);
+      height = Math.max(media.height, media.clientHeight, media.offsetHeight);
       height *= CapLevelController.contentScaleFactor;
     }
     return height;
