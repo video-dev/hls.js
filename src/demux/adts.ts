@@ -11,7 +11,7 @@ import { Observer } from '../observer';
 
 import { Events } from '../events';
 
-export function getAudioConfig (observer: Observer, data: Uint8Array, offset: number, audioCodec: string) {
+export function getAudioConfig (observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string) {
   let adtsObjectType: number; // :int
   let adtsExtensionSampleingIndex: number; // :int
   let adtsChanelConfig: number; // :int
