@@ -123,7 +123,7 @@ export function probe (data: Uint8Array, offset: number): boolean {
     // MPEG frame Length
     const header = parseHeader(data, offset);
     let frameLength = headerLength;
-    if (header && header.frameLength) {
+    if (header?.frameLength) {
       frameLength = header.frameLength;
     }
 
