@@ -11,18 +11,19 @@ import {
   ErrorData
 } from '../types/events';
 import { Level, LevelParsed } from '../types/level';
-import Event from '../events';
-import EventHandler from '../event-handler';
+import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, computeReloadInterval } from './level-helper';
 import Fragment from '../loader/fragment';
 import { MediaPlaylist } from '../types/media-playlist';
+import { NetworkComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
-let chromeOrFirefox: boolean;
+const chromeOrFirefox: boolean = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
-export default class LevelController extends EventHandler {
+export default class LevelController implements NetworkComponentAPI {
   private _levels: Level[] | null = null;
   private _firstLevel: number = -1;
   private _startLevel?: number;
@@ -31,21 +32,36 @@ export default class LevelController extends EventHandler {
   private levelRetryCount: number = 0;
   private manualLevelIndex: number = -1;
   private timer: number | null = null;
+  private hls: Hls;
+
   public onParsedComplete!: Function;
 
-  constructor (hls) {
-    super(hls,
-      Event.MANIFEST_LOADED,
-      Event.LEVEL_LOADED,
-      Event.AUDIO_TRACK_SWITCHED,
-      Event.FRAG_LOADED,
-      Event.ERROR);
-
-    chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+  constructor (hls: Hls) {
+    this.hls = hls;
+    this._registerListeners();
   }
 
-  protected onHandlerDestroying (): void {
+  private _registerListeners () {
+    const { hls } = this;
+    hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.on(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
+    hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.on(Events.ERROR, this.onError, this);
+  }
+
+  private _unregisterListeners () {
+    const { hls } = this;
+    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.off(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
+    hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.off(Events.ERROR, this.onError, this);
+  }
+
+  public destroy () {
     this.clearTimer();
+    this._unregisterListeners();
     this.manualLevelIndex = -1;
   }
 
@@ -67,7 +83,7 @@ export default class LevelController extends EventHandler {
       levels.forEach(level => {
         level.loadError = 0;
         const levelDetails = level.details;
-        if (levelDetails && levelDetails.live) {
+        if (levelDetails?.live) {
           level.details = undefined;
         }
       });
@@ -83,7 +99,7 @@ export default class LevelController extends EventHandler {
     this.clearTimer();
   }
 
-  protected onManifestLoaded (data: ManifestLoadedData): void {
+  protected onManifestLoaded (event: Events.MANIFEST_LOADED, data: ManifestLoadedData): void {
     let levels: Level[] = [];
     let audioTracks: MediaPlaylist[] = [];
     let bitrateStart: number | undefined;
@@ -169,11 +185,11 @@ export default class LevelController extends EventHandler {
         video: videoCodecFound,
         altAudio: audioTracks.some(t => !!t.url)
       };
-      this.hls.trigger(Event.MANIFEST_PARSED, edata);
+      this.hls.trigger(Events.MANIFEST_PARSED, edata);
 
       this.onParsedComplete();
     } else {
-      this.hls.trigger(Event.ERROR, {
+      this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
         fatal: true,
@@ -205,7 +221,7 @@ export default class LevelController extends EventHandler {
           if (this.currentLevelIndex !== newLevel) {
             logger.log(`[level-controller]: switching to level ${newLevel}`);
             this.currentLevelIndex = newLevel;
-            hls.trigger(Event.LEVEL_SWITCHING, Object.assign({}, levels[newLevel], {
+            hls.trigger(Events.LEVEL_SWITCHING, Object.assign({}, levels[newLevel], {
               level: newLevel
             }));
           }
@@ -219,7 +235,7 @@ export default class LevelController extends EventHandler {
           }
         } else {
           // invalid level id given, trigger error
-          hls.trigger(Event.ERROR, {
+          hls.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.LEVEL_SWITCH_ERROR,
             level: newLevel,
@@ -273,7 +289,7 @@ export default class LevelController extends EventHandler {
     this._startLevel = newLevel;
   }
 
-  protected onError (data: ErrorData) {
+  protected onError (event: Events.ERROR, data: ErrorData) {
     if (data.fatal) {
       if (data.type === ErrorTypes.NETWORK_ERROR) {
         this.clearTimer();
@@ -382,7 +398,7 @@ export default class LevelController extends EventHandler {
   }
 
   // reset errors on the successful load of a fragment
-  protected onFragLoaded ({ frag }: FragLoadedData) {
+  protected onFragLoaded (event: Events.FRAG_LOADED, { frag }: FragLoadedData) {
     if (frag !== undefined && frag.type === 'main') {
       if (!this._levels) {
         throw new Error('Levels are not set');
@@ -396,7 +412,7 @@ export default class LevelController extends EventHandler {
     }
   }
 
-  protected onLevelLoaded (data: LevelLoadedData) {
+  protected onLevelLoaded (event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     const { level, details } = data;
     // only process level loaded events matching with expected level
     if (level !== this.currentLevelIndex) {
@@ -423,7 +439,7 @@ export default class LevelController extends EventHandler {
     }
   }
 
-  protected onAudioTrackSwitched (data: TrackSwitchedData) {
+  protected onAudioTrackSwitched (event: Events.AUDIO_TRACK_SWITCHED, data: TrackSwitchedData) {
     const audioGroupId = this.hls.audioTracks[data.id].groupId;
 
     const currentLevel = this.hls.levels[this.currentLevelIndex as number];
@@ -467,7 +483,7 @@ export default class LevelController extends EventHandler {
         // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
         // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
 
-        this.hls.trigger(Event.LEVEL_LOADING, { url, level, id });
+        this.hls.trigger(Events.LEVEL_LOADING, { url, level, id });
       }
     }
   }
@@ -504,7 +520,7 @@ export default class LevelController extends EventHandler {
       return false;
     }).map((level, index) => {
       const { details } = level;
-      if (details && details.fragments) {
+      if (details?.fragments) {
         details.fragments.forEach((fragment) => {
           fragment.level = index;
         });
@@ -513,6 +529,6 @@ export default class LevelController extends EventHandler {
     });
     this._levels = levels;
 
-    this.hls.trigger(Event.LEVELS_UPDATED, { levels });
+    this.hls.trigger(Events.LEVELS_UPDATED, { levels });
   }
 }

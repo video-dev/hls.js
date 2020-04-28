@@ -5,10 +5,12 @@ import BaseAudioDemuxer from './base-audio-demuxer';
 import * as ADTS from './adts';
 import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
+import { HlsEventEmitter } from '../events';
+import { HlsConfig } from '../config';
 
 class AACDemuxer extends BaseAudioDemuxer {
-  private observer: any;
-  private config: any;
+  private readonly observer: HlsEventEmitter;
+  private readonly config: HlsConfig;
   static readonly minProbeByteLength: number = 9;
 
   constructor (observer, config) {

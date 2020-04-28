@@ -1,6 +1,6 @@
 import LevelController from '../../../src/controller/level-controller';
 import HlsMock from '../../mocks/hls.mock';
-import Event from '../../../src/events';
+import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Level } from '../../../src/types/level';
 
@@ -41,11 +41,11 @@ describe('LevelController', function () {
 
     const nextLevel = 1;
 
-    levelController.onManifestLoaded(data);
+    levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
     // First triggers "hlsManifestParsed"
     levelController.level = nextLevel;
     // Then triggers "levelSwitching"
-    expect(triggerSpy).to.have.been.calledWith(Event.LEVEL_SWITCHING, {
+    expect(triggerSpy).to.have.been.calledWith(Events.LEVEL_SWITCHING, {
       attrs: undefined,
       audioCodec: undefined,
       audioGroupIds: undefined,
@@ -70,7 +70,7 @@ describe('LevelController', function () {
 
   describe('onManifestLoaded handler', function () {
     it('should trigger an error when no levels are found in the manifest', function () {
-      levelController.onManifestLoaded({
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         audioTracks: [],
         levels: [],
         networkDetails: '',
@@ -78,7 +78,7 @@ describe('LevelController', function () {
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       });
 
-      expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
+      expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
         fatal: true,
@@ -104,9 +104,9 @@ describe('LevelController', function () {
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       };
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
-      expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
+      expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         altAudio: false,
         audio: false,
         audioTracks: [],
@@ -131,8 +131,8 @@ describe('LevelController', function () {
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
       };
 
-      levelController.onManifestLoaded(data);
-      expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+      expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         altAudio: true,
         audio: false,
         audioTracks: [],
@@ -158,10 +158,10 @@ describe('LevelController', function () {
 
     it('signals video if there is a videoCodec signaled', function () {
       data.levels[0].videoCodec = 'avc1.42e01e';
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(true);
       expect(payload.audio).to.equal(false);
       expect(payload.altAudio).to.equal(false);
@@ -169,10 +169,10 @@ describe('LevelController', function () {
 
     it('signals audio if there is an audioCodec signaled', function () {
       data.levels[0].audioCodec = 'mp4a.40.5';
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(false);
       expect(payload.audio).to.equal(true);
       expect(payload.altAudio).to.equal(false);
@@ -184,10 +184,10 @@ describe('LevelController', function () {
           AUDIO: true
         }
       }];
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(false);
       expect(payload.audio).to.equal(true);
       expect(payload.altAudio).to.equal(false);
@@ -217,10 +217,10 @@ describe('LevelController', function () {
         }
       ];
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(true);
       expect(payload.audio).to.equal(false);
       expect(payload.altAudio).to.equal(true);
@@ -249,10 +249,10 @@ describe('LevelController', function () {
         }
       ];
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(true);
       expect(payload.audio).to.equal(false);
       expect(payload.altAudio).to.equal(false);

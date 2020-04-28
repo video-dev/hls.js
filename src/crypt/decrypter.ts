@@ -113,6 +113,10 @@ export default class Decrypter {
     return this.fastAesKey.expandKey()
       .then((aesKey) => {
         // decrypt using web crypto
+        if (!subtle) {
+          return Promise.reject(new Error('web crypto not initialized'));
+        }
+
         const crypto = new AESCrypto(subtle, iv);
         return crypto.decrypt(data.buffer, aesKey);
       })

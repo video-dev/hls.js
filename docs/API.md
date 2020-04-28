@@ -19,6 +19,7 @@
 - [Fine Tuning](#fine-tuning)
   - [`Hls.DefaultConfig get/set`](#hlsdefaultconfig-getset)
   - [`capLevelToPlayerSize`](#capleveltoplayersize)
+  - [`capLevelOnFPSDrop`](#caplevelonfpsdrop)
   - [`debug`](#debug)
   - [`autoStartLoad`](#autostartload)
   - [`startPosition`](#startposition)
@@ -49,6 +50,7 @@
   - [`fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`](#fragloadingmaxretrytimeout--manifestloadingmaxretrytimeout--levelloadingmaxretrytimeout)
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
   - [`startFragPrefetch`](#startfragprefetch)
+  - [`testBandwidth`](#testBandwidth) 
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
@@ -63,6 +65,11 @@
   - [`captionsTextTrack1LanguageCode`](#captionstexttrack1languagecode)
   - [`captionsTextTrack2Label`](#captionstexttrack2label)
   - [`captionsTextTrack2LanguageCode`](#captionstexttrack2languagecode)
+  - [`captionsTextTrack3Label`](#captionsTextTrack3Label)
+  - [`captionsTextTrack3LanguageCode`](#captionsTextTrack3LanguageCode)
+  - [`captionsTextTrack4Label`](#captionsTextTrack4Label)
+  - [`captionsTextTrack4LanguageCode`](#captionsTextTrack4LanguageCode)
+  - [`renderTextTracksNatively`](#renderTextTracksNatively)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
@@ -91,6 +98,7 @@
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
   - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
   - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
+  - [`hls.removeLevel(levelIndex, urlId)`](#hlsremoveLevel)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -328,6 +336,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fragLoadingRetryDelay: 1000,
       fragLoadingMaxRetryTimeout: 64000,
       startFragPrefetch: false,
+      testBandwidth: true,
       fpsDroppedMonitoringPeriod: 5000,
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 3,
@@ -377,6 +386,13 @@ This configuration will be applied by default to all instances.
 
   - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height). If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
   - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
+
+### `capLevelOnFPSDrop`
+
+(default: `false`)
+
+  - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`, then the quality level is dropped and capped at this lower level.
+  - when set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
 ### `debug`
 
@@ -616,6 +632,13 @@ Prefetch start fragment although media not attached.
 (default: `false`)
 
 Start prefetching start fragment although media not attached yet.
+
+### `testBandwidth`
+                  
+(default: `true`)
+
+Load the first fragment of the lowest level to establish a bandwidth estimate before selecting the first auto-level.
+Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
 
 ### `appendErrorMaxRetry`
 
@@ -872,6 +895,47 @@ RFC 3066 language code for the text track generated for CEA-708 captions track 2
 
 parameter should be a string
 
+### `captionsTextTrack3Label`
+
+(default: `Unknown CC`)
+
+Label for the text track generated for CEA-708 captions track 3. This is how it will appear in the browser's native menu for subtitles and captions.
+
+parameter should be a string
+
+### `captionsTextTrack3LanguageCode`
+
+(default: ``)
+
+RFC 3066 language code for the text track generated for CEA-708 captions track 3.
+
+parameter should be a string
+
+### `captionsTextTrack4Label`
+
+(default: `Unknown CC`)
+
+Label for the text track generated for CEA-708 captions track 4. This is how it will appear in the browser's native menu for subtitles and captions.
+
+parameter should be a string
+
+### `captionsTextTrack4LanguageCode`
+
+(default: ``)
+
+RFC 3066 language code for the text track generated for CEA-708 captions track 4.
+
+parameter should be a string
+
+### `renderTextTracksNatively`
+
+(default: `true`)
+
+Whether or not render captions natively using the HTMLMediaElement's TextTracks. Disable native captions rendering
+when you want to handle rending of track and track cues using `NON_NATIVE_TEXT_TRACKS_FOUND` and `CUES_PARSED` events.
+
+parameter should be a boolean
+  
 ### `stretchShortVideoTrack`
 
 (default: `false`)
@@ -1079,6 +1143,15 @@ Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in conf
 
 get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, `NaN` is returned.
 
+
+### `hls.removeLevel(levelIndex, urlId)`
+
+Remove a loaded level from the list of levels, or a level url in from a list of redundant level urls.
+This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user
+or hls.js can choose from.
+
+Modifying the levels this way will result in a `Hls.Events.LEVELS_UPDATED` event being triggered.
+
 ## Version Control
 
 ### `Hls.version`
@@ -1178,7 +1251,7 @@ Full list of Events is available below:
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL }
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
-    -  data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
+    -  data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}, sessionData: [parsed #EXT-X-SESSION-DATA]}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest }
   - `Hls.Events.LEVEL_SWITCHING`  - fired when a level switch is requested
@@ -1193,6 +1266,8 @@ Full list of Events is available below:
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level }
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment }
+  - `Hls.Events.LEVELS_UPDATED`  - fired when a level is removed after calling `removeLevel()`
+    -  data: { levels : [ available quality levels ] }
   - `Hls.Events.AUDIO_TRACKS_UPDATED`  - fired to notify that audio track lists has been updated
     -  data: { audioTracks : audioTracks }
   - `Hls.Events.AUDIO_TRACK_SWITCHING`  - fired when an audio track switching is requested
@@ -1294,6 +1369,8 @@ Full list of errors is described below:
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT`, fatal : `true`, url : manifest URL, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_PARSING_ERROR` - raised when manifest parsing failed to find proper content
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_PARSING_ERROR`, fatal : `true`, url : manifest URL, reason : parsing error reason }
+  - `Hls.ErrorDetails.LEVEL_EMPTY_ERROR` - raised when loaded level contains no fragments
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_EMPTY_ERROR`, url: playlist URL, reason: error reason, level: index of the bad level }
   - `Hls.ErrorDetails.LEVEL_LOAD_ERROR` - raised when level loading fails because of a network error
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT` - raised when level loading fails because of a timeout
@@ -1332,7 +1409,8 @@ Full list of errors is described below:
   - `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE` - raised after hls.js seeks over a buffer hole to unstuck the playback,
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE`, fatal : `false`, hole : hole duration }
   - `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL` - raised when playback is stuck although currentTime is in a buffered area
-    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL`, fatal : `true` }
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL`, fatal : `true`|`false` }
+    - Not fatal for the first few nudges, but if we reach `config.nudgeMaxRetry` attempts and the player is still stalled, then `BUFFER_NUDGE_ON_STALL` is fatal
 
 ### Mux Errors
 

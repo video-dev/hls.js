@@ -29,7 +29,7 @@ export enum ErrorDetails {
   MANIFEST_PARSING_ERROR = 'manifestParsingError',
   // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
   MANIFEST_INCOMPATIBLE_CODECS_ERROR = 'manifestIncompatibleCodecsError',
-  // Identifier for a level which contains no fragments - data: { url: faulty URL, reason: error reason, level: index of the bad level }
+  // Identifier for a level which contains no fragments - data: { url: faulty URL, reason: "no fragments found in level", level: index of the bad level }
   LEVEL_EMPTY_ERROR = 'levelEmptyError',
   // Identifier for a level load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_ERROR = 'levelLoadError',

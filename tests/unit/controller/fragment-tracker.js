@@ -1,5 +1,5 @@
 import Hls from '../../../src/hls';
-import Event from '../../../src/events';
+import { Events } from '../../../src/events';
 import { FragmentTracker, FragmentState } from '../../../src/controller/fragment-tracker';
 import { PlaylistLevelType } from '../../../src/types/loader';
 
@@ -25,7 +25,7 @@ function createMockFragment (data, types) {
  * @param {Fragment} fragment
  */
 function loadFragment (hls, fragment) {
-  hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+  hls.trigger(Events.FRAG_LOADED, { frag: fragment });
 }
 
 /**
@@ -35,8 +35,9 @@ function loadFragment (hls, fragment) {
  */
 function loadFragmentAndBuffered (hls, fragment) {
   loadFragment(hls, fragment);
-  hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+  hls.trigger(Events.FRAG_BUFFERED, { frag: fragment });
 }
+
 describe('FragmentTracker', function () {
   describe('getPartialFragment', function () {
     let partialFragment;
@@ -52,7 +53,7 @@ describe('FragmentTracker', function () {
       type: 'main'
     }, ['audio', 'video']);
 
-    hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+    hls.trigger(Events.FRAG_LOADED, { frag: fragment });
 
     const buffered = createMockBuffer([
       {
@@ -64,9 +65,9 @@ describe('FragmentTracker', function () {
     const timeRanges = {};
     timeRanges.video = buffered;
     timeRanges.audio = buffered;
-    hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+    hls.trigger(Events.BUFFER_APPENDED, { timeRanges });
 
-    hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
+    hls.trigger(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
     it('detects fragments that partially loaded', function () {
       // Get the partial fragment at a time
@@ -77,6 +78,7 @@ describe('FragmentTracker', function () {
       partialFragment = fragmentTracker.getPartialFragment(1);
       expect(partialFragment).to.equal(fragment);
     });
+
     it('returns null when time is not inside partial fragment', function () {
       partialFragment = fragmentTracker.getPartialFragment(1.5);
       expect(partialFragment).to.not.exist;
@@ -99,7 +101,7 @@ describe('FragmentTracker', function () {
         level: 0,
         type: 'main'
       }, ['audio', 'video']);
-      hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+      hls.trigger(Events.FRAG_LOADED, { frag: fragment });
     };
 
     it('detects fragments that never loaded', function () {
@@ -119,9 +121,9 @@ describe('FragmentTracker', function () {
       timeRanges = {};
       timeRanges.video = buffered;
       timeRanges.audio = buffered;
-      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+      hls.trigger(Events.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
+      hls.trigger(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       expect(fragmentTracker.getState(fragment)).to.equal(FragmentState.OK);
     });
@@ -137,9 +139,9 @@ describe('FragmentTracker', function () {
       timeRanges = {};
       timeRanges.video = buffered;
       timeRanges.audio = buffered;
-      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+      hls.trigger(Events.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
+      hls.trigger(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       expect(fragmentTracker.getState(fragment)).to.equal(FragmentState.PARTIAL);
     });
@@ -155,9 +157,9 @@ describe('FragmentTracker', function () {
       timeRanges = {};
       timeRanges.video = buffered;
       timeRanges.audio = buffered;
-      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+      hls.trigger(Events.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
+      hls.trigger(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       expect(fragmentTracker.getState(fragment)).to.equal(FragmentState.PARTIAL);
 
@@ -171,7 +173,7 @@ describe('FragmentTracker', function () {
       timeRanges = {};
       timeRanges.video = buffered;
       timeRanges.audio = buffered;
-      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+      hls.trigger(Events.BUFFER_APPENDED, { timeRanges });
 
       expect(fragmentTracker.getState(fragment)).to.equal(FragmentState.NOT_LOADED);
     });
@@ -303,7 +305,7 @@ describe('FragmentTracker', function () {
         level: 1,
         type: 'main'
       }, ['audio', 'video']);
-      hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+      hls.trigger(Events.FRAG_LOADED, { frag: fragment });
 
       timeRanges = {};
       timeRanges.video = createMockBuffer([
@@ -318,9 +320,9 @@ describe('FragmentTracker', function () {
           endPTS: 2
         }
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+      hls.trigger(Events.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
+      hls.trigger(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       expect(fragmentTracker.getState(fragment)).to.equal(FragmentState.PARTIAL);
     });
@@ -333,7 +335,7 @@ describe('FragmentTracker', function () {
         level: 1,
         type: 'main'
       }, ['audio', 'video']);
-      hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+      hls.trigger(Events.FRAG_LOADED, { frag: fragment });
 
       timeRanges = {};
       timeRanges.video = createMockBuffer([
@@ -348,9 +350,9 @@ describe('FragmentTracker', function () {
           endPTS: 2
         }
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+      hls.trigger(Events.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
+      hls.trigger(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       expect(fragmentTracker.getState(fragment)).to.equal(FragmentState.PARTIAL);
     });
@@ -363,7 +365,7 @@ describe('FragmentTracker', function () {
         level: 1,
         type: 'audio'
       }, ['audio']);
-      hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+      hls.trigger(Events.FRAG_LOADED, { frag: fragment });
 
       timeRanges = {};
       timeRanges.video = createMockBuffer([
@@ -378,9 +380,9 @@ describe('FragmentTracker', function () {
           endPTS: 2
         }
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+      hls.trigger(Events.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
+      hls.trigger(Events.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       expect(fragmentTracker.getState(fragment)).to.equal(FragmentState.OK);
     });

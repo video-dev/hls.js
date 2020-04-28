@@ -13,7 +13,7 @@ export default class Chunker {
     const result: Array<Uint8Array> = [];
 
     let temp: Uint8Array | null = null;
-    if (cache && cache.length) {
+    if (cache?.length) {
       temp = appendUint8Array(cache, data);
       this.cache = null;
     } else {
