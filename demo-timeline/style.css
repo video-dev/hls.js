@@ -1,0 +1,245 @@
+html {
+  font-family: sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%
+}
+
+body {
+  margin: 0;
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: #333;
+}
+
+header {
+  text-align: center;
+  margin: 0 10px;
+}
+
+a {
+  color: #337ab7;
+  text-decoration: none;
+  background-color: transparent;
+}
+
+
+h1,h2,h3,h4,h5,h6 {
+  font-family: inherit;
+  font-weight: 500;
+  line-height: 1.1;
+  color: inherit;
+}
+
+h2 {
+  font-size: 30px;
+}
+
+h3 {
+  font-size: 24px;
+}
+
+th, td {
+  padding: 15px;
+}
+
+select {
+  background-color: rgb(181, 222, 255);
+  font-weight: 600;
+  padding: 5px 0;
+}
+
+button, select {
+  text-transform: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+select option {
+  font-size: 11px;
+}
+
+.innerControls input {
+  font-weight: normal;
+  float: right;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.demo-player-controls-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: stretch;
+  margin: 0 10px;
+  overflow: hidden;
+}
+
+.demo-timeline-chart-container {
+  margin: 0 10px;
+  /*overflow: hidden;*/
+  border: 1px solid #606060;
+}
+
+.video-flex {
+  flex: 0 0 auto;
+  margin: 0 auto;
+}
+
+.demo-controls-wrapper {
+  flex: 1 1 auto;
+  padding: 5px 5px 0 3px;
+  border: 1px solid #606060;
+  max-width: calc(100% - 10px);
+}
+
+.config-editor-wrapper {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #606060;
+  min-height: 150px;
+  min-width: 20em;
+  max-width: calc(100% - 2px);
+}
+
+.playback-controls-wrapper {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  align-items: flex-start;
+  padding: 5px 3px;
+  width: 100%;
+}
+
+.playback-controls-wrapper span {
+  flex: 0 0 auto;
+}
+
+.config-editor-container {
+  flex: 1 1 auto;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#config-editor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.config-editor-commands {
+  flex: 0 1 auto;
+  background-color: #ddd;
+  border-top: solid 1px #ccc;
+  padding: 3px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.config-editor-commands label {
+  display: inline-block;
+  max-width: 100%;
+  margin-bottom: 0;
+  font-weight: 700;
+}
+
+.config-editor-commands button {
+  padding: 5px 8px;
+  font-size: 14px;
+}
+
+.innerControls {
+  display: flex;
+  font-size: 12px;
+  align-items: center;
+  margin-bottom: 5px;
+  padding-left: 5px;
+  justify-content: space-between;
+}
+
+.center {
+  width: 70%;
+  min-width: 615px;
+  overflow: hidden;
+  margin-left: auto;
+  margin-right: auto;
+  display: block
+}
+
+#toggleButtons button {
+  width: 19%;
+  display : inline-block;
+  text-align: center;
+  font-size: 10pt;
+  font-weight: bolder;
+  background-color: rgb(181, 222, 255)
+}
+
+#statusOut {
+  height: auto;
+  max-height: 4em;
+  overflow: auto;
+}
+
+#errorOut {
+  height: auto;
+  max-height: 4em;
+  overflow: auto;
+}
+
+
+#streamURL,
+#streamSelect {
+  width: calc(100% - 10px);
+  margin-left: 3px;
+}
+
+#streamURL {
+  margin-bottom: 10px;
+  padding-left: 3px;
+}
+
+#streamSelect {
+  padding: 5px 0;
+}
+
+#StreamPermalink {
+  padding: 0 10px;
+}
+
+#StreamPermalink a {
+  font-size: 10px;
+  font-family: monospace;
+}
+
+/* Small devices (portrait tablets and large phones, 600px and up) */
+@media only screen and (min-width: 672px) {
+  .config-editor-wrapper {
+    height: auto;
+  }
+
+  .demo-controls-wrapper {
+    max-width: 50%;
+  }
+
+}
+
+@media only screen and (min-width: 1000px) {
+  .demo-controls-wrapper {
+    max-width: calc(100% - 10px);
+  }
+}

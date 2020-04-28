@@ -342,7 +342,7 @@ export function getDuration (data, initData) {
         sampleDuration = readUint32(tfhd, 8);
       }
       const sampleCount = readUint32(trun, 4);
-      rawDuration += sampleDuration * sampleCount;
+      rawDuration = sampleDuration * sampleCount;
     } else {
       rawDuration = computeRawDurationFromSamples(trun);
     }
@@ -358,7 +358,7 @@ export function getDuration (data, initData) {
   if (totalDuration === 0) {
     // If duration samples are not available in the traf use sidx subsegment_duration
     const sidx = parseSegmentIndex(data);
-    if (sidx && sidx.references) {
+    if (sidx?.references) {
       return sidx.references.reduce((dur, ref) => dur + ref.info.duration || 0, 0);
     }
   }

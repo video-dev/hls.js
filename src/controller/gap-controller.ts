@@ -1,6 +1,6 @@
 import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import Event from '../events';
+import { Events } from '../events';
 import { logger } from '../utils/logger';
 import Hls from '../hls';
 import { HlsConfig } from '../config';
@@ -168,7 +168,7 @@ export default class GapController {
       // Report stalled error once
       this.stallReported = true;
       logger.warn(`Playback stalling at @${media.currentTime} due to low buffer`);
-      hls.trigger(Event.ERROR, {
+      hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: false,
@@ -182,7 +182,7 @@ export default class GapController {
    * @param partial - The partial fragment found at the current time (where playback is stalling).
    * @private
    */
-  private _trySkipBufferHole (partial: Fragment | null) {
+  private _trySkipBufferHole (partial: Fragment | null): number {
     const { config, hls, media } = this;
     const currentTime = media.currentTime;
     let lastEndTime = 0;
@@ -196,7 +196,7 @@ export default class GapController {
         this.stalled = null;
         media.currentTime = targetTime;
         if (partial) {
-          hls.trigger(Event.ERROR, {
+          hls.trigger(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
             fatal: false,
@@ -226,15 +226,14 @@ export default class GapController {
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
       logger.warn(`Nudging 'currentTime' from ${currentTime} to ${targetTime}`);
       media.currentTime = targetTime;
-
-      hls.trigger(Event.ERROR, {
+      hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
         fatal: false
       });
     } else {
       logger.error(`Playhead still not moving while enough data buffered @${currentTime} after ${config.nudgeMaxRetry} nudges`);
-      hls.trigger(Event.ERROR, {
+      hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: true

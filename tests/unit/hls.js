@@ -7,7 +7,7 @@ describe('Hls', function () {
       const MOCKED_ESTIMATE = 2000;
       const hls = new Hls();
       hls.abrController = {
-        _bwEstimator: {
+        bwEstimator: {
           getEstimate: () => MOCKED_ESTIMATE
         }
       };

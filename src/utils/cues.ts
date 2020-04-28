@@ -1,22 +1,19 @@
 import { fixLineBreaks } from './vttparser';
 import { CaptionScreen, Row } from './cea-608-parser';
 
-interface VTTCue extends TextTrackCue {
-  new(start: number, end: number, cueText: string): VTTCue
-  line: number
-  align: string
-  position: number
+export interface CuesInterface {
+  newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[]
 }
 
-export function createCues (startTime: number, endTime: number, captionScreen: CaptionScreen) {
+export function newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[] {
+  const result: VTTCue[] = [];
   let row: Row;
   // the type data states this is VTTCue, but it can potentially be a TextTrackCue on old browsers
   let cue: VTTCue;
   let indenting: boolean;
   let indent: number;
   let text: string;
-  const VTTCue: VTTCue = (self as any).VTTCue as VTTCue || TextTrackCue;
-  const cues: Array<VTTCue> = [];
+  const Cue = (self.VTTCue || self.TextTrackCue) as any;
 
   for (let r = 0; r < captionScreen.rows.length; r++) {
     row = captionScreen.rows[r];
@@ -41,7 +38,7 @@ export function createCues (startTime: number, endTime: number, captionScreen: C
         endTime += 0.0001;
       }
 
-      cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
+      cue = new Cue(startTime, endTime, fixLineBreaks(text.trim()));
 
       if (indent >= 16) {
         indent--;
@@ -67,9 +64,11 @@ export function createCues (startTime: number, endTime: number, captionScreen: C
         cue.align = 'left';
         cue.position = Math.max(10, Math.min(90, 10 + 2.5 * indent));
       }
-      cues.push(cue);
+      result.push(cue);
+      if (track) {
+        track.addCue(cue);
+      }
     }
   }
-
-  return cues;
+  return result;
 }

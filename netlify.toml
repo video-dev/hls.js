@@ -11,4 +11,8 @@
 # Deploy Preview context: all deploys resulting from a pull/merge request will
 # inherit these settings.
 [context.deploy-preview]
-  command = "TRAVIS_MODE=netlifyPr ./scripts/travis.sh"
+  command = "./scripts/travis.sh"
+  
+[context.deploy-preview.environment]
+  TRAVIS_MODE = "netlifyPr"
+  NODE_VERSION = "lts/*"

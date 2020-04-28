@@ -1,27 +1,19 @@
 import Transmuxer, { isPromise } from '../demux/transmuxer';
-import Event from '../events';
+import { Events } from '../events';
 import { enableLogs } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
 import { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 
 export default function TransmuxerWorker (self) {
-  const observer = new EventEmitter() as any;
-  observer.trigger = (event, data) => {
-    observer.emit(event, event, ...data);
-  };
-
-  observer.off = (event, ...data) => {
-    observer.removeListener(event, ...data);
-  };
-
+  const observer = new EventEmitter();
   const forwardMessage = (ev, data) => {
     self.postMessage({ event: ev, data: data });
   };
 
   // forward events to main thread
-  observer.on(Event.FRAG_DECRYPTED, forwardMessage);
-  observer.on(Event.ERROR, forwardMessage);
+  observer.on(Events.FRAG_DECRYPTED, forwardMessage);
+  observer.on(Events.ERROR, forwardMessage);
 
   self.addEventListener('message', (ev) => {
     const data = ev.data;

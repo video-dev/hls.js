@@ -2,12 +2,11 @@
  * Buffer Controller
  */
 
-import Events from '../events';
-import EventHandler from '../event-handler';
+import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
-import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes } from '../loader/fragment';
 import { TrackSet } from '../types/track';
 import BufferOperationQueue from './buffer-operation-queue';
 import {
@@ -16,11 +15,13 @@ import {
   SourceBufferName,
   SourceBufferListeners
 } from '../types/buffer';
-import { LevelUpdatedData, BufferAppendingEventPayload } from '../types/events';
+import { LevelUpdatedData, BufferAppendingData, MediaAttachingData, ManifestParsedData, BufferCodecsData, LevelPTSUpdatedData, BufferEOSData, BufferFlushingData, FragParsedData } from '../types/events';
+import { ComponentAPI } from '../types/component-api';
+import Hls from '../hls';
 
 const MediaSource = getMediaSource();
 
-export default class BufferController extends EventHandler {
+export default class BufferController implements ComponentAPI {
   // the value that we have set mediasource.duration to
   // (the actual duration may be tweaked slighly by the browser)
   private _msDuration: number | null = null;
@@ -34,6 +35,8 @@ export default class BufferController extends EventHandler {
   private operationQueue!: BufferOperationQueue;
   // References to event listeners for each SourceBuffer, so that they can be referenced for event removal
   private listeners!: SourceBufferListeners;
+
+  private hls: Hls;
 
   // The number of BUFFER_CODEC events received before any sourceBuffers are created
   public bufferCodecEventsExpected: number = 0;
@@ -54,22 +57,44 @@ export default class BufferController extends EventHandler {
   public pendingTracks: TrackSet = {};
   public sourceBuffer!: SourceBuffers;
 
-  constructor (hls: any) {
-    super(hls,
-      Events.MEDIA_ATTACHING,
-      Events.MEDIA_DETACHING,
-      Events.MANIFEST_PARSED,
-      Events.BUFFER_RESET,
-      Events.BUFFER_APPENDING,
-      Events.BUFFER_CODECS,
-      Events.BUFFER_EOS,
-      Events.BUFFER_FLUSHING,
-      Events.LEVEL_PTS_UPDATED,
-      Events.LEVEL_UPDATED,
-      Events.FRAG_PARSED
-    );
+  constructor (hls: Hls) {
     this.hls = hls;
     this._initSourceBuffer();
+    this.registerListeners();
+  }
+
+  public destroy () {
+    this.unregisterListeners();
+  }
+
+  protected registerListeners () {
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.on(Events.BUFFER_RESET, this.onBufferReset, this);
+    hls.on(Events.BUFFER_APPENDING, this.onBufferAppending, this);
+    hls.on(Events.BUFFER_CODECS, this.onBufferCodecs, this);
+    hls.on(Events.BUFFER_EOS, this.onBufferEos, this);
+    hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
+    hls.on(Events.LEVEL_PTS_UPDATED, this.onLevelPtsUpdated, this);
+    hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
+    hls.on(Events.FRAG_PARSED, this.onFragParsed, this);
+  }
+
+  protected unregisterListeners () {
+    const { hls } = this;
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.off(Events.BUFFER_RESET, this.onBufferReset, this);
+    hls.off(Events.BUFFER_APPENDING, this.onBufferAppending, this);
+    hls.off(Events.BUFFER_CODECS, this.onBufferCodecs, this);
+    hls.off(Events.BUFFER_EOS, this.onBufferEos, this);
+    hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
+    hls.off(Events.LEVEL_PTS_UPDATED, this.onLevelPtsUpdated, this);
+    hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
+    hls.off(Events.FRAG_PARSED, this.onFragParsed, this);
   }
 
   private _initSourceBuffer () {
@@ -82,7 +107,7 @@ export default class BufferController extends EventHandler {
     };
   }
 
-  onManifestParsed (data: { altAudio: boolean }) {
+  protected onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData) {
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
@@ -91,7 +116,7 @@ export default class BufferController extends EventHandler {
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
-  onMediaAttaching (data: { media: HTMLMediaElement }) {
+  protected onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     const media = this.media = data.media;
     if (media && MediaSource) {
       const ms = this.mediaSource = new MediaSource();
@@ -106,7 +131,7 @@ export default class BufferController extends EventHandler {
     }
   }
 
-  onMediaDetaching () {
+  protected onMediaDetaching () {
     logger.log('media source detaching');
     const { media, mediaSource, _objectUrl } = this;
     if (mediaSource) {
@@ -155,7 +180,7 @@ export default class BufferController extends EventHandler {
     this.hls.trigger(Events.MEDIA_DETACHED);
   }
 
-  onBufferReset () {
+  protected onBufferReset () {
     const sourceBuffer = this.sourceBuffer;
     this.getSourceBufferTypes().forEach(type => {
       const sb = sourceBuffer[type];
@@ -176,15 +201,15 @@ export default class BufferController extends EventHandler {
     this._initSourceBuffer();
   }
 
-  onBufferCodecs (tracks: TrackSet) {
+  protected onBufferCodecs (event: Events.BUFFER_CODECS, data: BufferCodecsData) {
     // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
     // if sourcebuffers already created, do nothing ...
     if (Object.keys(this.sourceBuffer).length) {
       return;
     }
 
-    Object.keys(tracks).forEach(trackName => {
-      this.pendingTracks[trackName] = tracks[trackName];
+    Object.keys(data).forEach(trackName => {
+      this.pendingTracks[trackName] = data[trackName];
     });
 
     this.bufferCodecEventsExpected = Math.max(this.bufferCodecEventsExpected - 1, 0);
@@ -193,7 +218,7 @@ export default class BufferController extends EventHandler {
     }
   }
 
-  onBufferAppending (eventData: BufferAppendingEventPayload) {
+  protected onBufferAppending (event: Events.BUFFER_APPENDING, eventData: BufferAppendingData) {
     const { hls, operationQueue } = this;
     const { data, type, frag, chunkMeta } = eventData;
     const chunkStats = chunkMeta.buffering[type];
@@ -231,7 +256,7 @@ export default class BufferController extends EventHandler {
         const event = {
           type: ErrorTypes.MEDIA_ERROR,
           parent: frag.type,
-          details: '',
+          details: ErrorDetails.BUFFER_APPEND_ERROR,
           err,
           fatal: false
         };
@@ -258,7 +283,7 @@ export default class BufferController extends EventHandler {
     operationQueue.append(operation, type as SourceBufferName);
   }
 
-  onBufferFlushing (data: { startOffset: number, endOffset: number, type?: SourceBufferName }) {
+  protected onBufferFlushing (event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {
     const { operationQueue } = this;
     const flushOperation = (type): BufferOperation => ({
       execute: this.removeExecutor.bind(this, type, data.startOffset, data.endOffset),
@@ -278,7 +303,7 @@ export default class BufferController extends EventHandler {
     }
   }
 
-  onFragParsed (data: { frag: Fragment }) {
+  protected onFragParsed (event: Events.FRAG_PARSED, data: FragParsedData) {
     const { frag } = data;
     const buffersAppendedTo: Array<SourceBufferName> = [];
 
@@ -305,7 +330,7 @@ export default class BufferController extends EventHandler {
 
   // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
   // an undefined data.type will mark all buffers as EOS.
-  onBufferEos (data: { type?: SourceBufferName }) {
+  protected onBufferEos (event: Events.BUFFER_EOS, data: BufferEOSData) {
     for (const type in this.sourceBuffer) {
       if (!data.type || data.type === type) {
         const sb = this.sourceBuffer[type as SourceBufferName];
@@ -330,7 +355,7 @@ export default class BufferController extends EventHandler {
     this.blockBuffers(endStream);
   }
 
-  onLevelUpdated ({ details }: LevelUpdatedData) {
+  protected onLevelUpdated (event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData) {
     if (!details.fragments.length) {
       return;
     }
@@ -352,7 +377,7 @@ export default class BufferController extends EventHandler {
   // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
   // event if SB is in updating state.
   // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
-  onLevelPtsUpdated (data: { type: SourceBufferName, start: number }) {
+  protected onLevelPtsUpdated (event: Events.LEVEL_PTS_UPDATED, data: LevelPTSUpdatedData) {
     const { operationQueue, sourceBuffer, tracks } = this;
     const type = data.type;
     const audioTrack = tracks.audio;
@@ -409,7 +434,7 @@ export default class BufferController extends EventHandler {
           // time will lead to playback freezing)
           // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
           logger.log(`[buffer-controller]: Enqueueing operation to flush ${type} back buffer`);
-          this.onBufferFlushing({
+          this.onBufferFlushing(Events.BUFFER_FLUSHING, {
             startOffset: 0,
             endOffset: targetBackBufferPosition,
             type
@@ -424,7 +449,7 @@ export default class BufferController extends EventHandler {
    * 'liveDurationInfinity` is set to `true`
    * More details: https://github.com/video-dev/hls.js/issues/355
    */
-  updateMediaElementDuration (levelDuration: number) {
+  private updateMediaElementDuration (levelDuration: number) {
     if (!this.media || !this.mediaSource || this.mediaSource.readyState !== 'open') {
       return;
     }
@@ -451,7 +476,7 @@ export default class BufferController extends EventHandler {
     }
   }
 
-  private checkPendingTracks () {
+  protected checkPendingTracks () {
     const { bufferCodecEventsExpected, operationQueue, pendingTracks } = this;
 
     // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
@@ -470,7 +495,7 @@ export default class BufferController extends EventHandler {
     }
   }
 
-  private createSourceBuffers (tracks: TrackSet) {
+  protected createSourceBuffers (tracks: TrackSet) {
     const { sourceBuffer, mediaSource } = this;
     if (!mediaSource) {
       throw Error('createSourceBuffers called when mediaSource was null');
@@ -504,7 +529,7 @@ export default class BufferController extends EventHandler {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_ADD_CODEC_ERROR,
             fatal: false,
-            err,
+            error: err,
             mimeType: mimeType
           });
         }
@@ -517,7 +542,12 @@ export default class BufferController extends EventHandler {
   private _onMediaSourceOpen = () => {
     const { hls, media, mediaSource } = this;
     logger.log('media source opened');
-    hls.trigger(Events.MEDIA_ATTACHED, { media });
+    if (media) {
+      hls.trigger(Events.MEDIA_ATTACHED, { media });
+    } else {
+      logger.log('[buffer-controller]: Media source opened, and no media was attached');
+    }
+
     if (mediaSource) {
       // once received, don't listen anymore to sourceopen event
       mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
