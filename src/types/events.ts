@@ -229,9 +229,12 @@ export interface CuesParsedData {
 }
 
 interface NonNativeTextTrack {
+  _id?: string
   label: any
   kind: string
   default: boolean
+  closedCaptions?: MediaPlaylist
+  subtitleTrack?: MediaPlaylist
 }
 
 export interface NonNativeTextTracksData {

@@ -229,6 +229,7 @@ class TimelineController implements ComponentAPI {
     }
     const label = trackProperties.label as string;
     const track = {
+      _id: trackName,
       label,
       kind: 'captions',
       default: trackProperties.media ? !!trackProperties.media.default : false,
