@@ -58,14 +58,14 @@ module.exports = {
 
     // limit code block and line length
     /*
-        "max-len": 1,
-        "max-statements": 1,
-        "max-depth": 1,
-        "max-nested-callbacks": 1,
-        "max-params": 1,
-        "max-statements": 1,
-        "max-statements-per-line": 1
-        */
+    "max-len": 1,
+    "max-statements": 1,
+    "max-depth": 1,
+    "max-nested-callbacks": 1,
+    "max-params": 1,
+    "max-statements": 1,
+    "max-statements-per-line": 1
+    */
 
     // loosening of code-quality rules we may want to fix later
     // (warnings for now)
@@ -103,7 +103,6 @@ module.exports = {
     'no-empty': 1,
     'no-mixed-operators': 1,
     'no-unused-vars': 2,
-    '@typescript-eslint/no-unused-vars': 1,
     'no-console': 1,
     'no-fallthrough': 1,
     'no-case-declarations': 2,
@@ -119,12 +118,22 @@ module.exports = {
     'no-void': 0,
     'no-useless-catch': 2,
     'lines-between-class-members': 2,
-    'no-prototype-builtins': 0,
-    '@typescript-eslint/consistent-type-assertions': [ 2,
-      {
-        'assertionStyle': 'as',
-        'objectLiteralTypeAssertions': 'never'
+    'no-prototype-builtins': 0
+  },
+  'overrides': [
+    {
+      'files': ['*.ts'],
+      'rules': {
+        'no-unused-vars': 0,
+        '@typescript-eslint/no-unused-vars': 1,
+        '@typescript-eslint/prefer-optional-chain': 2,
+        '@typescript-eslint/consistent-type-assertions': [ 2,
+          {
+            'assertionStyle': 'as',
+            'objectLiteralTypeAssertions': 'never'
+          }
+        ]
       }
-    ]
-  }
+    }
+  ]
 };

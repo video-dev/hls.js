@@ -11,7 +11,7 @@
 
 import * as ADTS from './adts';
 import * as MpegAudio from './mpegaudio';
-import Event from '../events';
+import { Events, HlsEventEmitter } from '../events';
 import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
 import { logger } from '../utils/logger';
@@ -22,10 +22,11 @@ import {
   DemuxedTrack,
   Demuxer,
   DemuxerResult,
-  AvcSample
+  AvcSample, DemuxedMetadataTrack
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
+import { HlsConfig } from '../config';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -45,8 +46,8 @@ const RemuxerTrackIdConfig = {
 class TSDemuxer implements Demuxer {
   static readonly minProbeByteLength = 188;
 
-  private readonly observer: any;
-  private readonly config: any;
+  private readonly observer: HlsEventEmitter;
+  private readonly config: HlsConfig;
   private typeSupported: any;
 
   private sampleAes: any = null;
@@ -62,13 +63,13 @@ class TSDemuxer implements Demuxer {
 
   private _avcTrack!: DemuxedAvcTrack;
   private _audioTrack!: DemuxedAudioTrack;
-  private _id3Track!: DemuxedTrack;
+  private _id3Track!: DemuxedMetadataTrack;
   private _txtTrack!: DemuxedTrack;
   private aacOverFlow: any;
   private avcSample: AvcSample | null = null;
   private remainderData: Uint8Array | null = null;
 
-  constructor (observer, config, typeSupported) {
+  constructor (observer: HlsEventEmitter, config: HlsConfig, typeSupported) {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
@@ -327,7 +328,12 @@ class TSDemuxer implements Demuxer {
           break;
         }
       } else {
-        this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
+        this.observer.emit(Events.ERROR, Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_PARSING_ERROR,
+          fatal: false,
+          reason: 'TS packet did not start with 0x47'
+        });
       }
     }
 
@@ -335,15 +341,12 @@ class TSDemuxer implements Demuxer {
     audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
 
-    const result = {
+    return {
       audioTrack,
       avcTrack,
       id3Track,
       textTrack: this._txtTrack
     };
-
-    this.extractRemainingSamples(result);
-    return result;
   }
 
   flush () {
@@ -388,7 +391,7 @@ class TSDemuxer implements Demuxer {
 
       audioTrack.pesData = null;
     } else {
-      if (audioData && audioData.size) {
+      if (audioData?.size) {
         logger.log('last AAC PES packet truncated,might overlap between fragments');
       }
 
@@ -732,7 +735,7 @@ class TSDemuxer implements Demuxer {
       const samples = this._avcTrack.samples;
       avcSample = samples[samples.length - 1];
     }
-    if (avcSample && avcSample.units) {
+    if (avcSample?.units) {
       const units = avcSample.units;
       lastUnit = units[units.length - 1];
     }
@@ -923,7 +926,12 @@ class TSDemuxer implements Demuxer {
         fatal = true;
       }
       logger.warn(`parsing error:${reason}`);
-      this.observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
+      this.observer.emit(Events.ERROR, Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal,
+        reason
+      });
       if (fatal) {
         return;
       }
@@ -950,17 +958,19 @@ class TSDemuxer implements Demuxer {
 
     // scan for aac samples
     while (offset < len) {
-      if (ADTS.isHeader(data, offset) && (offset + 5) < len) {
-        const frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
-        if (frame) {
-          // logger.log(`${Math.round(frame.sample.pts)} : AAC`);
-          offset += frame.length;
-          stamp = frame.sample.pts;
-          frameIndex++;
-        } else {
-          // logger.log('Unable to parse AAC frame');
-          break;
+      if (ADTS.isHeader(data, offset)) {
+        if ((offset + 5) < len) {
+          const frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
+          if (frame) {
+            offset += frame.length;
+            stamp = frame.sample.pts;
+            frameIndex++;
+            continue;
+          }
         }
+        // We are at an ADTS header, but do not have enough data for a frame
+        // Remaining data will be added to aacOverFlow
+        break;
       } else {
         // nothing found, keep looking
         offset++;
@@ -1042,10 +1052,8 @@ function parsePMT (data, offset, mpegSupported, isSampleAes) {
         logger.log('unknown stream type:' + data[offset]);
         break;
       }
-      /* falls through */
-
-      // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
-    case 0x0f:
+    /* falls through */
+    case 0x0f: // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
       // logger.log('AAC PID:'  + pid);
       if (result.audio === -1) {
         result.audio = pid;
@@ -1068,9 +1076,7 @@ function parsePMT (data, offset, mpegSupported, isSampleAes) {
         break;
       }
       /* falls through */
-
-      // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
-    case 0x1b:
+    case 0x1b: // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
       // logger.log('AVC PID:'  + pid);
       if (result.avc === -1) {
         result.avc = pid;

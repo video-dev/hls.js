@@ -2,6 +2,7 @@ import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
 import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
+import { Events } from '../../../src/events';
 
 const sinon = require('sinon');
 
@@ -42,8 +43,8 @@ describe('EMEController', function () {
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
     });
 
-    emeController.onMediaAttached({ media });
-    emeController.onManifestParsed({ media });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, { media });
 
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
@@ -61,12 +62,12 @@ describe('EMEController', function () {
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
     });
 
-    emeController.onMediaAttached({ media });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
 
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
 
-    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: fakeLevels });
 
     self.setTimeout(function () {
       expect(media.setMediaKeys.callCount).to.equal(0);
@@ -75,7 +76,7 @@ describe('EMEController', function () {
     }, 0);
   });
 
-  it('should trigger key system error when bad encrypted data is received', function (done) {
+  it('should trigger key system error(s) when bad encrypted data is received', function (done) {
     const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
@@ -92,14 +93,15 @@ describe('EMEController', function () {
       initData: 'bad data'
     };
 
-    emeController.onMediaAttached({ media });
-    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: fakeLevels });
 
     media.emit('encrypted', badData);
 
     self.setTimeout(function () {
+      expect(emeController.hls.trigger).to.have.been.calledTwice;
       expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
-      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_SESSION);
       done();
     }, 0);
   });
