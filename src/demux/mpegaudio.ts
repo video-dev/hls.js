@@ -56,7 +56,7 @@ const BytesInSlot = [
 export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number) {
   // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
   if (offset + 24 > data.length) {
-    return undefined;
+    return;
   }
 
   const header = parseHeader(data, offset);
@@ -72,8 +72,6 @@ export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset:
 
     return { sample, length: header.frameLength };
   }
-
-  return undefined;
 }
 
 export function parseHeader (data: Uint8Array, offset: number) {
