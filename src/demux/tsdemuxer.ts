@@ -939,7 +939,7 @@ class TSDemuxer implements Demuxer {
 
     ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
 
-    if (!track.samplerate) {
+    if (typeof track.samplerate === 'undefined') {
       return;
     }
 
