@@ -1,5 +1,6 @@
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
+import { Events } from '../../../src/events';
 
 const sinon = require('sinon');
 
@@ -62,7 +63,7 @@ describe('AudioTrackController', function () {
         done();
       });
 
-      audioTrackController.onManifestParsed({
+      audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
         audioTracks: tracks
       });
     });
@@ -74,10 +75,46 @@ describe('AudioTrackController', function () {
         done();
       });
 
-      audioTrackController.onManifestParsed({
+      audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
         audioTracks: null
       });
     });
+  });
+
+  it('should select audioGroupId and trigger AUDIO_TRACK_SWITCHING', function (done) {
+    hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, (event, data) => {
+      done();
+    });
+
+    const levels = [
+      {
+        urlId: 1,
+        audioGroupIds: ['1', '2']
+      }
+    ];
+
+    hls.levelController = {
+      levels
+    };
+
+    const newLevelInfo = levels[0];
+    const newGroupId = newLevelInfo.audioGroupIds[newLevelInfo.urlId];
+
+    audioTrackController.audioGroupId = '1';
+    audioTrackController.tracks = tracks;
+    audioTrackController.audioTrack = 2;
+
+    // current track name
+    const audioTrackName = tracks[audioTrackController.audioTrack].name;
+
+    audioTrackController.onManifestParsed({
+      audioTracks: tracks
+    });
+
+    // group has switched
+    expect(audioTrackController.audioGroupId).to.equal(newGroupId);
+    // name is still the same
+    expect(tracks[audioTrackController.audioTrack].name).to.equal(audioTrackName);
   });
 
   describe('_needsTrackLoading', function () {
@@ -96,7 +133,7 @@ describe('AudioTrackController', function () {
     it('should update the current audioGroupId', function () {
       audioTrackController.tracks = tracks;
       audioTrackController.audioGroupId = '2';
-      audioTrackController.onAudioTrackSwitched({
+      audioTrackController.onAudioTrackSwitched(Events.AUDIO_TRACK_SWITCHED, {
         id: 1
       });
 
@@ -135,7 +172,7 @@ describe('AudioTrackController', function () {
       // current track name
       const audioTrackName = tracks[audioTrackController.audioTrack].name;
 
-      audioTrackController.onLevelLoading(levelLoadedEvent);
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, levelLoadedEvent);
 
       // group has switched
       expect(audioTrackController.audioGroupId).to.equal(newGroupId);
@@ -165,7 +202,7 @@ describe('AudioTrackController', function () {
 
       audioTrackController.tracks = [trackWithUrl];
 
-      audioTrackController.onLevelLoading({
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
       });
 
@@ -192,7 +229,7 @@ describe('AudioTrackController', function () {
 
       audioTrackController.tracks = tracks;
 
-      audioTrackController.onLevelLoading({
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
       });
 
@@ -207,24 +244,24 @@ describe('AudioTrackController', function () {
     it('should clear interval (only) on fatal network errors', function () {
       audioTrackController.timer = 1000;
 
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR
       });
 
       expect(audioTrackController.timer).to.equal(1000);
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
 
       expect(audioTrackController.timer).to.equal(1000);
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: false
       });
 
       expect(audioTrackController.timer).to.equal(1000);
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
@@ -237,19 +274,19 @@ describe('AudioTrackController', function () {
       const currentTrackId = 4;
       audioTrackController._trackId = currentTrackId;
       audioTrackController.tracks = tracks;
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
 
       expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
 
       expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
-      audioTrackController.onError({
+      audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,

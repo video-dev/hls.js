@@ -20,7 +20,7 @@ export default class LevelDetails {
   public tload?: number;
   public totalduration: number = 0;
   public type: string | null = null;
-  public updated?: boolean; // Manifest reload synchronization
+  public updated: boolean = true;
   public misses: number = 0;
   public url: string;
   public version: number | null = null;

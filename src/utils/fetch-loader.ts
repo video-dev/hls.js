@@ -6,7 +6,7 @@ import {
   LoaderConfiguration,
   LoaderOnProgress
 } from '../types/loader';
-import LoadStats from '../loader/load-stats';
+import LoadStats, { reset } from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
 
 const { fetch, AbortController, ReadableStream, Request, Headers, performance } = self;
@@ -56,6 +56,7 @@ class FetchLoader implements Loader<LoaderContext> {
 
   load (context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void {
     const stats = this.stats;
+    reset(stats);
     stats.loading.start = performance.now();
 
     const initParams = getRequestParameters(context, this.controller.signal);
