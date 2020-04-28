@@ -3,6 +3,7 @@ import Hls from '../../../src/hls';
 import sinon from 'sinon';
 import LoadStats from '../../../src/loader/load-stats';
 import LevelDetails from '../../../src/loader/level-details';
+import { Events } from '../../../src/events';
 
 describe('SubtitleTrackController', function () {
   let subtitleTrackController;
@@ -180,17 +181,17 @@ describe('SubtitleTrackController', function () {
         subtitleTrackController.trackId = 1;
 
         const mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
-        subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
+        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
         expect(subtitleTrackController.timer).to.not.exist;
         expect(clearReloadSpy).to.have.been.calledOnce;
 
         mockLoadedEvent.id = 0;
-        subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
+        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
         expect(subtitleTrackController.timer).to.not.exist;
         expect(clearReloadSpy).to.have.been.calledTwice;
 
         mockLoadedEvent.id = 1;
-        subtitleTrackController.onSubtitleTrackLoaded(mockLoadedEvent);
+        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
         tracks[1] = null;
         expect(subtitleTrackController.timer).to.not.exist;
         expect(clearReloadSpy).to.have.been.calledThrice;
@@ -200,7 +201,7 @@ describe('SubtitleTrackController', function () {
         const details = new LevelDetails('');
         subtitleTrackController.stopped = true;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, { id: 1, details, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.not.exist;
       });
 
@@ -208,7 +209,7 @@ describe('SubtitleTrackController', function () {
         const details = new LevelDetails('');
         subtitleTrackController.stopped = false;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, { id: 1, details, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.exist;
       });
 
@@ -217,7 +218,7 @@ describe('SubtitleTrackController', function () {
         details.live = false;
         subtitleTrackController.trackId = 1;
         subtitleTrackController.timer = self.setTimeout(() => {}, 0);
-        subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, { id: 1, details, stats: new LoadStats() });
         expect(subtitleTrackController.timer).to.not.exist;
       });
     });

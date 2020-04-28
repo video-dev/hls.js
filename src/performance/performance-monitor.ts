@@ -7,20 +7,25 @@
  * TODO: Add this to the demo page or a performance test page
  */
 
-import EventHandler from '../event-handler';
-import Events from '../events';
+import { Events } from '../events';
 import Fragment from '../loader/fragment';
 import { logger } from '../utils/logger';
+import Hls from '../hls';
+import { FragBufferedData } from '../types/events';
 
-export default class PerformanceMonitor extends EventHandler {
-  constructor (hls) {
-    super(hls,
-      Events.FRAG_BUFFERED
-    );
+export default class PerformanceMonitor {
+  private hls: Hls;
+
+  constructor (hls: Hls) {
     this.hls = hls;
+    this.hls.on(Events.FRAG_BUFFERED, this.onFragBuffered);
   }
 
-  onFragBuffered (data: { frag: Fragment }) {
+  destroy () {
+    this.hls.off(Events.FRAG_BUFFERED);
+  }
+
+  onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     logFragStats(data.frag);
   }
 }
@@ -35,7 +40,7 @@ function logFragStats (frag: Fragment) {
   logger.log(`[performance-monitor]: Stats for fragment ${frag.sn} of level ${frag.level}:
         Size:                       ${((stats.total / 1024)).toFixed(3)} kB
         Chunk Count:                ${stats.chunkCount}
-        
+
         Request:                    ${stats.loading.start.toFixed(3)} ms
         First Byte:                 ${stats.loading.first.toFixed(3)} ms
         Parse Start                 ${stats.parsing.start.toFixed(3)} ms
