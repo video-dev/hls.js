@@ -1,19 +1,27 @@
 import * as work from 'webworkify-webpack';
-import Event from '../events';
+import { Events } from '../events';
 import Transmuxer, { TransmuxConfig, TransmuxState, isPromise } from '../demux/transmuxer';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
-import { Observer } from '../observer';
+import { EventEmitter } from 'eventemitter3';
 import Fragment from '../loader/fragment';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
+import Hls from '../hls';
 
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
+// TOOD: Refactor this out
+class Observer extends EventEmitter {
+  trigger (event: any, ...args: any[]) {
+    this.emit(event, args);
+  }
+}
+
 export default class TransmuxerInterface {
-  private hls: any;
+  private hls: Hls;
   private id: any;
-  private observer: any;
+  private observer: Observer | null;
   private frag?: Fragment;
   private worker: any;
   private onwmsg?: Function;
@@ -23,13 +31,12 @@ export default class TransmuxerInterface {
 
   private currentTransmuxSession: ChunkMetadata | null = null;
 
-  constructor (hls, id, onTransmuxComplete, onFlush) {
+  constructor (hls: Hls, id, onTransmuxComplete, onFlush) {
     this.hls = hls;
     this.id = id;
     this.onTransmuxComplete = onTransmuxComplete;
     this.onFlush = onFlush;
 
-    const observer = this.observer = new Observer();
     const config = hls.config;
 
     const forwardMessage = (ev, data) => {
@@ -40,8 +47,9 @@ export default class TransmuxerInterface {
     };
 
     // forward events to main thread
-    observer.on(Event.FRAG_DECRYPTED, forwardMessage);
-    observer.on(Event.ERROR, forwardMessage);
+    this.observer = new Observer();
+    this.observer.on(Events.FRAG_DECRYPTED, forwardMessage);
+    this.observer.on(Events.ERROR, forwardMessage);
 
     const typeSupported = {
       mp4: MediaSource.isTypeSupported('video/mp4'),
@@ -59,7 +67,7 @@ export default class TransmuxerInterface {
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
-          hls.trigger(Event.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
+          hls.trigger(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
         };
         worker.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
@@ -69,11 +77,11 @@ export default class TransmuxerInterface {
           // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
           self.URL.revokeObjectURL(worker.objectURL);
         }
-        this.transmuxer = new Transmuxer(observer, typeSupported, config, vendor);
+        this.transmuxer = new Transmuxer(this.observer, typeSupported, config, vendor);
         this.worker = null;
       }
     } else {
-      this.transmuxer = new Transmuxer(observer, typeSupported, config, vendor);
+      this.transmuxer = new Transmuxer(this.observer, typeSupported, config, vendor);
     }
   }
 

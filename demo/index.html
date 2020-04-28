@@ -101,7 +101,7 @@
           <div class="config-editor-commands">
             <label for="config-persistence">
                 Persist
-                <input name="config-persistence" id="configPersistence" type="checkbox">
+                <input name="config-persistence" id="config-persistence" type="checkbox">
             </label>
             <button name="config-apply" onclick="applyConfigEditorValue()">Apply</button>
           </div>
@@ -121,6 +121,7 @@
       <pre id="errorOut" class="center" style="white-space: pre-wrap;"></pre>
 
       <div class="center" style="text-align: center;" id="toggleButtons">
+        <button type="button" class="btn btn-sm" onclick="toggleTab('timelineTab');">Timeline</button>
         <button type="button" class="btn btn-sm" onclick="toggleTab('playbackControlTab');">Playback</button>
         <button type="button" class="btn btn-sm" onclick="toggleTab('qualityLevelControlTab');">Quality-levels</button>
         <button type="button" class="btn btn-sm" onclick="toggleTab('audioTrackControlTab');">Audio-tracks</button>
@@ -213,8 +214,11 @@
         <table>
           <tr>
             <td>Current audio-track:</td>
-            <td width=10px>None selected</td>
-            <td> <div id="audioTrackControl" style="display: inline;"></div> </td>
+            <td><div id="audioTrackControl" style="display: inline;"></div></td>
+          </tr>
+          <tr>
+            <td>Language / Name:</td>
+            <td><div id="audioTrackLabel" style="display: inline;">None selected</div></td>
           </tr>
         </table>
       </div>
@@ -262,6 +266,10 @@
         <pre id='statisticsOut'></pre>
       </div>
 
+      <div class="center demo-timeline-chart-container" id='timelineTab'>
+        <canvas id="timeline-chart"></canvas>
+      </div>
+
     </div>
 
     <footer>
@@ -271,7 +279,7 @@
     <!-- Demo page required libs -->
     <script src="canvas.js"></script>
     <script src="metrics.js"></script>
-    <script src="jsonpack.js"></script>
+    <script src="libs/jsonpack.js"></script>
 
     <!-- demo build -->
     <script src="../dist/hls.js"></script>

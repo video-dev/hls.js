@@ -11,7 +11,7 @@ interface ILogger {
   error: ILogFunction
 }
 
-const noop: ILogFunction = function (...args: any[]): void { };
+const noop: ILogFunction = function () {};
 
 const fakeLogger: ILogger = {
   trace: noop,

@@ -23,7 +23,7 @@
                 enableCEA708Captions: true
             });
 
-            hls.on(Hls.Events.ERROR, function(event, data) {
+            hls.on(Hls.Events.ERROR, function(data) {
                 console.warn('ERROR', data);
             });
 
