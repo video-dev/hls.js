@@ -7,9 +7,8 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import {
   DemuxedAudioTrack
 } from '../types/demuxer';
-import { Observer } from '../observer';
 
-import { Events } from '../events';
+import { Events, HlsEventEmitter } from '../events';
 
 export function getAudioConfig (observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string) {
   let adtsObjectType: number; // :int
@@ -30,7 +29,7 @@ export function getAudioConfig (observer: HlsEventEmitter, data: Uint8Array, off
   adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
   const adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
   if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
-    observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
+    observer.emit(Events.ERROR, Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
     return;
   }
   adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);
@@ -191,7 +190,7 @@ export function probe (data: Uint8Array, offset: number): boolean {
   return false;
 }
 
-export function initTrackConfig (track: DemuxedAudioTrack, observer: Observer, data: Uint8Array, offset: number, audioCodec: string): void {
+export function initTrackConfig (track: DemuxedAudioTrack, observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string): void {
   if (!track.samplerate) {
     const config = getAudioConfig(observer, data, offset, audioCodec);
     if (!config) {
@@ -225,16 +224,10 @@ export function parseFrameHeader (data: Uint8Array, offset: number, pts: number,
     // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
     return { headerLength, frameLength, stamp };
   }
-
-  return undefined;
 }
 
 export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number) {
-  if (!track.samplerate) {
-    return undefined;
-  }
-
-  const frameDuration = getFrameDuration(track.samplerate);
+  const frameDuration = getFrameDuration(track.samplerate as number);
   const header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
   if (header) {
     const stamp = header.stamp;
@@ -251,6 +244,4 @@ export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset:
     track.samples.push(aacSample);
     return { sample: aacSample, length: frameLength + headerLength };
   }
-
-  return undefined;
 }
