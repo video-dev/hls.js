@@ -219,6 +219,9 @@ class TimelineController implements ComponentAPI {
   }
 
   createNonNativeTrack (trackName: string) {
+    if (this.nonNativeCaptionsTracks[trackName]) {
+      return;
+    }
     // Create a list of a single track for the provider to consume
     const trackProperties: TrackProperties = this.captionsProperties[trackName];
     if (!trackProperties) {
