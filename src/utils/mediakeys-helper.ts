@@ -1,3 +1,5 @@
+import { MediaKeysListItem } from '../controller/eme-controller';
+
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
  */
@@ -16,9 +18,9 @@ const requestMediaKeySystemAccess = (function (): MediaKeyFunc | null {
   }
 })();
 
-export type GenerateLicenseChallengFunc = (keySystem: KeySystems, keyMessage: ArrayBuffer) => ArrayBuffer;
-const generateLicenseChallenge = (keySystem: KeySystems, keyMessage: ArrayBuffer): ArrayBuffer => {
-  switch (keySystem) {
+export type GenerateLicenseChallengFunc = (keySystemItem: MediaKeysListItem, keyMessage: ArrayBuffer) => ArrayBuffer;
+const generateLicenseChallenge = (keySystemItem: MediaKeysListItem, keyMessage: ArrayBuffer): ArrayBuffer => {
+  switch (keySystemItem.mediaKeySystemDomain) {
   // case KeySystems.PLAYREADY:
   // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
   /*
@@ -47,7 +49,7 @@ const generateLicenseChallenge = (keySystem: KeySystems, keyMessage: ArrayBuffer
     return keyMessage;
   }
 
-  throw new Error(`unsupported key-system: ${keySystem}`);
+  throw new Error(`unsupported key-system: ${keySystemItem.mediaKeySystemDomain}`);
 };
 
 export {

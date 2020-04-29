@@ -564,7 +564,7 @@ class EMEController extends EventHandler {
         const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
 
         logger.log(`Sending license request to URL: ${url}`);
-        const challenge = this.emeGenerateLicenseChallengeFunc(keysListItem.mediaKeySystemDomain, keyMessage);
+        const challenge = this.emeGenerateLicenseChallengeFunc(keysListItem, keyMessage);
         xhr.send(challenge);
       })
       .catch(e => {
