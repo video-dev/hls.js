@@ -10,7 +10,7 @@ import {
 
 import { Events, HlsEventEmitter } from '../events';
 
-export function getAudioConfig (observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string) {
+export function getAudioConfig (observer, data: Uint8Array, offset: number, audioCodec: string) {
   let adtsObjectType: number; // :int
   let adtsExtensionSampleingIndex: number; // :int
   let adtsChanelConfig: number; // :int
@@ -29,7 +29,7 @@ export function getAudioConfig (observer: HlsEventEmitter, data: Uint8Array, off
   adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
   const adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
   if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
-    observer.emit(Events.ERROR, Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
+    observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
     return;
   }
   adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);
