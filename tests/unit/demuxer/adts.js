@@ -299,6 +299,25 @@ describe('probe', function () {
     data[1] = 0xf0; // protection_absent = 0
     expect(probe(data, 0)).to.be.false;
   });
+
+  it('should return false if the header is broken', function () {
+    const data = new Uint8Array(new ArrayBuffer(9));
+    data[0] = 0xff;
+    data[1] = 0xf0; // protection_absent = 0
+    data[4] = 0x00; // frame_length is 0
+    expect(probe(data, 0)).to.be.false;
+  });
+
+  it('should return false if it does not contain the entire header (2)', function () {
+    const data = new Uint8Array(new ArrayBuffer(8));
+    data[0] = 0xff;
+    data[1] = 0xf0; // protection_absent = 0
+    data[4] = 0x00; // frame_length is 6
+    data[5] = 0xc0;
+    data[6] = 0xff;
+    data[7] = 0xf0;
+    expect(probe(data, 0)).to.be.false;
+  });
 });
 
 describe('initTrackConfig', function () {
