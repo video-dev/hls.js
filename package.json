@@ -80,7 +80,7 @@
     "istanbul-instrumenter-loader": "^3.0.1",
     "karma": "^5.0.1",
     "karma-chrome-launcher": "^3.1.0",
-    "karma-coverage-istanbul-reporter": "^2.1.1",
+    "karma-coverage-istanbul-reporter": "^3.0.0",
     "karma-mocha": "^2.0.0",
     "karma-mocha-reporter": "^2.2.5",
     "karma-sinon-chai": "^2.0.2",
