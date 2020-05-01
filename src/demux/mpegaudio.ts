@@ -1,6 +1,9 @@
 /**
  *  MPEG parser helper
  */
+import {
+  DemuxedAudioTrack
+} from '../types/demuxer';
 
 const BitratesMap = [
   32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
@@ -50,7 +53,7 @@ const BytesInSlot = [
   4 // Layer1
 ];
 
-export function appendFrame (track, data, offset, pts, frameIndex) {
+export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number) {
   // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
   if (offset + 24 > data.length) {
     return;
@@ -71,7 +74,7 @@ export function appendFrame (track, data, offset, pts, frameIndex) {
   }
 }
 
-export function parseHeader (data, offset) {
+export function parseHeader (data: Uint8Array, offset: number) {
   const headerB = (data[offset + 1] >> 3) & 3;
   const headerC = (data[offset + 1] >> 1) & 3;
   const headerE = (data[offset + 2] >> 4) & 15;
@@ -86,30 +89,30 @@ export function parseHeader (data, offset) {
     const sampleCoefficient = SamplesCoefficients[headerB][headerC];
     const bytesInSlot = BytesInSlot[headerC];
     const samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
-    const frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
+    const frameLength = Math.floor(sampleCoefficient * bitRate / sampleRate + headerG) * bytesInSlot;
 
     return { sampleRate, channelCount, frameLength, samplesPerFrame };
   }
 }
 
-export function isHeaderPattern (data, offset) {
+export function isHeaderPattern (data: Uint8Array, offset: number): boolean {
   return data[offset] === 0xff && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00;
 }
 
-export function isHeader (data, offset) {
+export function isHeader (data: Uint8Array, offset: number): boolean {
   // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
   // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
   // More info http://www.mp3-tech.org/programmer/frame_header.html
   return offset + 1 < data.length && isHeaderPattern(data, offset);
 }
 
-export function canParse (data, offset) {
+export function canParse (data: Uint8Array, offset: number): boolean {
   const headerSize = 4;
 
   return isHeaderPattern(data, offset) && data.length - offset >= headerSize;
 }
 
-export function probe (data, offset) {
+export function probe (data: Uint8Array, offset: number): boolean {
   // same as isHeader but we also check that MPEG frame follows last MPEG frame
   // or end of data is reached
   if (offset + 1 < data.length && isHeaderPattern(data, offset)) {
@@ -118,7 +121,7 @@ export function probe (data, offset) {
     // MPEG frame Length
     const header = parseHeader(data, offset);
     let frameLength = headerLength;
-    if (header && header.frameLength) {
+    if (header?.frameLength) {
       frameLength = header.frameLength;
     }
 
