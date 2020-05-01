@@ -513,7 +513,7 @@ class MP4Remuxer {
         // 3: currentTime (aka nextPtsNorm) is not 0
         else if (delta >= maxAudioFramesDrift * inputSampleDuration && delta < MAX_SILENT_FRAME_DURATION_90KHZ && nextPts) {
           let missing = Math.round(delta / inputSampleDuration);
-          logger.warn(`Injecting ${missing} audio frames @ ${toMsFromMpegTsClock(nextPts, true)} ms due to ${toMsFromMpegTsClock(nextPts, true)} ms gap.`);
+          logger.warn(`Injecting ${missing} audio frames @ ${toMsFromMpegTsClock(nextPts, true)} ms due to ${toMsFromMpegTsClock(delta, true)} ms gap.`);
           for (let j = 0; j < missing; j++) {
             let newStamp = Math.max(nextPts, 0);
             fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
