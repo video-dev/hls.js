@@ -4,8 +4,6 @@
 
 import { logger } from '../utils/logger';
 
-const { performance, XMLHttpRequest } = window;
-
 class XhrLoader {
   constructor (config) {
     if (config && config.xhrSetup) {
@@ -35,14 +33,14 @@ class XhrLoader {
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
-    this.stats = { trequest: performance.now(), retry: 0 };
+    this.stats = { trequest: window.performance.now(), retry: 0 };
     this.retryDelay = config.retryDelay;
     this.loadInternal();
   }
 
   loadInternal () {
     let xhr, context = this.context;
-    xhr = this.loader = new XMLHttpRequest();
+    xhr = this.loader = new window.XMLHttpRequest();
 
     let stats = this.stats;
     stats.tfirst = 0;
@@ -99,14 +97,14 @@ class XhrLoader {
       // clear xhr timeout and rearm it if readyState less than 4
       window.clearTimeout(this.requestTimeout);
       if (stats.tfirst === 0) {
-        stats.tfirst = Math.max(performance.now(), stats.trequest);
+        stats.tfirst = Math.max(window.performance.now(), stats.trequest);
       }
 
       if (readyState === 4) {
         let status = xhr.status;
         // http status between 200 to 299 are all successful
         if (status >= 200 && status < 300) {
-          stats.tload = Math.max(stats.tfirst, performance.now());
+          stats.tload = Math.max(stats.tfirst, window.performance.now());
           let data, len;
           if (context.responseType === 'arraybuffer') {
             data = xhr.response;
