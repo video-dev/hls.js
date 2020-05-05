@@ -30,7 +30,7 @@
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
   - [`maxLoadingDelay`](#maxloadingdelay)
-  - [`lowBufferWatchdogPeriod`](#lowbufferwatchdogperiod)
+  - [`lowBufferWatchdogPeriod`](#lowbufferwatchdogperiod) (deprecated)
   - [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod)
   - [`nudgeOffset`](#nudgeoffset)
   - [`nudgeMaxRetry`](#nudgemaxretry)
@@ -465,7 +465,7 @@ In case no quality level with this criteria can be found (lets say for example t
 
 max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
 
-### `lowBufferWatchdogPeriod`
+### `lowBufferWatchdogPeriod` (deprecated)
 
 (default 0.5s)
 
