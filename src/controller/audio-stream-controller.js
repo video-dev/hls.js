@@ -14,6 +14,7 @@ import { findFragWithCC } from '../utils/discontinuities';
 import { FragmentState } from './fragment-tracker';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
+import { MAX_START_GAP_JUMP } from './gap-controller';
 const { performance } = window;
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -138,20 +139,21 @@ class AudioStreamController extends BaseStreamController {
           break;
         }
       }
-      let media = this.mediaBuffer ? this.mediaBuffer : this.media,
-        videoBuffer = this.videoBuffer ? this.videoBuffer : this.media,
-        bufferInfo = BufferHelper.bufferInfo(media, pos, config.maxBufferHole),
-        mainBufferInfo = BufferHelper.bufferInfo(videoBuffer, pos, config.maxBufferHole),
-        bufferLen = bufferInfo.len,
-        bufferEnd = bufferInfo.end,
-        fragPrevious = this.fragPrevious,
+      let media = this.mediaBuffer ? this.mediaBuffer : this.media;
+      const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
+      const maxBufferHole = pos < config.maxBufferHole ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole) : config.maxBufferHole;
+      const bufferInfo = BufferHelper.bufferInfo(media, pos, maxBufferHole);
+      const mainBufferInfo = BufferHelper.bufferInfo(videoBuffer, pos, maxBufferHole);
+      const bufferLen = bufferInfo.len;
+      let bufferEnd = bufferInfo.end;
+      const fragPrevious = this.fragPrevious;
         // ensure we buffer at least config.maxBufferLength (default 30s) or config.maxMaxBufferLength (default: 600s)
         // whichever is smaller.
         // once we reach that threshold, don't buffer more than video (mainBufferInfo.len)
-        maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength),
-        maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len),
-        audioSwitch = this.audioSwitch,
-        trackId = this.trackId;
+      const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
+      const maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len);
+      const audioSwitch = this.audioSwitch;
+      const trackId = this.trackId;
 
         // if buffer length is less than maxBufLen try to load a new fragment
       if ((bufferLen < maxBufLen || audioSwitch) && trackId < tracks.length) {
@@ -278,11 +280,12 @@ class AudioStreamController extends BaseStreamController {
             this.state = State.KEY_LOADING;
             hls.trigger(Event.KEY_LOADING, { frag: frag });
           } else {
-            logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
             // only load if fragment is not loaded or if in audio switch
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
             this.fragCurrent = frag;
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
+              logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+
               if (frag.sn !== 'initSegment') {
                 this.startFragRequested = true;
               }
