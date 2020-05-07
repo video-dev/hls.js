@@ -98,17 +98,18 @@ async function testSmoothSwitch (url, config) {
       let callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      video.onloadeddata = () => {
+      window.hls.once(window.Hls.Events.FRAG_CHANGED, (event, data) => {
         window.switchToHighestLevel('next');
-      };
+      });
       window.hls.on(window.Hls.Events.LEVEL_SWITCHED, (event, data) => {
+        console.log(`[test] > level switched: ${data.level}`);
         let currentTime = video.currentTime;
         if (data.level === window.hls.levels.length - 1) {
-          console.log(`[log] > switched on level: ${data.level}`);
+          console.log(`[test] > switched on level: ${data.level}`);
           window.setTimeout(() => {
             let newCurrentTime = video.currentTime;
             console.log(
-              `[log] > currentTime delta : ${newCurrentTime - currentTime}`
+              `[test] > currentTime delta : ${newCurrentTime - currentTime}`
             );
             callback({
               code: newCurrentTime > currentTime,
@@ -203,13 +204,13 @@ async function testIsPlayingVOD (url, config) {
         if (expectedPlaying) {
           window.setTimeout(() => {
             console.log(
-              `video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
+              `[test] > video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
             );
             callback({ playing: currentTime !== video.currentTime });
           }, 5000);
         } else {
           console.log(
-            `video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`
+            `[test] > video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`
           );
           callback({ playing: false });
         }
