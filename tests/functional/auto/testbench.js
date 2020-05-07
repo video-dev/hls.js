@@ -74,54 +74,55 @@ function startStream (streamUrl, config, callback) {
   if (!Hls) {
     throw new Error('Hls not installed');
   }
-
-  if (Hls.isSupported()) {
-    if (hls) {
-      callback({ code: 'hlsjsAlreadyInitialised', logs: logString });
-      return;
-    }
-    window.video = video = document.getElementById('video');
-    try {
-      window.hls = hls = new Hls(objectAssign({}, config, { debug: true }));
-      console.log(navigator.userAgent);
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        var playPromise = video.play();
-        if (playPromise) {
-          playPromise.catch(function (error) {
-            console.log('video.play() failed with error:', error);
-            if (error.name === 'NotAllowedError') {
-              console.log('Attempting to play with video muted');
-              video.muted = true;
-              return video.play();
-            }
-          });
-        }
-      });
-      hls.on(Hls.Events.ERROR, function (event, data) {
-        if (data.fatal) {
-          console.log('hlsjs fatal error :' + data.details);
-          if (data.details === Hls.ErrorDetails.INTERNAL_EXCEPTION) {
-            console.log('exception in :' + data.event);
-            console.log(data.err.stack ? JSON.stringify(data.err.stack) : data.err.message);
-          }
-          callback({ code: data.details, logs: logString });
-        }
-      });
-      video.onerror = function (event) {
-        console.log('video error, code :' + video.error.code);
-        callback({ code: 'video_error_' + video.error.code, logs: logString });
-      };
-    } catch (err) {
-      callback({ code: 'exception', logs: logString });
-    }
-  } else {
+  if (!Hls.isSupported()) {
     callback({ code: 'notSupported', logs: logString });
+    return;
+  }
+  if (hls) {
+    callback({ code: 'hlsjsAlreadyInitialised', logs: logString });
+    return;
+  }
+  window.video = video = document.getElementById('video');
+  try {
+    window.hls = hls = new Hls(objectAssign({}, config, { debug: true }));
+    console.log('[test] > userAgent:', navigator.userAgent);
+    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+      console.log('[test] > Manifest parsed. Calling video.play()');
+      var playPromise = video.play();
+      if (playPromise) {
+        playPromise.catch(function (error) {
+          console.log('[test] > video.play() failed with error:', error);
+          if (error.name === 'NotAllowedError') {
+            console.log('[test] > Attempting to play with video muted');
+            video.muted = true;
+            return video.play();
+          }
+        });
+      }
+    });
+    hls.on(Hls.Events.ERROR, function (event, data) {
+      if (data.fatal) {
+        console.log('[test] > hlsjs fatal error :' + data.details);
+        if (data.details === Hls.ErrorDetails.INTERNAL_EXCEPTION) {
+          console.log('[test] > exception in :' + data.event);
+          console.log(data.err.stack ? JSON.stringify(data.err.stack) : data.err.message);
+        }
+        callback({ code: data.details, logs: logString });
+      }
+    });
+    video.onerror = function (event) {
+      console.log('[test] > video error, code :' + video.error.code);
+      callback({ code: 'video_error_' + video.error.code, logs: logString });
+    };
+    hls.loadSource(streamUrl);
+    hls.attachMedia(video);
+  } catch (err) {
+    callback({ code: 'exception', logs: logString });
   }
 }
 
 function switchToLowestLevel (mode) {
+  console.log('[test] > switch to lowest level', mode);
   switch (mode) {
   case 'current':
     hls.currentLevel = 0;
@@ -138,6 +139,7 @@ function switchToLowestLevel (mode) {
 
 function switchToHighestLevel (mode) {
   var highestLevel = hls.levels.length - 1;
+  console.log('[test] > switch to highest level', highestLevel, mode);
   switch (mode) {
   case 'current':
     hls.currentLevel = highestLevel;
