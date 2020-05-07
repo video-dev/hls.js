@@ -69,7 +69,7 @@ function objectAssign (target, firstSource) {
   return to;
 }
 
-function startStream (streamUrl, config, callback) {
+function startStream (streamUrl, config, callback, autoplay) {
   var Hls = window.Hls;
   if (!Hls) {
     throw new Error('Hls not installed');
@@ -86,20 +86,22 @@ function startStream (streamUrl, config, callback) {
   try {
     window.hls = hls = new Hls(objectAssign({}, config, { debug: true }));
     console.log('[test] > userAgent:', navigator.userAgent);
-    hls.on(Hls.Events.MANIFEST_PARSED, function () {
-      console.log('[test] > Manifest parsed. Calling video.play()');
-      var playPromise = video.play();
-      if (playPromise) {
-        playPromise.catch(function (error) {
-          console.log('[test] > video.play() failed with error:', error);
-          if (error.name === 'NotAllowedError') {
-            console.log('[test] > Attempting to play with video muted');
-            video.muted = true;
-            return video.play();
-          }
-        });
-      }
-    });
+    if (autoplay !== false) {
+      hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        console.log('[test] > Manifest parsed. Calling video.play()');
+        var playPromise = video.play();
+        if (playPromise) {
+          playPromise.catch(function (error) {
+            console.log('[test] > video.play() failed with error:', error);
+            if (error.name === 'NotAllowedError') {
+              console.log('[test] > Attempting to play with video muted');
+              video.muted = true;
+              return video.play();
+            }
+          });
+        }
+      });
+    }
     hls.on(Hls.Events.ERROR, function (event, data) {
       if (data.fatal) {
         console.log('[test] > hlsjs fatal error :' + data.details);

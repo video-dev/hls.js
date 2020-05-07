@@ -92,6 +92,32 @@ async function testLoadedData (url, config) {
   expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
 }
 
+async function testIdleBufferLength (url, config) {
+  const result = await browser.executeAsyncScript(
+    (url, config) => {
+      const callback = arguments[arguments.length - 1];
+      const autoplay = false;
+      window.startStream(url, config, callback, autoplay);
+      const video = window.video;
+      const maxBufferLength = window.hls.config.maxBufferLength;
+      video.onprogress = function () {
+        const buffered = video.buffered;
+        if (buffered.length) {
+          const bufferEnd = buffered.end(buffered.length - 1);
+          const duration = video.duration;
+          console.log(`[log] > progress: ${bufferEnd.toFixed(2)}/${duration.toFixed(2)} buffered.length: ${buffered.length}`);
+          if (bufferEnd >= maxBufferLength || bufferEnd > duration - 1) {
+            callback({ code: 'loadeddata', logs: window.logString });
+          }
+        }
+      };
+    },
+    url,
+    config
+  );
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
+}
+
 async function testSmoothSwitch (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
@@ -381,6 +407,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           testSeekOnLive.bind(null, url, config)
         );
       } else {
+        it(
+          `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
+          testIdleBufferLength.bind(null, url, config)
+        );
         it(
           `should play ${stream.description}`,
           testIsPlayingVOD.bind(null, url, config)
