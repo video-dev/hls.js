@@ -9,6 +9,7 @@ echo "travis_fold:end:npm_install"
 if [ "${TRAVIS_MODE}" = "build" ]; then
   echo "travis_fold:start:lint"
   npm run lint
+  npm run prettier:verify
   echo "travis_fold:end:lint"
   echo "travis_fold:start:build"
   npm run type-check
@@ -49,6 +50,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   fi
   node ./scripts/set-package-version.js
   npm run lint
+  npm run prettier:verify
   npm run type-check
   npm run build:ci
 
