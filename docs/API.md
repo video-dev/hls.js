@@ -30,7 +30,7 @@
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
   - [`maxLoadingDelay`](#maxloadingdelay)
-  - [`lowBufferWatchdogPeriod`](#lowbufferwatchdogperiod)
+  - [`lowBufferWatchdogPeriod`](#lowbufferwatchdogperiod) (deprecated)
   - [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod)
   - [`nudgeOffset`](#nudgeoffset)
   - [`nudgeMaxRetry`](#nudgemaxretry)
@@ -466,7 +466,7 @@ In case no quality level with this criteria can be found (lets say for example t
 
 max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
 
-### `lowBufferWatchdogPeriod`
+### `lowBufferWatchdogPeriod` (deprecated)
 
 (default 0.5s)
 
@@ -932,7 +932,7 @@ parameter should be a string
 (default: `true`)
 
 Whether or not render captions natively using the HTMLMediaElement's TextTracks. Disable native captions rendering
-when you want to handle rending of track and track cues using `NON_NATIVE_TEXT_TRACKS_FOUND` and `CUES_PARSED` events.
+when you want to handle rending of track and track cues using `Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND` and `Hls.Events.CUES_PARSED` events.
 
 parameter should be a boolean
   
@@ -1327,7 +1327,10 @@ Full list of Events is available below:
   - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed
     -  data: { frag : fragment object }
   - `Hls.Events.STREAM_STATE_TRANSITION`  - fired upon stream controller state transitions
-    -  data: { previousState, nextState }
+  - `Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND`  - When `renderTextTracksNatively` is `false`, this event will fire when a new captions or subtitle track is found, in the place of adding a TextTrack to the video element.
+      -  data: { tracks: Array<{ label, kind, default, subtitleTrack }> }
+  - `Hls.Events.CUES_PARSED`  - When `renderTextTracksNatively` is `false`, this event will fire when new captions or subtitle cues are parsed.
+      -  data: { type, cues, track } }
 
 ## Loader Composition
 

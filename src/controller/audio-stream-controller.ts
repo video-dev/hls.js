@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
 import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
+import { MAX_START_GAP_JUMP } from './gap-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import ChunkCache from '../demux/chunk-cache';
 import LevelDetails from '../loader/level-details';
@@ -232,8 +233,9 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
 
     const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
     const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
-    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer, pos, config.maxBufferHole);
-    const mainBufferInfo = BufferHelper.bufferInfo(videoBuffer, pos, config.maxBufferHole);
+    const maxBufferHole = pos < config.maxBufferHole ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole) : config.maxBufferHole;
+    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer, pos, maxBufferHole);
+    const mainBufferInfo = BufferHelper.bufferInfo(videoBuffer, pos, maxBufferHole);
     const bufferLen = bufferInfo.len;
     const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
     const maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len);
@@ -282,7 +284,15 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       this.state = State.KEY_LOADING;
       hls.trigger(Events.KEY_LOADING, { frag: frag });
     } else {
-      this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferInfo.end.toFixed(3)}`);
+      // only load if fragment is not loaded or if in audio switch
+      // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+      const fragState = this.fragmentTracker.getState(frag);
+      this.fragCurrent = frag;
+      if (!this.audioSwitch && fragState !== FragmentState.NOT_LOADED) {
+        return;
+      }
+
+      this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${this.trackId}, load position: ${pos.toFixed(3)}-${loadPos.toFixed(3)}`);
       this.loadFragment(frag);
     }
   }
@@ -647,16 +657,6 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
   }
 
   private loadFragment (frag: Fragment) {
-    // only load if fragment is not loaded or if in audio switch
-    // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
-    const fragState = this.fragmentTracker.getState(frag);
-    this.fragCurrent = frag;
-    const prevPos = this.nextLoadPosition;
-
-    if (!this.audioSwitch && fragState !== FragmentState.NOT_LOADED) {
-      return;
-    }
-
     if (frag.sn === 'initSegment') {
       this._loadInitSegment(frag);
     } else if (Number.isFinite(this.initPTS[frag.cc])) {
@@ -666,7 +666,6 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     } else {
       this.log(`Unknown video PTS for continuity counter ${frag.cc}, waiting for video PTS before loading audio fragment ${frag.sn} of level ${this.trackId}`);
       this.state = State.WAITING_INIT_PTS;
-      this.nextLoadPosition = prevPos;
     }
   }
 
