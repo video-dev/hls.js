@@ -3,7 +3,7 @@ import { EventEmitter } from 'eventemitter3';
 /**
  * Simple adapter sub-class of Nodejs-like EventEmitter.
  */
-export class Observer extends EventEmitter {
+export class Observer extends EventEmitter<any> {
   /**
    * We simply want to pass along the event-name itself
    * in every call to a handler, which is the purpose of our `trigger` method
