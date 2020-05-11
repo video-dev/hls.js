@@ -124,20 +124,20 @@ class CapLevelController extends EventHandler {
   }
 
   get mediaWidth () {
-    let width;
+    let width = 0;
     const media = this.media;
     if (media) {
-      width = media.width || media.clientWidth || media.offsetWidth;
+      width = Math.max(media.width, media.clientWidth, media.offsetWidth);
       width *= CapLevelController.contentScaleFactor;
     }
     return width;
   }
 
   get mediaHeight () {
-    let height;
+    let height = 0;
     const media = this.media;
     if (media) {
-      height = media.height || media.clientHeight || media.offsetHeight;
+      height = Math.max(media.height, media.clientHeight, media.offsetHeight);
       height *= CapLevelController.contentScaleFactor;
     }
     return height;
