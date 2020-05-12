@@ -1,7 +1,8 @@
-import { logger } from '../utils/logger';
+import { logger } from './logger';
+import Fragment from '../loader/fragment';
 
-export function findFirstFragWithCC (fragments, cc) {
-  let firstFrag = null;
+export function findFirstFragWithCC (fragments: Fragment[], cc) {
+  let firstFrag: Fragment | null = null;
 
   for (let i = 0; i < fragments.length; i += 1) {
     const currentFrag = fragments[i];
@@ -16,7 +17,7 @@ export function findFirstFragWithCC (fragments, cc) {
 
 export function shouldAlignOnDiscontinuities (lastFrag, lastLevel, details) {
   let shouldAlign = false;
-  if (lastLevel && lastLevel.details && details) {
+  if (lastLevel?.details && details) {
     if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC)) {
       shouldAlign = true;
     }
@@ -97,7 +98,7 @@ export function alignDiscontinuities (lastFrag, details, lastLevel) {
  * @param lastDetails - The details of the last loaded level
  */
 export function alignPDT (details, lastDetails) {
-  if (lastDetails && lastDetails.fragments.length) {
+  if (lastDetails?.fragments.length) {
     if (!details.hasProgramDateTime || !lastDetails.hasProgramDateTime) {
       return;
     }
