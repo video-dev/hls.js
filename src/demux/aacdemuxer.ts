@@ -65,11 +65,7 @@ class AACDemuxer extends BaseAudioDemuxer {
   appendFrame (track, data, offset) {
     ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec);
 
-    if (this.initPTS === null) {
-      return undefined;
-    }
-
-    return ADTS.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
+    return ADTS.appendFrame(track, data, offset, this.initPTS as number, this.frameIndex);
   }
 }
 
