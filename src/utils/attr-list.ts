@@ -57,7 +57,7 @@ class AttrList {
     return parseFloat(this[attrName]);
   }
 
-  enumeratedString (attrName: string): string {
+  enumeratedString (attrName: string): string | undefined {
     return this[attrName];
   }
 
