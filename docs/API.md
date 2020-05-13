@@ -51,6 +51,8 @@
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
   - [`startFragPrefetch`](#startfragprefetch)
   - [`testBandwidth`](#testBandwidth) 
+  - [`fpsDroppedMonitoringPeriod`](#fpsDroppedMonitoringPeriod) 
+  - [`fpsDroppedMonitoringThreshold`](#fpsDroppedMonitoringThreshold) 
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
@@ -58,6 +60,9 @@
   - [`xhrSetup`](#xhrsetup)
   - [`fetchSetup`](#fetchsetup)
   - [`abrController`](#abrcontroller)
+  - [`bufferController`](#bufferController)
+  - [`capLevelController`](#capLevelController)
+  - [`fpsController`](#fpsController)
   - [`timelineController`](#timelinecontroller)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableCEA708Captions`](#enablecea708captions)
@@ -82,6 +87,11 @@
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
+  - [`emeEnabled`](#emeEnabled)
+  - [`widevineLicenseUrl`](#widevineLicenseUrl)
+  - [`drmSystemOptions`](#drmSystemOptions)
+  - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
+        
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -320,6 +330,8 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxFragLookUpTolerance: 0.25,
       liveSyncDurationCount: 3,
       liveMaxLatencyDurationCount: Infinity,
+      liveDurationInfinity: false,
+      liveBackBufferLength: Infinity,
       enableWorker: true,
       enableSoftwareAES: true,
       manifestLoadingTimeOut: 10000,
@@ -640,6 +652,15 @@ Start prefetching start fragment although media not attached yet.
 Load the first fragment of the lowest level to establish a bandwidth estimate before selecting the first auto-level.
 Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
 
+### `fpsDroppedMonitoringPeriod`
+
+(default: 5000) 
+
+
+### `fpsDroppedMonitoringThreshold`
+
+(default: 0.2) 
+  
 ### `appendErrorMaxRetry`
 
 (default: `3`)
@@ -836,6 +857,30 @@ Parameter should be a class providing 2 getters, 2 setters and a `destroy()` met
  - get/set `nextAutoLevel`: return next auto-quality level/force next auto-quality level that should be returned (currently used for emergency switch down)
  - get/set `autoLevelCapping`: capping/max level value that could be used by ABR Controller
  - `destroy()`: should clean-up all used resources
+
+### `bufferController`
+
+(default: internal buffer controller)
+
+Customized buffer controller.
+
+A class in charge of managing SourceBuffers.
+
+### `capLevelController`
+
+(default: internal cap level controller)
+
+Customized level capping controller.
+
+A class in charge of setting `hls.autoLevelCapping` to limit ABR level selection based on player size.
+
+### `fpsController`
+
+(default: internal fps controller)
+
+Customized fps controller (disabled).
+
+A class in charge of monitoring frame rate, that emits `FPS_DROP` events when frames dropped exceeds configured threshold.
 
 ### `timelineController`
 
@@ -1050,6 +1095,38 @@ then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality le
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
 Useful when browser or tab of the browser is not in the focus and bandwidth drops
 
+### `emeEnabled`
+
+(default: `false`)
+
+Set to `true` to enable DRM key system access and license retrieval.
+
+### `widevineLicenseUrl`
+
+(default: `undefined`)
+
+The Widevine license server URL. 
+
+### `drmSystemOptions`
+
+(default: `{}`)
+
+Allows for the customization of `audioRobustness` and `videoRobustness` in EMEController. Ex:
+
+```js
+{
+  audioRobustness: 'SW_SECURE_CRYPTO',
+  videoRobustness: 'SW_SECURE_CRYPTO'
+}
+```
+
+With the default argument, `''` will be specified for each option (_i.e. no specific robustness required_).
+
+### `requestMediaKeySystemAccessFunc`
+
+(default: A function that returns the result of `window.navigator.requestMediaKeySystemAccess.bind(window.navigator)` or `null`)
+
+Allows for the customization of `window.navigator.requestMediaKeySystemAccess`. 
 
 ## Video Binding/Unbinding API
 
