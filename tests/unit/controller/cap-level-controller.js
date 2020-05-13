@@ -58,6 +58,65 @@ describe('CapLevelController', function () {
     });
   });
 
+  describe('getDimensions', function () {
+    let hls;
+    let media;
+    let capLevelController;
+    beforeEach(function () {
+      const fixture = document.createElement('div');
+      fixture.id = 'test-fixture';
+      document.body.appendChild(fixture);
+
+      hls = new Hls({ capLevelToPlayerSize: true });
+      media = document.createElement('video');
+      capLevelController = new CapLevelController(hls);
+      capLevelController.onMediaAttaching({
+        media
+      });
+      capLevelController.onManifestParsed({
+        levels
+      });
+    });
+
+    afterEach(function () {
+      if (media.parentNode) {
+        media.parentNode.removeChild(media);
+      }
+      document.body.removeChild(document.querySelector('#test-fixture'));
+    });
+
+    it('gets 0 for width and height when the media element is not in the DOM', function () {
+      const bounds = capLevelController.getDimensions();
+      expect(bounds.width).to.equal(0);
+      expect(bounds.height).to.equal(0);
+      expect(capLevelController.mediaWidth).to.equal(0);
+      expect(capLevelController.mediaHeight).to.equal(0);
+    });
+
+    it('gets width and height attributes when the media element is not in the DOM', function () {
+      media.setAttribute('width', 320);
+      media.setAttribute('height', 240);
+      const pixelRatio = CapLevelController.contentScaleFactor;
+      const bounds = capLevelController.getDimensions();
+      expect(bounds.width).to.equal(320);
+      expect(bounds.height).to.equal(240);
+      expect(capLevelController.mediaWidth).to.equal(320 * pixelRatio);
+      expect(capLevelController.mediaHeight).to.equal(240 * pixelRatio);
+    });
+
+    it('gets client bounds width and height when media element is in the DOM', function () {
+      media.style.width = '1280px';
+      media.style.height = '720px';
+      document.querySelector('#test-fixture').appendChild(media);
+      const pixelRatio = CapLevelController.contentScaleFactor;
+      const bounds = capLevelController.getDimensions();
+      expect(bounds.width).to.equal(1280);
+      expect(bounds.height).to.equal(720);
+      expect(capLevelController.mediaWidth).to.equal(1280 * pixelRatio);
+      expect(capLevelController.mediaHeight).to.equal(720 * pixelRatio);
+    });
+  });
+
   describe('initialization', function () {
     let hls;
     let capLevelController;
