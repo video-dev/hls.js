@@ -368,6 +368,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       minAutoBitrate: 0,
       emeEnabled: false,
       widevineLicenseUrl: undefined,
+      drmSystemOptions: {},
       requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess
   };
 
