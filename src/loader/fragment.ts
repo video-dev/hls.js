@@ -179,13 +179,6 @@ export default class Fragment {
   }
 
   get encrypted () {
-    // TODO: Need to understand why a fragment should only be considered encrypted
-    // when there is no key payload attached, this seems like an odd part of
-    // the API, but keeping it for backwards compatability until fully understood.
-    if (this.decryptdata?.keyFormat === 'identity') {
-      return this.decryptdata?.uri !== null && this.decryptdata?.key === null;
-    }
-
     // At the m3u8-parser level we need to add support for manifest signalled keyformats
     // when we want the fragment to start reporting that it is encrypted.
     // Currently, keyFormat will only be set for identity keys
