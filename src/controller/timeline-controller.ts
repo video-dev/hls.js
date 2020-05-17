@@ -388,19 +388,21 @@ class TimelineController extends EventHandler {
         // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
         // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
         // and trying to access getCueById method of cues will throw an exception
+        // Because we check if the mode is diabled, we can force check `cues` below. They can't be null.
         if (currentTrack.mode === 'disabled') {
           hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
           return;
         }
+
         // Add cues and trigger event with success true.
         cues.forEach(cue => {
           // Sometimes there are cue overlaps on segmented vtts so the same
           // cue can appear more than once in different vtt files.
           // This avoid showing duplicated cues with same timecode and text.
-          if (!currentTrack.cues.getCueById(cue.id)) {
+          if (!currentTrack.cues!.getCueById(cue.id)) {
             try {
               currentTrack.addCue(cue);
-              if (!currentTrack.cues.getCueById(cue.id)) {
+              if (!currentTrack.cues!.getCueById(cue.id)) {
                 throw new Error(`addCue is failed for: ${cue}`);
               }
             } catch (err) {
