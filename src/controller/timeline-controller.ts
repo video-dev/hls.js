@@ -31,7 +31,7 @@ type NonNativeCaptionsTrack = {
   subtitleTrack?: MediaPlaylist
 };
 
-class TimelineController implements ComponentAPI {
+export class TimelineController implements ComponentAPI {
   private hls: Hls;
   private media: HTMLMediaElement | null = null;
   private config: HlsConfig;
@@ -550,5 +550,3 @@ function newVTTCCs (): VTTCCs {
     }
   };
 }
-
-export default TimelineController;
