@@ -1,17 +1,20 @@
 import { Events } from '../events';
 import Cea608Parser, { CaptionScreen } from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
-import WebVTTParser from '../utils/webvtt-parser';
+import { parseWebVTT } from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
-import Fragment from '../loader/fragment';
-import { HlsConfig } from '../config';
+
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
-import { CuesInterface } from '../utils/cues';
-import { MediaPlaylist } from '../types/media-playlist';
-import Hls from '../hls';
+import Fragment from '../loader/fragment';
 import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData, InitPTSFoundData } from '../types/events';
-import { ComponentAPI } from '../types/component-api';
+
+import type Hls from '../hls';
+import type { ComponentAPI } from '../types/component-api';
+import type { HlsConfig } from '../config';
+import type { CuesInterface } from '../utils/cues';
+import type { MediaPlaylist } from '../types/media-playlist';
+import type { VTTCCs } from '../types/vtt';
 
 type TrackProperties = {
   label: string,
@@ -26,16 +29,6 @@ type NonNativeCaptionsTrack = {
   default: boolean,
   closedCaptions?: MediaPlaylist,
   subtitleTrack?: MediaPlaylist
-};
-
-type VTTCCs = {
-  ccOffset: number,
-  presentationOffset: number,
-  [key: number]: {
-    start: number,
-    prevCC: number,
-    new: boolean
-  }
 };
 
 class TimelineController implements ComponentAPI {
@@ -427,7 +420,7 @@ class TimelineController implements ComponentAPI {
   private _parseVTTs (frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
     const hls = this.hls;
     // Parse the WebVTT file contents.
-    WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
+    parseWebVTT(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
       this._appendCues(cues, frag.level);
       hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     }, (error) => {
@@ -455,6 +448,10 @@ class TimelineController implements ComponentAPI {
     const hls = this.hls;
     if (this.config.renderTextTracksNatively) {
       const textTrack = this.textTracks[fragLevel];
+      // TODO the `cues` can potentially be null if the track mode is disabled
+      // we should check tha case either here via optional chaining or via checking
+      // that the track isn't disabled.
+      // @ts-ignore
       cues.filter(cue => !textTrack.cues.getCueById(cue.id)).forEach(cue => {
         textTrack.addCue(cue);
       });
