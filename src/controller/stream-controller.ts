@@ -251,16 +251,20 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     const frag = this.getNextFragment(bufferInfo.end, levelDetails);
-    if (frag) {
-      if (frag.encrypted) {
-        this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
-        this._loadKey(frag);
-      } else {
-        if (this.fragCurrent !== frag) {
-          this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
-        }
-        this._loadFragment(frag);
+    if (!frag) {
+      return;
+    }
+
+    // We want to load the key if we're dealing with an identity key, because we will decrypt
+    // this content using the key we fetch. Other keys will be handled by the DRM CDM via EME.
+    if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
+      this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
+      this._loadKey(frag);
+    } else {
+      if (this.fragCurrent !== frag) {
+        this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
       }
+      this._loadFragment(frag);
     }
   }
 
