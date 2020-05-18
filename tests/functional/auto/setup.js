@@ -132,7 +132,7 @@ async function testSmoothSwitch (url, config) {
         let currentTime = video.currentTime;
         if (data.level === window.hls.levels.length - 1) {
           console.log(`[test] > switched on level: ${data.level}`);
-          window.setTimeout(() => {
+          window.setTimeout(function () {
             let newCurrentTime = video.currentTime;
             console.log(
               `[test] > currentTime delta : ${newCurrentTime - currentTime}`
@@ -157,12 +157,12 @@ async function testSeekOnLive (url, config) {
       let callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      video.onloadeddata = () => {
-        window.setTimeout(() => {
+      video.onloadeddata = function () {
+        window.setTimeout(function () {
           video.currentTime = video.duration - 5;
         }, 5000);
       };
-      video.onseeked = () => {
+      video.onseeked = function () {
         callback({ code: 'seeked', logs: window.logString });
       };
     },
@@ -220,7 +220,7 @@ async function testIsPlayingVOD (url, config) {
       let callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      video.onloadeddata = () => {
+      video.onloadeddata = function () {
         let expectedPlaying = !(
           video.paused || // not playing when video is paused
           video.ended || // not playing when video is ended
@@ -228,7 +228,7 @@ async function testIsPlayingVOD (url, config) {
         ); // not playing if nothing buffered
         let currentTime = video.currentTime;
         if (expectedPlaying) {
-          window.setTimeout(() => {
+          window.setTimeout(function () {
             console.log(
               `[test] > video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
             );
