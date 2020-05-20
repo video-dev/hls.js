@@ -539,10 +539,27 @@ class EMEController extends EventHandler {
   }
 
   onMediaDetached () {
-    if (this._media) {
-      this._media.removeEventListener('encrypted', this._onMediaEncrypted);
-      this._media = null; // release reference
+    const media = this._media;
+    const mediaKeysList = this._mediaKeysList;
+    if (!media) {
+      return;
     }
+    media.removeEventListener('encrypted', this._onMediaEncrypted);
+    this._media = null;
+    this._mediaKeysList = [];
+    // Close all sessions and remove media keys from the video element.
+    Promise.all(mediaKeysList.map((mediaKeysListItem) => {
+      if (mediaKeysListItem.mediaKeysSession) {
+          return mediaKeysListItem.mediaKeysSession.close().catch(() => {
+            // Ignore errors when closing the sessions. Closing a session that
+            // generated no key requests will throw an error.
+          });
+      }
+    })).then(() => {
+      return media.setMediaKeys(null);
+    }).catch(() => {
+      // Ignore any failures while removing media keys from the video element.
+    });
   }
 
   // TODO: Use manifest types here when they are defined
