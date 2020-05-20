@@ -384,7 +384,7 @@ function backfillProgramDateTimes (fragments, startIndex) {
 function assignProgramDateTime (frag, prevFrag) {
   if (frag.rawProgramDateTime) {
     frag.programDateTime = Date.parse(frag.rawProgramDateTime);
-  } else if (prevFrag && prevFrag.programDateTime) {
+  } else if (prevFrag?.programDateTime) {
     frag.programDateTime = prevFrag.endProgramDateTime;
   }
 
