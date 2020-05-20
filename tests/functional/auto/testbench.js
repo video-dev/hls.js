@@ -19,7 +19,7 @@ function setupConsoleLogRedirection () {
     inner.appendChild(line);
 
     // The empty log line at the beginning comes from a test in `enableLogs`.
-    window.logString = logString += a + '\n';
+    logString += a + '\n';
   }
 
   // overload global window console methods
