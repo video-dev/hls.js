@@ -534,23 +534,15 @@ class EMEController extends EventHandler {
     // Close all sessions and remove media keys from the video element.
     Promise.all(mediaKeysList.map((mediaKeysListItem) => {
       if (mediaKeysListItem.mediaKeysSession) {
-        try {
-          return mediaKeysListItem.mediaKeysSession.close();
-        } catch (ex) {
-          // Ignore errors when closing the sessions. Closing a session that
-          // generated no key requests will throw an error.
-        }
+          return mediaKeysListItem.mediaKeysSession.close().catch(() => {
+            // Ignore errors when closing the sessions. Closing a session that
+            // generated no key requests will throw an error.
+          });
       }
     })).then(() => {
-      this._mediaKeysList = [];
-
-      try {
-        return media.setMediaKeys(null);
-      } catch (ex) {
-        // Ignore any failures while removing media keys from the video element.
-      }
-    }).then(() => {
-      this._media = null; // release reference
+      return media.setMediaKeys(null);
+    }).catch(() => {
+      // Ignore any failures while removing media keys from the video element.
     });
   }
 
