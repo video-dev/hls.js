@@ -523,12 +523,16 @@ class EMEController extends EventHandler {
 
   onMediaDetached () {
     const media = this._media;
-    if (!media) return;
-
+    const mediaKeysList = this._mediaKeysList;
+    if (!media) {
+      return;
+    }
     media.removeEventListener('encrypted', this._onMediaEncrypted);
-
+    this._media = null;
+    this._mediaKeysList = [];
+ 
     // Close all sessions and remove media keys from the video element.
-    Promise.all(this._mediaKeysList.map((mediaKeysListItem) => {
+    Promise.all(mediaKeysList.map((mediaKeysListItem) => {
       if (mediaKeysListItem.mediaKeysSession) {
         try {
           return mediaKeysListItem.mediaKeysSession.close();
