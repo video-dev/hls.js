@@ -80,7 +80,9 @@ const baseConfig = {
                   }
                 }
               }
-            }
+            },
+            ['@babel/plugin-transform-object-assign'],
+            ['@babel/plugin-proposal-optional-chaining']
           ]
         }
       }

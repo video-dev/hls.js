@@ -2,12 +2,13 @@
   "source": "./src",
   "destination": "./api-docs",
   "plugins": [
-    {"name": "esdoc-standard-plugin"},
-    {"name": "esdoc-typescript-plugin", "option": {"enable": true}},
+    {"name": "@itsjamie/esdoc-standard-plugin"},
+    {"name": "@itsjamie/esdoc-typescript-plugin", "option": {"enable": true}},
     {
-      "name": "esdoc-ecmascript-proposal-plugin",
+      "name": "@itsjamie/esdoc-ecmascript-proposal-plugin",
       "option": {
-        "objectRestSpread": true
+        "objectRestSpread": true,
+        "optionalChaining": true
       }
     }
   ]
