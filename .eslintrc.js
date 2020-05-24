@@ -103,7 +103,12 @@ module.exports = {
     'no-empty': 1,
     'no-mixed-operators': 1,
     'no-unused-vars': 2,
-    'no-console': 1,
+    'no-console': [
+      1,
+      {
+        "allow": ["assert"]
+      }
+    ],
     'no-fallthrough': 1,
     'no-case-declarations': 2,
     'no-irregular-whitespace': 1,
