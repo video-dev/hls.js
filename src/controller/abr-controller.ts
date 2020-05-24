@@ -5,16 +5,18 @@
  */
 
 import { Events } from '../events';
-import { BufferHelper, Bufferable } from '../utils/buffer-helper';
+import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
-import Fragment from '../loader/fragment';
-import { LoaderStats } from '../types/loader';
-import LevelDetails from '../loader/level-details';
-import Hls from '../hls';
-import { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
-import { ComponentAPI } from '../types/component-api';
+
+import type { Bufferable } from '../utils/buffer-helper';
+import type Fragment from '../loader/fragment';
+import type { LoaderStats } from '../types/loader';
+import type LevelDetails from '../loader/level-details';
+import type Hls from '../hls';
+import type { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
+import type { ComponentAPI } from '../types/component-api';
 
 const { performance } = self;
 
