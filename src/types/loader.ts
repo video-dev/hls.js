@@ -83,6 +83,8 @@ type LoaderOnError < T extends LoaderContext > = (
   error: {
     // error status code
     code: number,
+    // expect same response if request is repeated
+    final: boolean,
     // error description
     text: string,
   },

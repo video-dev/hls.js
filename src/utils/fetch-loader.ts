@@ -112,7 +112,9 @@ class FetchLoader implements Loader<LoaderContext> {
       }
       // CORS errors result in an undefined code. Set it to 0 here to align with XHR's behavior
       const code = error.code || 0;
-      callbacks.onError({ code, text: error.message }, context, error.details);
+      // CORS errors and 4XX responses are final (i.e. should not be retried)
+      const final = error.code && error.code >= 400 && error.code < 499;
+      callbacks.onError({ code, final, text: error.message }, context, error.details);
     });
   }
 

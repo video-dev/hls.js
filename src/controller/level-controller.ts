@@ -311,6 +311,10 @@ export default class LevelController implements NetworkComponentAPI {
       console.assert(data.frag, 'Event has a fragment defined.');
       levelIndex = (data.frag as Fragment).level;
       fragmentError = true;
+
+      // If the response was final, the request won't be retried;
+      // escalate to a level error instead:
+      if (data.response.final) levelError = true;
       break;
     case ErrorDetails.LEVEL_LOAD_ERROR:
     case ErrorDetails.LEVEL_LOAD_TIMEOUT:
@@ -348,8 +352,11 @@ export default class LevelController implements NetworkComponentAPI {
 
     if (levelError) {
       if ((this.levelRetryCount + 1) <= config.levelLoadingMaxRetry) {
+        const applyBackoff = !fragmentError;
         // exponential backoff capped to max retry timeout
-        delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
+        delay = applyBackoff
+          ? Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout)
+          : config.levelLoadingRetryDelay;
         // Schedule level reload
         this.timer = self.setTimeout(() => this.loadLevel(), delay);
         // boolean used to inform stream controller not to switch back to IDLE on non fatal error

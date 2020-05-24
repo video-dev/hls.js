@@ -502,6 +502,10 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       }
 
       if (!data.fatal) {
+        // If the response was final then it's useless to retry
+        // (the level controller handles this as a level error)
+        if (data.response.final) break;
+
         let loadError = this.fragLoadError;
         if (loadError) {
           loadError++;

@@ -733,6 +733,10 @@ export default class StreamController extends BaseStreamController implements Ne
     case ErrorDetails.KEY_LOAD_ERROR:
     case ErrorDetails.KEY_LOAD_TIMEOUT:
       if (!data.fatal) {
+        // If the response was final then it's useless to retry
+        // (the level controller handles this as a level error)
+        if (data.response.final) break;
+
         // keep retrying until the limit will be reached
         if ((this.fragLoadError + 1) <= this.config.fragLoadingMaxRetry) {
           // exponential backoff capped to config.fragLoadingMaxRetryTimeout
