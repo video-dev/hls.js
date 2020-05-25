@@ -511,7 +511,7 @@ export default class BaseStreamController extends TaskLoop {
 
   protected mergeLivePlaylists (oldDetails: LevelDetails | undefined, newDetails: LevelDetails): number {
     const { levels, levelLastLoaded } = this;
-    let lastLevel;
+    let lastLevel: Level | undefined;
     if (levelLastLoaded) {
       lastLevel = levels![levelLastLoaded];
     }
