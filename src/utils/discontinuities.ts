@@ -1,7 +1,12 @@
-import { logger } from '../utils/logger';
+import { logger } from './logger';
 
-export function findFirstFragWithCC (fragments, cc) {
-  let firstFrag = null;
+import type Fragment from '../loader/fragment';
+import type LevelDetails from '../loader/level-details';
+import type { Level } from '../types/level';
+import type { RequiredProperties } from '../types/general';
+
+export function findFirstFragWithCC (fragments: Fragment[], cc: number) {
+  let firstFrag: Fragment | null = null;
 
   for (let i = 0; i < fragments.length; i += 1) {
     const currentFrag = fragments[i];
@@ -14,9 +19,9 @@ export function findFirstFragWithCC (fragments, cc) {
   return firstFrag;
 }
 
-export function shouldAlignOnDiscontinuities (lastFrag, lastLevel, details) {
+export function shouldAlignOnDiscontinuities (lastFrag: Fragment | null, lastLevel: Level | undefined, details: LevelDetails): lastLevel is RequiredProperties<Level, 'details'> {
   let shouldAlign = false;
-  if (lastLevel && lastLevel.details && details) {
+  if (lastLevel?.details && details) {
     if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC)) {
       shouldAlign = true;
     }
@@ -25,7 +30,7 @@ export function shouldAlignOnDiscontinuities (lastFrag, lastLevel, details) {
 }
 
 // Find the first frag in the previous level which matches the CC of the first frag of the new level
-export function findDiscontinuousReferenceFrag (prevDetails, curDetails) {
+export function findDiscontinuousReferenceFrag (prevDetails: LevelDetails, curDetails: LevelDetails) {
   const prevFrags = prevDetails.fragments;
   const curFrags = curDetails.fragments;
 
@@ -44,7 +49,7 @@ export function findDiscontinuousReferenceFrag (prevDetails, curDetails) {
   return prevStartFrag;
 }
 
-export function adjustPts (sliding, details) {
+export function adjustPts (sliding: number, details: LevelDetails) {
   details.fragments.forEach((frag) => {
     if (frag) {
       const start = frag.start + sliding;
@@ -65,7 +70,7 @@ export function adjustPts (sliding, details) {
  * @param lastLevel
  * @param details
  */
-export function alignStream (lastFrag, lastLevel, details) {
+export function alignStream (lastFrag: Fragment | null, lastLevel: Level | undefined, details: LevelDetails) {
   alignDiscontinuities(lastFrag, details, lastLevel);
   if (!details.PTSKnown && lastLevel) {
     // If the PTS wasn't figured out via discontinuity sequence that means there was no CC increase within the level.
@@ -78,10 +83,11 @@ export function alignStream (lastFrag, lastLevel, details) {
 /**
  * Computes the PTS if a new level's fragments using the PTS of a fragment in the last level which shares the same
  * discontinuity sequence.
+ * @param lastFrag - The last Fragment which shares the same discontuinity sequence
  * @param lastLevel - The details of the last loaded level
  * @param details - The details of the new level
  */
-export function alignDiscontinuities (lastFrag, details, lastLevel) {
+export function alignDiscontinuities (lastFrag: Fragment | null, details: LevelDetails, lastLevel: Level | undefined) {
   if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
     const referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
     if (referenceFrag) {
@@ -96,16 +102,17 @@ export function alignDiscontinuities (lastFrag, details, lastLevel) {
  * @param details - The details of the new level
  * @param lastDetails - The details of the last loaded level
  */
-export function alignPDT (details, lastDetails) {
-  if (lastDetails && lastDetails.fragments.length) {
+export function alignPDT (details: LevelDetails, lastDetails: LevelDetails | undefined) {
+  if (lastDetails?.fragments.length) {
+    // This check protects the unsafe "!" usage below for null program date time access.
     if (!details.hasProgramDateTime || !lastDetails.hasProgramDateTime) {
       return;
     }
     // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
     // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
     // then we can deduce that playlist B sliding is 1000+8 = 1008s
-    const lastPDT = lastDetails.fragments[0].programDateTime;
-    const newPDT = details.fragments[0].programDateTime;
+    const lastPDT = lastDetails.fragments[0].programDateTime!; // hasProgramDateTime check above makes this safe.
+    const newPDT = details.fragments[0].programDateTime!;
     // date diff is in ms. frag.start is in seconds
     const sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
     if (Number.isFinite(sliding)) {
