@@ -1,14 +1,16 @@
-import { CaptionScreen } from './cea-608-parser';
+import { logger } from '../utils/logger';
+
+import type { TimelineController } from '../controller/timeline-controller';
+import type { CaptionScreen } from './cea-608-parser';
 
 export default class OutputFilter {
-  timelineController: any;
+  timelineController: TimelineController;
   trackName: string;
   startTime: number | null;
   endTime: number | null;
   screen: CaptionScreen | null;
 
-  // TODO(typescript-timelineController)
-  constructor (timelineController: any, trackName: string) {
+  constructor (timelineController: TimelineController, trackName: string) {
     this.timelineController = timelineController;
     this.trackName = trackName;
     this.startTime = null;
@@ -21,7 +23,12 @@ export default class OutputFilter {
       return;
     }
 
-    this.timelineController.addCues(this.trackName, this.startTime, this.endTime, this.screen);
+    if (!this.screen) {
+      logger.warn('Called dispatchCue from output filter before newCue.');
+      return;
+    }
+
+    this.timelineController.addCues(this.trackName, this.startTime, this.endTime as number, this.screen);
     this.startTime = null;
   }
 

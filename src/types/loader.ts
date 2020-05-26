@@ -1,5 +1,5 @@
-import Fragment from '../loader/fragment';
-import LevelDetails from '../loader/level-details';
+import type Fragment from '../loader/fragment';
+import type LevelDetails from '../loader/level-details';
 
 export interface LoaderContext {
   // target URL

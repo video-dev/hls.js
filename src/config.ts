@@ -4,7 +4,8 @@ import AudioTrackController from './controller/audio-track-controller';
 import BufferController from './controller/buffer-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-import TimelineController from './controller/timeline-controller';
+
+import { TimelineController } from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import EMEController from './controller/eme-controller';
 
@@ -142,7 +143,7 @@ export type HlsConfig =
     // Subtitle
     subtitleStreamController?: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
     subtitleTrackController?: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
-    timelineController?: any, // TODO(typescript-timelinecontroller): Type once file is done
+    timelineController?: typeof TimelineController,
     // EME
     emeController?: typeof EMEController,
 

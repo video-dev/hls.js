@@ -145,6 +145,7 @@ export function parseSegmentIndex (initSegment) {
     const referenceType = (referenceInfo & 0x80000000) >>> 31;
 
     if (referenceType === 1) {
+      // eslint-disable-next-line no-console
       console.warn('SIDX has hierarchical references (not supported)');
       return;
     }
