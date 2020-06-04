@@ -300,19 +300,46 @@ export default class M3U8Parser {
           const decryptmethod = keyAttrs.enumeratedString('METHOD');
           const decrypturi = keyAttrs.URI;
           const decryptiv = keyAttrs.hexadecimalInteger('IV');
+          const decryptkeyformatversions = keyAttrs.enumeratedString('KEYFORMATVERSIONS');
+          const decryptkeyid = keyAttrs.enumeratedString('KEYID');
           // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
-          const decryptkeyformat = keyAttrs.KEYFORMAT || 'identity';
+          const decryptkeyformat = keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
 
-          if (decryptkeyformat === 'com.apple.streamingkeydelivery') {
-            logger.warn('Keyformat com.apple.streamingkeydelivery is not supported');
+          const unsupportedKnownKeyformatsInManifest = [
+            'com.apple.streamingkeydelivery',
+            'com.microsoft.playready',
+            'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed', // widevine (v2)
+            'com.widevine' // earlier widevine (v1)
+          ];
+
+          if (unsupportedKnownKeyformatsInManifest.includes(decryptkeyformat)) {
+            logger.warn(`Keyformat ${decryptkeyformat} is not supported from the manifest`);
+            continue;
+          } else if (decryptkeyformat !== 'identity') {
+            // We are supposed to skip keys we don't understand.
+            // As we currently only officially support identity keys
+            // from the manifest we shouldn't save any other key.
             continue;
           }
 
+          // TODO: multiple keys can be defined on a fragment, and we need to support this
+          // for clients that support both playready and widevine
           if (decryptmethod) {
-            levelkey = new LevelKey(baseurl, decrypturi);
+            // TODO: need to determine if the level key is actually a relative URL
+            // if it isn't, then we should instead construct the LevelKey using fromURI.
+            levelkey = LevelKey.fromURL(baseurl, decrypturi);
             if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
               levelkey.method = decryptmethod;
-              levelkey.key = null;
+              levelkey.keyFormat = decryptkeyformat;
+
+              if (decryptkeyid) {
+                levelkey.keyID = decryptkeyid;
+              }
+
+              if (decryptkeyformatversions) {
+                levelkey.keyFormatVersions = decryptkeyformatversions;
+              }
+
               // Initialization Vector (IV)
               levelkey.iv = decryptiv;
             }

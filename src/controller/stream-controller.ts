@@ -7,7 +7,7 @@ import PlaylistLoader from '../loader/playlist-loader';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import GapController from './gap-controller';
+import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
@@ -218,7 +218,8 @@ export default class StreamController extends BaseStreamController implements Ne
     // determine next candidate fragment to be loaded, based on current position and end of buffer position
     // ensure up to `config.maxMaxBufferLength` of buffer upfront
 
-    const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, config.maxBufferHole);
+    const maxBufferHole = pos < config.maxBufferHole ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole) : config.maxBufferHole;
+    const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, maxBufferHole);
     const bufferLen = bufferInfo.len;
     // Stay idle if we are still with buffer margins
     if (bufferLen >= maxBufLen) {
@@ -250,16 +251,20 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     const frag = this.getNextFragment(bufferInfo.end, levelDetails);
-    if (frag) {
-      if (frag.encrypted) {
-        this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
-        this._loadKey(frag);
-      } else {
-        if (this.fragCurrent !== frag) {
-          this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
-        }
-        this._loadFragment(frag);
+    if (!frag) {
+      return;
+    }
+
+    // We want to load the key if we're dealing with an identity key, because we will decrypt
+    // this content using the key we fetch. Other keys will be handled by the DRM CDM via EME.
+    if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
+      this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
+      this._loadKey(frag);
+    } else {
+      if (this.fragCurrent !== frag) {
+        this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
       }
+      this._loadFragment(frag);
     }
   }
 

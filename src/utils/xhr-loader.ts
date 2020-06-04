@@ -57,7 +57,7 @@ class XhrLoader implements Loader<LoaderContext> {
 
   loadInternal (): void {
     const context = this.context;
-    const xhr = this.loader = new XMLHttpRequest();
+    const xhr = this.loader = new self.XMLHttpRequest();
 
     const stats = this.stats;
     stats.loading.first = 0;

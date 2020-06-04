@@ -198,6 +198,7 @@ const logger: {
   log: function (severity, msg) {
     const minLevel = this.verboseFilter[severity];
     if (this.verboseLevel >= minLevel) {
+      // eslint-disable-next-line no-console
       console.log(this.time + ' [' + severity + '] ' + msg);
     }
   }
