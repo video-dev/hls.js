@@ -1,4 +1,4 @@
-import { LevelParsed } from './level';
+import type { LevelParsed } from './level';
 
 export interface AudioGroup {
   id?: string;

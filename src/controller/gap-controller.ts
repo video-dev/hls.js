@@ -167,7 +167,7 @@ export default class GapController {
     if (!stallReported) {
       // Report stalled error once
       this.stallReported = true;
-      logger.warn(`Playback stalling at @${media.currentTime} due to low buffer`);
+      logger.warn(`Playback stalling at @${media.currentTime} due to low buffer (buffer=${bufferLen})`);
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,

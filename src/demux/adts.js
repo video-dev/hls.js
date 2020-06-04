@@ -173,10 +173,13 @@ export function probe (data, offset) {
   if (isHeader(data, offset)) {
     // ADTS header Length
     const headerLength = getHeaderLength(data, offset);
+    if (offset + headerLength >= data.length) {
+      return false;
+    }
     // ADTS frame Length
-    let frameLength = headerLength;
-    if (offset + 5 < data.length) {
-      frameLength = getFullFrameLength(data, offset);
+    const frameLength = getFullFrameLength(data, offset);
+    if (frameLength <= headerLength) {
+      return false;
     }
 
     const newOffset = offset + frameLength;
