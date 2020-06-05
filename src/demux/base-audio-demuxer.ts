@@ -54,7 +54,7 @@ class BaseAudioDemuxer implements Demuxer {
     const length = data.length;
 
     if (this.initPTS === null) {
-      this.initPTS = Number.isFinite(timestamp) ? timestamp * 90 : timeOffset * 90000;
+      this.initPTS = (timestamp && Number.isFinite(timestamp)) ? timestamp * 90 : timeOffset * 90000;
     }
 
     if (id3Data.length) {

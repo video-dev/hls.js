@@ -146,7 +146,7 @@ design idea is pretty simple :
     - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
   - [src/demux/exp-golomb.js][]
     - utility class to extract Exponential-Golomb coded data. needed by TS demuxer for SPS parsing.
-  - [src/demux/id3.js][]
+  - [src/demux/id3.ts][]
     - utility class that detect and parse ID3 tags, used by AAC demuxer
   - [src/demux/tsdemuxer.js][]
     - highly optimized TS demuxer:
@@ -245,7 +245,7 @@ design idea is pretty simple :
 [src/demux/demuxer-inline.js]: ../src/demux/demuxer-inline.js
 [src/demux/demuxer-worker.js]: ../src/demux/demuxer-worker.js
 [src/demux/exp-golomb.js]: ../src/demux/exp-golomb.js
-[src/demux/id3.js]: ../src/demux/id3.js
+[src/demux/id3.ts]: ../src/demux/id3.ts
 [src/demux/sample-aes.js]: ../src/demux/sample-aes.js
 [src/demux/tsdemuxer.js]: ../src/demux/tsdemuxer.js
 [src/helper/aac.js]: ../src/helper/aac.js
