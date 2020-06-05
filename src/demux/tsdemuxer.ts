@@ -622,7 +622,7 @@ class TSDemuxer implements Demuxer {
                 pts: pes.pts,
                 payloadType: payloadType,
                 uuid: uuidStrArray.join(''),
-                userData: utf8ArrayToStr(userDataPayloadBytes.buffer),
+                userData: utf8ArrayToStr(userDataPayloadBytes),
                 userDataBytes: userDataPayloadBytes
               });
             }
