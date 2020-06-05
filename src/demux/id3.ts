@@ -156,7 +156,8 @@ class ID3 {
    */
   static getID3Frames (id3Data) {
     let offset = 0;
-    const frames = [];
+    // todo: proper typing
+    const frames: { key: any; info: any; data: any; } | { key: any; data: any; info?: undefined; }[] = [];
 
     while (ID3.isHeader(id3Data, offset)) {
       const size = ID3._readSize(id3Data, offset + 6);
