@@ -1,4 +1,4 @@
-import ID3, { utf8ArrayToStr } from '../../../src/demux/id3';
+import ID3, { ID3Frame, utf8ArrayToStr } from '../../../src/demux/id3';
 import { expect } from 'chai';
 
 describe('ID3 tests', function () {
@@ -28,11 +28,11 @@ describe('ID3 tests', function () {
   it('should decode a TXXX frame', function () {
     const frame = {
       type: 'TXXX',
-      data: new Uint8Array([0, 102, 111, 111, 0, 97, 98, 99])
+      data: new Uint8Array([0, 102, 111, 111, 0, 97, 98, 99]),
+      size: 2 // required by the _decodeTextFrame function
     };
 
-    // todo: proper typing
-    const result: { key: any; info: any; data: any; } | { key: any; data: any; info?: undefined; } | undefined = ID3._decodeTextFrame(frame);
+    const result: ID3Frame | undefined = ID3._decodeTextFrame(frame);
     expect(result).to.exist;
     expect(result!.key).to.equal('TXXX');
     expect(result!.info).to.equal('foo');

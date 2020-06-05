@@ -1,3 +1,9 @@
+type RawFrame = {type: string, size: number, data: Uint8Array};
+
+// breaking up those two types in order to clarify what is happening in the decoding path.
+type DecodedFrame<T> = {key: string, data: T, info?: any};
+export type ID3Frame = DecodedFrame<ArrayBuffer | string>;
+
 /**
  * ID3 parser
  */
@@ -8,7 +14,7 @@ class ID3 {
    * @param {number} offset - The offset at which to start searching
    * @return {boolean} - True if an ID3 header is found
    */
-  static isHeader (data, offset) {
+  static isHeader (data: Uint8Array, offset: number): boolean {
     /*
     * http://id3.org/id3v2.3.0
     * [0]     = 'I'
@@ -44,7 +50,7 @@ class ID3 {
    * @param {number} offset - The offset at which to start searching
    * @return {boolean} - True if an ID3 footer is found
    */
-  static isFooter (data, offset) {
+  static isFooter (data: Uint8Array, offset: number): boolean {
     /*
     * The footer is a copy of the header, but with a different identifier
     */
@@ -68,9 +74,10 @@ class ID3 {
    * Returns any adjacent ID3 tags found in data starting at offset, as one block of data
    * @param {Uint8Array} data - The data to search in
    * @param {number} offset - The offset at which to start searching
-   * @return {Uint8Array} - The block of data containing any ID3 tags found
+   * @return {Uint8Array | undefined} - The block of data containing any ID3 tags found
+   * or *undefined* if no header is found at the starting offset
    */
-  static getID3Data (data, offset) {
+  static getID3Data (data: Uint8Array, offset: number): Uint8Array | undefined {
     const front = offset;
     let length = 0;
 
@@ -96,7 +103,7 @@ class ID3 {
     return undefined;
   }
 
-  static _readSize (data, offset) {
+  static _readSize (data: Uint8Array, offset: number): number {
     let size = 0;
     size = ((data[offset] & 0x7f) << 21);
     size |= ((data[offset + 1] & 0x7f) << 14);
@@ -105,21 +112,21 @@ class ID3 {
     return size;
   }
 
-  static canParse (data, offset) {
+  static canParse (data: Uint8Array, offset: number): boolean {
     return ID3.isHeader(data, offset) && ID3._readSize(data, offset + 6) + 10 <= data.length - offset;
   }
 
   /**
    * Searches for the Elementary Stream timestamp found in the ID3 data chunk
    * @param {Uint8Array} data - Block of data containing one or more ID3 tags
-   * @return {number} - The timestamp
+   * @return {number | undefined} - The timestamp
    */
-  static getTimeStamp (data) {
-    const frames = ID3.getID3Frames(data);
-    for (let i = 0; i < frames.length; i++) {
-      const frame = frames[i];
+  static getTimeStamp (data: Uint8Array): number | undefined {
+    const frames: ID3Frame[] = ID3.getID3Frames(data);
+
+    for (const frame of frames) {
       if (ID3.isTimeStampFrame(frame)) {
-        return ID3._readTimeStamp(frame);
+        return ID3._readTimeStamp(frame as DecodedFrame<ArrayBuffer>);
       }
     }
 
@@ -130,18 +137,18 @@ class ID3 {
    * Returns true if the ID3 frame is an Elementary Stream timestamp frame
    * @param {ID3 frame} frame
    */
-  static isTimeStampFrame (frame) {
+  static isTimeStampFrame (frame: ID3Frame): boolean {
     return (frame && frame.key === 'PRIV' && frame.info === 'com.apple.streaming.transportStreamTimestamp');
   }
 
-  static _getFrameData (data) {
+  static _getFrameData (data: Uint8Array): RawFrame {
     /*
     Frame ID       $xx xx xx xx (four characters)
     Size           $xx xx xx xx
     Flags          $xx xx
     */
-    const type = String.fromCharCode(data[0], data[1], data[2], data[3]);
-    const size = ID3._readSize(data, 4);
+    const type: string = String.fromCharCode(data[0], data[1], data[2], data[3]);
+    const size: number = ID3._readSize(data, 4);
 
     // skip frame id, size, and flags
     const offset = 10;
@@ -152,12 +159,11 @@ class ID3 {
   /**
    * Returns an array of ID3 frames found in all the ID3 tags in the id3Data
    * @param {Uint8Array} id3Data - The ID3 data containing one or more ID3 tags
-   * @return {ID3 frame[]} - Array of ID3 frame objects
+   * @return {ID3Frame[]} - Array of ID3 frame objects
    */
-  static getID3Frames (id3Data) {
+  static getID3Frames (id3Data: Uint8Array): ID3Frame[] {
     let offset = 0;
-    // todo: proper typing
-    const frames: { key: any; info: any; data: any; } | { key: any; data: any; info?: undefined; }[] = [];
+    const frames: ID3Frame[] = [];
 
     while (ID3.isHeader(id3Data, offset)) {
       const size = ID3._readSize(id3Data, offset + 6);
@@ -166,8 +172,8 @@ class ID3 {
       const end = offset + size;
       // loop through frames in the ID3 tag
       while (offset + 8 < end) {
-        const frameData = ID3._getFrameData(id3Data.subarray(offset));
-        const frame = ID3._decodeFrame(frameData);
+        const frameData: RawFrame = ID3._getFrameData(id3Data.subarray(offset));
+        const frame: ID3Frame | undefined = ID3._decodeFrame(frameData);
         if (frame) {
           frames.push(frame);
         }
@@ -184,7 +190,7 @@ class ID3 {
     return frames;
   }
 
-  static _decodeFrame (frame) {
+  static _decodeFrame (frame: RawFrame): ID3Frame | undefined {
     if (frame.type === 'PRIV') {
       return ID3._decodePrivFrame(frame);
     } else if (frame.type[0] === 'T') {
@@ -196,7 +202,7 @@ class ID3 {
     return undefined;
   }
 
-  static _readTimeStamp (timeStampFrame) {
+  static _readTimeStamp (timeStampFrame: DecodedFrame<ArrayBuffer>): number | undefined {
     if (timeStampFrame.data.byteLength === 8) {
       const data = new Uint8Array(timeStampFrame.data);
       // timestamp is 33 bit expressed as a big-endian eight-octet number,
@@ -218,7 +224,7 @@ class ID3 {
     return undefined;
   }
 
-  static _decodePrivFrame (frame) {
+  static _decodePrivFrame (frame: RawFrame): DecodedFrame<ArrayBuffer> | undefined {
     /*
     Format: <text string>\0<binary data>
     */
@@ -232,7 +238,7 @@ class ID3 {
     return { key: frame.type, info: owner, data: privateData.buffer };
   }
 
-  static _decodeTextFrame (frame) {
+  static _decodeTextFrame (frame: RawFrame): DecodedFrame<string> | undefined {
     if (frame.size < 2) {
       return undefined;
     }
@@ -261,7 +267,7 @@ class ID3 {
     }
   }
 
-  static _decodeURLFrame (frame) {
+  static _decodeURLFrame (frame: RawFrame): DecodedFrame<string> | undefined {
     if (frame.type === 'WXXX') {
       /*
       Format:
@@ -273,10 +279,10 @@ class ID3 {
       }
 
       let index = 1;
-      const description = ID3._utf8ArrayToStr(frame.data.subarray(index));
+      const description: string = ID3._utf8ArrayToStr(frame.data.subarray(index));
 
       index += description.length + 1;
-      const value = ID3._utf8ArrayToStr(frame.data.subarray(index));
+      const value: string = ID3._utf8ArrayToStr(frame.data.subarray(index));
 
       return { key: frame.type, info: description, data: value };
     } else {
@@ -284,7 +290,7 @@ class ID3 {
       Format:
       [0-?] = {URL}
       */
-      const url = ID3._utf8ArrayToStr(frame.data);
+      const url: string = ID3._utf8ArrayToStr(frame.data);
       return { key: frame.type, data: url };
     }
   }
@@ -298,7 +304,7 @@ class ID3 {
    * LastModified: Dec 25 1999
    * This library is free.  You can redistribute it and/or modify it.
    */
-  static _utf8ArrayToStr (array, exitOnNull = false) {
+  static _utf8ArrayToStr (array: Uint8Array, exitOnNull:boolean = false): string {
     const decoder = getTextDecoder();
     if (decoder) {
       const decoded = decoder.decode(array);
@@ -352,7 +358,7 @@ class ID3 {
   }
 }
 
-let decoder;
+let decoder: TextDecoder;
 
 function getTextDecoder () {
   if (!decoder && typeof self.TextDecoder !== 'undefined') {
