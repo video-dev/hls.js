@@ -219,7 +219,7 @@ async function testIsPlayingVOD (url, config) {
       const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
-      video.onloadeddata = function () {
+      self.hls.once(self.Hls.Events.BUFFER_APPENDED, function () {
         const expectedPlaying = !(
           video.paused || // not playing when video is paused
           video.ended || // not playing when video is ended
@@ -239,7 +239,7 @@ async function testIsPlayingVOD (url, config) {
           );
           callback({ playing: false });
         }
-      };
+      });
     },
     url,
     config
