@@ -448,12 +448,28 @@ export class TimelineController implements ComponentAPI {
     const hls = this.hls;
     if (this.config.renderTextTracksNatively) {
       const textTrack = this.textTracks[fragLevel];
-      // TODO the `cues` can potentially be null if the track mode is disabled
-      // we should check tha case either here via optional chaining or via checking
-      // that the track isn't disabled.
-      // @ts-ignore
-      cues.filter(cue => !textTrack.cues.getCueById(cue.id)).forEach(cue => {
-        textTrack.addCue(cue);
+      // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
+      // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
+      // and trying to access getCueById method of cues will throw an exception
+      // Because we check if the mode is diabled, we can force check `cues` below. They can't be null.
+      if (textTrack.mode === 'disabled') {
+        return;
+      }
+      // Sometimes there are cue overlaps on segmented vtts so the same
+      // cue can appear more than once in different vtt files.
+      // This avoid showing duplicated cues with same timecode and text.
+      cues.filter(cue => !textTrack.cues!.getCueById(cue.id)).forEach(cue => {
+        try {
+          textTrack.addCue(cue);
+          if (!textTrack.cues!.getCueById(cue.id)) {
+            throw new Error(`addCue is failed for: ${cue}`);
+          }
+        } catch (err) {
+          logger.debug(`Failed occurred on adding cues: ${err}`);
+          const textTrackCue = new (self.TextTrackCue as any)(cue.startTime, cue.endTime, cue.text);
+          textTrackCue.id = cue.id;
+          textTrack.addCue(textTrackCue);
+        }
       });
     } else {
       const currentTrack = this.tracks[fragLevel];

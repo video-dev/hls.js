@@ -3,7 +3,7 @@ import Fragment from '../loader/fragment';
 
 /**
  * Returns first fragment whose endPdt value exceeds the given PDT.
- * @param {Array} fragments - The array of candidate fragments
+ * @param {Array<Fragment>} fragments - The array of candidate fragments
  * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
  * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*|null} fragment - The best matching fragment
@@ -46,12 +46,23 @@ export function findFragmentByPDT (fragments: Array<Fragment>, PDTValue: number 
  * @returns {*} foundFrag - The best matching fragment
  */
 export function findFragmentByPTS (fragPrevious: Fragment | null, fragments: Array<Fragment>, bufferEnd: number = 0, maxFragLookUpTolerance: number = 0): Fragment | null {
-  const fragNext = fragPrevious ? fragments[fragPrevious.sn as number - (fragments[0].sn as number) + 1] : null;
+  let fragNext: Fragment | null = null;
+  if (fragPrevious) {
+    fragNext = fragments[fragPrevious.sn as number - (fragments[0].sn as number) + 1];
+  } else if (bufferEnd === 0 && fragments[0].start === 0) {
+    fragNext = fragments[0];
+  }
   // Prefer the next fragment if it's within tolerance
-  if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
+  if (fragNext && fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext) === 0) {
     return fragNext;
   }
-  return BinarySearch.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
+  // We might be seeking past the tolerance so find the best match
+  const foundFragment = BinarySearch.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
+  if (foundFragment) {
+    return foundFragment;
+  }
+  // If no match was found return the next fragment after fragPrevious, or null
+  return fragNext;
 }
 
 /**

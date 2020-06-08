@@ -39,10 +39,16 @@ type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean
 };
 
+export type DRMSystemOptions = {
+  audioRobustness?: string,
+  videoRobustness?: string,
+}
+
 export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
   widevineLicenseUrl?: string,
+  drmSystemOptions: DRMSystemOptions,
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null,
 };
 
@@ -239,6 +245,7 @@ export const hlsDefaultConfig: HlsConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: void 0, // used by eme-controller
+  drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
   progressive: true,
