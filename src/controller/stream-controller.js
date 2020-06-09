@@ -49,6 +49,7 @@ class StreamController extends BaseStreamController {
     this.stallReported = false;
     this.gapController = null;
     this.altAudio = false;
+    this.audioOnly = false;
     this.bitrateTest = false;
   }
 
@@ -150,6 +151,13 @@ class StreamController extends BaseStreamController {
     // exit loop, as we either need more info (level not parsed) or we need media to be attached to load new fragment
     if (this.levelLastLoaded === undefined || (
       !media && (this.startFragRequested || !config.startFragPrefetch))) {
+      return;
+    }
+
+    // If the "main" level is audio-only but we are loading an alternate track in the same group, do not load anything
+    if (this.altAudio && this.audioOnly) {
+      // Clear audio demuxer state so when switching back to main audio we're not still appending where we left off
+      this.demuxer.frag = null;
       return;
     }
 
@@ -914,14 +922,14 @@ class StreamController extends BaseStreamController {
         this.state === State.PARSING) {
       let tracks = data.tracks, trackName, track;
 
-      // if audio track is expected to come from audio stream controller, discard any coming from main
-      if (tracks.audio && this.altAudio) {
-        delete tracks.audio;
-      }
-
       // include levelCodec in audio and video tracks
       track = tracks.audio;
+      this.audioOnly = track && !tracks.video;
       if (track) {
+        // if audio track is expected to come from audio stream controller, discard any coming from main
+        if (this.altAudio) {
+          delete tracks.audio;
+        }
         let audioCodec = this.levels[this.level].audioCodec,
           ua = navigator.userAgent.toLowerCase();
         if (audioCodec && this.audioCodecSwap) {
@@ -1300,7 +1308,8 @@ class StreamController extends BaseStreamController {
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
     if (media) {
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      this.fragmentTracker.detectEvictedFragments(ElementaryStreamTypes.VIDEO, media.buffered);
+      const elementaryStreamType = this.audioOnly ? ElementaryStreamTypes.AUDIO : ElementaryStreamTypes.VIDEO;
+      this.fragmentTracker.detectEvictedFragments(elementaryStreamType, media.buffered);
     }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
