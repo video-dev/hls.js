@@ -922,14 +922,16 @@ class StreamController extends BaseStreamController {
         this.state === State.PARSING) {
       let tracks = data.tracks, trackName, track;
 
+      this.audioOnly = tracks.audio && !tracks.video;
+
+      // if audio track is expected to come from audio stream controller, discard any coming from main
+      if (this.altAudio && !this.audioOnly) {
+        delete tracks.audio;
+      }
+
       // include levelCodec in audio and video tracks
       track = tracks.audio;
-      this.audioOnly = track && !tracks.video;
       if (track) {
-        // if audio track is expected to come from audio stream controller, discard any coming from main
-        if (this.altAudio) {
-          delete tracks.audio;
-        }
         let audioCodec = this.levels[this.level].audioCodec,
           ua = navigator.userAgent.toLowerCase();
         if (audioCodec && this.audioCodecSwap) {
