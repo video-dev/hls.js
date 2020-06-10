@@ -141,12 +141,17 @@ class BufferController extends EventHandler {
     }
   }
 
-  onManifestParsed (data: { altAudio: boolean }) {
-    // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
+  onManifestParsed (data: { altAudio: boolean, audio: boolean, video: boolean }) {
+    // in case of alt audio (where all tracks have urls) 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = data.altAudio ? 2 : 1;
+    let codecEvents: number = 2;
+    if (data.audio && !data.video || !data.altAudio) {
+      codecEvents = 1;
+    }
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
+
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 

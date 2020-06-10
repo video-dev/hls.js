@@ -111,7 +111,7 @@ class MP4Remuxer {
       typeSupported = this.typeSupported,
       container = 'audio/mp4',
       tracks = {},
-      data = { tracks: tracks },
+      data = { tracks },
       computePTSDTS = (this._initPTS === undefined),
       initPTS, initDTS;
 
@@ -165,8 +165,11 @@ class MP4Remuxer {
       if (computePTSDTS) {
         initPTS = Math.min(initPTS, videoSamples[0].pts - inputTimeScale * timeOffset);
         initDTS = Math.min(initDTS, videoSamples[0].dts - inputTimeScale * timeOffset);
-        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS });
+        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
       }
+    } else if (computePTSDTS && tracks.audio) {
+      // initPTS found for audio-only stream with main and alt audio
+      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
     }
 
     if (Object.keys(tracks).length) {
