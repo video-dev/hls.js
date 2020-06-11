@@ -124,7 +124,9 @@ class ID3 {
   static getTimeStamp (data: Uint8Array): number | undefined {
     const frames: ID3Frame[] = ID3.getID3Frames(data);
 
-    for (const frame of frames) {
+    for (let i = 0; i < frames.length; i++) {
+      const frame = frames[i];
+
       if (ID3.isTimeStampFrame(frame)) {
         return ID3._readTimeStamp(frame as DecodedFrame<ArrayBuffer>);
       }
