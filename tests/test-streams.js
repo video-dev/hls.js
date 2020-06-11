@@ -185,12 +185,12 @@ module.exports = {
     description: 'Alternate audio tracks, and multiple VTT tracks'
   },
   altAudioAudioOnly: {
-    url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/margri.m3u8',
-    description: 'Audio only with alternate audio track'
+    url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/sintel/playlist.m3u8',
+    description: 'Audio only with alternate audio track (Sintel)'
   },
   altAudioMultiAudioOnly: {
     url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/angel-one.m3u8',
-    description: 'Audio only with multiple alternate audio tracks'
+    description: 'Audio only with multiple alternate audio tracks (Angel One)'
   },
   muxedFmp4: {
     url: 'https://s3.amazonaws.com/qa.jwplayer.com/hlsjs/muxed-fmp4/hls.m3u8',
