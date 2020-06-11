@@ -181,6 +181,11 @@ describe('BufferController tests', function () {
       expect(bufferController.bufferCodecEventsExpected).to.equal(2);
     });
 
+    it('expects one bufferCodec event if altAudio is signaled with audio only', function () {
+      bufferController.onManifestParsed(Events.MANIFEST_PARSED, { altAudio: true, audio: true, video: false });
+      expect(bufferController.bufferCodecEventsExpected).to.equal(1);
+    });
+
     it('creates sourceBuffers when no more BUFFER_CODEC events are expected', function () {
       bufferController.pendingTracks = { video: {} };
 

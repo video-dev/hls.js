@@ -184,6 +184,14 @@ module.exports = {
     url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
     description: 'Alternate audio tracks, and multiple VTT tracks'
   },
+  altAudioAudioOnly: {
+    url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/margri.m3u8',
+    description: 'Audio only with alternate audio track'
+  },
+  altAudioMultiAudioOnly: {
+    url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/angel-one.m3u8',
+    description: 'Audio only with multiple alternate audio tracks'
+  },
   muxedFmp4: {
     url: 'https://s3.amazonaws.com/qa.jwplayer.com/hlsjs/muxed-fmp4/hls.m3u8',
     description: 'Muxed av fmp4 - appended to "audiovideo" SourceBuffer'
