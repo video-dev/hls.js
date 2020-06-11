@@ -39,6 +39,7 @@ export default class StreamController extends BaseStreamController implements Ne
   private _forceStartLoad: boolean = false;
   private retryDate: number = 0;
   private altAudio: boolean = false;
+  private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
   private previouslyPaused: boolean = false;
   private immediateSwitch: boolean = false;
@@ -196,6 +197,11 @@ export default class StreamController extends BaseStreamController implements Ne
       return;
     }
 
+    // If the "main" level is audio-only but we are loading an alternate track in the same group, do not load anything
+    if (this.altAudio && this.audioOnly) {
+      return;
+    }
+
     if (!levels || !levels[level]) {
       return;
     }
@@ -299,6 +305,9 @@ export default class StreamController extends BaseStreamController implements Ne
       if (this._reduceMaxBufferLength(frag.duration)) {
         this.fragmentTracker.removeFragment(frag);
       }
+    } else if (this.media?.buffered.length === 0) {
+      // Stop gap for bad tracker / buffer flush behavior
+      this.fragmentTracker.removeAllFragments();
     }
   }
 
@@ -617,6 +626,13 @@ export default class StreamController extends BaseStreamController implements Ne
     );
   }
 
+  private resetTransmuxer () {
+    if (this.transmuxer) {
+      this.transmuxer.destroy();
+      this.transmuxer = null;
+    }
+  }
+
   onAudioTrackSwitching (event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) {
     // if any URL found on new audio track, it is an alternate audio track
     const altAudio = !!data.url;
@@ -637,12 +653,12 @@ export default class StreamController extends BaseStreamController implements Ne
         this.fragCurrent = null;
         this.fragPrevious = null;
         // destroy transmuxer to force init segment generation (following audio switch)
-        if (this.transmuxer) {
-          this.transmuxer.destroy();
-          this.transmuxer = null;
-        }
+        this.resetTransmuxer();
         // switch to IDLE state to load new fragment
         this.state = State.IDLE;
+      } else if (this.audioOnly) {
+        // Reset audio transmuxer so when switching back to main audio we're not still appending where we left off
+        this.resetTransmuxer();
       }
       const hls = this.hls;
       // switching to main audio, flush all audio and trigger track switched
@@ -848,7 +864,8 @@ export default class StreamController extends BaseStreamController implements Ne
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
     if (media) {
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      this.fragmentTracker.detectEvictedFragments(ElementaryStreamTypes.VIDEO, media.buffered);
+      const elementaryStreamType = this.audioOnly ? ElementaryStreamTypes.AUDIO : ElementaryStreamTypes.VIDEO;
+      this.fragmentTracker.detectEvictedFragments(elementaryStreamType, media.buffered);
     }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
@@ -983,8 +1000,11 @@ export default class StreamController extends BaseStreamController implements Ne
     if (this.state !== State.PARSING) {
       return;
     }
+
+    this.audioOnly = !!tracks.audio && !tracks.video;
+
     // if audio track is expected to come from audio stream controller, discard any coming from main
-    if (tracks.audio && this.altAudio) {
+    if (this.altAudio && !this.audioOnly) {
       delete tracks.audio;
     }
     // include levelCodec in audio and video tracks
