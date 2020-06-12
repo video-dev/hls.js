@@ -1,4 +1,4 @@
-import ID3, { ID3Frame, utf8ArrayToStr } from '../../../src/demux/id3';
+import ID3, { utf8ArrayToStr } from '../../../src/demux/id3';
 import { expect } from 'chai';
 
 describe('ID3 tests', function () {
@@ -6,13 +6,15 @@ describe('ID3 tests', function () {
   const mockID3HeaderMissingLeadingByte = mockID3Header.slice(8, mockID3Header.length);
   const mockID3HeaderMissingTrailingByte = mockID3Header.slice(0, mockID3Header.length - 8);
 
-  it('utf8ArrayToStr', function () {
+  it('utf8ArrayToStr', function (done) {
     const aB = new Uint8Array([97, 98]);
     const aNullBNullC = new Uint8Array([97, 0, 98, 0, 99]);
 
     expect(utf8ArrayToStr(aB)).to.equal('ab');
     expect(utf8ArrayToStr(aNullBNullC)).to.equal('abc');
     expect(utf8ArrayToStr(aNullBNullC, true)).to.equal('a');
+
+    done();
   });
   it('Properly parses ID3 Headers', function () {
     expect(ID3.isHeader(mockID3Header, 0)).to.equal(true);
@@ -32,7 +34,7 @@ describe('ID3 tests', function () {
       size: 2 // required by the _decodeTextFrame function
     };
 
-    const result: ID3Frame | undefined = ID3._decodeTextFrame(frame);
+    const result: ID3.Frame | undefined = ID3.testables.decodeTextFrame(frame);
     expect(result).to.exist;
     expect(result!.key).to.equal('TXXX');
     expect(result!.info).to.equal('foo');

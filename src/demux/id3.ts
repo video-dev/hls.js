@@ -1,20 +1,21 @@
-type RawFrame = {type: string, size: number, data: Uint8Array};
-
-// breaking up those two types in order to clarify what is happening in the decoding path.
-type DecodedFrame<T> = {key: string, data: T, info?: any};
-export type ID3Frame = DecodedFrame<ArrayBuffer | string>;
-
 /**
  * ID3 parser
  */
-class ID3 {
+module ID3 {
+  type RawFrame = {type: string, size: number, data: Uint8Array};
+
+// breaking up those two types in order to clarify what is happening in the decoding path.
+  type DecodedFrame<T> = {key: string, data: T, info?: any};
+
+  export type Frame = DecodedFrame<ArrayBuffer | string>;
+
   /**
    * Returns true if an ID3 header can be found at offset in data
    * @param {Uint8Array} data - The data to search in
    * @param {number} offset - The offset at which to start searching
    * @return {boolean} - True if an ID3 header is found
    */
-  static isHeader (data: Uint8Array, offset: number): boolean {
+  export const isHeader = (data: Uint8Array, offset: number): boolean => {
     /*
     * http://id3.org/id3v2.3.0
     * [0]     = 'I'
@@ -42,7 +43,7 @@ class ID3 {
     }
 
     return false;
-  }
+  };
 
   /**
    * Returns true if an ID3 footer can be found at offset in data
@@ -50,7 +51,7 @@ class ID3 {
    * @param {number} offset - The offset at which to start searching
    * @return {boolean} - True if an ID3 footer is found
    */
-  static isFooter (data: Uint8Array, offset: number): boolean {
+  export const isFooter = (data: Uint8Array, offset: number): boolean => {
     /*
     * The footer is a copy of the header, but with a different identifier
     */
@@ -68,7 +69,7 @@ class ID3 {
     }
 
     return false;
-  }
+  };
 
   /**
    * Returns any adjacent ID3 tags found in data starting at offset, as one block of data
@@ -77,7 +78,7 @@ class ID3 {
    * @return {Uint8Array | undefined} - The block of data containing any ID3 tags found
    * or *undefined* if no header is found at the starting offset
    */
-  static getID3Data (data: Uint8Array, offset: number): Uint8Array | undefined {
+  export const getID3Data = (data: Uint8Array, offset: number): Uint8Array | undefined => {
     const front = offset;
     let length = 0;
 
@@ -85,7 +86,7 @@ class ID3 {
       // ID3 header is 10 bytes
       length += 10;
 
-      const size = ID3._readSize(data, offset + 6);
+      const size = readSize(data, offset + 6);
       length += size;
 
       if (ID3.isFooter(data, offset + 10)) {
@@ -101,81 +102,81 @@ class ID3 {
     }
 
     return undefined;
-  }
+  };
 
-  static _readSize (data: Uint8Array, offset: number): number {
+  const readSize = (data: Uint8Array, offset: number): number => {
     let size = 0;
     size = ((data[offset] & 0x7f) << 21);
     size |= ((data[offset + 1] & 0x7f) << 14);
     size |= ((data[offset + 2] & 0x7f) << 7);
     size |= (data[offset + 3] & 0x7f);
     return size;
-  }
+  };
 
-  static canParse (data: Uint8Array, offset: number): boolean {
-    return ID3.isHeader(data, offset) && ID3._readSize(data, offset + 6) + 10 <= data.length - offset;
-  }
+  export const canParse = (data: Uint8Array, offset: number): boolean => {
+    return ID3.isHeader(data, offset) && readSize(data, offset + 6) + 10 <= data.length - offset;
+  };
 
   /**
    * Searches for the Elementary Stream timestamp found in the ID3 data chunk
    * @param {Uint8Array} data - Block of data containing one or more ID3 tags
    * @return {number | undefined} - The timestamp
    */
-  static getTimeStamp (data: Uint8Array): number | undefined {
-    const frames: ID3Frame[] = ID3.getID3Frames(data);
+  export const getTimeStamp = (data: Uint8Array): number | undefined => {
+    const frames: Frame[] = getID3Frames(data);
 
     for (let i = 0; i < frames.length; i++) {
       const frame = frames[i];
 
-      if (ID3.isTimeStampFrame(frame)) {
-        return ID3._readTimeStamp(frame as DecodedFrame<ArrayBuffer>);
+      if (isTimeStampFrame(frame)) {
+        return readTimeStamp(frame as DecodedFrame<ArrayBuffer>);
       }
     }
 
     return undefined;
-  }
+  };
 
   /**
    * Returns true if the ID3 frame is an Elementary Stream timestamp frame
    * @param {ID3 frame} frame
    */
-  static isTimeStampFrame (frame: ID3Frame): boolean {
+  export const isTimeStampFrame = (frame: Frame): boolean => {
     return (frame && frame.key === 'PRIV' && frame.info === 'com.apple.streaming.transportStreamTimestamp');
-  }
+  };
 
-  static _getFrameData (data: Uint8Array): RawFrame {
+  const getFrameData = (data: Uint8Array): RawFrame => {
     /*
     Frame ID       $xx xx xx xx (four characters)
     Size           $xx xx xx xx
     Flags          $xx xx
     */
     const type: string = String.fromCharCode(data[0], data[1], data[2], data[3]);
-    const size: number = ID3._readSize(data, 4);
+    const size: number = readSize(data, 4);
 
     // skip frame id, size, and flags
     const offset = 10;
 
     return { type, size, data: data.subarray(offset, offset + size) };
-  }
+  };
 
   /**
    * Returns an array of ID3 frames found in all the ID3 tags in the id3Data
    * @param {Uint8Array} id3Data - The ID3 data containing one or more ID3 tags
-   * @return {ID3Frame[]} - Array of ID3 frame objects
+   * @return {ID3.Frame[]} - Array of ID3 frame objects
    */
-  static getID3Frames (id3Data: Uint8Array): ID3Frame[] {
+  export const getID3Frames = (id3Data: Uint8Array): Frame[] => {
     let offset = 0;
-    const frames: ID3Frame[] = [];
+    const frames: Frame[] = [];
 
-    while (ID3.isHeader(id3Data, offset)) {
-      const size = ID3._readSize(id3Data, offset + 6);
+    while (isHeader(id3Data, offset)) {
+      const size = readSize(id3Data, offset + 6);
       // skip past ID3 header
       offset += 10;
       const end = offset + size;
       // loop through frames in the ID3 tag
       while (offset + 8 < end) {
-        const frameData: RawFrame = ID3._getFrameData(id3Data.subarray(offset));
-        const frame: ID3Frame | undefined = ID3._decodeFrame(frameData);
+        const frameData: RawFrame = getFrameData(id3Data.subarray(offset));
+        const frame: Frame | undefined = decodeFrame(frameData);
         if (frame) {
           frames.push(frame);
         }
@@ -184,27 +185,98 @@ class ID3 {
         offset += frameData.size + 10;
       }
 
-      if (ID3.isFooter(id3Data, offset)) {
+      if (isFooter(id3Data, offset)) {
         offset += 10;
       }
     }
 
     return frames;
-  }
+  };
 
-  static _decodeFrame (frame: RawFrame): ID3Frame | undefined {
+  export const decodeFrame = (frame: RawFrame): Frame | undefined => {
     if (frame.type === 'PRIV') {
-      return ID3._decodePrivFrame(frame);
+      return decodePrivFrame(frame);
     } else if (frame.type[0] === 'T') {
-      return ID3._decodeTextFrame(frame);
+      return decodeTextFrame(frame);
     } else if (frame.type[0] === 'W') {
-      return ID3._decodeURLFrame(frame);
+      return decodeURLFrame(frame);
     }
 
     return undefined;
-  }
+  };
 
-  static _readTimeStamp (timeStampFrame: DecodedFrame<ArrayBuffer>): number | undefined {
+  const decodePrivFrame = (frame: RawFrame): DecodedFrame<ArrayBuffer> | undefined => {
+    /*
+    Format: <text string>\0<binary data>
+    */
+    if (frame.size < 2) {
+      return undefined;
+    }
+
+    const owner = utf8ArrayToStr(frame.data, true);
+    const privateData = new Uint8Array(frame.data.subarray(owner.length + 1));
+
+    return { key: frame.type, info: owner, data: privateData.buffer };
+  };
+
+  const decodeTextFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
+    if (frame.size < 2) {
+      return undefined;
+    }
+
+    if (frame.type === 'TXXX') {
+      /*
+      Format:
+      [0]   = {Text Encoding}
+      [1-?] = {Description}\0{Value}
+      */
+      let index = 1;
+      const description = utf8ArrayToStr(frame.data.subarray(index), true);
+
+      index += description.length + 1;
+      const value = utf8ArrayToStr(frame.data.subarray(index));
+
+      return { key: frame.type, info: description, data: value };
+    } else {
+      /*
+      Format:
+      [0]   = {Text Encoding}
+      [1-?] = {Value}
+      */
+      const text = utf8ArrayToStr(frame.data.subarray(1));
+      return { key: frame.type, data: text };
+    }
+  };
+
+  const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
+    if (frame.type === 'WXXX') {
+      /*
+      Format:
+      [0]   = {Text Encoding}
+      [1-?] = {Description}\0{URL}
+      */
+      if (frame.size < 2) {
+        return undefined;
+      }
+
+      let index = 1;
+      const description: string = utf8ArrayToStr(frame.data.subarray(index));
+
+      index += description.length + 1;
+      const value: string = utf8ArrayToStr(frame.data.subarray(index));
+
+      return { key: frame.type, info: description, data: value };
+    } else {
+      /*
+      Format:
+      [0-?] = {URL}
+      */
+      const url: string = utf8ArrayToStr(frame.data);
+      return { key: frame.type, data: url };
+    }
+  };
+
+  const readTimeStamp = (timeStampFrame: DecodedFrame<ArrayBuffer>): number | undefined => {
     if (timeStampFrame.data.byteLength === 8) {
       const data = new Uint8Array(timeStampFrame.data);
       // timestamp is 33 bit expressed as a big-endian eight-octet number,
@@ -224,78 +296,7 @@ class ID3 {
     }
 
     return undefined;
-  }
-
-  static _decodePrivFrame (frame: RawFrame): DecodedFrame<ArrayBuffer> | undefined {
-    /*
-    Format: <text string>\0<binary data>
-    */
-    if (frame.size < 2) {
-      return undefined;
-    }
-
-    const owner = ID3._utf8ArrayToStr(frame.data, true);
-    const privateData = new Uint8Array(frame.data.subarray(owner.length + 1));
-
-    return { key: frame.type, info: owner, data: privateData.buffer };
-  }
-
-  static _decodeTextFrame (frame: RawFrame): DecodedFrame<string> | undefined {
-    if (frame.size < 2) {
-      return undefined;
-    }
-
-    if (frame.type === 'TXXX') {
-      /*
-      Format:
-      [0]   = {Text Encoding}
-      [1-?] = {Description}\0{Value}
-      */
-      let index = 1;
-      const description = ID3._utf8ArrayToStr(frame.data.subarray(index), true);
-
-      index += description.length + 1;
-      const value = ID3._utf8ArrayToStr(frame.data.subarray(index));
-
-      return { key: frame.type, info: description, data: value };
-    } else {
-      /*
-      Format:
-      [0]   = {Text Encoding}
-      [1-?] = {Value}
-      */
-      const text = ID3._utf8ArrayToStr(frame.data.subarray(1));
-      return { key: frame.type, data: text };
-    }
-  }
-
-  static _decodeURLFrame (frame: RawFrame): DecodedFrame<string> | undefined {
-    if (frame.type === 'WXXX') {
-      /*
-      Format:
-      [0]   = {Text Encoding}
-      [1-?] = {Description}\0{URL}
-      */
-      if (frame.size < 2) {
-        return undefined;
-      }
-
-      let index = 1;
-      const description: string = ID3._utf8ArrayToStr(frame.data.subarray(index));
-
-      index += description.length + 1;
-      const value: string = ID3._utf8ArrayToStr(frame.data.subarray(index));
-
-      return { key: frame.type, info: description, data: value };
-    } else {
-      /*
-      Format:
-      [0-?] = {URL}
-      */
-      const url: string = ID3._utf8ArrayToStr(frame.data);
-      return { key: frame.type, data: url };
-    }
-  }
+  };
 
   // http://stackoverflow.com/questions/8936984/uint8array-to-string-in-javascript/22373197
   // http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt
@@ -306,7 +307,7 @@ class ID3 {
    * LastModified: Dec 25 1999
    * This library is free.  You can redistribute it and/or modify it.
    */
-  static _utf8ArrayToStr (array: Uint8Array, exitOnNull:boolean = false): string {
+  export const utf8ArrayToStr = (array: Uint8Array, exitOnNull:boolean = false): string => {
     const decoder = getTextDecoder();
     if (decoder) {
       const decoded = decoder.decode(array);
@@ -357,7 +358,11 @@ class ID3 {
       }
     }
     return out;
-  }
+  };
+
+  export const testables = {
+    decodeTextFrame: decodeTextFrame
+  };
 }
 
 let decoder: TextDecoder;
@@ -370,7 +375,7 @@ function getTextDecoder () {
   return decoder;
 }
 
-const utf8ArrayToStr = ID3._utf8ArrayToStr;
+const utf8ArrayToStr = ID3.utf8ArrayToStr;
 
 export default ID3;
 
