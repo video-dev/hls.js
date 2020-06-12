@@ -49,7 +49,9 @@ const baseConfig = {
         options: {
           babelrc: false,
           presets: [
-            '@babel/preset-typescript',
+            ['@babel/preset-typescript', {
+              allowNamespaces: true
+            }],
             ['@babel/preset-env', {
               loose: true,
               modules: false,
