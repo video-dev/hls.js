@@ -54,7 +54,7 @@ class BaseAudioDemuxer implements Demuxer {
     const length = data.length;
 
     if (this.initPTS === null) {
-      this.initPTS = (timestamp && Number.isFinite(timestamp)) ? timestamp * 90 : timeOffset * 90000;
+      this.initPTS = initPTSFn(timestamp, timeOffset);
     }
 
     // more expressive than alternative: id3Data?.length
@@ -76,7 +76,7 @@ class BaseAudioDemuxer implements Demuxer {
           offset = length;
         }
       } else if (ID3.canParse(data, offset)) {
-        // after a ID3.canParse, a call to ID3.getID3Data should always returns some data
+        // after a ID3.canParse, a call to ID3.getID3Data *should* always returns some data
         id3Data = ID3.getID3Data(data, offset)!;
         id3Track.samples.push({ pts: pts, dts: pts, data: id3Data });
         offset += id3Data.length;
@@ -127,4 +127,13 @@ class BaseAudioDemuxer implements Demuxer {
   destroy () {}
 }
 
+/**
+ * Initialize PTS
+ * <p>
+ *    use timestamp unless it is undefined, NaN or Infinity
+ * </p>
+ */
+export const initPTSFn = (timestamp: number | undefined, timeOffset: number): number => {
+  return Number.isFinite(timestamp as number) ? timestamp! * 90 : timeOffset * 90000;
+};
 export default BaseAudioDemuxer;
