@@ -19,6 +19,7 @@ class CapLevelController implements ComponentAPI {
 
   private hls: Hls;
   private streamController?: StreamController;
+  public clientRect: { width: number, height: number } | null;
 
   constructor (hls: Hls) {
     this.hls = hls;
@@ -28,6 +29,7 @@ class CapLevelController implements ComponentAPI {
     this.media = null;
     this.restrictedLevels = [];
     this.timer = undefined;
+    this.clientRect = null;
 
     this.registerListeners();
   }
@@ -40,6 +42,7 @@ class CapLevelController implements ComponentAPI {
     this.unregisterListener();
     if (this.hls.config.capLevelToPlayerSize) {
       this.media = null;
+      this.clientRect = null;
       this.stopCapping();
     }
   }
@@ -132,6 +135,7 @@ class CapLevelController implements ComponentAPI {
       CapLevelController.isLevelAllowed(index, this.restrictedLevels) && index <= capLevelIndex
     );
 
+    this.clientRect = null;
     return CapLevelController.getMaxLevelByMediaSize(validLevels, this.mediaWidth, this.mediaHeight);
   }
 
@@ -157,24 +161,37 @@ class CapLevelController implements ComponentAPI {
     }
   }
 
-  get mediaWidth (): number {
-    let width;
-    const media = this.media;
-    if (media) {
-      width = media.width || media.clientWidth || media.offsetWidth;
-      width *= CapLevelController.contentScaleFactor;
+  getDimensions (): { width: number, height: number } {
+    if (this.clientRect) {
+      return this.clientRect;
     }
-    return width;
+    const media = this.media;
+    const boundsRect = {
+      width: 0,
+      height: 0
+    };
+
+    if (media) {
+      const clientRect = media.getBoundingClientRect();
+      boundsRect.width = clientRect.width;
+      boundsRect.height = clientRect.height;
+      if (!boundsRect.width && !boundsRect.height) {
+        // When the media element has no width or height (equivalent to not being in the DOM),
+        // then use its width and height attributes (media.width, media.height)
+        boundsRect.width = clientRect.right - clientRect.left || media.width || 0;
+        boundsRect.height = clientRect.bottom - clientRect.top || media.height || 0;
+      }
+    }
+    this.clientRect = boundsRect;
+    return boundsRect;
+  }
+
+  get mediaWidth (): number {
+    return this.getDimensions().width * CapLevelController.contentScaleFactor;
   }
 
   get mediaHeight (): number {
-    let height;
-    const media = this.media;
-    if (media) {
-      height = media.height || media.clientHeight || media.offsetHeight;
-      height *= CapLevelController.contentScaleFactor;
-    }
-    return height;
+    return this.getDimensions().height * CapLevelController.contentScaleFactor;
   }
 
   static get contentScaleFactor (): number {

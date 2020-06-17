@@ -101,7 +101,7 @@ module.exports = {
   },
   */
   mp3Audio: {
-    url: 'https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/vod-with-mp3/manifest.m3u8',
     description: 'MP3 VOD demo',
     live: false,
     abr: false,
@@ -183,6 +183,14 @@ module.exports = {
   altAudioAndTracks: {
     url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
     description: 'Alternate audio tracks, and multiple VTT tracks'
+  },
+  altAudioAudioOnly: {
+    url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/sintel/playlist.m3u8',
+    description: 'Audio only with alternate audio track (Sintel)'
+  },
+  altAudioMultiAudioOnly: {
+    url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/angel-one.m3u8',
+    description: 'Audio only with multiple alternate audio tracks (Angel One)'
   },
   muxedFmp4: {
     url: 'https://s3.amazonaws.com/qa.jwplayer.com/hlsjs/muxed-fmp4/hls.m3u8',

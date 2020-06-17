@@ -51,6 +51,8 @@
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
   - [`startFragPrefetch`](#startfragprefetch)
   - [`testBandwidth`](#testBandwidth) 
+  - [`fpsDroppedMonitoringPeriod`](#fpsDroppedMonitoringPeriod) 
+  - [`fpsDroppedMonitoringThreshold`](#fpsDroppedMonitoringThreshold) 
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
@@ -58,6 +60,9 @@
   - [`xhrSetup`](#xhrsetup)
   - [`fetchSetup`](#fetchsetup)
   - [`abrController`](#abrcontroller)
+  - [`bufferController`](#bufferController)
+  - [`capLevelController`](#capLevelController)
+  - [`fpsController`](#fpsController)
   - [`timelineController`](#timelinecontroller)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableCEA708Captions`](#enablecea708captions)
@@ -82,6 +87,11 @@
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
+  - [`emeEnabled`](#emeEnabled)
+  - [`widevineLicenseUrl`](#widevineLicenseUrl)
+  - [`drmSystemOptions`](#drmSystemOptions)
+  - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
+        
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -320,6 +330,8 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxFragLookUpTolerance: 0.25,
       liveSyncDurationCount: 3,
       liveMaxLatencyDurationCount: Infinity,
+      liveDurationInfinity: false,
+      liveBackBufferLength: Infinity,
       enableWorker: true,
       enableSoftwareAES: true,
       manifestLoadingTimeOut: 10000,
@@ -369,6 +381,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       minAutoBitrate: 0,
       emeEnabled: false,
       widevineLicenseUrl: undefined,
+      drmSystemOptions: {},
       requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess
   };
 
@@ -384,14 +397,16 @@ This configuration will be applied by default to all instances.
 
 (default: `false`)
 
-  - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height). If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
+  - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height).
+If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
   - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
 ### `capLevelOnFPSDrop`
 
 (default: `false`)
 
-  - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`, then the quality level is dropped and capped at this lower level.
+  - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`, 
+then the quality level is dropped and capped at this lower level.
   - when set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
 ### `debug`
@@ -420,7 +435,8 @@ A logger object could also be provided for custom logging: `config.debug = custo
 
 (default: `undefined`)
 
- If audio codec is not signaled in variant manifest, or if only a stream manifest is provided, hls.js tries to guess audio codec by parsing audio sampling rate in ADTS header. If sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AAC, otherwise it assumes it is AAC-LC. This could result in bad guess, leading to audio decode error, ending up in media error.
+ If audio codec is not signaled in variant manifest, or if only a stream manifest is provided, hls.js tries to guess audio codec by parsing audio sampling rate in ADTS header.
+If sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AAC, otherwise it assumes it is AAC-LC. This could result in bad guess, leading to audio decode error, ending up in media error.
  It is possible to hint default audiocodec to hls.js by configuring this value as below:
   - `mp4a.40.2` (AAC-LC) or
   - `mp4a.40.5` (HE-AAC) or
@@ -458,13 +474,16 @@ This could result in small overlapping or hole in media buffer. This tolerance f
 (default 4s)
 
 ABR algorithm will always try to choose a quality level that should avoid rebuffering.
-In case no quality level with this criteria can be found (lets say for example that buffer length is 1s, but fetching a fragment at lowest quality is predicted to take around 2s ... ie we can forecast around 1s of rebuffering ...) then ABR algorithm will try to find a level that should guarantee less than ```maxStarvationDelay``` of buffering.
+In case no quality level with this criteria can be found (lets say for example that buffer length is 1s,
+but fetching a fragment at lowest quality is predicted to take around 2s ... ie we can forecast around 1s of rebuffering ...)
+then ABR algorithm will try to find a level that should guarantee less than ```maxStarvationDelay``` of buffering.
 
 ### `maxLoadingDelay`
 
 (default 4s)
 
-max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
+max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time
+(ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
 
 ### `lowBufferWatchdogPeriod` (deprecated)
 
@@ -639,6 +658,18 @@ Start prefetching start fragment although media not attached yet.
 
 Load the first fragment of the lowest level to establish a bandwidth estimate before selecting the first auto-level.
 Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
+
+### `fpsDroppedMonitoringPeriod`
+
+(default: 5000) 
+
+The period used by the default `fpsController` to observe `fpsDroppedMonitoringThreshold`.
+
+### `fpsDroppedMonitoringThreshold`
+
+(default: 0.2) 
+
+The ratio of frames dropped to frames elapsed within `fpsDroppedMonitoringPeriod` needed for the default `fpsController` to emit an `FPS_DROP` event.
 
 ### `appendErrorMaxRetry`
 
@@ -836,6 +867,32 @@ Parameter should be a class providing 2 getters, 2 setters and a `destroy()` met
  - get/set `nextAutoLevel`: return next auto-quality level/force next auto-quality level that should be returned (currently used for emergency switch down)
  - get/set `autoLevelCapping`: capping/max level value that could be used by ABR Controller
  - `destroy()`: should clean-up all used resources
+
+### `bufferController`
+
+(default: internal buffer controller)
+
+Customized buffer controller.
+
+A class in charge of managing SourceBuffers.
+
+### `capLevelController`
+
+(default: internal cap level controller)
+
+Customized level capping controller.
+
+A class in charge of setting `hls.autoLevelCapping` to limit ABR level selection based on player size.
+Enable the default cap level controller by setting `capLevelToPlayerSize` to `true`.
+
+### `fpsController`
+
+(default: internal fps controller)
+
+Customized fps controller.
+
+A class in charge of monitoring frame rate, that emits `FPS_DROP` events when frames dropped exceeds configured threshold.
+Enable the default fps controller by setting `capLevelOnFPSDrop` to `true`.
 
 ### `timelineController`
 
@@ -1050,6 +1107,38 @@ then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality le
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
 Useful when browser or tab of the browser is not in the focus and bandwidth drops
 
+### `emeEnabled`
+
+(default: `false`)
+
+Set to `true` to enable DRM key system access and license retrieval.
+
+### `widevineLicenseUrl`
+
+(default: `undefined`)
+
+The Widevine license server URL. 
+
+### `drmSystemOptions`
+
+(default: `{}`)
+
+Allows for the customization of `audioRobustness` and `videoRobustness` in EMEController. Ex:
+
+```js
+{
+  audioRobustness: 'SW_SECURE_CRYPTO',
+  videoRobustness: 'SW_SECURE_CRYPTO'
+}
+```
+
+With the default argument, `''` will be specified for each option (_i.e. no specific robustness required_).
+
+### `requestMediaKeySystemAccessFunc`
+
+(default: A function that returns the result of `window.navigator.requestMediaKeySystemAccess.bind(window.navigator)` or `null`)
+
+Allows for the customization of `window.navigator.requestMediaKeySystemAccess`. 
 
 ## Video Binding/Unbinding API
 

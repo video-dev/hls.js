@@ -133,7 +133,6 @@ export default class LevelController implements NetworkComponentAPI {
 
       if (attributes) {
         if (attributes.AUDIO) {
-          audioCodecFound = true;
           addGroupId(levelFromSet, 'audio', attributes.AUDIO);
         }
         if (attributes.SUBTITLES) {
@@ -175,7 +174,9 @@ export default class LevelController implements NetworkComponentAPI {
         }
       }
 
-      // Audio is only alternate if manifest include a URI along with the audio group tag
+      // Audio is only alternate if manifest include a URI along with the audio group tag,
+      // and this is not an audio-only stream where levels contain audio-only
+      const audioOnly = audioCodecFound && !videoCodecFound;
       const edata: ManifestParsedData = {
         levels,
         audioTracks,
@@ -183,7 +184,7 @@ export default class LevelController implements NetworkComponentAPI {
         stats: data.stats,
         audio: audioCodecFound,
         video: videoCodecFound,
-        altAudio: audioTracks.some(t => !!t.url)
+        altAudio: !audioOnly && audioTracks.some(t => !!t.url)
       };
       this.hls.trigger(Events.MANIFEST_PARSED, edata);
 
