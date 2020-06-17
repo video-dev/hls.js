@@ -1,4 +1,4 @@
-import ID3 from '../demux/id3';
+import * as ID3 from '../demux/id3';
 import { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
@@ -44,20 +44,21 @@ class BaseAudioDemuxer implements Demuxer {
       this.cachedData = null;
     }
 
-    let id3Data = ID3.getID3Data(data, 0) || [];
-    let offset = id3Data.length;
+    let id3Data: Uint8Array | undefined = ID3.getID3Data(data, 0);
+    let offset = id3Data ? id3Data.length : 0;
     let lastDataIndex;
     let pts;
     const track = this._audioTrack;
     const id3Track = this._id3Track;
-    const timestamp = ID3.getTimeStamp(id3Data);
+    const timestamp = id3Data ? ID3.getTimeStamp(id3Data) : undefined;
     const length = data.length;
 
     if (this.initPTS === null) {
-      this.initPTS = Number.isFinite(timestamp) ? timestamp * 90 : timeOffset * 90000;
+      this.initPTS = initPTSFn(timestamp, timeOffset);
     }
 
-    if (id3Data.length) {
+    // more expressive than alternative: id3Data?.length
+    if (id3Data && id3Data.length > 0) {
       id3Track.samples.push({ pts: this.initPTS, dts: this.initPTS, data: id3Data });
     }
 
@@ -75,7 +76,8 @@ class BaseAudioDemuxer implements Demuxer {
           offset = length;
         }
       } else if (ID3.canParse(data, offset)) {
-        id3Data = ID3.getID3Data(data, offset);
+        // after a ID3.canParse, a call to ID3.getID3Data *should* always returns some data
+        id3Data = ID3.getID3Data(data, offset)!;
         id3Track.samples.push({ pts: pts, dts: pts, data: id3Data });
         offset += id3Data.length;
         lastDataIndex = offset;
@@ -125,4 +127,13 @@ class BaseAudioDemuxer implements Demuxer {
   destroy () {}
 }
 
+/**
+ * Initialize PTS
+ * <p>
+ *    use timestamp unless it is undefined, NaN or Infinity
+ * </p>
+ */
+export const initPTSFn = (timestamp: number | undefined, timeOffset: number): number => {
+  return Number.isFinite(timestamp as number) ? timestamp! * 90 : timeOffset * 90000;
+};
 export default BaseAudioDemuxer;
