@@ -365,6 +365,9 @@ export default class M3U8Parser {
           frag.level = id;
           frag.type = type;
           frag.sn = 'initSegment';
+          if (levelkey) {
+            frag.levelkey = levelkey;
+          }
           level.initSegment = frag;
           frag = new Fragment();
           frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
