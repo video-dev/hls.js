@@ -112,7 +112,12 @@ export default class BufferController implements ComponentAPI {
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = data.altAudio ? 2 : 1;
+    let codecEvents: number = 2;
+    if (data.audio && !data.video || !data.altAudio) {
+      codecEvents = 1;
+    }
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
+
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
@@ -317,7 +322,12 @@ export default class BufferController implements ComponentAPI {
         buffersAppendedTo.push('video');
       }
     }
-    console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
+
+    // TODO: Can this happen when switching audio tracks and be safely ignored?
+    // console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
+    if (buffersAppendedTo.length === 0) {
+      return;
+    }
 
     logger.log('[buffer-controller]: All fragment chunks received, enqueueing operation to signal fragment buffered');
     const onUnblocked = () => {

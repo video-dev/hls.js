@@ -7,7 +7,7 @@ import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
-import { EMEControllerConfig } from '../config';
+import { DRMSystemOptions, EMEControllerConfig } from '../config';
 import { KeySystems, MediaKeyFunc } from '../utils/mediakeys-helper';
 import Hls from '../hls';
 import { ComponentAPI } from '../types/component-api';
@@ -23,19 +23,31 @@ const MAX_LICENSE_REQUEST_FAILURES = 3;
  * @returns {Array<MediaSystemConfiguration>} An array of supported configurations
  */
 
-const createWidevineMediaKeySystemConfigurations = function (audioCodecs: string[], videoCodecs: string[]): MediaKeySystemConfiguration[] { /* jshint ignore:line */
+const createWidevineMediaKeySystemConfigurations = function (
+  audioCodecs: string[],
+  videoCodecs: string[],
+  drmSystemOptions: DRMSystemOptions
+): MediaKeySystemConfiguration[] { /* jshint ignore:line */
   const baseConfig: MediaKeySystemConfiguration = {
     // initDataTypes: ['keyids', 'mp4'],
     // label: "",
     // persistentState: "not-allowed", // or "required" ?
     // distinctiveIdentifier: "not-allowed", // or "required" ?
     // sessionTypes: ['temporary'],
+    audioCapabilities: [], // { contentType: 'audio/mp4; codecs="mp4a.40.2"' }
     videoCapabilities: [] // { contentType: 'video/mp4; codecs="avc1.42E01E"' }
   };
 
+  audioCodecs.forEach((codec) => {
+    baseConfig.audioCapabilities!.push({
+      contentType: `audio/mp4; codecs="${codec}"`,
+      robustness: drmSystemOptions.audioRobustness || ''
+    });
+  });
   videoCodecs.forEach((codec) => {
     baseConfig.videoCapabilities!.push({
-      contentType: `video/mp4; codecs="${codec}"`
+      contentType: `video/mp4; codecs="${codec}"`,
+      robustness: drmSystemOptions.videoRobustness || ''
     });
   });
 
@@ -56,10 +68,15 @@ const createWidevineMediaKeySystemConfigurations = function (audioCodecs: string
  * @throws will throw an error if a unknown key system is passed
  * @returns {Array<MediaSystemConfiguration>} A non-empty Array of MediaKeySystemConfiguration objects
  */
-const getSupportedMediaKeySystemConfigurations = function (keySystem: KeySystems, audioCodecs: string[], videoCodecs: string[]): MediaKeySystemConfiguration[] {
+const getSupportedMediaKeySystemConfigurations = function (
+  keySystem: KeySystems,
+  audioCodecs: string[],
+  videoCodecs: string[],
+  drmSystemOptions: DRMSystemOptions
+): MediaKeySystemConfiguration[] {
   switch (keySystem) {
   case KeySystems.WIDEVINE:
-    return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs);
+    return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
   default:
     throw new Error(`Unknown key-system: ${keySystem}`);
   }
@@ -86,6 +103,7 @@ class EMEController implements ComponentAPI {
   private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: MediaKeyFunc | null;
+  private _drmSystemOptions: DRMSystemOptions;
 
   private _config: EMEControllerConfig;
   private _mediaKeysList: MediaKeysListItem[] = [];
@@ -107,6 +125,7 @@ class EMEController implements ComponentAPI {
     this._licenseXhrSetup = this._config.licenseXhrSetup;
     this._emeEnabled = this._config.emeEnabled;
     this._requestMediaKeySystemAccess = this._config.requestMediaKeySystemAccessFunc;
+    this._drmSystemOptions = this._config.drmSystemOptions;
 
     this._registerListeners();
   }
@@ -153,10 +172,8 @@ class EMEController implements ComponentAPI {
      * @throws When a unsupported KeySystem is passed
      */
   private _attemptKeySystemAccess (keySystem: KeySystems, audioCodecs: string[], videoCodecs: string[]) {
-    // TODO: add other DRM "options"
-
     // This can throw, but is caught in event handler callpath
-    const mediaKeySystemConfigs = getSupportedMediaKeySystemConfigurations(keySystem, audioCodecs, videoCodecs);
+    const mediaKeySystemConfigs = getSupportedMediaKeySystemConfigurations(keySystem, audioCodecs, videoCodecs, this._drmSystemOptions);
 
     logger.log('Requesting encrypted media key-system access');
 
@@ -538,10 +555,27 @@ class EMEController implements ComponentAPI {
   }
 
   onMediaDetached () {
-    if (this._media) {
-      this._media.removeEventListener('encrypted', this._onMediaEncrypted);
-      this._media = null; // release reference
+    const media = this._media;
+    const mediaKeysList = this._mediaKeysList;
+    if (!media) {
+      return;
     }
+    media.removeEventListener('encrypted', this._onMediaEncrypted);
+    this._media = null;
+    this._mediaKeysList = [];
+    // Close all sessions and remove media keys from the video element.
+    Promise.all(mediaKeysList.map((mediaKeysListItem) => {
+      if (mediaKeysListItem.mediaKeysSession) {
+        return mediaKeysListItem.mediaKeysSession.close().catch(() => {
+          // Ignore errors when closing the sessions. Closing a session that
+          // generated no key requests will throw an error.
+        });
+      }
+    })).then(() => {
+      return media.setMediaKeys(null);
+    }).catch(() => {
+      // Ignore any failures while removing media keys from the video element.
+    });
   }
 
   onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData) {

@@ -128,10 +128,11 @@ async function testSmoothSwitch (url, config) {
         self.switchToHighestLevel('next');
       });
       self.hls.on(self.Hls.Events.LEVEL_SWITCHED, (event, data) => {
+        console.log(`[test] > level switched: ${data.level}`);
         const currentTime = video.currentTime;
         if (data.level === self.hls.levels.length - 1) {
-          console.log(`[log] > switched on level: ${data.level}`);
-          self.setTimeout(() => {
+          console.log(`[test] > switched on level: ${data.level}`);
+          self.setTimeout(function () {
             const newCurrentTime = video.currentTime;
             console.log(
               `[test] > currentTime delta : ${newCurrentTime - currentTime}`
@@ -156,12 +157,12 @@ async function testSeekOnLive (url, config) {
       const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
-      video.onloadeddata = () => {
-        self.setTimeout(() => {
+      video.onloadeddata = function () {
+        self.setTimeout(function () {
           video.currentTime = video.duration - 5;
         }, 5000);
       };
-      video.onseeked = () => {
+      video.onseeked = function () {
         callback({ code: 'seeked', logs: self.logString });
       };
     },
@@ -219,7 +220,7 @@ async function testIsPlayingVOD (url, config) {
       const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
-      video.onloadeddata = () => {
+      self.hls.once(self.Hls.Events.FRAG_CHANGED, function () {
         const expectedPlaying = !(
           video.paused || // not playing when video is paused
           video.ended || // not playing when video is ended
@@ -227,7 +228,7 @@ async function testIsPlayingVOD (url, config) {
         ); // not playing if nothing buffered
         const currentTime = video.currentTime;
         if (expectedPlaying) {
-          self.setTimeout(() => {
+          self.setTimeout(function () {
             console.log(
               `[test] > video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
             );
@@ -239,7 +240,7 @@ async function testIsPlayingVOD (url, config) {
           );
           callback({ playing: false });
         }
-      };
+      });
     },
     url,
     config
@@ -278,7 +279,7 @@ async function testSeekBackToStart (url, config) {
 }
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
-  beforeEach(async function () {
+  before(async function () {
     // high timeout because sometimes getSession() takes a while
     this.timeout(100000);
     if (!stream) {
@@ -313,32 +314,34 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     }
 
     browser = browser.withCapabilities(capabilities).build();
+
+    const start = Date.now();
+
+    try {
+      await retry(async function () {
+        console.log('Retrieving web driver session...');
+        const [, session] = await Promise.all([
+          browser.manage().setTimeouts({ script: 75000 }),
+          browser.getSession()
+        ]);
+        console.log(`Retrieved session in ${Date.now() - start}ms`);
+        if (onTravis) {
+          console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
+        } else {
+          console.log(`WebDriver SessionID: ${session.getId()}`);
+        }
+      });
+    } catch (err) {
+      throw new Error(`failed setting up session: ${err}`);
+    }
+  });
+
+  beforeEach(async function () {
     try {
       await retry(async () => {
-        const start = Date.now();
-        console.log('Retrieving web driver session...');
-        try {
-          const [timeouts, session] = await Promise.all([
-            browser.manage().setTimeouts({ script: 75000 }),
-            browser.getSession()
-          ]);
-          console.log(`Retrieved session in ${Date.now() - start}ms. timeouts ${timeouts}`);
-          if (onTravis) {
-            console.log(
-              `Job URL: https://saucelabs.com/jobs/${session.getId()}`
-            );
-          } else {
-            console.log(`WebDriver SessionID: ${session.getId()}`);
-          }
-        } catch (err) {
-          throw new Error(`failed setting up session: ${err}`);
-        }
-
         console.log('Loading test page...');
         try {
-          await browser.get(
-            `http://${hostname}:8000/tests/functional/auto/index.html`
-          );
+          await browser.get(`http://${hostname}:8000/tests/functional/auto/index.html`);
         } catch (e) {
           throw new Error('failed to open test page');
         }
@@ -364,10 +367,13 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   });
 
   afterEach(async function () {
+    // if (onTravis || (!onTravis && this.currentTest.isFailed())) {
     const logString = await browser.executeScript('return logString');
-    console.log('travis_fold:start:debug_logs');
-    console.log(logString);
-    console.log('travis_fold:end:debug_logs');
+    console.log(`${onTravis ? 'travis_fold:start:debug_logs' : ''}\n${logString}\n${onTravis ? 'travis_fold:end:debug_logs' : ''}`);
+    // }
+  });
+
+  after(async function () {
     console.log('Quitting browser...');
     await browser.quit();
     console.log('Browser quit.');
