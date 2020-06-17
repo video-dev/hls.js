@@ -220,7 +220,7 @@ async function testIsPlayingVOD (url, config) {
       const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
       const video = self.video;
-      self.hls.once(self.Hls.Events.BUFFER_APPENDED, function () {
+      self.hls.once(self.Hls.Events.FRAG_CHANGED, function () {
         const expectedPlaying = !(
           video.paused || // not playing when video is paused
           video.ended || // not playing when video is ended
