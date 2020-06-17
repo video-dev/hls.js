@@ -17,6 +17,7 @@ import { BufferAppendingData } from '../types/events';
 import { Level } from '../types/level';
 import { RemuxedTrack } from '../types/remuxer';
 import Hls from '../hls';
+import Decrypter from '../crypt/decrypter';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -55,12 +56,14 @@ export default class BaseStreamController extends TaskLoop {
   protected _liveSyncPosition: number | null = null;
   protected levelLastLoaded: number | null = null;
   protected startFragRequested: boolean = false;
+  protected decrypter: Decrypter;
 
   protected readonly logPrefix: string = '';
 
   constructor (hls: Hls) {
     super();
     this.hls = hls;
+    this.decrypter = new Decrypter(hls, hls.config);
   }
 
   protected doTick () {
@@ -197,19 +200,52 @@ export default class BaseStreamController extends TaskLoop {
   protected _loadInitSegment (frag: Fragment) {
     this._doFragLoad(frag)
       .then((data: FragLoadSuccessResult) => {
-        const { fragCurrent, hls, levels } = this;
-        if (!data || this._fragLoadAborted(frag) || !levels) {
+        if (!data || this._fragLoadAborted(frag) || !this.levels) {
           return;
         }
+
+        return data;
+      }).then((data: FragLoadSuccessResult) => {
+        const { hls } = this;
+        const { payload } = data;
+        const decryptData = frag.decryptdata;
+
+        // check to see if the payload needs to be decrypted
+        if (payload && payload.byteLength > 0 && decryptData && decryptData.key && decryptData.iv && decryptData.method === 'AES-128') {
+          const startTime = performance.now();
+          // decrypt the subtitles
+          return this.decrypter.webCryptoDecrypt(new Uint8Array(payload), decryptData.key.buffer, decryptData.iv.buffer).then((decryptedData) => {
+            const endTime = performance.now();
+            hls.trigger(Events.FRAG_DECRYPTED, {
+              frag,
+              payload: decryptedData,
+              stats: {
+                tstart: startTime,
+                tdecrypt: endTime
+              }
+            });
+            data.payload = decryptedData;
+
+            return data;
+          });
+        }
+
+        return data;
+      }).then((data: FragLoadSuccessResult) => {
+        const { fragCurrent, hls, levels } = this;
+        if (!levels) {
+          return;
+        }
+
         const details = levels[frag.level].details as LevelDetails;
         console.assert(details, 'Level details are defined when init segment is loaded');
         const initSegment = details.initSegment as Fragment;
         console.assert(initSegment, 'Fragment initSegment is defined when init segment is loaded');
-        const { payload } = data;
+
         const stats = frag.stats;
         this.state = State.IDLE;
         this.fragLoadError = 0;
-        initSegment.data = payload;
+        initSegment.data = new Uint8Array(data.payload);
         stats.parsing.start = stats.buffering.start = self.performance.now();
         stats.parsing.end = stats.buffering.end = self.performance.now();
         // TODO: set id from calling class
