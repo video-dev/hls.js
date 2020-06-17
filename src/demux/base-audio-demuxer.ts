@@ -1,4 +1,4 @@
-import ID3 from '../demux/id3';
+import * as ID3 from '../demux/id3';
 import { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
