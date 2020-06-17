@@ -1,6 +1,6 @@
 import { Events } from '../events';
 import { sendAddTrackEvent, clearCurrentCues, getClosestCue } from '../utils/texttrack-utils';
-import ID3 from '../demux/id3';
+import * as ID3 from '../demux/id3';
 import { FragParsingMetadataData, LiveBackBufferData, MediaAttachedData } from '../types/events';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
