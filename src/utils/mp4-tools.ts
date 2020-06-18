@@ -328,10 +328,14 @@ export function getDuration (data, initData) {
   for (let i = 0; i < trafs.length; i++) {
     const traf = trafs[i];
     // There is only one tfhd & trun per traf
+    // This is true for CMAF style content, and we should perhaps check the ftyp
+    // and only look for a single trun then, but for ISOBMFF we should check
+    // for multiple track runs.
     const tfhd = findBox(traf, ['tfhd'])[0];
-    const trun = findBox(traf, ['trun'])[0];
+    const truns = findBox(traf, ['trun']);
     const tfhdFlags = readUint32(tfhd, 0);
-    let sampleDuration;
+
+    let sampleDuration: number | undefined;
     if (tfhdFlags & 0x000008) {
       // 0x000008 indicates the presence of the default_sample_duration field
       if (tfhdFlags & 0x000002) {
@@ -342,18 +346,23 @@ export function getDuration (data, initData) {
         // Otherwise, the duration is at byte offset 8
         sampleDuration = readUint32(tfhd, 8);
       }
-      const sampleCount = readUint32(trun, 4);
-      rawDuration = sampleDuration * sampleCount;
-    } else {
-      rawDuration = computeRawDurationFromSamples(trun);
     }
 
-    const id = readUint32(tfhd, 4);
-    const track = initData[id];
-    const scale = track.timescale || 90e3;
-    totalDuration += rawDuration / scale;
-    if (track && track.type === ElementaryStreamTypes.VIDEO) {
-      videoDuration += rawDuration / scale;
+    for (let j = 0; j < truns.length; j++) {
+      if (sampleDuration) {
+        const sampleCount = readUint32(truns[j], 4);
+        rawDuration = sampleDuration * sampleCount;
+      } else {
+        rawDuration = computeRawDurationFromSamples(truns[j]);
+      }
+
+      const id = readUint32(tfhd, 4);
+      const track = initData[id];
+      const scale = track.timescale || 90e3;
+      totalDuration += rawDuration / scale;
+      if (track && track.type === ElementaryStreamTypes.VIDEO) {
+        videoDuration += rawDuration / scale;
+      }
     }
   }
   if (totalDuration === 0) {
