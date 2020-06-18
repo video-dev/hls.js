@@ -6,6 +6,7 @@ import { PlaylistLevelType } from '../types/loader';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 import { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
+import { logger } from '../utils/logger';
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
