@@ -50,7 +50,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run lint
   npm run type-check
   npm run build:ci
-  npm install --no-save chromium@^2.1.2
+  npm install --no-save chromium
   CHROME_BIN=$(node -e 'console.log(require("chromium").path);')
   CHROME_BIN="$CHROME_BIN" npm run test:unit
 
