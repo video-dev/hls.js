@@ -52,7 +52,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run build:ci
   npm install --no-save chromium
   CHROME_BIN=$(node -e 'console.log(require("chromium").path);')
-  npm run test:unit
+  CHROME_BIN="$CHROME_BIN" npm run test:unit
 
   if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
 
