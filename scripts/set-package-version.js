@@ -33,7 +33,7 @@ try {
     if (TRAVIS_MODE === 'netlifyPr') {
       newVersion += `-pr.${getCommitHash().substr(0, 8)}`;
     } else if (TRAVIS_MODE === 'netlifyBranch') {
-      newVersion += `-branch-${process.env.BRANCH /* set by netlify */}.${getCommitHash().substr(0, 8)}`;
+      newVersion += `-branch.${process.env.BRANCH /* set by netlify */}.${getCommitHash().substr(0, 8)}`;
     } else {
       newVersion += `-canary.${getCommitNum()}`;
     }
