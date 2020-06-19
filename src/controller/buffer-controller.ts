@@ -242,7 +242,6 @@ export default class BufferController implements ComponentAPI {
       },
       onStart: () => {
         logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
-        console.assert(this.sourceBuffer[type]?.updating, 'Expected source buffer updating flag to be true');
       },
       onComplete: () => {
         logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
@@ -590,16 +589,12 @@ export default class BufferController implements ComponentAPI {
   private _onSBUpdateStart (type: SourceBufferName) {
     const { operationQueue } = this;
     const operation = operationQueue.current(type);
-    console.assert(operation, 'Operation should exist on update start');
-
     operation.onStart();
   }
 
   private _onSBUpdateEnd (type: SourceBufferName) {
     const { operationQueue } = this;
     const operation = operationQueue.current(type);
-    console.assert(operation, 'Operation should exist on update end');
-
     operation.onComplete();
     operationQueue.shiftAndExecuteNext(type);
   }
