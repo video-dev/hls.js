@@ -50,10 +50,11 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run lint
   npm run type-check
   npm run build:ci
+  npm install --no-save chromium
+  CHROME_BIN=$(node -e 'console.log(require("chromium").path);')
+  npm run test:unit
 
   if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
-    # unit tests don't work on netlify because they need chrome
-    npm run test:unit
 
     if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
       # write the token to config
