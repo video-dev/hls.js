@@ -9,6 +9,8 @@ Join the discussion via [video-dev.org](http://video-dev.org) in #hlsjs (our Sla
 
 # ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
 
+testing
+
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
