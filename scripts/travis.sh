@@ -40,7 +40,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
   if [ ${n} = ${maxRetries} ]; then
     exit 1
   fi
-elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ]; then
+elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ] || [ "${TRAVIS_MODE}" = "netlifyBranch" ]; then
   # update the version
   if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
     # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
@@ -50,9 +50,9 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run lint
   npm run type-check
   npm run build:ci
+  npm run test:unit
 
-  if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
-    npm run test:unit
+  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
     if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
       # write the token to config
       # see https://docs.npmjs.com/private-modules/ci-server-config
@@ -82,7 +82,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run docs
 
   ./scripts/build-netlify.sh
-  if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
+  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
     ./scripts/deploy-netlify.sh
   fi
 else
