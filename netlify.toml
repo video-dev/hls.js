@@ -6,8 +6,6 @@
 
 [build.environment]
   NODE_VERSION = "lts/*"
-
-[context.branch-deploy.environment]
   TRAVIS_MODE = "netlifyBranch"
 
 [context.deploy-preview.environment]
