@@ -18,24 +18,32 @@ try {
     newVersion = tag.substring(1);
   } else if (TRAVIS_MODE === 'releaseCanary' || TRAVIS_MODE === 'netlifyPr' || TRAVIS_MODE === 'netlifyBranch') {
     // bump patch in version from latest git tag
-    let currentVersion = getLatestVersionTag();
-    // remove v
-    currentVersion = currentVersion.substring(1);
+    const latestRelease = getLatestVersionTag();
+    const latestStable = getLatestStableVersionTag();
+    const preRelease = latestRelease !== latestStable;
+    console.log('latestRelease', latestRelease);
+    console.log('latestStable', latestStable);
 
-    let matched = false;
-    newVersion = currentVersion.replace(/^(\d+)\.(\d+)\.(\d+).*$/, function(_, major, minor, patch) {
-      matched = true;
-      return major + '.' + minor + '.' + (parseInt(patch, 10) + 1);
-    });
-    if (!matched) {
-      throw new Error('Error calculating version.');
+    // remove v
+    newVersion = latestRelease.substring(1);
+    if (!preRelease) {
+      let matched = false;
+      newVersion = newVersion.replace(/^(\d+)\.(\d+)\.(\d+).*$/, function (_, major, minor, patch) {
+        matched = true;
+        return major + '.' + minor + '.' + (parseInt(patch, 10) + 1);
+      });
+      if (!matched) {
+        throw new Error('Error calculating version.');
+      }
     }
+
+    const preReleaseMeta = preRelease ? '+' : '-0+';
     if (TRAVIS_MODE === 'netlifyPr') {
-      newVersion += `-pr.${getCommitHash().substr(0, 8)}`;
+      newVersion += `${preReleaseMeta}pr.${getCommitHash().substr(0, 8)}`;
     } else if (TRAVIS_MODE === 'netlifyBranch') {
-      newVersion += `-branch.${process.env.BRANCH/* set by netlify */.replace(/[^a-zA-Z0-9]/g, '-')}.${getCommitHash().substr(0, 8)}`;
+      newVersion += `${preReleaseMeta}branch.${process.env.BRANCH/* set by netlify */.replace(/[^a-zA-Z0-9]/g, '-')}.${getCommitHash().substr(0, 8)}`;
     } else {
-      newVersion += `-canary.${getCommitNum()}`;
+      newVersion += `${preReleaseMeta}canary.${getCommitNum()}`;
     }
   } else {
     throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
@@ -44,23 +52,38 @@ try {
   packageJson.version = newVersion;
   fs.writeFileSync('./package.json', JSON.stringify(packageJson));
   console.log('Set version: ' + newVersion);
-} catch(e) {
+} catch (e) {
   console.error(e);
   process.exit(1);
 }
 process.exit(0);
 
-function getCommitNum() {
+function getCommitNum () {
   return parseInt(exec('git rev-list --count HEAD'), 10);
 }
 
-function getCommitHash() {
+function getCommitHash () {
   return exec('git rev-parse HEAD');
 }
 
-function getLatestVersionTag() {
+function getLatestVersionTag () {
   let commitish = '';
-  while(true) {
+  while (true) {
+    const tag = exec('git describe --abbrev=0 --match="v*" ' + commitish);
+    if (!tag) {
+      throw new Error('Could not find tag.');
+    }
+    if (versionParser.isValidVersion(tag)) {
+      return tag;
+    }
+    // next time search older tags than this one
+    commitish = tag + '~1';
+  }
+}
+
+function getLatestStableVersionTag () {
+  let commitish = '';
+  while (true) {
     const tag = exec('git describe --abbrev=0 --match="v*" ' + commitish);
     if (!tag) {
       throw new Error('Could not find tag.');
@@ -73,6 +96,6 @@ function getLatestVersionTag() {
   }
 }
 
-function exec(cmd) {
+function exec (cmd) {
   return require('child_process').execSync(cmd).toString().trim();
 }
