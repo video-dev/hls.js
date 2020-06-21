@@ -110,8 +110,18 @@ $(document).ready(function () {
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
-  $('h2').append('&nbsp;<a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
-  $('#currentVersion').html('Hls version:' + Hls.version);
+  const version = Hls.version;
+  const release = (version ? version.replace(/\+.*$/, '') : '').replace(/^(.+[^\d])(\d+?-0)$/,
+    function (version, majorMinor, ciPatch) {
+      if (ciPatch) {
+        return majorMinor + (parseInt(ciPatch, 10) - 1);
+      }
+      return version;
+    });
+  const versionLabel = version ? 'v' + version : 'releases';
+  $('h2').append('&nbsp;<a target=_blank href="https://github.com/video-dev/hls.js/releases/' +
+    (release ? 'tag/v' + release : '') + '">' + versionLabel + '</a>');
+  $('#currentVersion').html('Hls version:' + version);
 
   $('#streamURL').val(sourceURL);
 
