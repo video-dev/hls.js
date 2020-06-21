@@ -38,7 +38,7 @@ To build our distro bundle and serve our development environment we use [Webpack
 * [API and usage docs, with code examples](./docs/API.md)
 
 * [Auto-Generated Docs (Latest Release)](https://hls-js.netlify.com/api-docs)
-* [Auto-Generated Docs (Master)](https://hls-js-latest.netlify.com/api-docs)
+* [Auto-Generated Docs (Master)](https://hls-js-dev.netlify.com/api-docs)
 
 _Note you can access the docs for a particular version using "[https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md)"_
 
@@ -48,7 +48,7 @@ _Note you can access the docs for a particular version using "[https://github.co
 [https://hls-js.netlify.com/demo](https://hls-js.netlify.com/demo)
 
 ### Master
-[https://hls-js-latest.netlify.com/demo](https://hls-js-latest.netlify.com/demo)
+[https://hls-js-dev.netlify.com/demo](https://hls-js-dev.netlify.com/demo)
 
 ### Specific Version
 Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md).
