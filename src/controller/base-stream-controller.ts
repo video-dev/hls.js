@@ -201,11 +201,12 @@ export default class BaseStreamController extends TaskLoop {
     this._doFragLoad(frag)
       .then((data: FragLoadSuccessResult) => {
         if (!data || this._fragLoadAborted(frag) || !this.levels) {
-          return;
+          throw new Error('init load aborted');
         }
 
         return data;
-      }).then((data: FragLoadSuccessResult) => {
+      })
+      .then((data: FragLoadSuccessResult) => {
         const { hls } = this;
         const { payload } = data;
         const decryptData = frag.decryptdata;
@@ -234,7 +235,7 @@ export default class BaseStreamController extends TaskLoop {
       }).then((data: FragLoadSuccessResult) => {
         const { fragCurrent, hls, levels } = this;
         if (!levels) {
-          return;
+          throw new Error('init load aborted, missing levels');
         }
 
         const details = levels[frag.level].details as LevelDetails;
@@ -255,6 +256,8 @@ export default class BaseStreamController extends TaskLoop {
           hls.trigger(Events.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
         }
         this.tick();
+      }).catch(reason => {
+        logger.warn(reason);
       });
   }
 
