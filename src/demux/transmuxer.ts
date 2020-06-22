@@ -37,21 +37,27 @@ muxConfig.forEach(({ demux }) => {
   minProbeByteLength = Math.max(minProbeByteLength, demux.minProbeByteLength);
 });
 
+export type TransmuxerTypeSupported = {
+  mp4: boolean;
+  mpeg: boolean;
+  mp3: boolean;
+}
+
 export default class Transmuxer {
   private observer: HlsEventEmitter;
-  private typeSupported: any;
+  private typeSupported: TransmuxerTypeSupported;
   private config: HlsConfig;
-  private vendor: any;
+  private vendor: string;
   private demuxer?: Demuxer;
   private remuxer?: Remuxer;
-  private decrypter: any;
+  private decrypter?: Decrypter;
   private probe!: Function;
   private decryptionPromise: Promise<TransmuxerResult> | null = null;
   private transmuxConfig!: TransmuxConfig;
   private currentTransmuxState!: TransmuxState;
   private cache: ChunkCache = new ChunkCache();
 
-  constructor (observer: HlsEventEmitter, typeSupported, config: HlsConfig, vendor) {
+  constructor (observer: HlsEventEmitter, typeSupported: TransmuxerTypeSupported, config: HlsConfig, vendor: string) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
@@ -83,7 +89,7 @@ export default class Transmuxer {
       if (config.enableSoftwareAES) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
         // data is handled in the flush() call
-        const decryptedData: ArrayBuffer = decrypter.softwareDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer);
+        const decryptedData = decrypter.softwareDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer);
         if (!decryptedData) {
           stats.executeEnd = now();
           return emptyResult(chunkMeta);
@@ -296,12 +302,11 @@ export default class Transmuxer {
     return !this.demuxer || ((discontinuity || trackSwitch) && !this.probe(data));
   }
 
-  private getDecrypter () {
-    let decrypter = this.decrypter;
-    if (!decrypter) {
-      decrypter = this.decrypter = new Decrypter(this.observer, this.config);
+  private getDecrypter (): Decrypter {
+    if (!this.decrypter) {
+      this.decrypter = new Decrypter(this.observer, this.config);
     }
-    return decrypter;
+    return this.decrypter;
   }
 }
 

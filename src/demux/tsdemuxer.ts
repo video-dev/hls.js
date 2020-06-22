@@ -27,6 +27,14 @@ import {
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
 import { HlsConfig } from '../config';
+import { TransmuxerTypeSupported } from './transmuxer';
+
+interface PES {
+  data: Uint8Array;
+  pts: number;
+  dts: number;
+  len: number;
+}
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -48,7 +56,7 @@ class TSDemuxer implements Demuxer {
 
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
-  private typeSupported: any;
+  private typeSupported: TransmuxerTypeSupported;
 
   private sampleAes: any = null;
   private pmtParsed: boolean = false;
@@ -69,7 +77,7 @@ class TSDemuxer implements Demuxer {
   private avcSample: AvcSample | null = null;
   private remainderData: Uint8Array | null = null;
 
-  constructor (observer: HlsEventEmitter, config: HlsConfig, typeSupported) {
+  constructor (observer: HlsEventEmitter, config: HlsConfig, typeSupported: TransmuxerTypeSupported) {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
@@ -110,7 +118,7 @@ class TSDemuxer implements Demuxer {
    * @param {number} duration
    * @return {object} TSDemuxer's internal track model
    */
-  static createTrack (type, duration) : DemuxedTrack {
+  static createTrack (type: 'audio' | 'video' | 'id3' | 'text', duration: number) : DemuxedTrack {
     return {
       container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined,
       type,
@@ -128,7 +136,7 @@ class TSDemuxer implements Demuxer {
    * Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start)
    * Resets all internal track instances of the demuxer.
   */
-  resetInitSegment (audioCodec, videoCodec, duration) {
+  resetInitSegment (audioCodec: string, videoCodec: string, duration: number) {
     this.pmtParsed = false;
     this._pmtId = -1;
 
@@ -165,18 +173,18 @@ class TSDemuxer implements Demuxer {
     this.aacLastPTS = null;
   }
 
-  demux (data: Uint8Array, contiguous, timeOffset, isSampleAes = false, flush = false): DemuxerResult {
+  demux (data: Uint8Array, contiguous: any, timeOffset, isSampleAes = false, flush = false): DemuxerResult {
     if (!isSampleAes) {
       this.sampleAes = null;
     }
 
     this.contiguous = contiguous;
-    let start;
-    let stt;
-    let pid;
-    let atf;
-    let offset;
-    let pes;
+    let start: number;
+    let stt: boolean;
+    let pid: number;
+    let atf: number;
+    let offset: number;
+    let pes: PES | null;
 
     const avcTrack = this._avcTrack;
     const audioTrack = this._audioTrack;
@@ -467,7 +475,7 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  _parseAVCPES (pes, last) {
+  _parseAVCPES (pes: PES, last: boolean) {
     // logger.log('parse new PES');
     const track = this._avcTrack;
     const units = this._parseAVCNALu(pes.data);
@@ -479,7 +487,7 @@ class TSDemuxer implements Demuxer {
     let i;
     const pushAccessUnit = this.pushAccessUnit.bind(this);
     // free pes.data to save up some memory
-    pes.data = null;
+    (pes.data as any) = null;
 
     // if new NAL units found and last sample still there, let's push ...
     // this helps parsing streams with missing AUD (only do this if AUD never found)
@@ -742,7 +750,7 @@ class TSDemuxer implements Demuxer {
     return lastUnit;
   }
 
-  _parseAVCNALu (array): Array<any> {
+  _parseAVCNALu (array: Uint8Array): Array<any> {
     const len = array.byteLength;
     const track = this._avcTrack;
     let state = track.naluState || 0;
@@ -1107,7 +1115,7 @@ function parsePMT (data, offset, mpegSupported, isSampleAes) {
   return result;
 }
 
-function parsePES (stream) {
+function parsePES (stream): PES | null {
   let i = 0;
   let frag;
   let pesFlags;
