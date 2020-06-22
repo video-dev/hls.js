@@ -14,11 +14,15 @@ module.exports = {
   // e.g
   // v1.2.3-beta => beta
   // v1.2.3-beta.1 => beta
+  // v1.2.3-beta.1.alpha.53 => alpha
   // v1.2.3 => latest
   getVersionTag: function (version) {
     const match = VALID_VERSION_REGEX.exec(version);
     if (!match) {
       throw new Error('Invalid version.');
+    }
+    if (match[3] === 'alpha') {
+      return match[3];
     }
     return match[1] || 'latest';
   }

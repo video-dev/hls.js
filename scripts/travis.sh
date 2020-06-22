@@ -67,9 +67,9 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
         echo "Cleared jsdelivr cache."
       elif [ "${TRAVIS_MODE}" = "release" ]; then
         tag=$(node ./scripts/get-version-tag.js)
-        if [ "${tag}" = "canary" ]; then
-          # canary is blacklisted because this is handled separately on every commit
-          echo "canary not supported as explicit tag"
+        if [ "${tag}" = "alpha" ]; then
+          # alpha (previously canary) is blacklisted because this is handled separately on every commit
+          echo "alpha (previously canary) not supported as explicit tag"
           exit 1
         fi
         echo "Publishing tag: ${tag}"
