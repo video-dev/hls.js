@@ -37,13 +37,13 @@ try {
       }
     }
 
-    const preReleaseMeta = preRelease ? '+' : '-0+';
+    const preReleaseDelimiter = preRelease ? '.' : '-';
     if (TRAVIS_MODE === 'netlifyPr') {
-      newVersion += `${preReleaseMeta}pr.${getCommitHash().substr(0, 8)}`;
+      newVersion += `${preReleaseDelimiter}pr.${getCommitHash().substr(0, 8)}`;
     } else if (TRAVIS_MODE === 'netlifyBranch') {
-      newVersion += `${preReleaseMeta}branch.${process.env.BRANCH/* set by netlify */.replace(/[^a-zA-Z0-9]/g, '-')}.${getCommitHash().substr(0, 8)}`;
+      newVersion += `${preReleaseDelimiter}branch.${process.env.BRANCH/* set by netlify */.replace(/[^a-zA-Z0-9]/g, '_')}.${getCommitHash().substr(0, 8)}`;
     } else {
-      newVersion += `${preReleaseMeta}canary.${getCommitNum()}`;
+      newVersion += `${preReleaseDelimiter}alpha.${getCommitNum()}`;
     }
   } else {
     throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
