@@ -39,7 +39,6 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   protected levels: Array<Level> = [];
 
   private currentTrackId: number = -1;
-  private decrypter: Decrypter;
   private tracksBuffered: Array<TimeRange[]>;
   // lastAVStart stores the time in seconds for the start time of a level load
   private lastAVStart: number = 0;
@@ -48,7 +47,6 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls);
     this.config = hls.config;
-    this.decrypter = new Decrypter(hls, hls.config);
     this.fragCurrent = null;
     this.fragmentTracker = fragmentTracker;
     this.fragPrevious = null;
