@@ -22,6 +22,17 @@ module.exports = {
   isGreater: (newVersion, previousVersion) => {
     return semver.gt(newVersion, previousVersion);
   },
+  // returns true if there could never be an auto generated alpha
+  // version that is greater than this one
+  isDefinitelyGreaterThanAlphas: (version) => {
+    const parsed = semver.parse(version, { loose: false, includePrerelease: true });
+    if (!parsed) {
+      throw new Error('Error parsing version.');
+    }
+    return parsed.prerelease.every((part) => {
+      return typeof part === 'string' && part > 'alpha';
+    });
+  }
   // extract what we should use as the npm dist-tag (https://docs.npmjs.com/cli/dist-tag)
   // e.g
   // v1.2.3-beta => beta
