@@ -19,10 +19,10 @@ try {
     // remove v
     newVersion = tag.substring(1);
     if (!versionParser.isDefinitelyGreaterThanAlphas(newVersion)) {
-      // 1.2.3-alpha.500
-      // 1.2.3-alpha.501
-      // 1.2.3-aaalpha.custom => bad
-      // 1.2.3-aaalpha.custom.alpha.503 => now lower than 1.2.3-alpha.501
+      // 1.2.3-0.alpha.500
+      // 1.2.3-0.alpha.501
+      // 1.2.3-0.aaalpha.custom => bad
+      // 1.2.3-0.aaalpha.custom.0.alpha.503 => now lower than 1.2.3-0.alpha.501
       throw new Error(`It's possible that "${newVersion}" has a lower precedense than an alpha version which is not allowed.`);
     }
   } else if (TRAVIS_MODE === 'releaseAlpha' || TRAVIS_MODE === 'netlifyPr' || TRAVIS_MODE === 'netlifyBranch') {
@@ -30,8 +30,8 @@ try {
     let intermediateVersion = latestVersion;
     const isStable = isValidStableVersion(intermediateVersion);
 
-    // if last git tagged version is a prerelease we should append `.<type>.<commit num>`
-    // if the last git tagged version is a stable version then we should append `-<type>.<commit num>` and increment the patch
+    // if last git tagged version is a prerelease we should append `.0.<type>.<commit num>`
+    // if the last git tagged version is a stable version then we should append `-0.<type>.<commit num>` and increment the patch
     // `type` can be `pr`, `branch`, or `alpha`
     if (isStable) {
       intermediateVersion = incrementPatch(intermediateVersion);
@@ -44,7 +44,7 @@ try {
       ? `pr.${getCommitHash().substr(0, 8)}`
       : TRAVIS_MODE === 'netlifyBranch'
         ? `branch.${process.env.BRANCH/* set by netlify */.replace(/[^a-zA-Z0-9]/g, '-')}.${getCommitHash().substr(0, 8)}`
-        : `alpha.${getCommitNum()}`;
+        : `0.alpha.${getCommitNum()}`;
 
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
   } else {
