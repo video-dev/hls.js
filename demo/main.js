@@ -131,7 +131,7 @@ $(document).ready(function () {
 });
 
 function getReleaseVersion (version) {
-  const ciBuildRegEx = /[-.](?:alpha|pr|branch)\..+$/
+  const ciBuildRegEx = /[-.](?:0\.alpha|pr|branch)\..+$/
   if (ciBuildRegEx.test(version)) {
     return version.replace(ciBuildRegEx, '').replace(/^(\d+\.\d+\.)(\d+)$/, function (version, majorMinor, ciPatch) {
       if (ciPatch) {
