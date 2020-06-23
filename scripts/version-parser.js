@@ -22,8 +22,8 @@ module.exports = {
   isGreater: (newVersion, previousVersion) => {
     return semver.gt(newVersion, previousVersion);
   },
-  // returns true if there could never be an already existing auto generated alpha
-  // version that is greater than this one
+  // returns true if the provided version is definitely greater than any existing
+  // auto generated alpha versions
   isDefinitelyGreaterThanAlphas: (version) => {
     const parsed = semver.parse(version, { loose: false, includePrerelease: true });
     if (!parsed) {
