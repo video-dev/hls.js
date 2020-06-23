@@ -12,7 +12,7 @@ env:
     - SAUCE_USERNAME=mangui
 stages:
   - buildAndTest
-  - releaseCanary
+  - releaseAlpha
   - release
   - testFuncRequired
   - testFuncOptional
@@ -39,10 +39,10 @@ jobs:
         skip_cleanup: true
         on:
           tags: true
-    # publish canary package (and deploy gh-pages) if on master
-    - stage: releaseCanary
+    # publish canary package if on master
+    - stage: releaseAlpha
       if: branch = master AND type != pull_request
-      env: TRAVIS_MODE=releaseCanary
+      env: TRAVIS_MODE=releaseAlpha
     # Required tests
     - stage: buildAndTest
       env:   TRAVIS_MODE=build
