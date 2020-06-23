@@ -14,7 +14,6 @@ id=$currentCommit
 root="./netlify"
 version=$(jq -r -e '.version' "./package.json")
 idShort="$(echo "$id" | cut -c 1-8) ($version)"
-latestSiteId="642d9ad4-f002-4104-9309-40ed9cd81a1f"
 stableSiteId="deef7ecf-4c3e-4de0-b6bb-676b02e1c20e"
 
 deploy () {
@@ -31,11 +30,6 @@ commitSiteId=$(curl --fail -d "{\"name\":\"$commitSiteName\"}" -H "Content-Type:
 echo "Created site '$commitSiteId'."
 
 deploy "$commitSiteId"
-
-if [ $currentCommit = $masterLatestCommit ]; then
-  echo "On latest master commit."
-  deploy "$latestSiteId"
-fi
 
 if [[ $version != *"-"* ]]; then
   echo "Detected new version: $version"
