@@ -16,7 +16,7 @@ try {
     }
     // remove v
     newVersion = tag.substring(1);
-  } else if (TRAVIS_MODE === 'releaseCanary' || TRAVIS_MODE === 'netlifyPr') {
+  } else if (TRAVIS_MODE === 'releaseCanary' || TRAVIS_MODE === 'netlifyPr' || TRAVIS_MODE === 'netlifyBranch') {
     // bump patch in version from latest git tag
     let currentVersion = getLatestVersionTag();
     // remove v
@@ -32,6 +32,8 @@ try {
     }
     if (TRAVIS_MODE === 'netlifyPr') {
       newVersion += `-pr.${getCommitHash().substr(0, 8)}`;
+    } else if (TRAVIS_MODE === 'netlifyBranch') {
+      newVersion += `-branch.${process.env.BRANCH/* set by netlify */.replace(/[^a-zA-Z0-9]/g, '-')}.${getCommitHash().substr(0, 8)}`;
     } else {
       newVersion += `-canary.${getCommitNum()}`;
     }

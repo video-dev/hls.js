@@ -91,6 +91,8 @@ class AudioTrackController extends TaskLoop {
   onManifestParsed (data) {
     const tracks = this.tracks = data.audioTracks || [];
     this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
+
+    this._selectAudioGroup(this.hls.nextLoadLevel);
   }
 
   /**
@@ -98,7 +100,7 @@ class AudioTrackController extends TaskLoop {
    *
    * Set-up metadata update interval task for live-mode streams.
    *
-   * @param {} data
+   * @param {*} data
    */
   onAudioTrackLoaded (data) {
     if (data.id >= this.tracks.length) {
@@ -150,20 +152,7 @@ class AudioTrackController extends TaskLoop {
    * @param {*} data
    */
   onLevelLoaded (data) {
-    // FIXME: crashes because currentLevel is undefined
-    // const levelInfo = this.hls.levels[this.hls.currentLevel];
-
-    const levelInfo = this.hls.levels[data.level];
-
-    if (!levelInfo.audioGroupIds) {
-      return;
-    }
-
-    const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
-    if (this.audioGroupId !== audioGroupId) {
-      this.audioGroupId = audioGroupId;
-      this._selectInitialAudioTrack();
-    }
+    this._selectAudioGroup(data.level);
   }
 
   /**
@@ -250,6 +239,24 @@ class AudioTrackController extends TaskLoop {
    */
   doTick () {
     this._updateTrack(this._trackId);
+  }
+
+  /**
+   * @param levelId
+   * @private
+   */
+  _selectAudioGroup (levelId) {
+    const levelInfo = this.hls.levels[levelId];
+
+    if (!levelInfo || !levelInfo.audioGroupIds) {
+      return;
+    }
+
+    const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
+    if (this.audioGroupId !== audioGroupId) {
+      this.audioGroupId = audioGroupId;
+      this._selectInitialAudioTrack();
+    }
   }
 
   /**

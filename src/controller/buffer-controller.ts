@@ -55,6 +55,9 @@ class BufferController extends EventHandler {
   // The number of BUFFER_CODEC events received before any sourceBuffers are created
   public bufferCodecEventsExpected: number = 0;
 
+  // The total number of BUFFER_CODEC events received
+  private _bufferCodecEventsTotal: number = 0;
+
   // A reference to the attached media element
   public media: HTMLMediaElement | null = null;
 
@@ -138,12 +141,17 @@ class BufferController extends EventHandler {
     }
   }
 
-  onManifestParsed (data: { altAudio: boolean }) {
-    // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
+  onManifestParsed (data: { altAudio: boolean, audio: boolean, video: boolean }) {
+    // in case of alt audio (where all tracks have urls) 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    this.bufferCodecEventsExpected = data.altAudio ? 2 : 1;
+    let codecEvents: number = 2;
+    if (data.audio && !data.video || !data.altAudio) {
+      codecEvents = 1;
+    }
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
+
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
@@ -202,6 +210,7 @@ class BufferController extends EventHandler {
       this.mediaSource = null;
       this.media = null;
       this._objectUrl = null;
+      this.bufferCodecEventsExpected = this._bufferCodecEventsTotal;
       this.pendingTracks = {};
       this.tracks = {};
       this.sourceBuffer = {};
@@ -454,10 +463,6 @@ class BufferController extends EventHandler {
   }
 
   flushLiveBackBuffer () {
-    if (!this.media) {
-      throw Error('flushLiveBackBuffer called without attaching media');
-    }
-
     // clear back buffer for live only
     if (!this._live) {
       return;
@@ -465,6 +470,11 @@ class BufferController extends EventHandler {
 
     const liveBackBufferLength = this.config.liveBackBufferLength;
     if (!isFinite(liveBackBufferLength) || liveBackBufferLength < 0) {
+      return;
+    }
+
+    if (!this.media) {
+      logger.error('flushLiveBackBuffer called without attaching media');
       return;
     }
 
@@ -483,7 +493,9 @@ class BufferController extends EventHandler {
           // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
           // time will lead to playback freezing)
           // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
-          this.removeBufferRange(bufferType, sb, 0, targetBackBufferPosition);
+          if (this.removeBufferRange(bufferType, sb, 0, targetBackBufferPosition)) {
+            this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });
+          }
         }
       }
     }

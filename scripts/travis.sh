@@ -3,7 +3,7 @@
 set -ev
 
 echo "travis_fold:start:npm_install"
-npm install
+npm ci
 echo "travis_fold:end:npm_install"
 
 if [ "${TRAVIS_MODE}" = "build" ]; then
@@ -11,8 +11,12 @@ if [ "${TRAVIS_MODE}" = "build" ]; then
   npm run lint
   echo "travis_fold:end:lint"
   echo "travis_fold:start:build"
+  npm run type-check
   npm run build
   echo "travis_fold:end:build"
+  echo "travis_fold:start:docs"
+  npm run docs
+  echo "travis_fold:end:docs"
   # check that hls.js doesn't error if requiring in node
   # see https://github.com/video-dev/hls.js/pull/1642
   node -e 'require("./" + require("./package.json").main)'
@@ -36,7 +40,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
   if [ ${n} = ${maxRetries} ]; then
     exit 1
   fi
-elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ]; then
+elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ] || [ "${TRAVIS_MODE}" = "netlifyBranch" ]; then
   # update the version
   if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
     # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
@@ -44,9 +48,13 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   fi
   node ./scripts/set-package-version.js
   npm run lint
-  npm run build
-  if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
+  npm run type-check
+  npm run build:ci
+
+  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
+    # unit tests don't work on netlify because they need chrome
     npm run test:unit
+
     if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
       # write the token to config
       # see https://docs.npmjs.com/private-modules/ci-server-config
@@ -76,7 +84,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run docs
 
   ./scripts/build-netlify.sh
-  if [ "${TRAVIS_MODE}" != "netlifyPr" ]; then
+  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
     ./scripts/deploy-netlify.sh
   fi
 else

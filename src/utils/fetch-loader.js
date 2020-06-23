@@ -5,8 +5,6 @@
  * but still it is not bullet proof as it fails to avoid data waste....
 */
 
-const { Request, Headers, fetch, performance } = window;
-
 class FetchLoader {
   constructor (config) {
     this.fetchSetup = config.fetchSetup;
@@ -18,7 +16,7 @@ class FetchLoader {
 
   load (context, config, callbacks) {
     let stats = {
-      trequest: performance.now(),
+      trequest: window.performance.now(),
       retry: 0
     };
 
@@ -37,20 +35,20 @@ class FetchLoader {
       headersObj['Range'] = 'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1);
     } /* jshint ignore:line */
 
-    initParams.headers = new Headers(headersObj);
+    initParams.headers = new window.Headers(headersObj);
 
     if (this.fetchSetup) {
       request = this.fetchSetup(context, initParams);
     } else {
-      request = new Request(context.url, initParams);
+      request = new window.Request(context.url, initParams);
     }
 
-    let fetchPromise = fetch(request, initParams);
+    let fetchPromise = window.fetch(request, initParams);
 
     // process fetchPromise
     let responsePromise = fetchPromise.then(function (response) {
       if (response.ok) {
-        stats.tfirst = Math.max(stats.trequest, performance.now());
+        stats.tfirst = Math.max(stats.trequest, window.performance.now());
         targetURL = response.url;
         if (context.responseType === 'arraybuffer') {
           return response.arrayBuffer();
@@ -66,7 +64,7 @@ class FetchLoader {
     // process response Promise
     responsePromise.then(function (responseData) {
       if (responseData) {
-        stats.tload = Math.max(stats.tfirst, performance.now());
+        stats.tload = Math.max(stats.tfirst, window.performance.now());
         let len;
         if (typeof responseData === 'string') {
           len = responseData.length;

@@ -6,7 +6,9 @@ import LevelKey from './level-key';
 
 import AttrList from '../utils/attr-list';
 import { logger } from '../utils/logger';
-import { isCodecType } from '../utils/codecs';
+import { isCodecType, CodecType } from '../utils/codecs';
+import { MediaPlaylist, AudioGroup, MediaPlaylistType } from '../types/media-playlist';
+import { PlaylistLevelType } from '../types/loader';
 
 /**
  * M3U8 parser
@@ -14,7 +16,7 @@ import { isCodecType } from '../utils/codecs';
  */
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
+const MASTER_PLAYLIST_REGEX = /(?:#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)|#EXT-X-SESSION-DATA:([^\n\r]*)[\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
@@ -30,21 +32,13 @@ const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
 export default class M3U8Parser {
-  static findGroup (groups, mediaGroupId) {
-    if (!groups) {
-      return null;
-    }
-
-    let matchingGroup = null;
-
+  static findGroup (groups: Array<AudioGroup>, mediaGroupId: string): AudioGroup | undefined {
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
       if (group.id === mediaGroupId) {
-        matchingGroup = group;
+        return group;
       }
     }
-
-    return matchingGroup;
   }
 
   static convertAVC1ToAVCOTI (codec) {
@@ -64,12 +58,16 @@ export default class M3U8Parser {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
-  static parseMasterPlaylist (string, baseurl) {
-    let levels = [];
+  static parseMasterPlaylist (string: string, baseurl: string) {
+    // TODO(typescript-level)
+    let levels: Array<any> = [];
+    let sessionData: Record<string, AttrList> = {};
+    let hasSessionData = false;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
-    function setCodecs (codecs, level) {
-      ['video', 'audio'].forEach((type) => {
+    // TODO(typescript-level)
+    function setCodecs (codecs: Array<string>, level: any) {
+      ['video', 'audio'].forEach((type: CodecType) => {
         const filtered = codecs.filter((codec) => isCodecType(codec, type));
         if (filtered.length) {
           const preferred = filtered.filter((codec) => {
@@ -85,77 +83,97 @@ export default class M3U8Parser {
       level.unknownCodecs = codecs;
     }
 
-    let result;
+    let result: RegExpExecArray | null;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
-      const level = {};
+      if (result[1]) {
+        // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
 
-      const attrs = level.attrs = new AttrList(result[1]);
-      level.url = M3U8Parser.resolve(result[2], baseurl);
+        // TODO(typescript-level)
+        const level: any = {};
 
-      const resolution = attrs.decimalResolution('RESOLUTION');
-      if (resolution) {
-        level.width = resolution.width;
-        level.height = resolution.height;
+        const attrs = level.attrs = new AttrList(result[1]);
+        level.url = M3U8Parser.resolve(result[2], baseurl);
+
+        const resolution = attrs.decimalResolution('RESOLUTION');
+        if (resolution) {
+          level.width = resolution.width;
+          level.height = resolution.height;
+        }
+        level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
+        level.name = attrs.NAME;
+
+        setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+
+        if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+          level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
+        }
+
+        levels.push(level);
+      } else if (result[3]) {
+        // '#EXT-X-SESSION-DATA' is found, parse session data in group 3
+        let sessionAttrs = new AttrList(result[3]);
+        if (sessionAttrs['DATA-ID']) {
+          hasSessionData = true;
+          sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
+        }
       }
-      level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
-      level.name = attrs.NAME;
-
-      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
-
-      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
-        level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
-      }
-
-      levels.push(level);
     }
-    return levels;
+    return {
+      levels,
+      sessionData: hasSessionData ? sessionData : null
+    };
   }
 
-  static parseMasterPlaylistMedia (string, baseurl, type, audioGroups = []) {
-    let result;
-    let medias = [];
+  static parseMasterPlaylistMedia (string: string, baseurl: string, type: MediaPlaylistType, audioGroups: Array<AudioGroup> = []): Array<MediaPlaylist> {
+    let result: RegExpExecArray | null;
+    let medias: Array<MediaPlaylist> = [];
     let id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
-      const media = {};
       const attrs = new AttrList(result[1]);
       if (attrs.TYPE === type) {
-        media.groupId = attrs['GROUP-ID'];
-        media.name = attrs.NAME;
-        media.type = type;
-        media.default = (attrs.DEFAULT === 'YES');
-        media.autoselect = (attrs.AUTOSELECT === 'YES');
-        media.forced = (attrs.FORCED === 'YES');
+        const media: MediaPlaylist = {
+          attrs,
+          id: id++,
+          groupId: attrs['GROUP-ID'],
+          instreamId: attrs['INSTREAM-ID'],
+          name: attrs.NAME || attrs.LANGUAGE,
+          type,
+          default: (attrs.DEFAULT === 'YES'),
+          autoselect: (attrs.AUTOSELECT === 'YES'),
+          forced: (attrs.FORCED === 'YES'),
+          lang: attrs.LANGUAGE
+        };
+
         if (attrs.URI) {
           media.url = M3U8Parser.resolve(attrs.URI, baseurl);
         }
 
-        media.lang = attrs.LANGUAGE;
-        if (!media.name) {
-          media.name = media.lang;
-        }
-
         if (audioGroups.length) {
-          const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId);
+          // If there are audio groups signalled in the manifest, let's look for a matching codec string for this track
+          const groupCodec = M3U8Parser.findGroup(audioGroups, media.groupId as string);
+
+          // If we don't find the track signalled, lets use the first audio groups codec we have
+          // Acting as a best guess
           media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
         }
-        media.id = id++;
+
         medias.push(media);
       }
     }
     return medias;
   }
 
-  static parseLevelPlaylist (string, baseurl, id, type, levelUrlId) {
+  static parseLevelPlaylist (string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number) {
     let currentSN = 0;
     let totalduration = 0;
     let level = new Level(baseurl);
-    let levelkey = new LevelKey();
-    let cc = 0;
-    let prevFrag = null;
-    let frag = new Fragment();
-    let result;
-    let i;
+    let discontinuityCounter = 0;
+    let prevFrag: Fragment | null = null;
+    let frag: Fragment | null = new Fragment();
+    let result: RegExpExecArray | RegExpMatchArray | null;
+    let i: number;
+    let levelkey: LevelKey | undefined;
 
     let firstPdtIndex = null;
 
@@ -174,10 +192,12 @@ export default class M3U8Parser {
           const sn = currentSN++;
           frag.type = type;
           frag.start = totalduration;
-          frag.levelkey = levelkey;
+          if (levelkey) {
+            frag.levelkey = levelkey;
+          }
           frag.sn = sn;
           frag.level = id;
-          frag.cc = cc;
+          frag.cc = discontinuityCounter;
           frag.urlId = levelUrlId;
           frag.baseurl = baseurl;
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
@@ -206,6 +226,10 @@ export default class M3U8Parser {
         }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
+        if (!result) {
+          logger.warn('No matches on slow regex match for level playlist!');
+          continue;
+        }
         for (i = 1; i < result.length; i++) {
           if (typeof result[i] !== 'undefined') {
             break;
@@ -238,27 +262,31 @@ export default class M3U8Parser {
           level.live = false;
           break;
         case 'DIS':
-          cc++;
+          discontinuityCounter++;
           frag.tagList.push(['DIS']);
           break;
         case 'DISCONTINUITY-SEQ':
-          cc = parseInt(value1);
+          discontinuityCounter = parseInt(value1);
           break;
         case 'KEY': {
-          // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+          // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
           const decryptparams = value1;
           const keyAttrs = new AttrList(decryptparams);
           const decryptmethod = keyAttrs.enumeratedString('METHOD');
           const decrypturi = keyAttrs.URI;
           const decryptiv = keyAttrs.hexadecimalInteger('IV');
+          // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
+          const decryptkeyformat = keyAttrs.KEYFORMAT || 'identity';
+
+          if (decryptkeyformat === 'com.apple.streamingkeydelivery') {
+            logger.warn('Keyformat com.apple.streamingkeydelivery is not supported');
+            continue;
+          }
 
           if (decryptmethod) {
-            levelkey = new LevelKey();
+            levelkey = new LevelKey(baseurl, decrypturi);
             if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
               levelkey.method = decryptmethod;
-              // URI to get the key
-              levelkey.baseuri = baseurl;
-              levelkey.reluri = decrypturi;
               levelkey.key = null;
               // Initialization Vector (IV)
               levelkey.iv = decryptiv;
@@ -306,7 +334,7 @@ export default class M3U8Parser {
     level.averagetargetduration = totalduration / level.fragments.length;
     level.endSN = currentSN - 1;
     level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
-    level.endCC = cc;
+    level.endCC = discontinuityCounter;
 
     if (!level.initSegment && level.fragments.length) {
       // this is a bit lurky but HLS really has no other way to tell us
@@ -356,7 +384,7 @@ function backfillProgramDateTimes (fragments, startIndex) {
 function assignProgramDateTime (frag, prevFrag) {
   if (frag.rawProgramDateTime) {
     frag.programDateTime = Date.parse(frag.rawProgramDateTime);
-  } else if (prevFrag && prevFrag.programDateTime) {
+  } else if (prevFrag?.programDateTime) {
     frag.programDateTime = prevFrag.endProgramDateTime;
   }
 
