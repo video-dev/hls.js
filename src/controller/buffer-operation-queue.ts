@@ -30,6 +30,7 @@ export default class BufferOperationQueue {
     });
     const operation: BufferOperation = {
       execute,
+      onStart: () => {},
       onComplete: () => {},
       onError: () => {}
     };

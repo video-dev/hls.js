@@ -132,7 +132,7 @@ export class LoadError extends Error {
 }
 
 export interface FragLoadSuccessResult {
-  payload: ArrayBuffer | Uint8Array
+  payload: ArrayBuffer
   networkDetails: XMLHttpRequest | null
 }
 
