@@ -29,7 +29,20 @@ module.exports = {
     if (!parsed) {
       throw new Error('Error parsing version.');
     }
-    return !`.${parsed.prerelease.join('.')}.`.includes('.0.alpha.');
+
+    // anything after a part of `0` must be greater than `alpha`
+    let hadZero = false;
+    return parsed.prerelease.every((part) => {
+      if (hadZero && part <= 'alpha') {
+        return false;
+      } else {
+        hadZero = false;
+      }
+      if (part === 0) {
+        hadZero = true;
+      }
+      return true;
+    });
   },
   // extract what we should use as the npm dist-tag (https://docs.npmjs.com/cli/dist-tag)
   // e.g
