@@ -32,7 +32,7 @@ module.exports = {
     return parsed.prerelease.every((part) => {
       return typeof part === 'string' && part > 'alpha';
     });
-  }
+  },
   // extract what we should use as the npm dist-tag (https://docs.npmjs.com/cli/dist-tag)
   // e.g
   // v1.2.3-beta => beta
