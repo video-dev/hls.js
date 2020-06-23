@@ -6,6 +6,7 @@ const packageJson = require('../package.json');
 const { isValidStableVersion, incrementPatch } = require('./version-parser.js');
 
 const TRAVIS_MODE = process.env.TRAVIS_MODE;
+const latestVersion = getLatestVersionTag();
 let newVersion = '';
 
 try {
@@ -19,7 +20,7 @@ try {
     newVersion = tag.substring(1);
   } else if (TRAVIS_MODE === 'releaseAlpha' || TRAVIS_MODE === 'netlifyPr' || TRAVIS_MODE === 'netlifyBranch') {
     // bump patch in version from latest git tag
-    let intermediateVersion = getLatestVersionTag();
+    let intermediateVersion = latestVersion;
     const isStable = isValidStableVersion(intermediateVersion);
 
     // if last git tagged version is a prerelease we should append `.<type>.<commit num>`
@@ -41,6 +42,10 @@ try {
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
   } else {
     throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
+  }
+
+  if (!versionParser.isGreater(newVersion, latestVersion)) {
+    throw new Error(`New version "${newVersion}" is not > than latest version "${latestVersion}" on this branch.`);
   }
 
   packageJson.version = newVersion;

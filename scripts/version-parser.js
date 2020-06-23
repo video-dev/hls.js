@@ -1,5 +1,7 @@
 'use strict';
 
+const semver = require('semver');
+
 const VALID_VERSION_REGEX = /^v\d+\.\d+\.\d+(?:-([a-zA-Z][0-9a-zA-Z-]*))?/;
 const STABLE_VERSION_REGEX = /^v\d+\.\d+\.\d+$/;
 
@@ -11,15 +13,14 @@ module.exports = {
     return STABLE_VERSION_REGEX.test(version);
   },
   incrementPatch: (version) => {
-    let matched = false;
-    const newVersion = version.replace(/^(\d+)\.(\d+)\.(\d+).*$/, (_, major, minor, patch) => {
-      matched = true;
-      return major + '.' + minor + '.' + (parseInt(patch, 10) + 1);
-    });
-    if (!matched) {
+    const newVersion = semver.inc('patch', version);
+    if (!newVersion) {
       throw new Error('Error incrementing patch.');
     }
     return newVersion;
+  },
+  isGreater: (newVersion, previousVersion) => {
+    return semver.gt(newVersion, previousVersion);
   },
   // extract what we should use as the npm dist-tag (https://docs.npmjs.com/cli/dist-tag)
   // e.g
