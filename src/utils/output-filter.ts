@@ -1,14 +1,14 @@
 import { CaptionScreen } from './cea-608-parser';
+import type TimelineController from '../controller/timeline-controller';
 
 export default class OutputFilter {
-  timelineController: any;
+  timelineController: TimelineController;
   trackName: string;
   startTime: number | null;
   endTime: number | null;
   screen: CaptionScreen | null;
 
-  // TODO(typescript-timelineController)
-  constructor (timelineController: any, trackName: string) {
+  constructor (timelineController: TimelineController, trackName: string) {
     this.timelineController = timelineController;
     this.trackName = trackName;
     this.startTime = null;
@@ -21,7 +21,7 @@ export default class OutputFilter {
       return;
     }
 
-    this.timelineController.addCues(this.trackName, this.startTime, this.endTime, this.screen);
+    this.timelineController.addCues(this.trackName, this.startTime, this.endTime as number, this.screen as CaptionScreen);
     this.startTime = null;
   }
 
