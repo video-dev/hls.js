@@ -889,34 +889,25 @@ interface PACData {
 
 type SupportedField = 1 | 3;
 
-type CurrentChannels = {
-  [key: number]: 0 | 1 | 2 | 3 | 4; // Will be 1, 2, 3 or 4 when parsing captions
-}
+type Channels = 0 | 1 | 2; // Will be 1 or 2 when parsing captions
 
 type CmdHistory = {
-  [key: number]: {
-    a: number | null,
-    b: number | null
-  }
+  a: number | null,
+  b: number | null
 };
 
 class Cea608Parser {
   channels: Array<Cea608Channel | null>;
-  currentChannel: CurrentChannels = {
-    1: 0,
-    3: 0
-  };
+  currentChannel: Channels = 0;
   cmdHistory: CmdHistory;
   logger: CaptionsLogger;
 
-  constructor (out1: OutputFilter, out2: OutputFilter, out3: OutputFilter, out4: OutputFilter) {
+  constructor (field: SupportedField, out1: OutputFilter, out2: OutputFilter) {
     const logger = new CaptionsLogger();
     this.channels = [
       null,
-      new Cea608Channel(1, out1, logger),
-      new Cea608Channel(2, out2, logger),
-      new Cea608Channel(3, out3, logger),
-      new Cea608Channel(4, out4, logger)
+      new Cea608Channel(field, out1, logger),
+      new Cea608Channel(field + 1, out2, logger)
     ];
     this.cmdHistory = createCmdHistory();
     this.logger = logger;
@@ -933,7 +924,7 @@ class Cea608Parser {
   /**
    * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
    */
-  addData (time: number | null, byteList: number[], field: SupportedField) {
+  addData (time: number | null, byteList: number[]) {
     let cmdFound: boolean;
     let a: number;
     let b: number;
@@ -950,32 +941,27 @@ class Cea608Parser {
         this.logger.log(VerboseLevel.DATA, '[' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
       }
 
-      cmdFound = this.parseCmd(a, b, field);
+      cmdFound = this.parseCmd(a, b);
 
       if (!cmdFound) {
-        cmdFound = this.parseMidrow(a, b, field);
+        cmdFound = this.parseMidrow(a, b);
       }
 
       if (!cmdFound) {
-        cmdFound = this.parsePAC(a, b, field);
+        cmdFound = this.parsePAC(a, b);
       }
 
       if (!cmdFound) {
-        cmdFound = this.parseBackgroundAttributes(a, b, field);
+        cmdFound = this.parseBackgroundAttributes(a, b);
       }
 
       if (!cmdFound) {
-        charsFound = this.parseChars(a, b, field);
+        charsFound = this.parseChars(a, b);
         if (charsFound) {
-          const currChNr = this.currentChannel[field];
+          const currChNr = this.currentChannel;
           if (currChNr && currChNr > 0) {
-            if (field === 3 && currChNr > 2 || field === 1 && currChNr < 3) {
-              const channel = this.channels[currChNr] as Cea608Channel;
-              channel.insertChars(charsFound);
-            } else {
-              this.logger.log(VerboseLevel.WARNING, 'The last seen channel number does not fall within the current field. ' +
-                'Deferring character insertion until the field and channel match.');
-            }
+            const channel = this.channels[currChNr] as Cea608Channel;
+            channel.insertChars(charsFound);
           } else {
             this.logger.log(VerboseLevel.WARNING, 'No channel found yet. TEXT-MODE?');
           }
@@ -992,10 +978,10 @@ class Cea608Parser {
    * Parse Command.
    * @returns {Boolean} Tells if a command was found
    */
-  parseCmd (a: number, b: number, field: SupportedField) {
-    const cmdHistory = this.cmdHistory;
+  parseCmd (a: number, b: number) {
+    const { cmdHistory } = this;
     const chNr = getChannelNumber(a);
-    const dataChannel = getDataChannel(b, field);
+    const dataChannel = getDataChannel(b);
     const cond1 = chNr && (b >= 0x20 && b <= 0x2F);
     const cond2 = dataChannel && (b >= 0x21 && b <= 0x23);
 
@@ -1003,8 +989,8 @@ class Cea608Parser {
       return false;
     }
 
-    if (hasCmdRepeated(a, b, cmdHistory[field])) {
-      setLastCmd(null, null, cmdHistory[field]);
+    if (hasCmdRepeated(a, b, cmdHistory)) {
+      setLastCmd(null, null, cmdHistory);
       this.logger.log(VerboseLevel.DEBUG, 'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
       return true;
     }
@@ -1046,11 +1032,11 @@ class Cea608Parser {
         channel.ccEOC();
       }
     } else { // a == 0x17 || a == 0x1F
-      channel = this.channels[dataChannel!] as Cea608Channel;
+      channel = this.channels[dataChannel] as Cea608Channel;
       channel.ccTO(b - 0x20);
     }
-    setLastCmd(a, b, cmdHistory[field]);
-    this.currentChannel[field] = chNr;
+    setLastCmd(a, b, cmdHistory);
+    this.currentChannel = chNr;
     return true;
   }
 
@@ -1058,17 +1044,17 @@ class Cea608Parser {
    * Parse midrow styling command
    * @returns {Boolean}
    */
-  parseMidrow (a: number, b: number, field: SupportedField) {
+  parseMidrow (a: number, b: number) {
     let chNr: number = 0;
 
     if (((a === 0x11) || (a === 0x19)) && b >= 0x20 && b <= 0x2f) {
       if (a === 0x11) {
-        chNr = field;
+        chNr = 1;
       } else {
-        chNr = field + 1;
+        chNr = 2;
       }
 
-      if (chNr !== this.currentChannel[field]) {
+      if (chNr !== this.currentChannel) {
         this.logger.log(VerboseLevel.ERROR, 'Mismatch channel in midrow parsing');
         return false;
       }
@@ -1087,8 +1073,7 @@ class Cea608Parser {
    * Parse Preable Access Codes (Table 53).
    * @returns {Boolean} Tells if PAC found
    */
-  parsePAC (a: number, b: number, field: SupportedField): boolean {
-    let chNr: number = 0;
+  parsePAC (a: number, b: number): boolean {
     let row: number;
     const cmdHistory = this.cmdHistory;
 
@@ -1098,32 +1083,25 @@ class Cea608Parser {
       return false;
     }
 
-    if (hasCmdRepeated(a, b, cmdHistory[field])) {
-      setLastCmd(null, null, cmdHistory[field]);
+    if (hasCmdRepeated(a, b, cmdHistory)) {
+      setLastCmd(null, null, cmdHistory);
       return true; // Repeated commands are dropped (once)
     }
 
-    let dataChannel;
-    if (a <= 0x17) {
-      dataChannel = 1;
-      chNr = field;
-    } else {
-      dataChannel = 2;
-      chNr = field + 1;
-    }
+    const chNr: Channels = (a <= 0x17) ? 1 : 2;
 
     if (b >= 0x40 && b <= 0x5F) {
-      row = (dataChannel === 1) ? rowsLowCh1[a] : rowsLowCh2[a];
+      row = (chNr === 1) ? rowsLowCh1[a] : rowsLowCh2[a];
     } else { // 0x60 <= b <= 0x7F
-      row = (dataChannel === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
+      row = (chNr === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
     }
     const channel = this.channels[chNr];
     if (!channel) {
       return false;
     }
     channel.setPAC(this.interpretPAC(row, b));
-    setLastCmd(a, b, cmdHistory[field]);
-    this.currentChannel[field] = chNr as 0 | 1 | 2 | 3 | 4;
+    setLastCmd(a, b, cmdHistory);
+    this.currentChannel = chNr;
     return true;
   }
 
@@ -1157,8 +1135,8 @@ class Cea608Parser {
    * Parse characters.
    * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
    */
-  parseChars (a: number, b: number, field: SupportedField): number[] | null {
-    let channelNr: number | null = null;
+  parseChars (a: number, b: number): number[] | null {
+    let channelNr: Channels;
     let charCodes: number[] | null = null;
     let charCode1: number | null = null;
 
@@ -1188,7 +1166,7 @@ class Cea608Parser {
     if (charCodes) {
       const hexCodes = numArrayToHexArray(charCodes);
       this.logger.log(VerboseLevel.DEBUG, 'Char codes =  ' + hexCodes.join(','));
-      setLastCmd(a, b, this.cmdHistory[field]);
+      setLastCmd(a, b, this.cmdHistory);
     }
     return charCodes;
   }
@@ -1197,7 +1175,7 @@ class Cea608Parser {
    * Parse extended background attributes as well as new foreground color black.
    * @returns {Boolean} Tells if background attributes are found
    */
-  parseBackgroundAttributes (a: number, b: number, field: SupportedField): boolean {
+  parseBackgroundAttributes (a: number, b: number): boolean {
     const case1 = (a === 0x10 || a === 0x18) && (b >= 0x20 && b <= 0x2f);
     const case2 = (a === 0x17 || a === 0x1f) && (b >= 0x2d && b <= 0x2f);
     if (!(case1 || case2)) {
@@ -1219,10 +1197,10 @@ class Cea608Parser {
         bkgData.underline = true;
       }
     }
-    const chNr: number = (a < 0x18) ? field : field + 1;
+    const chNr: Channels = (a <= 0x17) ? 1 : 2;
     const channel: Cea608Channel = this.channels[chNr] as Cea608Channel;
     channel.setBkgData(bkgData);
-    setLastCmd(a, b, this.cmdHistory[field]);
+    setLastCmd(a, b, this.cmdHistory);
     return true;
   }
 
@@ -1252,57 +1230,37 @@ class Cea608Parser {
   }
 }
 
-function getChannelNumber (ccData0: number): 0 | 1 | 2 | 3 | 4 {
-  if (ccData0 === 0x14) {
+function getChannelNumber (ccData0: number): Channels {
+  if (ccData0 === 0x14 || ccData0 === 0x15) {
     return 1;
-  } else if (ccData0 === 0x1C) {
+  } else if (ccData0 === 0x1C || ccData0 === 0x1D) {
     return 2;
-  } else if (ccData0 === 0x15) {
-    return 3;
-  } else if (ccData0 === 0x1D) {
-    return 4;
   }
   return 0;
 }
 
-function getDataChannel (ccData1: number, field: SupportedField): number | null {
-  let dataChannel: number | null = null;
+function getDataChannel (ccData1: number): Channels {
   if (ccData1 === 0x17) {
-    dataChannel = field;
+    return 1;
   } else if (ccData1 === 0x1F) {
-    dataChannel = field + 1;
+    return 2;
   }
-
-  return dataChannel;
+  return 0;
 }
 
-function setLastCmd (a, b, cmdHistory) {
-  if (!cmdHistory) {
-    return;
-  }
-
+function setLastCmd (a: number | null, b: number | null, cmdHistory: CmdHistory) {
   cmdHistory.a = a;
   cmdHistory.b = b;
 }
 
-function hasCmdRepeated (a, b, cmdHistory) {
-  if (!cmdHistory) {
-    return;
-  }
-
+function hasCmdRepeated (a: number, b: number, cmdHistory: CmdHistory) {
   return cmdHistory.a === a && cmdHistory.b === b;
 }
 
 function createCmdHistory (): CmdHistory {
   return {
-    1: {
-      a: null,
-      b: null
-    },
-    3: {
-      a: null,
-      b: null
-    }
+    a: null,
+    b: null
   };
 }
 
