@@ -44,7 +44,6 @@ class TimelineController extends EventHandler {
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
   private unparsedVttFrags: Array<{ frag: Fragment, payload: ArrayBuffer }> = [];
-  private cueRanges: Array<[number, number]> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
   private captionsProperties: {
@@ -103,12 +102,11 @@ class TimelineController extends EventHandler {
     }
   }
 
-  addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen) {
+  addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen, cueRanges: Array<[number, number]>) {
     // skip cues which overlap more than 50% with previously parsed time ranges
-    const ranges = this.cueRanges;
     let merged = false;
-    for (let i = ranges.length; i--;) {
-      let cueRange = ranges[i];
+    for (let i = cueRanges.length; i--;) {
+      let cueRange = cueRanges[i];
       let overlap = intersection(cueRange[0], cueRange[1], startTime, endTime);
       if (overlap >= 0) {
         cueRange[0] = Math.min(cueRange[0], startTime);
@@ -120,7 +118,7 @@ class TimelineController extends EventHandler {
       }
     }
     if (!merged) {
-      ranges.push([startTime, endTime]);
+      cueRanges.push([startTime, endTime]);
     }
 
     if (this.config.renderTextTracksNatively) {
@@ -266,7 +264,10 @@ class TimelineController extends EventHandler {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
-    this.cueRanges = [];
+    if (this.cea608Parser1 && this.cea608Parser2) {
+      this.cea608Parser1.reset();
+      this.cea608Parser2.reset();
+    }
 
     if (this.config.enableWebVTT) {
       const tracks = data.subtitles || [];

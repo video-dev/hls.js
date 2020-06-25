@@ -1,4 +1,5 @@
 import OutputFilter from './output-filter';
+import { logger } from '../utils/logger';
 
 /**
  *
@@ -178,7 +179,7 @@ class CaptionsLogger {
 
   log (severity: VerboseLevel, msg: string): void {
     if (this.verboseLevel >= severity) {
-      console.log(`${this.time} [${severity}] ${msg}`);
+      logger.log(`${this.time} [${severity}] ${msg}`);
     }
   }
 }
@@ -681,6 +682,7 @@ class Cea608Channel {
     this.displayedMemory.reset();
     this.nonDisplayedMemory.reset();
     this.lastOutputScreen.reset();
+    this.outputFilter.reset();
     this.currRollUpRow = this.displayedMemory.rows[NR_ROWS - 1];
     this.writeScreen = this.displayedMemory;
     this.mode = null;
@@ -980,11 +982,8 @@ class Cea608Parser {
    */
   parseCmd (a: number, b: number) {
     const { cmdHistory } = this;
-    const chNr = getChannelNumber(a);
-    const dataChannel = getDataChannel(b);
-    const cond1 = chNr && (b >= 0x20 && b <= 0x2F);
-    const cond2 = dataChannel && (b >= 0x21 && b <= 0x23);
-
+    const cond1 = (a === 0x14 || a === 0x1C || a === 0x15 || a === 0x1D) && (b >= 0x20 && b <= 0x2F);
+    const cond2 = (a === 0x17 || a === 0x1F) && (b >= 0x21 && b <= 0x23);
     if (!(cond1 || cond2)) {
       return false;
     }
@@ -995,9 +994,10 @@ class Cea608Parser {
       return true;
     }
 
-    let channel;
-    if (chNr) {
-      channel = this.channels[chNr] as Cea608Channel;
+    const chNr = (a === 0x14 || a === 0x15 || a === 0x17) ? 1 : 2;
+    const channel = this.channels[chNr] as Cea608Channel;
+
+    if (a === 0x14 || a === 0x15 || a === 0x1C || a === 0x1D) {
       if (b === 0x20) {
         channel.ccRCL();
       } else if (b === 0x21) {
@@ -1032,7 +1032,6 @@ class Cea608Parser {
         channel.ccEOC();
       }
     } else { // a == 0x17 || a == 0x1F
-      channel = this.channels[dataChannel] as Cea608Channel;
       channel.ccTO(b - 0x20);
     }
     setLastCmd(a, b, cmdHistory);
@@ -1228,24 +1227,6 @@ class Cea608Parser {
       }
     }
   }
-}
-
-function getChannelNumber (ccData0: number): Channels {
-  if (ccData0 === 0x14 || ccData0 === 0x15) {
-    return 1;
-  } else if (ccData0 === 0x1C || ccData0 === 0x1D) {
-    return 2;
-  }
-  return 0;
-}
-
-function getDataChannel (ccData1: number): Channels {
-  if (ccData1 === 0x17) {
-    return 1;
-  } else if (ccData1 === 0x1F) {
-    return 2;
-  }
-  return 0;
 }
 
 function setLastCmd (a: number | null, b: number | null, cmdHistory: CmdHistory) {
