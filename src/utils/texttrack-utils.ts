@@ -13,7 +13,7 @@ export function sendAddTrackEvent (track: TextTrack, videoEl: HTMLMediaElement) 
 }
 
 export function clearCurrentCues (track: TextTrack) {
-  if (track && track.cues) {
+  if (track?.cues) {
     while (track.cues.length > 0) {
       track.removeCue(track.cues[0]);
     }

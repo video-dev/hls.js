@@ -111,7 +111,7 @@ class MP4Remuxer {
       typeSupported = this.typeSupported,
       container = 'audio/mp4',
       tracks = {},
-      data = { tracks: tracks },
+      data = { tracks },
       computePTSDTS = (this._initPTS === undefined),
       initPTS, initDTS;
 
@@ -165,8 +165,11 @@ class MP4Remuxer {
       if (computePTSDTS) {
         initPTS = Math.min(initPTS, videoSamples[0].pts - inputTimeScale * timeOffset);
         initDTS = Math.min(initDTS, videoSamples[0].dts - inputTimeScale * timeOffset);
-        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS });
+        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
       }
+    } else if (computePTSDTS && tracks.audio) {
+      // initPTS found for audio-only stream with main and alt audio
+      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
     }
 
     if (Object.keys(tracks).length) {
@@ -513,7 +516,7 @@ class MP4Remuxer {
         // 3: currentTime (aka nextPtsNorm) is not 0
         else if (delta >= maxAudioFramesDrift * inputSampleDuration && delta < MAX_SILENT_FRAME_DURATION_90KHZ && nextPts) {
           let missing = Math.round(delta / inputSampleDuration);
-          logger.warn(`Injecting ${missing} audio frames @ ${toMsFromMpegTsClock(nextPts, true)} ms due to ${toMsFromMpegTsClock(nextPts, true)} ms gap.`);
+          logger.warn(`Injecting ${missing} audio frames @ ${toMsFromMpegTsClock(nextPts, true)} ms due to ${toMsFromMpegTsClock(delta, true)} ms gap.`);
           for (let j = 0; j < missing; j++) {
             let newStamp = Math.max(nextPts, 0);
             fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
@@ -730,23 +733,24 @@ class MP4Remuxer {
   }
 
   remuxID3 (track) {
-    let length = track.samples.length, sample;
+    const length = track.samples.length;
+    if (!length) {
+      return;
+    }
     const inputTimeScale = track.inputTimeScale;
     const initPTS = this._initPTS;
     const initDTS = this._initDTS;
     // consume samples
-    if (length) {
-      for (let index = 0; index < length; index++) {
-        sample = track.samples[index];
-        // setting id3 pts, dts to relative time
-        // using this._initPTS and this._initDTS to calculate relative time
-        sample.pts = ((sample.pts - initPTS) / inputTimeScale);
-        sample.dts = ((sample.dts - initDTS) / inputTimeScale);
-      }
-      this.observer.trigger(Event.FRAG_PARSING_METADATA, {
-        samples: track.samples
-      });
+    for (let index = 0; index < length; index++) {
+      const sample = track.samples[index];
+      // setting id3 pts, dts to relative time
+      // using this._initPTS and this._initDTS to calculate relative time
+      sample.pts = ((sample.pts - initPTS) / inputTimeScale);
+      sample.dts = ((sample.dts - initDTS) / inputTimeScale);
     }
+    this.observer.trigger(Event.FRAG_PARSING_METADATA, {
+      samples: track.samples
+    });
 
     track.samples = [];
   }

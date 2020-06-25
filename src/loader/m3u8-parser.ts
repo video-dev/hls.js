@@ -16,7 +16,7 @@ import { PlaylistLevelType } from '../types/loader';
  */
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
+const MASTER_PLAYLIST_REGEX = /(?:#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)|#EXT-X-SESSION-DATA:([^\n\r]*)[\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
@@ -61,6 +61,8 @@ export default class M3U8Parser {
   static parseMasterPlaylist (string: string, baseurl: string) {
     // TODO(typescript-level)
     let levels: Array<any> = [];
+    let sessionData: Record<string, AttrList> = {};
+    let hasSessionData = false;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
     // TODO(typescript-level)
@@ -83,29 +85,43 @@ export default class M3U8Parser {
 
     let result: RegExpExecArray | null;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
-      // TODO(typescript-level)
-      const level: any = {};
+      if (result[1]) {
+        // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
 
-      const attrs = level.attrs = new AttrList(result[1]);
-      level.url = M3U8Parser.resolve(result[2], baseurl);
+        // TODO(typescript-level)
+        const level: any = {};
 
-      const resolution = attrs.decimalResolution('RESOLUTION');
-      if (resolution) {
-        level.width = resolution.width;
-        level.height = resolution.height;
+        const attrs = level.attrs = new AttrList(result[1]);
+        level.url = M3U8Parser.resolve(result[2], baseurl);
+
+        const resolution = attrs.decimalResolution('RESOLUTION');
+        if (resolution) {
+          level.width = resolution.width;
+          level.height = resolution.height;
+        }
+        level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
+        level.name = attrs.NAME;
+
+        setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+
+        if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+          level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
+        }
+
+        levels.push(level);
+      } else if (result[3]) {
+        // '#EXT-X-SESSION-DATA' is found, parse session data in group 3
+        let sessionAttrs = new AttrList(result[3]);
+        if (sessionAttrs['DATA-ID']) {
+          hasSessionData = true;
+          sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
+        }
       }
-      level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
-      level.name = attrs.NAME;
-
-      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
-
-      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
-        level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
-      }
-
-      levels.push(level);
     }
-    return levels;
+    return {
+      levels,
+      sessionData: hasSessionData ? sessionData : null
+    };
   }
 
   static parseMasterPlaylistMedia (string: string, baseurl: string, type: MediaPlaylistType, audioGroups: Array<AudioGroup> = []): Array<MediaPlaylist> {
@@ -117,8 +133,10 @@ export default class M3U8Parser {
       const attrs = new AttrList(result[1]);
       if (attrs.TYPE === type) {
         const media: MediaPlaylist = {
+          attrs,
           id: id++,
           groupId: attrs['GROUP-ID'],
+          instreamId: attrs['INSTREAM-ID'],
           name: attrs.NAME || attrs.LANGUAGE,
           type,
           default: (attrs.DEFAULT === 'YES'),
@@ -251,12 +269,19 @@ export default class M3U8Parser {
           discontinuityCounter = parseInt(value1);
           break;
         case 'KEY': {
-          // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+          // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
           const decryptparams = value1;
           const keyAttrs = new AttrList(decryptparams);
           const decryptmethod = keyAttrs.enumeratedString('METHOD');
           const decrypturi = keyAttrs.URI;
           const decryptiv = keyAttrs.hexadecimalInteger('IV');
+          // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
+          const decryptkeyformat = keyAttrs.KEYFORMAT || 'identity';
+
+          if (decryptkeyformat === 'com.apple.streamingkeydelivery') {
+            logger.warn('Keyformat com.apple.streamingkeydelivery is not supported');
+            continue;
+          }
 
           if (decryptmethod) {
             levelkey = new LevelKey(baseurl, decrypturi);
@@ -359,7 +384,7 @@ function backfillProgramDateTimes (fragments, startIndex) {
 function assignProgramDateTime (frag, prevFrag) {
   if (frag.rawProgramDateTime) {
     frag.programDateTime = Date.parse(frag.rawProgramDateTime);
-  } else if (prevFrag && prevFrag.programDateTime) {
+  } else if (prevFrag?.programDateTime) {
     frag.programDateTime = prevFrag.endProgramDateTime;
   }
 

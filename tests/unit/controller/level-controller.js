@@ -93,20 +93,20 @@ describe('LevelController', function () {
       levelController.onManifestLoaded(data);
 
       expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
-        altAudio: false,
-        audio: false,
+        levels: data.levels,
         audioTracks: [],
         firstLevel: 0,
-        levels: data.levels,
         stats: {},
-        video: false
+        audio: false,
+        video: false,
+        altAudio: false
       });
     });
 
-    it.skip('should signal altAudio if present in the manifest', function () {
+    it('should signal altAudio if present in the manifest without codec attributes', function () {
       let data = {
         audioTracks: [
-          { audioCodec: 'mp4a.40.5' }
+          { audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }
         ],
         levels: [
           { bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } }
@@ -119,13 +119,77 @@ describe('LevelController', function () {
 
       levelController.onManifestLoaded(data);
       expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
-        altAudio: true,
-        audio: false,
-        audioTracks: [],
-        firstLevel: 0,
         levels: data.levels,
+        audioTracks: data.audioTracks,
+        firstLevel: 0,
         stats: {},
-        video: false
+        audio: false,
+        video: false,
+        altAudio: true
+      });
+    });
+
+    it('should signal altAudio if present in the manifest with codec attributes', function () {
+      let data = {
+        audioTracks: [
+          { audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }
+        ],
+        levels: [
+          {
+            bitrate: 105000,
+            name: '144',
+            videoCodec: 'avc1.42001e',
+            audioCodec: 'mp4a.40.2',
+            details: { totalduration: 10, fragments: [{}] }
+          }
+        ],
+        networkDetails: '',
+        subtitles: [],
+        stats: {},
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+      };
+
+      levelController.onManifestLoaded(data);
+      expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
+        levels: data.levels,
+        audioTracks: data.audioTracks,
+        firstLevel: 0,
+        stats: {},
+        audio: true,
+        video: true,
+        altAudio: true
+      });
+    });
+
+    it('should not signal altAudio in audio-only streams', function () {
+      let data = {
+        audioTracks: [
+          { audioCodec: 'mp4a.40.5', name: 'main' },
+          { audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }
+        ],
+        levels: [
+          {
+            bitrate: 105000,
+            name: 'audio-only',
+            audioCodec: 'mp4a.40.2',
+            details: { totalduration: 10, fragments: [{}] }
+          }
+        ],
+        networkDetails: '',
+        subtitles: [],
+        stats: {},
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+      };
+
+      levelController.onManifestLoaded(data);
+      expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
+        levels: data.levels,
+        audioTracks: data.audioTracks,
+        firstLevel: 0,
+        stats: {},
+        audio: true,
+        video: false,
+        altAudio: false
       });
     });
   });
@@ -155,21 +219,6 @@ describe('LevelController', function () {
 
     it('signals audio if there is an audioCodec signaled', function () {
       data.levels[0].audioCodec = 'mp4a.40.5';
-      levelController.onManifestLoaded(data);
-
-      const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
-      expect(payload.video).to.equal(false);
-      expect(payload.audio).to.equal(true);
-      expect(payload.altAudio).to.equal(false);
-    });
-
-    it('signals audio if the level is part of an audio group', function () {
-      data.levels = [{
-        attrs: {
-          AUDIO: true
-        }
-      }];
       levelController.onManifestLoaded(data);
 
       const { name, payload } = hls.getEventData(0);

@@ -74,7 +74,8 @@ export default class GapController {
       // Waiting for seeking in a buffered range to complete
       const hasEnoughBuffer = bufferInfo.len > MAX_START_GAP_JUMP;
       // Next buffered range is too far ahead to jump to while still seeking
-      const noBufferGap = !nextStart || nextStart - currentTime > MAX_START_GAP_JUMP;
+      const noBufferGap = !nextStart ||
+        (nextStart - currentTime > MAX_START_GAP_JUMP && !this.fragmentTracker.getPartialFragment(currentTime));
       if (hasEnoughBuffer || noBufferGap) {
         return;
       }
@@ -157,7 +158,7 @@ export default class GapController {
     if (!stallReported) {
       // Report stalled error once
       this.stallReported = true;
-      logger.warn(`Playback stalling at @${media.currentTime} due to low buffer`);
+      logger.warn(`Playback stalling at @${media.currentTime} due to low buffer (buffer=${bufferLen})`);
       hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,

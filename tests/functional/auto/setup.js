@@ -92,23 +92,50 @@ async function testLoadedData (url, config) {
   expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
 }
 
+async function testIdleBufferLength (url, config) {
+  const result = await browser.executeAsyncScript(
+    (url, config) => {
+      const callback = arguments[arguments.length - 1];
+      const autoplay = false;
+      window.startStream(url, config, callback, autoplay);
+      const video = window.video;
+      const maxBufferLength = window.hls.config.maxBufferLength;
+      video.onprogress = function () {
+        const buffered = video.buffered;
+        if (buffered.length) {
+          const bufferEnd = buffered.end(buffered.length - 1);
+          const duration = video.duration;
+          console.log(`[log] > progress: ${bufferEnd.toFixed(2)}/${duration.toFixed(2)} buffered.length: ${buffered.length}`);
+          if (bufferEnd >= maxBufferLength || bufferEnd > duration - 1) {
+            callback({ code: 'loadeddata', logs: window.logString });
+          }
+        }
+      };
+    },
+    url,
+    config
+  );
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
+}
+
 async function testSmoothSwitch (url, config) {
   const result = await browser.executeAsyncScript(
     (url, config) => {
       let callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      video.onloadeddata = () => {
+      window.hls.once(window.Hls.Events.FRAG_CHANGED, (event, data) => {
         window.switchToHighestLevel('next');
-      };
+      });
       window.hls.on(window.Hls.Events.LEVEL_SWITCHED, (event, data) => {
+        console.log(`[test] > level switched: ${data.level}`);
         let currentTime = video.currentTime;
         if (data.level === window.hls.levels.length - 1) {
-          console.log(`[log] > switched on level: ${data.level}`);
-          window.setTimeout(() => {
+          console.log(`[test] > switched on level: ${data.level}`);
+          window.setTimeout(function () {
             let newCurrentTime = video.currentTime;
             console.log(
-              `[log] > currentTime delta : ${newCurrentTime - currentTime}`
+              `[test] > currentTime delta : ${newCurrentTime - currentTime}`
             );
             callback({
               code: newCurrentTime > currentTime,
@@ -130,12 +157,12 @@ async function testSeekOnLive (url, config) {
       let callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      video.onloadeddata = () => {
-        window.setTimeout(() => {
+      video.onloadeddata = function () {
+        window.setTimeout(function () {
           video.currentTime = video.duration - 5;
         }, 5000);
       };
-      video.onseeked = () => {
+      video.onseeked = function () {
         callback({ code: 'seeked', logs: window.logString });
       };
     },
@@ -193,7 +220,7 @@ async function testIsPlayingVOD (url, config) {
       let callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      video.onloadeddata = () => {
+      video.onloadeddata = function () {
         let expectedPlaying = !(
           video.paused || // not playing when video is paused
           video.ended || // not playing when video is ended
@@ -201,15 +228,15 @@ async function testIsPlayingVOD (url, config) {
         ); // not playing if nothing buffered
         let currentTime = video.currentTime;
         if (expectedPlaying) {
-          window.setTimeout(() => {
+          window.setTimeout(function () {
             console.log(
-              `video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
+              `[test] > video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
             );
             callback({ playing: currentTime !== video.currentTime });
           }, 5000);
         } else {
           console.log(
-            `video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`
+            `[test] > video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`
           );
           callback({ playing: false });
         }
@@ -252,7 +279,7 @@ async function testSeekBackToStart (url, config) {
 }
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
-  beforeEach(async function () {
+  before(async function () {
     // high timeout because sometimes getSession() takes a while
     this.timeout(100000);
     if (!stream) {
@@ -287,32 +314,34 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     }
 
     browser = browser.withCapabilities(capabilities).build();
+
+    let start = Date.now();
+
+    try {
+      await retry(async function () {
+        console.log('Retrieving web driver session...');
+        const [timeouts, session] = await Promise.all([
+          browser.manage().setTimeouts({ script: 75000 }),
+          browser.getSession()
+        ]);
+        console.log(`Retrieved session in ${Date.now() - start}ms`);
+        if (onTravis) {
+          console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
+        } else {
+          console.log(`WebDriver SessionID: ${session.getId()}`);
+        }
+      });
+    } catch (err) {
+      throw new Error(`failed setting up session: ${err}`);
+    }
+  });
+
+  beforeEach(async function () {
     try {
       await retry(async () => {
-        let start = Date.now();
-        console.log('Retrieving web driver session...');
-        try {
-          const [timeouts, session] = await Promise.all([
-            browser.manage().setTimeouts({ script: 75000 }),
-            browser.getSession()
-          ]);
-          console.log(`Retrieved session in ${Date.now() - start}ms`);
-          if (onTravis) {
-            console.log(
-              `Job URL: https://saucelabs.com/jobs/${session.getId()}`
-            );
-          } else {
-            console.log(`WebDriver SessionID: ${session.getId()}`);
-          }
-        } catch (err) {
-          throw new Error(`failed setting up session: ${err}`);
-        }
-
         console.log('Loading test page...');
         try {
-          await browser.get(
-            `http://${hostname}:8000/tests/functional/auto/index.html`
-          );
+          await browser.get(`http://${hostname}:8000/tests/functional/auto/index.html`);
         } catch (e) {
           throw new Error('failed to open test page');
         }
@@ -338,10 +367,13 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   });
 
   afterEach(async function () {
-    const logString = await browser.executeScript('return logString');
-    console.log('travis_fold:start:debug_logs');
-    console.log(logString);
-    console.log('travis_fold:end:debug_logs');
+    // if (onTravis || (!onTravis && this.currentTest.isFailed())) {
+      const logString = await browser.executeScript('return logString');
+      console.log(`${onTravis ? 'travis_fold:start:debug_logs' : ''}\n${logString}\n${onTravis ? 'travis_fold:end:debug_logs' : ''}`);
+    // }
+  });
+
+  after(async function () {
     console.log('Quitting browser...');
     await browser.quit();
     console.log('Browser quit.');
@@ -380,6 +412,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           testSeekOnLive.bind(null, url, config)
         );
       } else {
+        it(
+          `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
+          testIdleBufferLength.bind(null, url, config)
+        );
         it(
           `should play ${stream.description}`,
           testIsPlayingVOD.bind(null, url, config)

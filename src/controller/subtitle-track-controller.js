@@ -369,7 +369,7 @@ class SubtitleTrackController extends TaskLoop {
 
   _onTextTracksChanged () {
     // Media is undefined when switching streams via loadSource()
-    if (!this.media) {
+    if (!this.media || !this.hls.config.renderTextTracksNatively) {
       return;
     }
 
