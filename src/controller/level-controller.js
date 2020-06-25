@@ -80,7 +80,6 @@ export default class LevelController extends EventHandler {
     let audioTracks = [];
     let subtitleTracks = [];
 
-
     // regroup redundant levels together
     data.levels.forEach(level => {
       const attributes = level.attrs;

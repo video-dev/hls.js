@@ -1,4 +1,3 @@
-
 import Event from '../events';
 import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
@@ -344,7 +343,6 @@ class SubtitleTrackController extends TaskLoop {
     }
   }
 
-
   /**
    * @private
    * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
@@ -364,7 +362,6 @@ class SubtitleTrackController extends TaskLoop {
     logger.log(`Switching to subtitle track ${newId}`);
     hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
     this._loadCurrentTrack();
-
   }
 
   _onTextTracksChanged () {
