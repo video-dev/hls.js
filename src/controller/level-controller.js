@@ -109,11 +109,11 @@ export default class LevelController extends EventHandler {
 
       if (attributes) {
         if (attributes.AUDIO) {
-          addGroupId(levelFromSet || level, 'audio', attributes.AUDIO);
+          addGroupId(levelFromSet || level, PlaylistLevelType.AUDIO, attributes.AUDIO);
           audioCodecFound = true;
         }
         if (attributes.SUBTITLES) {
-          addGroupId(levelFromSet || level, 'text', attributes.SUBTITLES);
+          addGroupId(levelFromSet || level, PlaylistLevelType.SUBTITLE, attributes.SUBTITLES);
         }
       }
     });

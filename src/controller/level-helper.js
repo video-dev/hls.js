@@ -13,7 +13,7 @@ import { PlaylistLevelType } from '../types/loader';
 /**
  *
  * @param {Level} level Level container object
- * @param {'audio' | 'subtitle'} type Either audio or subtitle media
+ * @param {PlaylistLevelType} type Either audio or subtitle media
  * @param {number} id Group-ID of media-group attached to this level
  */
 export function addGroupId (level, type, id) {
