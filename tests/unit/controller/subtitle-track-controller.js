@@ -1,4 +1,4 @@
-function() function() function() function() function(import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
+import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import { Observer } from '../../../src/observer';
 import Hls from '../../../src/hls';
 import sinon from 'sinon';
@@ -15,7 +15,7 @@ describe('SubtitleTrackController', function () {
     { id: 3, details: { live: true }, url: 'foo', groupId: 'A', name: 'Bar' }
   ];
 
-  beforeEach(() => {
+  beforeEach(function () {
     const hls = new Observer();
 
     videoElement = document.createElement('video');
@@ -41,8 +41,8 @@ describe('SubtitleTrackController', function () {
     });
   });
 
-  describe('onSubtitleTrackSwitch', () => {
-    it('should set subtitleTrack to -1 if disabled', () => {
+  describe('onSubtitleTrackSwitch', function () {
+    it('should set subtitleTrack to -1 if disabled', function () {
       assert.strictEqual(subtitleTrackController.subtitleTrack, -1);
 
       videoElement.textTracks[0].mode = 'disabled';
@@ -143,7 +143,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should do nothing if called with out of bound indicies', function () {
-      const stopTimerSpy = sinon.spy(subtitleTrackController, 'clearInterval');
+      const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
 
@@ -217,7 +217,7 @@ describe('SubtitleTrackController', function () {
 
       it('stops the live reload timer if the level is not live', function () {
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.timer = setTimeout(() => {}, 0);
+        subtitleTrackController.timer = setTimeout(function () {}, 0);
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: {} });
         expect(subtitleTrackController.timer).to.not.exist;
       });
@@ -242,8 +242,8 @@ describe('SubtitleTrackController', function () {
     });
   });
 
-  describe('onLevelLoaded', () => {
-    it('should reselect the current track and trigger SUBTITLE_TRACK_SWITCH eventually', (done) => {
+  describe('onLevelLoaded', function () {
+    it('should reselect the current track and trigger SUBTITLE_TRACK_SWITCH eventually', function (done) {
       const hls = new Hls();
       const subtitleTrackController = new SubtitleTrackController(hls);
 
@@ -287,8 +287,8 @@ describe('SubtitleTrackController', function () {
     });
   });
 
-  describe('onError', () => {
-    it('should clear interval (only) on fatal network errors', () => {
+  describe('onError', function () {
+    it('should clear interval (only) on fatal network errors', function () {
       subtitleTrackController.setInterval(1000);
 
       subtitleTrackController.onError({
@@ -320,7 +320,7 @@ describe('SubtitleTrackController', function () {
       assert.strictEqual(subtitleTrackController.hasInterval(), false);
     });
 
-    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', () => {
+    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', function () {
       const currentTrackId = 3;
 
       subtitleTrackController.tracks = fakeTracks;
@@ -356,10 +356,6 @@ describe('SubtitleTrackController', function () {
     });
   });
 });
-) function() function() function() import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
-import { Observer } from '../../../src/observer';
-import Hls from '../../../src/hls';
-import sinon from 'sinon';
 
 describe('SubtitleTrackController', function () {
   let subtitleTrackController;
@@ -373,7 +369,7 @@ describe('SubtitleTrackController', function () {
     { id: 3, details: { live: true }, url: 'foo', groupId: 'A', name: 'Bar' }
   ];
 
-  beforeEach(() => {
+  beforeEach(function () {
     const hls = new Observer();
 
     videoElement = document.createElement('video');
@@ -399,8 +395,8 @@ describe('SubtitleTrackController', function () {
     });
   });
 
-  describe('onSubtitleTrackSwitch', () => {
-    it('should set subtitleTrack to -1 if disabled', () => {
+  describe('onSubtitleTrackSwitch', function () {
+    it('should set subtitleTrack to -1 if disabled', function () {
       assert.strictEqual(subtitleTrackController.subtitleTrack, -1);
 
       videoElement.textTracks[0].mode = 'disabled';
@@ -501,7 +497,7 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should do nothing if called with out of bound indicies', function () {
-      const stopTimerSpy = sinon.spy(subtitleTrackController, 'clearInterval');
+      const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
 
@@ -575,7 +571,7 @@ describe('SubtitleTrackController', function () {
 
       it('stops the live reload timer if the level is not live', function () {
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.timer = setTimeout(() => {}, 0);
+        subtitleTrackController.timer = setTimeout(function () {}, 0);
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: {} });
         expect(subtitleTrackController.timer).to.not.exist;
       });
@@ -600,8 +596,8 @@ describe('SubtitleTrackController', function () {
     });
   });
 
-  describe('onLevelLoaded', () => {
-    it('should reselect the current track and trigger SUBTITLE_TRACK_SWITCH eventually', (done) => {
+  describe('onLevelLoaded', function () {
+    it('should reselect the current track and trigger SUBTITLE_TRACK_SWITCH eventually', function (done) {
       const hls = new Hls();
       const subtitleTrackController = new SubtitleTrackController(hls);
 
@@ -645,8 +641,8 @@ describe('SubtitleTrackController', function () {
     });
   });
 
-  describe('onError', () => {
-    it('should clear interval (only) on fatal network errors', () => {
+  describe('onError', function () {
+    it('should clear interval (only) on fatal network errors', function () {
       subtitleTrackController.setInterval(1000);
 
       subtitleTrackController.onError({
@@ -678,7 +674,7 @@ describe('SubtitleTrackController', function () {
       assert.strictEqual(subtitleTrackController.hasInterval(), false);
     });
 
-    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', () => {
+    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', function () {
       const currentTrackId = 3;
 
       subtitleTrackController.tracks = fakeTracks;
