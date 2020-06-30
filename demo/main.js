@@ -110,12 +110,29 @@ $(document).ready(function () {
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
+  // link to version on npm if canary
+  // github branch for a branch version
+  // github tag for a normal tag
+  // github PR for a pr
+  function getVersionLink (version) {
+    const alphaRegex = /[-.]0\.alpha\./;
+    const prRegex = /[-.]pr\.([^.]+)/;
+    const branchRegex = /[-.]branch\.([^.]+)/;
+    if (alphaRegex.test(version)) {
+      return `https://www.npmjs.com/package/hls.js/v/${encodeURIComponent(version)}`;
+    } else if (prRegex.test(version)) {
+      return `https://github.com/video-dev/hls.js/pull/${prRegex.exec(version)[1]}`;
+    } else if (branchRegex.test(version)) {
+      return `https://github.com/video-dev/hls.js/tree/${branchRegex.exec(version)[1]}`;
+    }
+    return `https://github.com/video-dev/hls.js/releases/tag/v${encodeURIComponent(version)}`;
+  }
+
   const version = Hls.version;
-  const release = getReleaseVersion(version || '');
-  const versionLabel = version ? 'v' + version : 'releases';
-  $('h2').append('&nbsp;<a target=_blank href="https://github.com/video-dev/hls.js/releases/' +
-    (release ? 'tag/v' + release : '') + '">' + versionLabel + '</a>');
-  $('#currentVersion').html('Hls version:' + version);
+  if (version) {
+    const $a = $('<a />').attr('target', '_blank').attr('href', getVersionLink(version)).text('v' + version);
+    $('.title').append($a);
+  }
 
   $('#streamURL').val(sourceURL);
 
@@ -129,19 +146,6 @@ $(document).ready(function () {
 
   loadSelectedStream();
 });
-
-function getReleaseVersion (version) {
-  const ciBuildRegEx = /[-.](?:0\.alpha|pr|branch)\..+$/
-  if (ciBuildRegEx.test(version)) {
-    return version.replace(ciBuildRegEx, '').replace(/^(\d+\.\d+\.)(\d+)$/, function (version, majorMinor, ciPatch) {
-      if (ciPatch) {
-        return majorMinor + (parseInt(ciPatch, 10) - 1);
-      }
-      return version;
-    });
-  }
-  return version;
-}
 
 function setupGlobals () {
   window.events = events = {
