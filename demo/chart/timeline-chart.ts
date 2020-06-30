@@ -90,7 +90,7 @@ export class TimelineChart {
     scale.options.ticks.min = 0;
     scale.options.ticks.max = 60;
     const config = this.chart.config;
-    if (config && config.options) {
+    if (config?.options) {
       config.options.plugins.zoom.zoom.rangeMax.x = 60;
     }
     labels.length = 0;
@@ -112,7 +112,7 @@ export class TimelineChart {
     if (this.hidden) {
       return;
     }
-    if (datasets && datasets.length) {
+    if (datasets?.length) {
       const scale = this.chart.scales[X_AXIS_SECONDS];
       const { top } = this.chart.chartArea;
       const height = top + datasets.reduce((val, dataset) => val + dataset.barThickness, 0) + scale.height + 5;
@@ -195,7 +195,7 @@ export class TimelineChart {
     const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
     // eslint-disable-next-line no-restricted-properties
-    const levelDataSet = datasets.find(dataset => dataset.url && dataset.url.toString() === url);
+    const levelDataSet = arrayFind(datasets, dataset => dataset.url && dataset.url.toString() === url);
     if (!levelDataSet) {
       return;
     }
@@ -238,7 +238,7 @@ export class TimelineChart {
   set maxZoom (x: number) {
     const { chart } = this;
     const { config } = chart;
-    if (config && config.options) {
+    if (config?.options) {
       const currentZoom = config.options.plugins.zoom.zoom.rangeMax.x;
       const newZoom = Math.max(x, currentZoom);
       if (currentZoom === 60 && newZoom !== currentZoom) {
@@ -252,13 +252,12 @@ export class TimelineChart {
   updateFragment (data: any) {
     const { datasets } = this.chart.data;
     const frag: Fragment = data.frag;
-    // eslint-disable-next-line no-restricted-properties
-    const levelDataSet = datasets.find(dataset => dataset.url === frag.baseurl);
+    const levelDataSet = arrayFind(datasets, dataset => dataset.url === frag.baseurl);
     if (!levelDataSet) {
       return;
     }
     // eslint-disable-next-line no-restricted-properties
-    const fragData = levelDataSet.data.find(fragData => fragData.relurl === frag.relurl);
+    const fragData = arrayFind(levelDataSet.data, fragData => fragData.relurl === frag.relurl);
     if (fragData && fragData !== frag) {
       Object.assign(fragData, frag);
     }
@@ -630,4 +629,21 @@ function getChartOptions () {
       }
     }
   };
+}
+
+function arrayFind (array, predicate) {
+  const len = array.length >>> 0;
+  if (typeof predicate !== 'function') {
+    throw TypeError('predicate must be a function');
+  }
+  const thisArg = arguments[2];
+  let k = 0;
+  while (k < len) {
+    const kValue = array[k];
+    if (predicate.call(thisArg, kValue, k, array)) {
+      return kValue;
+    }
+    k++;
+  }
+  return undefined;
 }
