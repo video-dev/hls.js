@@ -13,9 +13,9 @@ module.exports = {
     return STABLE_VERSION_REGEX.test(version);
   },
   incrementPatch: (version) => {
-    const newVersion = semver.inc('patch', version);
+    const newVersion = 'v' + semver.inc(version, 'patch');
     if (!newVersion) {
-      throw new Error('Error incrementing patch.');
+      throw new Error(`Error incrementing patch for version "${version}"`);
     }
     return newVersion;
   },

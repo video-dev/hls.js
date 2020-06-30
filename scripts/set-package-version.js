@@ -14,7 +14,7 @@ try {
     // write the version field in the package json to the version in the git tag
     const tag = process.env.TRAVIS_TAG;
     if (!versionParser.isValidVersion(tag)) {
-      throw new Error('Unsuported tag for release: ' + tag);
+      throw new Error(`Unsupported tag for release: "${tag}"`);
     }
     // remove v
     newVersion = tag.substring(1);
