@@ -44,7 +44,6 @@ class TimelineController extends EventHandler {
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
   private unparsedVttFrags: Array<{ frag: Fragment, payload: ArrayBuffer }> = [];
-  private cueRanges: Array<[number, number]> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
   private captionsProperties: {
@@ -53,7 +52,8 @@ class TimelineController extends EventHandler {
     textTrack3: TrackProperties
     textTrack4: TrackProperties
   };
-  private readonly cea608Parser!: Cea608Parser;
+  private readonly cea608Parser1!: Cea608Parser;
+  private readonly cea608Parser2!: Cea608Parser;
   private lastSn: number = -1;
   private prevCC: number = -1;
   private vttCCs: VTTCCs = newVTTCCs();
@@ -97,16 +97,16 @@ class TimelineController extends EventHandler {
       const channel2 = new OutputFilter(this, 'textTrack2');
       const channel3 = new OutputFilter(this, 'textTrack3');
       const channel4 = new OutputFilter(this, 'textTrack4');
-      this.cea608Parser = new Cea608Parser(channel1, channel2, channel3, channel4);
+      this.cea608Parser1 = new Cea608Parser(1, channel1, channel2);
+      this.cea608Parser2 = new Cea608Parser(3, channel3, channel4);
     }
   }
 
-  addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen) {
+  addCues (trackName: string, startTime: number, endTime: number, screen: CaptionScreen, cueRanges: Array<[number, number]>) {
     // skip cues which overlap more than 50% with previously parsed time ranges
-    const ranges = this.cueRanges;
     let merged = false;
-    for (let i = ranges.length; i--;) {
-      let cueRange = ranges[i];
+    for (let i = cueRanges.length; i--;) {
+      let cueRange = cueRanges[i];
       let overlap = intersection(cueRange[0], cueRange[1], startTime, endTime);
       if (overlap >= 0) {
         cueRange[0] = Math.min(cueRange[0], startTime);
@@ -118,7 +118,7 @@ class TimelineController extends EventHandler {
       }
     }
     if (!merged) {
-      ranges.push([startTime, endTime]);
+      cueRanges.push([startTime, endTime]);
     }
 
     if (this.config.renderTextTracksNatively) {
@@ -264,7 +264,10 @@ class TimelineController extends EventHandler {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
-    this.cueRanges = [];
+    if (this.cea608Parser1 && this.cea608Parser2) {
+      this.cea608Parser1.reset();
+      this.cea608Parser2.reset();
+    }
 
     if (this.config.enableWebVTT) {
       const tracks = data.subtitles || [];
@@ -339,13 +342,14 @@ class TimelineController extends EventHandler {
 
   onFragLoaded (data: { frag: Fragment, payload: ArrayBuffer }) {
     const { frag, payload } = data;
-    const { cea608Parser, initPTS, lastSn, unparsedVttFrags } = this;
+    const { cea608Parser1, cea608Parser2, initPTS, lastSn, unparsedVttFrags } = this;
     if (frag.type === 'main') {
       const sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
       if (frag.sn !== lastSn + 1) {
-        if (cea608Parser) {
-          cea608Parser.reset();
+        if (cea608Parser1 && cea608Parser2) {
+          cea608Parser1.reset();
+          cea608Parser2.reset();
         }
       }
       this.lastSn = sn as number;
@@ -439,19 +443,19 @@ class TimelineController extends EventHandler {
   }
 
   onFragParsingUserdata (data: { samples: Array<any> }) {
-    if (!this.enabled || !this.cea608Parser) {
+    const { cea608Parser1, cea608Parser2 } = this;
+    if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
       return;
     }
 
     // If the event contains captions (found in the bytes property), push all bytes into the parser immediately
     // It will create the proper timestamps based on the PTS value
-    const cea608Parser = this.cea608Parser;
     for (let i = 0; i < data.samples.length; i++) {
       const ccBytes = data.samples[i].bytes;
       if (ccBytes) {
         const ccdatas = this.extractCea608Data(ccBytes);
-        cea608Parser.addData(data.samples[i].pts, ccdatas[0], 1);
-        cea608Parser.addData(data.samples[i].pts, ccdatas[1], 3);
+        cea608Parser1.addData(data.samples[i].pts, ccdatas[0]);
+        cea608Parser2.addData(data.samples[i].pts, ccdatas[1]);
       }
     }
   }
