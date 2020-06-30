@@ -123,7 +123,7 @@ $(document).ready(function () {
     } else if (prRegex.test(version)) {
       return `https://github.com/video-dev/hls.js/pull/${prRegex.exec(version)[1]}`;
     } else if (branchRegex.test(version)) {
-      return `https://github.com/video-dev/hls.js/tree/${branchRegex.exec(version)[1]}`;
+      return `https://github.com/video-dev/hls.js/tree/${encodeURIComponent(branchRegex.exec(version)[1])}`;
     }
     return `https://github.com/video-dev/hls.js/releases/tag/v${encodeURIComponent(version)}`;
   }
