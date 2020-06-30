@@ -41,7 +41,7 @@ try {
     intermediateVersion = intermediateVersion.substring(1);
 
     const suffix = TRAVIS_MODE === 'netlifyPr'
-      ? `pr.${getCommitHash().substr(0, 8)}`
+      ? `pr.${process.env.REVIEW_ID/* set by netlify */}.${getCommitHash().substr(0, 8)}`
       : TRAVIS_MODE === 'netlifyBranch'
         ? `branch.${process.env.BRANCH/* set by netlify */.replace(/[^a-zA-Z0-9]/g, '-')}.${getCommitHash().substr(0, 8)}`
         : `0.alpha.${getCommitNum()}`;
