@@ -110,8 +110,29 @@ $(document).ready(function () {
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
-  $('h2').append('&nbsp;<a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
-  $('#currentVersion').html('Hls version:' + Hls.version);
+  // link to version on npm if canary
+  // github branch for a branch version
+  // github tag for a normal tag
+  // github PR for a pr
+  function getVersionLink (version) {
+    const alphaRegex = /[-.]0\.alpha\./;
+    const prRegex = /[-.]pr\.([^.]+)/;
+    const branchRegex = /[-.]branch\.([^.]+)/;
+    if (alphaRegex.test(version)) {
+      return `https://www.npmjs.com/package/hls.js/v/${encodeURIComponent(version)}`;
+    } else if (prRegex.test(version)) {
+      return `https://github.com/video-dev/hls.js/pull/${prRegex.exec(version)[1]}`;
+    } else if (branchRegex.test(version)) {
+      return `https://github.com/video-dev/hls.js/tree/${encodeURIComponent(branchRegex.exec(version)[1])}`;
+    }
+    return `https://github.com/video-dev/hls.js/releases/tag/v${encodeURIComponent(version)}`;
+  }
+
+  const version = Hls.version;
+  if (version) {
+    const $a = $('<a />').attr('target', '_blank').attr('href', getVersionLink(version)).text('v' + version);
+    $('.title').append($a);
+  }
 
   $('#streamURL').val(sourceURL);
 
