@@ -1,6 +1,6 @@
 [![Build Status](https://api.travis-ci.org/video-dev/hls.js.svg?branch=master)](https://travis-ci.org/video-dev/hls.js)
 [![npm](https://img.shields.io/npm/v/hls.js.svg?style=flat)](https://npmjs.org/package/hls.js)
-[![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
+[![npm](https://img.shields.io/npm/v/hls.js/alpha.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/alpha)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 
 [![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
@@ -58,8 +58,8 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent canary version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
+<!-- Or if you want a more recent alpha version -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
@@ -147,9 +147,9 @@ If you want to bundle the application yourself, use node
 ```
 npm install hls.js
 ```
-or for the version from master (canary)
+or for the version from master (alpha)
 ```
-npm install hls.js@canary
+npm install hls.js@alpha
 ```
 
 **NOTE:** `hls.light.*.js` dist files do not include subtitling and alternate-audio features.
