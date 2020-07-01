@@ -52,7 +52,7 @@ try {
   }
 
   if (!versionParser.isGreaterOrEqual(newVersion, latestVersion)) {
-    throw new Error(`New version "${newVersion}" is not > than latest version "${latestVersion}" on this branch.`);
+    throw new Error(`New version "${newVersion}" is not >= latest version "${latestVersion}" on this branch.`);
   }
   packageJson.version = newVersion;
   fs.writeFileSync('./package.json', JSON.stringify(packageJson));
