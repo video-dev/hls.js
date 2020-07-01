@@ -47,14 +47,13 @@ try {
         : `0.alpha.${getCommitNum()}`;
 
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
-
-    if (!versionParser.isGreater(newVersion, latestVersion)) {
-      throw new Error(`New version "${newVersion}" is not > than latest version "${latestVersion}" on this branch.`);
-    }
   } else {
     throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
   }
 
+  if (!versionParser.isGreaterOrEqual(newVersion, latestVersion)) {
+    throw new Error(`New version "${newVersion}" is not > than latest version "${latestVersion}" on this branch.`);
+  }
   packageJson.version = newVersion;
   fs.writeFileSync('./package.json', JSON.stringify(packageJson));
   console.log('Set version: ' + newVersion);
