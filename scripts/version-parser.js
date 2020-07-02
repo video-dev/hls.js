@@ -19,8 +19,8 @@ module.exports = {
     }
     return newVersion;
   },
-  isGreater: (newVersion, previousVersion) => {
-    return semver.gt(newVersion, previousVersion);
+  isGreaterOrEqual: (newVersion, previousVersion) => {
+    return semver.gte(newVersion, previousVersion);
   },
   // returns true if the provided version is definitely greater than any existing
   // auto generated alpha versions
