@@ -248,7 +248,7 @@ export const hlsDefaultConfig: HlsConfig = {
   drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
-  progressive: true,
+  progressive: false,
 
   // Dynamic Modules
   ...timelineConfig(),
