@@ -214,7 +214,16 @@ const multiConfig = [
       libraryExport: 'default',
       globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
-    plugins: mainPlugins,
+    plugins: [
+      ...mainPlugins,
+      new webpack.DefinePlugin({
+      __NETLIFY__: JSON.stringify(process.env.NETLIFY === 'true' ? {
+          branch: process.env.BRANCH,
+          commitRef: process.env.COMMIT_REF,
+          reviewID: process.env.PULL_REQUEST === 'true' ? parseInt(process.env.REVIEW_ID) : null
+        } : {})
+      })
+    ],
     devtool: 'source-map'
   }
 ].map(config => merge(baseConfig, config));
