@@ -355,7 +355,7 @@ export default class LevelController extends EventHandler {
 
       if (redundantLevels > 1 && level.loadError < redundantLevels) {
         level.urlId = (level.urlId + 1) % redundantLevels;
-        level.details = undefined;
+        level.details = undefined; // Q: why not set to nullg
         logger.warn(`level controller, ${errorDetails} for level ${levelIndex}: switching to redundant URL-id ${level.urlId}`);
       } else {
         // Search for available level
