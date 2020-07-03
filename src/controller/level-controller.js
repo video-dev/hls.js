@@ -507,14 +507,16 @@ export default class LevelController extends EventHandler {
   }
 
   removeLevel (levelIndex, urlId) {
+    logger.warn('Removing level index:', levelIndex, 'URL id:', urlId);
     const levels = this.levels.filter((level, index) => {
       if (index !== levelIndex) {
         return true;
       }
-
       if (level.url.length > 1 && urlId !== undefined) {
-        level.url = level.url.filter((url, id) => id !== urlId);
-        level.urlId = 0;
+        level.url.splice(urlId, 1);
+        level.audioGroupIds.splice(urlId, 1);
+        level.subtitleGroupIds.splice(urlId, 1);
+        if (urlId < level.urlId) level.urlId--; // adjust when removed was before current index
         return true;
       }
       return false;
