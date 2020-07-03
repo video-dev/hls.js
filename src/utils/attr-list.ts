@@ -57,8 +57,17 @@ class AttrList {
     return parseFloat(this[attrName]);
   }
 
+  optionalFloat (attrName: string, defaultValue: number): number {
+    const value = this[attrName];
+    return value ? parseFloat(value) : defaultValue;
+  }
+
   enumeratedString (attrName: string): string | undefined {
     return this[attrName];
+  }
+
+  bool (attrName: string): boolean {
+    return this[attrName] === 'YES';
   }
 
   decimalResolution (attrName: string): {

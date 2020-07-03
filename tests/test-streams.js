@@ -201,5 +201,10 @@ module.exports = {
     // Disable smooth switch on this stream. Test is flakey because of what looks like (auto)play issue. To be expected with this large a gap (for now).
     // abr: true,
     startSeek: true
+  },
+  AppleLowLatencyHlsHoldBack: {
+    url: 'https://playertest.longtailvideo.com/adaptive/low-latency-hls/archived/hold-back-8s.m3u8',
+    description: 'Apple Low-Latency HLS archived sample. No blocking, no delta, PART-HOLD-BACK=2.004,HOLD-BACK=8, Safari MediaError 4',
+    live: true
   }
 };

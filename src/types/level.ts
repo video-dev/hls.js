@@ -1,4 +1,5 @@
 import LevelDetails from '../loader/level-details';
+import AttrList from '../utils/attr-list';
 
 export interface LevelParsed {
   attrs: LevelAttributes
@@ -16,7 +17,7 @@ export interface LevelParsed {
   width?: number
 }
 
-export interface LevelAttributes {
+export interface LevelAttributes extends AttrList {
   AUDIO?: string
   AUTOSELECT?: string
   'AVERAGE-BANDWIDTH'?: string

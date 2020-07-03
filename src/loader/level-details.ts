@@ -24,6 +24,11 @@ export default class LevelDetails {
   public misses: number = 0;
   public url: string;
   public version: number | null = null;
+  public canBlockReload: boolean = false;
+  public canSkipUntil: number = 0;
+  public canSkipDateRanges: boolean = false;
+  public partHoldBack: number = 0;
+  public holdBack: number = 0;
 
   constructor (baseUrl) {
     this.fragments = [];
