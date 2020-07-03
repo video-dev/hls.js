@@ -356,11 +356,7 @@ export default class LevelController extends EventHandler {
       if (redundantLevels > 1 && level.loadError < redundantLevels) {
         level.urlId = (level.urlId + 1) % redundantLevels;
         level.details = undefined;
-
         logger.warn(`level controller, ${errorDetails} for level ${levelIndex}: switching to redundant URL-id ${level.urlId}`);
-
-        // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
-        // console.log('New video quality level audio group id:', level.attrs.AUDIO);
       } else {
         // Search for available level
         if (this.manualLevelIndex === -1) {
