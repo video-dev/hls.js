@@ -28,6 +28,7 @@ import { ManifestLoadingData, LevelLoadingData, AudioTrackLoadingData, SubtitleT
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 import Hls from '../hls';
+import AttrList from '../utils/attr-list';
 
 const { performance } = self;
 
@@ -342,7 +343,7 @@ class PlaylistLoader {
           autoselect: false,
           forced: false,
           id: -1,
-          attrs: {},
+          attrs: new AttrList({}),
           bitrate: 0,
           url: ''
         });
@@ -400,7 +401,7 @@ class PlaylistLoader {
     // by creating a single-level structure for it.
     if (type === PlaylistContextType.MANIFEST) {
       const singleLevel: LevelParsed = {
-        attrs: {},
+        attrs: new AttrList({}),
         bitrate: 0,
         details: levelDetails,
         name: '',

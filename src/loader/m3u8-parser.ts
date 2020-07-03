@@ -40,6 +40,7 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp([
   /#EXT-X-(DIS)CONTINUITY/.source,
   /#EXT-X-(VERSION):(\d+)/.source,
   /#EXT-X-(MAP):(.+)/.source,
+  /#EXT-X-(SERVER-CONTROL):(.+)/.source,
   /(#)([^:]*):(.*)/.source,
   /(#)(.*)(?:.*)\r?\n?/.source
 ].join('|'));
@@ -155,9 +156,9 @@ export default class M3U8Parser {
           instreamId: attrs['INSTREAM-ID'],
           name: attrs.NAME || attrs.LANGUAGE || '',
           type,
-          default: (attrs.DEFAULT === 'YES'),
-          autoselect: (attrs.AUTOSELECT === 'YES'),
-          forced: (attrs.FORCED === 'YES'),
+          default: attrs.bool('DEFAULT'),
+          autoselect: attrs.bool('AUTOSELECT'),
+          forced: attrs.bool('FORCED'),
           lang: attrs.LANGUAGE,
           url: attrs.URI ? M3U8Parser.resolve(attrs.URI, baseurl) : ''
         };
@@ -359,6 +360,15 @@ export default class M3U8Parser {
           level.initSegment = frag;
           frag = new Fragment();
           frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
+          break;
+        }
+        case 'SERVER-CONTROL': {
+          const serverControlAttrs = new AttrList(value1);
+          level.canBlockReload = serverControlAttrs.bool('CAN-BLOCK-RELOAD');
+          level.canSkipUntil = serverControlAttrs.optionalFloat('CAN-SKIP-UNTIL', 0);
+          level.canSkipDateRanges = level.canSkipUntil > 0 && serverControlAttrs.bool('CAN-SKIP-DATERANGES');
+          level.partHoldBack = serverControlAttrs.optionalFloat('PART-HOLD-BACK', 0);
+          level.holdBack = serverControlAttrs.optionalFloat('HOLD-BACK', 0);
           break;
         }
         default:
