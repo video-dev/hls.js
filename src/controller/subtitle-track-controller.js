@@ -89,8 +89,8 @@ class SubtitleTrackController extends TaskLoop {
       return;
     }
 
-    if (Number.isFinite(this.queuedDefaultTrack)) {
-      this._setSubtitleTrack(this._queuedDefaultTrack.id);
+    if (this.queuedDefaultTrack !== null && Number.isFinite(this.queuedDefaultTrack)) {
+      this._setSubtitleTrack(this._queuedDefaultTrack);
       this._queuedDefaultTrack = null;
     }
 
