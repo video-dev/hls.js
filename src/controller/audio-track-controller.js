@@ -69,7 +69,7 @@ class AudioTrackController extends TaskLoop {
      * (we grab this on manifest-parsed and new level-loaded)
      * @member {string}
      */
-    this._audioGroupId = null;
+    this.audioGroupId = null;
   }
 
   /**
@@ -137,8 +137,8 @@ class AudioTrackController extends TaskLoop {
    */
   onAudioTrackSwitched (data) {
     const audioGroupId = this.tracks[data.id].groupId;
-    if (audioGroupId && (this._audioGroupId !== audioGroupId)) {
-      this._audioGroupId = audioGroupId;
+    if (audioGroupId && (this.audioGroupId !== audioGroupId)) {
+      this.audioGroupId = audioGroupId;
     }
   }
 
@@ -153,18 +153,6 @@ class AudioTrackController extends TaskLoop {
    */
   onLevelLoaded (data) {
     this._selectAudioGroup(data.level);
-
-    const levelInfo = this.hls.levels[data.level];
-
-    if (!levelInfo.audioGroupIds) {
-      return;
-    }
-
-    const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
-    if (this._audioGroupId !== audioGroupId) {
-      this._audioGroupId = audioGroupId;
-      this._selectInitialAudioTrack();
-    }
   }
 
   /**
@@ -261,11 +249,16 @@ class AudioTrackController extends TaskLoop {
     const levelInfo = this.hls.levels[levelId];
 
     if (!levelInfo || !levelInfo.audioGroupIds) {
+      logger.warn('Cant select audio-group, missing level info or current audio group-id');
       return;
     }
 
     const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
+
+    logger.debug('using audio group-id of current media level:', levelId, '->', audioGroupId);
+
     if (this.audioGroupId !== audioGroupId) {
+      logger.debug('audio group-id has changed from:', this.audioGroupId, '-> reselecting track for current group-id:', audioGroupId);
       this.audioGroupId = audioGroupId;
       this._selectInitialAudioTrack();
     }
@@ -308,7 +301,7 @@ class AudioTrackController extends TaskLoop {
         }
         // We need to match the (pre-)selected group ID
         // and the NAME of the current track.
-        if ((!this._audioGroupId || track.groupId === this._audioGroupId) &&
+        if ((!this.audioGroupId || track.groupId === this.audioGroupId) &&
           (!name || name === track.name)) {
           // If there was a previous track try to stay with the same `NAME`.
           // It should be unique across tracks of same group, and consistent through redundant track groups.
@@ -326,7 +319,7 @@ class AudioTrackController extends TaskLoop {
     }
 
     if (!trackFound) {
-      logger.error(`No track found for running audio group-ID: ${this._audioGroupId}`);
+      logger.error(`No track found for running audio group-ID: ${this.audioGroupId}`);
 
       this.hls.trigger(Event.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
