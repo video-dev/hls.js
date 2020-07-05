@@ -41,7 +41,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
   if [ ${n} = ${maxRetries} ]; then
     exit 1
   fi
-elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ] || [ "${TRAVIS_MODE}" = "netlifyBranch" ]; then
+elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseAlpha" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ] || [ "${TRAVIS_MODE}" = "netlifyBranch" ]; then
   # update the version
   if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
     # make sure everything is fetched https://github.com/travis-ci/travis-ci/issues/3412
@@ -52,7 +52,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run type-check
   npm run build:ci
 
-  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
+  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseAlpha" ]; then
     # unit tests don't work on netlify because they need chrome
     npm run test:unit
 
@@ -60,17 +60,17 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
       # write the token to config
       # see https://docs.npmjs.com/private-modules/ci-server-config
       echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
-      if [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
-        npm publish --tag canary
-        echo "Published canary."
-        curl https://purge.jsdelivr.net/npm/hls.js@canary
-        curl https://purge.jsdelivr.net/npm/hls.js@canary/dist/hls-demo.js
+      if [ "${TRAVIS_MODE}" = "releaseAlpha" ]; then 
+        npm publish --tag alpha
+        echo "Published alpha."
+        curl https://purge.jsdelivr.net/npm/hls.js@alpha
+        curl https://purge.jsdelivr.net/npm/hls.js@alpha/dist/hls-demo.js
         echo "Cleared jsdelivr cache."
       elif [ "${TRAVIS_MODE}" = "release" ]; then
         tag=$(node ./scripts/get-version-tag.js)
-        if [ "${tag}" = "canary" ]; then
-          # canary is blacklisted because this is handled separately on every commit
-          echo "canary not supported as explicit tag"
+        if [ "${tag}" = "alpha" ]; then
+          # alpha (previously canary) is blacklisted because this is handled separately on every commit
+          echo "alpha (previously canary) not supported as explicit tag"
           exit 1
         fi
         echo "Publishing tag: ${tag}"
@@ -85,7 +85,7 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ] 
   npm run docs
 
   ./scripts/build-netlify.sh
-  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseCanary" ]; then
+  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseAlpha" ]; then
     ./scripts/deploy-netlify.sh
   fi
 else
