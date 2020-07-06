@@ -463,13 +463,6 @@ export default class BaseStreamController extends TaskLoop {
       }
     }
 
-    // If no fragment has been selected by this point, load any one
-    if (!frag) {
-      const len = fragments.length;
-      frag = fragments[Math.min(len - 1, Math.round(len / 2))];
-      this.log(`Live playlist, switching playlist, unknown, load middle frag : ${frag!.sn}`);
-    }
-
     return frag;
   }
 
