@@ -297,10 +297,10 @@ function loadSelectedStream () {
       name: '',
       start: 0,
       end: data.levels.length,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      duration: data.stats.loading.end - data.stats.loading.first
     });
     trimEventHistory();
     self.refreshCanvas();
@@ -357,14 +357,14 @@ function loadSelectedStream () {
       id: data.level,
       start: data.details.startSN,
       end: data.details.endSN,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      duration: data.stats.loading.end - data.stats.loading.first
     };
 
-    const parsingDuration = data.stats.tparsed - data.stats.tload;
+    const parsingDuration = data.stats.parsing.end - data.stats.loading.end;
     if (stats.levelParsed) {
       this.sumLevelParsingMs += parsingDuration;
     } else {
@@ -388,11 +388,11 @@ function loadSelectedStream () {
       id: data.id,
       start: data.details.startSN,
       end: data.details.endSN,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      duration: data.stats.loading.end - data.stats.loading.first
     };
     events.load.push(event);
     trimEventHistory();
@@ -404,13 +404,13 @@ function loadSelectedStream () {
       type: data.frag.type + ' fragment',
       id: data.frag.level,
       id2: data.frag.sn,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      buffer: data.stats.tbuffered - data.stats.tparsed,
-      duration: data.stats.tbuffered - data.stats.tfirst,
-      bw: Math.round(8 * data.stats.total / (data.stats.tbuffered - data.stats.trequest)),
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      buffer: data.stats.buffering.end - data.stats.parsing.end,
+      duration: data.stats.buffering.end - data.stats.loading.first,
+      bw: Math.round(8 * data.stats.total / (data.stats.buffering.end - data.stats.loading.start)),
       size: data.stats.total
     };
     events.load.push(event);
@@ -432,10 +432,10 @@ function loadSelectedStream () {
     self.refreshCanvas();
     updateLevelInfo();
 
-    const latency = data.stats.tfirst - data.stats.trequest;
-    const parsing = data.stats.tparsed - data.stats.tload;
-    const process = data.stats.tbuffered - data.stats.trequest;
-    const bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
+    const latency = data.stats.loading.first - data.stats.loading.start;
+    const parsing = data.stats.parsing.end - data.stats.loading.end;
+    const process = data.stats.buffering.end - data.stats.loading.start;
+    const bitrate = Math.round(8 * data.stats.length / (data.stats.buffering.end - data.stats.loading.first));
 
     if (stats.fragBuffered) {
       stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
