@@ -1,8 +1,10 @@
-/* global $, Hls */
+/* global $, Hls, __NETLIFY__ */
 /* eslint camelcase: 0 */
 
 import { sortObject, copyTextToClipboard } from './demo-utils';
 import { TimelineChart } from './chart/timeline-chart';
+
+const NETLIFY = __NETLIFY__; // replaced in build
 
 const STORAGE_KEYS = {
   Editor_Persistence: 'hlsjs:config-editor-persist',
@@ -110,8 +112,27 @@ $(document).ready(function () {
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
-  $('h2').append('&nbsp;<a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
-  $('#currentVersion').html('Hls version:' + Hls.version);
+  // link to version on npm if canary
+  // github branch for a branch version
+  // github tag for a normal tag
+  // github PR for a pr
+  function getVersionLink (version) {
+    const alphaRegex = /[-.]0\.alpha\./;
+    if (alphaRegex.test(version)) {
+      return `https://www.npmjs.com/package/hls.js/v/${encodeURIComponent(version)}`;
+    } else if (NETLIFY.reviewID) {
+      return `https://github.com/video-dev/hls.js/pull/${NETLIFY.reviewID}`;
+    } else if (NETLIFY.branch) {
+      return `https://github.com/video-dev/hls.js/tree/${encodeURIComponent(NETLIFY.branch)}`;
+    }
+    return `https://github.com/video-dev/hls.js/releases/tag/v${encodeURIComponent(version)}`;
+  }
+
+  const version = Hls.version;
+  if (version) {
+    const $a = $('<a />').attr('target', '_blank').attr('href', getVersionLink(version)).text('v' + version);
+    $('.title').append($a);
+  }
 
   $('#streamURL').val(sourceURL);
 
