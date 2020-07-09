@@ -144,7 +144,7 @@ class MP4Remuxer {
       };
       if (computePTSDTS) {
         // remember first PTS of this demuxing context. for audio, PTS = DTS
-        initPTS = initDTS = audioSamples[0].pts - audioTrack.inputTimeScale * timeOffset;
+        initPTS = initDTS = audioSamples[0].pts - Math.round(audioTrack.inputTimeScale * timeOffset);
       }
     }
 
@@ -163,8 +163,9 @@ class MP4Remuxer {
         }
       };
       if (computePTSDTS) {
-        initPTS = Math.min(initPTS, videoSamples[0].pts - inputTimeScale * timeOffset);
-        initDTS = Math.min(initDTS, videoSamples[0].dts - inputTimeScale * timeOffset);
+        const startPTS = Math.round(inputTimeScale * timeOffset);
+        initPTS = Math.min(initPTS, videoSamples[0].pts - startPTS);
+        initDTS = Math.min(initDTS, videoSamples[0].dts - startPTS);
         this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
       }
     } else if (computePTSDTS && tracks.audio) {
@@ -189,10 +190,10 @@ class MP4Remuxer {
     let mp4SampleDuration;
     let mdat;
     let moof;
-    let firstPTS;
     let firstDTS;
-    let lastPTS;
     let lastDTS;
+    let minPTS = Number.MAX_SAFE_INTEGER;
+    let maxPTS = -Number.MAX_SAFE_INTEGER;
     const timeScale = track.timescale;
     const inputSamples = track.samples;
     const outputSamples = [];
@@ -232,6 +233,9 @@ class MP4Remuxer {
     inputSamples.forEach(function (sample) {
       sample.pts = ptsNormalize(sample.pts - initPTS, nextAvcDts);
       sample.dts = ptsNormalize(sample.dts - initPTS, nextAvcDts);
+
+      minPTS = Math.min(sample.pts, minPTS);
+      maxPTS = Math.max(sample.pts, maxPTS);
     });
 
     // sort video samples by DTS then PTS then demux id order
@@ -250,10 +254,9 @@ class MP4Remuxer {
       }
     }
 
-    // compute first DTS and last DTS, normalize them against reference value
-    let sample = inputSamples[0];
-    firstDTS = Math.max(sample.dts, 0);
-    firstPTS = Math.max(sample.pts, 0);
+    // Get first/last DTS
+    firstDTS = inputSamples[0].dts;
+    lastDTS = inputSamples[inputSamples.length - 1].dts;
 
     // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
     let delta = firstDTS - nextAvcDts;
@@ -270,16 +273,11 @@ class MP4Remuxer {
         firstDTS = nextAvcDts;
         inputSamples[0].dts = firstDTS;
         // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-        firstPTS = Math.max(firstPTS - delta, nextAvcDts);
-        inputSamples[0].pts = firstPTS;
-        logger.log(`Video: PTS/DTS adjusted: ${toMsFromMpegTsClock(firstPTS, true)}/${toMsFromMpegTsClock(firstDTS, true)}, delta: ${toMsFromMpegTsClock(delta, true)} ms`);
+        minPTS = Math.max(minPTS - delta, nextAvcDts);
+        inputSamples[0].pts = minPTS;
+        logger.log(`Video: PTS/DTS adjusted: ${toMsFromMpegTsClock(minPTS, true)}/${toMsFromMpegTsClock(firstDTS, true)}, delta: ${toMsFromMpegTsClock(delta, true)} ms`);
       }
     }
-
-    // compute lastPTS/lastDTS
-    sample = inputSamples[inputSamples.length - 1];
-    lastDTS = Math.max(sample.dts, 0);
-    lastPTS = Math.max(sample.pts, 0, lastDTS);
 
     // on Safari let's signal the same sample duration for all samples
     // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
@@ -357,7 +355,7 @@ class MP4Remuxer {
             // the duration of the last frame to minimize any potential gap between segments.
             let maxBufferHole = config.maxBufferHole,
               gapTolerance = Math.floor(maxBufferHole * timeScale),
-              deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
+              deltaToFrameEnd = (audioTrackLength ? minPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
             if (deltaToFrameEnd > gapTolerance) {
               // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
               // frame overlap. maxBufferHole should be >> lastFrameDuration anyway.
@@ -414,8 +412,8 @@ class MP4Remuxer {
     let data = {
       data1: moof,
       data2: mdat,
-      startPTS: firstPTS / timeScale,
-      endPTS: (lastPTS + mp4SampleDuration) / timeScale,
+      startPTS: minPTS / timeScale,
+      endPTS: (maxPTS + mp4SampleDuration) / timeScale,
       startDTS: firstDTS / timeScale,
       endDTS: this.nextAvcDts / timeScale,
       type: 'video',
