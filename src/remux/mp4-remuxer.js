@@ -8,7 +8,7 @@ import MP4 from './mp4-generator';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-import { toMsFromMpegTsClock, toMpegTsClockFromTimescale, toTimescaleFromScale } from '../utils/timescale-conversion';
+import { toMsFromMpegTsClock, toMpegTsClockFromTimescale } from '../utils/timescale-conversion';
 
 import { logger } from '../utils/logger';
 
@@ -250,7 +250,7 @@ class MP4Remuxer {
     if (PTSDTSshift < 0) {
       logger.warn(`PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(PTSDTSshift, true)} ms to overcome this issue`);
       for (let i = 0; i < inputSamples.length; i++) {
-        inputSamples[i].dts += PTSDTSshift;
+        inputSamples[i].dts = Math.max(0, inputSamples[i].dts + PTSDTSshift);
       }
     }
 
@@ -565,7 +565,7 @@ class MP4Remuxer {
       // logger.log(`Audio/PTS:${toMsFromMpegTsClock(pts, true)}`);
       // if not first sample
 
-      if (lastPTS !== undefined) {
+      if (lastPTS !== undefined && mp4Sample) {
         mp4Sample.duration = Math.round((pts - lastPTS) / scaleFactor);
       } else {
         let delta = pts - nextAudioPts;
