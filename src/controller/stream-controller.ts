@@ -191,7 +191,7 @@ export default class StreamController extends BaseStreamController implements Ne
     const { config, nextLoadLevel: level } = hls;
 
     // if start level not parsed yet OR
-    // if video not attached AND start fragment already requested OR start frag prefetch disable
+    // if video not attached AND start fragment already requested OR start frag prefetch not enabled
     // exit loop, as we either need more info (level not parsed) or we need media to be attached to load new fragment
     if (levelLastLoaded === null || (!media && (this.startFragRequested || !config.startFragPrefetch))) {
       return;
