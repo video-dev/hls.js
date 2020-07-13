@@ -1029,6 +1029,10 @@ class StreamController extends BaseStreamController {
               this.nextLoadPosition = data.startPTS;
               this.state = State.IDLE;
               this.fragPrevious = frag;
+              if (this.demuxer) {
+                this.demuxer.destroy();
+                this.demuxer = null;
+              }
               this.tick();
               return;
             }
