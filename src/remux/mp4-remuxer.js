@@ -285,6 +285,10 @@ class MP4Remuxer {
       mp4SampleDuration = Math.round((lastDTS - firstDTS) / (inputSamples.length - 1));
     }
 
+    // Clamp first DTS to 0 so that we're still aligning on initPTS,
+    // and not passing negative values to MP4.traf. This will change initial frame compositionTimeOffset!
+    firstDTS = Math.max(firstDTS, 0);
+
     let nbNalu = 0, naluLen = 0;
     for (let i = 0; i < nbSamples; i++) {
       // compute total/avc sample length and nb of NAL units
