@@ -262,13 +262,13 @@ class MP4Remuxer {
     const delta = firstDTS - nextAvcDts;
     // if fragment are contiguous, detect hole/overlapping between fragments
     if (contiguous) {
-      const foundHole = delta >= 1;
+      const foundHole = delta > 2;
       const foundOverlap = delta < -1;
       if (foundHole || foundOverlap) {
         if (foundHole) {
-          logger.warn(`AVC: ${toMsFromMpegTsClock(delta, true)} ms hole between fragments detected, filling it`);
+          logger.warn(`AVC: ${toMsFromMpegTsClock(delta, true)}ms (${delta}dts) hole between fragments detected, filling it`);
         } else {
-          logger.warn(`AVC: ${toMsFromMpegTsClock(-delta, true)} ms overlapping between fragments detected`);
+          logger.warn(`AVC: ${toMsFromMpegTsClock(-delta, true)}ms (${delta}dts) overlapping between fragments detected`);
         }
         firstDTS = nextAvcDts;
         minPTS -= delta;
