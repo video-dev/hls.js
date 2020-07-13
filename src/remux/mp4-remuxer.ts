@@ -189,7 +189,7 @@ export default class MP4Remuxer implements Remuxer {
       };
       if (computePTSDTS) {
         // remember first PTS of this demuxing context. for audio, PTS = DTS
-        initPTS = initDTS = audioSamples[0].pts - audioTrack.inputTimeScale * timeOffset;
+        initPTS = initDTS = audioSamples[0].pts - Math.round(audioTrack.inputTimeScale * timeOffset);
       }
     }
 
@@ -208,8 +208,9 @@ export default class MP4Remuxer implements Remuxer {
         }
       };
       if (computePTSDTS) {
-        initPTS = Math.min(initPTS, videoSamples[0].pts - inputTimeScale * timeOffset);
-        initDTS = Math.min(initDTS, videoSamples[0].dts - inputTimeScale * timeOffset);
+        const startPTS = Math.round(inputTimeScale * timeOffset);
+        initPTS = Math.min(initPTS, videoSamples[0].pts - startPTS);
+        initDTS = Math.min(initDTS, videoSamples[0].dts - startPTS);
       }
     }
 
@@ -235,6 +236,8 @@ export default class MP4Remuxer implements Remuxer {
     const initPTS: number = this._initPTS;
     let nextAvcDts = this.nextAvcDts;
     let offset = 8;
+    let minPTS: number = Number.MAX_SAFE_INTEGER;
+    let maxPTS: number = -Number.MAX_SAFE_INTEGER;
     let mp4SampleDuration!: number;
 
     // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
@@ -262,43 +265,33 @@ export default class MP4Remuxer implements Remuxer {
     inputSamples.forEach(function (sample) {
       sample.pts = PTSNormalize(sample.pts - initPTS, nextAvcDts);
       sample.dts = PTSNormalize(sample.dts - initPTS, nextAvcDts);
+      minPTS = Math.min(sample.pts, minPTS);
+      maxPTS = Math.max(sample.pts, maxPTS);
     });
 
-    // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
-    const PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), -18000), 0);
-    if (PTSDTSshift < 0) {
-      logger.log(`[mp4-remuxer]: PTS < DTS detected in video samples, shifting DTS by ${Math.round(PTSDTSshift / 90)} ms to overcome this issue`);
-      for (let i = 0; i < inputSamples.length; i++) {
-        inputSamples[i].dts += PTSDTSshift;
-      }
-    }
-
-    const firstSample = inputSamples[0];
-    let firstDTS = Math.max(firstSample.dts, 0);
-    let firstPTS = Math.max(firstSample.pts, 0);
+    // Get first/last DTS
+    let firstDTS = inputSamples[0].dts;
+    const lastDTS = inputSamples[inputSamples.length - 1].dts;
 
     // Check timestamp continuity across consecutive fragments, and modify timing in order to remove gaps or overlaps.
-    const millisecondDelta = Math.round((firstDTS - nextAvcDts) / 90);
     if (contiguous) {
-      if (millisecondDelta) {
-        if (millisecondDelta > 1) {
-          logger.log(`[mp4-remuxer]: AVC:${millisecondDelta} ms hole between fragments detected,filling it`);
-        } else if (millisecondDelta < -1) {
-          logger.log(`[mp4-remuxer]: AVC:${(-millisecondDelta)} ms overlapping between fragments detected`);
+      const delta = firstDTS - nextAvcDts;
+      const foundHole = delta > 2;
+      const foundOverlap = delta < -1;
+      if (foundHole || foundOverlap) {
+        const millisecondDelta = Math.round(delta / 90);
+        if (foundHole) {
+          logger.warn(`AVC: ${millisecondDelta}ms (${delta}dts) hole between fragments detected, filling it`);
+        } else {
+          logger.warn(`AVC: ${-millisecondDelta}ms (${delta}dts) overlapping between fragments detected`);
         }
-
-        // remove hole/gap : set DTS to next expected DTS
-        firstSample.dts = firstDTS = nextAvcDts;
-        firstSample.pts = firstPTS = Math.max(firstSample.pts - millisecondDelta, nextAvcDts);
-        // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-        logger.log(`[mp4-remuxer]: Video/PTS/DTS adjusted: ${Math.round(firstSample.pts / 90)}/${Math.round(firstDTS / 90)}, delta:${millisecondDelta} ms`);
+        firstDTS = nextAvcDts;
+        minPTS -= delta;
+        inputSamples[0].dts = firstDTS;
+        inputSamples[0].pts = minPTS;
+        logger.log(`Video: PTS/DTS adjusted: ${Math.round(minPTS / 90)}/${Math.round(firstDTS / 90)}, delta: ${millisecondDelta} ms`);
       }
     }
-
-    // compute lastPTS/lastDTS
-    const lastSample = inputSamples[inputSamples.length - 1];
-    const lastDTS = Math.max(lastSample.dts, 0);
-    const lastPTS = Math.max(lastSample.pts, 0, lastDTS);
 
     // on Safari let's signal the same sample duration for all samples
     // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
@@ -306,6 +299,19 @@ export default class MP4Remuxer implements Remuxer {
     if (isSafari) {
       mp4SampleDuration = Math.round((lastDTS - firstDTS) / (inputSamples.length - 1));
     }
+
+    // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
+    const PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), -18000), 0);
+    if (PTSDTSshift < 0) {
+      logger.warn(`[mp4-remuxer]: PTS < DTS detected in video samples, shifting DTS by ${Math.round(PTSDTSshift / 90)} ms to overcome this issue`);
+      for (let i = 0; i < inputSamples.length; i++) {
+        inputSamples[i].dts = Math.max(0, inputSamples[i].dts + PTSDTSshift);
+      }
+    }
+
+    // Clamp first DTS to 0 so that we're still aligning on initPTS,
+    // and not passing negative values to MP4.traf. This will change initial frame compositionTimeOffset!
+    firstDTS = Math.max(inputSamples[0].dts, 0);
 
     let nbNalu = 0;
     let naluLen = 0;
@@ -386,7 +392,7 @@ export default class MP4Remuxer implements Remuxer {
             // If so, playback would potentially get stuck, so we artificially inflate
             // the duration of the last frame to minimize any potential gap between segments.
             const gapTolerance = Math.floor(config.maxBufferHole * timeScale);
-            const deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
+            const deltaToFrameEnd = (audioTrackLength ? minPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
             if (deltaToFrameEnd > gapTolerance) {
               // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
               // frame overlap. maxBufferHole should be >> lastFrameDuration anyway.
@@ -429,8 +435,8 @@ export default class MP4Remuxer implements Remuxer {
     const data = {
       data1: moof,
       data2: mdat,
-      startPTS: firstPTS / timeScale,
-      endPTS: (lastPTS + mp4SampleDuration) / timeScale,
+      startPTS: minPTS / timeScale,
+      endPTS: (maxPTS + mp4SampleDuration) / timeScale,
       startDTS: firstDTS / timeScale,
       endDTS: nextAvcDts / timeScale,
       type,
@@ -518,9 +524,17 @@ export default class MP4Remuxer implements Remuxer {
 
         // If we're overlapping by more than a duration, drop this sample
         if (delta <= -maxAudioFramesDrift * inputSampleDuration) {
-          logger.warn(`[mp4-remuxer]: Dropping 1 audio frame @ ${(nextPts / inputTimeScale).toFixed(3)}s due to ${Math.round(duration)} ms overlap.`);
-          inputSamples.splice(i, 1);
-          // Don't touch nextPtsNorm or i
+          if (contiguous) {
+            logger.warn(`[mp4-remuxer]: Dropping 1 audio frame @ ${(nextPts / inputTimeScale).toFixed(3)}s due to ${Math.round(duration)} ms overlap.`);
+            inputSamples.splice(i, 1);
+            // Don't touch nextPtsNorm or i
+          } else {
+            // When changing qualities we can't trust that audio has been appended up to nextAudioPts
+            // Warn about the overlap but do not drop samples as that can introduce buffer gaps
+            logger.warn(`Audio frame @ ${(pts / inputTimeScale).toFixed(3)}s overlaps nextAudioPts by ${Math.round(1000 * delta / inputTimeScale)} ms.`);
+            nextPts = pts + inputSampleDuration;
+            i++;
+          }
         } // eslint-disable-line brace-style
 
         // Insert missing frames if:

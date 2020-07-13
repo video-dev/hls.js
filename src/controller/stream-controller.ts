@@ -967,6 +967,8 @@ export default class StreamController extends BaseStreamController implements Ne
     // Avoid buffering if backtracking this fragment
     if (video) {
       if (level.details && _hasDroppedFrames(frag, video.dropped, level.details.startSN)) {
+        // Clear demuxer to reset nextAvc which could have been set for dropped frames
+        this.resetTransmuxer();
         this.backtrack(frag, video.startPTS);
         return;
       } else {
