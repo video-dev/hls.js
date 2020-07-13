@@ -263,7 +263,7 @@ export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderSt
 
 export function getProgramDateTimeAtEndOfLastEncodedFragment (levelDetails: LevelDetails): number | null {
   if (levelDetails.hasProgramDateTime) {
-    const encodedFragments = levelDetails.fragments.filter((fragment) => !fragment.prefetch);
+    const encodedFragments = levelDetails.fragments;
     const lastEncodedFrag = encodedFragments[encodedFragments.length - 1];
     const programDateTime = lastEncodedFrag.programDateTime as number;
     if (Number.isFinite(programDateTime)) {

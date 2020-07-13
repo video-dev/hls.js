@@ -214,7 +214,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
 
     // if video not attached AND
-    // start fragment already requested OR start frag prefetch disable
+    // start fragment already requested OR start frag prefetch not enabled
     // exit loop
     // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
     if (!media && (this.startFragRequested || !config.startFragPrefetch)) {
