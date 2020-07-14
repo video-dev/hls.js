@@ -76,7 +76,9 @@ const baseConfig = {
               visitor: {
                 CallExpression: function (espath) {
                   if (espath.get('callee').matchesPattern('Number.isFinite')) {
-                    espath.node.callee = importHelper.addNamed(espath, 'isFiniteNumber', path.resolve('src/polyfills/number-isFinite'));
+                    espath.node.callee = importHelper.addNamed(espath, 'isFiniteNumber', path.resolve('src/polyfills/number'));
+                  } else if (espath.get('callee').matchesPattern('Number.MAX_SAFE_INTEGER')) {
+                    espath.node.callee = importHelper.addNamed(espath, 'MAX_SAFE_INTEGER', path.resolve('src/polyfills/number'));
                   }
                 }
               }
