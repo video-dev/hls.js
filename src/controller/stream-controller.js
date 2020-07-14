@@ -864,7 +864,11 @@ class StreamController extends BaseStreamController {
       this.stats = stats;
 
       if (!details) {
-        logger.warn('Loaded fragment but level switch occured before');
+        // we log this with a bit of additional information in order to debug this
+        // since this type of runtime assertion should actually be avoidable by
+        // aborting fragment requests properly on level switch in the first place.
+        logger.warn('Loaded fragment but level switch occured before. SN:', fragLoaded.sn,
+          'Level:', fragLoaded.level, 'Stats:', stats, 'Current Fragment:', fragCurrent);
         this.state = State.IDLE;
         return;
       }
