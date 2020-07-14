@@ -255,11 +255,8 @@ class AudioTrackController extends TaskLoop {
     }
 
     const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
-
-    logger.debug('using audio group-id of current media level/url-id:', levelId, '/', levelInfo.urlId, '->', audioGroupId);
-
     if (this.audioGroupId !== audioGroupId) {
-      logger.debug('audio group-id has changed from:', this.audioGroupId, '-> reselecting track for current group-id:', audioGroupId);
+      logger.debug('audio group-id has changed from:', this.audioGroupId, 'to:', audioGroupId);
       this.audioGroupId = audioGroupId;
       this._selectInitialAudioTrack();
     }
