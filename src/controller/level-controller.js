@@ -10,11 +10,7 @@ import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, computeReloadInterval } from './level-helper';
 import { PlaylistLevelType } from '../types/loader';
 
-const { performance } = window;
-
-// FIXME: we should centralizes all usages of userAgent in codebase
-// in a module to do browser model detection (once)
-const chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+let chromeOrFirefox;
 
 export default class LevelController extends EventHandler {
   constructor (hls) {
@@ -30,6 +26,8 @@ export default class LevelController extends EventHandler {
     this.currentLevelIndex = null;
     this.manualLevelIndex = -1;
     this.timer = null;
+
+    chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
   }
 
   onHandlerDestroying () {
@@ -355,7 +353,7 @@ export default class LevelController extends EventHandler {
 
       if (redundantLevels > 1 && level.loadError < redundantLevels) {
         level.urlId = (level.urlId + 1) % redundantLevels;
-        level.details = undefined; // Q: why not set to null?
+        level.details = undefined;
         logger.warn(`level controller, ${errorDetails} for level ${levelIndex}: switching to redundant URL-id ${level.urlId}`);
       } else {
         // Search for available level
@@ -503,7 +501,6 @@ export default class LevelController extends EventHandler {
   }
 
   removeLevel (levelIndex, urlId) {
-    logger.warn('Removing level index:', levelIndex, 'URL id:', urlId);
     const levels = this.levels.filter((level, index) => {
       if (index !== levelIndex) {
         return true;

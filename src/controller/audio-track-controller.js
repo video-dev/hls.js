@@ -2,6 +2,7 @@ import Event from '../events';
 import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { isFiniteNumber } from '../polyfills/number-isFinite';
 
 /**
  * @class AudioTrackController
@@ -64,7 +65,7 @@ class AudioTrackController extends TaskLoop {
     this.trackIdBlacklist = Object.create(null);
 
     /**
-     * @private
+     * @public
      * The currently running group ID for audio
      * (we grab this on manifest-parsed and new level-loaded)
      * @member {string}
@@ -216,7 +217,7 @@ class AudioTrackController extends TaskLoop {
     }
 
     // check if level idx is valid
-    if (typeof newId !== 'number' || newId < 0 || newId >= this.tracks.length) {
+    if (!isFiniteNumber(newId) || newId < 0 || newId >= this.tracks.length) {
       logger.warn('Invalid id passed to audio-track controller');
       return;
     }
