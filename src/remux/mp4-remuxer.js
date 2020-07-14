@@ -192,8 +192,8 @@ class MP4Remuxer {
     let moof;
     let firstDTS;
     let lastDTS;
-    let minPTS = Number.MAX_SAFE_INTEGER;
-    let maxPTS = -Number.MAX_SAFE_INTEGER;
+    let minPTS = Number.POSITIVE_INFINITY;
+    let maxPTS = Number.NEGATIVE_INFINITY;
     const timeScale = track.timescale;
     const inputSamples = track.samples;
     const outputSamples = [];
@@ -217,7 +217,7 @@ class MP4Remuxer {
       // consecutive fragments are frags with
       //  - less than 100ms gaps between new time offset (if accurate) and next expected PTS OR
       //  - less than 200 ms PTS gaps (timeScale/5)
-      contiguous |= (inputSamples.length && nextAvcDts &&
+      contiguous |= (nbSamples && nextAvcDts &&
                      ((accurateTimeOffset && Math.abs(timeOffset - nextAvcDts / timeScale) < 0.1) ||
                       Math.abs((inputSamples[0].pts - nextAvcDts - initPTS)) < timeScale / 5)
       );
@@ -249,14 +249,14 @@ class MP4Remuxer {
     let PTSDTSshift = inputSamples.reduce((prev, curr) => Math.max(Math.min(prev, curr.pts - curr.dts), -1 * PTS_DTS_SHIFT_TOLERANCE_90KHZ), 0);
     if (PTSDTSshift < 0) {
       logger.warn(`PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(PTSDTSshift, true)} ms to overcome this issue`);
-      for (let i = 0; i < inputSamples.length; i++) {
+      for (let i = 0; i < nbSamples; i++) {
         inputSamples[i].dts = Math.max(0, inputSamples[i].dts + PTSDTSshift);
       }
     }
 
     // Get first/last DTS
     firstDTS = inputSamples[0].dts;
-    lastDTS = inputSamples[inputSamples.length - 1].dts;
+    lastDTS = inputSamples[nbSamples - 1].dts;
 
     // check timestamp continuity across consecutive fragments (this is to remove inter-fragment gap/hole)
     const delta = firstDTS - nextAvcDts;
@@ -282,7 +282,7 @@ class MP4Remuxer {
     // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
     // set this constant duration as being the avg delta between consecutive DTS.
     if (isSafari) {
-      mp4SampleDuration = Math.round((lastDTS - firstDTS) / (inputSamples.length - 1));
+      mp4SampleDuration = Math.round((lastDTS - firstDTS) / (nbSamples - 1));
     }
 
     // Clamp first DTS to 0 so that we're still aligning on initPTS,
