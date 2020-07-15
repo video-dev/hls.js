@@ -22,7 +22,7 @@ import {
   DemuxedTrack,
   Demuxer,
   DemuxerResult,
-  AvcSample, DemuxedMetadataTrack
+  AvcSample, DemuxedMetadataTrack, ElementaryStreamData
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
@@ -1115,16 +1115,16 @@ function parsePMT (data, offset, mpegSupported, isSampleAes) {
   return result;
 }
 
-function parsePES (stream): PES | null {
+function parsePES (stream: ElementaryStreamData): PES | null {
   let i = 0;
-  let frag;
-  let pesFlags;
-  let pesLen;
-  let pesHdrLen;
-  let pesData;
-  let pesPts;
-  let pesDts;
-  let payloadStartOffset;
+  let frag: Uint8Array;
+  let pesFlags: number;
+  let pesLen: number;
+  let pesHdrLen: number;
+  let pesData: Uint8Array;
+  let pesPts: number;
+  let pesDts: number;
+  let payloadStartOffset: number| undefined;
   const data = stream.data;
   // safety check
   if (!stream || stream.size === 0) {
