@@ -98,12 +98,9 @@ class SubtitleTrackController extends TaskLoop {
 
     this.useTextTrackPolling = !(this.media.textTracks && 'onchange' in this.media.textTracks);
     if (this.useTextTrackPolling) {
-      // FIXME
-      /*
       this.subtitlePollingInterval = setInterval(() => {
         this.trackChangeListener();
       }, 500);
-      */
     } else {
       this.media.textTracks.addEventListener('change', this.trackChangeListener);
     }
