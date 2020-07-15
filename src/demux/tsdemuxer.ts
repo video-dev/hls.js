@@ -28,13 +28,16 @@ import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
 import { HlsConfig } from '../config';
 import { TransmuxerTypeSupported } from './transmuxer';
+import { RequiredProperties } from '../types/general';
 
 interface PES {
   data: Uint8Array;
-  pts: number;
-  dts: number;
+  pts?: number;
+  dts?: number;
   len: number;
 }
+
+type PopulatedPES = Required<PES>
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -1122,8 +1125,8 @@ function parsePES (stream: ElementaryStreamData): PES | null {
   let pesLen: number;
   let pesHdrLen: number;
   let pesData: Uint8Array;
-  let pesPts: number;
-  let pesDts: number;
+  let pesPts: number | undefined;
+  let pesDts: number | undefined;
   let payloadStartOffset: number| undefined;
   const data = stream.data;
   // safety check
