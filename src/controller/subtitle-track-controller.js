@@ -199,7 +199,7 @@ class SubtitleTrackController extends TaskLoop {
 
   stopLoad () {
     this.stopped = true;
-    this._clearReloadTimer();
+    this.clearInterval();
   }
 
   onError (data) {
