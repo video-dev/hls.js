@@ -2,7 +2,6 @@ import Event from '../events';
 import TaskLoop from '../task-loop';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { isFiniteNumber } from '../polyfills/number-isFinite';
 
 /**
  * @class AudioTrackController
@@ -217,7 +216,7 @@ class AudioTrackController extends TaskLoop {
     }
 
     // check if level idx is valid
-    if (!isFiniteNumber(newId) || newId < 0 || newId >= this.tracks.length) {
+    if (!Number.isFinite(newId) || newId < 0 || newId >= this.tracks.length) {
       logger.warn('Invalid id passed to audio-track controller');
       return;
     }
