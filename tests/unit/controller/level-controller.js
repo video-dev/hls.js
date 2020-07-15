@@ -122,6 +122,7 @@ describe('LevelController', function () {
       expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
         levels: data.levels,
         audioTracks: data.audioTracks,
+        subtitleTracks: [],
         firstLevel: 0,
         stats: {},
         audio: false,
@@ -154,6 +155,7 @@ describe('LevelController', function () {
       expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
         levels: data.levels,
         audioTracks: data.audioTracks,
+        subtitleTracks: [],
         firstLevel: 0,
         stats: {},
         audio: true,
@@ -186,6 +188,7 @@ describe('LevelController', function () {
       expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
         levels: data.levels,
         audioTracks: data.audioTracks,
+        subtitleTracks: [],
         firstLevel: 0,
         stats: {},
         audio: true,
