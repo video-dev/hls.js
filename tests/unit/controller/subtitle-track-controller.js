@@ -16,12 +16,17 @@ describe('SubtitleTrackController', function () {
   ];
 
   beforeEach(function () {
-    const hls = new Observer();
+    const hls = new Hls({});
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
     subtitleTrackController.media = videoElement;
     subtitleTrackController.tracks = fakeTracks;
+
+    hls.subtitleTrackController = subtitleTrackController;
+
+    hls.levelController._levels = [{ subtitleGroupIds: ['A', 'B'] }];
+    hls.currentLevelIndex = 0;
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
@@ -43,7 +48,7 @@ describe('SubtitleTrackController', function () {
 
   describe('onSubtitleTrackSwitch', function () {
     it('should set subtitleTrack to -1 if disabled', function () {
-      assert.strictEqual(subtitleTrackController.subtitleTrack, -1);
+      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
 
       videoElement.textTracks[0].mode = 'disabled';
       subtitleTrackController._onTextTracksChanged();
