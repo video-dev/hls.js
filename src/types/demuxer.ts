@@ -70,8 +70,8 @@ export interface UserdataSample {
 }
 
 export interface AvcSample {
-  dts?: number
-  pts?: number
+  dts: number
+  pts: number
   key: boolean
   frame: boolean
   units: Array<AvcSampleUnit>,
