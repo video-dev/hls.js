@@ -8,14 +8,14 @@ describe('SubtitleTrackController', function () {
   let videoElement;
   let sandbox;
 
-  const fakeTracks = [
-    { id: 0, url: 'baz', details: { live: false }, groupId: 'B', name: 'Foo' },
-    { id: 1, url: 'bar', groupId: 'B', name: 'Bar' },
-    { id: 2, details: { live: true }, url: 'foo', groupId: 'A', name: 'Foo' },
-    { id: 3, details: { live: true }, url: 'foo', groupId: 'A', name: 'Bar' }
-  ];
-
   beforeEach(function () {
+    const fakeTracks = [
+      { id: 0, url: 'baz', details: { live: false }, groupId: 'B', name: 'Foo' },
+      { id: 1, url: 'bar', groupId: 'B', name: 'Bar' },
+      { id: 2, details: { live: true }, url: 'foo', groupId: 'A', name: 'Foo' },
+      { id: 3, details: { live: true }, url: 'foo', groupId: 'A', name: 'Bar' }
+    ];
+
     const hls = new Hls({});
 
     videoElement = document.createElement('video');
@@ -147,8 +147,8 @@ describe('SubtitleTrackController', function () {
       expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', { url: 'foo', id: 2 });
     });
 
-    it('should do nothing if called with out of bound indicies', function () {
-      const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
+    it('should do nothing if called with out of bound indices', function () {
+      const clearReloadSpy = sandbox.spy(subtitleTrackController, 'clearInterval');
       subtitleTrackController.subtitleTrack = 5;
       subtitleTrackController.subtitleTrack = -2;
 
@@ -186,7 +186,7 @@ describe('SubtitleTrackController', function () {
     describe('onSubtitleTrackLoaded', function () {
       it('exits early if the loaded track does not match the requested track', function () {
         const tracks = subtitleTrackController.tracks;
-        const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
+        const clearReloadSpy = sandbox.spy(subtitleTrackController, 'clearInterval');
         subtitleTrackController.trackId = 1;
 
         let mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
@@ -207,30 +207,35 @@ describe('SubtitleTrackController', function () {
       });
 
       it('does not set the reload timer if the stopped flag is set', function () {
+        const setIntervalSpy = sandbox.spy(subtitleTrackController, 'setInterval');
         subtitleTrackController.stopped = true;
         subtitleTrackController.trackId = 1;
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
-        expect(subtitleTrackController.timer).to.not.exist;
+        expect(setIntervalSpy).to.not.have.been.calledOnce;
+        expect(subtitleTrackController.hasInterval()).to.be.false;
       });
 
       it('sets the live reload timer if the level is live', function () {
+        const setIntervalSpy = sandbox.spy(subtitleTrackController, 'setInterval');
         subtitleTrackController.stopped = false;
         subtitleTrackController.trackId = 1;
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: true, fragments: [] }, stats: {} });
-        expect(subtitleTrackController.timer).to.exist;
+        expect(subtitleTrackController.hasInterval()).to.be.true;
+        expect(setIntervalSpy).to.have.been.calledOnce;
       });
 
       it('stops the live reload timer if the level is not live', function () {
+        const setIntervalSpy = sandbox.spy(subtitleTrackController, 'setInterval');
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.timer = setTimeout(function () {}, 0);
+        subtitleTrackController.setInterval(1000);
         subtitleTrackController.onSubtitleTrackLoaded({ id: 1, details: { live: false, fragments: [] }, stats: {} });
-        expect(subtitleTrackController.timer).to.not.exist;
+        expect(subtitleTrackController.hasInterval()).to.be.false;
       });
     });
 
     describe('stopLoad', function () {
       it('stops loading', function () {
-        const clearReloadSpy = sandbox.spy(subtitleTrackController, '_clearReloadTimer');
+        const clearReloadSpy = sandbox.spy(subtitleTrackController, 'clearInterval');
         subtitleTrackController.stopLoad();
         expect(subtitleTrackController.stopped).to.be.true;
         expect(clearReloadSpy).to.have.been.calledOnce;
@@ -251,6 +256,13 @@ describe('SubtitleTrackController', function () {
     it('should reselect the current track and trigger SUBTITLE_TRACK_SWITCH eventually', function (done) {
       const hls = new Hls();
       const subtitleTrackController = new SubtitleTrackController(hls);
+
+      const fakeTracks = [
+        { id: 0, url: 'baz', details: { live: false }, groupId: 'B', name: 'Foo' },
+        { id: 1, url: 'bar', groupId: 'B', name: 'Bar' },
+        { id: 2, details: { live: true }, url: 'foo', groupId: 'A', name: 'Foo' },
+        { id: 3, details: { live: true }, url: 'foo', groupId: 'A', name: 'Bar' }
+      ];
 
       subtitleTrackController.tracks = fakeTracks;
 
@@ -327,6 +339,13 @@ describe('SubtitleTrackController', function () {
 
     it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', function () {
       const currentTrackId = 3;
+
+      const fakeTracks = [
+        { id: 0, url: 'baz', details: { live: false }, groupId: 'B', name: 'Foo' },
+        { id: 1, url: 'bar', groupId: 'B', name: 'Bar' },
+        { id: 2, details: { live: true }, url: 'foo', groupId: 'A', name: 'Foo' },
+        { id: 3, details: { live: true }, url: 'foo', groupId: 'A', name: 'Bar' }
+      ];
 
       subtitleTrackController.tracks = fakeTracks;
 
