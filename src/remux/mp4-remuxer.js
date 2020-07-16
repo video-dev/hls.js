@@ -52,9 +52,12 @@ class MP4Remuxer {
         // if first audio DTS is not aligned with first video DTS then we need to take that into account
         // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
         // drift between audio and video streams
-        let audiovideoDeltaDts = (audioTrack.samples[0].pts - videoTrack.samples[0].pts) / videoTrack.inputTimeScale;
-        audioTimeOffset += Math.max(0, audiovideoDeltaDts);
-        videoTimeOffset += Math.max(0, -audiovideoDeltaDts);
+        // Use pts at timeOffset 0 so that VOD streams begin at 0
+        const tsDelta = timeOffset > 0 ? audioTrack.samples[0].dts - videoTrack.samples[0].dts
+          : audioTrack.samples[0].pts - videoTrack.samples[0].pts;
+        const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
+        audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
+        videoTimeOffset += Math.max(0, -audiovideoTimestampDelta);
       }
       // Purposefully remuxing audio before video, so that remuxVideo can use nextAudioPts, which is
       // calculated in remuxAudio.
@@ -258,11 +261,16 @@ class MP4Remuxer {
     firstDTS = inputSamples[0].dts;
     lastDTS = inputSamples[nbSamples - 1].dts;
 
+    // on Safari let's signal the same sample duration for all samples
+    // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
+    // set this constant duration as being the avg delta between consecutive DTS.
+    const averageSampleDuration = Math.round((lastDTS - firstDTS) / (nbSamples - 1));
+
     // check timestamp continuity across consecutive fragments (this is to remove inter-fragment gap/hole)
     const delta = firstDTS - nextAvcDts;
     // if fragment are contiguous, detect hole/overlapping between fragments
     if (contiguous) {
-      const foundHole = delta > 2;
+      const foundHole = delta > averageSampleDuration;
       const foundOverlap = delta < -1;
       if (foundHole || foundOverlap) {
         if (foundHole) {
@@ -274,15 +282,8 @@ class MP4Remuxer {
         minPTS -= delta;
         inputSamples[0].dts = firstDTS;
         inputSamples[0].pts = minPTS;
-        logger.log(`Video: PTS/DTS adjusted: ${toMsFromMpegTsClock(minPTS, true)}/${toMsFromMpegTsClock(firstDTS, true)}, delta: ${toMsFromMpegTsClock(delta, true)} ms`);
+        logger.log(`Video: First PTS/DTS adjusted: ${toMsFromMpegTsClock(minPTS, true)}/${toMsFromMpegTsClock(firstDTS, true)}, delta: ${toMsFromMpegTsClock(delta, true)} ms`);
       }
-    }
-
-    // on Safari let's signal the same sample duration for all samples
-    // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
-    // set this constant duration as being the avg delta between consecutive DTS.
-    if (isSafari) {
-      mp4SampleDuration = Math.round((lastDTS - firstDTS) / (nbSamples - 1));
     }
 
     // Clamp first DTS to 0 so that we're still aligning on initPTS,
@@ -304,7 +305,7 @@ class MP4Remuxer {
       // normalize PTS/DTS
       if (isSafari) {
         // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
-        sample.dts = firstDTS + i * mp4SampleDuration;
+        sample.dts = firstDTS + i * averageSampleDuration;
       } else {
         // ensure sample monotonic DTS
         sample.dts = Math.max(sample.dts, firstDTS);
