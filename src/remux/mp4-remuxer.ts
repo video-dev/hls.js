@@ -105,6 +105,21 @@ export default class MP4Remuxer implements Remuxer {
       }
 
       if (this.ISGenerated) {
+        let audioTimeOffset = timeOffset;
+        let videoTimeOffset = timeOffset;
+        if (enoughAudioSamples && enoughVideoSamples) {
+          // timeOffset is expected to be the offset of the first timestamp of this fragment (first DTS)
+          // if first audio DTS is not aligned with first video DTS then we need to take that into account
+          // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
+          // drift between audio and video streams
+          // Use pts at timeOffset 0 so that VOD streams begin at 0
+          const tsDelta = timeOffset > 0 ? audioTrack.samples[0].dts - videoTrack.samples[0].dts
+            : audioTrack.samples[0].pts - videoTrack.samples[0].pts;
+          const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
+          audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
+          videoTimeOffset += Math.max(0, -audiovideoTimestampDelta);
+        }
+
         // Purposefully remuxing audio before video, so that remuxVideo can use nextAudioPts, which is calculated in remuxAudio.
         if (enoughAudioSamples) {
           // if initSegment was generated without audio samples, regenerate it again
@@ -113,7 +128,7 @@ export default class MP4Remuxer implements Remuxer {
             initSegment = this.generateIS(audioTrack, videoTrack, timeOffset);
             delete initSegment.video;
           }
-          audio = this.remuxAudio(audioTrack, timeOffset, this.isAudioContiguous, accurateTimeOffset);
+          audio = this.remuxAudio(audioTrack, audioTimeOffset, this.isAudioContiguous, accurateTimeOffset);
           if (enoughVideoSamples) {
             const audioTrackLength = audio ? audio.endPTS - audio.startPTS : 0;
             // if initSegment was generated without video samples, regenerate it again
@@ -121,10 +136,13 @@ export default class MP4Remuxer implements Remuxer {
               logger.warn('[mp4-remuxer]: regenerate InitSegment as video detected');
               initSegment = this.generateIS(audioTrack, videoTrack, timeOffset);
             }
-            video = this.remuxVideo(videoTrack, timeOffset, isVideoContiguous, audioTrackLength, accurateTimeOffset);
+            video = this.remuxVideo(videoTrack, videoTimeOffset, isVideoContiguous, audioTrackLength, accurateTimeOffset);
           }
         } else if (enoughVideoSamples) {
-          video = this.remuxVideo(videoTrack, timeOffset, isVideoContiguous, 0, accurateTimeOffset);
+          video = this.remuxVideo(videoTrack, videoTimeOffset, isVideoContiguous, 0, accurateTimeOffset);
+          if (video && audioTrack.codec) {
+            this.remuxEmptyAudio(audioTrack, audioTimeOffset, this.isAudioContiguous, video);
+          }
         }
       }
     }
@@ -236,8 +254,8 @@ export default class MP4Remuxer implements Remuxer {
     const initPTS: number = this._initPTS;
     let nextAvcDts = this.nextAvcDts;
     let offset = 8;
-    let minPTS: number = Number.MAX_SAFE_INTEGER;
-    let maxPTS: number = -Number.MAX_SAFE_INTEGER;
+    let minPTS: number = Number.POSITIVE_INFINITY;
+    let maxPTS: number = Number.NEGATIVE_INFINITY;
     let mp4SampleDuration!: number;
 
     // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
@@ -273,10 +291,16 @@ export default class MP4Remuxer implements Remuxer {
     let firstDTS = inputSamples[0].dts;
     const lastDTS = inputSamples[inputSamples.length - 1].dts;
 
-    // Check timestamp continuity across consecutive fragments, and modify timing in order to remove gaps or overlaps.
+    // on Safari let's signal the same sample duration for all samples
+    // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
+    // set this constant duration as being the avg delta between consecutive DTS.
+    const averageSampleDuration = Math.round((lastDTS - firstDTS) / (nbSamples - 1));
+
+    // if fragment are contiguous, detect hole/overlapping between fragments
     if (contiguous) {
+      // Check timestamp continuity across consecutive fragments, and modify timing in order to remove gaps or overlaps.
       const delta = firstDTS - nextAvcDts;
-      const foundHole = delta > 2;
+      const foundHole = delta > averageSampleDuration;
       const foundOverlap = delta < -1;
       if (foundHole || foundOverlap) {
         const millisecondDelta = Math.round(delta / 90);
@@ -289,15 +313,8 @@ export default class MP4Remuxer implements Remuxer {
         minPTS -= delta;
         inputSamples[0].dts = firstDTS;
         inputSamples[0].pts = minPTS;
-        logger.log(`Video: PTS/DTS adjusted: ${Math.round(minPTS / 90)}/${Math.round(firstDTS / 90)}, delta: ${millisecondDelta} ms`);
+        logger.log(`Video: First PTS/DTS adjusted: ${Math.round(minPTS / 90)}/${Math.round(firstDTS / 90)}, delta: ${millisecondDelta} ms`);
       }
-    }
-
-    // on Safari let's signal the same sample duration for all samples
-    // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
-    // set this constant duration as being the avg delta between consecutive DTS.
-    if (isSafari) {
-      mp4SampleDuration = Math.round((lastDTS - firstDTS) / (inputSamples.length - 1));
     }
 
     // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
@@ -332,7 +349,7 @@ export default class MP4Remuxer implements Remuxer {
       // normalize PTS/DTS
       if (isSafari) {
         // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
-        sample.dts = firstDTS + i * mp4SampleDuration;
+        sample.dts = firstDTS + i * averageSampleDuration;
       } else {
         // ensure sample monotonic DTS
         sample.dts = Math.max(sample.dts, firstDTS);
