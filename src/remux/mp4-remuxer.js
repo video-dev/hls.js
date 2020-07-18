@@ -20,8 +20,6 @@ class MP4Remuxer {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
-    const userAgent = navigator.userAgent;
-    this.isSafari = vendor && vendor.indexOf('Apple') > -1 && userAgent && !userAgent.match('CriOS');
     this.ISGenerated = false;
   }
 
@@ -207,23 +205,8 @@ class MP4Remuxer {
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
     let nextAvcDts = this.nextAvcDts;
 
-    const isSafari = this.isSafari;
-
     if (nbSamples === 0) {
       return;
-    }
-
-    // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
-    if (isSafari) {
-      // also consider consecutive fragments as being contiguous (even if a level switch occurs),
-      // for sake of clarity:
-      // consecutive fragments are frags with
-      //  - less than 100ms gaps between new time offset (if accurate) and next expected PTS OR
-      //  - less than 200 ms PTS gaps (timeScale/5)
-      contiguous |= (nbSamples && nextAvcDts &&
-                     ((accurateTimeOffset && Math.abs(timeOffset - nextAvcDts / timeScale) < 0.1) ||
-                      Math.abs((inputSamples[0].pts - nextAvcDts - initPTS)) < timeScale / 5)
-      );
     }
 
     if (!contiguous) {
@@ -303,13 +286,8 @@ class MP4Remuxer {
       sample.length = sampleLen;
 
       // normalize PTS/DTS
-      if (isSafari) {
-        // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
-        sample.dts = firstDTS + i * averageSampleDuration;
-      } else {
-        // ensure sample monotonic DTS
-        sample.dts = Math.max(sample.dts, firstDTS);
-      }
+      // ensure sample monotonic DTS
+      sample.dts = Math.max(sample.dts, firstDTS);
       // ensure that computed value is greater or equal than sample DTS
       sample.pts = Math.max(sample.pts, sample.dts);
     }
@@ -344,42 +322,38 @@ class MP4Remuxer {
         mp4SampleLength += 4 + unitDataLen;
       }
 
-      if (!isSafari) {
-        // expected sample duration is the Decoding Timestamp diff of consecutive samples
-        if (i < nbSamples - 1) {
-          mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
-        } else {
-          let config = this.config,
-            lastFrameDuration = avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
-          if (config.stretchShortVideoTrack) {
-            // In some cases, a segment's audio track duration may exceed the video track duration.
-            // Since we've already remuxed audio, and we know how long the audio track is, we look to
-            // see if the delta to the next segment is longer than maxBufferHole.
-            // If so, playback would potentially get stuck, so we artificially inflate
-            // the duration of the last frame to minimize any potential gap between segments.
-            let maxBufferHole = config.maxBufferHole,
-              gapTolerance = Math.floor(maxBufferHole * timeScale),
-              deltaToFrameEnd = (audioTrackLength ? minPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
-            if (deltaToFrameEnd > gapTolerance) {
-              // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
-              // frame overlap. maxBufferHole should be >> lastFrameDuration anyway.
-              mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
-              if (mp4SampleDuration < 0) {
-                mp4SampleDuration = lastFrameDuration;
-              }
-
-              logger.log(`It is approximately ${toMsFromMpegTsClock(deltaToFrameEnd, false)} ms to the next segment; using duration ${toMsFromMpegTsClock(mp4SampleDuration, false)} ms for the last video frame.`);
-            } else {
+      // expected sample duration is the Decoding Timestamp diff of consecutive samples
+      if (i < nbSamples - 1) {
+        mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
+      } else {
+        let config = this.config,
+          lastFrameDuration = avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
+        if (config.stretchShortVideoTrack) {
+          // In some cases, a segment's audio track duration may exceed the video track duration.
+          // Since we've already remuxed audio, and we know how long the audio track is, we look to
+          // see if the delta to the next segment is longer than maxBufferHole.
+          // If so, playback would potentially get stuck, so we artificially inflate
+          // the duration of the last frame to minimize any potential gap between segments.
+          let maxBufferHole = config.maxBufferHole,
+            gapTolerance = Math.floor(maxBufferHole * timeScale),
+            deltaToFrameEnd = (audioTrackLength ? minPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
+          if (deltaToFrameEnd > gapTolerance) {
+            // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
+            // frame overlap. maxBufferHole should be >> lastFrameDuration anyway.
+            mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
+            if (mp4SampleDuration < 0) {
               mp4SampleDuration = lastFrameDuration;
             }
+
+            logger.log(`It is approximately ${toMsFromMpegTsClock(deltaToFrameEnd, false)} ms to the next segment; using duration ${toMsFromMpegTsClock(mp4SampleDuration, false)} ms for the last video frame.`);
           } else {
             mp4SampleDuration = lastFrameDuration;
           }
+        } else {
+          mp4SampleDuration = lastFrameDuration;
         }
-        compositionTimeOffset = Math.round(avcSample.pts - avcSample.dts);
-      } else {
-        compositionTimeOffset = Math.max(0, mp4SampleDuration * Math.round((avcSample.pts - avcSample.dts) / mp4SampleDuration));
       }
+      compositionTimeOffset = Math.round(avcSample.pts - avcSample.dts);
 
       // console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
       outputSamples.push({
