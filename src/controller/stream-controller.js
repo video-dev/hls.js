@@ -617,8 +617,8 @@ class StreamController extends BaseStreamController {
     const media = this.media;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
     if (media && media.readyState) {
-      let fetchdelay, fragPlayingCurrent, nextBufferedFrag;
-      fragPlayingCurrent = this.getBufferedFrag(media.currentTime);
+      let fetchdelay;
+      const fragPlayingCurrent = this.getBufferedFrag(media.currentTime);
       if (fragPlayingCurrent && fragPlayingCurrent.startPTS > 1) {
         // flush buffer preceding current fragment (flush until current fragment start offset)
         // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
@@ -637,10 +637,10 @@ class StreamController extends BaseStreamController {
       }
       // logger.log('fetchdelay:'+fetchdelay);
       // find buffer range that will be reached once new fragment will be fetched
-      nextBufferedFrag = this.getBufferedFrag(media.currentTime + fetchdelay);
-      if (nextBufferedFrag) {
+      const bufferedFrag = this.getBufferedFrag(media.currentTime + fetchdelay);
+      if (bufferedFrag) {
         // we can flush buffer range following this one without stalling playback
-        nextBufferedFrag = this.followingBufferedFrag(nextBufferedFrag);
+        const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag);
         if (nextBufferedFrag) {
           // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
           let fragCurrent = this.fragCurrent;
@@ -652,7 +652,8 @@ class StreamController extends BaseStreamController {
           // start flush position is the start PTS of next buffered frag.
           // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
           // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
-          this.flushMainBuffer(nextBufferedFrag.maxStartPTS, Number.POSITIVE_INFINITY);
+          const startPts = Math.max(bufferedFrag.endPTS, nextBufferedFrag.maxStartPTS + Math.min(this.config.maxFragLookUpTolerance, nextBufferedFrag.duration));
+          this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY);
         }
       }
     }
