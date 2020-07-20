@@ -71,8 +71,8 @@ module.exports = {
     'blacklist_ua': ['internet explorer']
   },
   issue666: {
-    'url': 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
-    'description': 'hls.js/issues/666',
+    'url': 'https://playertest.longtailvideo.com/adaptive/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    'description': 'Surveillance footage - https://github.com/video-dev/hls.js/issues/666',
     'live': false,
     'abr': false,
     'blacklist_ua': ['internet explorer']
