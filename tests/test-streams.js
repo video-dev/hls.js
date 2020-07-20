@@ -44,6 +44,12 @@ module.exports = {
     nudgeMaxRetry: 5
   }
   ),
+  fdr: {
+    url: 'https://cdn.jwplayer.com/manifests/pZxWPRg4.m3u8',
+    description: 'FDR - CDN packaged, 4s segments, 180p - 1080p',
+    live: false,
+    abr: true
+  },
   bigBuckBunny480p: {
     'url': 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     'description': 'Big Buck Bunny - 480p only',
@@ -82,6 +88,12 @@ module.exports = {
   closedCaptions: {
     'url': 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
     'description': 'CNN special report, with CC',
+    'live': false,
+    'abr': false
+  },
+  customIvBadDts: {
+    'url': 'https://playertest.longtailvideo.com/adaptive/customIV/prog_index.m3u8',
+    'description': 'Custom IV with bad PTS DTS',
     'live': false,
     'abr': false,
     'blacklist_ua': ['safari']
