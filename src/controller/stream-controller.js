@@ -231,7 +231,6 @@ class StreamController extends BaseStreamController {
 
   _fetchPayloadOrEos (pos, bufferInfo, levelDetails) {
     const fragPrevious = this.fragPrevious,
-      level = this.level,
       fragments = levelDetails.fragments,
       fragLen = fragments.length;
 
@@ -1332,10 +1331,10 @@ class StreamController extends BaseStreamController {
       const elementaryStreamType = this.audioOnly ? ElementaryStreamTypes.AUDIO : ElementaryStreamTypes.VIDEO;
       this.fragmentTracker.detectEvictedFragments(elementaryStreamType, media.buffered);
     }
-    // move to IDLE once flush complete. this should trigger new fragment loading
-    this.state = State.IDLE;
     // reset reference to frag
     this.fragPrevious = null;
+    // move to IDLE once flush complete. this should trigger new fragment loading
+    this.state = State.IDLE;
   }
 
   onLevelsUpdated (data) {

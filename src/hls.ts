@@ -281,6 +281,7 @@ export default class Hls extends Observer {
    * @param {string} url
    */
   loadSource (url: string) {
+    this.stopLoad();
     url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
