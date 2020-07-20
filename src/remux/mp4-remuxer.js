@@ -313,6 +313,7 @@ class MP4Remuxer {
       minPTS = Math.min(sample.pts, minPTS);
       maxPTS = Math.max(sample.pts, maxPTS);
     }
+    lastDTS = inputSamples[nbSamples - 1].dts;
 
     /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
