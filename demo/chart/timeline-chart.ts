@@ -132,13 +132,26 @@ export class TimelineChart {
     this.hidden = true;
   }
 
-  updateLevels (levels: any[]) {
+  updateLevels (levels: any[], levelSwitched) {
     const { labels, datasets } = this.chart.data;
+    const { loadLevel, nextLoadLevel, nextAutoLevel } = self.hls;
+    const currentLevel = levelSwitched !== undefined ? levelSwitched : self.hls.currentLevel;
     levels.forEach((level, i) => {
       labels.push(getLevelName(level, level.level || level.id || i));
+      let borderColor = null;
+      if (currentLevel === i) {
+        borderColor = 'rgba(32, 32, 240, 1.0)';
+      } else if (loadLevel === i) {
+        borderColor = 'rgba(255, 128, 0, 1.0)';
+      } else if (nextLoadLevel === i) {
+        borderColor = 'rgba(200, 200, 64, 1.0)';
+      } else if (nextAutoLevel === i) {
+        borderColor = 'rgba(160, 0, 160, 1.0)';
+      }
       datasets.push(datasetWithDefaults({
         url: Array.isArray(level.url) ? level.url[0] : level.url,
         trackType: 'level',
+        borderColor,
         level: level.level
       }));
       if (level.details) {
@@ -150,11 +163,13 @@ export class TimelineChart {
 
   updateAudioTracks (audioTracks: any[]) {
     const { labels, datasets } = this.chart.data;
+    const { audioTrack } = self.hls;
     audioTracks.forEach((track, i) => {
       labels.push(getAudioTrackName(track, i));
       datasets.push(datasetWithDefaults({
         url: Array.isArray(track.url) ? track.url[0] : track.url,
         trackType: 'audioTrack',
+        borderColor: audioTrack === i ? 'rgba(32, 32, 240, 1.0)' : null,
         audioTrack: i
       }));
       if (track.details) {
@@ -166,11 +181,13 @@ export class TimelineChart {
 
   updateSubtitleTracks (subtitles: any[]) {
     const { labels, datasets } = this.chart.data;
+    const { subtitleTrack } = self.hls;
     subtitles.forEach((track, i) => {
       labels.push(getSubtitlesName(track, i));
       datasets.push(datasetWithDefaults({
         url: Array.isArray(track.url) ? track.url[0] : track.url,
         trackType: 'subtitleTrack',
+        borderColor: subtitleTrack === i ? 'rgba(32, 32, 240, 1.0)' : null,
         subtitleTrack: i
       }));
       if (track.details) {
@@ -346,6 +363,7 @@ export class TimelineChart {
         categoryPercentage: 0.5,
         url: '',
         trackType: 'textTrack',
+        borderColor: textTrack.mode !== 'hidden' === i ? 'rgba(32, 32, 240, 1.0)' : null,
         textTrack: i
       }));
       this.cuesChangeHandler = this.cuesChangeHandler || ((e) => this.updateTextTrackCues(e.currentTarget));
