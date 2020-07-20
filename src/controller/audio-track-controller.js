@@ -79,6 +79,7 @@ class AudioTrackController extends TaskLoop {
     this.tracks = [];
     this._trackId = -1;
     this._selectDefaultTrack = true;
+    this.audioGroupId = null;
   }
 
   /**
