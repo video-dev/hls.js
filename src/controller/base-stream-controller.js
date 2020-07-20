@@ -63,9 +63,7 @@ export default class BaseStreamController extends TaskLoop {
     const currentTime = media ? media.currentTime : null;
     const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
 
-    if (Number.isFinite(currentTime)) {
-      logger.log(`media seeking to ${currentTime.toFixed(3)}`);
-    }
+    logger.log(`media seeking to ${Number.isFinite(currentTime) ? currentTime.toFixed(3) : currentTime}`);
 
     if (state === State.FRAG_LOADING) {
       let fragCurrent = this.fragCurrent;
