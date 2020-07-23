@@ -282,6 +282,11 @@ export default class Hls extends Observer {
    */
   loadSource (url: string) {
     this.stopLoad();
+    const media = this.media;
+    if (media && this.url) {
+      this.detachMedia();
+      this.attachMedia(media);
+    }
     url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
