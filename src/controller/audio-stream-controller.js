@@ -15,6 +15,8 @@ import { FragmentState } from './fragment-tracker';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
 import { MAX_START_GAP_JUMP } from './gap-controller';
+import { fragmentWithinToleranceTest } from './fragment-finders';
+
 const { performance } = window;
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -218,31 +220,6 @@ class AudioStreamController extends BaseStreamController {
           let foundFrag;
           let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
           const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
-          let fragmentWithinToleranceTest = (candidate) => {
-            // offset should be within fragment boundary - config.maxFragLookUpTolerance
-            // this is to cope with situations like
-            // bufferEnd = 9.991
-            // frag[Ø] : [0,10]
-            // frag[1] : [10,20]
-            // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
-            //              frag start               frag start+duration
-            //                  |-----------------------------|
-            //              <--->                         <--->
-            //  ...--------><-----------------------------><---------....
-            // previous frag         matching fragment         next frag
-            //  return -1             return 0                 return 1
-            // logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-            // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
-            let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration);
-            if ((candidate.start + candidate.duration - candidateLookupTolerance) <= bufferEnd) {
-              return 1;
-            } else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start) {
-              // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
-              return -1;
-            }
-
-            return 0;
-          };
 
           if (bufferEnd < end) {
             if (bufferEnd > end - maxFragLookUpTolerance) {
@@ -250,10 +227,10 @@ class AudioStreamController extends BaseStreamController {
             }
 
             // Prefer the next fragment if it's within tolerance
-            if (fragNext && !fragmentWithinToleranceTest(fragNext)) {
+            if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
               foundFrag = fragNext;
             } else {
-              foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
+              foundFrag = BinarySearch.search(fragments, (frag) => fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, frag));
             }
           } else {
             // reach end of playlist
@@ -320,26 +297,24 @@ class AudioStreamController extends BaseStreamController {
       }
       break;
     case State.WAITING_INIT_PTS:
-      const videoTrackCC = this.videoTrackCC;
-      if (this.initPTS[videoTrackCC] === undefined) {
-        break;
-      }
-
       // Ensure we don't get stuck in the WAITING_INIT_PTS state if the waiting frag CC doesn't match any initPTS
       const waitingFrag = this.waitingFragment;
       if (waitingFrag) {
         const waitingFragCC = waitingFrag.frag.cc;
-        if (videoTrackCC !== waitingFragCC) {
-          track = this.tracks[this.trackId];
-          if (track.details && track.details.live) {
-            logger.warn(`Waiting fragment CC (${waitingFragCC}) does not match video track CC (${videoTrackCC})`);
-            this.waitingFragment = null;
-            this.state = State.IDLE;
-          }
-        } else {
-          this.state = State.FRAG_LOADING;
-          this.onFragLoaded(this.waitingFragment);
+        if (this.initPTS[waitingFragCC] !== undefined) {
           this.waitingFragment = null;
+          this.state = State.FRAG_LOADING;
+          this.onFragLoaded(waitingFrag);
+        } else if (!this.fragPrevious) {
+          logger.warn(`Waiting fragment CC (${waitingFragCC}) cancelled because of continuity change`);
+          this.clearWaitingFragment();
+        } else {
+          const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer, this.media.currentTime, config.maxBufferHole);
+          const waitingFragmentAtPosition = fragmentWithinToleranceTest(bufferInfo.end, config.maxFragLookUpTolerance, waitingFrag.frag);
+          if (waitingFragmentAtPosition !== 0) {
+            logger.warn(`Waiting fragment CC (${waitingFragCC}) @ ${waitingFrag.frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`);
+            this.clearWaitingFragment();
+          }
         }
       } else {
         this.state = State.IDLE;
@@ -354,6 +329,15 @@ class AudioStreamController extends BaseStreamController {
       break;
     default:
       break;
+    }
+  }
+
+  clearWaitingFragment () {
+    const waitingFrag = this.waitingFragment;
+    if (waitingFrag) {
+      this.fragmentTracker.removeFragment(waitingFrag.frag);
+      this.waitingFragment = null;
+      this.state = State.IDLE;
     }
   }
 
@@ -399,8 +383,8 @@ class AudioStreamController extends BaseStreamController {
     this.trackId = data.id;
 
     this.fragCurrent = null;
+    this.clearWaitingFragment();
     this.state = State.PAUSED;
-    this.waitingFragment = null;
     // destroy useless demuxer when switching audio to main
     if (!altAudio) {
       if (this.demuxer) {
