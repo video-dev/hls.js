@@ -349,6 +349,14 @@ export class TimelineChart {
     this.resize(datasets);
   }
 
+  removeSourceBuffers () {
+    const { labels, datasets } = this.chart.data;
+    while ((labels[0] || '').indexOf('buffer') > -1) {
+      labels.shift();
+      datasets.shift();
+    }
+  }
+
   setTextTracks (textTracks) {
     const { labels, datasets } = this.chart.data;
     this.removeType('textTrack');
