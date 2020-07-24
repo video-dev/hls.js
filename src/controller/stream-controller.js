@@ -571,7 +571,9 @@ class StreamController extends BaseStreamController {
       let media = this.media, previouslyPaused;
       if (media) {
         previouslyPaused = media.paused;
-        media.pause();
+        if (!previouslyPaused) {
+          media.pause();
+        }
       } else {
         // don't restart playback after instant level switch in case media not attached
         previouslyPaused = true;
@@ -597,7 +599,7 @@ class StreamController extends BaseStreamController {
     const media = this.media;
     if (media && media.buffered.length) {
       this.immediateSwitch = false;
-      if (BufferHelper.isBuffered(media, media.currentTime)) {
+      if (media.currentTime > 0 && BufferHelper.isBuffered(media, media.currentTime)) {
         // only nudge if currentTime is buffered
         media.currentTime -= 0.0001;
       }
