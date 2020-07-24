@@ -179,7 +179,7 @@ class AudioStreamController extends BaseStreamController {
           end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration,
           frag;
 
-          // When switching audio track, reload audio as close as possible to currentTime
+        // When switching audio track, reload audio as close as possible to currentTime
         if (audioSwitch) {
           if (trackDetails.live && !trackDetails.PTSKnown) {
             logger.log('switching audiotrack, live stream, unknown PTS,load first fragment');
@@ -306,13 +306,13 @@ class AudioStreamController extends BaseStreamController {
           this.state = State.FRAG_LOADING;
           this.onFragLoaded(waitingFrag);
         } else if (!this.fragPrevious) {
-          logger.warn(`Waiting fragment CC (${waitingFragCC}) cancelled because of continuity change`);
+          logger.log(`Waiting fragment cc (${waitingFragCC}) cancelled because of continuity change`);
           this.clearWaitingFragment();
         } else {
           const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer, this.media.currentTime, config.maxBufferHole);
           const waitingFragmentAtPosition = fragmentWithinToleranceTest(bufferInfo.end, config.maxFragLookUpTolerance, waitingFrag.frag);
           if (waitingFragmentAtPosition !== 0) {
-            logger.warn(`Waiting fragment CC (${waitingFragCC}) @ ${waitingFrag.frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`);
+            logger.log(`Waiting fragment cc (${waitingFragCC}) @ ${waitingFrag.frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`);
             this.clearWaitingFragment();
           }
         }
@@ -514,7 +514,7 @@ class AudioStreamController extends BaseStreamController {
           let accurateTimeOffset = false; // details.PTSKnown || !details.live;
           this.demuxer.push(data.payload, initSegmentData, audioCodec, null, fragCurrent, duration, accurateTimeOffset, initPTS);
         } else {
-          logger.log(`unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
+          logger.log(`Unknown video PTS for cc ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           this.waitingFragment = data;
           this.state = State.WAITING_INIT_PTS;
         }
