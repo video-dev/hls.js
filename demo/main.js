@@ -1311,7 +1311,7 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);
   }, chart);
-  hls.on(Hls.Events.BUFFER_RESET, (eventName, { tracks }) => {
+  hls.on(Hls.Events.BUFFER_RESET, (eventName) => {
     chart.removeSourceBuffers();
   }, chart);
   hls.on(Hls.Events.LEVELS_UPDATED, (eventName, { levels }) => {
