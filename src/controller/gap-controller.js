@@ -88,7 +88,11 @@ export default class GapController {
     if (!this.moved && this.stalled) {
       // Jump start gaps within jump threshold
       const startJump = Math.max(nextStart, bufferInfo.start || 0) - currentTime;
-      if (startJump > 0 && startJump <= MAX_START_GAP_JUMP) {
+
+      const level = this.hls.levels ? this.hls.levels[this.hls.currentLevel] : null;
+      const isLive = level?.details?.live;
+      const maxStartGapJump = isLive ? level.details.targetduration * 2 : MAX_START_GAP_JUMP;
+      if (startJump > 0 && startJump <= maxStartGapJump) {
         this._trySkipBufferHole(null);
         return;
       }
