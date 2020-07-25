@@ -106,9 +106,9 @@ class StreamController extends BaseStreamController {
       this._doTickIdle();
       break;
     case State.WAITING_LEVEL:
-      var level = this.levels[this.level];
-      // check if playlist is already loaded
-      if (level && level.details) {
+      var details = this.levels[this.level]?.details;
+      // check if playlist is already loaded (must be current level for live)
+      if (details && (!details.live || this.levelLastLoaded === this.level)) {
         this.state = State.IDLE;
       }
 
@@ -301,7 +301,7 @@ class StreamController extends BaseStreamController {
       let liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
       bufferEnd = liveSyncPosition;
       if (media && !media.paused && media.readyState && media.duration > liveSyncPosition && liveSyncPosition > media.currentTime) {
-        logger.log(`buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
+        logger.warn(`buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
         media.currentTime = liveSyncPosition;
       }
 
@@ -831,7 +831,7 @@ class StreamController extends BaseStreamController {
       }
       this.nextLoadPosition = this.startPosition;
     }
-    // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
+    // only switch back to IDLE state if we were waiting for level to start downloading a new fragment
     if (this.state === State.WAITING_LEVEL) {
       this.state = State.IDLE;
     }
