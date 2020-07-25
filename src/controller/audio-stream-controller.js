@@ -47,6 +47,7 @@ class AudioStreamController extends BaseStreamController {
     this.initPTS = [];
     this.waitingFragment = null;
     this.videoTrackCC = null;
+    this.waitingVideoCC = null;
   }
 
   // Signal that video PTS was found
@@ -305,13 +306,15 @@ class AudioStreamController extends BaseStreamController {
           this.waitingFragment = null;
           this.state = State.FRAG_LOADING;
           this.onFragLoaded(waitingFrag);
-        } else if (!this.fragPrevious) {
-          logger.log(`Waiting fragment cc (${waitingFragCC}) cancelled because of continuity change`);
+        } else if (this.videoTrackCC !== this.waitingVideoCC) {
+          // Drop waiting fragment if videoTrackCC has changed since waitingFragment was set and initPTS was not found
+          logger.log(`Waiting fragment cc (${waitingFragCC}) cancelled because video is at cc ${this.videoTrackCC}`);
           this.clearWaitingFragment();
         } else {
+          // Drop waiting fragment if an earlier fragment is needed
           const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer, this.media.currentTime, config.maxBufferHole);
           const waitingFragmentAtPosition = fragmentWithinToleranceTest(bufferInfo.end, config.maxFragLookUpTolerance, waitingFrag.frag);
-          if (waitingFragmentAtPosition !== 0) {
+          if (waitingFragmentAtPosition < 0) {
             logger.log(`Waiting fragment cc (${waitingFragCC}) @ ${waitingFrag.frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`);
             this.clearWaitingFragment();
           }
@@ -337,6 +340,7 @@ class AudioStreamController extends BaseStreamController {
     if (waitingFrag) {
       this.fragmentTracker.removeFragment(waitingFrag.frag);
       this.waitingFragment = null;
+      this.waitingVideoCC = null;
       this.state = State.IDLE;
     }
   }
@@ -516,6 +520,7 @@ class AudioStreamController extends BaseStreamController {
         } else {
           logger.log(`Unknown video PTS for cc ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           this.waitingFragment = data;
+          this.waitingVideoCC = this.videoTrackCC;
           this.state = State.WAITING_INIT_PTS;
         }
       }
