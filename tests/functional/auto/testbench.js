@@ -92,7 +92,7 @@ function startStream (streamUrl, config, callback, autoplay) {
         var playPromise = video.play();
         if (playPromise) {
           playPromise.catch(function (error) {
-            console.log('[test] > video.play() failed with error:', error);
+            console.log('[test] > video.play() failed with error: ' + error.name + ' ' + error.message);
             if (error.name === 'NotAllowedError') {
               console.log('[test] > Attempting to play with video muted');
               video.muted = true;

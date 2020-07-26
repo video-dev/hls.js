@@ -62,6 +62,7 @@ HttpServer.createServer({
   root: './'
 }).listen(8000, hostname);
 
+const stringifyResult = (result) => JSON.stringify(result, Object.keys(result).filter(k => k !== 'logs'), 2);
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function retry (attempt, numAttempts = 5, interval = 2000) {
   try {
@@ -88,7 +89,7 @@ async function testLoadedData (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('loadeddata');
 }
 
 async function testIdleBufferLength (url, config) {
@@ -114,7 +115,7 @@ async function testIdleBufferLength (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('loadeddata');
 }
 
 async function testSmoothSwitch (url, config) {
@@ -144,7 +145,7 @@ async function testSmoothSwitch (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('currentTimeDelta').which.is.gt(0);
+  expect(result, stringifyResult(result)).to.have.property('currentTimeDelta').which.is.gt(0);
 }
 
 async function testSeekOnLive (url, config) {
@@ -164,7 +165,7 @@ async function testSeekOnLive (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('seeked');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('seeked');
 }
 
 async function testSeekOnVOD (url, config) {
@@ -175,6 +176,12 @@ async function testSeekOnVOD (url, config) {
       video.onloadeddata = function () {
         window.setTimeout(function () {
           video.currentTime = video.duration - 5;
+          // Fail test early if more than 2 buffered ranges are found
+          video.onprogress = function () {
+            if (video.buffered.length > 2) {
+              callback({ code: 'buffer-gaps', bufferedRanges: video.buffered.length, logs: window.logString });
+            }
+          };
         }, 5000);
       };
       video.onended = function () {
@@ -184,7 +191,7 @@ async function testSeekOnVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('ended');
 }
 
 async function testSeekEndVOD (url, config) {
@@ -204,7 +211,7 @@ async function testSeekEndVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('ended');
 }
 
 async function testIsPlayingVOD (url, config) {
@@ -235,7 +242,7 @@ async function testIsPlayingVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('playing').which.is.true;
+  expect(result, stringifyResult(result)).to.have.property('playing').which.is.true;
 }
 
 async function testSeekBackToStart (url, config) {
@@ -264,7 +271,7 @@ async function testSeekBackToStart (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('playing').which.is.true;
+  expect(result, stringifyResult(result)).to.have.property('playing').which.is.true;
 }
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
@@ -410,7 +417,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           testIsPlayingVOD.bind(null, url, config)
         );
         it(
-          `should seek 5s from end and receive video ended event for ${stream.description}`,
+          `should seek 5s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
           testSeekOnVOD.bind(null, url, config)
         );
         // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
