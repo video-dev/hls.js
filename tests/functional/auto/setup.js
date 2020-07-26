@@ -77,9 +77,8 @@ async function retry (attempt, numAttempts = 5, interval = 2000) {
 }
 
 async function testLoadedData (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -93,8 +92,7 @@ async function testLoadedData (url, config) {
 }
 
 async function testIdleBufferLength (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
+  const result = await browser.executeAsyncScript(function (url, config) {
       const callback = arguments[arguments.length - 1];
       const autoplay = false;
       window.startStream(url, config, callback, autoplay);
@@ -105,7 +103,8 @@ async function testIdleBufferLength (url, config) {
         if (buffered.length) {
           const bufferEnd = buffered.end(buffered.length - 1);
           const duration = video.duration;
-          console.log(`[log] > progress: ${bufferEnd.toFixed(2)}/${duration.toFixed(2)} buffered.length: ${buffered.length}`);
+          console.log('[log] > progress: ' + bufferEnd.toFixed(2) + '/' + duration.toFixed(2) +
+            ' buffered.length: ' + buffered.length);
           if (bufferEnd >= maxBufferLength || bufferEnd > duration - 1) {
             callback({ code: 'loadeddata', logs: window.logString });
           }
@@ -119,26 +118,23 @@ async function testIdleBufferLength (url, config) {
 }
 
 async function testSmoothSwitch (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       window.hls.once(window.Hls.Events.FRAG_CHANGED, (event, data) => {
         window.switchToHighestLevel('next');
       });
       window.hls.on(window.Hls.Events.LEVEL_SWITCHED, (event, data) => {
-        console.log(`[test] > level switched: ${data.level}`);
+        console.log('[test] > level switched: ' + data.level);
         let currentTime = video.currentTime;
         if (data.level === window.hls.levels.length - 1) {
-          console.log(`[test] > switched on level: ${data.level}`);
+          console.log('[test] > switched on level: ' + data.level);
           window.setTimeout(function () {
             let newCurrentTime = video.currentTime;
-            console.log(
-              `[test] > currentTime delta : ${newCurrentTime - currentTime}`
-            );
+            console.log('[test] > currentTime delta : ' + (newCurrentTime - currentTime));
             callback({
-              code: newCurrentTime > currentTime,
+              currentTimeDelta: newCurrentTime - currentTime,
               logs: window.logString
             });
           }, 2000);
@@ -148,13 +144,12 @@ async function testSmoothSwitch (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals(true);
+  expect(result, JSON.stringify(result, null, 2)).to.have.property('currentTimeDelta').which.is.gt(0);
 }
 
 async function testSeekOnLive (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -173,9 +168,8 @@ async function testSeekOnLive (url, config) {
 }
 
 async function testSeekOnVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -194,9 +188,8 @@ async function testSeekOnVOD (url, config) {
 }
 
 async function testSeekEndVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -215,9 +208,8 @@ async function testSeekEndVOD (url, config) {
 }
 
 async function testIsPlayingVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -229,15 +221,13 @@ async function testIsPlayingVOD (url, config) {
         let currentTime = video.currentTime;
         if (expectedPlaying) {
           window.setTimeout(function () {
-            console.log(
-              `[test] > video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
-            );
+            console.log('[test] > video expected playing. last currentTime/new currentTime=' +
+              currentTime + '/' + video.currentTime);
             callback({ playing: currentTime !== video.currentTime });
           }, 5000);
         } else {
-          console.log(
-            `[test] > video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`
-          );
+          console.log('[test] > video not playing. paused/ended/buffered.length=' +
+            video.paused + '/' + video.ended + '/' + video.buffered.length);
           callback({ playing: false });
         }
       };
@@ -249,9 +239,8 @@ async function testIsPlayingVOD (url, config) {
 }
 
 async function testSeekBackToStart (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.ontimeupdate = function () {
