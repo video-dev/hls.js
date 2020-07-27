@@ -668,13 +668,15 @@ class MP4Remuxer {
       mp4Sample.duration = lastSampleDuration;
     }
     if (nbSamples) {
+      logger.log(`Audio remuxer nextAudioPts  in: ${this.nextAudioPts} inputTimeScale: ${track.inputTimeScale} timescale: ${track.timescale}`);
       // next audio sample PTS should be equal to last sample PTS + duration
       this.nextAudioPts = nextAudioPts = lastPTS + scaleFactor * lastSampleDuration;
-      // logger.log('Audio/PTS/PTSend:' + audioSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
+      logger.log(`Audio remuxer nextAudioPts out: ${nextAudioPts}`);
       track.samples = outputSamples;
       if (rawMPEG) {
         moof = new Uint8Array();
       } else {
+        logger.log(`Audio moof ${track.sequenceNumber} @${(toMsFromMpegTsClock(firstPTS / scaleFactor, true) / 1000).toFixed(3)}s (${firstPTS} / ${scaleFactor})`);
         moof = MP4.moof(track.sequenceNumber++, firstPTS / scaleFactor, track);
       }
 

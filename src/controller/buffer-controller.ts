@@ -259,6 +259,7 @@ class BufferController extends EventHandler {
   }
 
   private _onSBUpdateEnd = () => {
+    logger.log('sb update ended');
     // update timestampOffset
     if (this.audioTimestampOffset && this.sourceBuffer.audio) {
       let audioBuffer = this.sourceBuffer.audio;
@@ -268,8 +269,10 @@ class BufferController extends EventHandler {
       delete this.audioTimestampOffset;
     }
 
-    if (this._needsFlush) {
+    if (this._needsFlush && this.flushBufferCounter === 0) {
       this.doFlush();
+    } else {
+      this._needsFlush = false;
     }
 
     if (this._needsEos) {
@@ -636,7 +639,7 @@ class BufferController extends EventHandler {
 
       // reset sourceBuffer ended flag before appending segment
       sb.ended = false;
-      // logger.log(`appending ${segment.content} ${type} SB, size:${segment.data.length}, ${segment.parent}`);
+      logger.log(`appending ${segment.content} ${segment.type} SB, size:${segment.data.byteLength}, ${segment.parent}`);
       this.parent = segment.parent;
       sb.appendBuffer(segment.data);
       this.appendError = 0;
@@ -684,7 +687,6 @@ class BufferController extends EventHandler {
     if (this.media) {
       currentTime = this.media.currentTime.toFixed(3);
     }
-    logger.log(`flushBuffer,pos/start/end: ${currentTime}/${startOffset}/${endOffset}`);
 
     // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
     if (this.flushBufferCounter >= this.appended) {
@@ -695,6 +697,7 @@ class BufferController extends EventHandler {
     const sb = sourceBuffer[sbType];
     // we are going to flush buffer, mark source buffer as 'not ended'
     if (sb) {
+      logger.log(`flushBuffer,flush-counter/appending/time/start/end: ${this.flushBufferCounter}/${this.appending}/${currentTime}/${startOffset}/${endOffset}`);
       sb.ended = false;
       if (!sb.updating) {
         if (this.removeBufferRange(sbType, sb, startOffset, endOffset)) {
@@ -705,9 +708,9 @@ class BufferController extends EventHandler {
         logger.warn('cannot flush, sb updating in progress');
         return false;
       }
+      logger.log('buffer flushed');
     }
 
-    logger.log('buffer flushed');
     // everything flushed !
     return true;
   }

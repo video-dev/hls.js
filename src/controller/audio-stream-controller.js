@@ -158,7 +158,7 @@ class AudioStreamController extends BaseStreamController {
       const audioSwitch = this.audioSwitch;
       const trackId = this.trackId;
 
-        // if buffer length is less than maxBufLen try to load a new fragment
+      // if buffer length is less than maxBufLen try to load a new fragment
       if ((bufferLen < maxBufLen || audioSwitch) && trackId < tracks.length) {
         trackDetails = tracks[trackId].details;
         // if track info not retrieved yet, switch state and wait for track retrieval
@@ -262,7 +262,7 @@ class AudioStreamController extends BaseStreamController {
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
             this.fragCurrent = frag;
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-              logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+              logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, start:${frag.start.toFixed(2)}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
 
               if (frag.sn !== 'initSegment') {
                 this.startFragRequested = true;
@@ -352,7 +352,7 @@ class AudioStreamController extends BaseStreamController {
     media.addEventListener('seeking', this.onvseeking);
     media.addEventListener('ended', this.onvended);
     let config = this.config;
-    if (this.tracks && config.autoStartLoad) {
+    if (this.tracks && config.autoStartLoad && this.state === State.STOPPED) {
       this.startLoad(config.startPosition);
     }
   }
@@ -388,7 +388,6 @@ class AudioStreamController extends BaseStreamController {
 
     this.fragCurrent = null;
     this.clearWaitingFragment();
-    this.state = State.PAUSED;
     // destroy useless demuxer when switching audio to main
     if (!altAudio) {
       if (this.demuxer) {
@@ -400,11 +399,18 @@ class AudioStreamController extends BaseStreamController {
       this.setInterval(TICK_INTERVAL);
     }
 
+    if (this.state === State.STOPPED) {
+      this.audioSwitch = !!altAudio;
+      return;
+    }
+
     // should we switch tracks ?
     if (altAudio) {
       this.audioSwitch = true;
       // main audio track are handled by stream-controller, just do something if switching to alt audio track
       this.state = State.IDLE;
+    } else {
+      this.state = State.PAUSED;
     }
     this.tick();
   }
@@ -460,7 +466,7 @@ class AudioStreamController extends BaseStreamController {
       }
       this.nextLoadPosition = this.startPosition;
     }
-    // only switch batck to IDLE state if we were waiting for track to start downloading a new fragment
+    // only switch back to IDLE state if we were waiting for track to start downloading a new fragment
     if (this.state === State.WAITING_TRACK) {
       this.state = State.IDLE;
     }

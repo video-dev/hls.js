@@ -447,7 +447,7 @@ class StreamController extends BaseStreamController {
       frag.autoLevel = this.hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
 
-      logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${this.level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
+      logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${this.level}, start:${frag.start.toFixed(2)}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
 
       this.hls.trigger(Event.FRAG_LOADING, { frag });
       // lazy demuxer init, as this could take some time ... do it during frag loading
@@ -681,7 +681,7 @@ class StreamController extends BaseStreamController {
     media.addEventListener('seeked', this.onvseeked);
     media.addEventListener('ended', this.onvended);
     let config = this.config;
-    if (this.levels && config.autoStartLoad) {
+    if (this.levels && config.autoStartLoad && this.state === State.STOPPED) {
       this.hls.startLoad(config.startPosition);
     }
 
@@ -765,7 +765,7 @@ class StreamController extends BaseStreamController {
     this.levels = data.levels;
     this.startFragRequested = false;
     let config = this.config;
-    if (config.autoStartLoad || this.forceStartLoad) {
+    if (config.autoStartLoad && this.state === State.STOPPED || this.forceStartLoad) {
       this.hls.startLoad(config.startPosition);
     }
   }
@@ -1105,8 +1105,10 @@ class StreamController extends BaseStreamController {
           this.demuxer.destroy();
           this.demuxer = null;
         }
-        // switch to IDLE state to load new fragment
-        this.state = State.IDLE;
+        if (this.state !== State.STOPPED) {
+          // switch to IDLE state to load new fragment
+          this.state = State.IDLE;
+        }
       }
       let hls = this.hls;
       // switching to main audio, flush all audio and trigger track switched

@@ -370,15 +370,15 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   });
 
   after(async function () {
-    console.log('Quitting browser...');
-    await browser.quit();
-    console.log('Browser quit.');
+    // console.log('Quitting browser...');
+    // await browser.quit();
+    // console.log('Browser quit.');
   });
 
   for (let name in streams) {
     stream = streams[name];
-    let url = stream.url;
-    let config = stream.config || {};
+    const url = stream.url;
+    const config = stream.config || { enableWorker: false };
     if (
       !stream.blacklist_ua ||
       stream.blacklist_ua.indexOf(browserConfig.name) === -1
