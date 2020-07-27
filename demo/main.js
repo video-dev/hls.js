@@ -12,7 +12,7 @@ const STORAGE_KEYS = {
 };
 
 const testStreams = require('../tests/test-streams');
-const defaultTestStreamUrl = testStreams['bbb'].url;
+const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
 let demoConfig = getURLParam('demoConfig', null);
