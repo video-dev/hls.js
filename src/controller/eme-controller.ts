@@ -355,7 +355,6 @@ class EMEController extends EventHandler {
     while (end > start && encodedBase64[end - 1] === '=') {
       --end;
     }
-      
     return (start > 0 || end < encodedBase64.length) ? encodedBase64.substring(start, end) : encodedBase64;
   }
 
