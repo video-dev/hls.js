@@ -121,15 +121,15 @@
       <pre id="errorOut" class="center" style="white-space: pre-wrap;"></pre>
 
       <div class="center" style="text-align: center;" id="toggleButtons">
-        <button type="button" class="btn btn-sm" onclick="toggleTab('timelineTab');">Timeline</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('playbackControlTab');">Playback</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('qualityLevelControlTab');">Quality-levels</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('audioTrackControlTab');">Audio-tracks</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('statsDisplayTab');">Buffer &amp; Statistics</button>
-        <button type="button" class="btn btn-sm" onclick="toggleTab('metricsDisplayTab'); showMetrics();">Real-time metrics</button>
+        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="playbackControlTab" onclick="toggleTab(this);">Playback</button>
+        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="qualityLevelControlTab" onclick="toggleTab(this);">Quality-levels</button>
+        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="audioTrackControlTab" onclick="toggleTab(this);">Audio-tracks</button>
+        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="timelineTab" onclick="toggleTab(this);">Timeline</button>
+        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="statsDisplayTab" onclick="toggleTab(this);">Buffer &amp; Statistics</button>
+        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="metricsDisplayTab" onclick="toggleTab(this); showMetrics();">Real-time metrics</button>
       </div>
 
-      <div class="center" id='playbackControlTab'>
+      <div class="center demo-tab" id='playbackControlTab'>
         <h4>Playback</h4>
         <center>
             <p>
@@ -169,7 +169,7 @@
 
       </div>
 
-      <div class="center" id='qualityLevelControlTab'>
+      <div class="center demo-tab" id='qualityLevelControlTab'>
         <h4>Quality-levels</h4>
         <center>
             <table>
@@ -209,7 +209,7 @@
         </center>
       </div>
 
-      <div class="center" id='audioTrackControlTab'>
+      <div class="center demo-tab" id='audioTrackControlTab'>
         <h4>Audio-tracks</h4>
         <table>
           <tr>
@@ -220,7 +220,7 @@
         </table>
       </div>
 
-      <div class="center" id='metricsDisplayTab'>
+      <div class="center demo-tab" id='metricsDisplayTab'>
         <h4>Real-time metrics</h4>
         <div id="metricsButton">
           <button type="button" class="btn btn-xs btn-info" onclick="$('#metricsButtonWindow').toggle();$('#metricsButtonFixed').toggle();windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
@@ -255,7 +255,7 @@
         </div>
       </div>
 
-      <div class="center" id='statsDisplayTab'>
+      <div class="center demo-tab" id='statsDisplayTab'>
         <h4>Buffer &amp; Statistics</h4>
         <label>Buffer state:</label>
         <pre id="bufferedOut"></pre>
@@ -263,7 +263,7 @@
         <pre id='statisticsOut'></pre>
       </div>
 
-      <div class="center demo-timeline-chart-container" id='timelineTab'>
+      <div class="center demo-tab demo-timeline-chart-container" id='timelineTab'>
         <canvas id="timeline-chart"></canvas>
       </div>
 
