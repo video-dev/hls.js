@@ -47,10 +47,17 @@ export type DRMSystemOptions = {
   videoRobustness?: string,
 }
 
+export interface KeyidValue {
+  [keyid: string] : string;
+}
+
 export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
   widevineLicenseUrl?: string,
+  clearkey: boolean,
+  clearkeyServerUrl?: string,
+  clearkeyPair: KeyidValue,
   drmSystemOptions: DRMSystemOptions,
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null,
 };
@@ -245,6 +252,9 @@ export const hlsDefaultConfig: HlsConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
+  clearkeyServerUrl: void 0,
+  clearkey: false,
+  clearkeyPair: {},
   widevineLicenseUrl: void 0, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
