@@ -12,7 +12,7 @@ const STORAGE_KEYS = {
 };
 
 const testStreams = require('../tests/test-streams');
-const defaultTestStreamUrl = testStreams['bbb'].url;
+const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
 let demoConfig = getURLParam('demoConfig', null);
@@ -138,8 +138,7 @@ $(document).ready(function () {
 
   video.volume = 0.05;
 
-  hideAllTabs();
-  // $('#timelineTab').show();
+  toggleTab($('.demo-tab-btn')[0]);
 
   $('#metricsButtonWindow').toggle(window.windowSliding);
   $('#metricsButtonFixed').toggle(!window.windowSliding);
@@ -1311,6 +1310,9 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);
   }, chart);
+  hls.on(Hls.Events.BUFFER_RESET, (eventName) => {
+    chart.removeSourceBuffers();
+  }, chart);
   hls.on(Hls.Events.LEVELS_UPDATED, (eventName, { levels }) => {
     chart.removeType('level');
     chart.updateLevels(levels);
@@ -1402,17 +1404,14 @@ function arrayConcat (inputArray) {
 }
 
 function hideAllTabs () {
-  $('#timelineTab').hide();
-  $('#playbackControlTab').hide();
-  $('#qualityLevelControlTab').hide();
-  $('#audioTrackControlTab').hide();
-  $('#metricsDisplayTab').hide();
-  $('#statsDisplayTab').hide();
+  $('.demo-tab-btn').css('background-color', '');
+  $('.demo-tab').hide();
 }
 
-function toggleTab (tabElId) {
+function toggleTab (btn) {
   hideAllTabs();
   window.hideMetrics();
+  const tabElId = $(btn).data('tab');
   $('#' + tabElId).show();
   if (hls) {
     if (tabElId === 'timelineTab') {
@@ -1422,6 +1421,7 @@ function toggleTab (tabElId) {
       chart.hide();
     }
   }
+  $(btn).css('background-color', 'orange');
 }
 
 function appendLog (textElId, message) {
