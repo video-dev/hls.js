@@ -75,13 +75,11 @@ const createClearkeyMediaKeySystemConfigurations = function (
   });
 
   videoCodecs.forEach((codec) => {
-    logger.log(codec);
+    // logger.log(codec);
     baseConfig.videoCapabilities!.push({
       contentType: `video/mp4; codecs="${codec}"`
     });
   });
-  logger.log(baseConfig.audioCapabilities);
-  logger.log(baseConfig.videoCapabilities);
   return [
     baseConfig
   ];
@@ -291,14 +289,14 @@ class EMEController extends EventHandler {
     // Instead, we will generate the license synchronously on the client, using
     // the hard-coded KEY.
     if (this._clearkeyPair == null) {
-      console.error('Failed to load the keys');
+      logger.error('Failed to load the keys');
     }
 
     let license = this._generateLicense(message);
 
     keySession.update(license).catch(
       function (error) {
-        console.error('Failed to update the session', error);
+        logger.error('Failed to update the session', error);
       }
     );
     logger.log(`Received license data (length: ${license ? license.byteLength : license}), updating key-session`);
@@ -314,12 +312,10 @@ class EMEController extends EventHandler {
       k?: string
     }
 
-    logger.log(JSON.stringify(request.kids));
     let keyarray: responseFormat[] = [];
-    logger.log(`clearkey pair: ${JSON.stringify(this._clearkeyPair)}`);
     for (let id of request.kids) {
       let decodedBase64 = this.base64ToHex(id);
-      logger.log(`decodedBase64: ${decodedBase64}`);
+      // logger.log(`decodedBase64: ${decodedBase64}`);
       if (!this._clearkeyPair.hasOwnProperty(decodedBase64)) {
         logger.error('No pair key, please use lower case');
       }
