@@ -11,17 +11,17 @@ export interface Demuxer {
 export interface DemuxerResult {
   audioTrack: DemuxedAudioTrack
   avcTrack: DemuxedAvcTrack
-  id3Track: DemuxedTrack
-  textTrack: DemuxedTrack
+  id3Track: DemuxedMetadataTrack
+  textTrack: DemuxedTrack<unknown>
 }
 
-export interface DemuxedTrack {
-  type: string
+export interface DemuxedTrack<T> {
+  type: 'audio' | 'video' | 'id3' | 'text'
   id: number
   pid: number
   inputTimeScale: number
   sequenceNumber: number
-  samples: any
+  samples: T
   timescale?: number
   container?: string
   dropped: number
@@ -30,7 +30,8 @@ export interface DemuxedTrack {
   codec?: string
 }
 
-export interface DemuxedAudioTrack extends DemuxedTrack {
+export interface DemuxedAudioTrack extends DemuxedTrack<any> {
+  type: 'audio',
   config?: Array<number>
   samplerate?: number
   isAAC?: boolean
@@ -38,7 +39,8 @@ export interface DemuxedAudioTrack extends DemuxedTrack {
   manifestCodec?: string
 }
 
-export interface DemuxedAvcTrack extends DemuxedTrack {
+export interface DemuxedAvcTrack extends DemuxedTrack<AvcSample[]> {
+  type: 'video',
   width?: number
   height?: number
   pixelRatio?: number
@@ -46,15 +48,14 @@ export interface DemuxedAvcTrack extends DemuxedTrack {
   pps?: Array<number>
   sps?: Array<number>
   naluState?: number
-  samples: Array<AvcSample>
 }
 
-export interface DemuxedMetadataTrack extends DemuxedTrack {
-  samples: MetadataSample[]
+export interface DemuxedMetadataTrack extends DemuxedTrack<MetadataSample[]> {
+  type: 'id3'
 }
 
-export interface DemuxedUserdataTrack extends DemuxedTrack {
-  samples: UserdataSample[]
+export interface DemuxedUserdataTrack extends DemuxedTrack<UserdataSample[]> {
+  type: 'text'
 }
 
 export interface MetadataSample {

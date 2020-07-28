@@ -22,7 +22,9 @@ import {
   DemuxedTrack,
   Demuxer,
   DemuxerResult,
-  AvcSample, DemuxedMetadataTrack, ElementaryStreamData
+  AvcSample,
+  DemuxedMetadataTrack,
+  ElementaryStreamData
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
@@ -75,7 +77,7 @@ class TSDemuxer implements Demuxer {
   private _avcTrack!: DemuxedAvcTrack;
   private _audioTrack!: DemuxedAudioTrack;
   private _id3Track!: DemuxedMetadataTrack;
-  private _txtTrack!: DemuxedTrack;
+  private _txtTrack!: DemuxedTrack<any>;
   private aacOverFlow: any;
   private avcSample: AvcSample | null = null;
   private remainderData: Uint8Array | null = null;
@@ -121,7 +123,11 @@ class TSDemuxer implements Demuxer {
    * @param {number} duration
    * @return {object} TSDemuxer's internal track model
    */
-  static createTrack (type: 'audio' | 'video' | 'id3' | 'text', duration: number) : DemuxedTrack {
+  static createTrack (type: 'audio', duration: number): DemuxedAudioTrack
+  static createTrack (type: 'video', duration: number): DemuxedAvcTrack
+  static createTrack (type: 'id3', duration: number): DemuxedMetadataTrack
+  static createTrack (type: 'text', duration: number): DemuxedTrack<unknown>
+  static createTrack (type: 'audio' | 'video' | 'id3' | 'text', duration: number): DemuxedTrack<unknown> {
     return {
       container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined,
       type,
@@ -455,7 +461,7 @@ class TSDemuxer implements Demuxer {
     this._duration = 0;
   }
 
-  pushAccessUnit (avcSample, avcTrack) {
+  pushAccessUnit (avcSample: AvcSample, avcTrack: DemuxedAvcTrack) {
     if (avcSample.units.length && avcSample.frame) {
       // if sample does not have PTS/DTS, patch with last sample PTS/DTS
       if (isNaN(avcSample.pts)) {
@@ -484,10 +490,10 @@ class TSDemuxer implements Demuxer {
     const units = this._parseAVCNALu(pes.data);
     const debug = false;
     let expGolombDecoder;
-    let avcSample = this.avcSample;
-    let push;
+    let avcSample: AvcSample | null = this.avcSample;
+    let push: boolean;
     let spsfound = false;
-    let i;
+    let i: number;
     const pushAccessUnit = this.pushAccessUnit.bind(this);
     // free pes.data to save up some memory
     (pes.data as any) = null;
