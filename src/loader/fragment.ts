@@ -76,7 +76,10 @@ export default class Fragment {
   public backtracked: boolean = false;
   // Set by `updateFragPTSDTS` in level-helper
   public deltaPTS?: number;
+  // The maximum starting Presentation Time Stamp (audio/video PTS) of the fragment. Set after transmux complete.
   public maxStartPTS?: number;
+  // The minimum ending Presentation Time Stamp (audio/video PTS) of the fragment. Set after transmux complete.
+  public minEndPTS?: number;
   // Load/parse timing information
   public stats: LoadStats = new LoadStats();
   public urlId: number = 0;

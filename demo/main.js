@@ -12,7 +12,7 @@ const STORAGE_KEYS = {
 };
 
 const testStreams = require('../tests/test-streams');
-const defaultTestStreamUrl = testStreams.bbb.url;
+const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
 let demoConfig = getURLParam('demoConfig', null);
@@ -138,8 +138,7 @@ $(document).ready(function () {
 
   video.volume = 0.05;
 
-  hideAllTabs();
-  // $('#timelineTab').show();
+  toggleTab($('.demo-tab-btn')[0]);
 
   $('#metricsButtonWindow').toggle(self.windowSliding);
   $('#metricsButtonFixed').toggle(!self.windowSliding);
@@ -1305,13 +1304,35 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);
   }, chart);
+  hls.on(Hls.Events.BUFFER_RESET, () => {
+    chart.removeSourceBuffers();
+  }, chart);
   hls.on(Hls.Events.LEVELS_UPDATED, (eventName, { levels }) => {
     chart.removeType('level');
     chart.updateLevels(levels);
   });
-  hls.on(Hls.Events.LEVEL_UPDATED, (eventName, { details, level }) => {
+  hls.on(Hls.Events.LEVEL_SWITCHED, (eventName, { level }) => {
+    // TODO: mutate level datasets
+    // Update currentLevel
+    chart.removeType('level');
+    chart.updateLevels(hls.levels, level);
+  }, chart);
+  hls.on(Hls.Events.LEVEL_LOADING, () => {
+    // TODO: mutate level datasets
+    // Update loadLevel
+    chart.removeType('level');
+    chart.updateLevels(hls.levels);
+  }, chart);
+  hls.on(Hls.Events.FRAG_LOADING, () => {
+    // TODO: mutate level datasets
+    // Update loadLevel
+    chart.removeType('level');
+    chart.updateLevels(hls.levels);
+  }, chart);
+  hls.on(Hls.Events.LEVEL_UPDATED, (eventName, { details }) => {
     chart.updateLevelOrTrack(details);
   }, chart);
+
   hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (eventName, { audioTracks }) => {
     chart.removeType('audioTrack');
     chart.updateAudioTracks(audioTracks);
@@ -1319,6 +1340,17 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (eventName, { subtitleTracks }) => {
     chart.removeType('subtitleTrack');
     chart.updateSubtitleTracks(subtitleTracks);
+  }, chart);
+
+  hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (eventName) => {
+    // TODO: mutate level datasets
+    chart.removeType('audioTrack');
+    chart.updateAudioTracks(hls.audioTracks);
+  }, chart);
+  hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH, (eventName) => {
+    // TODO: mutate level datasets
+    chart.removeType('subtitleTrack');
+    chart.updateSubtitleTracks(hls.subtitleTracks);
   }, chart);
   hls.on(Hls.Events.AUDIO_TRACK_LOADED, updateLevelOrTrack, chart);
   hls.on(Hls.Events.SUBTITLE_TRACK_LOADED, updateLevelOrTrack, chart);
@@ -1366,17 +1398,14 @@ function arrayConcat (inputArray) {
 }
 
 function hideAllTabs () {
-  $('#timelineTab').hide();
-  $('#playbackControlTab').hide();
-  $('#qualityLevelControlTab').hide();
-  $('#audioTrackControlTab').hide();
-  $('#metricsDisplayTab').hide();
-  $('#statsDisplayTab').hide();
+  $('.demo-tab-btn').css('background-color', '');
+  $('.demo-tab').hide();
 }
 
-function toggleTab (tabElId) {
+function toggleTab (btn) {
   hideAllTabs();
   self.hideMetrics();
+  const tabElId = $(btn).data('tab');
   $('#' + tabElId).show();
   if (hls) {
     if (tabElId === 'timelineTab') {
@@ -1386,6 +1415,7 @@ function toggleTab (tabElId) {
       chart.hide();
     }
   }
+  $(btn).css('background-color', 'orange');
 }
 
 function appendLog (textElId, message) {
