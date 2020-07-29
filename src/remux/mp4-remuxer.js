@@ -50,7 +50,21 @@ class MP4Remuxer {
         // if first audio DTS is not aligned with first video DTS then we need to take that into account
         // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
         // drift between audio and video streams
-        const startPTS = videoTrack.samples.reduce((minPTS, sample) => Math.min(minPTS, sample.pts), videoTrack.samples[0].pts);
+        let rolloverDetected = false;
+        const startPTS = videoTrack.samples.reduce((minPTS, sample) => {
+          const delta = sample.pts - minPTS;
+          if (delta < -4294967296) { // 2^32, see PTSNormalize for reasoning, but we're hitting a rollover here, and we don't want that to impact the timeOffset calculation
+            rolloverDetected = true;
+            return minPTS;
+          } else if (delta > 0) {
+            return minPTS;
+          } else {
+            return sample.pts;
+          }
+        }, videoTrack.samples[0].pts);
+        if (rolloverDetected) {
+          logger.debug('PTS rollover detected');
+        }
         const tsDelta = audioTrack.samples[0].pts - startPTS;
         const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
         audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
