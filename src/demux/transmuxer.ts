@@ -25,7 +25,13 @@ try {
   now = self.Date.now;
 }
 
-const muxConfig = [
+type MuxConfig =
+  { demux: typeof TSDemuxer, remux: typeof MP4Remuxer } |
+  { demux: typeof MP4Demuxer, remux: typeof PassThroughRemuxer } |
+  { demux: typeof AACDemuxer, remux: typeof MP4Remuxer } |
+  { demux: typeof MP3Demuxer, remux: typeof MP4Remuxer };
+
+const muxConfig: MuxConfig[] = [
   { demux: TSDemuxer, remux: MP4Remuxer },
   { demux: MP4Demuxer, remux: PassThroughRemuxer },
   { demux: AACDemuxer, remux: MP4Remuxer },
@@ -265,35 +271,41 @@ export default class Transmuxer {
       );
   }
 
-  private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig) {
+  private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig): { remuxer: Remuxer | undefined, demuxer: Demuxer | undefined } {
     const { config, observer, typeSupported, vendor } = this;
     const { audioCodec, defaultInitPts, duration, initSegmentData, videoCodec } = transmuxConfig;
-    let demuxer, remuxer;
     // probe for content type
+    let mux;
     for (let i = 0, len = muxConfig.length; i < len; i++) {
-      const mux = muxConfig[i];
-      const probe = mux.demux.probe;
-      if (probe(data)) {
-        remuxer = this.remuxer = new mux.remux(observer, config, typeSupported, vendor);
-        demuxer = this.demuxer = new mux.demux(observer, config, typeSupported);
-
-        // Ensure that muxers are always initialized with an initSegment
-        this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
-        this.resetInitialTimestamp(defaultInitPts);
-        logger.log(`[transmuxer.ts]: Probe succeeded with a data length of ${data.length}.`);
-        this.probe = probe;
+      mux = muxConfig[i];
+      if (mux.demux.probe(data)) {
         break;
       }
     }
-
+    if (!mux) {
+      return { remuxer: undefined, demuxer: undefined };
+    }
+    // so let's check that current remuxer and demuxer are still valid
+    let demuxer = this.demuxer;
+    let remuxer = this.remuxer;
+    if (!remuxer || !(remuxer instanceof mux.remux)) {
+      remuxer = this.remuxer = new mux.remux(observer, config, typeSupported, vendor);
+    }
+    if (!demuxer || !(demuxer instanceof mux.demux)) {
+      demuxer = this.demuxer = new mux.demux(observer, config, typeSupported);
+      this.probe = mux.demux.probe;
+    }
+    // Ensure that muxers are always initialized with an initSegment
+    this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
+    this.resetInitialTimestamp(defaultInitPts);
+    logger.log(`[transmuxer.ts]: Probe succeeded with a data length of ${data.length}.`);
     return { demuxer, remuxer };
   }
 
   private needsProbing (data: Uint8Array, discontinuity: boolean, trackSwitch: boolean) : boolean {
     // in case of continuity change, or track switch
     // we might switch from content type (AAC container to TS container, or TS to fmp4 for example)
-    // so let's check that current demuxer is still valid
-    return !this.demuxer || ((discontinuity || trackSwitch) && !this.probe(data));
+    return !this.demuxer || ((discontinuity || trackSwitch));
   }
 
   private getDecrypter () {
