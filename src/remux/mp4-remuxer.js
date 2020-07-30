@@ -222,14 +222,14 @@ class MP4Remuxer {
     // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
     for (let i = 0; i < nbSamples; i++) {
       const sample = inputSamples[i];
+      sample.pts = PTSNormalize(sample.pts - initPTS, nextAvcDts);
+      sample.dts = PTSNormalize(sample.dts - initPTS, nextAvcDts);
       if (sample.dts > sample.pts) {
         ptsDtsShift = Math.max(Math.min(ptsDtsShift, sample.pts - sample.dts), -1 * PTS_DTS_SHIFT_TOLERANCE_90KHZ);
       }
       if (sample.dts < inputSamples[i > 0 ? i - 1 : i].dts) {
         sortSamples = true;
       }
-      sample.pts = PTSNormalize(sample.pts - initPTS, nextAvcDts);
-      sample.dts = PTSNormalize(sample.dts - initPTS, nextAvcDts);
     }
 
     // sort video samples by DTS then PTS then demux id order
