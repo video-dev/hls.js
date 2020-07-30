@@ -49,7 +49,6 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
 
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls);
-    this.config = hls.config;
     this.fragmentTracker = fragmentTracker;
     this.fragmentLoader = new FragmentLoader(hls.config);
 

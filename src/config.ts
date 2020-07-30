@@ -157,7 +157,9 @@ export type HlsConfig =
     bufferController: typeof BufferController,
     capLevelController: typeof CapLevelController,
     fpsController: typeof FPSController,
-    progressive: boolean
+    progressive: boolean,
+
+    userConfig: Partial<HlsConfig>
   } &
   ABRControllerConfig &
   BufferControllerConfig &
@@ -249,6 +251,7 @@ export const hlsDefaultConfig: HlsConfig = {
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
   progressive: false,
+  userConfig: {},
 
   // Dynamic Modules
   ...timelineConfig(),
@@ -278,23 +281,20 @@ function timelineConfig (): TimelineControllerConfig {
   };
 }
 
-export function mergeConfig (defaultConfig, passedConfig) {
-  if ((passedConfig.liveSyncDurationCount || passedConfig.liveMaxLatencyDurationCount) && (passedConfig.liveSyncDuration || passedConfig.liveMaxLatencyDuration)) {
-    throw new Error('Illegal hls.js passedConfig: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+export function mergeConfig (defaultConfig, userConfig): HlsConfig {
+  if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
+    throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
   }
 
-  for (const prop in defaultConfig) {
-    if (prop in passedConfig) continue;
-    passedConfig[prop] = defaultConfig[prop];
-  }
-
-  if (passedConfig.liveMaxLatencyDurationCount !== void 0 && passedConfig.liveMaxLatencyDurationCount <= passedConfig.liveSyncDurationCount) {
+  if (userConfig.liveMaxLatencyDurationCount !== void 0 && userConfig.liveMaxLatencyDurationCount <= userConfig.liveSyncDurationCount) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
   }
 
-  if (passedConfig.liveMaxLatencyDuration !== void 0 && (passedConfig.liveMaxLatencyDuration <= passedConfig.liveSyncDuration || passedConfig.liveSyncDuration === void 0)) {
+  if (userConfig.liveMaxLatencyDuration !== void 0 && (userConfig.liveMaxLatencyDuration <= userConfig.liveSyncDuration || userConfig.liveSyncDuration === void 0)) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
   }
+
+  return Object.assign({}, defaultConfig, userConfig, { userConfig });
 }
 
 const canStreamProgressively = fetchSupported();

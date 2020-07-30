@@ -57,7 +57,6 @@ export default class StreamController extends BaseStreamController implements Ne
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls);
     this.fragmentLoader = new FragmentLoader(hls.config);
-    this.config = hls.config;
     this.fragmentTracker = fragmentTracker;
     this.state = State.STOPPED;
 
@@ -566,7 +565,7 @@ export default class StreamController extends BaseStreamController implements Ne
     if (newDetails.live) {
       sliding = this.mergeLivePlaylists(curLevel.details, newDetails);
       if (sliding) {
-        this._liveSyncPosition = this.computeLivePosition(sliding, newDetails.targetduration, newDetails.totalduration);
+        this._liveSyncPosition = this.computeLivePosition(sliding, newDetails);
       }
     } else {
       newDetails.PTSKnown = false;

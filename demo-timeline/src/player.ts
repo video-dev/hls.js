@@ -13,12 +13,13 @@ import {
   SubtitleTrackLoadedData,
   SubtitleTracksUpdatedData
 } from '../../src/types/events';
+import type { HlsConfig } from '../../src/config';
 
 const Hls = self.Hls;
 
 export class Player {
   public hls: any = null;
-  private config: any = null;
+  private config: Partial<HlsConfig> | null = null;
   private url: string | null = null;
   private width: number | null = null;
   private chart: TimelineChart;
@@ -29,7 +30,7 @@ export class Player {
     this.video = video;
   }
 
-  public setConfig (config) {
+  public setConfig (config: Partial<HlsConfig>) {
     this.config = config;
     this.loadSelectedStream();
   }
