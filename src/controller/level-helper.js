@@ -46,7 +46,8 @@ export function updatePTS (fragments, fromIdx, toIdx) {
   } else {
     // we dont know startPTS[toIdx]
     if (toIdx > fromIdx) {
-      fragTo.start = fragFrom.start + (fragFrom.minEndPTS ? fragFrom.minEndPTS - fragFrom.start : fragFrom.duration);
+      const contiguous = fragFrom.cc === fragTo.cc;
+      fragTo.start = fragFrom.start + ((contiguous && fragFrom.minEndPTS) ? fragFrom.minEndPTS - fragFrom.start : fragFrom.duration);
     } else {
       fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
     }
