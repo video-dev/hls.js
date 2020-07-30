@@ -112,9 +112,7 @@ export default class BaseStreamController extends TaskLoop {
     const currentTime = media ? media.currentTime : null;
     const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
 
-    if (Number.isFinite(currentTime)) {
-      this.log(`media seeking to ${currentTime.toFixed(3)}, state: ${state}`);
-    }
+    this.log(`media seeking to ${Number.isFinite(currentTime) ? currentTime.toFixed(3) : currentTime}, state: ${state}`);
 
     if (state === State.ENDED) {
       // if seeking to unbuffered area, clean up fragPrevious
