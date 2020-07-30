@@ -4,13 +4,15 @@ import AESDecryptor, { removePadding } from './aes-decryptor';
 import { logger } from '../utils/logger';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
+import type { HlsConfig } from '../config';
+import type { HlsEventEmitter } from '../events';
 
 const CHUNK_SIZE = 16; // 16 bytes, 128 bits
 
 export default class Decrypter {
   private logEnabled: boolean = true;
-  private observer: any;
-  private config: any;
+  private observer: HlsEventEmitter;
+  private config: HlsConfig;
   private removePKCS7Padding: boolean;
   private subtle: SubtleCrypto | null = null;
   private softwareDecrypter: AESDecryptor | null = null;
@@ -20,7 +22,7 @@ export default class Decrypter {
   private currentIV: ArrayBuffer | null = null;
   private currentResult: ArrayBuffer | null = null;
 
-  constructor (observer, config, { removePKCS7Padding = true } = {}) {
+  constructor (observer: HlsEventEmitter, config: HlsConfig, { removePKCS7Padding = true } = {}) {
     this.observer = observer;
     this.config = config;
     this.removePKCS7Padding = removePKCS7Padding;

@@ -16,7 +16,7 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
-import { Events, HlsEventEmitter, HlsListeners } from './events';
+import { Events } from './events';
 import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
 import { MediaPlaylist } from './types/media-playlist';
@@ -28,13 +28,14 @@ import CapLevelController from './controller/cap-level-controller';
 import AbrController from './controller/abr-controller';
 import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 import { Tail } from './types/tuples';
+import type { HlsEventEmitter, HlsListeners } from './events';
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls {
+export default class Hls implements HlsEventEmitter {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
@@ -96,9 +97,7 @@ export default class Hls {
    * @param {HlsConfig} config
    */
   constructor (userConfig: Partial<HlsConfig> = {}) {
-    const defaultConfig = Hls.DefaultConfig;
-    mergeConfig(defaultConfig, userConfig);
-    const config = this.config = userConfig as HlsConfig;
+    const config = this.config = mergeConfig(Hls.DefaultConfig, userConfig);
     enableLogs(config.debug);
 
     this._autoLevelCapping = -1;
@@ -172,7 +171,7 @@ export default class Hls {
   }
 
   // Delegate the EventEmitter through the public API of Hls.js
-  on<E extends Events, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
+  on<E extends keyof HlsListeners, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
     this._emitter.on(event, (...args: unknown[]) => {
       if (this.config.debug) {
         listener.apply(context, args);
@@ -193,7 +192,7 @@ export default class Hls {
     }, context);
   }
 
-  once<E extends Events, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
+  once<E extends keyof HlsListeners, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
     this._emitter.once(event, (...args: unknown[]) => {
       if (this.config.debug) {
         listener.apply(context, args);
@@ -214,23 +213,27 @@ export default class Hls {
     }, context);
   }
 
-  removeAllListeners<E extends Events> (event?: E | undefined) {
+  removeAllListeners<E extends keyof HlsListeners> (event?: E | undefined) {
     this._emitter.removeAllListeners(event);
   }
 
-  off<E extends Events, Context = undefined> (event: E, listener?: HlsListeners[E] | undefined, context?: Context, once?: boolean | undefined) {
+  off<E extends keyof HlsListeners, Context = undefined> (event: E, listener?: HlsListeners[E] | undefined, context?: Context, once?: boolean | undefined) {
     this._emitter.off(event, listener, context, once);
   }
 
-  listeners<E extends Events> (event: E): HlsListeners[E][] {
+  listeners<E extends keyof HlsListeners> (event: E): HlsListeners[E][] {
     return this._emitter.listeners(event);
   }
 
-  trigger<E extends Events> (event: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean {
+  emit (event, name, ...args): boolean {
+    return this._emitter.emit(event, name, ...args);
+  }
+
+  trigger<E extends keyof HlsListeners> (event: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean {
     return this._emitter.emit(event, event, ...args);
   }
 
-  listenerCount<E extends Events> (event: E): number {
+  listenerCount<E extends keyof HlsListeners> (event: E): number {
     return this._emitter.listenerCount(event);
   }
 

@@ -6,14 +6,15 @@ import {
   FragmentLoaderContext,
   LoaderCallbacks
 } from '../types/loader';
+import type { HlsConfig } from '../config';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
 export default class FragmentLoader {
-  private readonly config: any;
+  private readonly config: HlsConfig;
   private loader: Loader<FragmentLoaderContext> | null = null;
 
-  constructor (config) {
+  constructor (config: HlsConfig) {
     this.config = config;
   }
 
