@@ -244,13 +244,13 @@ export default class Transmuxer {
   }
 
   private transmux (data: Uint8Array, decryptData: Uint8Array, encryptionType: string | null, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata): TransmuxerResult | Promise<TransmuxerResult> {
-    let result: TransmuxerResult | Promise<TransmuxerResult>;
-    if (encryptionType === 'SAMPLE-AES') {
-      result = this.transmuxSampleAes(data, decryptData, timeOffset, accurateTimeOffset, chunkMeta);
-    } else {
-      result = this.transmuxUnencrypted(data, timeOffset, accurateTimeOffset, chunkMeta);
-    }
-    return result;
+    // let result: TransmuxerResult | Promise<TransmuxerResult>;
+    // if (encryptionType === 'SAMPLE-AES') {
+    //   result = this.transmuxSampleAes(data, decryptData, timeOffset, accurateTimeOffset, chunkMeta);
+    // } else {
+    // result = this.transmuxUnencrypted(data, timeOffset, accurateTimeOffset, chunkMeta);
+    // }
+    return this.transmuxUnencrypted(data, timeOffset, accurateTimeOffset, chunkMeta);
   }
 
   private transmuxUnencrypted (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) {
@@ -262,14 +262,14 @@ export default class Transmuxer {
   }
 
   // TODO: Handle flush with Sample-AES
-  private transmuxSampleAes (data: Uint8Array, decryptData: any, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) : Promise<TransmuxerResult> {
-    return this.demuxer!.demuxSampleAes(data, decryptData, timeOffset)
-      .then(demuxResult => ({
-        remuxResult: this.remuxer!.remux(demuxResult.audioTrack, demuxResult.avcTrack, demuxResult.id3Track, demuxResult.textTrack, timeOffset, accurateTimeOffset),
-        chunkMeta
-      })
-      );
-  }
+  // private transmuxSampleAes (data: Uint8Array, decryptData: any, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) : Promise<TransmuxerResult> {
+  //   return this.demuxer!.demuxSampleAes(data, decryptData, timeOffset)
+  //     .then(demuxResult => ({
+  //       remuxResult: this.remuxer!.remux(demuxResult.audioTrack, demuxResult.avcTrack, demuxResult.id3Track, demuxResult.textTrack, timeOffset, accurateTimeOffset),
+  //       chunkMeta
+  //     })
+  //     );
+  // }
 
   private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig): { remuxer: Remuxer | undefined, demuxer: Demuxer | undefined } {
     const { config, observer, typeSupported, vendor } = this;

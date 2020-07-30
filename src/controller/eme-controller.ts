@@ -105,10 +105,10 @@ const getSupportedMediaKeySystemConfigurations = function (
   drmSystemOptions: DRMSystemOptions
 ): MediaKeySystemConfiguration[] {
   switch (keySystem) {
-    case KeySystems.WIDEVINE:
-      return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
-    case KeySystems.CLEARKEY:
-      return createClearkeyMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
+  case KeySystems.WIDEVINE:
+    return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
+  case KeySystems.CLEARKEY:
+    return createClearkeyMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
   default:
     throw new Error(`Unknown key-system: ${keySystem}`);
   }
@@ -294,7 +294,7 @@ class EMEController implements ComponentAPI {
       logger.error('Failed to load the keys');
     }
 
-    let license = this._generateLicense(message);
+    const license = this._generateLicense(message);
 
     keySession.update(license).catch(
       function (error) {
@@ -306,7 +306,7 @@ class EMEController implements ComponentAPI {
 
   private _generateLicense (message) {
     // Parse the clearkey license request.
-    let request = JSON.parse(new TextDecoder().decode(message));
+    const request = JSON.parse(new TextDecoder().decode(message));
     type responseFormat = {
       kty?: string,
       alg?: string,
@@ -314,9 +314,9 @@ class EMEController implements ComponentAPI {
       k?: string
     }
 
-    let keyarray: responseFormat[] = [];
-    for (let id of request.kids) {
-      let decodedBase64 = this.base64ToHex(id);
+    const keyarray: responseFormat[] = [];
+    for (const id of request.kids) {
+      const decodedBase64 = this.base64ToHex(id);
       // logger.log(`decodedBase64: ${decodedBase64}`);
       if (!this._clearkeyPair.hasOwnProperty(decodedBase64)) {
         logger.error('No pair key, please use lower case');
@@ -345,7 +345,7 @@ class EMEController implements ComponentAPI {
 
   private hexToBase64 (hexstring) {
     var encodedBase64 = btoa(hexstring.match(/\w{2}/g).map(function (a) {
-        return String.fromCharCode(parseInt(a, 16));
+      return String.fromCharCode(parseInt(a, 16));
     }).join(''));
 
     var start = 0;
