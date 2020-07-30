@@ -7,7 +7,7 @@ import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
-import { DRMSystemOptions, EMEControllerConfig } from '../config';
+import { DRMSystemOptions, EMEControllerConfig, KeyidValue } from '../config';
 import { KeySystems, MediaKeyFunc } from '../utils/mediakeys-helper';
 import Hls from '../hls';
 import { ComponentAPI } from '../types/component-api';
@@ -56,6 +56,36 @@ const createWidevineMediaKeySystemConfigurations = function (
   ];
 };
 
+const createClearkeyMediaKeySystemConfigurations = function (
+  audioCodecs: string[],
+  videoCodecs: string[],
+  drmSystemOptions: DRMSystemOptions
+): MediaKeySystemConfiguration[] { /* jshint ignore:line */
+  const baseConfig: MediaKeySystemConfiguration = {
+    initDataTypes: ['keyids', 'mp4'],
+    // label: "",
+    // persistentState: "not-allowed", // or "required" ?
+    // distinctiveIdentifier: "not-allowed", // or "required" ?
+    // sessionTypes: ['temporary'],
+    audioCapabilities: [], // { contentType: 'audio/mp4; codecs="mp4a.40.2"' }
+    videoCapabilities: [] // { contentType: 'video/mp4; codecs="avc1.42E01E"' }
+  };
+
+  audioCodecs.forEach((codec) => {
+    logger.log(codec);
+  });
+
+  videoCodecs.forEach((codec) => {
+    // logger.log(codec);
+    baseConfig.videoCapabilities!.push({
+      contentType: `video/mp4; codecs="${codec}"`
+    });
+  });
+  return [
+    baseConfig
+  ];
+};
+
 /**
  * The idea here is to handle key-system (and their respective platforms) specific configuration differences
  * in order to work with the local requestMediaKeySystemAccess method.
@@ -75,8 +105,10 @@ const getSupportedMediaKeySystemConfigurations = function (
   drmSystemOptions: DRMSystemOptions
 ): MediaKeySystemConfiguration[] {
   switch (keySystem) {
-  case KeySystems.WIDEVINE:
-    return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
+    case KeySystems.WIDEVINE:
+      return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
+    case KeySystems.CLEARKEY:
+      return createClearkeyMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
   default:
     throw new Error(`Unknown key-system: ${keySystem}`);
   }
@@ -102,6 +134,8 @@ class EMEController implements ComponentAPI {
   private _widevineLicenseUrl?: string;
   private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
   private _emeEnabled: boolean;
+  private _clearkeyServerUrl?: string;
+  private _clearkeyPair: KeyidValue;
   private _requestMediaKeySystemAccess: MediaKeyFunc | null;
   private _drmSystemOptions: DRMSystemOptions;
 
@@ -124,6 +158,8 @@ class EMEController implements ComponentAPI {
     this._widevineLicenseUrl = this._config.widevineLicenseUrl;
     this._licenseXhrSetup = this._config.licenseXhrSetup;
     this._emeEnabled = this._config.emeEnabled;
+    this._clearkeyServerUrl = this._config.clearkeyServerUrl;
+    this._clearkeyPair = this._config.clearkeyPair;
     this._requestMediaKeySystemAccess = this._config.requestMediaKeySystemAccessFunc;
     this._drmSystemOptions = this._config.drmSystemOptions;
 
@@ -248,6 +284,89 @@ class EMEController implements ComponentAPI {
     });
   }
 
+  private _handleMessage (keySession: MediaKeySession, message: ArrayBuffer) {
+    // If you had a license server, you would make an asynchronous XMLHttpRequest
+    // with event.message as the body.  The response from the server, as a
+    // Uint8Array, would then be passed to session.update().
+    // Instead, we will generate the license synchronously on the client, using
+    // the hard-coded KEY.
+    if (this._clearkeyPair == null) {
+      logger.error('Failed to load the keys');
+    }
+
+    let license = this._generateLicense(message);
+
+    keySession.update(license).catch(
+      function (error) {
+        logger.error('Failed to update the session', error);
+      }
+    );
+    logger.log(`Received license data (length: ${license ? license.byteLength : license}), updating key-session`);
+  }
+
+  private _generateLicense (message) {
+    // Parse the clearkey license request.
+    let request = JSON.parse(new TextDecoder().decode(message));
+    type responseFormat = {
+      kty?: string,
+      alg?: string,
+      kid?: string,
+      k?: string
+    }
+
+    let keyarray: responseFormat[] = [];
+    for (let id of request.kids) {
+      let decodedBase64 = this.base64ToHex(id);
+      // logger.log(`decodedBase64: ${decodedBase64}`);
+      if (!this._clearkeyPair.hasOwnProperty(decodedBase64)) {
+        logger.error('No pair key, please use lower case');
+      }
+      keyarray.push(
+        {
+          kty: 'oct',
+          alg: 'A128KW',
+          kid: id,
+          k: this.hexToBase64(this._clearkeyPair[decodedBase64])
+          // k: "aeqoAqZ2Ovl56NGUD7iDkg"
+        }
+      );
+    }
+
+    logger.log(JSON.stringify({
+      keys: keyarray,
+      type: 'temporary'
+    }));
+
+    return new TextEncoder().encode(JSON.stringify({
+      keys: keyarray,
+      type: 'temporary'
+    }));
+  }
+
+  private hexToBase64 (hexstring) {
+    var encodedBase64 = btoa(hexstring.match(/\w{2}/g).map(function (a) {
+        return String.fromCharCode(parseInt(a, 16));
+    }).join(''));
+
+    var start = 0;
+    var end = encodedBase64.length;
+    while (end > start && encodedBase64[end - 1] === '=') {
+      --end;
+    }
+    return (start > 0 || end < encodedBase64.length) ? encodedBase64.substring(start, end) : encodedBase64;
+  }
+
+  private base64ToHex (str) {
+    const raw = atob(str);
+    logger.log(raw);
+    let result = '';
+    for (let i = 0; i < raw.length; i++) {
+      const hex = raw.charCodeAt(i).toString(16);
+      result += (hex.length === 2 ? hex : '0' + hex);
+    }
+    return result.toLowerCase();
+  }
+
   /**
      * @private
      * @param {*} keySession
@@ -268,10 +387,14 @@ class EMEController implements ComponentAPI {
   private _onKeySessionMessage (keySession: MediaKeySession, message: ArrayBuffer) {
     logger.log('Got EME message event, creating license request');
 
-    this._requestLicense(message, (data: ArrayBuffer) => {
-      logger.log(`Received license data (length: ${data ? data.byteLength : data}), updating key-session`);
-      keySession.update(data);
-    });
+    if (this._clearkeyPair && this._clearkeyServerUrl === void 0) {
+      this._handleMessage(keySession, message);
+    } else {
+      this._requestLicense(message, (data: ArrayBuffer) => {
+        logger.log(`Received license data (length: ${data ? data.byteLength : data}), updating key-session`);
+        keySession.update(data);
+      });
+    }
   }
 
   /**
@@ -590,7 +713,11 @@ class EMEController implements ComponentAPI {
       (videoCodec: string | undefined): videoCodec is string => !!videoCodec
     );
 
-    this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
+    if (this._clearkeyPair || this._clearkeyServerUrl) {
+      this._attemptKeySystemAccess(KeySystems.CLEARKEY, audioCodecs, videoCodecs);
+    } else {
+      this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
+    }
   }
 }
 
