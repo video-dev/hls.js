@@ -44,6 +44,12 @@ module.exports = {
     nudgeMaxRetry: 5
   }
   ),
+  fdr: {
+    url: 'https://cdn.jwplayer.com/manifests/pZxWPRg4.m3u8',
+    description: 'FDR - CDN packaged, 4s segments, 180p - 1080p',
+    live: false,
+    abr: true
+  },
   bigBuckBunny480p: {
     url: 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     description: 'Big Buck Bunny - 480p only',
@@ -65,8 +71,8 @@ module.exports = {
     blacklist_ua: ['internet explorer']
   },
   issue666: {
-    url: 'https://test-streams.mux.dev/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
-    description: 'hls.js/issues/666',
+    url: 'https://playertest.longtailvideo.com/adaptive/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    description: 'Surveillance footage - https://github.com/video-dev/hls.js/issues/666',
     live: false,
     abr: false,
     blacklist_ua: ['internet explorer']
@@ -83,8 +89,13 @@ module.exports = {
     url: 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
     description: 'CNN special report, with CC',
     live: false,
-    abr: false,
-    blacklist_ua: ['safari']
+    abr: false
+  },
+  customIvBadDts: {
+    url: 'https://playertest.longtailvideo.com/adaptive/customIV/prog_index.m3u8',
+    description: 'Custom IV with bad PTS DTS',
+    live: false,
+    abr: false
   },
   oceansAES: {
     url: 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
