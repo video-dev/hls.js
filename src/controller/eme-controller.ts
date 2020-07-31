@@ -194,6 +194,11 @@ class EMEController implements ComponentAPI {
         break;
       }
       return this._widevineLicenseUrl;
+    case KeySystems.CLEARKEY:
+      if (!this._clearkeyServerUrl) {
+        break;
+      }
+      return this._clearkeyServerUrl;
     }
 
     throw new Error(`no license server URL configured for key-system "${keySystem}"`);
@@ -312,7 +317,7 @@ class EMEController implements ComponentAPI {
       alg?: string,
       kid?: string,
       k?: string
-    }
+    };
 
     const keyarray: responseFormat[] = [];
     for (const id of request.kids) {
@@ -624,6 +629,10 @@ class EMEController implements ComponentAPI {
     case KeySystems.WIDEVINE:
       // For Widevine CDMs, the challenge is the keyMessage.
       return keyMessage;
+    case KeySystems.CLEARKEY:
+      // For CLEARKEY, the challenge is the keyMessage.
+      return keyMessage;
+      // return JSON.parse(new TextDecoder().decode(keyMessage));
     }
 
     throw new Error(`unsupported key-system: ${keysListItem.mediaKeySystemDomain}`);
@@ -653,7 +662,14 @@ class EMEController implements ComponentAPI {
       const xhr = this._createLicenseXhr(url, keyMessage, callback);
       logger.log(`Sending license request to URL: ${url}`);
       const challenge = this._generateLicenseRequestChallenge(keysListItem, keyMessage);
-      xhr.send(challenge);
+      switch (keysListItem.mediaKeySystemDomain) {
+      case KeySystems.WIDEVINE:
+        xhr.send(challenge);
+      case KeySystems.CLEARKEY:
+        // xhr.setRequestHeader('content-type', 'application/json')
+        // xhr.send(JSON.stringify(challenge));
+        xhr.send(challenge);
+      }
     } catch (e) {
       logger.error(`Failure requesting DRM license: ${e}`);
       this.hls.trigger(Events.ERROR, {
