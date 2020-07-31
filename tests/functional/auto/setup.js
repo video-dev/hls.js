@@ -408,10 +408,12 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           testSeekOnLive.bind(null, url, config)
         );
       } else {
-        it(
-          `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
-          testIdleBufferLength.bind(null, url, config)
-        );
+        if (!stream.skipBufferLengthTest) {
+          it(
+            `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
+            testIdleBufferLength.bind(null, url, config)
+          );
+        }
         it(
           `should play ${stream.description}`,
           testIsPlayingVOD.bind(null, url, config)
