@@ -14,7 +14,7 @@ import ChunkCache from './chunk-cache';
 import { appendUint8Array } from '../utils/mp4-tools';
 
 import { logger } from '../utils/logger';
-import { HlsConfig, EMEControllerConfig, KeyidValue } from '../config';
+import { HlsConfig, KeyidValue } from '../config';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
