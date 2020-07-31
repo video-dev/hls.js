@@ -187,7 +187,7 @@ module.exports = {
   noTrackIntersection: {
     url: 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/123633/new_master.m3u8',
     description: 'Audio/video track PTS values do not intersect; 10 second start gap',
-    skipBufferLengthTest: true
+    avBufferOffset: 10.5
   },
   // altAudioNoVideoCodecSignaled: {
   //   url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/3cbf1114-b2f4-4320-afb3-f0f7eeeb8630/playlist.m3u8',
