@@ -71,9 +71,10 @@ const createClearkeyMediaKeySystemConfigurations = function (
   };
 
   audioCodecs.forEach((codec) => {
-    logger.log(codec);
+      baseConfig.audioCapabilities!.push({
+        contentType: `audio/mp4; codecs="${codec}"`
+      });
   });
-
   videoCodecs.forEach((codec) => {
     // logger.log(codec);
     baseConfig.videoCapabilities!.push({
