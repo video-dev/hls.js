@@ -106,7 +106,7 @@ async function testIdleBufferLength (url, config) {
           const duration = video.duration;
           console.log('[test] > progress: ' + bufferEnd.toFixed(2) + '/' + duration.toFixed(2) +
             ' buffered.length: ' + buffered.length);
-          if (bufferEnd >= maxBufferLength || bufferEnd > duration - 1) {
+          if (bufferEnd >= maxBufferLength || bufferEnd > duration - (config.avBufferOffset || 1)) {
             callback({ code: 'loadeddata', logs: window.logString });
           }
         }
