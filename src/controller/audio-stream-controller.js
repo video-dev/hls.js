@@ -244,7 +244,9 @@ class AudioStreamController extends BaseStreamController {
             if (fragPrevious && frag.level === fragPrevious.level && frag.sn === fragPrevious.sn) {
               if (frag.sn < trackDetails.endSN) {
                 frag = fragments[frag.sn + 1 - trackDetails.startSN];
-                logger.log(`SN just loaded, load next one: ${frag.sn}`);
+                if (this.fragmentTracker.getState(frag) !== FragmentState.OK) {
+                  logger.log(`SN just loaded, load next one: ${frag.sn}`);
+                }
               } else {
                 frag = null;
               }

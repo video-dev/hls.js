@@ -393,7 +393,9 @@ class StreamController extends BaseStreamController {
               logger.warn('Previous fragment was dropped with large PTS gap between audio and video. Maybe fragment is not starting with a keyframe? Loading previous one to try to overcome this');
             } else {
               fragNextLoad = nextSnFrag;
-              logger.log(`Re-loading fragment with SN: ${fragNextLoad.sn}`);
+              if (this.fragmentTracker.getState(fragNextLoad) !== FragmentState.OK) {
+                logger.log(`Re-loading fragment with SN: ${fragNextLoad.sn}`);
+              }
             }
           } else {
             fragNextLoad = null;

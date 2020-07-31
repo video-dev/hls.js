@@ -104,7 +104,7 @@ async function testIdleBufferLength (url, config) {
         if (buffered.length) {
           const bufferEnd = buffered.end(buffered.length - 1);
           const duration = video.duration;
-          console.log('[log] > progress: ' + bufferEnd.toFixed(2) + '/' + duration.toFixed(2) +
+          console.log('[test] > progress: ' + bufferEnd.toFixed(2) + '/' + duration.toFixed(2) +
             ' buffered.length: ' + buffered.length);
           if (bufferEnd >= maxBufferLength || bufferEnd > duration - 1) {
             callback({ code: 'loadeddata', logs: window.logString });
