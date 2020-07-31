@@ -59,9 +59,9 @@ class MP4Demuxer implements Demuxer {
     };
   }
 
-  // demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
-  //   return Promise.reject(new Error('The MP4 demuxer does not support SAMPLE-AES decryption'));
-  // }
+  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
+    return Promise.reject(new Error('The MP4 demuxer does not support SAMPLE-AES decryption, Please specify DRM'));
+  }
 
   destroy () {}
 }
