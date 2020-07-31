@@ -428,7 +428,7 @@ export default class BufferController implements ComponentAPI {
         logger.warn('[buffer-controller]: Failed to abort the audio SourceBuffer', e);
       }
     };
-    operationQueue.append(operation, type);
+    operationQueue.insertAbort(operation, type);
   }
 
   flushLiveBackBuffer () {
@@ -660,10 +660,13 @@ export default class BufferController implements ComponentAPI {
       return;
     }
     logger.log(`[buffer-controller]: Aborting the ${type} SourceBuffer`);
-    console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
+    // console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
+    const updating = sb.updating;
     sb.abort();
     // updateend is only triggered if aborting while updating is true
-    this._onSBUpdateEnd(type);
+    if (!updating) {
+      this._onSBUpdateEnd(type);
+    }
   }
 
   // Enqueues an operation to each SourceBuffer queue which, upon execution, resolves a promise. When all promises
