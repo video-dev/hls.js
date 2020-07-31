@@ -494,7 +494,9 @@ export default class BaseStreamController extends TaskLoop {
         if (sameLevel && !frag.backtracked) {
           if (frag.sn < levelDetails.endSN) {
             frag = nextFrag;
-            this.log(`SN just loaded, load next one: ${frag.sn}`);
+            if (this.fragmentTracker.getState(frag) !== FragmentState.OK) {
+              this.log(`SN just loaded, load next one: ${frag.sn}`);
+            }
           } else {
             frag = null;
           }
