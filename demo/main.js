@@ -93,6 +93,7 @@ $(document).ready(function () {
 
   $('#dumpfMP4').click(function () {
     dumpfMP4 = this.checked;
+    $('.btn-dump').toggle(dumpfMP4);
     onDemoConfigChanged();
   });
 
@@ -138,6 +139,8 @@ $(document).ready(function () {
 
   video.volume = 0.05;
 
+  $('.btn-dump').toggle(dumpfMP4);
+  $('#toggleButtons').show();
   toggleTab($('.demo-tab-btn')[0]);
 
   $('#metricsButtonWindow').toggle(self.windowSliding);
@@ -1381,6 +1384,8 @@ function createfMP4 (type) {
     const filename = type + '-' + new Date().toISOString() + '.mp4';
     self.saveAs(blob, filename);
     // $('body').append('<a download="hlsjs-' + filename + '" href="' + self.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
+  } else if (!dumpfMP4) {
+    console.error('Check "Dump transmuxed fMP4 data" first to make appended media available for saving.');
   }
 }
 
@@ -1403,19 +1408,29 @@ function hideAllTabs () {
 }
 
 function toggleTab (btn) {
-  hideAllTabs();
-  self.hideMetrics();
   const tabElId = $(btn).data('tab');
-  $('#' + tabElId).show();
+  // eslint-disable-next-line no-restricted-globals
+  const modifierPressed = window.event && (window.event.metaKey || window.event.shiftKey);
+  if (!modifierPressed) {
+    hideAllTabs();
+  }
+  if (modifierPressed) {
+    $(`#${tabElId}`).toggle();
+  } else {
+    $(`#${tabElId}`).show();
+  }
+  $(btn).css('background-color', $(`#${tabElId}`).is(':visible') ? 'orange' : '');
+  if (!$('#statsDisplayTab').is(':visible')) {
+    self.hideMetrics();
+  }
   if (hls) {
-    if (tabElId === 'timelineTab') {
+    if ($('#timelineTab').is(':visible')) {
       chart.show();
       chart.resize(chart.chart.data ? chart.chart.data.datasets : null);
     } else {
       chart.hide();
     }
   }
-  $(btn).css('background-color', 'orange');
 }
 
 function appendLog (textElId, message) {
