@@ -123,18 +123,20 @@ async function testSmoothSwitch (url, config) {
       const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      window.hls.once(window.Hls.Events.FRAG_CHANGED, function (event, data) {
+      window.hls.once(window.Hls.Events.FRAG_CHANGED, function (eventName, data) {
+        console.log('[test] > ' + eventName + ' frag.level: ' + data.frag.level);
         window.switchToHighestLevel('next');
       });
-      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
-        console.log('[test] > level switched: ' + data.level);
+      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
+        console.log('[test] > ' + eventName + ' data.level: ' + data.level);
         let currentTime = video.currentTime;
-        if (data.level === window.hls.levels.length - 1) {
-          console.log('[test] > switched on level: ' + data.level);
+        const highestLevel = (window.hls.levels.length - 1);
+        if (data.level === highestLevel) {
           window.setTimeout(function () {
             let newCurrentTime = video.currentTime;
-            console.log('[test] > currentTime delta : ' + (newCurrentTime - currentTime));
+            console.log('[test] > currentTime delta: ' + (newCurrentTime - currentTime));
             callback({
+              highestLevel: highestLevel,
               currentTimeDelta: newCurrentTime - currentTime,
               logs: window.logString
             });

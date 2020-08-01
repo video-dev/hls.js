@@ -232,7 +232,7 @@ class MP4Remuxer {
 
     if (!contiguous) {
       const pts = timeOffset * timeScale;
-      const cts = inputSamples[0].pts - inputSamples[0].dts;
+      const cts = inputSamples[0].pts - PTSNormalize(inputSamples[0].dts, inputSamples[0].pts);
       // if not contiguous, let's use target timeOffset
       nextAvcDts = pts - cts;
     }
