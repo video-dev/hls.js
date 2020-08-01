@@ -120,57 +120,62 @@
       <label class="center">Error:</label>
       <pre id="errorOut" class="center" style="white-space: pre-wrap;"></pre>
 
-      <div class="center" style="text-align: center;" id="toggleButtons">
+      <div class="center" style="text-align: center; display: none;" id="toggleButtons">
         <button type="button" class="btn btn-sm demo-tab-btn" data-tab="playbackControlTab" onclick="toggleTab(this);">Playback</button>
+        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="timelineTab" onclick="toggleTab(this);">Timeline</button>
         <button type="button" class="btn btn-sm demo-tab-btn" data-tab="qualityLevelControlTab" onclick="toggleTab(this);">Quality-levels</button>
         <button type="button" class="btn btn-sm demo-tab-btn" data-tab="audioTrackControlTab" onclick="toggleTab(this);">Audio-tracks</button>
-        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="timelineTab" onclick="toggleTab(this);">Timeline</button>
-        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="statsDisplayTab" onclick="toggleTab(this);">Buffer &amp; Statistics</button>
         <button type="button" class="btn btn-sm demo-tab-btn" data-tab="metricsDisplayTab" onclick="toggleTab(this); showMetrics();">Real-time metrics</button>
+        <button type="button" class="btn btn-sm demo-tab-btn" data-tab="statsDisplayTab" onclick="toggleTab(this);">Buffer &amp; Statistics</button>
       </div>
 
-      <div class="center demo-tab" id='playbackControlTab'>
-        <h4>Playback</h4>
+      <div class="center demo-tab" id="playbackControlTab" style="display: none;">
+        <br>
         <center>
-            <p>
-              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].play()">Play</button>
-              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].pause()">Pause</button>
-            </p>
-
-            <p>
-              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime-=10">- 10 s</button>
-              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime+=10">+ 10 s</button>
-            </p>
-
-            <p>
-              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">Seek to </button>
-              <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}">
-            </p>
-
-            <p>
-              <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachMedia($('#video')[0])">Attach media</button>
-              <button type="button" class="btn btn-xs btn-warning" onclick="hls.detachMedia()">Detach media</button>
-            </p>
-
-            <p>
-              <button type="button" class="btn btn-xs btn-warning" onclick="hls.startLoad()">Start loading</button>
-              <button type="button" class="btn btn-xs btn-warning" onclick="hls.stopLoad()">Stop loading</button>
-            </p>
-
-            <p>
-              <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">Recover media-error</button>
-            </p>
-
-            <p>
-              <button type="button" class="btn btn-xs btn-warning" onclick="createfMP4('audio');">Create audio-fmp4</button>
-              <button type="button" class="btn btn-xs btn-warning" onclick="createfMP4('video')">Create video-fmp4</button>
-            </p>
+          <p>
+            <span>
+                <button type="button" class="btn btn-sm btn-info" title="video.play()" onclick="$('#video')[0].play()">Play</button>
+                <button type="button" class="btn btn-sm btn-info" title="video.pause()" onclick="$('#video')[0].pause()">Pause</button>
+            </span>
+              <span>
+              <button type="button" class="btn btn-sm btn-info" title="video.currentTime -= 10" onclick="$('#video')[0].currentTime-=10">- 10 s</button>
+              <button type="button" class="btn btn-sm btn-info" title="video.currentTime += 10" onclick="$('#video')[0].currentTime+=10">+ 10 s</button>
+            </span>
+              <span>
+              <button type="button" class="btn btn-sm btn-info" title="video.currentTime = text input" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">Seek to </button>
+              <input type="number" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}">
+            </span>
+          </p>
+          <p>
+          <span>
+              <button type="button" class="btn btn-xs btn-warning" title="hls.startLoad()" onclick="hls.startLoad()">Start loading</button>
+              <button type="button" class="btn btn-xs btn-warning" title="hls.stopLoad()" onclick="hls.stopLoad()">Stop loading</button>
+            </span>
+            <span>
+              <button type="button" class="btn btn-xs btn-warning" title="hls.attachMedia(video)" onclick="hls.attachMedia($('#video')[0])">Attach media</button>
+              <button type="button" class="btn btn-xs btn-warning" title="hls.detachMedia()" onclick="hls.detachMedia()">Detach media</button>
+            </span>
+          </p>
+          <p>
+            <span>
+              <button type="button" class="btn btn-xs btn-warning" title="hls.recoverMediaError()" onclick="hls.recoverMediaError()">Recover media-error</button>
+              <button type="button" class="btn btn-xs btn-warning" title="hls.swapAudioCodec()" onclick="hls.swapAudioCodec()">Swap audio codec</button>
+            </span>
+          </p>
+          <p>
+            <span>
+              <button type="button" class="btn btn-xs btn-default btn-dump" title="Save dumped audio mp4 appends" onclick="createfMP4('audio');">Create audio-fmp4</button>
+              <button type="button" class="btn btn-xs btn-default btn-dump" title="Save dumped video mp4 appends" onclick="createfMP4('video')">Create video-fmp4</button>
+            </span>
+          </p>
         </center>
-
       </div>
 
-      <div class="center demo-tab" id='qualityLevelControlTab'>
-        <h4>Quality-levels</h4>
+      <div class="center demo-tab demo-timeline-chart-container" id="timelineTab" style="display: none;">
+        <canvas id="timeline-chart"></canvas>
+      </div>
+
+      <div class="center demo-tab" id="qualityLevelControlTab" style="display: none;">
         <center>
             <table>
                 <tr>
@@ -209,19 +214,21 @@
         </center>
       </div>
 
-      <div class="center demo-tab" id='audioTrackControlTab'>
-        <h4>Audio-tracks</h4>
+      <div class="center demo-tab" id="audioTrackControlTab" style="display: none;">
         <table>
           <tr>
             <td>Current audio-track:</td>
-            <td width=10px>None selected</td>
-            <td> <div id="audioTrackControl" style="display: inline;"></div> </td>
+            <td><div id="audioTrackControl" style="display: inline;"></div></td>
+          </tr>
+          <tr>
+            <td>Language / Name:</td>
+            <td><div id="audioTrackLabel" style="display: inline;">None selected</div></td>
           </tr>
         </table>
       </div>
 
-      <div class="center demo-tab" id='metricsDisplayTab'>
-        <h4>Real-time metrics</h4>
+      <div class="center demo-tab" id="metricsDisplayTab" style="display: none;">
+        <br>
         <div id="metricsButton">
           <button type="button" class="btn btn-xs btn-info" onclick="$('#metricsButtonWindow').toggle();$('#metricsButtonFixed').toggle();windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
           <div id="metricsButtonWindow">
@@ -255,16 +262,12 @@
         </div>
       </div>
 
-      <div class="center demo-tab" id='statsDisplayTab'>
-        <h4>Buffer &amp; Statistics</h4>
+      <div class="center demo-tab" id="statsDisplayTab" style="display: none;">
+        <br>
         <label>Buffer state:</label>
         <pre id="bufferedOut"></pre>
         <label>General stats:</label>
         <pre id='statisticsOut'></pre>
-      </div>
-
-      <div class="center demo-tab demo-timeline-chart-container" id='timelineTab'>
-        <canvas id="timeline-chart"></canvas>
       </div>
 
     </div>
