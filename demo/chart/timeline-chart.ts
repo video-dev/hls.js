@@ -289,6 +289,8 @@ export class TimelineChart {
     const trackTypes = Object.keys(tracks).sort((type) => type === 'video' ? 1 : -1);
     const mediaBufferData = [];
 
+    this.removeSourceBuffers();
+
     this.media = media;
 
     trackTypes.forEach((type) => {
@@ -351,9 +353,12 @@ export class TimelineChart {
 
   removeSourceBuffers () {
     const { labels, datasets } = this.chart.data;
-    while ((labels[0] || '').indexOf('buffer') > -1) {
-      labels.shift();
-      datasets.shift();
+    let i = datasets.length;
+    while (i--) {
+      if ((labels[0] || '').indexOf('buffer') > -1) {
+        datasets.splice(i, 1);
+        labels.splice(i, 1);
+      }
     }
   }
 
