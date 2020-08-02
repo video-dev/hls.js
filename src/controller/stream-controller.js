@@ -426,7 +426,7 @@ class StreamController extends BaseStreamController {
   }
 
   _loadKey (frag, levelDetails) {
-    logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${this.level}`);
+    logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${this.level}`);
     this.state = State.KEY_LOADING;
     this.hls.trigger(Event.KEY_LOADING, { frag });
   }
@@ -449,7 +449,9 @@ class StreamController extends BaseStreamController {
       frag.autoLevel = this.hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
 
-      logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${this.level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
+      logger.log(`Loading ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${this.level}, ${
+        this.loadedmetadata ? 'currentTime' : 'nextLoadPosition'
+      }: ${parseFloat(pos.toFixed(3))}, bufferEnd: ${parseFloat(bufferEnd.toFixed(3))}`);
 
       this.hls.trigger(Event.FRAG_LOADING, { frag });
       // lazy demuxer init, as this could take some time ... do it during frag loading
@@ -1085,8 +1087,9 @@ class StreamController extends BaseStreamController {
 
   onAudioTrackSwitching (data) {
     // if any URL found on new audio track, it is an alternate audio track
-    let altAudio = !!data.url,
-      trackId = data.id;
+    const fromAltAudio = this.altAudio;
+    const altAudio = !!data.url;
+    const trackId = data.id;
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
     // don't do anything if we switch to alt audio: audio stream controller is handling it.
     // we will just have to change buffer scheduling on audioTrackSwitched
@@ -1111,10 +1114,17 @@ class StreamController extends BaseStreamController {
         this.state = State.IDLE;
       }
       let hls = this.hls;
-      // switching to main audio, flush all audio and trigger track switched
-      hls.trigger(Event.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
-      hls.trigger(Event.AUDIO_TRACK_SWITCHED, { id: trackId });
-      this.altAudio = false;
+      // If switching from alt to main audio, flush all audio and trigger track switched
+      if (fromAltAudio) {
+        hls.trigger(Event.BUFFER_FLUSHING, {
+          startOffset: 0,
+          endOffset: Number.POSITIVE_INFINITY,
+          type: 'audio'
+        });
+      }
+      hls.trigger(Event.AUDIO_TRACK_SWITCHED, {
+        id: trackId
+      });
     }
   }
 
