@@ -5,7 +5,6 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
-import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues, getClosestCue } from '../utils/texttrack-utils';
 
 const MIN_CUE_DURATION = 0.25;
@@ -81,7 +80,6 @@ class ID3TrackController extends EventHandler {
 
         const timeDiff = endTime - startTime;
         if (timeDiff < MIN_CUE_DURATION) {
-          logger.warn(`detected an id3 sample with a duration of ${timeDiff}s. Adjusting to provide a duration of ${MIN_CUE_DURATION}`);
           endTime += MIN_CUE_DURATION - timeDiff;
         }
 
