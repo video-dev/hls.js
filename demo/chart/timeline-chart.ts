@@ -274,7 +274,7 @@ export class TimelineChart {
       return;
     }
     // eslint-disable-next-line no-restricted-properties
-    const fragData = arrayFind(levelDataSet.data, fragData => fragData.relurl === frag.relurl);
+    const fragData = arrayFind(levelDataSet.data, fragData => fragData.relurl === frag.relurl && fragData.sn === frag.sn);
     if (fragData && fragData !== frag) {
       Object.assign(fragData, frag);
     }

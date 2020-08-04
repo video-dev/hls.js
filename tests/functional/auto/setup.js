@@ -123,10 +123,10 @@ async function testSmoothSwitch (url, config) {
       const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      window.hls.once(window.Hls.Events.FRAG_CHANGED, (event, data) => {
+      window.hls.once(window.Hls.Events.FRAG_CHANGED, function (event, data) {
         window.switchToHighestLevel('next');
       });
-      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, (event, data) => {
+      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
         console.log('[test] > level switched: ' + data.level);
         let currentTime = video.currentTime;
         if (data.level === window.hls.levels.length - 1) {

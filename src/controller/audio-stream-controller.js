@@ -58,7 +58,7 @@ class AudioStreamController extends BaseStreamController {
       // Can change due level switch
       this.initPTS[cc] = initPTS;
       this.videoTrackCC = cc;
-      logger.log(`InitPTS for cc: ${cc} found from video track: ${initPTS}`);
+      logger.log(`InitPTS for cc: ${cc} found from main: ${initPTS}`);
 
       // If we are waiting we need to demux/remux the waiting frag
       // With the new initPTS
@@ -264,7 +264,9 @@ class AudioStreamController extends BaseStreamController {
             // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
             this.fragCurrent = frag;
             if (audioSwitch || this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-              logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+              logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, ${
+                this.loadedmetadata ? 'currentTime' : 'nextLoadPosition'
+              }: ${pos}, bufferEnd: ${bufferEnd.toFixed(3)}`);
 
               if (frag.sn !== 'initSegment') {
                 this.startFragRequested = true;
@@ -593,9 +595,10 @@ class AudioStreamController extends BaseStreamController {
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       LevelHelper.updateFragPTSDTS(track.details, fragCurrent, data.startPTS, data.endPTS);
 
-      let audioSwitch = this.audioSwitch, media = this.media, appendOnBufferFlush = false;
+      const media = this.media;
+      let appendOnBufferFlush = false;
       // Only flush audio from old audio tracks when PTS is known on new audio track
-      if (audioSwitch) {
+      if (this.audioSwitch) {
         if (media && media.readyState) {
           let currentTime = media.currentTime;
           logger.log('switching audio track : currentTime:' + currentTime);
