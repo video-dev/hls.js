@@ -99,7 +99,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     const cc = frag.cc;
     this.initPTS[cc] = initPTS;
     this.videoTrackCC = cc;
-    this.log(`InitPTS for cc: ${cc} found from video track: ${initPTS}`);
+    this.log(`InitPTS for cc: ${cc} found from main: ${initPTS}`);
     // If we are waiting, tick immediately to unblock audio fragment transmuxing
     if (this.state === State.WAITING_INIT_PTS) {
       this.tick();
@@ -310,7 +310,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
         return;
       }
 
-      this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${this.trackId}, load position: ${pos.toFixed(3)}-${loadPos.toFixed(3)}`);
+      this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN}-${trackDetails.endSN}], track ${trackId}, load position: ${pos.toFixed(3)}-${loadPos.toFixed(3)}`);
       this.loadFragment(frag);
     }
   }

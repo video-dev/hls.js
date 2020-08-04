@@ -58,14 +58,18 @@ $(document).ready(function () {
 
   chart = setupTimelineChart();
 
-  Object.keys(testStreams).forEach((key) => {
+  Object.keys(testStreams).forEach((key, index) => {
     const stream = testStreams[key];
     const option = new Option(stream.description, key);
     $('#streamSelect').append(option);
+    if (stream.url === sourceURL) {
+      $('#streamSelect')[0].selectedIndex = index + 1;
+    }
   });
 
   $('#streamSelect').change(function () {
-    selectedTestStream = testStreams[$('#streamSelect').val()];
+    const key = $('#streamSelect').val() || Object.keys(testStreams)[0];
+    selectedTestStream = testStreams[key];
     const streamUrl = selectedTestStream.url;
     $('#streamURL').val(streamUrl);
     loadSelectedStream();
@@ -159,6 +163,9 @@ function setupGlobals () {
     level: [],
     bitrate: []
   };
+  lastAudioTrackSwitchingIdx = undefined;
+  lastSeekingIdx = undefined;
+  bufferingIdx = -1;
 
   // actual values, only on window
   self.recoverDecodingErrorDate = null;
