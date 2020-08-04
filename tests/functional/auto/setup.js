@@ -22,6 +22,8 @@ const browserConfig = {
  */
 let browser;
 let stream;
+let printDebugLogs = false;
+
 // Setup browser config data from env vars
 if (onTravis) {
   let UA = process.env.UA;
@@ -123,18 +125,20 @@ async function testSmoothSwitch (url, config) {
       const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      window.hls.once(window.Hls.Events.FRAG_CHANGED, function (event, data) {
+      window.hls.once(window.Hls.Events.FRAG_CHANGED, function (eventName, data) {
+        console.log('[test] > ' + eventName + ' frag.level: ' + data.frag.level);
         window.switchToHighestLevel('next');
       });
-      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (event, data) {
-        console.log('[test] > level switched: ' + data.level);
+      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
+        console.log('[test] > ' + eventName + ' data.level: ' + data.level);
         let currentTime = video.currentTime;
-        if (data.level === window.hls.levels.length - 1) {
-          console.log('[test] > switched on level: ' + data.level);
+        const highestLevel = (window.hls.levels.length - 1);
+        if (data.level === highestLevel) {
           window.setTimeout(function () {
             let newCurrentTime = video.currentTime;
-            console.log('[test] > currentTime delta : ' + (newCurrentTime - currentTime));
+            console.log('[test] > currentTime delta: ' + (newCurrentTime - currentTime));
             callback({
+              highestLevel: highestLevel,
               currentTimeDelta: newCurrentTime - currentTime,
               logs: window.logString
             });
@@ -335,15 +339,17 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   beforeEach(async function () {
     try {
       await retry(async () => {
-        console.log('Loading test page...');
+        if (printDebugLogs) {
+          console.log('Loading test page...');
+        }
         try {
           await browser.get(`http://${hostname}:8000/tests/functional/auto/index.html`);
         } catch (e) {
           throw new Error('failed to open test page');
         }
-        console.log('Test page loaded.');
-
-        console.log('Locating ID \'hlsjs-functional-tests\'');
+        if (printDebugLogs) {
+          console.log('Test page loaded.');
+        }
         try {
           await browser.wait(
             until.elementLocated(By.css('body#hlsjs-functional-tests')),
@@ -355,7 +361,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           console.log(source);
           throw e;
         }
-        console.log('Located the ID, page confirmed loaded');
+        if (printDebugLogs) {
+          console.log('Test harness found, page confirmed loaded');
+        }
       });
     } catch (e) {
       throw new Error(`error getting test page loaded: ${e}`);
@@ -363,10 +371,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   });
 
   afterEach(async function () {
-    // if (onTravis || (!onTravis && this.currentTest.isFailed())) {
+    if (printDebugLogs || this.currentTest.isFailed()) {
       const logString = await browser.executeScript('return logString');
       console.log(`${onTravis ? 'travis_fold:start:debug_logs' : ''}\n${logString}\n${onTravis ? 'travis_fold:end:debug_logs' : ''}`);
-    // }
+    }
   });
 
   after(async function () {
