@@ -89,6 +89,9 @@ export default class GapController {
       // Jump start gaps within jump threshold
       const startJump = Math.max(nextStart, bufferInfo.start || 0) - currentTime;
 
+      // When joining a live stream with audio tracks, account for live playlist window sliding by allowing
+      // a larger jump over start gaps caused by the audio-stream-controller buffering a start fragment
+      // that begins over 1 target duration after the video start position.
       const level = this.hls.levels ? this.hls.levels[this.hls.currentLevel] : null;
       const isLive = level?.details?.live;
       const maxStartGapJump = isLive ? level.details.targetduration * 2 : MAX_START_GAP_JUMP;
