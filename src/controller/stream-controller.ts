@@ -264,11 +264,13 @@ export default class StreamController extends BaseStreamController implements Ne
     // We want to load the key if we're dealing with an identity key, because we will decrypt
     // this content using the key we fetch. Other keys will be handled by the DRM CDM via EME.
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
+      this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${level}`);
       this._loadKey(frag);
     } else {
       if (this.fragCurrent !== frag) {
-        this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferInfo.end.toFixed(3)}`);
+        this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${level}, ${
+          this.loadedmetadata ? 'currentTime' : 'nextLoadPosition'
+        }: ${parseFloat(pos.toFixed(3))}, bufferInfo.end: ${parseFloat(bufferInfo.end.toFixed(3))}`);
       }
       this._loadFragment(frag);
     }
@@ -638,6 +640,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
   onAudioTrackSwitching (event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) {
     // if any URL found on new audio track, it is an alternate audio track
+    const fromAltAudio = this.altAudio;
     const altAudio = !!data.url;
     const trackId = data.id;
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
@@ -664,10 +667,17 @@ export default class StreamController extends BaseStreamController implements Ne
         this.resetTransmuxer();
       }
       const hls = this.hls;
-      // switching to main audio, flush all audio and trigger track switched
-      hls.trigger(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
-      hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: trackId });
-      this.altAudio = false;
+      // If switching from alt to main audio, flush all audio and trigger track switched
+      if (fromAltAudio) {
+        hls.trigger(Events.BUFFER_FLUSHING, {
+          startOffset: 0,
+          endOffset: Number.POSITIVE_INFINITY,
+          type: 'audio'
+        });
+      }
+      hls.trigger(Events.AUDIO_TRACK_SWITCHED, {
+        id: trackId
+      });
     }
   }
 

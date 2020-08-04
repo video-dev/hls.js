@@ -72,6 +72,25 @@ export default class MP4Remuxer implements Remuxer {
     this.ISGenerated = false;
   }
 
+  getVideoStartPts (videoSamples) {
+    let rolloverDetected = false;
+    const startPTS = videoSamples.reduce((minPTS, sample) => {
+      const delta = sample.pts - minPTS;
+      if (delta < -4294967296) { // 2^32, see PTSNormalize for reasoning, but we're hitting a rollover here, and we don't want that to impact the timeOffset calculation
+        rolloverDetected = true;
+        return minPTS;
+      } else if (delta > 0) {
+        return minPTS;
+      } else {
+        return sample.pts;
+      }
+    }, videoSamples[0].pts);
+    if (rolloverDetected) {
+      logger.debug('PTS rollover detected');
+    }
+    return startPTS;
+  }
+
   remux (audioTrack: DemuxedAudioTrack, videoTrack: DemuxedAvcTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset: number, accurateTimeOffset: boolean) : RemuxerResult {
     let video;
     let audio;
@@ -112,7 +131,7 @@ export default class MP4Remuxer implements Remuxer {
           // if first audio DTS is not aligned with first video DTS then we need to take that into account
           // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
           // drift between audio and video streams
-          const startPTS = videoTrack.samples.reduce((minPTS, sample) => Math.min(minPTS, sample.pts), videoTrack.samples[0].pts);
+          const startPTS = this.getVideoStartPts(videoTrack.samples);
           const tsDelta = audioTrack.samples[0].pts - startPTS;
           const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
           audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
@@ -148,11 +167,11 @@ export default class MP4Remuxer implements Remuxer {
 
     if (this.ISGenerated) {
       if (id3Track.samples.length) {
-        id3 = this.remuxID3(id3Track);
+        id3 = this.remuxID3(id3Track, timeOffset);
       }
 
       if (textTrack.samples.length) {
-        text = this.remuxText(textTrack);
+        text = this.remuxText(textTrack, timeOffset);
       }
     }
 
@@ -225,7 +244,7 @@ export default class MP4Remuxer implements Remuxer {
         }
       };
       if (computePTSDTS) {
-        const startPTS = videoSamples.reduce((minPTS, sample) => Math.min(minPTS, sample.pts), videoSamples[0].pts);
+        const startPTS = this.getVideoStartPts(videoSamples);
         const startOffset = Math.round(inputTimeScale * timeOffset);
         initDTS = Math.min(initDTS, videoSamples[0].dts - startOffset);
         initPTS = Math.min(initPTS, startPTS - startOffset);
@@ -265,8 +284,7 @@ export default class MP4Remuxer implements Remuxer {
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
     if (!contiguous || nextAvcDts === null) {
       const pts = timeOffset * timeScale;
-      // TODO: Handle case where pts value is wrapped, but dts is not
-      const cts = Math.max(0, inputSamples[0].pts - inputSamples[0].dts);
+      const cts = inputSamples[0].pts - PTSNormalize(inputSamples[0].dts, inputSamples[0].pts);
       // if not contiguous, let's use target timeOffset
       nextAvcDts = pts - cts;
     }
@@ -754,7 +772,7 @@ export default class MP4Remuxer implements Remuxer {
     return this.remuxAudio(track, timeOffset, contiguous, false);
   }
 
-  remuxID3 (track: DemuxedTrack) : RemuxedMetadata | undefined {
+  remuxID3 (track: DemuxedTrack, timeOffset: number) : RemuxedMetadata | undefined {
     const length = track.samples.length;
     if (!length) {
       return;
@@ -766,8 +784,8 @@ export default class MP4Remuxer implements Remuxer {
       const sample = track.samples[index];
       // setting id3 pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
-      sample.pts = ((sample.pts - initPTS) / inputTimeScale);
-      sample.dts = ((sample.dts - initDTS) / inputTimeScale);
+      sample.pts = PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale) / inputTimeScale;
+      sample.dts = PTSNormalize(sample.dts - initDTS, timeOffset * inputTimeScale) / inputTimeScale;
     }
     const samples = track.samples;
     track.samples = [];
@@ -776,12 +794,11 @@ export default class MP4Remuxer implements Remuxer {
     };
   }
 
-  remuxText (track: DemuxedTrack) : RemuxedUserdata | undefined {
+  remuxText (track: DemuxedTrack, timeOffset: number) : RemuxedUserdata | undefined {
     const length = track.samples.length;
     if (!length) {
       return;
     }
-    track.samples.sort((a, b) => a.pts - b.pts);
 
     const inputTimeScale = track.inputTimeScale;
     const initPTS = this._initPTS;
@@ -789,8 +806,9 @@ export default class MP4Remuxer implements Remuxer {
       const sample = track.samples[index];
       // setting text pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
-      sample.pts = ((sample.pts - initPTS) / inputTimeScale);
+      sample.pts = PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale) / inputTimeScale;
     }
+    track.samples.sort((a, b) => a.pts - b.pts);
     const samples = track.samples;
     track.samples = [];
     return {
