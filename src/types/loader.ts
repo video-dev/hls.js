@@ -1,5 +1,6 @@
 import type Fragment from '../loader/fragment';
 import type LevelDetails from '../loader/level-details';
+import type { HlsUrlParameters } from './level';
 
 export interface LoaderContext {
   // target URL
@@ -154,6 +155,8 @@ export interface PlaylistLoaderContext extends LoaderContext {
   id: number | null
   // defines if the loader is handling a sidx request for the playlist
   isSidxRequest?: boolean
-  // internal reprsentation of a parsed m3u8 level playlist
-  levelDetails?: LevelDetails
+  // internal representation of a parsed m3u8 level playlist
+  levelDetails?: LevelDetails,
+  // Blocking playlist request delivery directives (or null id none were added to playlist url
+  deliveryDirectives?: HlsUrlParameters | null
 }

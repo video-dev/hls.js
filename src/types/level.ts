@@ -37,6 +37,34 @@ export interface LevelAttributes extends AttrList {
   URI?: string
 }
 
+export class HlsUrlParameters {
+  msn: number;
+  part?: number;
+  skip?: boolean;
+
+  constructor (msn: number, part?: number, skip?: boolean) {
+    this.msn = msn;
+    this.part = part;
+    this.skip = skip;
+  }
+
+  addDirectives (uri: string): string | never {
+    const url: URL = new self.URL(uri);
+    const searchParams: URLSearchParams = url.searchParams;
+    searchParams.set('_HLS_msn', this.msn.toString());
+    if (this.part !== undefined) {
+      searchParams.set('_HLS_part', this.part.toString());
+    }
+    if (this.skip) {
+      // TODO: LL-HLS value is 'v2' when 'CAN-SKIP-DATERANGES=YES'
+      searchParams.set('_HLS_skip', 'YES');
+    }
+    searchParams.sort();
+    url.search = searchParams.toString();
+    return url.toString();
+  }
+}
+
 export class Level {
   public attrs: LevelAttributes;
   public audioCodec?: string;

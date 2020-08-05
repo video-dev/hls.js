@@ -4,10 +4,11 @@ import { computeReloadInterval } from './level-helper';
 import { clearCurrentCues } from '../utils/texttrack-utils';
 import { MediaPlaylist } from '../types/media-playlist';
 import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdatedData } from '../types/events';
-import { ComponentAPI } from '../types/component-api';
+import { NetworkComponentAPI } from '../types/component-api';
 import Hls from '../hls';
+import { HlsUrlParameters } from '../types/level';
 
-class SubtitleTrackController implements ComponentAPI {
+class SubtitleTrackController implements NetworkComponentAPI {
   private hls: Hls;
   private tracks: MediaPlaylist[];
   private trackId: number = -1;
@@ -133,8 +134,19 @@ class SubtitleTrackController implements ComponentAPI {
 
     if (details.live && !this.stopped) {
       details.reloaded(curDetails);
+      if (curDetails) {
+        logger.log(`[subtitle-track-controller]: live subtitle track ${id} ${details.updated ? 'REFRESHED' : 'MISSED'}`);
+      }
+      // TODO: Do not use LL-HLS delivery directives if playlist "endSN" is stale
+      if (details?.canBlockReload && details.endSN && details.updated) {
+        // Load track with LL-HLS delivery directives
+        // TODO: LL-HLS Specify latest partial segment
+        // TODO: LL-HLS enable skip parameter for delta playlists independent of canBlockReload
+        this._loadCurrentTrack(new HlsUrlParameters(details.endSN + 1, 0, false));
+        return;
+      }
       const reloadInterval = computeReloadInterval(details, data.stats);
-      logger.log(`[subtitle-track-controller]: live subtitle track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
+      logger.log(`[subtitle-track-controller]: reload live subtitle track ${id} in ${Math.round(reloadInterval)} ms`);
       this.timer = self.setTimeout(() => {
         this._loadCurrentTrack();
       }, reloadInterval);
@@ -178,14 +190,18 @@ class SubtitleTrackController implements ComponentAPI {
     }
   }
 
-  private _loadCurrentTrack (): void {
-    const { trackId, tracks, hls } = this;
+  private _loadCurrentTrack (hlsUrlParameters?: HlsUrlParameters): void {
+    const { trackId, tracks } = this;
     const currentTrack = tracks[trackId];
     if (this.stopped || trackId < 0 || !currentTrack || (currentTrack.details && !currentTrack.details.live)) {
       return;
     }
     logger.log(`[subtitle-track-controller]: Loading subtitle track ${trackId}`);
-    hls.trigger(Events.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
+    this.hls.trigger(Events.SUBTITLE_TRACK_LOADING, {
+      url: currentTrack.url,
+      id: trackId,
+      deliveryDirectives: hlsUrlParameters || null
+    });
   }
 
   /**
@@ -223,13 +239,15 @@ class SubtitleTrackController implements ComponentAPI {
      */
   private _setSubtitleTrackInternal (newId: number): void {
     const { hls, tracks } = this;
-    if (!Number.isFinite(newId) || newId < -1 || newId >= tracks.length) {
+    if (this.trackId === newId && this.tracks[this.trackId].details ||
+      newId < -1 || newId >= tracks.length) {
       return;
     }
 
     this.trackId = newId;
     logger.log(`[subtitle-track-controller]: Switching to subtitle track ${newId}`);
     hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
+    // TODO: LL-HLS use RENDITION-REPORT if available
     this._loadCurrentTrack();
   }
 

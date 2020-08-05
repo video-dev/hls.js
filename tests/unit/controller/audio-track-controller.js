@@ -205,6 +205,7 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
       });
+      audioTrackController.startLoad();
 
       expect(needsTrackLoading).to.have.been.calledOnce;
       expect(needsTrackLoading).to.have.been.calledWith(trackWithUrl);
@@ -232,6 +233,7 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
       });
+      audioTrackController.startLoad();
 
       expect(needsTrackLoading).to.have.been.calledOnce;
       expect(needsTrackLoading).to.have.been.calledWith(trackWithOutUrl);
