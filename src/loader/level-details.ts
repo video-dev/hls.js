@@ -44,6 +44,7 @@ export default class LevelDetails {
       this.updated = true;
       return;
     }
+    // TODO: LL-HLS Set `updated` with delta playlist and partial segment changes taken into account
     const updated = (this.endSN !== previous.endSN || this.url !== previous.url);
     if (updated) {
       this.misses = Math.floor(previous.misses * 0.6);

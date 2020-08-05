@@ -13,6 +13,7 @@ import {
 } from '../types/events';
 import { NetworkComponentAPI } from '../types/component-api';
 import Hls from '../hls';
+import { HlsUrlParameters } from '../types/level';
 
 /**
  * @class AudioTrackController
@@ -142,12 +143,22 @@ class AudioTrackController implements NetworkComponentAPI {
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
       details.reloaded(curDetails);
-      const reloadInterval = computeReloadInterval(details, data.stats);
-      logger.log(`[audio-track-controller]: live audio track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
-      // Stop reloading if the timer was cleared
-      if (this.canLoad) {
-        this.timer = self.setTimeout(() => this._updateTrack(this._trackId), reloadInterval);
+      if (curDetails) {
+        logger.log(`[audio-track-controller]: live audio track ${id} ${details.updated ? 'REFRESHED' : 'MISSED'}`);
       }
+      // TODO: Do not use LL-HLS delivery directives if playlist "endSN" is stale
+      if (details?.canBlockReload && details.endSN && details.updated) {
+        // Load track with LL-HLS delivery directives
+        // TODO: LL-HLS Specify latest partial segment
+        // TODO: LL-HLS enable skip parameter for delta playlists independent of canBlockReload
+        this._updateTrack(new HlsUrlParameters(details.endSN + 1, 0, false));
+        return;
+      }
+      const reloadInterval = computeReloadInterval(details, data.stats);
+      logger.log(`[audio-track-controller]: reload live audio track ${id} in ${Math.round(reloadInterval)} ms`);
+      this.timer = self.setTimeout(() => {
+        this._updateTrack();
+      }, reloadInterval);
     } else {
       // playlist is not live and timer is scheduled: cancel it
       this.clearTimer();
@@ -164,7 +175,7 @@ class AudioTrackController implements NetworkComponentAPI {
   public startLoad (): void {
     this.canLoad = true;
     if (this.timer === null) {
-      this._updateTrack(this._trackId);
+      this._updateTrack();
     }
   }
 
@@ -248,7 +259,6 @@ class AudioTrackController implements NetworkComponentAPI {
   private _setAudioTrack (newId: number): void {
     // noop on same audio track id as already set
     if (this._trackId === newId && this.tracks[this._trackId].details) {
-      logger.debug('[audio-track-controller]: Same id as current audio-track passed, and track details available -> no-op');
       return;
     }
 
@@ -268,7 +278,8 @@ class AudioTrackController implements NetworkComponentAPI {
 
     const { url, type, id } = audioTrack;
     this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
-    this._loadTrackDetailsIfNeeded(audioTrack);
+    // TODO: LL-HLS use RENDITION-REPORT if available
+    this._updateTrack();
   }
 
   private _selectInitialAudioTrack (): void {
@@ -334,27 +345,27 @@ class AudioTrackController implements NetworkComponentAPI {
     return !!url && (!details || details.live);
   }
 
-  private _loadTrackDetailsIfNeeded (audioTrack: MediaPlaylist): void {
-    if (this._needsTrackLoading(audioTrack)) {
-      const { url, id } = audioTrack;
-      // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
-      this.hls.trigger(Events.AUDIO_TRACK_LOADING, { url, id });
-    }
-  }
-
-  private _updateTrack (newId: number): void {
+  private _updateTrack (hlsUrlParameters?: HlsUrlParameters): void {
+    const newId: number = this._trackId;
     // check if level idx is valid
     if (newId < 0 || newId >= this.tracks.length) {
       return;
     }
 
-    // stopping live reloading timer if any
-    this.clearTimer();
     this._trackId = newId;
-    logger.log(`[audio-track-controller]: trying to update audio-track ${newId}`);
+    logger.log(`[audio-track-controller]: updated audio-track index ${newId}`);
     const audioTrack = this.tracks[newId];
-    this._loadTrackDetailsIfNeeded(audioTrack);
+    if (this.canLoad && this._needsTrackLoading(audioTrack)) {
+      const { url, id, details } = audioTrack;
+      // track not retrieved yet, or live playlist we need to (re)load it
+      logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
+      this.clearTimer();
+      this.hls.trigger(Events.AUDIO_TRACK_LOADING, {
+        url,
+        id,
+        deliveryDirectives: hlsUrlParameters || null
+      });
+    }
   }
 
   private _handleLoadError (): void {

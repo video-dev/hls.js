@@ -111,7 +111,11 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 1;
 
       expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', { url: 'bar', id: 1 });
+      expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', {
+        url: 'bar',
+        id: 1,
+        deliveryDirectives: null
+      });
     });
 
     it('should not trigger SUBTITLE_TRACK_LOADING if the track has details and is not live', function () {
@@ -138,7 +142,11 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 2;
 
       expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', { url: 'foo', id: 2 });
+      expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', {
+        url: 'foo',
+        id: 2,
+        deliveryDirectives: null
+      });
     });
 
     it('should do nothing if called with out of bound indices', function () {

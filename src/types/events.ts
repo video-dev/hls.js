@@ -1,15 +1,15 @@
-import Fragment from '../loader/fragment';
-import LevelDetails from '../loader/level-details';
-import { Level, LevelParsed } from './level';
-import { MediaPlaylist } from './media-playlist';
-import { LoaderStats, PlaylistLevelType } from './loader';
-import { Track, TrackSet } from './track';
-import { SourceBufferName } from './buffer';
-import { ChunkMetadata } from './transmuxer';
-import LoadStats from '../loader/load-stats';
-import { ErrorDetails, ErrorTypes } from '../errors';
-import { MetadataSample, UserdataSample } from './demuxer';
-import AttrList from '../utils/attr-list';
+import type Fragment from '../loader/fragment';
+import type LevelDetails from '../loader/level-details';
+import type { HlsUrlParameters, Level, LevelParsed } from './level';
+import type { MediaPlaylist } from './media-playlist';
+import type { LoaderStats, PlaylistLevelType } from './loader';
+import type { Track, TrackSet } from './track';
+import type { SourceBufferName } from './buffer';
+import type { ChunkMetadata } from './transmuxer';
+import type LoadStats from '../loader/load-stats';
+import type { ErrorDetails, ErrorTypes } from '../errors';
+import type { MetadataSample, UserdataSample } from './demuxer';
+import type AttrList from '../utils/attr-list';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement
@@ -92,6 +92,7 @@ export interface LevelSwitchedData {
 export interface TrackLoadingData {
   id: number
   url: string
+  deliveryDirectives: HlsUrlParameters | null
 }
 
 export interface LevelLoadingData extends TrackLoadingData {
@@ -133,11 +134,6 @@ export interface AudioTrackSwitchedData {
   id: any
 }
 
-export interface AudioTrackLoadingData {
-  url: string;
-  id: number | null;
-}
-
 export interface AudioTrackLoadedData {
   details: LevelDetails;
   id: number;
@@ -155,11 +151,6 @@ export interface SubtitleTracksUpdatedData {
 
 export interface SubtitleTrackSwitchData {
   id: number
-}
-
-export interface SubtitleTrackLoadingData {
-  url: string;
-  id: number | null;
 }
 
 export interface SubtitleTrackLoadedData {

@@ -212,7 +212,9 @@ export class TimelineChart {
     const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
     // eslint-disable-next-line no-restricted-properties
-    const levelDataSet = arrayFind(datasets, dataset => dataset.url && dataset.url.toString() === url);
+    const deliveryDirectivePattern = /[?&]_HLS_(?:msn|part|skip)=[^?&]+/g;
+    const levelDataSet = arrayFind(datasets, dataset =>
+      dataset.url?.toString().replace(deliveryDirectivePattern, '') === url.replace(deliveryDirectivePattern, ''));
     if (!levelDataSet) {
       return;
     }

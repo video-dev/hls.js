@@ -24,7 +24,7 @@ import {
   PlaylistLevelType,
   PlaylistLoaderContext
 } from '../types/loader';
-import { ManifestLoadingData, LevelLoadingData, AudioTrackLoadingData, SubtitleTrackLoadingData } from '../types/events';
+import { ManifestLoadingData, LevelLoadingData, TrackLoadingData } from '../types/events';
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 import Hls from '../hls';
@@ -167,35 +167,38 @@ class PlaylistLoader {
   }
 
   private onLevelLoading (event: Events.LEVEL_LOADING, data: LevelLoadingData) {
-    const { id, level, url } = data;
+    const { id, level, url, deliveryDirectives } = data;
     this.load({
       id,
       level,
       responseType: 'text',
       type: PlaylistContextType.LEVEL,
-      url
+      url,
+      deliveryDirectives
     });
   }
 
-  private onAudioTrackLoading (event: Events.AUDIO_TRACK_LOADING, data: AudioTrackLoadingData) {
-    const { id, url } = data;
+  private onAudioTrackLoading (event: Events.AUDIO_TRACK_LOADING, data: TrackLoadingData) {
+    const { id, url, deliveryDirectives } = data;
     this.load({
       id,
       level: null,
       responseType: 'text',
       type: PlaylistContextType.AUDIO_TRACK,
-      url
+      url,
+      deliveryDirectives
     });
   }
 
-  private onSubtitleTrackLoading (event: Events.SUBTITLE_TRACK_LOADING, data: SubtitleTrackLoadingData) {
-    const { id, url } = data;
+  private onSubtitleTrackLoading (event: Events.SUBTITLE_TRACK_LOADING, data: TrackLoadingData) {
+    const { id, url, deliveryDirectives } = data;
     this.load({
       id,
       level: null,
       responseType: 'text',
       type: PlaylistContextType.SUBTITLE_TRACK,
-      url
+      url,
+      deliveryDirectives
     });
   }
 

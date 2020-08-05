@@ -10,7 +10,7 @@ import {
   FragLoadedData,
   ErrorData
 } from '../types/events';
-import { Level, LevelParsed } from '../types/level';
+import { HlsUrlParameters, Level, LevelParsed } from '../types/level';
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
@@ -165,7 +165,7 @@ export default class LevelController implements NetworkComponentAPI {
       for (let i = 0; i < levels.length; i++) {
         if (levels[i].bitrate === bitrateStart) {
           this._firstLevel = i;
-          logger.log(`[level-controller]: manifest loaded,${levels.length} level(s) found, first bitrate:${bitrateStart}`);
+          logger.log(`[level-controller]: manifest loaded, ${levels.length} level(s) found, first bitrate: ${bitrateStart}`);
           break;
         }
       }
@@ -216,7 +216,8 @@ export default class LevelController implements NetworkComponentAPI {
           // stopping live reloading timer if any
           this.clearTimer();
           if (this.currentLevelIndex !== newLevel) {
-            logger.log(`[level-controller]: switching to level ${newLevel}`);
+            const lastLevel = this.currentLevelIndex;
+            logger.log(`[level-controller]: switching to level ${newLevel} from ${lastLevel}`);
             this.currentLevelIndex = newLevel;
             hls.trigger(Events.LEVEL_SWITCHING, Object.assign({}, levels[newLevel], {
               level: newLevel
@@ -228,6 +229,7 @@ export default class LevelController implements NetworkComponentAPI {
           // check if we need to load playlist for this level
           if (!levelDetails || levelDetails.live) {
             // level not retrieved yet, or live playlist we need to (re)load it
+            // TODO: LL-HLS use RENDITION-REPORT if available
             this.loadLevel();
           }
         } else {
@@ -297,6 +299,7 @@ export default class LevelController implements NetworkComponentAPI {
 
     let levelError = false;
     let fragmentError = false;
+    let levelSwitch = true;
     let levelIndex;
 
     // try to recover not fatal errors
@@ -311,6 +314,11 @@ export default class LevelController implements NetworkComponentAPI {
       break;
     case ErrorDetails.LEVEL_LOAD_ERROR:
     case ErrorDetails.LEVEL_LOAD_TIMEOUT:
+      // Do not perform level switch if an error occurred using delivery directives
+      // Attempt to reload level without directives first
+      if (data.context.deliveryDirectives) {
+        levelSwitch = false;
+      }
       levelIndex = data.context.level;
       levelError = true;
       break;
@@ -321,7 +329,7 @@ export default class LevelController implements NetworkComponentAPI {
     }
 
     if (levelIndex !== undefined) {
-      this.recoverLevel(data, levelIndex, levelError, fragmentError);
+      this.recoverLevel(data, levelIndex, levelError, fragmentError, levelSwitch);
     }
   }
 
@@ -330,7 +338,7 @@ export default class LevelController implements NetworkComponentAPI {
    * If redundant stream is not available, emergency switch down if ABR mode is enabled.
    */
   // FIXME Find a better abstraction where fragment/level retry management is well decoupled
-  private recoverLevel (errorEvent: ErrorData, levelIndex: number, levelError: boolean, fragmentError: boolean): void {
+  private recoverLevel (errorEvent: ErrorData, levelIndex: number, levelError: boolean, fragmentError: boolean, levelSwitch: boolean): void {
     // TODO: Handle levels not set rather than throwing (see other parts of this module throwing the same error)
     if (!this._levels) {
       throw new Error('Levels are not set');
@@ -366,7 +374,7 @@ export default class LevelController implements NetworkComponentAPI {
 
     // Try any redundant streams if available for both errors: level and fragment
     // If level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
-    if (levelError || fragmentError) {
+    if (levelSwitch && (levelError || fragmentError)) {
       redundantLevels = level.url.length;
 
       if (redundantLevels > 1 && level.loadError < redundantLevels) {
@@ -428,8 +436,19 @@ export default class LevelController implements NetworkComponentAPI {
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
       details.reloaded(curDetails);
+      if (curDetails) {
+        logger.log(`[level-controller]: live level ${level} ${details.updated ? 'REFRESHED' : 'MISSED'}`);
+      }
+      // TODO: Do not use LL-HLS delivery directives if playlist "endSN" is stale
+      if (details.canBlockReload && details.endSN && details.updated) {
+        // Load level with LL-HLS delivery directives
+        // TODO: LL-HLS Specify latest partial segment
+        // TODO: LL-HLS enable skip parameter for delta playlists independent of canBlockReload
+        this.loadLevel(new HlsUrlParameters(details.endSN + 1, 0, false));
+        return;
+      }
       const reloadInterval = computeReloadInterval(details, data.stats);
-      logger.log(`[level-controller]: live playlist ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
+      logger.log(`[level-controller]: reload live level ${level} in ${Math.round(reloadInterval)} ms`);
       this.timer = self.setTimeout(() => this.loadLevel(), reloadInterval);
     } else {
       this.clearTimer();
@@ -459,9 +478,7 @@ export default class LevelController implements NetworkComponentAPI {
     }
   }
 
-  private loadLevel () {
-    logger.log(`[level-controller]: call to loadLevel (canLoad ${this.canLoad})`);
-
+  private loadLevel (hlsUrlParameters?: HlsUrlParameters) {
     if (this.currentLevelIndex !== null && this.canLoad) {
       if (!this._levels) {
         throw new Error('Levels are not set');
@@ -471,14 +488,28 @@ export default class LevelController implements NetworkComponentAPI {
       if (typeof levelObject === 'object' && levelObject.url.length > 0) {
         const level = this.currentLevelIndex;
         const id = levelObject.urlId;
-        const url = levelObject.url[id];
+        let url = levelObject.url[id];
+        if (hlsUrlParameters) {
+          try {
+            url = hlsUrlParameters.addDirectives(url);
+          } catch (error) {
+            logger.warn(`[level-controller] Could not construct new URL with HLS Delivery Directives: ${error}`);
+          }
+        }
 
-        logger.log(`[level-controller]: Attempt loading level index ${level} with URL-id ${id}`);
+        logger.log(`[level-controller]: Attempt loading level index ${level}${
+          hlsUrlParameters ? ' at sn ' + hlsUrlParameters.msn : ''
+        } with URL-id ${id}`);
 
         // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
         // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
-
-        this.hls.trigger(Events.LEVEL_LOADING, { url, level, id });
+        this.clearTimer();
+        this.hls.trigger(Events.LEVEL_LOADING, {
+          url,
+          level,
+          id,
+          deliveryDirectives: hlsUrlParameters || null
+        });
       }
     }
   }

@@ -1,4 +1,51 @@
-import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData, AudioTrackLoadingData, AudioTrackLoadedData, SubtitleTrackLoadedData, SubtitleTrackLoadingData, ErrorData, AudioTrackSwitchingData, AudioTrackSwitchedData, KeyLoadedData, KeyLoadingData, SubtitleTrackSwitchData, SubtitleTracksUpdatedData, LevelSwitchedData, FragChangedData, BufferAppendingData, BufferCodecsData, FragParsingMetadataData, FragParsingInitSegmentData, FragBufferedData, BufferFlushingData, BufferEOSData, LevelSwitchingData, FPSDropLevelCappingData, FPSDropData, BufferCreatedData, BufferAppendedData, LevelPTSUpdatedData, FragParsedData, AudioTracksUpdatedData, FragLoadEmergencyAbortedData, LiveBackBufferData } from './types/events';
+import {
+  ManifestLoadedData,
+  ManifestLoadingData,
+  MediaAttachedData,
+  MediaAttachingData,
+  LevelLoadingData,
+  LevelLoadedData,
+  ManifestParsedData,
+  LevelUpdatedData,
+  LevelsUpdatedData,
+  FragParsingUserdataData,
+  FragDecryptedData,
+  FragLoadedData,
+  InitPTSFoundData,
+  CuesParsedData,
+  SubtitleFragProcessedData,
+  NonNativeTextTracksData,
+  FragLoadingData,
+  AudioTrackLoadedData,
+  SubtitleTrackLoadedData,
+  ErrorData,
+  AudioTrackSwitchingData,
+  AudioTrackSwitchedData,
+  KeyLoadedData,
+  KeyLoadingData,
+  SubtitleTrackSwitchData,
+  SubtitleTracksUpdatedData,
+  LevelSwitchedData,
+  FragChangedData,
+  BufferAppendingData,
+  BufferCodecsData,
+  FragParsingMetadataData,
+  FragParsingInitSegmentData,
+  FragBufferedData,
+  BufferFlushingData,
+  BufferEOSData,
+  LevelSwitchingData,
+  FPSDropLevelCappingData,
+  FPSDropData,
+  BufferCreatedData,
+  BufferAppendedData,
+  LevelPTSUpdatedData,
+  FragParsedData,
+  AudioTracksUpdatedData,
+  FragLoadEmergencyAbortedData,
+  LiveBackBufferData,
+  TrackLoadingData
+} from './types/events';
 import { Tail } from './types/tuples';
 
 /**
@@ -144,12 +191,12 @@ export interface HlsListeners {
   [Events.AUDIO_TRACKS_UPDATED]: (event: Events.AUDIO_TRACKS_UPDATED, data: AudioTracksUpdatedData) => void
   [Events.AUDIO_TRACK_SWITCHING]: (event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) => void
   [Events.AUDIO_TRACK_SWITCHED]: (event: Events.AUDIO_TRACK_SWITCHED, data: AudioTrackSwitchedData) => void
-  [Events.AUDIO_TRACK_LOADING]: (event: Events.AUDIO_TRACK_LOADING, data: AudioTrackLoadingData) => void
+  [Events.AUDIO_TRACK_LOADING]: (event: Events.AUDIO_TRACK_LOADING, data: TrackLoadingData) => void
   [Events.AUDIO_TRACK_LOADED]: (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData) => void
   [Events.SUBTITLE_TRACKS_UPDATED]: (event: Events.SUBTITLE_TRACKS_UPDATED, data: SubtitleTracksUpdatedData) => void
   [Events.SUBTITLE_TRACKS_CLEARED]: (event: Events.SUBTITLE_TRACKS_CLEARED) => void
   [Events.SUBTITLE_TRACK_SWITCH]: (event: Events.SUBTITLE_TRACK_SWITCH, data: SubtitleTrackSwitchData) => void
-  [Events.SUBTITLE_TRACK_LOADING]: (event: Events.SUBTITLE_TRACK_LOADING, data: SubtitleTrackLoadingData) => void
+  [Events.SUBTITLE_TRACK_LOADING]: (event: Events.SUBTITLE_TRACK_LOADING, data: TrackLoadingData) => void
   [Events.SUBTITLE_TRACK_LOADED]: (event: Events.SUBTITLE_TRACK_LOADED, data: SubtitleTrackLoadedData) => void
   [Events.SUBTITLE_FRAG_PROCESSED]: (event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessedData) => void
   [Events.CUES_PARSED]: (event: Events.CUES_PARSED, data: CuesParsedData) => void
