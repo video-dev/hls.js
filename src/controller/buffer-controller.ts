@@ -102,7 +102,7 @@ class BufferController extends EventHandler {
     EventHandler.prototype.destroy.call(this);
   }
 
-  onLevelPtsUpdated (data: { type: SourceBufferName, start: number }) {
+  onLevelPtsUpdated (data: { details, type: SourceBufferName, start: number }) {
     let type = data.type;
     let audioTrack = this.tracks.audio;
 
@@ -138,6 +138,10 @@ class BufferController extends EventHandler {
           this.audioTimestampOffset = data.start;
         }
       }
+    }
+
+    if (this.config.liveDurationInfinity) {
+      this.updateSeekableRange(data.details);
     }
   }
 
@@ -507,6 +511,9 @@ class BufferController extends EventHandler {
       this._levelTargetDuration = details.averagetargetduration || details.targetduration || 10;
       this._live = details.live;
       this.updateMediaElementDuration();
+      if (this.config.liveDurationInfinity) {
+        this.updateSeekableRange(details);
+      }
     }
   }
 
@@ -542,7 +549,7 @@ class BufferController extends EventHandler {
       this._msDuration = this.mediaSource.duration;
     }
 
-    if (this._live === true && config.liveDurationInfinity === true) {
+    if (this._live === true && config.liveDurationInfinity) {
       // Override duration to Infinity
       logger.log('Media Source duration is set to Infinity');
       this._msDuration = this.mediaSource.duration = Infinity;
@@ -553,6 +560,17 @@ class BufferController extends EventHandler {
       // flushing already buffered portion when switching between quality level
       logger.log(`Updating Media Source duration to ${this._levelDuration.toFixed(3)}`);
       this._msDuration = this.mediaSource.duration = this._levelDuration;
+    }
+  }
+
+  updateSeekableRange (levelDetails) {
+    const mediaSource = this.mediaSource;
+    const fragments = levelDetails.fragments;
+    const len = fragments.length;
+    if (len && mediaSource?.setLiveSeekableRange) {
+      const start = fragments[0]?.start;
+      const end = fragments[len - 1].start + fragments[len - 1].duration;
+      mediaSource.setLiveSeekableRange(start, end);
     }
   }
 
