@@ -75,7 +75,7 @@
     "chart.js": "^2.9.3",
     "chartjs-plugin-zoom": "^0.7.5",
     "chromedriver": "^84.0.0",
-    "eslint": "^6.8.0",
+    "eslint": "^7.6.0",
     "eslint-config-standard": "^14.1.0",
     "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-mocha": "^6.3.0",
