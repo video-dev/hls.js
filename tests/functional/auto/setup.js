@@ -180,9 +180,10 @@ async function testSeekOnVOD (url, config) {
       video.onloadeddata = function () {
         window.setTimeout(function () {
           video.currentTime = video.duration - 5;
-          // Fail test early if more than 2 buffered ranges are found
+          // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
+          const allowedBufferedRanges = config.allowedBufferedRangesInSeekTest || 2;
           video.onprogress = function () {
-            if (video.buffered.length > 2) {
+            if (video.buffered.length > allowedBufferedRanges) {
               callback({ code: 'buffer-gaps', bufferedRanges: video.buffered.length, logs: window.logString });
             }
           };

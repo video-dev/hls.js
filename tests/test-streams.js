@@ -175,11 +175,16 @@ module.exports = {
     description: 'Alternate audio tracks, and multiple VTT tracks',
     abr: true
   },
-  altAudioAudioOnly: {
+  altAudioAudioOnly: createTestStreamWithConfig({
     url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/sintel/playlist.m3u8',
     description: 'Audio only with alternate audio track (Sintel)',
     abr: false
-  },
+  }, {
+    // the playlist segment durations are longer than the media. So much so, that when seeking near the end,
+    // the timeline shifts roughly 10 seconds seconds back, and as a result buffering skips several segments
+    // to adjust for the currentTime now being places at the very end of the stream.
+    allowedBufferedRangesInSeekTest: 3
+  }),
   altAudioMultiAudioOnly: {
     url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/angel-one.m3u8',
     description: 'Audio only with multiple alternate audio tracks (Angel One)',
