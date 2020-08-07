@@ -567,7 +567,7 @@ export default class MP4Remuxer implements Remuxer {
 
         // If we're overlapping by more than a duration, drop this sample
         if (delta <= -maxAudioFramesDrift * inputSampleDuration) {
-          if (contiguous) {
+          if (contiguous || i > 0) {
             logger.warn(`[mp4-remuxer]: Dropping 1 audio frame @ ${(nextPts / inputTimeScale).toFixed(3)}s due to ${Math.round(duration)} ms overlap.`);
             inputSamples.splice(i, 1);
             // Don't touch nextPtsNorm or i
