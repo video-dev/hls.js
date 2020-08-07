@@ -155,8 +155,8 @@ export default class StreamController extends BaseStreamController implements Ne
       break;
     case State.WAITING_LEVEL: {
       const { levels, level } = this;
-      if (levels?.[level]?.details) {
-        // Details is set after the playlist has been loaded
+      const details = levels?.[level]?.details;
+      if (details && (!details.live || this.levelLastLoaded === this.level)) {
         this.state = State.IDLE;
         break;
       }
@@ -579,7 +579,7 @@ export default class StreamController extends BaseStreamController implements Ne
     if (!this.startFragRequested) {
       this.setStartPosition(newDetails, sliding);
     }
-    // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
+    // only switch back to IDLE state if we were waiting for level to start downloading a new fragment
     if (this.state === State.WAITING_LEVEL) {
       this.state = State.IDLE;
     }
@@ -880,10 +880,10 @@ export default class StreamController extends BaseStreamController implements Ne
       const elementaryStreamType = this.audioOnly ? ElementaryStreamTypes.AUDIO : ElementaryStreamTypes.VIDEO;
       this.fragmentTracker.detectEvictedFragments(elementaryStreamType, media.buffered);
     }
-    // move to IDLE once flush complete. this should trigger new fragment loading
-    this.state = State.IDLE;
     // reset reference to frag
     this.fragPrevious = null;
+    // move to IDLE once flush complete. this should trigger new fragment loading
+    this.state = State.IDLE;
   }
 
   onLevelsUpdated (event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {

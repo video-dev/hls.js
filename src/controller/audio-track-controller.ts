@@ -105,6 +105,7 @@ class AudioTrackController implements NetworkComponentAPI {
     this.tracks = [];
     this._trackId = -1;
     this._selectDefaultTrack = true;
+    this.audioGroupId = null;
   }
 
   /**

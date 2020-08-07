@@ -531,7 +531,7 @@ export default class BaseStreamController extends TaskLoop {
 
     if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
       const liveSyncPosition = this._liveSyncPosition = this.computeLivePosition(start, targetDuration, totalDuration);
-      this.log(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
+      this.warn(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
       this.nextLoadPosition = liveSyncPosition;
       if (media?.readyState && media.duration > liveSyncPosition && liveSyncPosition > media.currentTime) {
         media.currentTime = liveSyncPosition;
