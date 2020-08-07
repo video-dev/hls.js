@@ -520,7 +520,7 @@ class MP4Remuxer {
 
         // If we're overlapping by more than a duration, drop this sample
         if (delta <= -maxAudioFramesDrift * inputSampleDuration) {
-          if (contiguous) {
+          if (contiguous || i > 0) {
             logger.warn(`Dropping 1 audio frame @ ${toMsFromMpegTsClock(nextPts, true) / 1000}s due to ${toMsFromMpegTsClock(delta, true)} ms overlap.`);
             inputSamples.splice(i, 1);
             // Don't touch nextPtsNorm or i
