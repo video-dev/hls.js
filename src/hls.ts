@@ -273,6 +273,12 @@ export default class Hls {
    * @param {string} url
    */
   loadSource (url: string) {
+    this.stopLoad();
+    const media = this.media;
+    if (media && this.url) {
+      this.detachMedia();
+      this.attachMedia(media);
+    }
     url = URLToolkit.buildAbsoluteURL(self.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;

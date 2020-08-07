@@ -387,6 +387,9 @@ export default class BufferController implements ComponentAPI {
       this.blockBuffers(this.updateMediaElementDuration.bind(this, levelDuration));
     } else {
       this.updateMediaElementDuration(levelDuration);
+      if (this.hls.config.liveDurationInfinity) {
+        this.updateSeekableRange(details);
+      }
     }
   }
 
@@ -429,6 +432,10 @@ export default class BufferController implements ComponentAPI {
       }
     };
     operationQueue.insertAbort(operation, type);
+
+    if (this.hls.config.liveDurationInfinity) {
+      this.updateSeekableRange(data.details);
+    }
   }
 
   flushLiveBackBuffer () {
@@ -495,6 +502,17 @@ export default class BufferController implements ComponentAPI {
       // flushing already buffered portion when switching between quality level
       logger.log(`[buffer-controller]: Updating Media Source duration to ${levelDuration.toFixed(3)}`);
       this._msDuration = mediaSource.duration = levelDuration;
+    }
+  }
+
+  updateSeekableRange (levelDetails) {
+    const mediaSource = this.mediaSource;
+    const fragments = levelDetails.fragments;
+    const len = fragments.length;
+    if (len && mediaSource?.setLiveSeekableRange) {
+      const start = fragments[0]?.start;
+      const end = fragments[len - 1].start + fragments[len - 1].duration;
+      mediaSource.setLiveSeekableRange(start, end);
     }
   }
 
