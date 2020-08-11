@@ -1,5 +1,6 @@
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import AttrList from '../../../src/utils/attr-list';
+import { PlaylistLevelType } from '../../../src/types/loader';
 
 describe('PlaylistLoader', function () {
   it('parses empty manifest returns empty array', function () {
@@ -898,6 +899,160 @@ frag1.ts
       expect(result.hasProgramDateTime).to.be.false;
       expect(result.fragments[0].rawProgramDateTime).to.not.exist;
       expect(result.fragments[0].programDateTime).to.not.exist;
+    });
+  });
+
+  describe('Low-Latency HLS Manifest Parsing', function () {
+    const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:4
+#EXT-X-VERSION:3
+#EXT-X-PART-INF:PART-TARGET=1.004000
+#EXT-X-MEDIA-SEQUENCE:1151226
+#EXTINF:4.00000,
+fileSequence1151226.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-08-11T23:02:18.003Z
+#EXTINF:4.00000,
+fileSequence1151227.ts
+#EXTINF:4.00000,
+fileSequence1151228.ts
+#EXTINF:4.00000,
+fileSequence1151229.ts
+#EXTINF:4.00000,
+fileSequence1151230.ts
+#EXTINF:4.00000,
+fileSequence1151231.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-08-11T23:02:38.003Z
+#EXT-X-PART:DURATION=1.00000,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151232.1.ts"
+#EXT-X-PART:DURATION=1.00001,INDEPENDENT=NO,URI="lowLatencyHLS.php?segment=filePart1151232.2.ts"
+#EXT-X-PART:DURATION=1.00000,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151232.3.ts"
+#EXT-X-PART:DURATION=1.00000,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151232.4.ts"
+#EXTINF:4.00000,
+fileSequence1151232.ts
+#EXT-X-PART:DURATION=1.00000,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.1.ts"
+#EXT-X-PART:DURATION=0.99999,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.2.ts"
+#EXT-X-PART:DURATION=1.00000,INDEPENDENT=NO,URI="lowLatencyHLS.php?segment=filePart1151233.3.ts"
+#EXT-X-PART:DURATION=1.00000,GAP=YES,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.4.ts"
+#EXTINF:4.00000,
+fileSequence1151233.ts
+#EXT-X-PRELOAD-HINT:TYPE=PART,URI="lowLatencyHLS.php?segment=filePart1151234.1.ts"
+#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,CAN-SKIP-UNTIL=24,PART-HOLD-BACK=3.012
+#EXT-X-RENDITION-REPORT:URI="/media0/lowLatencyHLS.php",LAST-MSN=1151201,LAST-PART=3,LAST-I-MSN=1151201,LAST-I-PART=3
+#EXT-X-RENDITION-REPORT:URI="/media2/lowLatencyHLS.php",LAST-MSN=1151201,LAST-PART=3,LAST-I-MSN=1151201,LAST-I-PART=3`;
+
+    it('Parses the SERVER-CONTROL tag', function () {
+      const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
+        PlaylistLevelType.MAIN, 0);
+      expect(details.canBlockReload).to.be.true;
+      expect(details.canSkipUntil).to.equal(24);
+      expect(details.partHoldBack).to.equal(3.012);
+      // defaults:
+      expect(details.holdBack).to.equal(0);
+      expect(details.canSkipDateRanges).to.be.false;
+    });
+
+    it('Parses the SERVER-CONTROL CAN-SKIP-DATERANGES and HOLD-BACK attributes', function () {
+      const details = M3U8Parser.parseLevelPlaylist(`#EXTM3U
+#EXT-X-TARGETDURATION:4
+#EXT-X-VERSION:3
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=20,CAN-SKIP-DATERANGES=YES,HOLD-BACK=15.1
+#EXTINF:4.00000,
+fileSequence1151226.ts`, 'http://dummy.url.com/playlist.m3u8', 0, PlaylistLevelType.MAIN, 0);
+      expect(details.canSkipUntil).to.equal(20);
+      expect(details.holdBack).to.equal(15.1);
+      expect(details.canSkipDateRanges).to.be.true;
+      // defaults:
+      expect(details.canBlockReload).to.be.false;
+      expect(details.partHoldBack).to.equal(0);
+      expect(details.partTarget).to.equal(0);
+    });
+
+    it('Parses the PART-INF tag', function () {
+      const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
+        PlaylistLevelType.MAIN, 0);
+      expect(details.partTarget).to.equal(1.004);
+    });
+
+    it('Parses the PART tags (for complete fragments - incomplete ones will be exposed later)', function () {
+      const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
+        PlaylistLevelType.MAIN, 0);
+      // TODO: Partial Segments for a yet to be appended EXT-INF entry will be added to the fragments list
+      //  once PartLoader is implemented to abstract away part loading complexity using progressive loader events
+      expect(details.fragments).to.have.lengthOf(8);
+      expect(details.fragments[0].partList).to.equal(null);
+      expect(details.fragments[1].partList).to.equal(null);
+      expect(details.fragments[2].partList).to.equal(null);
+      expect(details.fragments[3].partList).to.equal(null);
+      expect(details.fragments[4].partList).to.equal(null);
+      expect(details.fragments[5].partList).to.equal(null);
+      expect(details.fragments[6].partList).to.be.an('array').which.has.lengthOf(4);
+      expect(details.fragments[7].partList).to.be.an('array').which.has.lengthOf(4);
+      expect(details.fragments[6].partList[0], '6-0').to.deep.equal({
+        duration: 1,
+        gap: false,
+        independent: true,
+        uri: 'lowLatencyHLS.php?segment=filePart1151232.1.ts'
+      });
+      expect(details.fragments[6].partList[1], '6-1').to.deep.equal({
+        duration: 1.00001,
+        gap: false,
+        independent: false,
+        uri: 'lowLatencyHLS.php?segment=filePart1151232.2.ts'
+      });
+      expect(details.fragments[6].partList[2], '6-2').to.deep.equal({
+        duration: 1,
+        gap: false,
+        independent: true,
+        uri: 'lowLatencyHLS.php?segment=filePart1151232.3.ts'
+      });
+      expect(details.fragments[6].partList[3], '6-3').to.deep.equal({
+        duration: 1,
+        gap: false,
+        independent: true,
+        uri: 'lowLatencyHLS.php?segment=filePart1151232.4.ts'
+      });
+      expect(details.fragments[7].partList[0], '7-0').to.deep.equal({
+        duration: 1,
+        gap: false,
+        independent: true,
+        uri: 'lowLatencyHLS.php?segment=filePart1151233.1.ts'
+      });
+      expect(details.fragments[7].partList[1], '7-1').to.deep.equal({
+        duration: 0.99999,
+        gap: false,
+        independent: true,
+        uri: 'lowLatencyHLS.php?segment=filePart1151233.2.ts'
+      });
+      expect(details.fragments[7].partList[2], '7-2').to.deep.equal({
+        duration: 1,
+        gap: false,
+        independent: false,
+        uri: 'lowLatencyHLS.php?segment=filePart1151233.3.ts'
+      });
+      expect(details.fragments[7].partList[3], '7-3').to.deep.equal({
+        duration: 1,
+        gap: true,
+        independent: true,
+        uri: 'lowLatencyHLS.php?segment=filePart1151233.4.ts'
+      });
+    });
+
+    it('Parses the PRELOAD-HINT tag', function () {
+      const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
+        PlaylistLevelType.MAIN, 0);
+      expect(details.preloadHint).to.be.an('object');
+      expect(details.preloadHint.TYPE).to.equal('PART');
+      expect(details.preloadHint.URI).to.equal('lowLatencyHLS.php?segment=filePart1151234.1.ts');
+    });
+
+    it('Parses the RENDITION-REPORT tag', function () {
+      const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
+        PlaylistLevelType.MAIN, 0);
+      expect(details.renditionReports).to.be.an('array').which.has.lengthOf(2);
+      expect(details.renditionReports[0].URI).to.equal('/media0/lowLatencyHLS.php');
+      expect(details.renditionReports[0]['LAST-MSN']).to.equal('1151201');
+      expect(details.renditionReports[0]['LAST-PART']).to.equal('3');
+      expect(details.renditionReports[0]['LAST-I-MSN']).to.equal('1151201');
+      expect(details.renditionReports[0]['LAST-I-PART']).to.equal('3');
     });
   });
 

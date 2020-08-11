@@ -1,4 +1,5 @@
-import Fragment from './fragment';
+import type Fragment from './fragment';
+import type AttrList from '../utils/attr-list';
 
 const DEFAULT_TARGET_DURATION = 10;
 
@@ -30,6 +31,8 @@ export default class LevelDetails {
   public partHoldBack: number = 0;
   public holdBack: number = 0;
   public partTarget: number = 0;
+  public preloadHint?: AttrList;
+  public renditionReports?: AttrList[];
 
   constructor (baseUrl) {
     this.fragments = [];

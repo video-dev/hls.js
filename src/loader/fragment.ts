@@ -3,7 +3,8 @@ import { buildAbsoluteURL } from 'url-toolkit';
 import { logger } from '../utils/logger';
 import LevelKey from './level-key';
 import LoadStats from './load-stats';
-import { PlaylistLevelType } from '../types/loader';
+import type { PlaylistLevelType } from '../types/loader';
+import type AttrList from '../utils/attr-list';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
@@ -41,11 +42,11 @@ export default class Fragment {
   // Something to think on.
 
   // relurl is the portion of the URL that comes from inside the playlist.
-  public relurl!: string;
+  public relurl?: string;
   // baseurl is the URL to the playlist
-  public baseurl!: string;
-  // EXTINF has to be present for a m3u8 to be considered valid
-  public duration!: number;
+  public baseurl?: string;
+  // EXTINF has to be present for a m38 to be considered valid
+  public duration: number = 0;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
   public sn: number | 'initSegment' = 0;
   // levelkey is the EXT-X-KEY that applies to this segment for decryption
@@ -53,9 +54,9 @@ export default class Fragment {
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
   // A string representing the fragment type
-  public type!: PlaylistLevelType;
+  public readonly type: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
-  public loader!: any;
+  public loader?: any;
   // The level index to which the fragment belongs
   public level: number = -1;
   // The continuity counter of the fragment
@@ -65,7 +66,7 @@ export default class Fragment {
   // The ending Presentation Time Stamp (PTS) of the fragment. Set after transmux complete.
   public endPTS!: number;
   // The latest Presentation Time Stamp (PTS) appended to the buffer.
-  public appendedPTS!: number;
+  public appendedPTS?: number;
   // The starting Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
   public startDTS!: number;
   // The ending Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
@@ -83,13 +84,19 @@ export default class Fragment {
   // Load/parse timing information
   public stats: LoadStats = new LoadStats();
   public urlId: number = 0;
-  // TODO: Create InitSegment class extended from Fragment
   public data?: Uint8Array;
   // A flag indicating whether the segment was downloaded in order to test bitrate, and was not buffered
   public bitrateTest: boolean = false;
   // Total video frames dropped by the transmuxer
   public dropped: number = 0;
+  // #EXTINF  segment title
   public title: string | null = null;
+  // #EXT-X-PART list
+  public partList: Part[] | null = null;
+
+  constructor (type: PlaylistLevelType) {
+    this.type = type;
+  }
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange (value: string, previousFrag?: Fragment) {
@@ -105,7 +112,7 @@ export default class Fragment {
   }
 
   get url () {
-    if (!this._url && this.relurl) {
+    if (!this._url && this.baseurl && this.relurl) {
       this._url = buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
     }
 
@@ -241,5 +248,32 @@ export default class Fragment {
     info.endPTS = Math.max(info.endPTS, endPTS);
     info.startDTS = Math.min(info.startDTS, startDTS);
     info.endDTS = Math.max(info.endDTS, endDTS);
+  }
+
+  appendPart (partAttrs: AttrList) {
+    if (!this.partList) {
+      this.partList = [];
+    }
+    const part = new Part(partAttrs);
+    this.partList.push(part);
+    this.duration += part.duration;
+  }
+
+  hasParts (): boolean {
+    return this.partList !== null;
+  }
+}
+
+export class Part {
+  public readonly duration: number = 0;
+  public readonly gap: boolean = false;
+  public readonly independent: boolean = false;
+  public readonly uri: string;
+
+  constructor (partAttrs: AttrList) {
+    this.duration = partAttrs.decimalFloatingPoint('DURATION');
+    this.gap = partAttrs.bool('GAP');
+    this.independent = partAttrs.bool('INDEPENDENT');
+    this.uri = partAttrs.enumeratedString('URI') as string;
   }
 }

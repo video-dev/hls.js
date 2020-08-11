@@ -22,7 +22,7 @@ const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
   /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
-  /(?!#)([\S+ ?]+)/.source, // segment URI, group 3 => the URI (note newline is not eaten)
+  /(?!#) *(\S[\S ]*)/.source, // segment URI, group 3 => the URI (note newline is not eaten)
   /#EXT-X-BYTERANGE:*(.+)/.source, // next segment's byterange, group 4 => range spec (x@y)
   /#EXT-X-PROGRAM-DATE-TIME:(.+)/.source, // next segment's program date/time group 5 => the datetime spec
   /#.*/.source // All other non-segment oriented tags will match with all groups empty
@@ -42,6 +42,11 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp([
   /#EXT-X-(MAP):(.+)/.source,
   /#EXT-X-(SERVER-CONTROL):(.+)/.source,
   /#EXT-X-(PART-INF):(.+)/.source,
+  /#EXT-X-(GAP)/.source,
+  /#EXT-X-(BITRATE):\s*(\d+)/.source,
+  /#EXT-X-(PART):(.+)/.source,
+  /#EXT-X-(PRELOAD-HINT):(.+)/.source,
+  /#EXT-X-(RENDITION-REPORT):(.+)/.source,
   /(#)([^:]*):(.*)/.source,
   /(#)(.*)(?:.*)\r?\n?/.source
 ].join('|'));
@@ -185,7 +190,7 @@ export default class M3U8Parser {
     const level = new LevelDetails(baseurl);
     let discontinuityCounter = 0;
     let prevFrag: Fragment | null = null;
-    let frag: Fragment | null = new Fragment();
+    let frag: Fragment = new Fragment(type);
     let result: RegExpExecArray | RegExpMatchArray | null;
     let i: number;
     let levelkey: LevelKey | undefined;
@@ -193,6 +198,21 @@ export default class M3U8Parser {
     let firstPdtIndex: number | null = null;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
+
+    const appendfragment = () => {
+      frag.start = totalduration;
+      if (levelkey) {
+        frag.levelkey = levelkey;
+      }
+      frag.sn = currentSN;
+      frag.level = id;
+      frag.cc = discontinuityCounter;
+      frag.urlId = levelUrlId;
+      frag.baseurl = baseurl;
+      if (level.fragments[level.fragments.length - 1] !== frag) {
+        level.fragments.push(frag);
+      }
+    };
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       const duration = result[1];
@@ -204,26 +224,15 @@ export default class M3U8Parser {
         frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
       } else if (result[3]) { // url
         if (Number.isFinite(frag.duration)) {
-          const sn = currentSN++;
-          frag.type = type;
-          frag.start = totalduration;
-          if (levelkey) {
-            frag.levelkey = levelkey;
-          }
-          frag.sn = sn;
-          frag.level = id;
-          frag.cc = discontinuityCounter;
-          frag.urlId = levelUrlId;
-          frag.baseurl = baseurl;
+          appendfragment();
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
           assignProgramDateTime(frag, prevFrag);
-
-          level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
 
-          frag = new Fragment();
+          currentSN++;
+          frag = new Fragment(type);
         }
       } else if (result[4]) { // X-BYTERANGE
         const data = (' ' + result[4]).slice(1);
@@ -252,13 +261,11 @@ export default class M3U8Parser {
         }
 
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
+        const tag = (' ' + result[i]).slice(1);
         const value1 = (' ' + result[i + 1]).slice(1);
-        const value2 = (' ' + result[i + 2]).slice(1);
+        const value2 = result[i + 2] ? (' ' + result[i + 2]).slice(1) : '';
 
-        switch (result[i]) {
-        case '#':
-          frag.tagList.push(value2 ? [value1, value2] : [value1]);
-          break;
+        switch (tag) {
         case 'PLAYLIST-TYPE':
           level.type = value1.toUpperCase();
           break;
@@ -276,9 +283,19 @@ export default class M3U8Parser {
         case 'ENDLIST':
           level.live = false;
           break;
+        case '#':
+          if (value1 || value2) {
+            frag.tagList.push(value2 ? [value1, value2] : [value1]);
+          }
+          break;
         case 'DIS':
           discontinuityCounter++;
-          frag.tagList.push(['DIS']);
+          /* falls through */
+        case 'GAP':
+          frag.tagList.push([tag]);
+          break;
+        case 'BITRATE':
+          frag.tagList.push([tag, value1]);
           break;
         case 'DISCONTINUITY-SEQ':
           discontinuityCounter = parseInt(value1);
@@ -353,13 +370,12 @@ export default class M3U8Parser {
           }
           frag.baseurl = baseurl;
           frag.level = id;
-          frag.type = type;
           frag.sn = 'initSegment';
           if (levelkey) {
             frag.levelkey = levelkey;
           }
           level.initSegment = frag;
-          frag = new Fragment();
+          frag = new Fragment(type);
           frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
           break;
         }
@@ -377,17 +393,30 @@ export default class M3U8Parser {
           level.partTarget = partInfAttrs.decimalFloatingPoint('PART-TARGET');
           break;
         }
+        case 'PART':
+          frag.appendPart(new AttrList(value1));
+          break;
+        case 'PRELOAD-HINT': {
+          const preloadHintAttrs = new AttrList(value1);
+          level.preloadHint = preloadHintAttrs;
+          break;
+        }
+        case 'RENDITION-REPORT': {
+          const renditionReportAttrs = new AttrList(value1);
+          level.renditionReports = level.renditionReports || [];
+          level.renditionReports.push(renditionReportAttrs);
+          break;
+        }
         default:
           logger.warn(`line parsed but not handled: ${result}`);
           break;
         }
       }
     }
-    frag = prevFrag;
     // logger.log('found ' + level.fragments.length + ' fragments');
-    if (frag && !frag.relurl) {
+    if (prevFrag && !prevFrag.relurl) {
       level.fragments.pop();
-      totalduration -= frag.duration;
+      totalduration -= prevFrag.duration;
     }
     level.totalduration = totalduration;
     if (totalduration > 0 && level.fragments.length) {
@@ -401,14 +430,13 @@ export default class M3U8Parser {
       // this is a bit lurky but HLS really has no other way to tell us
       // if the fragments are TS or MP4, except if we download them :/
       // but this is to be able to handle SIDX.
-      if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl))) {
+      if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl as string))) {
         logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
-        frag = new Fragment();
+        frag = new Fragment(type);
         frag.relurl = level.fragments[0].relurl;
         frag.baseurl = baseurl;
         frag.level = id;
-        frag.type = type;
         frag.sn = 'initSegment';
 
         level.initSegment = frag;
