@@ -82,6 +82,7 @@ $(document).ready(function () {
   $('#videoSize').change(function () {
     $('#video').width($('#videoSize').val());
     $('#bufferedCanvas').width($('#videoSize').val());
+    checkBuffer();
   });
 
   $('#enableStreaming').click(function () {
@@ -860,19 +861,18 @@ function checkBuffer () {
   const r = v.buffered;
   let bufferingDuration;
   ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'gray';
   if (r) {
     if (!canvas.width || canvas.width !== v.clientWidth) {
       canvas.width = v.clientWidth;
     }
-
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     const pos = v.currentTime;
     let bufferLen = 0;
+    ctx.fillStyle = 'gray';
     for (let i = 0; i < r.length; i++) {
       const start = r.start(i) / v.duration * canvas.width;
       const end = r.end(i) / v.duration * canvas.width;
-      ctx.fillRect(start, 3, Math.max(2, end - start), 10);
+      ctx.fillRect(start, 2, Math.max(2, end - start), 11);
       if (pos >= r.start(i) && pos < r.end(i)) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferLen = r.end(i) - pos;
@@ -957,6 +957,8 @@ function checkBuffer () {
     ctx.fillStyle = 'blue';
     const x = v.currentTime / v.duration * canvas.width;
     ctx.fillRect(x, 0, 2, 15);
+  } else {
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 }
 
