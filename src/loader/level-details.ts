@@ -29,6 +29,7 @@ export default class LevelDetails {
   public canSkipDateRanges: boolean = false;
   public partHoldBack: number = 0;
   public holdBack: number = 0;
+  public partTarget: number = 0;
 
   constructor (baseUrl) {
     this.fragments = [];

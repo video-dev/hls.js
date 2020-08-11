@@ -41,6 +41,7 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp([
   /#EXT-X-(VERSION):(\d+)/.source,
   /#EXT-X-(MAP):(.+)/.source,
   /#EXT-X-(SERVER-CONTROL):(.+)/.source,
+  /#EXT-X-(PART-INF):(.+)/.source,
   /(#)([^:]*):(.*)/.source,
   /(#)(.*)(?:.*)\r?\n?/.source
 ].join('|'));
@@ -369,6 +370,11 @@ export default class M3U8Parser {
           level.canSkipDateRanges = level.canSkipUntil > 0 && serverControlAttrs.bool('CAN-SKIP-DATERANGES');
           level.partHoldBack = serverControlAttrs.optionalFloat('PART-HOLD-BACK', 0);
           level.holdBack = serverControlAttrs.optionalFloat('HOLD-BACK', 0);
+          break;
+        }
+        case 'PART-INF': {
+          const partInfAttrs = new AttrList(value1);
+          level.partTarget = partInfAttrs.decimalFloatingPoint('PART-TARGET');
           break;
         }
         default:
