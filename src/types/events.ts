@@ -1,8 +1,8 @@
 import type Fragment from '../loader/fragment';
 import type LevelDetails from '../loader/level-details';
 import type { HlsUrlParameters, Level, LevelParsed } from './level';
-import type { MediaPlaylist } from './media-playlist';
-import type { LoaderStats, PlaylistLevelType } from './loader';
+import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
+import type { Loader, LoaderContext, LoaderResponse, LoaderStats, PlaylistLevelType, PlaylistLoaderContext } from './loader';
 import type { Track, TrackSet } from './track';
 import type { SourceBufferName } from './buffer';
 import type { ChunkMetadata } from './transmuxer';
@@ -10,6 +10,7 @@ import type LoadStats from '../loader/load-stats';
 import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type AttrList from '../utils/attr-list';
+import type { HlsListeners } from '../events';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement
@@ -74,6 +75,7 @@ export interface ManifestLoadedData {
 export interface ManifestParsedData {
   levels: Level[]
   audioTracks: MediaPlaylist[]
+  subtitleTracks: MediaPlaylist[]
   firstLevel: number
   stats: LoaderStats
   audio: boolean
@@ -86,7 +88,7 @@ export interface LevelSwitchingData extends Level {
 }
 
 export interface LevelSwitchedData {
-  level: any
+  level: number
 }
 
 export interface TrackLoadingData {
@@ -104,6 +106,7 @@ export interface TrackLoadedData {
   id: number
   networkDetails: any
   stats: LoaderStats
+  deliveryDirectives: HlsUrlParameters | null
 }
 
 export interface LevelLoadedData extends TrackLoadedData {
@@ -116,30 +119,25 @@ export interface LevelUpdatedData {
 }
 
 export interface LevelPTSUpdatedData {
-  details: any,
+  details: LevelDetails,
   level: Level,
   drift: number,
   type: string,
-  start: any,
-  end: any
+  start: number,
+  end: number
 }
 
 export interface AudioTrackSwitchingData {
-  url: any
-  type: any
-  id: any
+  url: string
+  type: MediaPlaylistType | 'main'
+  id: number
 }
 
 export interface AudioTrackSwitchedData {
-  id: any
+  id: number
 }
 
-export interface AudioTrackLoadedData {
-  details: LevelDetails;
-  id: number;
-  stats: LoaderStats;
-  networkDetails: unknown;
-}
+export interface AudioTrackLoadedData extends TrackLoadedData {}
 
 export interface AudioTracksUpdatedData {
   audioTracks: MediaPlaylist[]
@@ -153,12 +151,7 @@ export interface SubtitleTrackSwitchData {
   id: number
 }
 
-export interface SubtitleTrackLoadedData {
-  details: LevelDetails;
-  id: number | null;
-  stats: LoaderStats;
-  networkDetails: unknown;
-}
+export interface SubtitleTrackLoadedData extends TrackLoadedData {}
 
 export interface TrackSwitchedData {
   id: number
@@ -190,16 +183,17 @@ export interface ErrorData {
   fatal: boolean
   buffer?: number
   bytes?: number
-  context?: any
+  context?: PlaylistLoaderContext
   error?: Error
-  event?: any
+  event?: keyof HlsListeners | 'demuxerWorker'
   frag?: Fragment
-  level?: number
+  level?: number | undefined
   levelRetry?: boolean
+  loader?: Loader<LoaderContext>
   networkDetails?: any
   mimeType?: string
   reason?: string
-  response?: any
+  response?: LoaderResponse
   url?: string
   parent?: PlaylistLevelType
   err?: { // comes from transmuxer interface

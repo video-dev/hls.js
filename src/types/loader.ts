@@ -158,5 +158,5 @@ export interface PlaylistLoaderContext extends LoaderContext {
   // internal representation of a parsed m3u8 level playlist
   levelDetails?: LevelDetails,
   // Blocking playlist request delivery directives (or null id none were added to playlist url
-  deliveryDirectives?: HlsUrlParameters | null
+  deliveryDirectives: HlsUrlParameters | null
 }

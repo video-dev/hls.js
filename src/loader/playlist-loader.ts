@@ -15,7 +15,7 @@ import { logger } from '../utils/logger';
 import { parseSegmentIndex } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
 import { getProgramDateTimeAtEndOfLastEncodedFragment } from '../controller/level-helper';
-import { LevelParsed } from '../types/level';
+import { HlsUrlParameters, LevelParsed } from '../types/level';
 import {
   Loader,
   LoaderContext,
@@ -24,11 +24,11 @@ import {
   PlaylistLevelType,
   PlaylistLoaderContext
 } from '../types/loader';
-import { ManifestLoadingData, LevelLoadingData, TrackLoadingData } from '../types/events';
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 import Hls from '../hls';
 import AttrList from '../utils/attr-list';
+import type { ManifestLoadingData, LevelLoadingData, TrackLoadingData, ErrorData } from '../types/events';
 
 const { performance } = self;
 
@@ -162,7 +162,8 @@ class PlaylistLoader {
       level: 0,
       responseType: 'text',
       type: PlaylistContextType.MANIFEST,
-      url
+      url,
+      deliveryDirectives: null
     });
   }
 
@@ -299,7 +300,7 @@ class PlaylistLoader {
   }
 
   private loadtimeout (stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any = null): void {
-    this._handleNetworkError(context, networkDetails, true, null);
+    this._handleNetworkError(context, networkDetails, true);
   }
 
   private _handleMasterPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
@@ -438,7 +439,8 @@ class PlaylistLoader {
         id,
         rangeStart: 0,
         rangeEnd: 2048,
-        responseType: 'arraybuffer'
+        responseType: 'arraybuffer',
+        deliveryDirectives: null
       });
       return;
     }
@@ -468,7 +470,7 @@ class PlaylistLoader {
     (levelDetails.initSegment as Fragment).setByteRange(String(sidxInfo.moovEndOffset) + '@0');
   }
 
-  private _handleManifestParsingError (response: LoaderResponse, context, reason, networkDetails): void {
+  private _handleManifestParsingError (response: LoaderResponse, context: PlaylistLoaderContext, reason: string, networkDetails: any): void {
     this.hls.trigger(Events.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
@@ -481,7 +483,7 @@ class PlaylistLoader {
     });
   }
 
-  private _handleNetworkError (context, networkDetails, timeout = false, response: LoaderResponse | null = null): void {
+  private _handleNetworkError (context, networkDetails, timeout = false, response?: LoaderResponse): void {
     logger.info(`[playlist-loader]: A network error occurred while loading a ${context.type}-type playlist`);
     let details;
     let fatal;
@@ -510,13 +512,12 @@ class PlaylistLoader {
       this.resetInternalLoader(context.type);
     }
 
-    const errorData = {
+    const errorData: ErrorData = {
       type: ErrorTypes.NETWORK_ERROR,
       details,
       fatal,
       url: context.url,
       loader,
-      response,
       context,
       networkDetails
     };
@@ -528,10 +529,10 @@ class PlaylistLoader {
     this.hls.trigger(Events.ERROR, errorData);
   }
 
-  private _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context, networkDetails): void {
-    const { type, level, id, levelDetails } = context;
+  private _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
+    const { type, level, id, levelDetails, deliveryDirectives } = context;
 
-    if (!levelDetails.targetduration) {
+    if (!levelDetails?.targetduration) {
       this._handleManifestParsingError(response, context, 'invalid target duration', networkDetails);
       return;
     }
@@ -543,24 +544,27 @@ class PlaylistLoader {
         level: level || 0,
         id: id || 0,
         stats,
-        networkDetails
+        networkDetails,
+        deliveryDirectives
       });
     } else {
       switch (type) {
       case PlaylistContextType.AUDIO_TRACK:
         this.hls.trigger(Events.AUDIO_TRACK_LOADED, {
           details: levelDetails,
-          id,
+          id: id || 0,
           stats,
-          networkDetails
+          networkDetails,
+          deliveryDirectives
         });
         break;
       case PlaylistContextType.SUBTITLE_TRACK:
         this.hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
-          id,
+          id: id || 0,
           stats,
-          networkDetails
+          networkDetails,
+          deliveryDirectives
         });
         break;
       }
