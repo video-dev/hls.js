@@ -4,10 +4,10 @@ import OutputFilter from '../utils/output-filter';
 import { parseWebVTT } from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
-
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import Fragment from '../loader/fragment';
 import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData, InitPTSFoundData } from '../types/events';
+import { PlaylistLevelType } from '../types/loader';
 
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
@@ -517,7 +517,7 @@ export class TimelineController implements ComponentAPI {
     // If we receive this event, we have not received an onInitPtsFound event. This happens when the video track has no samples (but has audio)
     // In order to have captions display, which requires an initPTS, we assume one of 90000
     if (typeof this.initPTS === 'undefined') {
-      this.onInitPtsFound(Events.INIT_PTS_FOUND, { id: '', frag: new Fragment(), initPTS: 90000 });
+      this.onInitPtsFound(Events.INIT_PTS_FOUND, { id: '', frag: new Fragment(PlaylistLevelType.MAIN), initPTS: 90000 });
     }
   }
 
