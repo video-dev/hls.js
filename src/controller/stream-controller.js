@@ -1293,12 +1293,12 @@ class StreamController extends BaseStreamController {
   _checkBuffer () {
     const { media } = this;
     if (!media || media.readyState === 0) {
-      // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
+      // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
 
-    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-    const buffered = mediaBuffer.buffered;
+    // Check combined buffer
+    const buffered = media.buffered;
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
