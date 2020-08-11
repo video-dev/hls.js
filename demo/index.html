@@ -81,7 +81,7 @@
               <option value="854px">854 x 480</option>
               <option value="1280px">1280 x 720</option>
               <option value="1920px">1920 x 1080</option>
-              <option value="50%">Responsive (50%)</option>
+              <option value="80%">Responsive (80%)</option>
               <option value="100%">Responsive (100%)</option>
             </select>
           </label>
@@ -116,7 +116,7 @@
 
       <video id="video" controls autoplay class="videoCentered"></video>
       <br>
-      <canvas id="bufferedCanvas" height="15" class="videoCentered" onclick="onClickBufferedRange(event);"></canvas>
+      <canvas id="bufferedCanvas" width="720" height="15" class="videoCentered" onclick="onClickBufferedRange(event);" style="height: fit-content;"></canvas>
       <br>
       <br>
       <label class="center">Status:</label>
