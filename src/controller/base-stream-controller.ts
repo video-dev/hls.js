@@ -638,15 +638,16 @@ export default class BaseStreamController extends TaskLoop {
     this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer & resetting nextLoadPosition to ${this.nextLoadPosition}`);
   }
 
-  private updateLevelTiming (frag: Fragment, currentLevel: Level) {
-    const { details } = currentLevel;
+  private updateLevelTiming (frag: Fragment, level: Level) {
+    const details = level.details as LevelDetails;
+    console.assert(!!details, 'level.details must be defined');
     Object.keys(frag.elementaryStreams).forEach(type => {
       const info = frag.elementaryStreams[type];
       if (info) {
         const drift = LevelHelper.updateFragPTSDTS(details, frag, info.startPTS, info.endPTS, info.startDTS, info.endDTS);
         this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
           details,
-          level: currentLevel,
+          level,
           drift,
           type,
           start: info.startPTS,

@@ -244,9 +244,8 @@ export default class Hls implements HlsEventEmitter {
     logger.log('destroy');
     this.trigger(Events.DESTROYING);
     this.detachMedia();
-    this.coreComponents.concat(this.networkControllers).forEach(component => {
-      component.destroy();
-    });
+    this.networkControllers.forEach(component => component.destroy());
+    this.coreComponents.forEach(component => component.destroy());
     this.url = null;
     this.removeAllListeners();
     this._autoLevelCapping = -1;

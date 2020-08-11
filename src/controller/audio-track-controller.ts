@@ -1,7 +1,6 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { computeReloadInterval } from './level-helper';
 import { MediaPlaylist } from '../types/media-playlist';
 import {
   TrackSwitchedData,
@@ -11,7 +10,7 @@ import {
   LevelLoadingData,
   AudioTrackLoadedData
 } from '../types/events';
-import { NetworkComponentAPI } from '../types/component-api';
+import BasePlaylistController from './base-playlist-controller';
 import Hls from '../hls';
 import { HlsUrlParameters } from '../types/level';
 
@@ -36,19 +35,14 @@ import { HlsUrlParameters } from '../types/level';
  * @fires ERROR
  *
  */
-class AudioTrackController implements NetworkComponentAPI {
+class AudioTrackController extends BasePlaylistController {
   /**
    * @private
    * If should select tracks according to default track attribute
    * @member {boolean} _selectDefaultTrack
    */
-  private _selectDefaultTrack: boolean = true;
-  private hls: Hls;
-  private _trackId: number = -1;
-
-  private canLoad: boolean = false;
-
-  private timer: number | null = null;
+  private selectDefaultTrack: boolean = true;
+  private trackId: number = -1;
 
   private readonly trackIdBlacklist: { [key: number]: boolean };
 
@@ -68,7 +62,7 @@ class AudioTrackController implements NetworkComponentAPI {
   public audioGroupId: string | null = null;
 
   constructor (hls: Hls) {
-    this.hls = hls;
+    super(hls);
     this.tracks = [];
     this.trackIdBlacklist = Object.create(null);
     this._registerListeners();
@@ -96,7 +90,7 @@ class AudioTrackController implements NetworkComponentAPI {
 
   public destroy () {
     this._unregisterListeners();
-    this.clearTimer();
+    super.destroy();
   }
 
   /**
@@ -104,8 +98,8 @@ class AudioTrackController implements NetworkComponentAPI {
    */
   protected onManifestLoading (): void {
     this.tracks = [];
-    this._trackId = -1;
-    this._selectDefaultTrack = true;
+    this.trackId = -1;
+    this.selectDefaultTrack = true;
     this.audioGroupId = null;
   }
 
@@ -130,58 +124,19 @@ class AudioTrackController implements NetworkComponentAPI {
   protected onAudioTrackLoaded (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void {
     const { id, details } = data;
     const currentTrack = this.tracks[id];
-    const curDetails = currentTrack.details;
 
-    if (id >= this.tracks.length) {
+    if (!currentTrack) {
       logger.warn('[audio-track-controller]: Invalid audio track id:', id);
       return;
     }
 
+    const curDetails = currentTrack.details;
     currentTrack.details = data.details;
-    logger.log(`[audio-track-controller]: audioTrack ${id} loaded [${details.startSN},${details.endSN}]`);
+    logger.log(`[audio-track-controller]: audioTrack ${id} loaded [${details.startSN}-${details.endSN}]`);
 
-    // if current playlist is a live playlist, arm a timer to reload it
-    if (details.live) {
-      details.reloaded(curDetails);
-      if (curDetails) {
-        logger.log(`[audio-track-controller]: live audio track ${id} ${details.updated ? 'REFRESHED' : 'MISSED'}`);
-      }
-      // TODO: Do not use LL-HLS delivery directives if playlist "endSN" is stale
-      if (details?.canBlockReload && details.endSN && details.updated) {
-        // Load track with LL-HLS delivery directives
-        // TODO: LL-HLS Specify latest partial segment
-        // TODO: LL-HLS enable skip parameter for delta playlists independent of canBlockReload
-        this._updateTrack(new HlsUrlParameters(details.endSN + 1, 0, false));
-        return;
-      }
-      const reloadInterval = computeReloadInterval(details, data.stats);
-      logger.log(`[audio-track-controller]: reload live audio track ${id} in ${Math.round(reloadInterval)} ms`);
-      this.timer = self.setTimeout(() => {
-        this._updateTrack();
-      }, reloadInterval);
-    } else {
-      // playlist is not live and timer is scheduled: cancel it
-      this.clearTimer();
+    if (id === this.trackId) {
+      this.playlistLoaded(id, data, curDetails);
     }
-  }
-
-  private clearTimer (): void {
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-  }
-
-  public startLoad (): void {
-    this.canLoad = true;
-    if (this.timer === null) {
-      this._updateTrack();
-    }
-  }
-
-  public stopLoad (): void {
-    this.canLoad = false;
-    this.clearTimer();
   }
 
   /**
@@ -238,7 +193,7 @@ class AudioTrackController implements NetworkComponentAPI {
       return;
     }
 
-    logger.warn('[audio-track-controller]: Network failure on audio-track id:', data.context.id);
+    logger.warn('[audio-track-controller]: Network failure on audio-track id:', data.context?.id);
     this._handleLoadError();
   }
 
@@ -247,18 +202,18 @@ class AudioTrackController implements NetworkComponentAPI {
   }
 
   get audioTrack (): number {
-    return this._trackId;
+    return this.trackId;
   }
 
   set audioTrack (newId: number) {
     this._setAudioTrack(newId);
     // If audio track is selected from API then don't choose from the manifest default track
-    this._selectDefaultTrack = false;
+    this.selectDefaultTrack = false;
   }
 
   private _setAudioTrack (newId: number): void {
     // noop on same audio track id as already set
-    if (this._trackId === newId && this.tracks[this._trackId].details) {
+    if (this.trackId === newId && this.tracks[this.trackId].details) {
       return;
     }
 
@@ -274,19 +229,19 @@ class AudioTrackController implements NetworkComponentAPI {
 
     // stopping live reloading timer if any
     this.clearTimer();
-    this._trackId = newId;
+    this.trackId = newId;
 
     const { url, type, id } = audioTrack;
     this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
     // TODO: LL-HLS use RENDITION-REPORT if available
-    this._updateTrack();
+    this.loadPlaylist();
   }
 
   private _selectInitialAudioTrack (): void {
     let tracks = this.tracks;
     console.assert(tracks.length, 'Initial audio track should be selected when tracks are known');
 
-    const currentAudioTrack = this.tracks[this._trackId];
+    const currentAudioTrack = this.tracks[this.trackId];
 
     let name: string | null = null;
     if (currentAudioTrack) {
@@ -294,7 +249,7 @@ class AudioTrackController implements NetworkComponentAPI {
     }
 
     // Pre-select default tracks if there are any
-    if (this._selectDefaultTrack) {
+    if (this.selectDefaultTrack) {
       const defaultTracks = tracks.filter((track) => track.default);
       if (defaultTracks.length) {
         tracks = defaultTracks;
@@ -339,24 +294,10 @@ class AudioTrackController implements NetworkComponentAPI {
     }
   }
 
-  private _needsTrackLoading (audioTrack: MediaPlaylist): boolean {
-    const { details, url } = audioTrack;
-
-    return !!url && (!details || details.live);
-  }
-
-  private _updateTrack (hlsUrlParameters?: HlsUrlParameters): void {
-    const newId: number = this._trackId;
-    // check if level idx is valid
-    if (newId < 0 || newId >= this.tracks.length) {
-      return;
-    }
-
-    this._trackId = newId;
-    logger.log(`[audio-track-controller]: updated audio-track index ${newId}`);
-    const audioTrack = this.tracks[newId];
-    if (this.canLoad && this._needsTrackLoading(audioTrack)) {
-      const { url, id, details } = audioTrack;
+  protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters): void {
+    const audioTrack = this.tracks[this.trackId];
+    if (this.shouldLoadTrack(audioTrack)) {
+      const { url, id } = audioTrack;
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
       this.clearTimer();
@@ -369,7 +310,7 @@ class AudioTrackController implements NetworkComponentAPI {
   }
 
   private _handleLoadError (): void {
-    const previousId = this._trackId;
+    const previousId = this.trackId;
 
     // First, let's black list current track id
     this.trackIdBlacklist[previousId] = true;

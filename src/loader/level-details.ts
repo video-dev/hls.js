@@ -22,6 +22,7 @@ export default class LevelDetails {
   public totalduration: number = 0;
   public type: string | null = null;
   public updated: boolean = true;
+  public advanced: boolean = true;
   public misses: number = 0;
   public url: string;
   public version: number | null = null;
@@ -41,6 +42,7 @@ export default class LevelDetails {
 
   reloaded (previous: LevelDetails | undefined) {
     if (!previous) {
+      this.advanced = true;
       this.updated = true;
       return;
     }
@@ -52,6 +54,7 @@ export default class LevelDetails {
       this.misses = previous.misses + 1;
     }
     this.updated = updated;
+    this.advanced = this.endSN > previous.endSN;
     this.availabilityDelay = previous.availabilityDelay;
   }
 
