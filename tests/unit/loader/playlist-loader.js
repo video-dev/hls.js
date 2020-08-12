@@ -1056,6 +1056,89 @@ fileSequence1151226.ts`, 'http://dummy.url.com/playlist.m3u8', 0, PlaylistLevelT
     });
   });
 
+  it('adds BITRATE to fragment.tagList', function () {
+    const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:5.97263,\t
+#EXT-X-BITRATE:5083
+fileSequence0.ts
+#EXTINF:5.97263,\t
+#EXT-X-BITRATE:5453
+fileSequence1.ts
+#EXTINF:5.97263,\t
+#EXT-X-BITRATE:4802
+fileSequence2.ts
+`;
+    const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
+      PlaylistLevelType.MAIN, 0);
+    expectWithJSONMessage(details.fragments[0].tagList).to.deep.equal([['INF', '5.97263', '\t'], ['BITRATE', '5083']]);
+    expectWithJSONMessage(details.fragments[1].tagList).to.deep.equal([['INF', '5.97263', '\t'], ['BITRATE', '5453']]);
+    expectWithJSONMessage(details.fragments[2].tagList).to.deep.equal([['INF', '5.97263', '\t'], ['BITRATE', '4802']]);
+  });
+
+  it('adds GAP to fragment.tagList', function () {
+    const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:5
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:5,title
+fileSequence0.ts
+#EXTINF:5,
+#EXT-X-GAP
+fileSequence1.ts
+#EXTINF:5,
+fileSequence2.ts
+`;
+    const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
+      PlaylistLevelType.MAIN, 0);
+    expectWithJSONMessage(details.fragments[0].tagList).to.deep.equal([['INF', '5', 'title']]);
+    expectWithJSONMessage(details.fragments[1].tagList).to.deep.equal([['INF', '5'], ['GAP']]);
+    expectWithJSONMessage(details.fragments[2].tagList).to.deep.equal([['INF', '5']]);
+  });
+
+  it('adds unhandled tags (DATERANGE) and comments to fragment.tagList', function () {
+    const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXT-X-VERSION:4
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-PROGRAM-DATE-TIME:2018-09-28T16:50:26Z
+#EXTINF:10,
+main1.aac
+#EXT-X-PROGRAM-DATE-TIME:2018-09-28T16:50:36Z
+#EXT-X-DATERANGE:ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:50:48Z",PLANNED-DURATION=20.0,X-CUSTOM="Hi!",SCTE35-OUT=0xFC002F0000000000FF
+#EXTINF:10,
+main2.aac
+#EXTINF:10,
+main3.aac
+#EXT-X-PROGRAM-DATE-TIME:2018-09-28T16:50:56Z
+#EXT-X-DATERANGE:ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:51:18Z",DURATION=30.0,SCTE35-IN=0xFC002F0000000000FF
+#EXTINF:9.9846,
+main4.aac
+`;
+    const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
+      PlaylistLevelType.MAIN, 0);
+    expectWithJSONMessage(details.fragments[0].tagList).to.deep.equal([
+      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:26Z'],
+      ['INF', '10']
+    ]);
+    expectWithJSONMessage(details.fragments[1].tagList).to.deep.equal([
+      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:36Z'],
+      ['EXT-X-DATERANGE', 'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:50:48Z",PLANNED-DURATION=20.0,X-CUSTOM="Hi!",SCTE35-OUT=0xFC002F0000000000FF'],
+      ['INF', '10']
+    ]);
+    expectWithJSONMessage(details.fragments[2].tagList).to.deep.equal([['INF', '10']]);
+    expectWithJSONMessage(details.fragments[3].tagList).to.deep.equal([
+      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:56Z'],
+      ['EXT-X-DATERANGE', 'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:51:18Z",DURATION=30.0,SCTE35-IN=0xFC002F0000000000FF'],
+      ['INF', '9.9846']
+    ]);
+  });
+
   it('tests : at end of tag name is used to divide custom tags', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:2
@@ -1121,3 +1204,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
     expect(result.fragments[1].url).to.equal('http://dummy.url.com/180724_Allison VLOG v3_00002.ts');
   });
 });
+
+function expectWithJSONMessage (value) {
+  return expect(value, JSON.stringify(value));
+}
