@@ -159,7 +159,15 @@ class SubtitleTrackController extends BasePlaylistController {
   protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters): void {
     const currentTrack = this.tracks[this.trackId];
     if (this.shouldLoadTrack(currentTrack)) {
-      const { url, id } = currentTrack;
+      const id = currentTrack.id;
+      let url = currentTrack.url;
+      if (hlsUrlParameters) {
+        try {
+          url = hlsUrlParameters.addDirectives(url);
+        } catch (error) {
+          logger.warn(`[subtitle-track-controller] Could not construct new URL with HLS Delivery Directives: ${error}`);
+        }
+      }
       logger.log(`[subtitle-track-controller]: Loading subtitle playlist for id ${id}`);
       this.hls.trigger(Events.SUBTITLE_TRACK_LOADING, {
         url,

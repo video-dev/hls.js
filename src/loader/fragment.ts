@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 import LevelKey from './level-key';
 import LoadStats from './load-stats';
 import AttrList from '../utils/attr-list';
-import type { Loader, LoaderContext, PlaylistLevelType } from '../types/loader';
+import type { FragmentLoaderContext, Loader, PlaylistLevelType } from '../types/loader';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
@@ -98,7 +98,7 @@ export default class Fragment extends BaseSegment {
   // A string representing the fragment type
   public readonly type: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
-  public loader: Loader<LoaderContext> | null = null;
+  public loader: Loader<FragmentLoaderContext> | null = null;
   // The level index to which the fragment belongs
   public level: number = -1;
   // The continuity counter of the fragment

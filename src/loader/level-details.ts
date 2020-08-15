@@ -34,6 +34,8 @@ export default class LevelDetails {
   public partTarget: number = 0;
   public preloadHint?: AttrList;
   public renditionReports?: AttrList[];
+  public endPart: number = 0;
+  public lastPart: boolean = true;
 
   constructor (baseUrl) {
     this.fragments = [];
@@ -46,15 +48,14 @@ export default class LevelDetails {
       this.updated = true;
       return;
     }
-    // TODO: LL-HLS Set `updated` with delta playlist and partial segment changes taken into account
-    const updated = (this.endSN !== previous.endSN || this.url !== previous.url);
+    const updated = (this.endSN !== previous.endSN || this.endPart !== previous.endPart);
     if (updated) {
       this.misses = Math.floor(previous.misses * 0.6);
     } else {
       this.misses = previous.misses + 1;
     }
     this.updated = updated;
-    this.advanced = this.endSN > previous.endSN;
+    this.advanced = this.endSN > previous.endSN || this.endPart > previous.endPart;
     this.availabilityDelay = previous.availabilityDelay;
   }
 

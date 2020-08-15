@@ -1,20 +1,21 @@
 import AbrController from './controller/abr-controller';
 import AudioStreamController from './controller/audio-stream-controller';
 import AudioTrackController from './controller/audio-track-controller';
+import { SubtitleStreamController } from './controller/subtitle-stream-controller';
+import SubtitleTrackController from './controller/subtitle-track-controller';
 import BufferController from './controller/buffer-controller';
+import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-
-import { TimelineController } from './controller/timeline-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
 import EMEController from './controller/eme-controller';
-
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import * as Cues from './utils/cues';
-import { SubtitleStreamController } from './controller/subtitle-stream-controller';
-import { requestMediaKeySystemAccess, MediaKeyFunc } from './utils/mediakeys-helper';
+import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { logger } from './utils/logger';
+
+import type { MediaKeyFunc } from './utils/mediakeys-helper';
+import type { FragmentLoaderContext, Loader, LoaderContext, PlaylistLoaderContext } from './types/loader';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
@@ -53,7 +54,7 @@ export type EMEControllerConfig = {
 };
 
 type FragmentLoaderConfig = {
-  fLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
+  fLoader?: { new(confg: HlsConfig): Loader<FragmentLoaderContext> },
 
   fragLoadingTimeOut: number,
   fragLoadingMaxRetry: number,
@@ -77,7 +78,7 @@ export type MP4RemuxerConfig = {
 };
 
 type PlaylistLoaderConfig = {
-  pLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
+  pLoader?: { new(confg: HlsConfig): Loader<PlaylistLoaderContext> },
 
   manifestLoadingTimeOut: number,
   manifestLoadingMaxRetry: number,
@@ -140,7 +141,7 @@ export type HlsConfig =
     enableWorker: boolean,
     enableSoftwareAES: boolean,
     minAutoBitrate: number,
-    loader: any, // TODO(typescript-xhrloader): Type once XHR is done
+    loader: { new(confg: HlsConfig): Loader<LoaderContext> },
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
 
     // Alt Audio

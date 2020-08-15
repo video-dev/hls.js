@@ -15,37 +15,22 @@ import { logger } from '../utils/logger';
 import { parseSegmentIndex } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
 import { getProgramDateTimeAtEndOfLastEncodedFragment } from '../controller/level-helper';
-import { HlsUrlParameters, LevelParsed } from '../types/level';
-import {
-  Loader,
-  LoaderContext,
-  LoaderResponse,
-  LoaderStats, PlaylistContextType,
-  PlaylistLevelType,
-  PlaylistLoaderContext
-} from '../types/loader';
+import { LevelParsed } from '../types/level';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 import Hls from '../hls';
 import AttrList from '../utils/attr-list';
 import type { ManifestLoadingData, LevelLoadingData, TrackLoadingData, ErrorData } from '../types/events';
+import type { Loader, LoaderContext, LoaderResponse, LoaderStats, PlaylistLoaderContext } from '../types/loader';
 
 const { performance } = self;
 
-/**
- * @param {PlaylistContextType} type
- * @returns {boolean}
- */
 function canHaveQualityLevels (type: PlaylistContextType): boolean {
   return (type !== PlaylistContextType.AUDIO_TRACK &&
     type !== PlaylistContextType.SUBTITLE_TRACK);
 }
 
-/**
- * Map context.type to LevelType
- * @param {{type: PlaylistContextType}} context
- * @returns {LevelType}
- */
 function mapContextToLevelType (context: PlaylistLoaderContext): PlaylistLevelType {
   const { type } = context;
 
@@ -70,19 +55,12 @@ function getResponseUrl (response: LoaderResponse, context: PlaylistLoaderContex
   return url;
 }
 
-/**
- * @constructor
- */
 class PlaylistLoader {
   private readonly hls: Hls;
   private readonly loaders: {
     [key: string]: Loader<LoaderContext>
   } = Object.create(null)
 
-  /**
-   * @constructs
-   * @param {Hls} hls
-   */
   constructor (hls: Hls) {
     this.hls = hls;
     this._registerListeners();
@@ -118,7 +96,7 @@ class PlaylistLoader {
     const Loader = config.loader;
     const InternalLoader = PLoader || Loader;
 
-    const loader = new InternalLoader(config);
+    const loader = new InternalLoader(config) as Loader<PlaylistLoaderContext>;
 
     context.loader = loader;
     this.loaders[context.type] = loader;

@@ -47,21 +47,23 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
       if (deliveryDirectives) {
-        console.assert(deliveryDirectives.msn === details.endSN, `blocking reload result ${details.endSN}, requested ${deliveryDirectives.msn}`);
+        console.assert(details.advanced, `blocking reload result sn-part: ${details.endSN}-${details.endPart}, requested ${deliveryDirectives.msn}-${deliveryDirectives.part}`);
       }
       details.reloaded(previousDetails);
       if (previousDetails) {
-        logger.log(`[${this.constructor?.name}] live playlist ${index} ${details.advanced ? 'REFRESHED' : 'MISSED'}`);
+        logger.log(`[${this.constructor?.name}] live playlist ${index} ${details.advanced ? ('REFRESHED ' + details.endSN + '-' + details.endPart) : 'MISSED'}`);
       }
       if (!this.canLoad) {
         return;
       }
-      // TODO: Do not use LL-HLS delivery directives if playlist "endSN" is stale
       if (details.canBlockReload && details.endSN && details.advanced) {
         // Load level with LL-HLS delivery directives
-        // TODO: LL-HLS Specify latest partial segment
+        // TODO: Advance "msn" and "part" if the current details are stale (CDN Tune-in "age" header + time since request)
+        const msn = details.lastPart ? details.endSN + 1 : details.endSN;
+        const part = details.lastPart ? 0 : details.endPart + 1;
         // TODO: LL-HLS enable skip parameter for delta playlists independent of canBlockReload
-        this.loadPlaylist(new HlsUrlParameters(details.endSN + 1, 0, false));
+        const skip = false;
+        this.loadPlaylist(new HlsUrlParameters(msn, part, skip));
         return;
       }
       const reloadInterval = computeReloadInterval(details, stats);
