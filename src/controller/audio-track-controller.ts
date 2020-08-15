@@ -297,7 +297,15 @@ class AudioTrackController extends BasePlaylistController {
   protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters): void {
     const audioTrack = this.tracks[this.trackId];
     if (this.shouldLoadTrack(audioTrack)) {
-      const { url, id } = audioTrack;
+      const id = audioTrack.id;
+      let url = audioTrack.url;
+      if (hlsUrlParameters) {
+        try {
+          url = hlsUrlParameters.addDirectives(url);
+        } catch (error) {
+          logger.warn(`[audio-track-controller] Could not construct new URL with HLS Delivery Directives: ${error}`);
+        }
+      }
       // track not retrieved yet, or live playlist we need to (re)load it
       logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
       this.clearTimer();

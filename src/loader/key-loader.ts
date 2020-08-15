@@ -6,7 +6,14 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import Hls from '../hls';
 import Fragment from './fragment';
-import { LoaderStats, LoaderResponse, LoaderContext, LoaderConfiguration, LoaderCallbacks } from '../types/loader';
+import {
+  LoaderStats,
+  LoaderResponse,
+  LoaderContext,
+  LoaderConfiguration,
+  LoaderCallbacks,
+  Loader, FragmentLoaderContext
+} from '../types/loader';
 import { ComponentAPI } from '../types/component-api';
 import { KeyLoadingData } from '../types/events';
 
@@ -67,7 +74,7 @@ export default class KeyLoader implements ComponentAPI {
         return;
       }
 
-      const fragLoader = frag.loader = this.loaders[type] = new config.loader(config);
+      const fragLoader = frag.loader = this.loaders[type] = new config.loader(config) as Loader<FragmentLoaderContext>;
       this.decrypturl = uri;
       this.decryptkey = null;
 

@@ -393,6 +393,8 @@ export default class M3U8Parser {
         }
         case 'PART':
           frag.appendPart(new AttrList(value1));
+          // TODO: Append this incomplete fragment with its parts once the fragment-loader can handle it
+          // appendfragment();
           break;
         case 'PRELOAD-HINT': {
           const preloadHintAttrs = new AttrList(value1);
@@ -423,6 +425,9 @@ export default class M3U8Parser {
       const lastFragment = level.fragments[fragmentLength - 1];
       const lastSn = lastFragment.sn;
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
+      level.endPart = lastFragment.partCount - 1;
+      // If we have a complete fragment url, then all parts are accounted for
+      level.lastPart = !!lastFragment.relurl;
       level.startCC = level.fragments[0].cc;
     } else {
       level.endSN = 0;

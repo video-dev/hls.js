@@ -461,7 +461,7 @@ export default class LevelController extends BasePlaylistController {
     const level = this.currentLevelIndex;
     const currentLevel = this._levels[level];
 
-    if (this.canLoad && currentLevel?.url.length > 0) {
+    if (this.canLoad && currentLevel && currentLevel.url.length > 0) {
       const id = currentLevel.urlId;
       let url = currentLevel.url[id];
       if (hlsUrlParameters) {
@@ -473,8 +473,8 @@ export default class LevelController extends BasePlaylistController {
       }
 
       logger.log(`[level-controller]: Attempt loading level index ${level}${
-        hlsUrlParameters ? ' at sn ' + hlsUrlParameters.msn : ''
-      } with URL-id ${id}`);
+        hlsUrlParameters ? ' at sn ' + hlsUrlParameters.msn + ' part ' + hlsUrlParameters.part : ''
+      } with URL-id ${id} ${url}`);
 
       // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
       // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);

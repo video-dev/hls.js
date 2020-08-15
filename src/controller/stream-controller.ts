@@ -24,7 +24,9 @@ import {
   AudioTrackSwitchedData,
   BufferCreatedData,
   ErrorData,
-  FragParsingMetadataData, FragParsingUserdataData
+  FragParsingMetadataData,
+  FragParsingUserdataData,
+  LevelLoadingData
 } from '../types/events';
 import Hls from '../hls';
 import { NetworkComponentAPI } from '../types/component-api';
@@ -544,8 +546,15 @@ export default class StreamController extends BaseStreamController implements Ne
     this.startFragRequested = false;
   }
 
-  onLevelLoading () {
-    this.state = State.WAITING_LEVEL;
+  onLevelLoading (event: Events.LEVEL_LOADING, data: LevelLoadingData) {
+    const { levels } = this;
+    if (!levels || !State.IDLE) {
+      return;
+    }
+    const level = levels[data.level];
+    if (!level.details || (level.details.live && this.levelLastLoaded !== data.level)) {
+      this.state = State.WAITING_LEVEL;
+    }
   }
 
   onLevelLoaded (event: Events.LEVEL_LOADED, data: LevelLoadedData) {
@@ -842,8 +851,8 @@ export default class StreamController extends BaseStreamController implements Ne
       return;
     }
 
-    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-    const buffered = mediaBuffer.buffered;
+    // Check combined buffer
+    const buffered = media.buffered;
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;

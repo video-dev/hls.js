@@ -20,7 +20,13 @@ export default class FragmentLoader {
 
   load (frag: Fragment, onProgress?: FragmentLoadProgressCallback, highWaterMark?: number): Promise<FragLoadSuccessResult | LoadError> {
     if (!frag.url) {
-      return Promise.reject(new LoadError(null, 'Fragment does not have a url'));
+      return Promise.reject(new LoadError({
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.FRAG_LOAD_ERROR,
+        fatal: true,
+        frag,
+        networkDetails: null
+      }, 'Fragment does not have a url'));
     }
 
     const config = this.config;
@@ -34,7 +40,7 @@ export default class FragmentLoader {
     }
 
     loader = this.loader = frag.loader =
-      config.fLoader ? new FragmentILoader(config) : new DefaultILoader(config);
+      FragmentILoader ? new FragmentILoader(config) : new DefaultILoader(config) as Loader<FragmentLoaderContext>;
 
     const loaderContext: FragmentLoaderContext = {
       frag,
@@ -125,7 +131,7 @@ export default class FragmentLoader {
 }
 
 export class LoadError extends Error {
-  private data: FragLoadFailResult | null;
+  private readonly data: FragLoadFailResult;
   constructor (data, ...params) {
     super(...params);
     this.data = data;
@@ -142,7 +148,7 @@ export interface FragLoadFailResult {
   details: string
   fatal: boolean
   frag: Fragment
-  networkDetails: XMLHttpRequest
+  networkDetails: any
 }
 
 export type FragmentLoadProgressCallback = (result: FragLoadSuccessResult) => void;

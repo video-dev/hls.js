@@ -135,11 +135,17 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
       newFrag.endPTS = oldFrag.endPTS;
       newFrag.startDTS = oldFrag.startDTS;
       newFrag.endDTS = oldFrag.endDTS;
+      newFrag.appendedPTS = oldFrag.appendedPTS;
+      newFrag.maxStartPTS = oldFrag.maxStartPTS;
+      newFrag.minEndPTS = oldFrag.minEndPTS;
       newFrag.duration = oldFrag.duration;
       newFrag.backtracked = oldFrag.backtracked;
       newFrag.dropped = oldFrag.dropped;
       PTSFrag = newFrag;
     }
+    newFrag.stats = oldFrag.stats;
+    newFrag.loader = oldFrag.loader;
+    newFrag.urlId = oldFrag.urlId;
     // PTS is known when there are overlapping segments
     newDetails.PTSKnown = true;
   });
