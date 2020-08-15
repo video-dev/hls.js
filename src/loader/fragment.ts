@@ -3,8 +3,8 @@ import { buildAbsoluteURL } from 'url-toolkit';
 import { logger } from '../utils/logger';
 import LevelKey from './level-key';
 import LoadStats from './load-stats';
-import type { PlaylistLevelType } from '../types/loader';
-import type AttrList from '../utils/attr-list';
+import AttrList from '../utils/attr-list';
+import type { Loader, LoaderContext, PlaylistLevelType } from '../types/loader';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
@@ -19,9 +19,61 @@ interface ElementaryStreamInfo {
   endDTS: number
 }
 
-export default class Fragment {
-  private _url: string | null = null;
+export class BaseSegment {
   private _byteRange: number[] | null = null;
+  private _url: string | null = null;
+
+  // baseurl is the URL to the playlist
+  public readonly baseurl: string;
+  // relurl is the portion of the URL that comes from inside the playlist.
+  public relurl?: string;
+
+  constructor (baseurl: string) {
+    this.baseurl = baseurl;
+  }
+
+  // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
+  setByteRange (value: string, previous?: BaseSegment) {
+    const params = value.split('@', 2);
+    const byteRange: number[] = [];
+    if (params.length === 1) {
+      byteRange[0] = previous ? previous.byteRangeEndOffset : 0;
+    } else {
+      byteRange[0] = parseInt(params[1]);
+    }
+    byteRange[1] = parseInt(params[0]) + byteRange[0];
+    this._byteRange = byteRange;
+  }
+
+  get byteRange (): number[] {
+    if (!this._byteRange) {
+      return [];
+    }
+
+    return this._byteRange;
+  }
+
+  get byteRangeStartOffset (): number {
+    return this.byteRange[0];
+  }
+
+  get byteRangeEndOffset (): number {
+    return this.byteRange[1];
+  }
+
+  get url (): string {
+    if (!this._url && this.baseurl && this.relurl) {
+      this._url = buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
+    }
+    return this._url || '';
+  }
+
+  set url (value: string) {
+    this._url = value;
+  }
+}
+
+export default class Fragment extends BaseSegment {
   private _decryptdata: LevelKey | null = null;
 
   // Holds the types of data this fragment supports
@@ -35,16 +87,6 @@ export default class Fragment {
   public programDateTime: number | null = null;
   public tagList: Array<string[]> = [];
 
-  // TODO: Move at least baseurl to constructor.
-  // Currently we do a two-pass construction as use the Fragment class almost like a object for holding parsing state.
-  // It may make more sense to just use a POJO to keep state during the parsing phase.
-  // Have Fragment be the representation once we have a known state?
-  // Something to think on.
-
-  // relurl is the portion of the URL that comes from inside the playlist.
-  public relurl?: string;
-  // baseurl is the URL to the playlist
-  public baseurl?: string;
   // EXTINF has to be present for a m38 to be considered valid
   public duration: number = 0;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
@@ -56,7 +98,7 @@ export default class Fragment {
   // A string representing the fragment type
   public readonly type: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
-  public loader?: any;
+  public loader: Loader<LoaderContext> | null = null;
   // The level index to which the fragment belongs
   public level: number = -1;
   // The continuity counter of the fragment
@@ -94,52 +136,9 @@ export default class Fragment {
   // #EXT-X-PART list
   public partList: Part[] | null = null;
 
-  constructor (type: PlaylistLevelType) {
+  constructor (type: PlaylistLevelType, baseurl: string) {
+    super(baseurl);
     this.type = type;
-  }
-
-  // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
-  setByteRange (value: string, previousFrag?: Fragment) {
-    const params = value.split('@', 2);
-    const byteRange: number[] = [];
-    if (params.length === 1) {
-      byteRange[0] = previousFrag ? previousFrag.byteRangeEndOffset : 0;
-    } else {
-      byteRange[0] = parseInt(params[1]);
-    }
-    byteRange[1] = parseInt(params[0]) + byteRange[0];
-    this._byteRange = byteRange;
-  }
-
-  get url () {
-    if (!this._url && this.baseurl && this.relurl) {
-      this._url = buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
-    }
-
-    return this._url;
-  }
-
-  set url (value) {
-    this._url = value;
-  }
-
-  get byteRange (): number[] {
-    if (!this._byteRange) {
-      return [];
-    }
-
-    return this._byteRange;
-  }
-
-  /**
-   * @type {number}
-   */
-  get byteRangeStartOffset () {
-    return this.byteRange[0];
-  }
-
-  get byteRangeEndOffset () {
-    return this.byteRange[1];
   }
 
   get decryptdata (): LevelKey | null {
@@ -250,30 +249,49 @@ export default class Fragment {
     info.endDTS = Math.max(info.endDTS, endDTS);
   }
 
-  appendPart (partAttrs: AttrList) {
-    if (!this.partList) {
-      this.partList = [];
+  appendPart (partAttr: AttrList) {
+    let partList = this.partList;
+    if (!partList) {
+      partList = this.partList = [];
     }
-    const part = new Part(partAttrs);
-    this.partList.push(part);
+    const index = partList.length;
+    const part = new Part(partAttr, this.baseurl, index, partList[index - 1]);
+    partList.push(part);
     this.duration += part.duration;
   }
 
-  hasParts (): boolean {
+  get hasParts (): boolean {
     return this.partList !== null;
+  }
+
+  get partCount (): number {
+    return this.partList ? this.partList.length : 0;
+  }
+
+  isFinalPart (part: Part) {
+    // When the fragment has a url from EXT-INF entry, and this is the last part, there will be no more parts
+    return this.relurl && this.partList && part === this.partList[this.partList.length - 1];
   }
 }
 
-export class Part {
+export class Part extends BaseSegment {
   public readonly duration: number = 0;
   public readonly gap: boolean = false;
   public readonly independent: boolean = false;
-  public readonly uri: string;
+  public readonly relurl: string;
+  public readonly index: number;
+  public stats: LoadStats = new LoadStats();
 
-  constructor (partAttrs: AttrList) {
+  constructor (partAttrs: AttrList, baseurl: string, index: number, previous: Part | undefined) {
+    super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');
     this.gap = partAttrs.bool('GAP');
     this.independent = partAttrs.bool('INDEPENDENT');
-    this.uri = partAttrs.enumeratedString('URI') as string;
+    this.relurl = partAttrs.enumeratedString('URI') as string;
+    this.index = index;
+    const byteRange = partAttrs.enumeratedString('BYTERANGE');
+    if (byteRange) {
+      this.setByteRange(byteRange, previous);
+    }
   }
 }

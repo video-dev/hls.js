@@ -190,7 +190,7 @@ export default class M3U8Parser {
     const level = new LevelDetails(baseurl);
     let discontinuityCounter = 0;
     let prevFrag: Fragment | null = null;
-    let frag: Fragment = new Fragment(type);
+    let frag: Fragment = new Fragment(type, baseurl);
     let result: RegExpExecArray | RegExpMatchArray | null;
     let i: number;
     let levelkey: LevelKey | undefined;
@@ -208,7 +208,6 @@ export default class M3U8Parser {
       frag.level = id;
       frag.cc = discontinuityCounter;
       frag.urlId = levelUrlId;
-      frag.baseurl = baseurl;
       if (level.fragments[level.fragments.length - 1] !== frag) {
         level.fragments.push(frag);
       }
@@ -232,7 +231,7 @@ export default class M3U8Parser {
           totalduration += frag.duration;
 
           currentSN++;
-          frag = new Fragment(type);
+          frag = new Fragment(type, baseurl);
         }
       } else if (result[4]) { // X-BYTERANGE
         const data = (' ' + result[4]).slice(1);
@@ -368,14 +367,13 @@ export default class M3U8Parser {
           if (mapAttrs.BYTERANGE) {
             frag.setByteRange(mapAttrs.BYTERANGE);
           }
-          frag.baseurl = baseurl;
           frag.level = id;
           frag.sn = 'initSegment';
           if (levelkey) {
             frag.levelkey = levelkey;
           }
           level.initSegment = frag;
-          frag = new Fragment(type);
+          frag = new Fragment(type, baseurl);
           frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
           break;
         }
@@ -413,29 +411,34 @@ export default class M3U8Parser {
         }
       }
     }
-    // logger.log('found ' + level.fragments.length + ' fragments');
-    if (prevFrag && !prevFrag.relurl) {
+    const fragmentLength = level.fragments.length;
+    // logger.log('found ' + fragmentLength + ' fragments');
+    if (prevFrag && !(prevFrag.relurl || prevFrag.partList)) {
       level.fragments.pop();
       totalduration -= prevFrag.duration;
     }
     level.totalduration = totalduration;
-    if (totalduration > 0 && level.fragments.length) {
-      level.averagetargetduration = totalduration / level.fragments.length;
+    if (totalduration > 0 && fragmentLength) {
+      level.averagetargetduration = totalduration / fragmentLength;
+      const lastFragment = level.fragments[fragmentLength - 1];
+      const lastSn = lastFragment.sn;
+      level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
+      level.startCC = level.fragments[0].cc;
+    } else {
+      level.endSN = 0;
+      level.startCC = 0;
     }
-    level.endSN = currentSN - 1;
-    level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
     level.endCC = discontinuityCounter;
 
-    if (!level.initSegment && level.fragments.length) {
+    if (!level.initSegment && fragmentLength) {
       // this is a bit lurky but HLS really has no other way to tell us
       // if the fragments are TS or MP4, except if we download them :/
       // but this is to be able to handle SIDX.
       if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl as string))) {
         logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
-        frag = new Fragment(type);
+        frag = new Fragment(type, baseurl);
         frag.relurl = level.fragments[0].relurl;
-        frag.baseurl = baseurl;
         frag.level = id;
         frag.sn = 'initSegment';
 

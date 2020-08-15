@@ -2,13 +2,14 @@ import * as LevelHelper from '../../../src/controller/level-helper';
 import LevelDetails from '../../../src/loader/level-details';
 import Fragment from '../../../src/loader/fragment';
 import LoadStats from '../../../src/loader/load-stats';
+import { PlaylistLevelType } from '../../../src/types/loader';
 
 const generatePlaylist = (sequenceNumbers) => {
   const playlist = new LevelDetails('');
   playlist.startSN = sequenceNumbers[0];
   playlist.endSN = sequenceNumbers[sequenceNumbers.length - 1];
   playlist.fragments = sequenceNumbers.map((n, i) => {
-    const frag = new Fragment();
+    const frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.sn = n;
     frag.start = i * 5;
     frag.duration = 5;

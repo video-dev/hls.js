@@ -517,7 +517,7 @@ export class TimelineController implements ComponentAPI {
     // If we receive this event, we have not received an onInitPtsFound event. This happens when the video track has no samples (but has audio)
     // In order to have captions display, which requires an initPTS, we assume one of 90000
     if (typeof this.initPTS === 'undefined') {
-      this.onInitPtsFound(Events.INIT_PTS_FOUND, { id: '', frag: new Fragment(PlaylistLevelType.MAIN), initPTS: 90000 });
+      this.onInitPtsFound(Events.INIT_PTS_FOUND, { id: '', frag: new Fragment(PlaylistLevelType.MAIN, ''), initPTS: 90000 });
     }
   }
 

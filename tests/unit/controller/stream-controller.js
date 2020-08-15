@@ -6,7 +6,7 @@ import { State } from '../../../src/controller/base-stream-controller';
 import { mockFragments } from '../../mocks/data';
 import Fragment from '../../../src/loader/fragment';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
-
+import { PlaylistLevelType } from '../../../src/types/loader';
 import sinon from 'sinon';
 
 describe('StreamController', function () {
@@ -133,7 +133,7 @@ describe('StreamController', function () {
     beforeEach(function () {
       streamController.levels = [{ bitrate: 500000 }];
       triggerSpy = sinon.spy(hls, 'trigger');
-      frag = new Fragment();
+      frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.level = 0;
       frag.url = 'file';
     });

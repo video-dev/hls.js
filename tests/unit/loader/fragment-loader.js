@@ -3,6 +3,7 @@ import Fragment from '../../../src/loader/fragment';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import sinon from 'sinon';
 import LoadStats from '../../../src/loader/load-stats';
+import { PlaylistLevelType } from '../../../src/types/loader';
 
 class MockXhr {
   constructor () {
@@ -26,7 +27,7 @@ describe('FragmentLoader tests', function () {
   let networkDetails;
   beforeEach(function () {
     fragmentLoader = new FragmentLoader({ loader: MockXhr });
-    frag = new Fragment();
+    frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.url = 'foo';
     response = {};
     context = {};
