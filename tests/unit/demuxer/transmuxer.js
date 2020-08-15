@@ -2,6 +2,7 @@ import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
 import { TransmuxState, TransmuxConfig } from '../../../src/demux/transmuxer';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 import Fragment from '../../../src/loader/fragment';
+import { PlaylistLevelType } from '../../../src/types/loader';
 
 const sinon = require('sinon');
 
@@ -77,14 +78,14 @@ describe('TransmuxerInterface tests', function () {
     };
     const id = 'main';
     const transmuxerInterface = new TransmuxerInterface(hls, id);
-    const currentFrag = new Fragment();
+    const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
     currentFrag.cc = 100;
     currentFrag.sn = 5;
     currentFrag.level = 1;
     // Config for push
     transmuxerInterface.frag = currentFrag;
 
-    const newFrag = new Fragment();
+    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
     newFrag.cc = 100;
     newFrag.sn = 6;
     newFrag.level = 1;
@@ -130,7 +131,7 @@ describe('TransmuxerInterface tests', function () {
     const id = 'main';
     const transmuxerInterface = new TransmuxerInterface(hls, id);
 
-    const currentFrag = new Fragment();
+    const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
     currentFrag.cc = 100;
     currentFrag.sn = 5;
     currentFrag.level = 1;
@@ -138,7 +139,7 @@ describe('TransmuxerInterface tests', function () {
     // Config for push
     transmuxerInterface.frag = currentFrag;
 
-    const newFrag = new Fragment();
+    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
     newFrag.cc = 200;
     newFrag.sn = 5;
     newFrag.level = 2;

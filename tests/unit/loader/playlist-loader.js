@@ -986,53 +986,61 @@ fileSequence1151226.ts`, 'http://dummy.url.com/playlist.m3u8', 0, PlaylistLevelT
       expect(details.fragments[5].partList).to.equal(null);
       expect(details.fragments[6].partList).to.be.an('array').which.has.lengthOf(4);
       expect(details.fragments[7].partList).to.be.an('array').which.has.lengthOf(4);
-      expect(details.fragments[6].partList[0], '6-0').to.deep.equal({
+      expectWithJSONMessage(details.fragments[6].partList[0], '6-0').to.deep.include({
         duration: 1,
         gap: false,
         independent: true,
-        uri: 'lowLatencyHLS.php?segment=filePart1151232.1.ts'
+        index: 0,
+        relurl: 'lowLatencyHLS.php?segment=filePart1151232.1.ts'
       });
-      expect(details.fragments[6].partList[1], '6-1').to.deep.equal({
+      expectWithJSONMessage(details.fragments[6].partList[1], '6-1').to.deep.include({
         duration: 1.00001,
         gap: false,
         independent: false,
-        uri: 'lowLatencyHLS.php?segment=filePart1151232.2.ts'
+        index: 1,
+        relurl: 'lowLatencyHLS.php?segment=filePart1151232.2.ts'
       });
-      expect(details.fragments[6].partList[2], '6-2').to.deep.equal({
+      expectWithJSONMessage(details.fragments[6].partList[2], '6-2').to.deep.include({
         duration: 1,
         gap: false,
         independent: true,
-        uri: 'lowLatencyHLS.php?segment=filePart1151232.3.ts'
+        index: 2,
+        relurl: 'lowLatencyHLS.php?segment=filePart1151232.3.ts'
       });
-      expect(details.fragments[6].partList[3], '6-3').to.deep.equal({
+      expectWithJSONMessage(details.fragments[6].partList[3], '6-3').to.deep.include({
         duration: 1,
         gap: false,
         independent: true,
-        uri: 'lowLatencyHLS.php?segment=filePart1151232.4.ts'
+        index: 3,
+        relurl: 'lowLatencyHLS.php?segment=filePart1151232.4.ts'
       });
-      expect(details.fragments[7].partList[0], '7-0').to.deep.equal({
+      expectWithJSONMessage(details.fragments[7].partList[0], '7-0').to.deep.include({
         duration: 1,
         gap: false,
         independent: true,
-        uri: 'lowLatencyHLS.php?segment=filePart1151233.1.ts'
+        index: 0,
+        relurl: 'lowLatencyHLS.php?segment=filePart1151233.1.ts'
       });
-      expect(details.fragments[7].partList[1], '7-1').to.deep.equal({
+      expectWithJSONMessage(details.fragments[7].partList[1], '7-1').to.deep.include({
         duration: 0.99999,
         gap: false,
         independent: true,
-        uri: 'lowLatencyHLS.php?segment=filePart1151233.2.ts'
+        index: 1,
+        relurl: 'lowLatencyHLS.php?segment=filePart1151233.2.ts'
       });
-      expect(details.fragments[7].partList[2], '7-2').to.deep.equal({
+      expectWithJSONMessage(details.fragments[7].partList[2], '7-2').to.deep.include({
         duration: 1,
         gap: false,
         independent: false,
-        uri: 'lowLatencyHLS.php?segment=filePart1151233.3.ts'
+        index: 2,
+        relurl: 'lowLatencyHLS.php?segment=filePart1151233.3.ts'
       });
-      expect(details.fragments[7].partList[3], '7-3').to.deep.equal({
+      expectWithJSONMessage(details.fragments[7].partList[3], '7-3').to.deep.include({
         duration: 1,
         gap: true,
         independent: true,
-        uri: 'lowLatencyHLS.php?segment=filePart1151233.4.ts'
+        index: 3,
+        relurl: 'lowLatencyHLS.php?segment=filePart1151233.4.ts'
       });
     });
 
@@ -1205,6 +1213,6 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
   });
 });
 
-function expectWithJSONMessage (value) {
-  return expect(value, JSON.stringify(value));
+function expectWithJSONMessage (value, msg) {
+  return expect(value, `${msg || 'actual:'} ${JSON.stringify(value, null, 2)}`);
 }

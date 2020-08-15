@@ -140,8 +140,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       queueNames.forEach((name, i) => {
         const buffer = buffers[name];
         const segmentData = new Uint8Array();
-        const frag = new Fragment();
-        frag.type = PlaylistLevelType.MAIN;
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
         const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
         const data: BufferAppendingData = {
           type: name,
@@ -176,7 +175,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
         bufferController.onBufferAppending(Events.BUFFER_APPENDING, {
           type: name,
           data: new Uint8Array(),
-          frag: new Fragment(),
+          frag: new Fragment(PlaylistLevelType.MAIN, ''),
           chunkMeta: new ChunkMetadata(0, 0, 0, 0)
         });
 
@@ -190,7 +189,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
   describe('onFragParsed', function () {
     it('should trigger FRAG_BUFFERED when all audio/video data has been buffered', function () {
       const flushLiveBackBufferSpy = sandbox.spy(bufferController, 'flushLiveBackBuffer');
-      const frag = new Fragment();
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
       frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 
