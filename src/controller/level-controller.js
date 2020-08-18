@@ -505,13 +505,33 @@ export default class LevelController extends EventHandler {
       if (index !== levelIndex) {
         return true;
       }
-      if (level.url.length > 1 && urlId !== undefined) {
+      // index === levelIndex
+      // no urlId specified, we filter out this level completely
+      if (!Number.isFinite(urlId)) {
+        return false;
+      }
+      // special case: there is only one URL and a valid url-id has been specified.
+      // in that case, we should filter out the level as a whole here
+      // because we would otherwise end up with an empty level object
+      // if going for the logic below, made for when there is more than one URL.
+      if (level.url.length === 1 && urlId === 0) {
+        return false;
+      }
+      // there are sevel URLs, we check if the urlId is valid, and then
+      // only remove out a specific redundant media group in a variant level
+      if (level.url.length > urlId) {
         level.url.splice(urlId, 1);
-        level.audioGroupIds.splice(urlId, 1);
-        level.subtitleGroupIds.splice(urlId, 1);
+        if (level.audioGroupIds && level.audioGroupIds.length > urlId) {
+          level.audioGroupIds.splice(urlId, 1);
+        }
+        if (level.subtitleGroupIds && level.subtitleGroupIds.length > urlId) {
+          level.subtitleGroupIds.splice(urlId, 1);
+        }
         if (urlId < level.urlId) level.urlId--; // adjust when removed was before current index
         return true;
       }
+      // if we reach this, the urlId is too large for the number of URLs in this level
+      logger.warn('removeLevel called with urlId larger than number of URLs in level');
       return false;
     }).map((level, index) => {
       const { details } = level;
