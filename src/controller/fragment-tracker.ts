@@ -59,7 +59,10 @@ export class FragmentTracker implements ComponentAPI {
    */
   getAppendedFrag (position: number, levelType: PlaylistLevelType) : Fragment | null {
     const { activeFragment } = this;
-    if (activeFragment?.appendedPTS !== undefined && activeFragment.start <= position && position <= activeFragment.appendedPTS) {
+    if (!activeFragment) {
+      return null;
+    }
+    if (activeFragment.appendedPTS !== undefined && activeFragment.start <= position && position <= activeFragment.appendedPTS) {
       return activeFragment;
     }
     return this.getBufferedFrag(position, levelType);

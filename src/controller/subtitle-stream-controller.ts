@@ -253,7 +253,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
       const { maxBufferHole, maxFragLookUpTolerance } = config;
       const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
       const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), media.currentTime, maxBufferHole);
-      const { end: bufferEnd, len: bufferLen } = bufferedInfo;
+      const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
 
       if (bufferLen > maxConfigBuffer) {
         return;
@@ -267,12 +267,12 @@ export class SubtitleStreamController extends BaseStreamController implements Co
 
       let foundFrag;
       const fragPrevious = this.fragPrevious;
-      if (bufferEnd < end) {
+      if (targetBufferTime < end) {
         if (fragPrevious && trackDetails.hasProgramDateTime) {
           foundFrag = findFragmentByPDT(fragments, fragPrevious.endProgramDateTime, maxFragLookUpTolerance);
         }
         if (!foundFrag) {
-          foundFrag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, maxFragLookUpTolerance);
+          foundFrag = findFragmentByPTS(fragPrevious, fragments, targetBufferTime, maxFragLookUpTolerance);
         }
       } else {
         foundFrag = fragments[fragLen - 1];
@@ -285,7 +285,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
       } else if (foundFrag && fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
         // only load if fragment is not loaded
         this.fragCurrent = foundFrag;
-        this._loadFragForPlayback(foundFrag);
+        this._loadFragForPlayback(foundFrag, targetBufferTime);
       }
     }
   }

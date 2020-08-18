@@ -233,7 +233,8 @@ export interface InitPTSFoundData {
 }
 
 export interface FragLoadingData {
-  frag: Fragment
+  frag: Fragment,
+  targetBufferTime: number | null
 }
 
 export interface FragLoadEmergencyAbortedData {

@@ -1,3 +1,5 @@
+import BaseStreamController, { State } from './base-stream-controller';
+import { NetworkComponentAPI } from '../types/component-api';
 import { BufferHelper } from '../utils/buffer-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { Events } from '../events';
@@ -8,14 +10,14 @@ import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
-import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import { Level } from '../types/level';
 import LevelDetails from '../loader/level-details';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
-import {
+import Hls from '../hls';
+import type {
   LevelLoadedData,
   ManifestParsedData,
   MediaAttachedData,
@@ -28,8 +30,6 @@ import {
   FragParsingUserdataData,
   LevelLoadingData
 } from '../types/events';
-import Hls from '../hls';
-import { NetworkComponentAPI } from '../types/component-api';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -257,7 +257,8 @@ export default class StreamController extends BaseStreamController implements Ne
       return;
     }
 
-    const frag = this.getNextFragment(bufferInfo.end, levelDetails);
+    const targetBufferTime = bufferInfo.end;
+    const frag = this.getNextFragment(targetBufferTime, levelDetails);
     if (!frag) {
       return;
     }
@@ -266,23 +267,23 @@ export default class StreamController extends BaseStreamController implements Ne
     // this content using the key we fetch. Other keys will be handled by the DRM CDM via EME.
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
       this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${level}`);
-      this._loadKey(frag);
+      this.loadKey(frag);
     } else {
-      if (this.fragCurrent !== frag) {
+      if (this.fragCurrent?.sn !== frag.sn) {
         this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${level}, ${
           this.loadedmetadata ? 'currentTime' : 'nextLoadPosition'
-        }: ${parseFloat(pos.toFixed(3))}, bufferInfo.end: ${parseFloat(bufferInfo.end.toFixed(3))}`);
+        }: ${parseFloat(pos.toFixed(3))}, bufferInfo.end: ${parseFloat(targetBufferTime.toFixed(3))}`);
       }
-      this._loadFragment(frag);
+      this.loadFragment(frag, targetBufferTime);
     }
   }
 
-  _loadKey (frag: Fragment) {
+  private loadKey (frag: Fragment) {
     this.state = State.KEY_LOADING;
     this.hls.trigger(Events.KEY_LOADING, { frag });
   }
 
-  _loadFragment (frag: Fragment) {
+  private loadFragment (frag: Fragment, targetBufferTime: number) {
     // Check if fragment is not loaded
     const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
@@ -301,7 +302,7 @@ export default class StreamController extends BaseStreamController implements Ne
         this._loadBitrateTestFrag(frag);
       } else {
         this.startFragRequested = true;
-        this._loadFragForPlayback(frag);
+        this._loadFragForPlayback(frag, targetBufferTime);
       }
     } else if (fragState === FragmentState.APPENDING) {
       // Lower the buffer size and try again
@@ -548,7 +549,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
   onLevelLoading (event: Events.LEVEL_LOADING, data: LevelLoadingData) {
     const { levels } = this;
-    if (!levels || !State.IDLE) {
+    if (!levels || this.state !== State.IDLE) {
       return;
     }
     const level = levels[data.level];
@@ -568,6 +569,14 @@ export default class StreamController extends BaseStreamController implements Ne
       return;
     }
     this.log(`Level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}], cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`);
+
+    const fragCurrent = this.fragCurrent;
+    if (fragCurrent && (this.state === State.FRAG_LOADING || this.state === State.FRAG_LOADING_WAITING_RETRY)) {
+      if (fragCurrent.level !== data.level && fragCurrent.loader) {
+        this.state = State.IDLE;
+        fragCurrent.loader.abort();
+      }
+    }
 
     const curLevel = levels[newLevelId];
     let sliding = 0;
@@ -1122,7 +1131,7 @@ export default class StreamController extends BaseStreamController implements Ne
       }
       if (fragPlayingCurrent) {
         const fragPlaying = fragPlayingCurrent;
-        if (fragPlaying !== this.fragPlaying) {
+        if (!this.fragPlaying || (fragPlaying.sn !== this.fragPlaying.sn && fragPlaying.level !== this.fragPlaying.level)) {
           this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlaying });
           const fragPlayingLevel = fragPlaying.level;
           if (!this.fragPlaying || this.fragPlaying.level !== fragPlayingLevel) {
