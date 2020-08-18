@@ -22,6 +22,8 @@ const browserConfig = {
  */
 let browser;
 let stream;
+let printDebugLogs = false;
+
 // Setup browser config data from env vars
 if (onTravis) {
   let UA = process.env.UA;
@@ -62,6 +64,7 @@ HttpServer.createServer({
   root: './'
 }).listen(8000, hostname);
 
+const stringifyResult = (result) => JSON.stringify(result, Object.keys(result).filter(k => k !== 'logs'), 2);
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function retry (attempt, numAttempts = 5, interval = 2000) {
   try {
@@ -77,9 +80,8 @@ async function retry (attempt, numAttempts = 5, interval = 2000) {
 }
 
 async function testLoadedData (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -89,12 +91,11 @@ async function testLoadedData (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('loadeddata');
 }
 
 async function testIdleBufferLength (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
+  const result = await browser.executeAsyncScript(function (url, config) {
       const callback = arguments[arguments.length - 1];
       const autoplay = false;
       window.startStream(url, config, callback, autoplay);
@@ -105,8 +106,9 @@ async function testIdleBufferLength (url, config) {
         if (buffered.length) {
           const bufferEnd = buffered.end(buffered.length - 1);
           const duration = video.duration;
-          console.log(`[log] > progress: ${bufferEnd.toFixed(2)}/${duration.toFixed(2)} buffered.length: ${buffered.length}`);
-          if (bufferEnd >= maxBufferLength || bufferEnd > duration - 1) {
+          console.log('[test] > progress: ' + bufferEnd.toFixed(2) + '/' + duration.toFixed(2) +
+            ' buffered.length: ' + buffered.length);
+          if (bufferEnd >= maxBufferLength || bufferEnd > duration - (config.avBufferOffset || 1)) {
             callback({ code: 'loadeddata', logs: window.logString });
           }
         }
@@ -115,30 +117,29 @@ async function testIdleBufferLength (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('loadeddata');
 }
 
 async function testSmoothSwitch (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      window.hls.once(window.Hls.Events.FRAG_CHANGED, (event, data) => {
+      window.hls.once(window.Hls.Events.FRAG_CHANGED, function (eventName, data) {
+        console.log('[test] > ' + eventName + ' frag.level: ' + data.frag.level);
         window.switchToHighestLevel('next');
       });
-      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, (event, data) => {
-        console.log(`[test] > level switched: ${data.level}`);
+      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
+        console.log('[test] > ' + eventName + ' data.level: ' + data.level);
         let currentTime = video.currentTime;
-        if (data.level === window.hls.levels.length - 1) {
-          console.log(`[test] > switched on level: ${data.level}`);
+        const highestLevel = (window.hls.levels.length - 1);
+        if (data.level === highestLevel) {
           window.setTimeout(function () {
             let newCurrentTime = video.currentTime;
-            console.log(
-              `[test] > currentTime delta : ${newCurrentTime - currentTime}`
-            );
+            console.log('[test] > currentTime delta: ' + (newCurrentTime - currentTime));
             callback({
-              code: newCurrentTime > currentTime,
+              highestLevel: highestLevel,
+              currentTimeDelta: newCurrentTime - currentTime,
               logs: window.logString
             });
           }, 2000);
@@ -148,13 +149,12 @@ async function testSmoothSwitch (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals(true);
+  expect(result, stringifyResult(result)).to.have.property('currentTimeDelta').which.is.gt(0);
 }
 
 async function testSeekOnLive (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -169,18 +169,24 @@ async function testSeekOnLive (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('seeked');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('seeked');
 }
 
 async function testSeekOnVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
         window.setTimeout(function () {
           video.currentTime = video.duration - 5;
+          // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
+          const allowedBufferedRanges = config.allowedBufferedRangesInSeekTest || 2;
+          video.onprogress = function () {
+            if (video.buffered.length > allowedBufferedRanges) {
+              callback({ code: 'buffer-gaps', bufferedRanges: video.buffered.length, logs: window.logString });
+            }
+          };
         }, 5000);
       };
       video.onended = function () {
@@ -190,13 +196,12 @@ async function testSeekOnVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('ended');
 }
 
 async function testSeekEndVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -211,13 +216,12 @@ async function testSeekEndVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('ended');
 }
 
 async function testIsPlayingVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -229,15 +233,13 @@ async function testIsPlayingVOD (url, config) {
         let currentTime = video.currentTime;
         if (expectedPlaying) {
           window.setTimeout(function () {
-            console.log(
-              `[test] > video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
-            );
+            console.log('[test] > video expected playing. last currentTime/new currentTime=' +
+              currentTime + '/' + video.currentTime);
             callback({ playing: currentTime !== video.currentTime });
           }, 5000);
         } else {
-          console.log(
-            `[test] > video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`
-          );
+          console.log('[test] > video not playing. paused/ended/buffered.length=' +
+            video.paused + '/' + video.ended + '/' + video.buffered.length);
           callback({ playing: false });
         }
       };
@@ -245,13 +247,12 @@ async function testIsPlayingVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('playing').which.is.true;
+  expect(result, stringifyResult(result)).to.have.property('playing').which.is.true;
 }
 
 async function testSeekBackToStart (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.ontimeupdate = function () {
@@ -275,7 +276,7 @@ async function testSeekBackToStart (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('playing').which.is.true;
+  expect(result, stringifyResult(result)).to.have.property('playing').which.is.true;
 }
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
@@ -339,15 +340,17 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   beforeEach(async function () {
     try {
       await retry(async () => {
-        console.log('Loading test page...');
+        if (printDebugLogs) {
+          console.log('Loading test page...');
+        }
         try {
           await browser.get(`http://${hostname}:8000/tests/functional/auto/index.html`);
         } catch (e) {
           throw new Error('failed to open test page');
         }
-        console.log('Test page loaded.');
-
-        console.log('Locating ID \'hlsjs-functional-tests\'');
+        if (printDebugLogs) {
+          console.log('Test page loaded.');
+        }
         try {
           await browser.wait(
             until.elementLocated(By.css('body#hlsjs-functional-tests')),
@@ -359,7 +362,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           console.log(source);
           throw e;
         }
-        console.log('Located the ID, page confirmed loaded');
+        if (printDebugLogs) {
+          console.log('Test harness found, page confirmed loaded');
+        }
       });
     } catch (e) {
       throw new Error(`error getting test page loaded: ${e}`);
@@ -367,10 +372,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   });
 
   afterEach(async function () {
-    // if (onTravis || (!onTravis && this.currentTest.isFailed())) {
+    if (printDebugLogs || this.currentTest.isFailed()) {
       const logString = await browser.executeScript('return logString');
       console.log(`${onTravis ? 'travis_fold:start:debug_logs' : ''}\n${logString}\n${onTravis ? 'travis_fold:end:debug_logs' : ''}`);
-    // }
+    }
   });
 
   after(async function () {
@@ -421,7 +426,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           testIsPlayingVOD.bind(null, url, config)
         );
         it(
-          `should seek 5s from end and receive video ended event for ${stream.description}`,
+          `should seek 5s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
           testSeekOnVOD.bind(null, url, config)
         );
         // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));

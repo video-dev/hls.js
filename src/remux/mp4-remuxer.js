@@ -34,6 +34,25 @@ class MP4Remuxer {
     this.ISGenerated = false;
   }
 
+  getVideoStartPts (videoSamples) {
+    let rolloverDetected = false;
+    const startPTS = videoSamples.reduce((minPTS, sample) => {
+      const delta = sample.pts - minPTS;
+      if (delta < -4294967296) { // 2^32, see PTSNormalize for reasoning, but we're hitting a rollover here, and we don't want that to impact the timeOffset calculation
+        rolloverDetected = true;
+        return minPTS;
+      } else if (delta > 0) {
+        return minPTS;
+      } else {
+        return sample.pts;
+      }
+    }, videoSamples[0].pts);
+    if (rolloverDetected) {
+      logger.debug('PTS rollover detected');
+    }
+    return startPTS;
+  }
+
   remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
     // generate Init Segment if needed
     if (!this.ISGenerated) {
@@ -50,7 +69,7 @@ class MP4Remuxer {
         // if first audio DTS is not aligned with first video DTS then we need to take that into account
         // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
         // drift between audio and video streams
-        const startPTS = videoTrack.samples.reduce((minPTS, sample) => Math.min(minPTS, sample.pts), videoTrack.samples[0].pts);
+        const startPTS = this.getVideoStartPts(videoTrack.samples);
         const tsDelta = audioTrack.samples[0].pts - startPTS;
         const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
         audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
@@ -163,7 +182,7 @@ class MP4Remuxer {
         }
       };
       if (computePTSDTS) {
-        const startPTS = videoSamples.reduce((minPTS, sample) => Math.min(minPTS, sample.pts), videoSamples[0].pts);
+        const startPTS = this.getVideoStartPts(videoSamples);
         const startOffset = Math.round(inputTimeScale * timeOffset);
         initDTS = Math.min(initDTS, videoSamples[0].dts - startOffset);
         initPTS = Math.min(initPTS, startPTS - startOffset);
@@ -213,7 +232,7 @@ class MP4Remuxer {
 
     if (!contiguous) {
       const pts = timeOffset * timeScale;
-      const cts = inputSamples[0].pts - inputSamples[0].dts;
+      const cts = inputSamples[0].pts - PTSNormalize(inputSamples[0].dts, inputSamples[0].pts);
       // if not contiguous, let's use target timeOffset
       nextAvcDts = pts - cts;
     }
@@ -222,14 +241,14 @@ class MP4Remuxer {
     // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
     for (let i = 0; i < nbSamples; i++) {
       const sample = inputSamples[i];
+      sample.pts = PTSNormalize(sample.pts - initPTS, nextAvcDts);
+      sample.dts = PTSNormalize(sample.dts - initPTS, nextAvcDts);
       if (sample.dts > sample.pts) {
         ptsDtsShift = Math.max(Math.min(ptsDtsShift, sample.pts - sample.dts), -1 * PTS_DTS_SHIFT_TOLERANCE_90KHZ);
       }
       if (sample.dts < inputSamples[i > 0 ? i - 1 : i].dts) {
         sortSamples = true;
       }
-      sample.pts = PTSNormalize(sample.pts - initPTS, nextAvcDts);
-      sample.dts = PTSNormalize(sample.dts - initPTS, nextAvcDts);
     }
 
     // sort video samples by DTS then PTS then demux id order
@@ -313,6 +332,7 @@ class MP4Remuxer {
       minPTS = Math.min(sample.pts, minPTS);
       maxPTS = Math.max(sample.pts, maxPTS);
     }
+    lastDTS = inputSamples[nbSamples - 1].dts;
 
     /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
@@ -500,7 +520,7 @@ class MP4Remuxer {
 
         // If we're overlapping by more than a duration, drop this sample
         if (delta <= -maxAudioFramesDrift * inputSampleDuration) {
-          if (contiguous) {
+          if (contiguous || i > 0) {
             logger.warn(`Dropping 1 audio frame @ ${toMsFromMpegTsClock(nextPts, true) / 1000}s due to ${toMsFromMpegTsClock(delta, true)} ms overlap.`);
             inputSamples.splice(i, 1);
             // Don't touch nextPtsNorm or i
@@ -735,7 +755,7 @@ class MP4Remuxer {
     this.remuxAudio(track, timeOffset, contiguous);
   }
 
-  remuxID3 (track) {
+  remuxID3 (track, timeOffset) {
     const length = track.samples.length;
     if (!length) {
       return;
@@ -748,8 +768,8 @@ class MP4Remuxer {
       const sample = track.samples[index];
       // setting id3 pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
-      sample.pts = ((sample.pts - initPTS) / inputTimeScale);
-      sample.dts = ((sample.dts - initDTS) / inputTimeScale);
+      sample.pts = PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale) / inputTimeScale;
+      sample.dts = PTSNormalize(sample.dts - initDTS, timeOffset * inputTimeScale) / inputTimeScale;
     }
     this.observer.trigger(Event.FRAG_PARSING_METADATA, {
       samples: track.samples
@@ -758,22 +778,21 @@ class MP4Remuxer {
     track.samples = [];
   }
 
-  remuxText (track) {
-    track.samples.sort(function (a, b) {
-      return (a.pts - b.pts);
-    });
-
-    let length = track.samples.length, sample;
+  remuxText (track, timeOffset) {
+    const length = track.samples.length;
     const inputTimeScale = track.inputTimeScale;
     const initPTS = this._initPTS;
     // consume samples
     if (length) {
       for (let index = 0; index < length; index++) {
-        sample = track.samples[index];
+        const sample = track.samples[index];
         // setting text pts, dts to relative time
         // using this._initPTS and this._initDTS to calculate relative time
-        sample.pts = ((sample.pts - initPTS) / inputTimeScale);
+        sample.pts = PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale) / inputTimeScale;
       }
+      track.samples.sort(function (a, b) {
+        return (a.pts - b.pts);
+      });
       this.observer.trigger(Event.FRAG_PARSING_USERDATA, {
         samples: track.samples
       });

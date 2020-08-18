@@ -12,7 +12,7 @@ const STORAGE_KEYS = {
 };
 
 const testStreams = require('../tests/test-streams');
-const defaultTestStreamUrl = testStreams['bbb'].url;
+const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
 let demoConfig = getURLParam('demoConfig', null);
@@ -36,8 +36,8 @@ let dumpfMP4 = getDemoConfigPropOrDefault('dumpfMP4', false);
 
 let bufferingIdx = -1;
 let selectedTestStream = null;
-let video = $('#video')[0];
-let startTime = Date.now();
+const video = $('#video')[0];
+const startTime = Date.now();
 
 let lastSeekingIdx;
 let lastStartPosition;
@@ -58,10 +58,13 @@ $(document).ready(function () {
 
   chart = setupTimelineChart();
 
-  Object.keys(testStreams).forEach((key) => {
+  Object.keys(testStreams).forEach((key, index) => {
     const stream = testStreams[key];
     const option = new Option(stream.description, key);
     $('#streamSelect').append(option);
+    if (stream.url === sourceURL) {
+      $('#streamSelect')[0].selectedIndex = index + 1;
+    }
   });
 
   $('#streamSelect').change(function () {
@@ -79,6 +82,7 @@ $(document).ready(function () {
   $('#videoSize').change(function () {
     $('#video').width($('#videoSize').val());
     $('#bufferedCanvas').width($('#videoSize').val());
+    checkBuffer();
   });
 
   $('#enableStreaming').click(function () {
@@ -93,6 +97,7 @@ $(document).ready(function () {
 
   $('#dumpfMP4').click(function () {
     dumpfMP4 = this.checked;
+    $('.btn-dump').toggle(dumpfMP4);
     onDemoConfigChanged();
   });
 
@@ -138,17 +143,18 @@ $(document).ready(function () {
 
   video.volume = 0.05;
 
-  hideAllTabs();
-  // $('#timelineTab').show();
+  $('.btn-dump').toggle(dumpfMP4);
+  $('#toggleButtons').show();
+  toggleTab($('.demo-tab-btn')[0]);
 
-  $('#metricsButtonWindow').toggle(window.windowSliding);
-  $('#metricsButtonFixed').toggle(!window.windowSliding);
+  $('#metricsButtonWindow').toggle(self.windowSliding);
+  $('#metricsButtonFixed').toggle(!self.windowSliding);
 
   loadSelectedStream();
 });
 
 function setupGlobals () {
-  window.events = events = {
+  self.events = events = {
     url: url,
     t0: performance.now(),
     load: [],
@@ -159,22 +165,19 @@ function setupGlobals () {
   };
 
   // actual values, only on window
-  window.recoverDecodingErrorDate = null;
-  window.recoverSwapAudioCodecDate = null;
-
-  window.fmp4Data = fmp4Data = {
-    'audio': [],
-    'video': []
+  self.recoverDecodingErrorDate = null;
+  self.recoverSwapAudioCodecDate = null;
+  self.fmp4Data = fmp4Data = {
+    audio: [],
+    video: []
   };
-
-  window.onClickBufferedRange = onClickBufferedRange;
-
-  window.updateLevelInfo = updateLevelInfo;
-  window.onDemoConfigChanged = onDemoConfigChanged;
-  window.createfMP4 = createfMP4;
-  window.goToMetricsPermaLink = goToMetricsPermaLink;
-  window.toggleTab = toggleTab;
-  window.applyConfigEditorValue = applyConfigEditorValue;
+  self.onClickBufferedRange = onClickBufferedRange;
+  self.updateLevelInfo = updateLevelInfo;
+  self.onDemoConfigChanged = onDemoConfigChanged;
+  self.createfMP4 = createfMP4;
+  self.goToMetricsPermaLink = goToMetricsPermaLink;
+  self.toggleTab = toggleTab;
+  self.applyConfigEditorValue = applyConfigEditorValue;
 }
 
 function trimArray (target, limit) {
@@ -240,7 +243,7 @@ function loadSelectedStream () {
   onDemoConfigChanged();
   console.log('Using Hls.js config:', hlsConfig);
 
-  window.hls = hls = new Hls(hlsConfig);
+  self.hls = hls = new Hls(hlsConfig);
 
   logStatus('Loading manifest and attaching video element...');
 
@@ -262,6 +265,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.MEDIA_DETACHED, function () {
     logStatus('Media element detached');
+    clearInterval(hls.bufferTimer);
     bufferingIdx = -1;
     tracks = [];
     events.video.push({
@@ -271,7 +275,14 @@ function loadSelectedStream () {
     trimEventHistory();
   });
 
-  hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (name, data) {
+  hls.on(Hls.Events.DESTROYING, function () {
+    clearInterval(hls.bufferTimer);
+  });
+  hls.on(Hls.Events.BUFFER_RESET, function () {
+    clearInterval(hls.bufferTimer);
+  });
+
+  hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (eventName, data) {
     showCanvas();
     events.video.push({
       time: performance.now() - events.t0,
@@ -280,11 +291,11 @@ function loadSelectedStream () {
     trimEventHistory();
   });
 
-  hls.on(Hls.Events.FRAG_PARSING_METADATA, function (name, data) {
+  hls.on(Hls.Events.FRAG_PARSING_METADATA, function (eventName, data) {
     // console.log("Id3 samples ", data.samples);
   });
 
-  hls.on(Hls.Events.LEVEL_SWITCHING, function (name, data) {
+  hls.on(Hls.Events.LEVEL_SWITCHING, function (eventName, data) {
     events.level.push({
       time: performance.now() - events.t0,
       id: data.level,
@@ -294,7 +305,7 @@ function loadSelectedStream () {
     updateLevelInfo();
   });
 
-  hls.on(Hls.Events.MANIFEST_PARSED, function (name, data) {
+  hls.on(Hls.Events.MANIFEST_PARSED, function (eventName, data) {
     events.load.push({
       type: 'manifest',
       name: '',
@@ -306,10 +317,10 @@ function loadSelectedStream () {
       duration: data.stats.tload - data.stats.tfirst
     });
     trimEventHistory();
-    window.refreshCanvas();
+    self.refreshCanvas();
   });
 
-  hls.on(Hls.Events.MANIFEST_PARSED, function (name, data) {
+  hls.on(Hls.Events.MANIFEST_PARSED, function (eventName, data) {
     logStatus('No of quality levels found: ' + hls.levels.length);
     logStatus('Manifest successfully loaded');
     stats = {
@@ -320,12 +331,12 @@ function loadSelectedStream () {
     updateLevelInfo();
   });
 
-  hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function (name, data) {
+  hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function (eventName, data) {
     logStatus('No of audio tracks found: ' + data.audioTracks.length);
     updateAudioTrackInfo();
   });
 
-  hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, function (name, data) {
+  hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, function (eventName, data) {
     logStatus('Audio track switching...');
     updateAudioTrackInfo();
     events.video.push({
@@ -337,10 +348,10 @@ function loadSelectedStream () {
     lastAudioTrackSwitchingIdx = events.video.length - 1;
   });
 
-  hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function (name, data) {
+  hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function (eventName, data) {
     logStatus('Audio track switched');
     updateAudioTrackInfo();
-    var event = {
+    const event = {
       time: performance.now() - events.t0,
       type: 'audio switched',
       name: '@' + data.id
@@ -353,9 +364,9 @@ function loadSelectedStream () {
     trimEventHistory();
   });
 
-  hls.on(Hls.Events.LEVEL_LOADED, function (name, data) {
+  hls.on(Hls.Events.LEVEL_LOADED, function (eventName, data) {
     events.isLive = data.details.live;
-    var event = {
+    const event = {
       type: 'level',
       id: data.level,
       start: data.details.startSN,
@@ -380,12 +391,12 @@ function loadSelectedStream () {
 
     events.load.push(event);
     trimEventHistory();
-    window.refreshCanvas();
+    self.refreshCanvas();
   });
 
-  hls.on(Hls.Events.AUDIO_TRACK_LOADED, function (name, data) {
+  hls.on(Hls.Events.AUDIO_TRACK_LOADED, function (eventName, data) {
     events.isLive = data.details.live;
-    var event = {
+    const event = {
       type: 'audio track',
       id: data.id,
       start: data.details.startSN,
@@ -398,11 +409,11 @@ function loadSelectedStream () {
     };
     events.load.push(event);
     trimEventHistory();
-    window.refreshCanvas();
+    self.refreshCanvas();
   });
 
-  hls.on(Hls.Events.FRAG_BUFFERED, function (name, data) {
-    var event = {
+  hls.on(Hls.Events.FRAG_BUFFERED, function (eventName, data) {
+    const event = {
       type: data.frag.type + ' fragment',
       id: data.frag.level,
       id2: data.frag.sn,
@@ -428,16 +439,16 @@ function loadSelectedStream () {
         buffer: 0,
         pos: 0
       });
-      hls.bufferTimer = window.setInterval(checkBuffer, 100);
+      hls.bufferTimer = self.setInterval(checkBuffer, 100);
     }
     trimEventHistory();
-    window.refreshCanvas();
+    self.refreshCanvas();
     updateLevelInfo();
 
-    let latency = data.stats.tfirst - data.stats.trequest;
-    let parsing = data.stats.tparsed - data.stats.tload;
-    let process = data.stats.tbuffered - data.stats.trequest;
-    let bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
+    const latency = data.stats.tfirst - data.stats.trequest;
+    const parsing = data.stats.tparsed - data.stats.tload;
+    const process = data.stats.tbuffered - data.stats.trequest;
+    const bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
     if (stats.fragBuffered) {
       stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
       stats.fragMaxLatency = Math.max(stats.fragMaxLatency, latency);
@@ -476,31 +487,32 @@ function loadSelectedStream () {
     stats.autoLevelCappingLast = hls.autoLevelCapping;
   });
 
-  hls.on(Hls.Events.LEVEL_SWITCHED, function (name, data) {
-    var event = {
+  hls.on(Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
+    const event = {
       time: performance.now() - events.t0,
       type: 'level switched',
       name: data.level
     };
     events.video.push(event);
     trimEventHistory();
-    window.refreshCanvas();
+    self.refreshCanvas();
     updateLevelInfo();
   });
 
-  hls.on(Hls.Events.FRAG_CHANGED, function (name, data) {
-    var event = {
+  hls.on(Hls.Events.FRAG_CHANGED, function (eventName, data) {
+    const event = {
       time: performance.now() - events.t0,
       type: 'frag changed',
       name: data.frag.sn + ' @ ' + data.frag.level
     };
     events.video.push(event);
     trimEventHistory();
-    window.refreshCanvas();
+    self.refreshCanvas();
     updateLevelInfo();
     stats.tagList = data.frag.tagList;
 
-    let level = data.frag.level; let autoLevel = data.frag.autoLevel;
+    const level = data.frag.level;
+    const autoLevel = data.frag.autoLevel;
     if (stats.levelStart === undefined) {
       stats.levelStart = level;
     }
@@ -540,7 +552,7 @@ function loadSelectedStream () {
     this.levelLastAuto = autoLevel;
   });
 
-  hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, function (name, data) {
+  hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, function (eventName, data) {
     if (stats) {
       if (stats.fragLoadEmergencyAborted === undefined) {
         stats.fragLoadEmergencyAborted = 1;
@@ -550,7 +562,7 @@ function loadSelectedStream () {
     }
   });
 
-  hls.on(Hls.Events.FRAG_DECRYPTED, function (name, data) {
+  hls.on(Hls.Events.FRAG_DECRYPTED, function (eventName, data) {
     if (!stats.fragDecrypted) {
       stats.fragDecrypted = 0;
       this.totalDecryptTime = 0;
@@ -561,7 +573,7 @@ function loadSelectedStream () {
     stats.fragAvgDecryptTime = this.totalDecryptTime / stats.fragDecrypted;
   });
 
-  hls.on(Hls.Events.ERROR, function (name, data) {
+  hls.on(Hls.Events.ERROR, function (eventName, data) {
     console.warn('Error event:', data);
     switch (data.details) {
     case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
@@ -631,6 +643,7 @@ function loadSelectedStream () {
     default:
       break;
     }
+
     if (data.fatal) {
       console.error('Fatal error :' + data.details);
       switch (data.type) {
@@ -649,6 +662,7 @@ function loadSelectedStream () {
     if (!stats) {
       stats = {};
     }
+
     // track all errors independently
     if (stats[data.details] === undefined) {
       stats[data.details] = 1;
@@ -667,23 +681,23 @@ function loadSelectedStream () {
     $('#statisticsOut').text(JSON.stringify(sortObject(stats), null, '\t'));
   });
 
-  hls.on(Hls.Events.BUFFER_CREATED, function (name, data) {
+  hls.on(Hls.Events.BUFFER_CREATED, function (eventName, data) {
     tracks = data.tracks;
   });
 
-  hls.on(Hls.Events.BUFFER_APPENDING, function (name, data) {
+  hls.on(Hls.Events.BUFFER_APPENDING, function (eventName, data) {
     if (dumpfMP4) {
       fmp4Data[data.type].push(data.data);
     }
   });
 
-  hls.on(Hls.Events.FPS_DROP, function (name, data) {
-    let evt = {
+  hls.on(Hls.Events.FPS_DROP, function (eventName, data) {
+    const event = {
       time: performance.now() - events.t0,
       type: 'frame drop',
       name: data.currentDropped + '/' + data.currentDecoded
     };
-    events.video.push(evt);
+    events.video.push(event);
     trimEventHistory();
     if (stats) {
       if (stats.fpsDropEvent === undefined) {
@@ -778,7 +792,7 @@ function handleVideoEvent (evt) {
     break;
   }
 
-  let event = {
+  const event = {
     time: performance.now() - events.t0,
     type: evt.type,
     name: data
@@ -813,14 +827,14 @@ function handleLevelError (data) {
 
 function handleMediaError () {
   if (autoRecoverError) {
-    let now = performance.now();
-    if (!window.recoverDecodingErrorDate || (now - window.recoverDecodingErrorDate) > 3000) {
-      window.recoverDecodingErrorDate = performance.now();
+    const now = performance.now();
+    if (!self.recoverDecodingErrorDate || (now - self.recoverDecodingErrorDate) > 3000) {
+      self.recoverDecodingErrorDate = performance.now();
       $('#statusOut').append(', trying to recover media error.');
       hls.recoverMediaError();
     } else {
-      if (!window.recoverSwapAudioCodecDate || (now - window.recoverSwapAudioCodecDate) > 3000) {
-        window.recoverSwapAudioCodecDate = performance.now();
+      if (!self.recoverSwapAudioCodecDate || (now - self.recoverSwapAudioCodecDate) > 3000) {
+        self.recoverSwapAudioCodecDate = performance.now();
         $('#statusOut').append(', trying to swap audio codec and recover media error.');
         hls.swapAudioCodec();
         hls.recoverMediaError();
@@ -841,25 +855,24 @@ function timeRangesToString (r) {
 }
 
 function checkBuffer () {
-  let v = $('#video')[0];
-  let canvas = $('#bufferedCanvas')[0];
-  let ctx = canvas.getContext('2d');
-  let r = v.buffered;
+  const v = $('#video')[0];
+  const canvas = $('#bufferedCanvas')[0];
+  const ctx = canvas.getContext('2d');
+  const r = v.buffered;
   let bufferingDuration;
   ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'gray';
   if (r) {
     if (!canvas.width || canvas.width !== v.clientWidth) {
       canvas.width = v.clientWidth;
     }
-
-    let pos = v.currentTime;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const pos = v.currentTime;
     let bufferLen = 0;
+    ctx.fillStyle = 'gray';
     for (let i = 0; i < r.length; i++) {
-      let start = r.start(i) / v.duration * canvas.width;
-      let end = r.end(i) / v.duration * canvas.width;
-      ctx.fillRect(start, 3, Math.max(2, end - start), 10);
+      const start = r.start(i) / v.duration * canvas.width;
+      const end = r.end(i) / v.duration * canvas.width;
+      ctx.fillRect(start, 2, Math.max(2, end - start), 11);
       if (pos >= r.start(i) && pos < r.end(i)) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferLen = r.end(i) - pos;
@@ -867,8 +880,8 @@ function checkBuffer () {
     }
     // check if we are in buffering / or playback ended state
     if (bufferLen <= 0.1 && v.paused === false && (pos - lastStartPosition) > 0.5) {
-      // don't create buffering event if we are at the end of the playlist, don't report ended for live playlist
       if (lastDuration - pos <= 0.5 && events.isLive === false) {
+        // don't create buffering event if we are at the end of the playlist, don't report ended for live playlist
       } else {
         // we are not at the end of the playlist ... real buffering
         if (bufferingIdx !== -1) {
@@ -896,108 +909,99 @@ function checkBuffer () {
     }
 
     // update buffer/position for current Time
-    let event = {
+    const event = {
       time: performance.now() - events.t0,
       buffer: Math.round(bufferLen * 1000),
       pos: Math.round(pos * 1000)
     };
-    let bufEvents = events.buffer; let bufEventLen = bufEvents.length;
+    const bufEvents = events.buffer;
+    const bufEventLen = bufEvents.length;
     if (bufEventLen > 1) {
-      let event0 = bufEvents[bufEventLen - 2]; let event1 = bufEvents[bufEventLen - 1];
-      let slopeBuf0 = (event0.buffer - event1.buffer) / (event0.time - event1.time);
-      let slopeBuf1 = (event1.buffer - event.buffer) / (event1.time - event.time);
+      const event0 = bufEvents[bufEventLen - 2];
+      const event1 = bufEvents[bufEventLen - 1];
+      const slopeBuf0 = (event0.buffer - event1.buffer) / (event0.time - event1.time);
+      const slopeBuf1 = (event1.buffer - event.buffer) / (event1.time - event.time);
 
-      let slopePos0 = (event0.pos - event1.pos) / (event0.time - event1.time);
-      let slopePos1 = (event1.pos - event.pos) / (event1.time - event.time);
+      const slopePos0 = (event0.pos - event1.pos) / (event0.time - event1.time);
+      const slopePos1 = (event1.pos - event.pos) / (event1.time - event.time);
       // compute slopes. if less than 30% difference, remove event1
-      if ((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0 / slopeBuf1 - 1) <= 0.3) &&
-           (slopePos0 === slopePos1 || Math.abs(slopePos0 / slopePos1 - 1) <= 0.3)) {
+      if (
+        (slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0 / slopeBuf1 - 1) <= 0.3) &&
+        (slopePos0 === slopePos1 || Math.abs(slopePos0 / slopePos1 - 1) <= 0.3)
+      ) {
         bufEvents.pop();
       }
     }
     events.buffer.push(event);
     trimEventHistory();
-    window.refreshCanvas();
+    self.refreshCanvas();
 
-    let log = 'Duration: ' +
-              v.duration + '\n' +
-              'Buffered: ' +
-              timeRangesToString(v.buffered) + '\n' +
-              'Seekable: ' +
-              timeRangesToString(v.seekable) + '\n' +
-              'Played: ' +
-              timeRangesToString(v.played) + '\n';
+    let log = `Duration: ${v.duration}\nBuffered: ${timeRangesToString(v.buffered)}\nSeekable: ${timeRangesToString(v.seekable)}\nPlayed: ${timeRangesToString(v.played)}\n`;
 
     if (hls.media) {
-      for (let type in tracks) {
+      for (const type in tracks) {
         log += 'Buffer for ' + type + ' contains: ' + timeRangesToString(tracks[type].buffer.buffered) + '\n';
       }
 
       const videoPlaybackQuality = v.getVideoPlaybackQuality;
       if (videoPlaybackQuality && typeof (videoPlaybackQuality) === typeof (Function)) {
-        log += 'Dropped frames: ' + v.getVideoPlaybackQuality().droppedVideoFrames + '\n';
-        log += 'Corrupted frames:' + v.getVideoPlaybackQuality().corruptedVideoFrames + '\n';
+        log += `Dropped frames: ${v.getVideoPlaybackQuality().droppedVideoFrames}\n`;
+        log += `Corrupted frames: ${v.getVideoPlaybackQuality().corruptedVideoFrames}\n`;
       } else if (v.webkitDroppedFrameCount) {
-        log += 'Dropped frames:' + v.webkitDroppedFrameCount + '\n';
+        log += `Dropped frames: ${v.webkitDroppedFrameCount}`;
       }
     }
+
     $('#bufferedOut').text(log);
-
     $('#statisticsOut').text(JSON.stringify(sortObject(stats), null, '\t'));
-
     ctx.fillStyle = 'blue';
-
     const x = v.currentTime / v.duration * canvas.width;
     ctx.fillRect(x, 0, 2, 15);
+  } else {
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 }
 
 function showCanvas () {
-  window.showMetrics();
+  self.showMetrics();
   $('#bufferedOut').show();
   $('#bufferedCanvas').show();
 }
 
 function hideCanvas () {
-  window.hideMetrics();
+  self.hideMetrics();
   $('#bufferedOut').hide();
   $('#bufferedCanvas').hide();
 }
 
 function getMetrics () {
-  let json = JSON.stringify(events);
-  let jsonpacked = window.jsonpack.pack(json);
+  const json = JSON.stringify(events);
+  const jsonpacked = self.jsonpack.pack(json);
   // console.log('packing JSON from ' + json.length + ' to ' + jsonpacked.length + ' bytes');
   return btoa(jsonpacked);
 }
 
-function copyMetricsToClipBoard () {
+self.copyMetricsToClipBoard = function () {
   copyTextToClipboard(getMetrics());
-}
+};
 
-function goToMetrics () {
+self.goToMetrics = function () {
   let url = document.URL;
   url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html';
-  window.open(url, '_blank');
-}
+  self.open(url, '_blank');
+};
 
 function goToMetricsPermaLink () {
   let url = document.URL;
-  let b64 = getMetrics();
+  const b64 = getMetrics();
   url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html#data=' + b64;
-  window.open(url, '_blank');
-}
-
-function minsecs (ts) {
-  let m = Math.floor(Math.floor(ts % 3600) / 60);
-  let s = Math.floor(ts % 60);
-  return m + ':' + (s < 10 ? '0' : '') + s;
+  self.open(url, '_blank');
 }
 
 function onClickBufferedRange (event) {
-  let canvas = $('#bufferedCanvas')[0];
-  let v = $('#video')[0];
-  let target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
+  const canvas = $('#bufferedCanvas')[0];
+  const v = $('#video')[0];
+  const target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
   v.currentTime = target;
 }
 
@@ -1005,92 +1009,91 @@ function updateLevelInfo () {
   if (!hls.levels) {
     return;
   }
+  const buttonTemplate = '<button type="button" class="btn btn-sm ';
+  const buttonEnabled = 'btn-primary" ';
+  const buttonDisabled = 'btn-success" ';
 
-  let button_template = '<button type="button" class="btn btn-sm ';
-  let button_enabled = 'btn-primary" ';
-  let button_disabled = 'btn-success" ';
-
-  let html1 = button_template;
+  let html1 = buttonTemplate;
   if (hls.autoLevelEnabled) {
-    html1 += button_enabled;
+    html1 += buttonEnabled;
   } else {
-    html1 += button_disabled;
+    html1 += buttonDisabled;
   }
 
   html1 += 'onclick="hls.currentLevel=-1">auto</button>';
 
-  let html2 = button_template;
+  let html2 = buttonTemplate;
   if (hls.autoLevelEnabled) {
-    html2 += button_enabled;
+    html2 += buttonEnabled;
   } else {
-    html2 += button_disabled;
+    html2 += buttonDisabled;
   }
 
   html2 += 'onclick="hls.loadLevel=-1">auto</button>';
 
-  let html3 = button_template;
+  let html3 = buttonTemplate;
   if (hls.autoLevelCapping === -1) {
-    html3 += button_enabled;
+    html3 += buttonEnabled;
   } else {
-    html3 += button_disabled;
+    html3 += buttonDisabled;
   }
 
   html3 += 'onclick="levelCapping=hls.autoLevelCapping=-1;updateLevelInfo();onDemoConfigChanged();">auto</button>';
 
-  let html4 = button_template;
+  let html4 = buttonTemplate;
   if (hls.autoLevelEnabled) {
-    html4 += button_enabled;
+    html4 += buttonEnabled;
   } else {
-    html4 += button_disabled;
+    html4 += buttonDisabled;
   }
 
   html4 += 'onclick="hls.nextLevel=-1">auto</button>';
 
   for (let i = 0; i < hls.levels.length; i++) {
-    html1 += button_template;
+    html1 += buttonTemplate;
     if (hls.currentLevel === i) {
-      html1 += button_enabled;
+      html1 += buttonEnabled;
     } else {
-      html1 += button_disabled;
+      html1 += buttonDisabled;
     }
 
     let levelName = i;
-    let label = level2label(i);
+    const label = level2label(i);
     if (label) {
       levelName += ' (' + level2label(i) + 'p)';
     }
 
     html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
-    html2 += button_template;
+    html2 += buttonTemplate;
     if (hls.loadLevel === i) {
-      html2 += button_enabled;
+      html2 += buttonEnabled;
     } else {
-      html2 += button_disabled;
+      html2 += buttonDisabled;
     }
 
     html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
 
-    html3 += button_template;
+    html3 += buttonTemplate;
     if (hls.autoLevelCapping === i) {
-      html3 += button_enabled;
+      html3 += buttonEnabled;
     } else {
-      html3 += button_disabled;
+      html3 += buttonDisabled;
     }
 
     html3 += 'onclick="levelCapping=hls.autoLevelCapping=' + i + ';updateLevelInfo();onDemoConfigChanged();">' + levelName + '</button>';
 
-    html4 += button_template;
+    html4 += buttonTemplate;
     if (hls.nextLevel === i) {
-      html4 += button_enabled;
+      html4 += buttonEnabled;
     } else {
-      html4 += button_disabled;
+      html4 += buttonDisabled;
     }
 
     html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
   }
 
-  let v = $('#video')[0];
+  const v = $('#video')[0];
 
   if (v.videoWidth && v.videoHeight) {
     $('#currentResolution').html(v.videoWidth + ' x ' + v.videoHeight);
@@ -1114,28 +1117,32 @@ function updateLevelInfo () {
 }
 
 function updateAudioTrackInfo () {
-  let button_template = '<button type="button" class="btn btn-sm ';
-  let button_enabled = 'btn-primary" ';
-  let button_disabled = 'btn-success" ';
+  const buttonTemplate = '<button type="button" class="btn btn-sm ';
+  const buttonEnabled = 'btn-primary" ';
+  const buttonDisabled = 'btn-success" ';
   let html1 = '';
-  let audioTrackId = hls.audioTrack; let len = hls.audioTracks.length;
+  const audioTrackId = hls.audioTrack;
+  const len = hls.audioTracks.length;
+  const track = hls.audioTracks[audioTrackId];
 
   for (let i = 0; i < len; i++) {
-    html1 += button_template;
+    html1 += buttonTemplate;
     if (audioTrackId === i) {
-      html1 += button_enabled;
+      html1 += buttonEnabled;
     } else {
-      html1 += button_disabled;
+      html1 += buttonDisabled;
     }
 
     html1 += 'onclick="hls.audioTrack=' + i + '">' + hls.audioTracks[i].name + '</button>';
   }
+
+  $('#audioTrackLabel').text(track ? (track.lang || track.name) : 'None selected');
   $('#audioTrackControl').html(html1);
 }
 
 function level2label (index) {
   if (hls && hls.levels.length - 1 >= index) {
-    let level = hls.levels[index];
+    const level = hls.levels[index];
     if (level.name) {
       return level.name;
     } else {
@@ -1157,10 +1164,10 @@ function getDemoConfigPropOrDefault (propName, defaultVal) {
 }
 
 function getURLParam (sParam, defaultValue) {
-  let sPageURL = window.location.search.substring(1);
-  let sURLVariables = sPageURL.split('&');
+  const sPageURL = self.location.search.substring(1);
+  const sURLVariables = sPageURL.split('&');
   for (let i = 0; i < sURLVariables.length; i++) {
-    let sParameterName = sURLVariables[i].split('=');
+    const sParameterName = sURLVariables[i].split('=');
     if (sParameterName[0] === sParam) {
       return sParameterName[1] === 'undefined' ? undefined : sParameterName[1] === 'false' ? false : sParameterName[1];
     }
@@ -1218,7 +1225,6 @@ function getEditorValue (options) {
 
 function getPersistedHlsConfig () {
   let value = localStorage.getItem(STORAGE_KEYS.Hls_Config);
-
   if (value === null) {
     return value;
   }
@@ -1238,7 +1244,7 @@ function persistEditorValue () {
 }
 
 function setupConfigEditor () {
-  configEditor = window.ace.edit('config-editor');
+  configEditor = self.ace.edit('config-editor');
   configEditor.setTheme('ace/theme/github');
   configEditor.session.setMode('ace/mode/json');
 
@@ -1311,6 +1317,9 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);
   }, chart);
+  hls.on(Hls.Events.BUFFER_RESET, () => {
+    chart.removeSourceBuffers();
+  }, chart);
   hls.on(Hls.Events.LEVELS_UPDATED, (eventName, { levels }) => {
     chart.removeType('level');
     chart.updateLevels(levels);
@@ -1379,20 +1388,22 @@ function applyConfigEditorValue () {
 
 function createfMP4 (type) {
   if (fmp4Data[type].length) {
-    let blob = new Blob([arrayConcat(fmp4Data[type])], {
+    const blob = new Blob([arrayConcat(fmp4Data[type])], {
       type: 'application/octet-stream'
     });
-    let filename = type + '-' + new Date().toISOString() + '.mp4';
-    window.saveAs(blob, filename);
-    // $('body').append('<a download="hlsjs-' + filename + '" href="' + window.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
+    const filename = type + '-' + new Date().toISOString() + '.mp4';
+    self.saveAs(blob, filename);
+    // $('body').append('<a download="hlsjs-' + filename + '" href="' + self.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
+  } else if (!dumpfMP4) {
+    console.error('Check "Dump transmuxed fMP4 data" first to make appended media available for saving.');
   }
 }
 
 function arrayConcat (inputArray) {
-  let totalLength = inputArray.reduce(function (prev, cur) {
+  const totalLength = inputArray.reduce(function (prev, cur) {
     return prev + cur.length;
   }, 0);
-  let result = new Uint8Array(totalLength);
+  const result = new Uint8Array(totalLength);
   let offset = 0;
   inputArray.forEach(function (element) {
     result.set(element, offset);
@@ -1402,20 +1413,28 @@ function arrayConcat (inputArray) {
 }
 
 function hideAllTabs () {
-  $('#timelineTab').hide();
-  $('#playbackControlTab').hide();
-  $('#qualityLevelControlTab').hide();
-  $('#audioTrackControlTab').hide();
-  $('#metricsDisplayTab').hide();
-  $('#statsDisplayTab').hide();
+  $('.demo-tab-btn').css('background-color', '');
+  $('.demo-tab').hide();
 }
 
-function toggleTab (tabElId) {
-  hideAllTabs();
-  window.hideMetrics();
-  $('#' + tabElId).show();
+function toggleTab (btn) {
+  const tabElId = $(btn).data('tab');
+  // eslint-disable-next-line no-restricted-globals
+  const modifierPressed = window.event && (window.event.metaKey || window.event.shiftKey);
+  if (!modifierPressed) {
+    hideAllTabs();
+  }
+  if (modifierPressed) {
+    $(`#${tabElId}`).toggle();
+  } else {
+    $(`#${tabElId}`).show();
+  }
+  $(btn).css('background-color', $(`#${tabElId}`).is(':visible') ? 'orange' : '');
+  if (!$('#statsDisplayTab').is(':visible')) {
+    self.hideMetrics();
+  }
   if (hls) {
-    if (tabElId === 'timelineTab') {
+    if ($('#timelineTab').is(':visible')) {
       chart.show();
       chart.resize(chart.chart.data ? chart.chart.data.datasets : null);
     } else {
