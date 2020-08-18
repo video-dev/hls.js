@@ -51,10 +51,10 @@ class SubtitleTrackController extends TaskLoop {
 
     /**
      * @public
-     * Flag hash of blacklisted track IDs (that have caused failure)
+     * Flag hash of restricted track IDs (that have caused failure)
      * @member {{[id: number] => boolean}}
      */
-    this.trackIdBlacklist = Object.create(null);
+    this.restrictedTracks = Object.create(null);
 
     /**
      * @private
@@ -387,20 +387,20 @@ class SubtitleTrackController extends TaskLoop {
    * @private
    */
   _handleLoadError () {
-    // First, let's black list current track id
-    this.trackIdBlacklist[this.trackId] = true;
+    // add current track id to restricted list
+    this.restrictedTracks[this.trackId] = true;
 
-    // Let's try to fall back on a functional audio-track with the same group ID
+    // try to fall back on a functional audio-track with the same group ID
     const previousId = this.trackId;
     const { name, language, groupId } = this.tracks[previousId];
 
     logger.warn(`Loading failed on subtitle track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${language}"`);
 
-    // Find a non-blacklisted track ID with the same NAME
-    // At least a track that is not blacklisted, thus on another group-ID.
+    // Find a non-restricted track ID with the same NAME
+    // At least a track that is not restricted, thus on another group-ID.
     let newId = previousId;
     for (let i = 0; i < this.tracks.length; i++) {
-      if (this.trackIdBlacklist[i]) {
+      if (this.restrictedTracks[i]) {
         continue;
       }
       const newTrack = this.tracks[i];
