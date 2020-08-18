@@ -337,7 +337,7 @@ describe('SubtitleTrackController', function () {
       assert.strictEqual(subtitleTrackController.hasInterval(), false);
     });
 
-    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', function () {
+    it('should restrict current track on fatal network error, and find a backup track (fallback mechanism)', function () {
       const currentTrackId = 3;
 
       const fakeTracks = [
@@ -356,14 +356,14 @@ describe('SubtitleTrackController', function () {
         fatal: true
       });
 
-      assert.strictEqual(!!subtitleTrackController.trackIdBlacklist[currentTrackId], false);
+      assert.strictEqual(!!subtitleTrackController.restrictedTracks[currentTrackId], false);
 
       subtitleTrackController.onError({
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
 
-      assert.strictEqual(!!subtitleTrackController.trackIdBlacklist[currentTrackId], false);
+      assert.strictEqual(!!subtitleTrackController.restrictedTracks[currentTrackId], false);
 
       subtitleTrackController.onError({
         type: Hls.ErrorTypes.NETWORK_ERROR,
@@ -374,7 +374,7 @@ describe('SubtitleTrackController', function () {
         }
       });
 
-      assert.strictEqual(!!subtitleTrackController.trackIdBlacklist[currentTrackId], true);
+      assert.strictEqual(!!subtitleTrackController.restrictedTracks[currentTrackId], true);
 
       assert.strictEqual(subtitleTrackController.subtitleTrack, 1);
     });
