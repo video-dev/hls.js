@@ -393,8 +393,7 @@ export default class M3U8Parser {
         }
         case 'PART':
           frag.appendPart(new AttrList(value1));
-          // TODO: Append this incomplete fragment with its parts once the fragment-loader can handle it
-          // appendfragment();
+          appendfragment();
           break;
         case 'PRELOAD-HINT': {
           const preloadHintAttrs = new AttrList(value1);

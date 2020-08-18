@@ -194,7 +194,7 @@ class PlaylistLoader {
         logger.trace('[playlist-loader]: playlist request ongoing');
         return;
       }
-      logger.warn(`[playlist-loader]: aborting previous loader for type: ${context.type}`);
+      logger.log(`[playlist-loader]: aborting previous loader for type: ${context.type}`);
       loader.abort();
     }
 

@@ -130,15 +130,17 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
   let PTSFrag;
   mapFragmentIntersection(oldDetails, newDetails, (oldFrag, newFrag) => {
     ccOffset = oldFrag.cc - newFrag.cc;
-    if (Number.isFinite(oldFrag.startPTS)) {
+    if (Number.isFinite(oldFrag.startPTS) && Number.isFinite(oldFrag.endPTS)) {
       newFrag.start = newFrag.startPTS = oldFrag.startPTS;
-      newFrag.endPTS = oldFrag.endPTS;
       newFrag.startDTS = oldFrag.startDTS;
-      newFrag.endDTS = oldFrag.endDTS;
       newFrag.appendedPTS = oldFrag.appendedPTS;
       newFrag.maxStartPTS = oldFrag.maxStartPTS;
+
+      newFrag.endPTS = oldFrag.endPTS;
+      newFrag.endDTS = oldFrag.endDTS;
       newFrag.minEndPTS = oldFrag.minEndPTS;
       newFrag.duration = oldFrag.duration;
+
       newFrag.backtracked = oldFrag.backtracked;
       newFrag.dropped = oldFrag.dropped;
       PTSFrag = newFrag;
@@ -146,6 +148,7 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
     newFrag.stats = oldFrag.stats;
     newFrag.loader = oldFrag.loader;
     newFrag.urlId = oldFrag.urlId;
+
     // PTS is known when there are overlapping segments
     newDetails.PTSKnown = true;
   });

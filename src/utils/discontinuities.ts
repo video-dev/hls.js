@@ -115,7 +115,7 @@ export function alignPDT (details: LevelDetails, lastDetails: LevelDetails | und
     const newPDT = details.fragments[0].programDateTime!;
     // date diff is in ms. frag.start is in seconds
     const sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
-    if (Number.isFinite(sliding)) {
+    if (sliding && Number.isFinite(sliding)) {
       logger.log(`adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(3)}`);
       adjustPts(sliding, details);
     }

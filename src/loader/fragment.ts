@@ -264,13 +264,32 @@ export default class Fragment extends BaseSegment {
     return this.partList !== null;
   }
 
+  get hasAllParts () {
+    return !!this.relurl;
+  }
+
   get partCount (): number {
     return this.partList ? this.partList.length : 0;
   }
 
+  findIndependentPart (targetBufferTime: number): Part | null {
+    const partList = this.partList;
+    if (partList !== null) {
+      let start = this.start;
+      for (let i = 0, len = partList.length; i < len; i++) {
+        const part = partList[0];
+        if (part.independent && targetBufferTime < start + part.duration) {
+          return part;
+        }
+        start += part.duration;
+      }
+    }
+    return null;
+  }
+
   isFinalPart (part: Part) {
     // When the fragment has a url from EXT-INF entry, and this is the last part, there will be no more parts
-    return this.relurl && this.partList && part === this.partList[this.partList.length - 1];
+    return this.hasAllParts && this.partList && part.index === this.partList[this.partList.length - 1].index;
   }
 }
 

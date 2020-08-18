@@ -1,4 +1,5 @@
-import type Fragment from '../loader/fragment';
+import Fragment from '../loader/fragment';
+import type { Part } from '../loader/fragment';
 import type LevelDetails from '../loader/level-details';
 import type { HlsUrlParameters } from './level';
 
@@ -16,7 +17,8 @@ export interface LoaderContext {
 }
 
 export interface FragmentLoaderContext extends LoaderContext {
-  frag: Fragment
+  frag: Fragment,
+  part: Part | null
 }
 
 export interface LoaderConfiguration {
@@ -121,6 +123,7 @@ export interface Loader<T extends LoaderContext> {
   ): void
   getResponseHeader(name:string): string | null
   context: T
+  loader: any
   stats: LoaderStats
 }
 

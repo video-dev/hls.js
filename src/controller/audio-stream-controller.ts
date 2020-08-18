@@ -277,10 +277,10 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
 
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
-    let loadPos = bufferInfo.end;
+    let targetBufferTime = bufferInfo.end;
 
     if (audioSwitch) {
-      loadPos = pos;
+      targetBufferTime = pos;
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
       if (trackDetails.PTSKnown && pos < start) {
         // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
@@ -291,7 +291,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       }
     }
 
-    const frag = this.getNextFragment(loadPos, trackDetails);
+    const frag = this.getNextFragment(targetBufferTime, trackDetails);
     if (!frag) {
       return;
     }
@@ -299,18 +299,20 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
       this.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
       this.state = State.KEY_LOADING;
-      hls.trigger(Events.KEY_LOADING, { frag: frag });
+      hls.trigger(Events.KEY_LOADING, { frag });
     } else {
       // only load if fragment is not loaded or if in audio switch
       // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
       const fragState = this.fragmentTracker.getState(frag);
-      this.fragCurrent = frag;
       if (!this.audioSwitch && fragState !== FragmentState.NOT_LOADED) {
         return;
       }
-
-      this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN}-${trackDetails.endSN}], track ${trackId}, load position: ${pos.toFixed(3)}-${loadPos.toFixed(3)}`);
-      this.loadFragment(frag);
+      if (this.fragCurrent?.sn !== frag.sn) {
+        this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN}-${trackDetails.endSN}], track ${trackId}, ${
+          this.loadedmetadata ? 'currentTime' : 'nextLoadPosition'
+        }: ${pos.toFixed(3)}-${targetBufferTime.toFixed(3)}`);
+      }
+      this.loadFragment(frag, targetBufferTime);
     }
   }
 
@@ -675,13 +677,14 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     this.tick();
   }
 
-  private loadFragment (frag: Fragment) {
+  private loadFragment (frag: Fragment, targetBufferTime: number) {
+    this.fragCurrent = frag;
     if (frag.sn === 'initSegment') {
       this._loadInitSegment(frag);
     } else if (Number.isFinite(this.initPTS[frag.cc])) {
       this.startFragRequested = true;
       this.nextLoadPosition = frag.start + frag.duration;
-      this._loadFragForPlayback(frag);
+      this._loadFragForPlayback(frag, targetBufferTime);
     } else {
       this.log(`Unknown video PTS for continuity counter ${frag.cc}, waiting for video PTS before loading audio fragment ${frag.sn} of level ${this.trackId}`);
       this.state = State.WAITING_INIT_PTS;
