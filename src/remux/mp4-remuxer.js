@@ -496,13 +496,13 @@ class MP4Remuxer {
 
     if (!contiguous) {
       if (videoTimeOffset === 0) {
-        // At the start, always start at 0 so that we can fill gaps with silence
+        // Set the start to 0 to match video so that start gaps larger than inputSampleDuration are filled with silence
         nextAudioPts = 0;
       } else if (accurateTimeOffset) {
-        // if timeOffset is accurate, let's use it as predicted next audio PTS
+        // When not seeking, not live, and LevelDetails.PTSKnown, use fragment start as predicted next audio PTS
         nextAudioPts = Math.max(0, timeOffset * inputTimeScale);
       } else {
-        // if frag are mot contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
+        // if frags are not contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
         nextAudioPts = inputSamples[0].pts;
       }
     }
@@ -540,8 +540,9 @@ class MP4Remuxer {
         // 1: We're more than maxAudioFramesDrift frame away
         // 2: Not more than MAX_SILENT_FRAME_DURATION away
         else if (delta >= maxAudioFramesDrift * inputSampleDuration && delta < MAX_SILENT_FRAME_DURATION_90KHZ) {
-          let missing = Math.floor(delta / inputSampleDuration);
-          // Adjust nextPts so that we don't move following samples
+          const missing = Math.floor(delta / inputSampleDuration);
+          // Adjust nextPts so that silent samples are aligned with media pts. This will prevent media samples from
+          // later being shifted if nextPts is based on timeOffset and delta is not a multiple of inputSampleDuration.
           nextPts = pts - missing * inputSampleDuration;
           logger.warn(`Injecting ${missing} audio frames @ ${toMsFromMpegTsClock(nextPts, true) / 1000}s due to ${toMsFromMpegTsClock(delta, true)} ms gap.`);
           for (let j = 0; j < missing; j++) {
