@@ -61,7 +61,7 @@ class AudioTrackController extends TaskLoop {
      * Flag hash of blacklisted track IDs (that have caused failure)
      * @member {{[id: number] => boolean}}
      */
-    this.trackIdBlacklist = Object.create(null);
+    this.restrictedTracks = Object.create(null);
 
     /**
      * @public
@@ -378,7 +378,7 @@ class AudioTrackController extends TaskLoop {
    */
   _handleLoadError () {
     // First, let's black list current track id
-    this.trackIdBlacklist[this._trackId] = true;
+    this.restrictedTracks[this._trackId] = true;
 
     // Let's try to fall back on a functional audio-track with the same group ID
     const previousId = this._trackId;
@@ -390,7 +390,7 @@ class AudioTrackController extends TaskLoop {
     // At least a track that is not blacklisted, thus on another group-ID.
     let newId = previousId;
     for (let i = 0; i < this.tracks.length; i++) {
-      if (this.trackIdBlacklist[i]) {
+      if (this.restrictedTracks[i]) {
         continue;
       }
       const newTrack = this.tracks[i];
