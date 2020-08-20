@@ -84,7 +84,7 @@ class MP4Remuxer {
           logger.warn('regenerate InitSegment as audio detected');
           this.generateIS(audioTrack, videoTrack, timeOffset);
         }
-        let audioData = this.remuxAudio(audioTrack, audioTimeOffset, contiguous, accurateTimeOffset);
+        let audioData = this.remuxAudio(audioTrack, audioTimeOffset, contiguous, accurateTimeOffset, videoTimeOffset);
         // logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (nbVideoSamples) {
           let audioTrackLength;
@@ -102,7 +102,7 @@ class MP4Remuxer {
       } else {
         // logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (nbVideoSamples) {
-          let videoData = this.remuxVideo(videoTrack, videoTimeOffset, contiguous, 0, accurateTimeOffset);
+          let videoData = this.remuxVideo(videoTrack, videoTimeOffset, contiguous, 0);
           if (videoData && audioTrack.codec) {
             this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
           }
@@ -446,7 +446,7 @@ class MP4Remuxer {
     return data;
   }
 
-  remuxAudio (track, timeOffset, contiguous, accurateTimeOffset) {
+  remuxAudio (track, timeOffset, contiguous, accurateTimeOffset, videoTimeOffset) {
     const inputTimeScale = track.inputTimeScale;
     const mp4timeScale = track.timescale;
     const scaleFactor = inputTimeScale / mp4timeScale;
@@ -495,12 +495,15 @@ class MP4Remuxer {
     }
 
     if (!contiguous) {
-      if (!accurateTimeOffset) {
-        // if frag are mot contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
-        nextAudioPts = inputSamples[0].pts;
-      } else {
-        // if timeOffset is accurate, let's use it as predicted next audio PTS
+      if (videoTimeOffset === 0) {
+        // Set the start to 0 to match video so that start gaps larger than inputSampleDuration are filled with silence
+        nextAudioPts = 0;
+      } else if (accurateTimeOffset) {
+        // When not seeking, not live, and LevelDetails.PTSKnown, use fragment start as predicted next audio PTS
         nextAudioPts = Math.max(0, timeOffset * inputTimeScale);
+      } else {
+        // if frags are not contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
+        nextAudioPts = inputSamples[0].pts;
       }
     }
 
@@ -536,9 +539,11 @@ class MP4Remuxer {
         // Insert missing frames if:
         // 1: We're more than maxAudioFramesDrift frame away
         // 2: Not more than MAX_SILENT_FRAME_DURATION away
-        // 3: currentTime (aka nextPtsNorm) is not 0
-        else if (delta >= maxAudioFramesDrift * inputSampleDuration && delta < MAX_SILENT_FRAME_DURATION_90KHZ && nextPts) {
-          let missing = Math.round(delta / inputSampleDuration);
+        else if (delta >= maxAudioFramesDrift * inputSampleDuration && delta < MAX_SILENT_FRAME_DURATION_90KHZ) {
+          const missing = Math.floor(delta / inputSampleDuration);
+          // Adjust nextPts so that silent samples are aligned with media pts. This will prevent media samples from
+          // later being shifted if nextPts is based on timeOffset and delta is not a multiple of inputSampleDuration.
+          nextPts = pts - missing * inputSampleDuration;
           logger.warn(`Injecting ${missing} audio frames @ ${toMsFromMpegTsClock(nextPts, true) / 1000}s due to ${toMsFromMpegTsClock(delta, true)} ms gap.`);
           for (let j = 0; j < missing; j++) {
             let newStamp = Math.max(nextPts, 0);
