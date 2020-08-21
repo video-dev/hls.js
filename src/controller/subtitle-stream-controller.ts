@@ -199,6 +199,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
       mergeSubtitlePlaylists(currentTrack.details, details, this.lastAVStart);
     }
     currentTrack.details = details;
+    this.levelLastLoaded = id;
     this.setInterval(TICK_INTERVAL);
   }
 

@@ -158,6 +158,9 @@ export default class StreamController extends BaseStreamController implements Ne
       const { levels, level } = this;
       const details = levels?.[level]?.details;
       if (details && (!details.live || this.levelLastLoaded === this.level)) {
+        if (this.waitForCdnTuneIn(details)) {
+          break;
+        }
         this.state = State.IDLE;
         break;
       }
@@ -553,7 +556,7 @@ export default class StreamController extends BaseStreamController implements Ne
       return;
     }
     const level = levels[data.level];
-    if (!level.details || (level.details.live && this.levelLastLoaded !== data.level)) {
+    if (!level.details || (level.details.live && this.levelLastLoaded !== data.level) || this.waitForCdnTuneIn(level.details)) {
       this.state = State.WAITING_LEVEL;
     }
   }
@@ -573,6 +576,7 @@ export default class StreamController extends BaseStreamController implements Ne
     const fragCurrent = this.fragCurrent;
     if (fragCurrent && (this.state === State.FRAG_LOADING || this.state === State.FRAG_LOADING_WAITING_RETRY)) {
       if (fragCurrent.level !== data.level && fragCurrent.loader) {
+        console.warn(`Aborting load frag for level ${fragCurrent.level} sn: ${fragCurrent.sn} context: ${JSON.stringify(fragCurrent.loader.context, null, 4)}`);
         this.state = State.IDLE;
         fragCurrent.loader.abort();
       }
@@ -591,14 +595,20 @@ export default class StreamController extends BaseStreamController implements Ne
     // override level info
     curLevel.details = newDetails;
     this.levelLastLoaded = newLevelId;
+
     this.hls.trigger(Events.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
+
+    // only switch back to IDLE state if we were waiting for level to start downloading a new fragment
+    if (this.state === State.WAITING_LEVEL) {
+      if (this.waitForCdnTuneIn(newDetails)) {
+        // Wait for Low-Latency CDN Tune-in
+        return;
+      }
+      this.state = State.IDLE;
+    }
 
     if (!this.startFragRequested) {
       this.setStartPosition(newDetails, sliding);
-    }
-    // only switch back to IDLE state if we were waiting for level to start downloading a new fragment
-    if (this.state === State.WAITING_LEVEL) {
-      this.state = State.IDLE;
     }
 
     // trigger handler right now

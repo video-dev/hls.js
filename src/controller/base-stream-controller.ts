@@ -533,10 +533,7 @@ export default class BaseStreamController extends TaskLoop {
 
   protected mergeLivePlaylists (oldDetails: LevelDetails | undefined, newDetails: LevelDetails): number {
     const { levels, levelLastLoaded, fragmentLoader, fragCurrent } = this;
-    let lastLevel: Level | undefined;
-    if (levelLastLoaded !== null) {
-      lastLevel = levels![levelLastLoaded];
-    }
+    const lastLevel: Level | null = (levelLastLoaded !== null) ? levels![levelLastLoaded] : null;
 
     let sliding = 0;
     if (oldDetails?.PTSKnown && newDetails.fragments.length > 0) {
@@ -566,6 +563,12 @@ export default class BaseStreamController extends TaskLoop {
     }
 
     return sliding;
+  }
+
+  protected waitForCdnTuneIn (details: LevelDetails) {
+    // Wait for Low-Latency CDN Tune-in to get an updated playlist
+    const advancePartLimit = 3;
+    return details.live && details.canBlockReload && details.tuneInGoal > Math.max(details.partHoldBack, details.partTarget * advancePartLimit);
   }
 
   protected setStartPosition (details: LevelDetails, sliding: number) {
@@ -601,7 +604,8 @@ export default class BaseStreamController extends TaskLoop {
     if (userConfig.liveSyncDuration || userConfig.liveSyncDurationCount || targetLatency === 0) {
       targetLatency = liveSyncDuration !== undefined ? liveSyncDuration : liveSyncDurationCount * targetduration;
     }
-    return sliding + Math.max(0, totalduration - targetLatency);
+    const age = Math.min(targetduration, Math.max(levelDetails.age, 0));
+    return sliding + Math.max(0, totalduration - targetLatency) + age;
   }
 
   protected getLoadPosition (): number {

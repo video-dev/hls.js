@@ -19,7 +19,7 @@ export function findFirstFragWithCC (fragments: Fragment[], cc: number) {
   return firstFrag;
 }
 
-export function shouldAlignOnDiscontinuities (lastFrag: Fragment | null, lastLevel: Level | undefined, details: LevelDetails): lastLevel is RequiredProperties<Level, 'details'> {
+export function shouldAlignOnDiscontinuities (lastFrag: Fragment | null, lastLevel: Level | null, details: LevelDetails): lastLevel is RequiredProperties<Level, 'details'> {
   let shouldAlign = false;
   if (lastLevel?.details && details) {
     if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC)) {
@@ -70,7 +70,7 @@ export function adjustPts (sliding: number, details: LevelDetails) {
  * @param lastLevel
  * @param details
  */
-export function alignStream (lastFrag: Fragment | null, lastLevel: Level | undefined, details: LevelDetails) {
+export function alignStream (lastFrag: Fragment | null, lastLevel: Level | null, details: LevelDetails) {
   alignDiscontinuities(lastFrag, details, lastLevel);
   if (!details.PTSKnown && lastLevel) {
     // If the PTS wasn't figured out via discontinuity sequence that means there was no CC increase within the level.
@@ -83,11 +83,11 @@ export function alignStream (lastFrag: Fragment | null, lastLevel: Level | undef
 /**
  * Computes the PTS if a new level's fragments using the PTS of a fragment in the last level which shares the same
  * discontinuity sequence.
- * @param lastFrag - The last Fragment which shares the same discontuinity sequence
+ * @param lastFrag - The last Fragment which shares the same discontinuity sequence
  * @param lastLevel - The details of the last loaded level
  * @param details - The details of the new level
  */
-export function alignDiscontinuities (lastFrag: Fragment | null, details: LevelDetails, lastLevel: Level | undefined) {
+export function alignDiscontinuities (lastFrag: Fragment | null, details: LevelDetails, lastLevel: Level | null) {
   if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
     const referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
     if (referenceFrag) {
@@ -116,7 +116,7 @@ export function alignPDT (details: LevelDetails, lastDetails: LevelDetails | und
     // date diff is in ms. frag.start is in seconds
     const sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
     if (sliding && Number.isFinite(sliding)) {
-      logger.log(`adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(3)}`);
+      logger.log(`adjusting PTS using programDateTime delta ${newPDT - lastPDT}ms, sliding:${sliding.toFixed(3)}`);
       adjustPts(sliding, details);
     }
   }

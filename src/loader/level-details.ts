@@ -36,6 +36,7 @@ export default class LevelDetails {
   public renditionReports?: AttrList[];
   public endPart: number = 0;
   public lastPart: boolean = true;
+  public tuneInGoal: number = 0;
 
   constructor (baseUrl) {
     this.fragments = [];
@@ -65,5 +66,12 @@ export default class LevelDetails {
 
   get levelTargetDuration (): number {
     return this.averagetargetduration || this.targetduration || DEFAULT_TARGET_DURATION;
+  }
+
+  get age (): number {
+    if (this.lastModified) {
+      return (Date.now() - this.lastModified) / 1000;
+    }
+    return 0;
   }
 }
