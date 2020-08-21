@@ -143,8 +143,11 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       break;
     case State.WAITING_TRACK: {
       const { levels, trackId } = this;
-      if (levels?.[trackId]?.details) {
-        // check if playlist is already loaded
+      const details = levels?.[trackId]?.details;
+      if (details) {
+        if (this.waitForCdnTuneIn(details)) {
+          break;
+        }
         this.state = State.WAITING_INIT_PTS;
       }
       break;
@@ -248,6 +251,12 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
     const levelInfo = levels[trackId];
 
+    const trackDetails = levelInfo.details;
+    if (!trackDetails || (trackDetails.live && this.levelLastLoaded !== trackId) || this.waitForCdnTuneIn(trackDetails)) {
+      this.state = State.WAITING_TRACK;
+      return;
+    }
+
     const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
     const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
     const maxBufferHole = pos < config.maxBufferHole ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole) : config.maxBufferHole;
@@ -260,12 +269,6 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
 
     // if buffer length is less than maxBufLen try to load a new fragment
     if (bufferLen >= maxBufLen && !audioSwitch) {
-      return;
-    }
-
-    const trackDetails = levelInfo.details;
-    if (!trackDetails) {
-      this.state = State.WAITING_TRACK;
       return;
     }
 
@@ -304,15 +307,12 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       // only load if fragment is not loaded or if in audio switch
       // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
       const fragState = this.fragmentTracker.getState(frag);
-      if (!this.audioSwitch && fragState !== FragmentState.NOT_LOADED) {
-        return;
-      }
-      if (this.fragCurrent?.sn !== frag.sn) {
+      if (this.audioSwitch || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
         this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN}-${trackDetails.endSN}], track ${trackId}, ${
           this.loadedmetadata ? 'currentTime' : 'nextLoadPosition'
         }: ${pos.toFixed(3)}-${targetBufferTime.toFixed(3)}`);
+        this.loadFragment(frag, targetBufferTime);
       }
-      this.loadFragment(frag, targetBufferTime);
     }
   }
 
@@ -402,13 +402,14 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       newDetails.PTSKnown = false;
     }
     track.details = newDetails;
+    this.levelLastLoaded = trackId;
 
     // compute start position
     if (!this.startFragRequested) {
       this.setStartPosition(track.details, sliding);
     }
     // only switch back to IDLE state if we were waiting for track to start downloading a new fragment
-    if (this.state === State.WAITING_TRACK) {
+    if (this.state === State.WAITING_TRACK && !this.waitForCdnTuneIn(newDetails)) {
       this.state = State.IDLE;
     }
 

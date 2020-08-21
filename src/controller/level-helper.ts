@@ -274,18 +274,6 @@ export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderSt
   return Math.round(estimatedTimeUntilUpdate);
 }
 
-export function getProgramDateTimeAtEndOfLastEncodedFragment (levelDetails: LevelDetails): number | null {
-  if (levelDetails.hasProgramDateTime) {
-    const encodedFragments = levelDetails.fragments;
-    const lastEncodedFrag = encodedFragments[encodedFragments.length - 1];
-    const programDateTime = lastEncodedFrag.programDateTime as number;
-    if (Number.isFinite(programDateTime)) {
-      return programDateTime + lastEncodedFrag.duration * 1000;
-    }
-  }
-  return null;
-}
-
 export function getFragmentWithSN (level: Level, sn: number): Fragment | null {
   if (!level || !level.details) {
     return null;

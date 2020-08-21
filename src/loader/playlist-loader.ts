@@ -14,7 +14,6 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { parseSegmentIndex } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
-import { getProgramDateTimeAtEndOfLastEncodedFragment } from '../controller/level-helper';
 import { LevelParsed } from '../types/level';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import LevelDetails from './level-details';
@@ -347,6 +346,9 @@ class PlaylistLoader {
   private _handleTrackOrLevelPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
     const hls = this.hls;
     const { id, level, type, loader } = context;
+    if (!loader) {
+      return;
+    }
     const url = getResponseUrl(response, context);
 
     const levelUrlId = Number.isFinite(id as number) ? id : 0;
@@ -356,14 +358,11 @@ class PlaylistLoader {
     const levelDetails: LevelDetails = M3U8Parser.parseLevelPlaylist(response.data as string, url, levelId!, levelType, levelUrlId!);
 
     // set stats on level structure
-    const toDate = (value) => value ? new Date(value) : null;
-
-    // Last-Modified or PDT after last encoded segment provides an approximation of the last manifest write
-    const mtime = toDate((loader as Loader<LoaderContext>).getResponseHeader('Last-Modified'));
-    const encoded = toDate(getProgramDateTimeAtEndOfLastEncodedFragment(levelDetails));
-
     levelDetails.tload = stats.loading.end;
-    levelDetails.lastModified = Math.max(+(mtime as Date), +(encoded as Date));
+    const loaded = self.performance.timing.navigationStart + levelDetails.tload;
+    const ageHeader: string | null = loader.getResponseHeader('age');
+    const age = ageHeader ? parseFloat(ageHeader) : 0;
+    levelDetails.lastModified = loaded - age * 1000;
 
     if (!levelDetails.fragments.length) {
       hls.trigger(Events.ERROR, {
