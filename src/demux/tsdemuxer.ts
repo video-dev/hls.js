@@ -23,14 +23,14 @@ import {
   Demuxer,
   DemuxerResult,
   AvcSample,
-  DemuxedMetadataTrack,
-  ElementaryStreamData
+  DemuxedID3Track,
+  ElementaryStreamData,
+  DemuxedTrackType
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
 import { HlsConfig } from '../config';
 import { TransmuxerTypeSupported } from './transmuxer';
-import { RequiredProperties } from '../types/general';
 
 interface PES {
   data: Uint8Array;
@@ -40,6 +40,12 @@ interface PES {
 }
 
 type PopulatedPES = Required<PES>
+
+export interface TSDemuxOptions {
+  timeOffset: number;
+  isSampleAes: boolean;
+  flush: boolean;
+}
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -56,16 +62,13 @@ const RemuxerTrackIdConfig = {
   text: 4
 };
 
-class TSDemuxer implements Demuxer {
+class TSDemuxer implements Demuxer<TSDemuxOptions> {
   static readonly minProbeByteLength = 188;
 
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
   private typeSupported: TransmuxerTypeSupported;
-
-  private sampleAes: any = null;
   private pmtParsed: boolean = false;
-  private contiguous: boolean = false;
   private audioCodec!: string;
   private videoCodec!: string;
   private _duration: number = 0;
@@ -76,8 +79,8 @@ class TSDemuxer implements Demuxer {
 
   private _avcTrack!: DemuxedAvcTrack;
   private _audioTrack!: DemuxedAudioTrack;
-  private _id3Track!: DemuxedMetadataTrack;
-  private _txtTrack!: DemuxedTrack<any>;
+  private _id3Track!: DemuxedID3Track;
+  private _txtTrack!: DemuxedTrack<any, 'text'>;
   private aacOverFlow: any;
   private avcSample: AvcSample | null = null;
   private remainderData: Uint8Array | null = null;
@@ -119,15 +122,19 @@ class TSDemuxer implements Demuxer {
   /**
    * Creates a track model internal to demuxer used to drive remuxing input
    *
-   * @param {string} type 'audio' | 'video' | 'id3' | 'text'
+   * @param {DemuxedTrackType} type 'audio' | 'video' | 'id3' | 'text'
    * @param {number} duration
    * @return {object} TSDemuxer's internal track model
    */
   static createTrack (type: 'audio', duration: number): DemuxedAudioTrack
+  // eslint-disable-next-line no-dupe-class-members
   static createTrack (type: 'video', duration: number): DemuxedAvcTrack
-  static createTrack (type: 'id3', duration: number): DemuxedMetadataTrack
-  static createTrack (type: 'text', duration: number): DemuxedTrack<unknown>
-  static createTrack (type: 'audio' | 'video' | 'id3' | 'text', duration: number): DemuxedTrack<unknown> {
+  // eslint-disable-next-line no-dupe-class-members
+  static createTrack (type: 'id3', duration: number): DemuxedID3Track
+  // eslint-disable-next-line no-dupe-class-members
+  static createTrack (type: 'text', duration: number): DemuxedTrack<unknown, 'text'>
+  // eslint-disable-next-line no-dupe-class-members
+  static createTrack (type: DemuxedTrackType, duration: number): DemuxedTrack<unknown, DemuxedTrackType> {
     return {
       container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined,
       type,
@@ -182,18 +189,15 @@ class TSDemuxer implements Demuxer {
     this.aacLastPTS = null;
   }
 
-  demux (data: Uint8Array, contiguous: any, timeOffset, isSampleAes = false, flush = false): DemuxerResult {
-    if (!isSampleAes) {
-      this.sampleAes = null;
-    }
-
-    this.contiguous = contiguous;
+  demux (data: Uint8Array, options: TSDemuxOptions): DemuxerResult {
     let start: number;
     let stt: boolean;
     let pid: number;
     let atf: number;
     let offset: number;
     let pes: PES | null;
+
+    const { flush, isSampleAes } = options;
 
     const avcTrack = this._avcTrack;
     const audioTrack = this._audioTrack;
@@ -366,12 +370,12 @@ class TSDemuxer implements Demuxer {
     };
   }
 
-  flush () {
+  flush (): DemuxerResult {
     const { remainderData } = this;
     this.remainderData = null;
-    let result;
+    let result: DemuxerResult;
     if (remainderData) {
-      result = this.demux(remainderData, this.contiguous, -1, false, true);
+      result = this.demux(remainderData, { timeOffset: -1, isSampleAes: false, flush: true });
     } else {
       result = {
         audioTrack: this._audioTrack,
@@ -425,9 +429,13 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  demuxSampleAes (data, decryptData, timeOffset): Promise <DemuxerResult> {
-    const demuxResult = this.demux(data, timeOffset, true);
-    const sampleAes = this.sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptData, this.discardEPB);
+  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise <DemuxerResult> {
+    const demuxResult = this.demux(data, {
+      timeOffset: timeOffset,
+      isSampleAes: true,
+      flush: false
+    });
+    const sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptData, this.discardEPB);
     return new Promise((resolve, reject) => {
       this.decrypt(demuxResult.audioTrack, demuxResult.avcTrack, sampleAes)
         .then(() => {
@@ -436,7 +444,7 @@ class TSDemuxer implements Demuxer {
     });
   }
 
-  decrypt (audioTrack, videoTrack, sampleAes): Promise<void> {
+  decrypt (audioTrack: DemuxedAudioTrack, videoTrack: DemuxedAvcTrack, sampleAes: SampleAesDecrypter): Promise<void> {
     return new Promise((resolve) => {
       if (audioTrack.samples && audioTrack.isAAC) {
         sampleAes.decryptAacSamples(audioTrack.samples, 0, () => {
@@ -1183,7 +1191,6 @@ function parsePES (stream: ElementaryStreamData): PES | null {
           logger.warn(`${Math.round((pesPts - pesDts) / 90000)}s delta between PTS and DTS, align them`);
           pesPts = pesDts;
         }
-
       } else {
         pesDts = pesPts;
       }

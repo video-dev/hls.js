@@ -1,12 +1,16 @@
 import * as ID3 from '../demux/id3';
-import { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack } from '../types/demuxer';
+import { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack, DemuxedID3Track } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
 
-class BaseAudioDemuxer implements Demuxer {
+interface AudioDemuxOptions {
+  timeOffset: number;
+}
+
+class BaseAudioDemuxer implements Demuxer<AudioDemuxOptions> {
   protected _audioTrack!: DemuxedAudioTrack;
-  protected _id3Track!: DemuxedTrack;
+  protected _id3Track!: DemuxedID3Track;
   protected frameIndex: number = 0;
   protected cachedData: Uint8Array | null = null;
   protected initPTS: number | null = null;
@@ -38,7 +42,7 @@ class BaseAudioDemuxer implements Demuxer {
   }
 
   // feed incoming data to the front of the parsing pipeline
-  demux (data: Uint8Array, timeOffset: number): DemuxerResult {
+  demux (data: Uint8Array, options: AudioDemuxOptions): DemuxerResult {
     if (this.cachedData) {
       data = appendUint8Array(this.cachedData, data);
       this.cachedData = null;
@@ -54,7 +58,7 @@ class BaseAudioDemuxer implements Demuxer {
     const length = data.length;
 
     if (this.initPTS === null) {
-      this.initPTS = initPTSFn(timestamp, timeOffset);
+      this.initPTS = initPTSFn(timestamp, options.timeOffset);
     }
 
     // more expressive than alternative: id3Data?.length
@@ -109,7 +113,7 @@ class BaseAudioDemuxer implements Demuxer {
   flush (timeOffset: number): DemuxerResult {
     // Parse cache in case of remaining frames.
     if (this.cachedData) {
-      this.demux(this.cachedData, 0);
+      this.demux(this.cachedData, { timeOffset: 0 });
     }
 
     this.frameIndex = 0;

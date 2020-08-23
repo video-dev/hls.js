@@ -1,11 +1,11 @@
 /**
  * MP4 demuxer
  */
-import { Demuxer, DemuxerResult, DemuxedTrack } from '../types/demuxer';
+import { Demuxer, DemuxerResult, DemuxedTrack, DemuxedAvcTrack } from '../types/demuxer';
 import { findBox, segmentValidRange, appendUint8Array } from '../utils/mp4-tools';
 import { dummyTrack } from './dummy-demuxed-track';
 
-class MP4Demuxer implements Demuxer {
+class MP4Demuxer implements Demuxer<never> {
   static readonly minProbeByteLength = 1024;
   private remainderData: Uint8Array | null = null;
 
@@ -23,7 +23,7 @@ class MP4Demuxer implements Demuxer {
     return findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, ['moof']).length > 0;
   }
 
-  demux (data): DemuxerResult {
+  demux (data: Uint8Array): DemuxerResult {
     // Load all data into the avc track. The CMAF remuxer will look for the data in the samples object; the rest of the fields do not matter
     let avcSamples = data;
     if (this.remainderData) {
@@ -47,7 +47,7 @@ class MP4Demuxer implements Demuxer {
 
   // TODO: Re-validate remainder data? Or we can assume that the segmented remainder is always valid CMAF
   flush () {
-    const avcTrack: DemuxedTrack = dummyTrack();
+    const avcTrack: DemuxedTrack<Uint8Array | null, 'video'> = dummyTrack();
     avcTrack.samples = this.remainderData;
     this.remainderData = null;
 

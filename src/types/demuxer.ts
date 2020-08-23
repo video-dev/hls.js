@@ -1,5 +1,5 @@
-export interface Demuxer {
-  demux (data: Uint8Array, timeOffset: number, isSampleAes?: boolean) : DemuxerResult
+export interface Demuxer<T> {
+  demux (data: Uint8Array, options?: T): DemuxerResult; // mp4-demuxer
   demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number) : Promise<DemuxerResult>
   flush(timeOffset?: number): DemuxerResult
   destroy() : void
@@ -8,20 +8,22 @@ export interface Demuxer {
   resetContiguity(): void;
 }
 
+export type DemuxedTrackType = 'audio' | 'video' | 'id3' | 'text'
+
 export interface DemuxerResult {
   audioTrack: DemuxedAudioTrack
   avcTrack: DemuxedAvcTrack
-  id3Track: DemuxedMetadataTrack
-  textTrack: DemuxedTrack<unknown>
+  id3Track: DemuxedID3Track
+  textTrack: DemuxedTrack<unknown, 'text'>
 }
 
-export interface DemuxedTrack<T> {
-  type: 'audio' | 'video' | 'id3' | 'text'
+export interface DemuxedTrack<Samples, TrackType> {
+  type: TrackType
   id: number
   pid: number
   inputTimeScale: number
   sequenceNumber: number
-  samples: T
+  samples: Samples
   timescale?: number
   container?: string
   dropped: number
@@ -30,7 +32,7 @@ export interface DemuxedTrack<T> {
   codec?: string
 }
 
-export interface DemuxedAudioTrack extends DemuxedTrack<any> {
+export interface DemuxedAudioTrack extends DemuxedTrack<any, 'audio'> {
   type: 'audio',
   config?: Array<number>
   samplerate?: number
@@ -39,7 +41,7 @@ export interface DemuxedAudioTrack extends DemuxedTrack<any> {
   manifestCodec?: string
 }
 
-export interface DemuxedAvcTrack extends DemuxedTrack<AvcSample[]> {
+export interface DemuxedAvcTrack extends DemuxedTrack<AvcSample[], 'video'> {
   type: 'video',
   width?: number
   height?: number
@@ -49,14 +51,8 @@ export interface DemuxedAvcTrack extends DemuxedTrack<AvcSample[]> {
   sps?: Array<number>
   naluState?: number
 }
-
-export interface DemuxedMetadataTrack extends DemuxedTrack<MetadataSample[]> {
-  type: 'id3'
-}
-
-export interface DemuxedUserdataTrack extends DemuxedTrack<UserdataSample[]> {
-  type: 'text'
-}
+export type DemuxedID3Track = DemuxedTrack<MetadataSample[], 'id3'>
+export type DemuxedTextTrack = DemuxedTrack<UserdataSample[], 'text'>
 
 export interface MetadataSample {
   pts: number,

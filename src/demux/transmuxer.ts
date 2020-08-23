@@ -54,7 +54,7 @@ export default class Transmuxer {
   private typeSupported: TransmuxerTypeSupported;
   private config: HlsConfig;
   private vendor: string;
-  private demuxer?: Demuxer;
+  private demuxer?: Demuxer<unknown>;
   private remuxer?: Remuxer;
   private decrypter?: Decrypter;
   private probe!: Function;
@@ -260,7 +260,7 @@ export default class Transmuxer {
   }
 
   private transmuxUnencrypted (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) {
-    const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(data, timeOffset, false);
+    const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(data, { timeOffset: timeOffset, isSampleAes: false });
     return {
       remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
       chunkMeta
@@ -268,7 +268,7 @@ export default class Transmuxer {
   }
 
   // TODO: Handle flush with Sample-AES
-  private transmuxSampleAes (data: Uint8Array, decryptData: any, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) : Promise<TransmuxerResult> {
+  private transmuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) : Promise<TransmuxerResult> {
     return this.demuxer!.demuxSampleAes(data, decryptData, timeOffset)
       .then(demuxResult => ({
         remuxResult: this.remuxer!.remux(demuxResult.audioTrack, demuxResult.avcTrack, demuxResult.id3Track, demuxResult.textTrack, timeOffset, accurateTimeOffset),
@@ -277,7 +277,7 @@ export default class Transmuxer {
       );
   }
 
-  private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig): { remuxer: Remuxer | undefined, demuxer: Demuxer | undefined } {
+  private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig): { remuxer: Remuxer | undefined, demuxer: Demuxer<unknown> | undefined } {
     const { config, observer, typeSupported, vendor } = this;
     const { audioCodec, defaultInitPts, duration, initSegmentData, videoCodec } = transmuxConfig;
     // probe for content type

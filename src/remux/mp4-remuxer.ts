@@ -11,7 +11,7 @@ import {
   RemuxedTrack,
   RemuxedUserdata
 } from '../types/remuxer';
-import { AvcSample, DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../types/demuxer';
+import { AvcSample, DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack, DemuxedID3Track, DemuxedTextTrack } from '../types/demuxer';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
 import Fragment from '../loader/fragment';
@@ -91,7 +91,7 @@ export default class MP4Remuxer implements Remuxer {
     return startPTS;
   }
 
-  remux (audioTrack: DemuxedAudioTrack, videoTrack: DemuxedAvcTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset: number, accurateTimeOffset: boolean) : RemuxerResult {
+  remux (audioTrack: DemuxedAudioTrack, videoTrack: DemuxedAvcTrack, id3Track: DemuxedID3Track, textTrack: DemuxedTextTrack, timeOffset: number, accurateTimeOffset: boolean) : RemuxerResult {
     let video;
     let audio;
     let initSegment;
@@ -772,7 +772,7 @@ export default class MP4Remuxer implements Remuxer {
     return this.remuxAudio(track, timeOffset, contiguous, false);
   }
 
-  remuxID3 (track: DemuxedTrack, timeOffset: number) : RemuxedMetadata | undefined {
+  remuxID3 (track: DemuxedID3Track, timeOffset: number) : RemuxedMetadata | undefined {
     const length = track.samples.length;
     if (!length) {
       return;
@@ -794,7 +794,7 @@ export default class MP4Remuxer implements Remuxer {
     };
   }
 
-  remuxText (track: DemuxedTrack, timeOffset: number) : RemuxedUserdata | undefined {
+  remuxText (track: DemuxedTextTrack, timeOffset: number) : RemuxedUserdata | undefined {
     const length = track.samples.length;
     if (!length) {
       return;
