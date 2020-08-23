@@ -52,7 +52,8 @@ export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number
   } else {
     // we dont know startPTS[toIdx]
     if (toIdx > fromIdx) {
-      fragTo.start = fragFrom.start + fragFrom.duration;
+      const contiguous = fragFrom.cc === fragTo.cc;
+      fragTo.start = fragFrom.start + ((contiguous && fragFrom.minEndPTS) ? fragFrom.minEndPTS - fragFrom.start : fragFrom.duration);
     } else {
       fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
     }
@@ -61,6 +62,7 @@ export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number
 
 export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
   let maxStartPTS = startPTS;
+  let minEndPTS = endPTS;
   if (Number.isFinite(frag.startPTS)) {
     // delta PTS between audio and video
     const deltaPTS = Math.abs(frag.startPTS - startPTS);
@@ -72,6 +74,7 @@ export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragm
 
     maxStartPTS = Math.max(startPTS, frag.startPTS);
     startPTS = Math.min(startPTS, frag.startPTS);
+    minEndPTS = Math.min(endPTS, frag.endPTS);
     endPTS = Math.max(endPTS, frag.endPTS);
     startDTS = Math.min(startDTS, frag.startDTS);
     endDTS = Math.max(endDTS, frag.endDTS);
@@ -81,6 +84,7 @@ export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragm
   frag.start = frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.endPTS = frag.appendedPTS = endPTS;
+  frag.minEndPTS = minEndPTS;
   frag.startDTS = startDTS;
   frag.endDTS = endDTS;
   frag.duration = endPTS - startPTS;
@@ -263,7 +267,7 @@ export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderSt
 
 export function getProgramDateTimeAtEndOfLastEncodedFragment (levelDetails: LevelDetails): number | null {
   if (levelDetails.hasProgramDateTime) {
-    const encodedFragments = levelDetails.fragments.filter((fragment) => !fragment.prefetch);
+    const encodedFragments = levelDetails.fragments;
     const lastEncodedFrag = encodedFragments[encodedFragments.length - 1];
     const programDateTime = lastEncodedFrag.programDateTime as number;
     if (Number.isFinite(programDateTime)) {

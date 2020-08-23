@@ -240,7 +240,11 @@ export default class BufferController implements ComponentAPI {
         chunkStats.executeStart = performance.now();
         this.appendExecutor(data, type);
       },
+      onStart: () => {
+        logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
+      },
       onComplete: () => {
+        logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
         const end = performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
         if (!fragStats.first) {
@@ -265,6 +269,7 @@ export default class BufferController implements ComponentAPI {
           err,
           fatal: false
         };
+
         if (err.code === DOMException.QUOTA_EXCEEDED_ERR) {
           // TODO: enum MSE error codes
           // TODO: Should queues be cleared on this error?
@@ -285,14 +290,18 @@ export default class BufferController implements ComponentAPI {
         hls.trigger(Events.ERROR, event);
       }
     };
-    operationQueue.append(operation, type as SourceBufferName);
+    operationQueue.append(operation, type);
   }
 
   protected onBufferFlushing (event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {
     const { operationQueue } = this;
     const flushOperation = (type): BufferOperation => ({
       execute: this.removeExecutor.bind(this, type, data.startOffset, data.endOffset),
+      onStart: () => {
+        logger.debug(`[buffer-controller]: Started flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
+      },
       onComplete: () => {
+        logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
         this.hls.trigger(Events.BUFFER_FLUSHED);
       },
       onError: (e) => {
@@ -378,6 +387,9 @@ export default class BufferController implements ComponentAPI {
       this.blockBuffers(this.updateMediaElementDuration.bind(this, levelDuration));
     } else {
       this.updateMediaElementDuration(levelDuration);
+      if (this.hls.config.liveDurationInfinity) {
+        this.updateSeekableRange(details);
+      }
     }
   }
 
@@ -406,6 +418,9 @@ export default class BufferController implements ComponentAPI {
 
     const operation = {
       execute: this.abortExecutor.bind(this, type),
+      onStart () {
+        logger.debug(`[buffer-controller]: Starting abort on source buffer ${type}`);
+      },
       onComplete () {
         if (audioBuffer) {
           logger.log(`[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${data.start}`);
@@ -416,7 +431,11 @@ export default class BufferController implements ComponentAPI {
         logger.warn('[buffer-controller]: Failed to abort the audio SourceBuffer', e);
       }
     };
-    operationQueue.append(operation, type);
+    operationQueue.insertAbort(operation, type);
+
+    if (this.hls.config.liveDurationInfinity) {
+      this.updateSeekableRange(data.details);
+    }
   }
 
   flushLiveBackBuffer () {
@@ -486,6 +505,17 @@ export default class BufferController implements ComponentAPI {
     }
   }
 
+  updateSeekableRange (levelDetails) {
+    const mediaSource = this.mediaSource;
+    const fragments = levelDetails.fragments;
+    const len = fragments.length;
+    if (len && mediaSource?.setLiveSeekableRange) {
+      const start = fragments[0]?.start;
+      const end = fragments[len - 1].start + fragments[len - 1].duration;
+      mediaSource.setLiveSeekableRange(start, end);
+    }
+  }
+
   protected checkPendingTracks () {
     const { bufferCodecEventsExpected, operationQueue, pendingTracks } = this;
 
@@ -524,6 +554,7 @@ export default class BufferController implements ComponentAPI {
         try {
           const sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
           const sbName = trackName as SourceBufferName;
+          this.addBufferListener(sbName, 'updatestart', this._onSBUpdateStart);
           this.addBufferListener(sbName, 'updateend', this._onSBUpdateEnd);
           this.addBufferListener(sbName, 'error', this._onSBUpdateError);
           this.tracks[trackName] = {
@@ -573,11 +604,15 @@ export default class BufferController implements ComponentAPI {
     logger.log('[buffer-controller]: Media source ended');
   };
 
+  private _onSBUpdateStart (type: SourceBufferName) {
+    const { operationQueue } = this;
+    const operation = operationQueue.current(type);
+    operation.onStart();
+  }
+
   private _onSBUpdateEnd (type: SourceBufferName) {
     const { operationQueue } = this;
     const operation = operationQueue.current(type);
-    console.assert(operation, 'Operation should exist on update end');
-
     operation.onComplete();
     operationQueue.shiftAndExecuteNext(type);
   }
@@ -643,10 +678,13 @@ export default class BufferController implements ComponentAPI {
       return;
     }
     logger.log(`[buffer-controller]: Aborting the ${type} SourceBuffer`);
-    console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
+    // console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
+    const updating = sb.updating;
     sb.abort();
     // updateend is only triggered if aborting while updating is true
-    this._onSBUpdateEnd(type);
+    if (!updating) {
+      this._onSBUpdateEnd(type);
+    }
   }
 
   // Enqueues an operation to each SourceBuffer queue which, upon execution, resolves a promise. When all promises

@@ -14,8 +14,9 @@ export interface BufferOperationQueues {
 
 export interface BufferOperation {
   execute: Function
+  onStart: Function
   onComplete: Function
-  onError: Function,
+  onError: Function
   start?: number
   end?: number
 }

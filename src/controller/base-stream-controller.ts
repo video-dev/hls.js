@@ -17,6 +17,7 @@ import { BufferAppendingData } from '../types/events';
 import { Level } from '../types/level';
 import { RemuxedTrack } from '../types/remuxer';
 import Hls from '../hls';
+import Decrypter from '../crypt/decrypter';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -55,12 +56,14 @@ export default class BaseStreamController extends TaskLoop {
   protected _liveSyncPosition: number | null = null;
   protected levelLastLoaded: number | null = null;
   protected startFragRequested: boolean = false;
+  protected decrypter: Decrypter;
 
   protected readonly logPrefix: string = '';
 
   constructor (hls: Hls) {
     super();
     this.hls = hls;
+    this.decrypter = new Decrypter(hls, hls.config);
   }
 
   protected doTick () {
@@ -109,9 +112,7 @@ export default class BaseStreamController extends TaskLoop {
     const currentTime = media ? media.currentTime : null;
     const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
 
-    if (Number.isFinite(currentTime)) {
-      this.log(`media seeking to ${currentTime.toFixed(3)}, state: ${state}`);
-    }
+    this.log(`media seeking to ${Number.isFinite(currentTime) ? currentTime.toFixed(3) : currentTime}, state: ${state}`);
 
     if (state === State.ENDED) {
       // if seeking to unbuffered area, clean up fragPrevious
@@ -197,19 +198,53 @@ export default class BaseStreamController extends TaskLoop {
   protected _loadInitSegment (frag: Fragment) {
     this._doFragLoad(frag)
       .then((data: FragLoadSuccessResult) => {
-        const { fragCurrent, hls, levels } = this;
-        if (!data || this._fragLoadAborted(frag) || !levels) {
-          return;
+        if (!data || this._fragLoadAborted(frag) || !this.levels) {
+          throw new Error('init load aborted');
         }
+
+        return data;
+      })
+      .then((data: FragLoadSuccessResult) => {
+        const { hls } = this;
+        const { payload } = data;
+        const decryptData = frag.decryptdata;
+
+        // check to see if the payload needs to be decrypted
+        if (payload && payload.byteLength > 0 && decryptData && decryptData.key && decryptData.iv && decryptData.method === 'AES-128') {
+          const startTime = performance.now();
+          // decrypt the subtitles
+          return this.decrypter.webCryptoDecrypt(new Uint8Array(payload), decryptData.key.buffer, decryptData.iv.buffer).then((decryptedData) => {
+            const endTime = performance.now();
+            hls.trigger(Events.FRAG_DECRYPTED, {
+              frag,
+              payload: decryptedData,
+              stats: {
+                tstart: startTime,
+                tdecrypt: endTime
+              }
+            });
+            data.payload = decryptedData;
+
+            return data;
+          });
+        }
+
+        return data;
+      }).then((data: FragLoadSuccessResult) => {
+        const { fragCurrent, hls, levels } = this;
+        if (!levels) {
+          throw new Error('init load aborted, missing levels');
+        }
+
         const details = levels[frag.level].details as LevelDetails;
         console.assert(details, 'Level details are defined when init segment is loaded');
         const initSegment = details.initSegment as Fragment;
         console.assert(initSegment, 'Fragment initSegment is defined when init segment is loaded');
-        const { payload } = data;
+
         const stats = frag.stats;
         this.state = State.IDLE;
         this.fragLoadError = 0;
-        initSegment.data = payload;
+        initSegment.data = new Uint8Array(data.payload);
         stats.parsing.start = stats.buffering.start = self.performance.now();
         stats.parsing.end = stats.buffering.end = self.performance.now();
         // TODO: set id from calling class
@@ -219,6 +254,8 @@ export default class BaseStreamController extends TaskLoop {
           hls.trigger(Events.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
         }
         this.tick();
+      }).catch(reason => {
+        logger.warn(reason);
       });
   }
 
@@ -424,13 +461,6 @@ export default class BaseStreamController extends TaskLoop {
       }
     }
 
-    // If no fragment has been selected by this point, load any one
-    if (!frag) {
-      const len = fragments.length;
-      frag = fragments[Math.min(len - 1, Math.round(len / 2))];
-      this.log(`Live playlist, switching playlist, unknown, load middle frag : ${frag!.sn}`);
-    }
-
     return frag;
   }
 
@@ -464,7 +494,9 @@ export default class BaseStreamController extends TaskLoop {
         if (sameLevel && !frag.backtracked) {
           if (frag.sn < levelDetails.endSN) {
             frag = nextFrag;
-            this.log(`SN just loaded, load next one: ${frag.sn}`);
+            if (this.fragmentTracker.getState(frag) !== FragmentState.OK) {
+              this.log(`SN just loaded, load next one: ${frag.sn}`);
+            }
           } else {
             frag = null;
           }
@@ -499,7 +531,7 @@ export default class BaseStreamController extends TaskLoop {
 
     if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
       const liveSyncPosition = this._liveSyncPosition = this.computeLivePosition(start, targetDuration, totalDuration);
-      this.log(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
+      this.warn(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
       this.nextLoadPosition = liveSyncPosition;
       if (media?.readyState && media.duration > liveSyncPosition && liveSyncPosition > media.currentTime) {
         media.currentTime = liveSyncPosition;
@@ -512,7 +544,7 @@ export default class BaseStreamController extends TaskLoop {
   protected mergeLivePlaylists (oldDetails: LevelDetails | undefined, newDetails: LevelDetails): number {
     const { levels, levelLastLoaded } = this;
     let lastLevel: Level | undefined;
-    if (levelLastLoaded) {
+    if (levelLastLoaded !== null) {
       lastLevel = levels![levelLastLoaded];
     }
 

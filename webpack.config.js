@@ -74,7 +74,9 @@ const baseConfig = {
               visitor: {
                 CallExpression: function (espath) {
                   if (espath.get('callee').matchesPattern('Number.isFinite')) {
-                    espath.node.callee = importHelper.addNamed(espath, 'isFiniteNumber', path.resolve('src/polyfills/number-isFinite'));
+                    espath.node.callee = importHelper.addNamed(espath, 'isFiniteNumber', path.resolve('src/polyfills/number'));
+                  } else if (espath.get('callee').matchesPattern('Number.MAX_SAFE_INTEGER')) {
+                    espath.node.callee = importHelper.addNamed(espath, 'MAX_SAFE_INTEGER', path.resolve('src/polyfills/number'));
                   }
                 }
               }
@@ -212,7 +214,16 @@ const multiConfig = [
       libraryExport: 'default',
       globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
-    plugins: mainPlugins,
+    plugins: [
+      ...mainPlugins,
+      new webpack.DefinePlugin({
+      __NETLIFY__: JSON.stringify(process.env.NETLIFY === 'true' ? {
+          branch: process.env.BRANCH,
+          commitRef: process.env.COMMIT_REF,
+          reviewID: process.env.PULL_REQUEST === 'true' ? parseInt(process.env.REVIEW_ID) : null
+        } : {})
+      })
+    ],
     devtool: 'source-map'
   },
   {

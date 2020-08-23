@@ -90,7 +90,7 @@ export class TimelineChart {
     scale.options.ticks.min = 0;
     scale.options.ticks.max = 60;
     const config = this.chart.config;
-    if (config && config.options) {
+    if (config?.options) {
       config.options.plugins.zoom.zoom.rangeMax.x = 60;
     }
     labels.length = 0;
@@ -112,7 +112,7 @@ export class TimelineChart {
     if (this.hidden) {
       return;
     }
-    if (datasets && datasets.length) {
+    if (datasets?.length) {
       const scale = this.chart.scales[X_AXIS_SECONDS];
       const { top } = this.chart.chartArea;
       const height = top + datasets.reduce((val, dataset) => val + dataset.barThickness, 0) + scale.height + 5;
@@ -132,13 +132,26 @@ export class TimelineChart {
     this.hidden = true;
   }
 
-  updateLevels (levels: any[]) {
+  updateLevels (levels: any[], levelSwitched) {
     const { labels, datasets } = this.chart.data;
+    const { loadLevel, nextLoadLevel, nextAutoLevel } = self.hls;
+    const currentLevel = levelSwitched !== undefined ? levelSwitched : self.hls.currentLevel;
     levels.forEach((level, i) => {
       labels.push(getLevelName(level, level.level || level.id || i));
+      let borderColor = null;
+      if (currentLevel === i) {
+        borderColor = 'rgba(32, 32, 240, 1.0)';
+      } else if (loadLevel === i) {
+        borderColor = 'rgba(255, 128, 0, 1.0)';
+      } else if (nextLoadLevel === i) {
+        borderColor = 'rgba(200, 200, 64, 1.0)';
+      } else if (nextAutoLevel === i) {
+        borderColor = 'rgba(160, 0, 160, 1.0)';
+      }
       datasets.push(datasetWithDefaults({
         url: Array.isArray(level.url) ? level.url[0] : level.url,
         trackType: 'level',
+        borderColor,
         level: level.level
       }));
       if (level.details) {
@@ -150,11 +163,13 @@ export class TimelineChart {
 
   updateAudioTracks (audioTracks: any[]) {
     const { labels, datasets } = this.chart.data;
+    const { audioTrack } = self.hls;
     audioTracks.forEach((track, i) => {
       labels.push(getAudioTrackName(track, i));
       datasets.push(datasetWithDefaults({
         url: Array.isArray(track.url) ? track.url[0] : track.url,
         trackType: 'audioTrack',
+        borderColor: audioTrack === i ? 'rgba(32, 32, 240, 1.0)' : null,
         audioTrack: i
       }));
       if (track.details) {
@@ -166,11 +181,13 @@ export class TimelineChart {
 
   updateSubtitleTracks (subtitles: any[]) {
     const { labels, datasets } = this.chart.data;
+    const { subtitleTrack } = self.hls;
     subtitles.forEach((track, i) => {
       labels.push(getSubtitlesName(track, i));
       datasets.push(datasetWithDefaults({
         url: Array.isArray(track.url) ? track.url[0] : track.url,
         trackType: 'subtitleTrack',
+        borderColor: subtitleTrack === i ? 'rgba(32, 32, 240, 1.0)' : null,
         subtitleTrack: i
       }));
       if (track.details) {
@@ -195,7 +212,7 @@ export class TimelineChart {
     const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
     // eslint-disable-next-line no-restricted-properties
-    const levelDataSet = datasets.find(dataset => dataset.url && dataset.url.toString() === url);
+    const levelDataSet = arrayFind(datasets, dataset => dataset.url && dataset.url.toString() === url);
     if (!levelDataSet) {
       return;
     }
@@ -238,7 +255,7 @@ export class TimelineChart {
   set maxZoom (x: number) {
     const { chart } = this;
     const { config } = chart;
-    if (config && config.options) {
+    if (config?.options) {
       const currentZoom = config.options.plugins.zoom.zoom.rangeMax.x;
       const newZoom = Math.max(x, currentZoom);
       if (currentZoom === 60 && newZoom !== currentZoom) {
@@ -252,13 +269,12 @@ export class TimelineChart {
   updateFragment (data: any) {
     const { datasets } = this.chart.data;
     const frag: Fragment = data.frag;
-    // eslint-disable-next-line no-restricted-properties
-    const levelDataSet = datasets.find(dataset => dataset.url === frag.baseurl);
+    const levelDataSet = arrayFind(datasets, dataset => dataset.url === frag.baseurl);
     if (!levelDataSet) {
       return;
     }
     // eslint-disable-next-line no-restricted-properties
-    const fragData = levelDataSet.data.find(fragData => fragData.relurl === frag.relurl);
+    const fragData = arrayFind(levelDataSet.data, fragData => fragData.relurl === frag.relurl && fragData.sn === frag.sn);
     if (fragData && fragData !== frag) {
       Object.assign(fragData, frag);
     }
@@ -272,6 +288,8 @@ export class TimelineChart {
     const { labels, datasets } = this.chart.data;
     const trackTypes = Object.keys(tracks).sort((type) => type === 'video' ? 1 : -1);
     const mediaBufferData = [];
+
+    this.removeSourceBuffers();
 
     this.media = media;
 
@@ -333,6 +351,17 @@ export class TimelineChart {
     this.resize(datasets);
   }
 
+  removeSourceBuffers () {
+    const { labels, datasets } = this.chart.data;
+    let i = datasets.length;
+    while (i--) {
+      if ((labels[0] || '').indexOf('buffer') > -1) {
+        datasets.splice(i, 1);
+        labels.splice(i, 1);
+      }
+    }
+  }
+
   setTextTracks (textTracks) {
     const { labels, datasets } = this.chart.data;
     this.removeType('textTrack');
@@ -347,6 +376,7 @@ export class TimelineChart {
         categoryPercentage: 0.5,
         url: '',
         trackType: 'textTrack',
+        borderColor: textTrack.mode !== 'hidden' === i ? 'rgba(32, 32, 240, 1.0)' : null,
         textTrack: i
       }));
       this.cuesChangeHandler = this.cuesChangeHandler || ((e) => this.updateTextTrackCues(e.currentTarget));
@@ -630,4 +660,21 @@ function getChartOptions () {
       }
     }
   };
+}
+
+function arrayFind (array, predicate) {
+  const len = array.length >>> 0;
+  if (typeof predicate !== 'function') {
+    throw TypeError('predicate must be a function');
+  }
+  const thisArg = arguments[2];
+  let k = 0;
+  while (k < len) {
+    const kValue = array[k];
+    if (predicate.call(thisArg, kValue, k, array)) {
+      return kValue;
+    }
+    k++;
+  }
+  return undefined;
 }

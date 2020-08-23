@@ -1,8 +1,10 @@
-/* global $, Hls */
+/* global $, Hls, __NETLIFY__ */
 /* eslint camelcase: 0 */
 
 import { sortObject, copyTextToClipboard } from './demo-utils';
 import { TimelineChart } from './chart/timeline-chart';
+
+const NETLIFY = __NETLIFY__; // replaced in build
 
 const STORAGE_KEYS = {
   Editor_Persistence: 'hlsjs:config-editor-persist',
@@ -10,7 +12,7 @@ const STORAGE_KEYS = {
 };
 
 const testStreams = require('../tests/test-streams');
-const defaultTestStreamUrl = testStreams.bbb.url;
+const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
 let demoConfig = getURLParam('demoConfig', null);
@@ -56,14 +58,18 @@ $(document).ready(function () {
 
   chart = setupTimelineChart();
 
-  Object.keys(testStreams).forEach((key) => {
+  Object.keys(testStreams).forEach((key, index) => {
     const stream = testStreams[key];
     const option = new Option(stream.description, key);
     $('#streamSelect').append(option);
+    if (stream.url === sourceURL) {
+      $('#streamSelect')[0].selectedIndex = index + 1;
+    }
   });
 
   $('#streamSelect').change(function () {
-    selectedTestStream = testStreams[$('#streamSelect').val()];
+    const key = $('#streamSelect').val() || Object.keys(testStreams)[0];
+    selectedTestStream = testStreams[key];
     const streamUrl = selectedTestStream.url;
     $('#streamURL').val(streamUrl);
     loadSelectedStream();
@@ -77,6 +83,7 @@ $(document).ready(function () {
   $('#videoSize').change(function () {
     $('#video').width($('#videoSize').val());
     $('#bufferedCanvas').width($('#videoSize').val());
+    checkBuffer();
   });
 
   $('#enableStreaming').click(function () {
@@ -91,6 +98,7 @@ $(document).ready(function () {
 
   $('#dumpfMP4').click(function () {
     dumpfMP4 = this.checked;
+    $('.btn-dump').toggle(dumpfMP4);
     onDemoConfigChanged();
   });
 
@@ -110,15 +118,35 @@ $(document).ready(function () {
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
-  $('h2').append('&nbsp;<a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
-  $('#currentVersion').html('Hls version:' + Hls.version);
+  // link to version on npm if canary
+  // github branch for a branch version
+  // github tag for a normal tag
+  // github PR for a pr
+  function getVersionLink (version) {
+    const alphaRegex = /[-.]0\.alpha\./;
+    if (alphaRegex.test(version)) {
+      return `https://www.npmjs.com/package/hls.js/v/${encodeURIComponent(version)}`;
+    } else if (NETLIFY.reviewID) {
+      return `https://github.com/video-dev/hls.js/pull/${NETLIFY.reviewID}`;
+    } else if (NETLIFY.branch) {
+      return `https://github.com/video-dev/hls.js/tree/${encodeURIComponent(NETLIFY.branch)}`;
+    }
+    return `https://github.com/video-dev/hls.js/releases/tag/v${encodeURIComponent(version)}`;
+  }
+
+  const version = Hls.version;
+  if (version) {
+    const $a = $('<a />').attr('target', '_blank').attr('href', getVersionLink(version)).text('v' + version);
+    $('.title').append($a);
+  }
 
   $('#streamURL').val(sourceURL);
 
   video.volume = 0.05;
 
-  hideAllTabs();
-  // $('#timelineTab').show();
+  $('.btn-dump').toggle(dumpfMP4);
+  $('#toggleButtons').show();
+  toggleTab($('.demo-tab-btn')[0]);
 
   $('#metricsButtonWindow').toggle(self.windowSliding);
   $('#metricsButtonFixed').toggle(!self.windowSliding);
@@ -136,6 +164,9 @@ function setupGlobals () {
     level: [],
     bitrate: []
   };
+  lastAudioTrackSwitchingIdx = undefined;
+  lastSeekingIdx = undefined;
+  bufferingIdx = -1;
 
   // actual values, only on window
   self.recoverDecodingErrorDate = null;
@@ -238,6 +269,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.MEDIA_DETACHED, function () {
     logStatus('Media element detached');
+    clearInterval(hls.bufferTimer);
     bufferingIdx = -1;
     tracks = [];
     events.video.push({
@@ -245,6 +277,13 @@ function loadSelectedStream () {
       type: 'Media detached'
     });
     trimEventHistory();
+  });
+
+  hls.on(Hls.Events.DESTROYING, function () {
+    clearInterval(hls.bufferTimer);
+  });
+  hls.on(Hls.Events.BUFFER_RESET, function () {
+    clearInterval(hls.bufferTimer);
   });
 
   hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (eventName, data) {
@@ -276,10 +315,10 @@ function loadSelectedStream () {
       name: '',
       start: 0,
       end: data.levels.length,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      duration: data.stats.loading.end - data.stats.loading.first
     });
     trimEventHistory();
     self.refreshCanvas();
@@ -336,14 +375,14 @@ function loadSelectedStream () {
       id: data.level,
       start: data.details.startSN,
       end: data.details.endSN,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      duration: data.stats.loading.end - data.stats.loading.first
     };
 
-    const parsingDuration = data.stats.tparsed - data.stats.tload;
+    const parsingDuration = data.stats.parsing.end - data.stats.loading.end;
     if (stats.levelParsed) {
       this.sumLevelParsingMs += parsingDuration;
     } else {
@@ -367,11 +406,11 @@ function loadSelectedStream () {
       id: data.id,
       start: data.details.startSN,
       end: data.details.endSN,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      duration: data.stats.loading.end - data.stats.loading.first
     };
     events.load.push(event);
     trimEventHistory();
@@ -383,13 +422,13 @@ function loadSelectedStream () {
       type: data.frag.type + ' fragment',
       id: data.frag.level,
       id2: data.frag.sn,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      buffer: data.stats.tbuffered - data.stats.tparsed,
-      duration: data.stats.tbuffered - data.stats.tfirst,
-      bw: Math.round(8 * data.stats.total / (data.stats.tbuffered - data.stats.trequest)),
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      buffer: data.stats.buffering.end - data.stats.parsing.end,
+      duration: data.stats.buffering.end - data.stats.loading.first,
+      bw: Math.round(8 * data.stats.total / (data.stats.buffering.end - data.stats.loading.start)),
       size: data.stats.total
     };
     events.load.push(event);
@@ -411,10 +450,10 @@ function loadSelectedStream () {
     self.refreshCanvas();
     updateLevelInfo();
 
-    const latency = data.stats.tfirst - data.stats.trequest;
-    const parsing = data.stats.tparsed - data.stats.tload;
-    const process = data.stats.tbuffered - data.stats.trequest;
-    const bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
+    const latency = data.stats.loading.first - data.stats.loading.start;
+    const parsing = data.stats.parsing.end - data.stats.loading.end;
+    const process = data.stats.buffering.end - data.stats.loading.start;
+    const bitrate = Math.round(8 * data.stats.length / (data.stats.buffering.end - data.stats.loading.first));
 
     if (stats.fragBuffered) {
       stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
@@ -829,19 +868,18 @@ function checkBuffer () {
   const r = v.buffered;
   let bufferingDuration;
   ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'gray';
   if (r) {
     if (!canvas.width || canvas.width !== v.clientWidth) {
       canvas.width = v.clientWidth;
     }
-
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     const pos = v.currentTime;
     let bufferLen = 0;
+    ctx.fillStyle = 'gray';
     for (let i = 0; i < r.length; i++) {
       const start = r.start(i) / v.duration * canvas.width;
       const end = r.end(i) / v.duration * canvas.width;
-      ctx.fillRect(start, 3, Math.max(2, end - start), 10);
+      ctx.fillRect(start, 2, Math.max(2, end - start), 11);
       if (pos >= r.start(i) && pos < r.end(i)) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferLen = r.end(i) - pos;
@@ -926,6 +964,8 @@ function checkBuffer () {
     ctx.fillStyle = 'blue';
     const x = v.currentTime / v.duration * canvas.width;
     ctx.fillRect(x, 0, 2, 15);
+  } else {
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 }
 
@@ -1284,13 +1324,35 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);
   }, chart);
+  hls.on(Hls.Events.BUFFER_RESET, () => {
+    chart.removeSourceBuffers();
+  }, chart);
   hls.on(Hls.Events.LEVELS_UPDATED, (eventName, { levels }) => {
     chart.removeType('level');
     chart.updateLevels(levels);
   });
-  hls.on(Hls.Events.LEVEL_UPDATED, (eventName, { details, level }) => {
+  hls.on(Hls.Events.LEVEL_SWITCHED, (eventName, { level }) => {
+    // TODO: mutate level datasets
+    // Update currentLevel
+    chart.removeType('level');
+    chart.updateLevels(hls.levels, level);
+  }, chart);
+  hls.on(Hls.Events.LEVEL_LOADING, () => {
+    // TODO: mutate level datasets
+    // Update loadLevel
+    chart.removeType('level');
+    chart.updateLevels(hls.levels);
+  }, chart);
+  hls.on(Hls.Events.FRAG_LOADING, () => {
+    // TODO: mutate level datasets
+    // Update loadLevel
+    chart.removeType('level');
+    chart.updateLevels(hls.levels);
+  }, chart);
+  hls.on(Hls.Events.LEVEL_UPDATED, (eventName, { details }) => {
     chart.updateLevelOrTrack(details);
   }, chart);
+
   hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (eventName, { audioTracks }) => {
     chart.removeType('audioTrack');
     chart.updateAudioTracks(audioTracks);
@@ -1298,6 +1360,17 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (eventName, { subtitleTracks }) => {
     chart.removeType('subtitleTrack');
     chart.updateSubtitleTracks(subtitleTracks);
+  }, chart);
+
+  hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (eventName) => {
+    // TODO: mutate level datasets
+    chart.removeType('audioTrack');
+    chart.updateAudioTracks(hls.audioTracks);
+  }, chart);
+  hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH, (eventName) => {
+    // TODO: mutate level datasets
+    chart.removeType('subtitleTrack');
+    chart.updateSubtitleTracks(hls.subtitleTracks);
   }, chart);
   hls.on(Hls.Events.AUDIO_TRACK_LOADED, updateLevelOrTrack, chart);
   hls.on(Hls.Events.SUBTITLE_TRACK_LOADED, updateLevelOrTrack, chart);
@@ -1328,6 +1401,8 @@ function createfMP4 (type) {
     const filename = type + '-' + new Date().toISOString() + '.mp4';
     self.saveAs(blob, filename);
     // $('body').append('<a download="hlsjs-' + filename + '" href="' + self.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
+  } else if (!dumpfMP4) {
+    console.error('Check "Dump transmuxed fMP4 data" first to make appended media available for saving.');
   }
 }
 
@@ -1345,20 +1420,28 @@ function arrayConcat (inputArray) {
 }
 
 function hideAllTabs () {
-  $('#timelineTab').hide();
-  $('#playbackControlTab').hide();
-  $('#qualityLevelControlTab').hide();
-  $('#audioTrackControlTab').hide();
-  $('#metricsDisplayTab').hide();
-  $('#statsDisplayTab').hide();
+  $('.demo-tab-btn').css('background-color', '');
+  $('.demo-tab').hide();
 }
 
-function toggleTab (tabElId) {
-  hideAllTabs();
-  self.hideMetrics();
-  $('#' + tabElId).show();
+function toggleTab (btn) {
+  const tabElId = $(btn).data('tab');
+  // eslint-disable-next-line no-restricted-globals
+  const modifierPressed = window.event && (window.event.metaKey || window.event.shiftKey);
+  if (!modifierPressed) {
+    hideAllTabs();
+  }
+  if (modifierPressed) {
+    $(`#${tabElId}`).toggle();
+  } else {
+    $(`#${tabElId}`).show();
+  }
+  $(btn).css('background-color', $(`#${tabElId}`).is(':visible') ? 'orange' : '');
+  if (!$('#statsDisplayTab').is(':visible')) {
+    self.hideMetrics();
+  }
   if (hls) {
-    if (tabElId === 'timelineTab') {
+    if ($('#timelineTab').is(':visible')) {
       chart.show();
       chart.resize(chart.chart.data ? chart.chart.data.datasets : null);
     } else {

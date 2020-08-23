@@ -182,6 +182,7 @@ describe('StreamController', function () {
 
   describe('checkBuffer', function () {
     const sandbox = sinon.createSandbox();
+    const bufStart = 5;
 
     beforeEach(function () {
       streamController.gapController = {
@@ -189,6 +190,9 @@ describe('StreamController', function () {
       };
       streamController.media = {
         buffered: {
+          start () {
+            return bufStart;
+          },
           length: 1
         },
         readyState: 4

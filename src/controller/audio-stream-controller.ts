@@ -4,6 +4,7 @@ import { Events } from '../events';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import { fragmentWithinToleranceTest } from './fragment-finders';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
 import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
@@ -25,7 +26,7 @@ import {
 import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
 import Hls from '../hls';
-import { ComponentAPI } from '../types/component-api';
+import type { ComponentAPI } from '../types/component-api';
 
 const { performance } = self;
 
@@ -39,6 +40,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
   private videoBuffer: any | null = null;
   private initPTS: any = [];
   private videoTrackCC: number = -1;
+  private waitingVideoCC: number = -1;
   private audioSwitch: boolean = false;
   private trackId: number = -1;
   private waitingData: { frag: Fragment, cache: ChunkCache, complete: boolean } | null = null;
@@ -97,7 +99,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     const cc = frag.cc;
     this.initPTS[cc] = initPTS;
     this.videoTrackCC = cc;
-    this.log(`InitPTS for cc: ${cc} found from video track: ${initPTS}`);
+    this.log(`InitPTS for cc: ${cc} found from main: ${initPTS}`);
     // If we are waiting, tick immediately to unblock audio fragment transmuxing
     if (this.state === State.WAITING_INIT_PTS) {
       this.tick();
@@ -159,34 +161,50 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       break;
     }
     case State.WAITING_INIT_PTS: {
-      const videoTrackCC = this.videoTrackCC;
-      if (Number.isFinite(this.initPTS[videoTrackCC])) {
-        // Ensure we don't get stuck in the WAITING_INIT_PTS state if the waiting frag CC doesn't match any initPTS
-        const waitingData = this.waitingData;
-        if (waitingData) {
-          const { frag, cache, complete } = waitingData;
+      // Ensure we don't get stuck in the WAITING_INIT_PTS state if the waiting frag CC doesn't match any initPTS
+      const waitingData = this.waitingData;
+      if (waitingData) {
+        const { frag, cache, complete } = waitingData;
+        if (this.initPTS[frag.cc] !== undefined) {
           this.waitingData = null;
-          if (videoTrackCC === frag.cc) {
-            this.state = State.FRAG_LOADING;
-            const payload = cache.flush();
-            this._handleFragmentLoadProgress(frag, payload);
-            if (complete) {
-              super._handleFragmentLoadComplete(frag, payload);
-            }
-          } else {
-            this.state = State.IDLE;
+          this.state = State.FRAG_LOADING;
+          const payload = cache.flush();
+          this._handleFragmentLoadProgress(frag, payload);
+          if (complete) {
+            super._handleFragmentLoadComplete(frag, payload);
           }
+        } else if (this.videoTrackCC !== this.waitingVideoCC) {
+          // Drop waiting fragment if videoTrackCC has changed since waitingFragment was set and initPTS was not found
+          logger.log(`Waiting fragment cc (${frag.cc}) cancelled because video is at cc ${this.videoTrackCC}`);
+          this.clearWaitingFragment();
         } else {
-          this.state = State.IDLE;
+          // Drop waiting fragment if an earlier fragment is needed
+          const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer, this.media.currentTime, this.config.maxBufferHole);
+          const waitingFragmentAtPosition = fragmentWithinToleranceTest(bufferInfo.end, this.config.maxFragLookUpTolerance, frag);
+          if (waitingFragmentAtPosition < 0) {
+            logger.log(`Waiting fragment cc (${frag.cc}) @ ${frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`);
+            this.clearWaitingFragment();
+          }
         }
+      } else {
+        this.state = State.IDLE;
       }
-      break;
     }
     default:
       break;
     }
 
     this.onTickEnd();
+  }
+
+  clearWaitingFragment () {
+    const waitingData = this.waitingData;
+    if (waitingData) {
+      this.fragmentTracker.removeFragment(waitingData.frag);
+      this.waitingData = null;
+      this.waitingVideoCC = -1;
+      this.state = State.IDLE;
+    }
   }
 
   protected onTickEnd () {
@@ -214,7 +232,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
 
     // if video not attached AND
-    // start fragment already requested OR start frag prefetch disable
+    // start fragment already requested OR start frag prefetch not enabled
     // exit loop
     // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
     if (!media && (this.startFragRequested || !config.startFragPrefetch)) {
@@ -292,7 +310,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
         return;
       }
 
-      this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${this.trackId}, load position: ${pos.toFixed(3)}-${loadPos.toFixed(3)}`);
+      this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN}-${trackDetails.endSN}], track ${trackId}, load position: ${pos.toFixed(3)}-${loadPos.toFixed(3)}`);
       this.loadFragment(frag);
     }
   }
@@ -343,7 +361,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       fragCurrent.loader.abort();
     }
     this.fragCurrent = null;
-    this.waitingData = null;
+    this.clearWaitingFragment();
     // destroy useless transmuxer when switching audio to main
     if (!altAudio) {
       if (transmuxer) {
@@ -427,15 +445,17 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     // If not we need to wait for it
     const initPTS = this.initPTS[frag.cc];
     const initSegmentData = details.initSegment ? details.initSegment.data : [];
-    if (details.initSegment || initPTS !== undefined) {
+    if (initPTS !== undefined) {
       // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
       const accurateTimeOffset = false; // details.PTSKnown || !details.live;
       const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount, payload.byteLength);
       transmuxer.push(payload, initSegmentData, audioCodec, '', frag, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
     } else {
+      logger.log(`Unknown video PTS for cc ${frag.cc}, waiting for video PTS before demuxing audio frag ${frag.sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       const { cache } = this.waitingData = this.waitingData || { frag, cache: new ChunkCache(), complete: false };
       cache.push(payload);
+      this.waitingVideoCC = this.videoTrackCC;
       this.state = State.WAITING_INIT_PTS;
     }
   }
