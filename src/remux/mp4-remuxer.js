@@ -15,12 +15,18 @@ import { logger } from '../utils/logger';
 const MAX_SILENT_FRAME_DURATION_90KHZ = toMpegTsClockFromTimescale(10);
 const PTS_DTS_SHIFT_TOLERANCE_90KHZ = toMpegTsClockFromTimescale(0.2);
 
+let chromeVersion = null;
+
 class MP4Remuxer {
   constructor (observer, config, typeSupported, vendor) {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
     this.ISGenerated = false;
+    if (chromeVersion === null) {
+      const result = navigator.userAgent.match(/Chrome\/(\d+)/i);
+      chromeVersion = result ? parseInt(result[1]) : 0;
+    }
   }
 
   destroy () {
@@ -308,6 +314,9 @@ class MP4Remuxer {
       }
     }
 
+    if (chromeVersion && chromeVersion < 75) {
+      firstDTS = Math.max(0, firstDTS);
+    }
     let nbNalu = 0;
     let naluLen = 0;
     for (let i = 0; i < nbSamples; i++) {
