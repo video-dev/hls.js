@@ -71,24 +71,27 @@
           </label>
 
           <label class="innerControls">
-            Player size:
+            HTML video element width:
             <select id="videoSize" style="float:right;">
-              <option value="" selected>Set video width (height will vary according to selected size)</option>
-              <option value="240px">240 x 135</option>
-              <option value="426px">426 x 240</option>
-              <option value="640px">640 x 360</option>
-              <option value="720px">720 x 405</option>
-              <option value="854px">854 x 480</option>
-              <option value="1280px">1280 x 720</option>
-              <option value="1920px">1920 x 1080</option>
+              <option value="240px">240px</option>
+              <option value="426px">426px</option>
+              <option value="640px">640px</option>
+              <option value="720px">720px</option>
+              <option value="854px">854px</option>
+              <option value="1280px">1280px</option>
+              <option value="1920px">1920px</option>
               <option value="80%">Responsive (80%)</option>
               <option value="100%">Responsive (100%)</option>
             </select>
           </label>
 
           <label class="innerControls">
-            Current video-resolution:
-            <span id="currentResolution">/</span>
+            Current player size:
+            <span id="currentSize"></span>
+          </label>
+          <label class="innerControls">
+            Current video resolution:
+            <span id="currentResolution"></span>
           </label>
 
           <label class="innerControls">
@@ -114,7 +117,7 @@
 
       </div>
 
-      <video id="video" controls autoplay class="videoCentered"></video>
+      <video id="video" controls autoplay class="videoCentered" style="width: 80%;"></video>
       <br>
       <canvas id="bufferedCanvas" width="720" height="15" class="videoCentered" onclick="onClickBufferedRange(event);" style="height: fit-content;"></canvas>
       <br>
