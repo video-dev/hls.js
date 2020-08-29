@@ -311,6 +311,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;
+      capabilities.extendedDebugging = true;
       browser = browser.usingServer(`http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`);
     }
 
@@ -321,8 +322,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     try {
       await retry(async function () {
         console.log('Retrieving web driver session...');
-        const [timeouts, session] = await Promise.all([
-          browser.manage().setTimeouts({ script: 75000 }),
+        // const [timeouts, session] = await Promise.all([
+        const [session] = await Promise.all([
+          // browser.manage().setTimeouts({ script: 75000 }),
           browser.getSession()
         ]);
         console.log(`Retrieved session in ${Date.now() - start}ms`);
