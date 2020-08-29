@@ -15,7 +15,7 @@ const expect = chai.expect;
 
 const browserConfig = {
   version: 'latest',
-  name: 'firefox',
+  name: 'chrome',
   platform: 'macOS 10.15'
 };
 
