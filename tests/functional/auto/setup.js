@@ -310,7 +310,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       capabilities.build = 'HLSJS-' + process.env.TRAVIS_BUILD_NUMBER;
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
-      capabilities.avoidProxy = true;
+      // capabilities.avoidProxy = true;
       capabilities.extendedDebugging = true;
       browser = browser.usingServer(`http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`);
     }
@@ -346,6 +346,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           console.log('Loading test page...');
         }
         try {
+          console.log(`http://${hostname}:8000/tests/functional/auto/index.html`);
           await browser.get(`http://${hostname}:8000/tests/functional/auto/index.html`);
         } catch (e) {
           throw new Error('failed to open test page');
