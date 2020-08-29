@@ -22,7 +22,7 @@ const browserConfig = {
  */
 let browser;
 let stream;
-let printDebugLogs = false;
+let printDebugLogs = true;
 
 // Setup browser config data from env vars
 if (onTravis) {
