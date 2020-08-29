@@ -95,6 +95,7 @@
     "karma-webpack": "^4.0.2",
     "mocha": "^8.0.1",
     "netlify-cli": "^2.36.0",
+    "node-fetch": "^2.6.0",
     "selenium-webdriver": "^3.1.0",
     "semver": "^7.3.2",
     "sinon": "^9.0.1",

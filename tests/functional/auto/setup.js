@@ -10,6 +10,7 @@ const HttpServer = require('http-server');
 const streams = require('../../test-streams');
 const onTravis = !!process.env.TRAVIS;
 const chai = require('chai');
+const fetch = require('node-fetch');
 const expect = chai.expect;
 
 const browserConfig = {
@@ -64,6 +65,13 @@ HttpServer.createServer({
   autoIndex: false,
   root: './'
 }).listen(8000, hostname);
+
+setInterval(() => {
+  fetch(`http://${hostname}:8000/`).then((res) => {
+    console.log('!!!! status', res.status);
+    return res.text().then((body) => console.log('!! body', body));
+  }).catch((e) => console.log('!!!!! error', e));
+}, 3000);
 
 const stringifyResult = (result) => JSON.stringify(result, Object.keys(result).filter(k => k !== 'logs'), 2);
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
