@@ -1297,8 +1297,8 @@ class StreamController extends BaseStreamController {
       return;
     }
 
-    // Check combined buffer
-    const buffered = media.buffered;
+    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+    const buffered = mediaBuffer.buffered;
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
