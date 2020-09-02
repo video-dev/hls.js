@@ -50,10 +50,6 @@ export default class LevelController extends EventHandler {
     if (levels) {
       levels.forEach(level => {
         level.loadError = 0;
-        const levelDetails = level.details;
-        if (levelDetails && levelDetails.live) {
-          level.details = undefined;
-        }
       });
     }
     // speed up live playlist refresh if timer exists
