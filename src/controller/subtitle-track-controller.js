@@ -114,7 +114,7 @@ class SubtitleTrackController extends EventHandler {
     }
 
     logger.log(`subtitle track ${id} loaded`);
-    if (details.live) {
+    if (details.live && !this.stopped) {
       const reloadInterval = computeReloadInterval(currentTrack.details, details, data.stats.trequest);
       logger.log(`Reloading live subtitle playlist in ${reloadInterval}ms`);
       this.timer = setTimeout(() => {
@@ -163,7 +163,7 @@ class SubtitleTrackController extends EventHandler {
   _loadCurrentTrack () {
     const { trackId, tracks, hls } = this;
     const currentTrack = tracks[trackId];
-    if (trackId < 0 || !currentTrack || (currentTrack.details && !currentTrack.details.live)) {
+    if (this.stopped || trackId < 0 || !currentTrack || (currentTrack.details && !currentTrack.details.live)) {
       return;
     }
     logger.log(`Loading subtitle track ${trackId}`);
