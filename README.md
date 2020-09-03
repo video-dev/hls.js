@@ -6,8 +6,6 @@
 
 [![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
 
-[![Testing Powered By SauceLabs](https://opensource.saucelabs.com/images/opensauce/powered-by-saucelabs-badge-gray.png?sanitize=true "Testing Powered By SauceLabs")](https://saucelabs.com)
-
 Join the discussion via [video-dev.org](https://video-dev.org) in #hlsjs (our Slack channel)
 
 # ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
@@ -405,6 +403,7 @@ npm run test:func
 
 Click [here](/docs/design.md) for details.
 
-### Tested With
+### Test Status
 
-[<img src="https://cloud.githubusercontent.com/assets/7864462/12837037/452a17c6-cb73-11e5-9f39-fc96893bc9bf.png" alt="Browser Stack Logo" width="300">](https://www.browserstack.com/)
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/mangui.svg)](https://saucelabs.com/u/mangui)
+[![Testing Powered By SauceLabs](https://opensource.saucelabs.com/images/opensauce/powered-by-saucelabs-badge-gray.png?sanitize=true "Testing Powered By SauceLabs")](https://saucelabs.com)
