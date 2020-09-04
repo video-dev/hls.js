@@ -162,7 +162,7 @@ class TSDemuxer {
       parseMPEGPES = this._parseMPEGPES.bind(this),
       parseID3PES = this._parseID3PES.bind(this);
 
-    const syncOffset = TSDemuxer._syncOffset(data);
+    const syncOffset = Math.max(0, TSDemuxer._syncOffset(data));
 
     // don't parse last TS packet if incomplete
     len -= (len + syncOffset) % 188;
