@@ -21,10 +21,11 @@ import {
   FragBufferedData,
   BufferCreatedData,
   AudioTrackSwitchingData,
-  FragParsingUserdataData, FragParsingMetadataData
+  FragParsingUserdataData, FragParsingMetadataData, FragLoadedData
 } from '../types/events';
 import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
+import { PlaylistLevelType } from '../types/loader';
 import Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 
@@ -171,9 +172,14 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
           this.waitingData = null;
           this.state = State.FRAG_LOADING;
           const payload = cache.flush();
-          this._handleFragmentLoadProgress(frag, payload);
+          const data: FragLoadedData = {
+            frag,
+            payload,
+            networkDetails: null
+          };
+          this._handleFragmentLoadProgress(data);
           if (complete) {
-            super._handleFragmentLoadComplete(frag, payload);
+            super._handleFragmentLoadComplete(data);
           }
         } else if (this.videoTrackCC !== this.waitingVideoCC) {
           // Drop waiting fragment if videoTrackCC has changed since waitingFragment was set and initPTS was not found
@@ -424,7 +430,8 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
   }
 
-  _handleFragmentLoadProgress (frag: Fragment, payload: Uint8Array) {
+  _handleFragmentLoadProgress (data: FragLoadedData) {
+    const { frag, payload } = data;
     const { config, trackId, levels } = this;
     if (!levels) {
       this.warn(`Audio tracks were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
@@ -440,13 +447,13 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     let transmuxer = this.transmuxer;
     if (!transmuxer) {
       transmuxer = this.transmuxer =
-          new TransmuxerInterface(this.hls, 'audio', this._handleTransmuxComplete.bind(this), this._handleTransmuxerFlush.bind(this));
+          new TransmuxerInterface(this.hls, PlaylistLevelType.AUDIO, this._handleTransmuxComplete.bind(this), this._handleTransmuxerFlush.bind(this));
     }
 
     // Check if we have video initPTS
     // If not we need to wait for it
     const initPTS = this.initPTS[frag.cc];
-    const initSegmentData = details.initSegment ? details.initSegment.data : [];
+    const initSegmentData = details.initSegment?.data || new Uint8Array(0);
     if (initPTS !== undefined) {
       // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
@@ -456,17 +463,17 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     } else {
       logger.log(`Unknown video PTS for cc ${frag.cc}, waiting for video PTS before demuxing audio frag ${frag.sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       const { cache } = this.waitingData = this.waitingData || { frag, cache: new ChunkCache(), complete: false };
-      cache.push(payload);
+      cache.push(new Uint8Array(payload));
       this.waitingVideoCC = this.videoTrackCC;
       this.state = State.WAITING_INIT_PTS;
     }
   }
 
-  protected _handleFragmentLoadComplete (frag: Fragment, payload: ArrayBuffer | Uint8Array) {
+  protected _handleFragmentLoadComplete (fragLoadedData: FragLoadedData) {
     if (this.waitingData) {
       return;
     }
-    super._handleFragmentLoadComplete(frag, payload);
+    super._handleFragmentLoadComplete(fragLoadedData);
   }
 
   onBufferReset () {

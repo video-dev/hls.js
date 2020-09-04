@@ -4,7 +4,6 @@
 
 import { Events } from '../events';
 import { logger } from '../utils/logger';
-import Decrypter from '../crypt/decrypter';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
@@ -12,7 +11,7 @@ import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { mergeSubtitlePlaylists } from './level-helper';
 import {
-  ErrorData,
+  ErrorData, FragLoadedData,
   LevelUpdatedData,
   MediaAttachedData,
   SubtitleFragProcessed,
@@ -21,7 +20,6 @@ import {
   TrackSwitchedData
 } from '../types/events';
 import { Level } from '../types/level';
-import Fragment from '../loader/fragment';
 import LevelDetails from '../loader/level-details';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
@@ -209,7 +207,8 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     }
   }
 
-  _handleFragmentLoadComplete (frag: Fragment, payload: ArrayBuffer | Uint8Array) {
+  _handleFragmentLoadComplete (fragLoadedData: FragLoadedData) {
+    const { frag, payload } = fragLoadedData;
     const decryptData = frag.decryptdata;
     const hls = this.hls;
 

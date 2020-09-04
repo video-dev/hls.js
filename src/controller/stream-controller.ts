@@ -13,6 +13,7 @@ import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import { Level } from '../types/level';
+import { PlaylistLevelType } from '../types/loader';
 import LevelDetails from '../loader/level-details';
 import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
@@ -28,7 +29,8 @@ import type {
   ErrorData,
   FragParsingMetadataData,
   FragParsingUserdataData,
-  LevelLoadingData
+  LevelLoadingData,
+  FragLoadedData
 } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -329,7 +331,7 @@ export default class StreamController extends BaseStreamController implements Ne
   followingBufferedFrag (frag: Fragment | null) {
     if (frag) {
       // try to get range of next fragment (500ms after this range)
-      return this.getBufferedFrag(frag.endPTS + 0.5);
+      return this.getBufferedFrag(frag.end + 0.5);
     }
     return null;
   }
@@ -433,8 +435,8 @@ export default class StreamController extends BaseStreamController implements Ne
           // start flush position is the start PTS of next buffered frag.
           // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
           // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
-          const maxStart = nextBufferedFrag.maxStartPTS ? nextBufferedFrag.maxStartPTS : nextBufferedFrag.startPTS;
-          const startPts = Math.max(bufferedFrag.endPTS, maxStart + Math.min(this.config.maxFragLookUpTolerance, nextBufferedFrag.duration));
+          const maxStart = nextBufferedFrag.maxStartPTS ? nextBufferedFrag.maxStartPTS : nextBufferedFrag.start;
+          const startPts = Math.max(bufferedFrag.end, maxStart + Math.min(this.config.maxFragLookUpTolerance, nextBufferedFrag.duration));
           this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY);
         }
       }
@@ -517,7 +519,7 @@ export default class StreamController extends BaseStreamController implements Ne
   onManifestLoading () {
     // reset buffer on manifest loading
     this.log('Trigger BUFFER_RESET');
-    this.hls.trigger(Events.BUFFER_RESET);
+    this.hls.trigger(Events.BUFFER_RESET, undefined);
     this.fragmentTracker.removeAllFragments();
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
@@ -622,7 +624,8 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  _handleFragmentLoadProgress (frag: Fragment, payload: Uint8Array) {
+  _handleFragmentLoadProgress (data: FragLoadedData) {
+    const { frag, part, payload } = data;
     const { levels, media } = this;
     if (!levels) {
       this.warn(`Levels were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
@@ -635,15 +638,15 @@ export default class StreamController extends BaseStreamController implements Ne
 
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
     const accurateTimeOffset = !(media?.seeking) && (details.PTSKnown || !details.live);
-    const initSegmentData = details.initSegment ? details.initSegment.data : [];
+    const initSegmentData = details.initSegment?.data || new Uint8Array(0);
     const audioCodec = this._getAudioCodec(currentLevel);
 
     // transmux the MPEG-TS data to ISO-BMFF segments
     // this.log(`Transmuxing ${frag.sn} of [${details.startSN} ,${details.endSN}],level ${frag.level}, cc ${frag.cc}`);
     const transmuxer = this.transmuxer = this.transmuxer ||
-          new TransmuxerInterface(this.hls, 'main', this._handleTransmuxComplete.bind(this), this._handleTransmuxerFlush.bind(this));
+          new TransmuxerInterface(this.hls, PlaylistLevelType.MAIN, this._handleTransmuxComplete.bind(this), this._handleTransmuxerFlush.bind(this));
 
-    const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount, payload.byteLength);
+    const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount, payload.byteLength, part ? part.index : -1);
     chunkMeta.transmuxing.start = performance.now();
 
     transmuxer.push(

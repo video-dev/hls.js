@@ -17,6 +17,8 @@ import type LevelDetails from '../loader/level-details';
 import type Hls from '../hls';
 import type { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
+import LoadStats from '../loader/load-stats';
+import { Part } from '../loader/fragment';
 
 const { performance } = self;
 
@@ -188,7 +190,11 @@ class AbrController implements ComponentAPI {
         level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
       }
       if (frag.bitrateTest) {
-        this.onFragBuffered(Events.FRAG_BUFFERED, data);
+        const fragBufferedData: Omit<FragBufferedData, 'id'> = {
+          stats: data.frag.stats,
+          frag: data.frag
+        };
+        this.onFragBuffered(Events.FRAG_BUFFERED, fragBufferedData);
       }
     }
   }

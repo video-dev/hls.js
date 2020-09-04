@@ -4,11 +4,12 @@ import {
   Loader,
   LoaderConfiguration,
   FragmentLoaderContext,
-  LoaderContext
+  LoaderStats
 } from '../types/loader';
 import { reset } from './load-stats';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
+import type { FragLoadedData } from '../types/events';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
@@ -26,11 +27,12 @@ export default class FragmentLoader {
   abort () {
     if (this.loader) {
       // Abort the loader for current fragment. Only one may load at any given time
+      console.log(`Abort frag loader ${this.loader.context.url}`, this.loader);
       this.loader.abort();
     }
   }
 
-  load (frag: Fragment, targetBufferTime: number | null = null, onProgress?: FragmentLoadProgressCallback): Promise<FragLoadSuccessResult> {
+  load (frag: Fragment, targetBufferTime: number | null = null, onProgress?: FragmentLoadProgressCallback): Promise<FragLoadedData> {
     const url = frag.url;
     if (!url && !frag.hasParts) {
       return Promise.reject(new LoadError({
@@ -59,8 +61,12 @@ export default class FragmentLoader {
       highWaterMark: MIN_CHUNK_SIZE
     };
 
-    if (frag.hasParts && !frag.hasAllParts && onProgress) {
-      return this.loadFragmentParts(frag, targetBufferTime || 0, loaderConfig, onProgress);
+    // TODO: If we had access to LevelDetails and currentTime/startPosition here we could reason whether loading parts or whole fragment would be best
+    targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
+    const canPartLoad = frag.hasParts && onProgress;
+    const skipPartLoading = canPartLoad && frag.hasAllParts && (targetBufferTime - frag.start < frag.partList![0].duration);
+    if (canPartLoad && !skipPartLoading) {
+      return this.loadFragmentParts(frag, targetBufferTime, loaderConfig, onProgress!);
     }
 
     const loaderContext = createLoaderContext(frag);
@@ -72,6 +78,7 @@ export default class FragmentLoader {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
           resolve({
+            frag,
             payload: response.data as ArrayBuffer,
             networkDetails
           });
@@ -110,6 +117,7 @@ export default class FragmentLoader {
         onProgress: (stats, context, data, networkDetails) => {
           if (onProgress) {
             onProgress({
+              frag,
               payload: data as ArrayBuffer,
               networkDetails
             });
@@ -119,17 +127,16 @@ export default class FragmentLoader {
     });
   }
 
-  private loadFragmentParts (frag: Fragment, targetBufferTime: number, loaderConfig: LoaderConfiguration, onProgress: FragmentLoadProgressCallback): Promise<FragLoadSuccessResult> {
+  private loadFragmentParts (frag: Fragment, targetBufferTime: number, loaderConfig: LoaderConfiguration, onProgress: FragmentLoadProgressCallback): Promise<FragLoadedData> {
     reset(frag.stats);
 
     // Start loading parts at `targetBufferTime`
-    targetBufferTime = Math.max(frag.start, targetBufferTime);
     const part = frag.findIndependentPart(targetBufferTime) || frag.partList![0];
 
     return new Promise((resolve, reject) => {
       if (!part) {
         return reject(new LoadError({
-          type: ErrorTypes.NETWORK_ERROR,
+          type: ErrorTypes.OTHER_ERROR,
           details: ErrorDetails.INTERNAL_ABORTED,
           fatal: false,
           frag,
@@ -153,6 +160,18 @@ export default class FragmentLoader {
       this.nextPartIndex = -1;
       this.updateLiveFragment = (newFragment: Fragment) => {
         const loadingParts = this.nextPartIndex !== -1;
+        if (frag.sn !== newFragment.sn || frag.level !== newFragment.level) {
+          // Stop loading parts for current fragment
+          this.resetLoader(frag, loader);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.INTERNAL_ABORTED,
+            fatal: false,
+            frag,
+            networkDetails: loader.loader
+          }, `aborted part loading for sn ${frag.sn} level ${frag.level}. new sn ${frag.sn} level ${frag.level}`));
+          return;
+        }
         if (newFragment.partList) {
           frag.partList = newFragment.partList;
         } else if (loadingParts) {
@@ -170,6 +189,8 @@ export default class FragmentLoader {
             // Fragment is complete
             this.resetLoader(frag, loader);
             resolve({
+              frag,
+              part,
               payload: new ArrayBuffer(0),
               networkDetails: loader.loader
             });
@@ -181,23 +202,17 @@ export default class FragmentLoader {
     });
   }
 
-  private loadPart (frag: Fragment, part: Part, loader: Loader<FragmentLoaderContext>, loaderConfig: LoaderConfiguration, onProgress: FragmentLoadProgressCallback, resolve: (value: FragLoadSuccessResult) => void, reject: (reason: LoadError) => void) {
+  private loadPart (frag: Fragment, part: Part, loader: Loader<FragmentLoaderContext>, loaderConfig: LoaderConfiguration, onProgress: FragmentLoadProgressCallback, resolve: (value: FragLoadedData) => void, reject: (reason: LoadError) => void) {
     const loaderContext = createLoaderContext(frag, part);
 
     // Assign frag stats to the loader's stats reference
     loader.stats = part.stats;
     loader.load(loaderContext, loaderConfig, {
       onSuccess: (response, stats, context, networkDetails) => {
-        frag.stats.loaded += part.stats.loaded;
-        if (frag.stats.loading.start) {
-          frag.stats.loading.start += part.stats.loading.start - frag.stats.loading.end;
-          frag.stats.loading.first += part.stats.loading.first - frag.stats.loading.end;
-        } else {
-          frag.stats.loading.start = part.stats.loading.start;
-          frag.stats.loading.first = part.stats.loading.first;
-        }
-        frag.stats.loading.end = part.stats.loading.end;
+        this.updateStatsFromPart(frag.stats, part.stats);
         onProgress({
+          frag,
+          part,
           payload: response.data as ArrayBuffer,
           networkDetails
         });
@@ -205,6 +220,8 @@ export default class FragmentLoader {
         if (frag.isFinalPart(part)) {
           this.resetLoader(frag, loader);
           resolve({
+            frag,
+            part,
             payload: response.data as ArrayBuffer,
             networkDetails
           });
@@ -251,12 +268,25 @@ export default class FragmentLoader {
     });
   }
 
+  private updateStatsFromPart (fragStats: LoaderStats, partStats: LoaderStats) {
+    fragStats.loaded += partStats.loaded;
+    const fragLoading = fragStats.loading;
+    if (fragLoading.start) {
+      fragLoading.start += partStats.loading.start - fragLoading.end;
+      fragLoading.first += partStats.loading.first - fragLoading.end;
+    } else {
+      fragLoading.start = partStats.loading.start;
+      fragLoading.first = partStats.loading.first;
+    }
+    fragLoading.end = partStats.loading.end;
+  }
+
   private resetLoader (frag: Fragment, loader: Loader<FragmentLoaderContext>) {
-    this.updateLiveFragment = null;
-    this.nextPartIndex = -1;
     frag.loader = null;
     if (this.loader === loader) {
       self.clearTimeout(this.partLoadTimeout);
+      this.updateLiveFragment = null;
+      this.nextPartIndex = -1;
       this.loader = null;
     }
   }
@@ -289,11 +319,6 @@ export class LoadError extends Error {
   }
 }
 
-export interface FragLoadSuccessResult {
-  payload: ArrayBuffer
-  networkDetails: any
-}
-
 export interface FragLoadFailResult {
   type: string
   details: string
@@ -309,4 +334,4 @@ export interface FragLoadFailResult {
   networkDetails: any
 }
 
-export type FragmentLoadProgressCallback = (result: FragLoadSuccessResult) => void;
+export type FragmentLoadProgressCallback = (result: FragLoadedData) => void;

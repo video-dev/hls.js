@@ -182,7 +182,7 @@ export default class BufferController implements ComponentAPI {
       this.tracks = {};
     }
 
-    this.hls.trigger(Events.MEDIA_DETACHED);
+    this.hls.trigger(Events.MEDIA_DETACHED, undefined);
   }
 
   protected onBufferReset () {
@@ -302,7 +302,7 @@ export default class BufferController implements ComponentAPI {
       },
       onComplete: () => {
         logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
-        this.hls.trigger(Events.BUFFER_FLUSHED);
+        this.hls.trigger(Events.BUFFER_FLUSHED, undefined);
       },
       onError: (e) => {
         logger.warn(`[buffer-controller]: Failed to remove from ${type} SourceBuffer`, e);
@@ -332,17 +332,18 @@ export default class BufferController implements ComponentAPI {
       }
     }
 
-    // TODO: Can this happen when switching audio tracks and be safely ignored?
-    // console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
-    if (buffersAppendedTo.length === 0) {
-      return;
-    }
-
-    logger.log('[buffer-controller]: All fragment chunks received, enqueueing operation to signal fragment buffered');
     const onUnblocked = () => {
       frag.stats.buffering.end = self.performance.now();
       this.hls.trigger(Events.FRAG_BUFFERED, { frag, stats: frag.stats, id: frag.type });
     };
+
+    // console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
+    if (buffersAppendedTo.length === 0) {
+      // TODO: Can this happen when switching audio tracks and be safely ignored?
+      onUnblocked();
+      return;
+    }
+
     this.blockBuffers(onUnblocked, buffersAppendedTo);
     this.flushLiveBackBuffer();
   }

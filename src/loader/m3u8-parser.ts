@@ -201,6 +201,11 @@ export default class M3U8Parser {
 
     const appendfragment = () => {
       frag.start = totalduration;
+      // TODO: This segment is not complete and is a collection of parts. Ideally it's duration would be the sum of
+      //  of it's parts and it would update when the live level is updated
+      if (!frag.duration) {
+        frag.duration = level.targetduration;
+      }
       if (levelkey) {
         frag.levelkey = levelkey;
       }

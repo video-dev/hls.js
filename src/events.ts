@@ -46,7 +46,6 @@ import {
   LiveBackBufferData,
   TrackLoadingData
 } from './types/events';
-import { Tail } from './types/tuples';
 
 /**
  * @readonly
@@ -230,6 +229,6 @@ export interface HlsEventEmitter {
   off<E extends keyof HlsListeners, Context = undefined> (event: E, listener?: HlsListeners[E], context?: Context, once?: boolean): void
 
   listeners<E extends keyof HlsListeners> (event: E): HlsListeners[E][]
-  emit<E extends keyof HlsListeners> (event: E, name: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean
+  emit<E extends keyof HlsListeners> (event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean
   listenerCount<E extends keyof HlsListeners> (event: E): number
 }
