@@ -83,9 +83,11 @@ export class FragmentTracker implements ComponentAPI {
       if (!fragmentEntity || fragmentEntity.body.type !== levelType || !fragmentEntity.buffered) {
         return false;
       }
-
       const frag = fragmentEntity.body;
-      return frag.startPTS <= position && position <= frag.endPTS;
+      if (frag.startPTS === undefined) {
+        return false;
+      }
+      return frag.start <= position && position <= frag.end;
     });
     if (!bufferedFrags.length) {
       return null;
@@ -120,15 +122,14 @@ export class FragmentTracker implements ComponentAPI {
       if (!esData) {
         return;
       }
-      const fragmentTimes = esData.time;
-      for (let i = 0; i < fragmentTimes.length; i++) {
-        const time = fragmentTimes[i];
-        if (!this.isTimeBuffered(time.startPTS, time.endPTS, timeRange)) {
+      esData.time.some((time: FragmentTimeRange) => {
+        const isNotBuffered = !this.isTimeBuffered(time.startPTS, time.endPTS, timeRange);
+        if (isNotBuffered) {
           // Unregister partial fragment as it needs to load again to be reused
           this.removeFragment(fragmentEntity.body);
-          break;
         }
-      }
+        return isNotBuffered;
+      });
     });
   }
 
@@ -149,12 +150,11 @@ export class FragmentTracker implements ComponentAPI {
       return;
     }
     fragmentEntity.buffered = true;
-
     Object.keys(timeRanges).forEach(elementaryStream => {
       if (!fragment.elementaryStreams[elementaryStream]) {
         return;
       }
-      fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRanges[elementaryStream]);
+      fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.start, fragment.end, timeRanges[elementaryStream]);
     });
   }
 
@@ -211,8 +211,8 @@ export class FragmentTracker implements ComponentAPI {
         return;
       }
       if (isPartial(fragmentEntity)) {
-        startTime = fragmentEntity.body.startPTS - bufferPadding;
-        endTime = fragmentEntity.body.endPTS + bufferPadding;
+        startTime = fragmentEntity.body.start - bufferPadding;
+        endTime = fragmentEntity.body.end + bufferPadding;
         if (time >= startTime && time <= endTime) {
           // Use the fragment that has the most padding from start and end time
           timePadding = Math.min(time - startTime, endTime - time);

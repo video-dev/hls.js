@@ -1,4 +1,7 @@
+// eslint-disable-next-line import/no-duplicates
 import type Fragment from '../loader/fragment';
+// eslint-disable-next-line import/no-duplicates
+import type { Part } from '../loader/fragment';
 import type LevelDetails from '../loader/level-details';
 import type { HlsUrlParameters, Level, LevelParsed } from './level';
 import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
@@ -244,9 +247,9 @@ export interface FragLoadEmergencyAbortedData {
 
 export interface FragLoadedData {
   frag: Fragment
-  networkDetails: any
+  part?: Part
   payload: ArrayBuffer
-  stats: LoaderStats
+  networkDetails: any
 }
 
 export interface FragDecryptedData {

@@ -27,7 +27,6 @@ import EMEController from './controller/eme-controller';
 import CapLevelController from './controller/cap-level-controller';
 import AbrController from './controller/abr-controller';
 import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
-import { Tail } from './types/tuples';
 import type { HlsEventEmitter, HlsListeners } from './events';
 
 /**
@@ -171,16 +170,17 @@ export default class Hls implements HlsEventEmitter {
   }
 
   // Delegate the EventEmitter through the public API of Hls.js
-  on<E extends keyof HlsListeners, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
-    this._emitter.on(event, (...args: unknown[]) => {
-      if (this.config.debug) {
-        listener.apply(context, args);
+  on<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context) {
+    const hlsjs = this;
+    this._emitter.on(event, function (this: Context, ...args: unknown[]) {
+      if (hlsjs.config.debug) {
+        listener.apply(this, args);
       } else {
         try {
-          listener.apply(context, args);
+          listener.apply(this, args);
         } catch (e) {
           logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
-          this.trigger(Events.ERROR, {
+          hlsjs.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: false,
@@ -192,16 +192,17 @@ export default class Hls implements HlsEventEmitter {
     }, context);
   }
 
-  once<E extends keyof HlsListeners, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
-    this._emitter.once(event, (...args: unknown[]) => {
-      if (this.config.debug) {
-        listener.apply(context, args);
+  once<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context) {
+    const hlsjs = this;
+    this._emitter.once(event, function (this: Context, ...args: unknown[]) {
+      if (hlsjs.config.debug) {
+        listener.apply(this, args);
       } else {
         try {
-          listener.apply(context, args);
+          listener.apply(this, args);
         } catch (e) {
           logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
-          this.trigger(Events.ERROR, {
+          hlsjs.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: false,
@@ -225,12 +226,12 @@ export default class Hls implements HlsEventEmitter {
     return this._emitter.listeners(event);
   }
 
-  emit (event, name, ...args): boolean {
-    return this._emitter.emit(event, name, ...args);
+  emit<E extends keyof HlsListeners> (event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean {
+    return this._emitter.emit(event, name, eventObject);
   }
 
-  trigger<E extends keyof HlsListeners> (event: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean {
-    return this._emitter.emit(event, event, ...args);
+  trigger<E extends keyof HlsListeners> (event: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean {
+    return this._emitter.emit(event, event, eventObject);
   }
 
   listenerCount<E extends keyof HlsListeners> (event: E): number {
@@ -242,7 +243,7 @@ export default class Hls implements HlsEventEmitter {
    */
   destroy () {
     logger.log('destroy');
-    this.trigger(Events.DESTROYING);
+    this.trigger(Events.DESTROYING, undefined);
     this.detachMedia();
     this.networkControllers.forEach(component => component.destroy());
     this.coreComponents.forEach(component => component.destroy());
@@ -266,7 +267,7 @@ export default class Hls implements HlsEventEmitter {
    */
   detachMedia () {
     logger.log('detachMedia');
-    this.trigger(Events.MEDIA_DETACHING);
+    this.trigger(Events.MEDIA_DETACHING, undefined);
     this._media = null;
   }
 

@@ -1,12 +1,31 @@
 import FragmentLoader, { LoadError } from '../../../src/loader/fragment-loader';
 import Fragment from '../../../src/loader/fragment';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import sinon from 'sinon';
 import LoadStats from '../../../src/loader/load-stats';
-import { PlaylistLevelType } from '../../../src/types/loader';
+import {
+  FragmentLoaderContext,
+  Loader,
+  LoaderCallbacks,
+  LoaderContext,
+  PlaylistLevelType
+} from '../../../src/types/loader';
+import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
+import type { HlsConfig } from '../../../src/config';
 
-class MockXhr {
-  constructor () {
+import * as sinon from 'sinon';
+import * as chai from 'chai';
+import * as sinonChai from 'sinon-chai';
+
+chai.use(sinonChai);
+const expect = chai.expect;
+
+class MockXhr implements Loader<LoaderContext> {
+  context!: LoaderContext;
+  loader: any;
+  stats: LoadStats;
+  callbacks?: LoaderCallbacks<FragmentLoaderContext>;
+
+  constructor (confg: HlsConfig) {
     this.stats = new LoadStats();
   }
 
@@ -15,18 +34,22 @@ class MockXhr {
   }
 
   abort () {}
+  destroy (): void {}
+  getResponseHeader (name: string): string | null {
+    return null;
+  }
 }
 
 describe('FragmentLoader tests', function () {
   const sandbox = sinon.createSandbox();
-  let fragmentLoader;
+  let fragmentLoader: FragmentLoader;
   let frag;
   let response;
   let context;
   let stats;
   let networkDetails;
   beforeEach(function () {
-    fragmentLoader = new FragmentLoader({ loader: MockXhr });
+    fragmentLoader = new FragmentLoader(mergeConfig(hlsDefaultConfig, { loader: MockXhr }));
     frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.url = 'foo';
     response = {};
@@ -42,23 +65,25 @@ describe('FragmentLoader tests', function () {
   it('handles successful fragment loading', function () {
     response = { data: new Uint8Array(4) };
     return new Promise((resolve, reject) => {
+      const fragmentLoaderPrivates = fragmentLoader as any;
       fragmentLoader.load(frag)
         .then(data => {
           expect(data).to.deep.equal({
+            frag,
             payload: response.data,
             networkDetails
           });
           expect(frag.stats).to.exist;
-          expect(fragmentLoader.loader).to.not.exist;
+          expect(fragmentLoaderPrivates.loader).to.not.exist;
           expect(frag.loader).to.not.exist;
           resolve();
         })
         .catch((e) => {
           reject(e);
         });
-      expect(fragmentLoader.loader).to.exist;
-      expect(fragmentLoader.loader).to.be.instanceOf(MockXhr);
-      fragmentLoader.loader.callbacks.onSuccess(response, context, stats, networkDetails);
+      expect(fragmentLoaderPrivates.loader).to.exist;
+      expect(fragmentLoaderPrivates.loader).to.be.instanceOf(MockXhr);
+      fragmentLoaderPrivates.loader.callbacks.onSuccess(response, stats, context, networkDetails);
     });
   });
 
@@ -77,6 +102,7 @@ describe('FragmentLoader tests', function () {
 
   it('handles fragment load errors', function () {
     return new Promise((resolve, reject) => {
+      const fragmentLoaderPrivates = fragmentLoader as any;
       fragmentLoader.load(frag)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
@@ -91,18 +117,19 @@ describe('FragmentLoader tests', function () {
             response,
             networkDetails
           });
-          expect(fragmentLoader.loader).to.not.exist;
+          expect(fragmentLoaderPrivates.loader).to.not.exist;
           expect(frag.loader).to.not.exist;
           resolve();
         });
-      expect(fragmentLoader.loader).to.be.instanceOf(MockXhr);
-      fragmentLoader.loader.callbacks.onError(response, context, networkDetails);
+      expect(fragmentLoaderPrivates.loader).to.be.instanceOf(MockXhr);
+      fragmentLoaderPrivates.loader.callbacks.onError(response, context, networkDetails);
     });
   });
 
   it('handles fragment load timeouts', function () {
     // let abortSpy;
     return new Promise((resolve, reject) => {
+      const fragmentLoaderPrivates = fragmentLoader as any;
       fragmentLoader.load(frag)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
@@ -116,15 +143,15 @@ describe('FragmentLoader tests', function () {
             frag,
             networkDetails
           });
-          expect(fragmentLoader.loader).to.not.exist;
+          expect(fragmentLoaderPrivates.loader).to.not.exist;
           expect(frag.loader).to.not.exist;
           // expect(abortSpy).to.have.been.calledOnce();
           resolve();
         });
-      const loaderInstance = fragmentLoader.loader;
+      const loaderInstance: MockXhr = fragmentLoaderPrivates.loader;
       expect(loaderInstance).to.be.instanceOf(MockXhr);
       // abortSpy = sinon.spy(loaderInstance.abort);
-      loaderInstance.callbacks.onTimeout(response, context, networkDetails);
+      loaderInstance.callbacks!.onTimeout(response, context, networkDetails);
     });
   });
 });

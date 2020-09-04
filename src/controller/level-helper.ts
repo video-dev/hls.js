@@ -29,7 +29,7 @@ export function addGroupId (level: Level, type: string, id: string): void {
 export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number): void {
   const fragFrom = fragments[fromIdx];
   const fragTo = fragments[toIdx];
-  const fragToPTS = fragTo.startPTS;
+  const fragToPTS = fragTo.startPTS as number;
   // if we know startPTS[toIdx]
   if (Number.isFinite(fragToPTS)) {
     // update fragment duration.
@@ -53,41 +53,52 @@ export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number
     // we dont know startPTS[toIdx]
     if (toIdx > fromIdx) {
       const contiguous = fragFrom.cc === fragTo.cc;
-      fragTo.start = fragFrom.start + ((contiguous && fragFrom.minEndPTS) ? fragFrom.minEndPTS - fragFrom.start : fragFrom.duration);
+      // TODO: With part-loading end/durations we need to confirm the whole fragment is loaded before using (or setting) minEndPTS
+      const duration = ((contiguous && fragFrom.minEndPTS) ? fragFrom.minEndPTS - fragFrom.start : fragFrom.duration);
+      fragTo.start = fragFrom.start + duration;
     } else {
       fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
     }
   }
 }
 
-export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
+export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number, partIndex: number): number {
   let maxStartPTS = startPTS;
   let minEndPTS = endPTS;
-  if (Number.isFinite(frag.startPTS)) {
+  const fragStartPts = frag.startPTS as number;
+  const fragEndPts = frag.endPTS as number;
+  if (Number.isFinite(fragStartPts)) {
     // delta PTS between audio and video
-    const deltaPTS = Math.abs(frag.startPTS - startPTS);
+    const deltaPTS = Math.abs(fragStartPts - startPTS);
     if (!Number.isFinite(frag.deltaPTS as number)) {
       frag.deltaPTS = deltaPTS;
     } else {
       frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS as number);
     }
 
-    maxStartPTS = Math.max(startPTS, frag.startPTS);
-    startPTS = Math.min(startPTS, frag.startPTS);
-    minEndPTS = Math.min(endPTS, frag.endPTS);
-    endPTS = Math.max(endPTS, frag.endPTS);
+    maxStartPTS = Math.max(startPTS, fragStartPts);
+    startPTS = Math.min(startPTS, fragStartPts);
+    minEndPTS = Math.min(endPTS, fragEndPts);
+    endPTS = Math.max(endPTS, fragEndPts);
     startDTS = Math.min(startDTS, frag.startDTS);
     endDTS = Math.max(endDTS, frag.endDTS);
   }
 
+  const parsedMediaDuration = endPTS - startPTS;
   const drift = startPTS - frag.start;
+  frag.appendedPTS = endPTS;
   frag.start = frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
-  frag.endPTS = frag.appendedPTS = endPTS;
-  frag.minEndPTS = minEndPTS;
   frag.startDTS = startDTS;
-  frag.endDTS = endDTS;
-  frag.duration = endPTS - startPTS;
+  // TODO: When we are loading parts we don't explicitly know if/when all parts have been loaded
+  // If we the manifest contains LL-HLS parts, only update end after all parts are loaded.
+  if (!details || !details.partTarget || parsedMediaDuration > frag.duration - details.partTarget / 2) {
+    frag.endPTS = endPTS;
+    frag.minEndPTS = minEndPTS;
+    frag.endDTS = endDTS;
+    frag.duration = parsedMediaDuration;
+  }
+
   console.assert(frag.duration > 0, 'Fragment should have a positive duration', frag);
 
   const sn = frag.sn as number; // 'initSegment'
@@ -139,7 +150,8 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
       newFrag.endPTS = oldFrag.endPTS;
       newFrag.endDTS = oldFrag.endDTS;
       newFrag.minEndPTS = oldFrag.minEndPTS;
-      newFrag.duration = oldFrag.duration;
+      const duration = Math.max(oldFrag.endPTS - oldFrag.startPTS, oldFrag.duration);
+      newFrag.duration = duration;
 
       newFrag.backtracked = oldFrag.backtracked;
       newFrag.dropped = oldFrag.dropped;
@@ -167,7 +179,7 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
 
   // if at least one fragment contains PTS info, recompute PTS information for all fragments
   if (PTSFrag) {
-    updateFragPTSDTS(newDetails, PTSFrag, PTSFrag.startPTS, PTSFrag.endPTS, PTSFrag.startDTS, PTSFrag.endDTS);
+    updateFragPTSDTS(newDetails, PTSFrag, PTSFrag.startPTS, PTSFrag.endPTS, PTSFrag.startDTS, PTSFrag.endDTS, -1);
   } else {
     // ensure that delta is within oldFragments range
     // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
@@ -222,8 +234,9 @@ export function adjustSliding (oldPlaylist: LevelDetails, newPlaylist: LevelDeta
   if (delta < 0 || delta > oldFragments.length) {
     return;
   }
+  const playlistStartOffset = oldFragments[delta].start;
   for (let i = 0; i < newFragments.length; i++) {
-    newFragments[i].start += oldFragments[delta].start;
+    newFragments[i].start += playlistStartOffset;
   }
 }
 

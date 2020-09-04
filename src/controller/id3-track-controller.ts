@@ -97,10 +97,7 @@ class ID3TrackController implements ComponentAPI {
       const frames = ID3.getID3Frames(samples[i].data);
       if (frames) {
         const startTime = samples[i].pts;
-        let endTime: number = i < samples.length - 1 ? samples[i + 1].pts : fragment.endPTS;
-        if (!endTime) {
-          endTime = fragment.start + fragment.duration;
-        }
+        let endTime: number = i < samples.length - 1 ? samples[i + 1].pts : fragment.end;
 
         const timeDiff = endTime - startTime;
         if (timeDiff <= 0) {

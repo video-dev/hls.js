@@ -39,6 +39,7 @@ describe('BufferOperationQueue tests', function () {
       const execute = sandbox.spy();
       const operation: BufferOperation = {
         execute,
+        onStart: () => {},
         onComplete: () => {},
         onError: () => {}
       };
@@ -59,6 +60,7 @@ describe('BufferOperationQueue tests', function () {
     const execute = sandbox.spy();
     const operation: BufferOperation = {
       execute,
+      onStart: () => {},
       onComplete: () => {},
       onError: () => {}
     };
@@ -72,7 +74,7 @@ describe('BufferOperationQueue tests', function () {
 
   describe('appendBlocker', function () {
     it('appends a blocking promise, which resolves upon execution', function () {
-      const promises = [];
+      const promises: Promise<{}>[] = [];
       queueNames.forEach(name => {
         promises.push(operationQueue.appendBlocker(name));
       });
@@ -98,6 +100,7 @@ describe('BufferOperationQueue tests', function () {
         execute: () => {
           throw error;
         },
+        onStart: () => {},
         onComplete: () => {},
         onError
       };
@@ -114,6 +117,7 @@ describe('BufferOperationQueue tests', function () {
     const execute = sandbox.spy();
     const operation: BufferOperation = {
       execute,
+      onStart: () => {},
       onComplete: () => {},
       onError: () => {}
     };

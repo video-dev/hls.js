@@ -92,6 +92,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     const currentOnComplete = sandbox.spy();
     const currentOperation: BufferOperation = {
       execute: () => {},
+      onStart: () => {},
       onComplete: currentOnComplete,
       onError: () => {}
     };
@@ -99,6 +100,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     const nextExecute = sandbox.spy();
     const nextOperation: BufferOperation = {
       execute: nextExecute,
+      onStart: () => {},
       onComplete: () => {},
       onError: () => {}
     };
@@ -116,6 +118,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     const onError = sandbox.spy();
     const operation: BufferOperation = {
       execute: () => {},
+      onStart: () => {},
       onComplete: () => {},
       onError
     };

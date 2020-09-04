@@ -9,12 +9,13 @@
     "strictPropertyInitialization": true,
     "lib": [
       "dom",
-      "es2015",
+      "es2015"
     ],
-    "outDir": "./dist/",
+    "outDir": "./dist/"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "tests/unit/**/*"
   ],
   "exclude": [
     "node_modules",

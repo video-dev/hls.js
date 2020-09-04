@@ -104,9 +104,9 @@ export default class Fragment extends BaseSegment {
   // The continuity counter of the fragment
   public cc: number = 0;
   // The starting Presentation Time Stamp (PTS) of the fragment. Set after transmux complete.
-  public startPTS!: number;
+  public startPTS?: number;
   // The ending Presentation Time Stamp (PTS) of the fragment. Set after transmux complete.
-  public endPTS!: number;
+  public endPTS?: number;
   // The latest Presentation Time Stamp (PTS) appended to the buffer.
   public appendedPTS?: number;
   // The starting Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
@@ -169,6 +169,10 @@ export default class Fragment extends BaseSegment {
     }
 
     return this._decryptdata;
+  }
+
+  get end (): number {
+    return this.start + this.duration;
   }
 
   get endProgramDateTime () {
@@ -257,7 +261,8 @@ export default class Fragment extends BaseSegment {
     const index = partList.length;
     const part = new Part(partAttr, this.baseurl, index, partList[index - 1]);
     partList.push(part);
-    this.duration += part.duration;
+    // TODO: use sum of parts duration until complete segment is found in playlist
+    // this.duration += part.duration;
   }
 
   get hasParts (): boolean {

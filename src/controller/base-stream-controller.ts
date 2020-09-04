@@ -2,23 +2,22 @@ import TaskLoop from '../task-loop';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
-import { Events, HlsListeners } from '../events';
-import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
+import { ErrorDetails } from '../errors';
 import * as LevelHelper from './level-helper';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS, findFragWithCC } from './fragment-finders';
 import TransmuxerInterface from '../demux/transmuxer-interface';
-import Fragment from '../loader/fragment';
+import Fragment, { Part } from '../loader/fragment';
 import FragmentLoader, {
   FragLoadFailResult,
-  FragLoadSuccessResult,
   FragmentLoadProgressCallback,
   LoadError
 } from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
-import { BufferAppendingData, ErrorData } from '../types/events';
+import { BufferAppendingData, ErrorData, FragLoadedData } from '../types/events';
 import { Level } from '../types/level';
 import { RemuxedTrack } from '../types/remuxer';
 import Hls from '../hls';
@@ -177,42 +176,40 @@ export default class BaseStreamController extends TaskLoop {
   }
 
   protected _loadFragForPlayback (frag: Fragment, targetBufferTime: number) {
-    const progressCallback: FragmentLoadProgressCallback = (data: FragLoadSuccessResult) => {
+    const progressCallback: FragmentLoadProgressCallback = (data: FragLoadedData) => {
       if (this._fragLoadAborted(frag)) {
         this.warn(`Fragment ${frag.sn} of level ${frag.level} was aborted during progressive download.`);
         this.fragmentTracker.removeFragment(frag);
         return;
       }
       frag.stats.chunkCount++;
-      this._handleFragmentLoadProgress(frag, data.payload);
+      this._handleFragmentLoadProgress(data);
     };
 
     this._doFragLoad(frag, targetBufferTime, progressCallback)
-      .then((data: FragLoadSuccessResult | null) => {
+      .then((data: FragLoadedData | null) => {
         this.fragLoadError = 0;
-        if (!data || this._fragLoadAborted(frag)) {
+        const aborted = this._fragLoadAborted(frag);
+        if (!data || aborted) {
           return;
         }
         this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
-        // For compatibility, emit the FRAG_LOADED with the same signature
-        const compatibilityEventData: any = data;
-        compatibilityEventData.frag = frag;
-        this.hls.trigger(Events.FRAG_LOADED, compatibilityEventData);
+        this.hls.trigger(Events.FRAG_LOADED, data);
         // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
-        this._handleFragmentLoadComplete(frag, data.payload);
+        this._handleFragmentLoadComplete(data);
       });
   }
 
   protected _loadInitSegment (frag: Fragment) {
     this._doFragLoad(frag)
-      .then((data: FragLoadSuccessResult | null) => {
+      .then((data: FragLoadedData | null) => {
         if (!data || this._fragLoadAborted(frag) || !this.levels) {
           throw new Error('init load aborted');
         }
 
         return data;
       })
-      .then((data: FragLoadSuccessResult) => {
+      .then((data: FragLoadedData) => {
         const { hls } = this;
         const { payload } = data;
         const decryptData = frag.decryptdata;
@@ -238,7 +235,7 @@ export default class BaseStreamController extends TaskLoop {
         }
 
         return data;
-      }).then((data: FragLoadSuccessResult) => {
+      }).then((data: FragLoadedData) => {
         const { fragCurrent, hls, levels } = this;
         if (!levels) {
           throw new Error('init load aborted, missing levels');
@@ -258,7 +255,7 @@ export default class BaseStreamController extends TaskLoop {
         // TODO: set id from calling class
 
         // Silence FRAG_BUFFERED event if fragCurrent is null
-        if (fragCurrent) {
+        if (data.frag === fragCurrent) {
           hls.trigger(Events.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
         }
         this.tick();
@@ -269,28 +266,29 @@ export default class BaseStreamController extends TaskLoop {
 
   protected _fragLoadAborted (frag: Fragment | null) {
     const { fragCurrent } = this;
-    if (!frag || !fragCurrent) {
+    // TODO: Do frags in tracks have a level property? what abot track id?
+    if (!frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn) {
       return true;
     }
-    // TODO: This works for levels but what about tracks?
-    return frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn;
+    return false;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected _handleFragmentLoadComplete (frag: Fragment, payload: ArrayBuffer | Uint8Array) {
+  protected _handleFragmentLoadComplete (fragLoadedData: FragLoadedData) {
     const { transmuxer } = this;
     if (!transmuxer) {
       return;
     }
-    const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0);
+    const { frag, part } = fragLoadedData;
+    const partIndex = part ? part.index : -1;
+    const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0, partIndex);
     chunkMeta.transmuxing.start = performance.now();
     transmuxer.flush(chunkMeta);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected _handleFragmentLoadProgress (frag: Fragment, payload: ArrayBuffer | Uint8Array) {}
+  protected _handleFragmentLoadProgress (frag: FragLoadedData) {}
 
-  protected _doFragLoad (frag: Fragment, targetBufferTime: number | null = null, progressCallback?: FragmentLoadProgressCallback): Promise<FragLoadSuccessResult | null> {
+  protected _doFragLoad (frag: Fragment, targetBufferTime: number | null = null, progressCallback?: FragmentLoadProgressCallback): Promise<FragLoadedData | null> {
     this.state = State.FRAG_LOADING;
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
 
@@ -299,7 +297,7 @@ export default class BaseStreamController extends TaskLoop {
         const errorData: FragLoadFailResult = e.data;
 
         if (errorData && errorData.details === ErrorDetails.INTERNAL_ABORTED) {
-          this.handleFragLoadAborted(frag);
+          this.handleFragLoadAborted(frag, errorData.part);
         } else {
           this.hls.trigger(Events.ERROR, errorData as ErrorData);
         }
@@ -317,15 +315,15 @@ export default class BaseStreamController extends TaskLoop {
     if (!context) {
       return;
     }
-    const { frag, level } = context;
+    const { frag, partIndex, level } = context;
     frag.stats.parsing.end = performance.now();
 
-    this.updateLevelTiming(frag, level);
+    this.updateLevelTiming(frag, level, partIndex);
     this.state = State.PARSED;
     this.hls.trigger(Events.FRAG_PARSED, { frag });
   }
 
-  protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, level: Level } | null {
+  protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, partIndex: number, level: Level } | null {
     const { fragCurrent, levels } = this;
     const { level, sn } = chunkMeta;
     if (!levels || !levels[level]) {
@@ -343,7 +341,7 @@ export default class BaseStreamController extends TaskLoop {
     // Assign fragCurrent. References to fragments in the level details change between playlist refreshes.
     // TODO: Preserve frag references between live playlist refreshes
     frag = fragCurrent!;
-    return { frag, level: currentLevel };
+    return { frag, partIndex: chunkMeta.part, level: currentLevel };
   }
 
   protected bufferFragmentData (data: RemuxedTrack, frag: Fragment, chunkMeta: ChunkMetadata) {
@@ -621,7 +619,7 @@ export default class BaseStreamController extends TaskLoop {
     return pos;
   }
 
-  private handleFragLoadAborted (frag: Fragment) {
+  private handleFragLoadAborted (frag: Fragment, part: Part | undefined) {
     const { fragPrevious, transmuxer } = this;
     // TODO: nextLoadPos should only be set on successful frag load
     if (fragPrevious) {
@@ -630,7 +628,7 @@ export default class BaseStreamController extends TaskLoop {
       this.nextLoadPosition = this.lastCurrentTime;
     }
     if (transmuxer && frag.sn !== 'initSegment') {
-      transmuxer.flush(new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0));
+      transmuxer.flush(new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0, part ? part.index : -1));
     }
 
     Object.keys(frag.elementaryStreams).forEach(type => {
@@ -639,13 +637,13 @@ export default class BaseStreamController extends TaskLoop {
     this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer & resetting nextLoadPosition to ${this.nextLoadPosition}`);
   }
 
-  private updateLevelTiming (frag: Fragment, level: Level) {
+  private updateLevelTiming (frag: Fragment, level: Level, partIndex: number) {
     const details = level.details as LevelDetails;
     console.assert(!!details, 'level.details must be defined');
     Object.keys(frag.elementaryStreams).forEach(type => {
       const info = frag.elementaryStreams[type];
       if (info) {
-        const drift = LevelHelper.updateFragPTSDTS(details, frag, info.startPTS, info.endPTS, info.startDTS, info.endDTS);
+        const drift = LevelHelper.updateFragPTSDTS(details, frag, info.startPTS, info.endPTS, info.startDTS, info.endDTS, partIndex);
         this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
           details,
           level,
