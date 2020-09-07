@@ -321,11 +321,11 @@ export default class StreamController extends BaseStreamController implements Ne
   }
 
   getAppendedFrag (position) {
-    return this.fragmentTracker.getAppendedFrag(position, PlaylistLoader.LevelType.MAIN);
+    return this.fragmentTracker.getAppendedFrag(position, PlaylistLevelType.MAIN);
   }
 
   getBufferedFrag (position) {
-    return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
+    return this.fragmentTracker.getBufferedFrag(position, PlaylistLevelType.MAIN);
   }
 
   followingBufferedFrag (frag: Fragment | null) {

@@ -24,7 +24,7 @@ import Hls from '../hls';
 const chromeOrFirefox: boolean = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
 export default class LevelController extends BasePlaylistController {
-  private _levels: Level[] | null = null;
+  private _levels: Level[] = [];
   private _firstLevel: number = -1;
   private _startLevel?: number;
   private currentLevelIndex: number = -1;
@@ -67,12 +67,10 @@ export default class LevelController extends BasePlaylistController {
 
     this.levelRetryCount = 0;
 
-    // Reset load errors
-    if (levels) {
-      levels.forEach(level => {
-        level.loadError = 0;
-      });
-    }
+    // clean up live level details to force reload them, and reset load errors
+    levels.forEach(level => {
+      level.loadError = 0;
+    });
 
     super.startLoad();
   }
@@ -185,6 +183,9 @@ export default class LevelController extends BasePlaylistController {
   }
 
   get levels (): Level[] | null {
+    if (this._levels.length === 0) {
+      return null;
+    }
     return this._levels;
   }
 
@@ -194,42 +195,39 @@ export default class LevelController extends BasePlaylistController {
 
   set level (newLevel: number) {
     const levels = this._levels;
-    if (levels) {
-      newLevel = Math.min(newLevel, levels.length - 1);
-      if (this.currentLevelIndex !== newLevel || !levels[newLevel].details) {
-        const levels = this._levels as Level[];
-        const hls = this.hls;
-        // check if level idx is valid
-        if (newLevel >= 0 && newLevel < levels.length) {
-          // stopping live reloading timer if any
-          this.clearTimer();
-          if (this.currentLevelIndex !== newLevel) {
-            const lastLevel = this.currentLevelIndex;
-            logger.log(`[level-controller]: switching to level ${newLevel} from ${lastLevel}`);
-            this.currentLevelIndex = newLevel;
-            hls.trigger(Events.LEVEL_SWITCHING, Object.assign({}, levels[newLevel], {
-              level: newLevel
-            }));
-          }
-          const level = levels[newLevel];
-          const levelDetails = level.details;
-
-          // check if we need to load playlist for this level
-          if (!levelDetails || levelDetails.live) {
-            // level not retrieved yet, or live playlist we need to (re)load it
-            // TODO: LL-HLS use RENDITION-REPORT if available
-            this.loadPlaylist();
-          }
-        } else {
-          // invalid level id given, trigger error
-          hls.trigger(Events.ERROR, {
-            type: ErrorTypes.OTHER_ERROR,
-            details: ErrorDetails.LEVEL_SWITCH_ERROR,
-            level: newLevel,
-            fatal: false,
-            reason: 'invalid level idx'
-          });
+    newLevel = Math.min(newLevel, levels.length - 1);
+    if (this.currentLevelIndex !== newLevel || !levels[newLevel]?.details) {
+      const hls = this.hls;
+      // check if level idx is valid
+      if (newLevel >= 0 && newLevel < levels.length) {
+        // stopping live reloading timer if any
+        this.clearTimer();
+        if (this.currentLevelIndex !== newLevel) {
+          const lastLevel = this.currentLevelIndex;
+          logger.log(`[level-controller]: switching to level ${newLevel} from ${lastLevel}`);
+          this.currentLevelIndex = newLevel;
+          hls.trigger(Events.LEVEL_SWITCHING, Object.assign({}, levels[newLevel], {
+            level: newLevel
+          }));
         }
+        const level = levels[newLevel];
+        const levelDetails = level.details;
+
+        // check if we need to load playlist for this level
+        if (!levelDetails || levelDetails.live) {
+          // level not retrieved yet, or live playlist we need to (re)load it
+          // TODO: LL-HLS use RENDITION-REPORT if available
+          this.loadPlaylist();
+        }
+      } else {
+        // invalid level id given, trigger error
+        hls.trigger(Events.ERROR, {
+          type: ErrorTypes.OTHER_ERROR,
+          details: ErrorDetails.LEVEL_SWITCH_ERROR,
+          level: newLevel,
+          fatal: false,
+          reason: 'invalid level idx'
+        });
       }
     }
   }
@@ -327,12 +325,7 @@ export default class LevelController extends BasePlaylistController {
    * Switch to a redundant stream if any available.
    * If redundant stream is not available, emergency switch down if ABR mode is enabled.
    */
-  // FIXME Find a better abstraction where fragment/level retry management is well decoupled
   private recoverLevel (errorEvent: ErrorData, levelIndex: number, levelError: boolean, fragmentError: boolean, levelSwitch: boolean): void {
-    // TODO: Handle levels not set rather than throwing (see other parts of this module throwing the same error)
-    if (!this._levels) {
-      throw new Error('Levels are not set');
-    }
     const { config } = this.hls;
     const { details: errorDetails } = errorEvent;
     const level = this._levels[levelIndex];
@@ -395,9 +388,6 @@ export default class LevelController extends BasePlaylistController {
   // reset errors on the successful load of a fragment
   protected onFragLoaded (event: Events.FRAG_LOADED, { frag }: FragLoadedData) {
     if (frag !== undefined && frag.type === 'main') {
-      if (!this._levels) {
-        throw new Error('Levels are not set');
-      }
       const level = this._levels[frag.level];
       if (level !== undefined) {
         level.fragmentError = false;
@@ -408,9 +398,6 @@ export default class LevelController extends BasePlaylistController {
   }
 
   protected onLevelLoaded (event: Events.LEVEL_LOADED, data: LevelLoadedData) {
-    if (!this._levels) {
-      throw new Error('Levels are not set');
-    }
     const { level, details } = data;
     const curLevel = this._levels[level];
 
@@ -455,9 +442,6 @@ export default class LevelController extends BasePlaylistController {
   }
 
   protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters) {
-    if (!this._levels) {
-      throw new Error('Levels are not set');
-    }
     const level = this.currentLevelIndex;
     const currentLevel = this._levels[level];
 
@@ -504,9 +488,6 @@ export default class LevelController extends BasePlaylistController {
   }
 
   removeLevel (levelIndex, urlId) {
-    if (!this._levels) {
-      throw new Error('Levels are not set');
-    }
     const levels = this._levels.filter((level, index) => {
       if (index !== levelIndex) {
         return true;

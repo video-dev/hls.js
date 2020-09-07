@@ -15,7 +15,7 @@ import { logger } from '../utils/logger';
 import { parseSegmentIndex } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
 import { LevelParsed } from '../types/level';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { LoaderConfiguration, PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 import Hls from '../hls';
@@ -79,11 +79,6 @@ class PlaylistLoader {
     hls.off(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.off(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading, this);
     hls.off(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading, this);
-  }
-
-  // TODO: export as enum once fragment-tracker and stream-controller typed
-  static get LevelType () {
-    return PlaylistLevelType;
   }
 
   /**
@@ -227,7 +222,7 @@ class PlaylistLoader {
 
     loader = this.createInternalLoader(context);
 
-    const loaderConfig = {
+    const loaderConfig: LoaderConfiguration = {
       timeout,
       maxRetry,
       retryDelay,

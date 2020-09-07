@@ -103,7 +103,6 @@ class SubtitleTrackController extends BasePlaylistController {
     this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
     // loop through available subtitle tracks and autoselect default if needed
-    // TODO: improve selection logic to handle forced, etc
     subtitleTracks.forEach((track: MediaPlaylist) => {
       if (track.default) {
         // setting this.subtitleTrack will trigger internal logic

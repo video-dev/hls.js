@@ -54,8 +54,11 @@ export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number
     if (toIdx > fromIdx) {
       const contiguous = fragFrom.cc === fragTo.cc;
       // TODO: With part-loading end/durations we need to confirm the whole fragment is loaded before using (or setting) minEndPTS
-      const duration = ((contiguous && fragFrom.minEndPTS) ? fragFrom.minEndPTS - fragFrom.start : fragFrom.duration);
-      fragTo.start = fragFrom.start + duration;
+      if (contiguous && fragFrom.minEndPTS && !fragFrom.hasParts) {
+        fragTo.start = fragFrom.start + (fragFrom.minEndPTS - fragFrom.start);
+      } else {
+        fragTo.start = fragFrom.start + fragFrom.duration;
+      }
     } else {
       fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
     }
@@ -146,13 +149,12 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
       newFrag.startDTS = oldFrag.startDTS;
       newFrag.appendedPTS = oldFrag.appendedPTS;
       newFrag.maxStartPTS = oldFrag.maxStartPTS;
-
-      newFrag.endPTS = oldFrag.endPTS;
-      newFrag.endDTS = oldFrag.endDTS;
-      newFrag.minEndPTS = oldFrag.minEndPTS;
-      const duration = Math.max(oldFrag.endPTS - oldFrag.startPTS, oldFrag.duration);
-      newFrag.duration = duration;
-
+      if (!oldFrag.hasParts) {
+        newFrag.endPTS = oldFrag.endPTS;
+        newFrag.endDTS = oldFrag.endDTS;
+        newFrag.minEndPTS = oldFrag.minEndPTS;
+        newFrag.duration = oldFrag.endPTS - oldFrag.startPTS;
+      }
       newFrag.backtracked = oldFrag.backtracked;
       newFrag.dropped = oldFrag.dropped;
       PTSFrag = newFrag;

@@ -261,8 +261,7 @@ export default class Fragment extends BaseSegment {
     const index = partList.length;
     const part = new Part(partAttr, this.baseurl, index, partList[index - 1]);
     partList.push(part);
-    // TODO: use sum of parts duration until complete segment is found in playlist
-    // this.duration += part.duration;
+    this.duration += part.duration;
   }
 
   get hasParts (): boolean {

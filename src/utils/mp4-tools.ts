@@ -1,7 +1,6 @@
 import { sliceUint8 } from './typed-array';
 import { ElementaryStreamTypes } from '../loader/fragment';
 
-// Todo: Optimize by using loops instead of array methods
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
 export function bin2str (buffer): string {
@@ -220,20 +219,18 @@ export interface InitData extends Array<any> {
 export function parseInitSegment (initSegment): InitData {
   const result: InitData = [];
   const traks = findBox(initSegment, ['moov', 'trak']);
-
-  traks.forEach(trak => {
+  for (let i = 0; i < traks.length; i++) {
+    const trak = traks[i];
     const tkhd = findBox(trak, ['tkhd'])[0];
     if (tkhd) {
       let version = tkhd.data[tkhd.start];
       let index = version === 0 ? 12 : 20;
       const trackId = readUint32(tkhd, index);
-
       const mdhd = findBox(trak, ['mdia', 'mdhd'])[0];
       if (mdhd) {
         version = mdhd.data[mdhd.start];
         index = version === 0 ? 12 : 20;
         const timescale = readUint32(mdhd, index);
-
         const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
         if (hdlr) {
           const hdlrType = bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
@@ -252,7 +249,7 @@ export function parseInitSegment (initSegment): InitData {
         }
       }
     }
-  });
+  }
   return result;
 }
 

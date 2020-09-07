@@ -1,7 +1,8 @@
-import { InitSegmentData, RemuxedTrack, Remuxer, RemuxerResult } from '../types/remuxer';
 import { getDuration, getStartDTS, offsetStartDTS, parseInitSegment, InitData } from '../utils/mp4-tools';
-import { TrackSet } from '../types/track';
 import { logger } from '../utils/logger';
+import type { TrackSet } from '../types/track';
+import type { InitSegmentData, RemuxedTrack, Remuxer, RemuxerResult } from '../types/remuxer';
+import type { DemuxedAudioTrack, DemuxedTrack, PassthroughVideoTrack } from '../types/demuxer';
 
 class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
@@ -70,8 +71,7 @@ class PassThroughRemuxer implements Remuxer {
     this.initTracks = tracks;
   }
 
-  // TODO: utilize accurateTimeOffset
-  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, accurateTimeOffset): RemuxerResult {
+  remux (audioTrack: DemuxedAudioTrack, videoTrack: PassthroughVideoTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset: number): RemuxerResult {
     let { initPTS, lastEndDTS } = this;
     const result: RemuxerResult = {
       audio: undefined,

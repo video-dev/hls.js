@@ -13,7 +13,6 @@ export default class BufferOperationQueue {
     this.buffers = sourceBufferReference;
   }
 
-  // TODO: Handle media errors, (!this.media || this.media.error)
   public append (operation: BufferOperation, type: SourceBufferName) {
     const queue = this.queues[type];
     queue.push(operation);

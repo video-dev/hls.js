@@ -45,7 +45,6 @@ class MP4Demuxer implements Demuxer {
     };
   }
 
-  // TODO: Re-validate remainder data? Or we can assume that the segmented remainder is always valid CMAF
   flush () {
     const avcTrack: DemuxedTrack = dummyTrack();
     avcTrack.samples = this.remainderData;
