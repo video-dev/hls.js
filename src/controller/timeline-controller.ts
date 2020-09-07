@@ -159,7 +159,6 @@ export class TimelineController implements ComponentAPI {
     if (unparsedVttFrags.length) {
       this.unparsedVttFrags = [];
       unparsedVttFrags.forEach(frag => {
-        // TODO: This can be either FragLoadedData or FragDecryptedData
         this.onFragLoaded(Events.FRAG_LOADED, frag as FragLoadedData);
       });
     }

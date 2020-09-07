@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 import { isCodecType, CodecType } from '../utils/codecs';
 import { MediaPlaylist, AudioGroup, MediaPlaylistType } from '../types/media-playlist';
 import { PlaylistLevelType } from '../types/loader';
-import { LevelAttributes } from '../types/level';
+import { LevelAttributes, LevelParsed } from '../types/level';
 
 /**
  * M3U8 parser
@@ -81,48 +81,28 @@ export default class M3U8Parser {
   }
 
   static parseMasterPlaylist (string: string, baseurl: string) {
-    // TODO(typescript-level)
-    const levels: Array<any> = [];
+    const levels: Array<LevelParsed> = [];
     const sessionData: Record<string, AttrList> = {};
     let hasSessionData = false;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
-
-    // TODO(typescript-level)
-    function setCodecs (codecs: Array<string>, level: any) {
-      ['video', 'audio', 'text'].forEach((type: CodecType) => {
-        const filtered = codecs.filter((codec) => isCodecType(codec, type));
-        if (filtered.length) {
-          const preferred = filtered.filter((codec) => {
-            return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
-          });
-          level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
-
-          // remove from list
-          codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
-        }
-      });
-
-      level.unknownCodecs = codecs;
-    }
 
     let result: RegExpExecArray | null;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       if (result[1]) {
         // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
-
-        // TODO(typescript-level)
-        const level: any = {};
-
-        const attrs = level.attrs = new AttrList(result[1]);
-        level.url = M3U8Parser.resolve(result[2], baseurl);
+        const attrs = new AttrList(result[1]);
+        const level: LevelParsed = {
+          attrs,
+          bitrate: attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH'),
+          name: attrs.NAME,
+          url: M3U8Parser.resolve(result[2], baseurl)
+        };
 
         const resolution = attrs.decimalResolution('RESOLUTION');
         if (resolution) {
           level.width = resolution.width;
           level.height = resolution.height;
         }
-        level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
-        level.name = attrs.NAME;
 
         setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
 
@@ -201,11 +181,6 @@ export default class M3U8Parser {
 
     const appendfragment = () => {
       frag.start = totalduration;
-      // TODO: This segment is not complete and is a collection of parts. Ideally it's duration would be the sum of
-      //  of it's parts and it would update when the live level is updated
-      if (!frag.duration) {
-        frag.duration = level.targetduration;
-      }
       if (levelkey) {
         frag.levelkey = levelkey;
       }
@@ -471,6 +446,23 @@ export default class M3U8Parser {
 
     return level;
   }
+}
+
+function setCodecs (codecs: Array<string>, level: LevelParsed) {
+  ['video', 'audio', 'text'].forEach((type: CodecType) => {
+    const filtered = codecs.filter((codec) => isCodecType(codec, type));
+    if (filtered.length) {
+      const preferred = filtered.filter((codec) => {
+        return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+      });
+      level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
+
+      // remove from list
+      codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
+    }
+  });
+
+  level.unknownCodecs = codecs;
 }
 
 function assignCodec (media, groupItem, codecProperty) {

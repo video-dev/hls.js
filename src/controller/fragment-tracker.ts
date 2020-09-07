@@ -7,18 +7,18 @@ import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 import { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
 
-export const FragmentState = {
-  NOT_LOADED: 'NOT_LOADED',
-  APPENDING: 'APPENDING',
-  PARTIAL: 'PARTIAL',
-  OK: 'OK'
-};
+export enum FragmentState {
+  NOT_LOADED = 'NOT_LOADED',
+  APPENDING = 'APPENDING',
+  PARTIAL = 'PARTIAL',
+  OK = 'OK'
+}
 
 export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;
   private fragments: Partial<Record<string, FragmentEntity>> = Object.create(null);
   private timeRanges: {
-    [key in SourceBufferName]?: TimeRanges
+    [key in SourceBufferName]: TimeRanges
   } | null = Object.create(null);
 
   private bufferPadding: number = 0.2;
@@ -53,9 +53,6 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Return a Fragment with an appended range that matches the position and levelType.
    * If not found any Fragment, return null
-   * @param {number} position
-   * @param {LevelType} levelType
-   * @returns {Fragment|null}
    */
   getAppendedFrag (position: number, levelType: PlaylistLevelType) : Fragment | null {
     const { activeFragment } = this;
@@ -72,9 +69,6 @@ export class FragmentTracker implements ComponentAPI {
    * Return a buffered Fragment that matches the position and levelType.
    * A buffered Fragment is one whose loading, parsing and appending is done (completed or "partial" meaning aborted).
    * If not found any Fragment, return null
-   * @param {number} position
-   * @param {LevelType} levelType
-   * @returns {Fragment|null}
    */
   getBufferedFrag (position: number, levelType: PlaylistLevelType) : Fragment | null {
     const { fragments } = this;
@@ -108,10 +102,8 @@ export class FragmentTracker implements ComponentAPI {
    * Partial fragments effected by coded frame eviction will be removed
    * The browser will unload parts of the buffer to free up memory for new buffer data
    * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
-   * @param {String} elementaryStream The elementaryStream of media this is (eg. video/audio)
-   * @param {TimeRanges} timeRange TimeRange object from a sourceBuffer
    */
-  detectEvictedFragments (elementaryStream, timeRange) : void {
+  detectEvictedFragments (elementaryStream: SourceBufferName, timeRange: TimeRanges) {
     // Check if any flagged fragments have been unloaded
     Object.keys(this.fragments).forEach(key => {
       const fragmentEntity = this.fragments[key];
@@ -136,9 +128,8 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Checks if the fragment passed in is loaded in the buffer properly
    * Partially loaded fragments will be registered as a partial fragment
-   * @param {Object} fragment Check the fragment against all sourceBuffers loaded
    */
-  detectPartialFragments (fragment: Fragment) : void {
+  detectPartialFragments (fragment: Fragment) {
     const { timeRanges, fragments } = this;
     if (!timeRanges) {
       return;
@@ -195,8 +186,6 @@ export class FragmentTracker implements ComponentAPI {
 
   /**
    * Gets the partial fragment for a certain time
-   * @param {Number} time
-   * @returns {Object} fragment Returns a partial fragment at a time or null if there is no partial fragment
    */
   getPartialFragment (time: number): Fragment | null {
     let bestFragment: Fragment | null = null;
@@ -227,25 +216,23 @@ export class FragmentTracker implements ComponentAPI {
   }
 
   /**
-   * @param {Object} fragment The fragment to check
-   * @returns {String} Returns the fragment state when a fragment never loaded or if it partially loaded
+   *  Return the fragment state when a fragment never loaded or if it partially loaded
    */
-  getState (fragment: Fragment): string {
+  getState (fragment: Fragment): FragmentState {
     const fragKey = getFragmentKey(fragment);
     const fragmentEntity = this.fragments[fragKey];
-    let state = FragmentState.NOT_LOADED;
 
     if (fragmentEntity) {
       if (!fragmentEntity.buffered) {
-        state = FragmentState.APPENDING;
+        return FragmentState.APPENDING;
       } else if (isPartial(fragmentEntity)) {
-        state = FragmentState.PARTIAL;
+        return FragmentState.PARTIAL;
       } else {
-        state = FragmentState.OK;
+        return FragmentState.OK;
       }
     }
 
-    return state;
+    return FragmentState.NOT_LOADED;
   }
 
   isTimeBuffered (startPTS: number, endPTS: number, timeRange: TimeRanges): boolean {
@@ -292,9 +279,9 @@ export class FragmentTracker implements ComponentAPI {
     const { frag, timeRanges } = data;
     this.activeFragment = frag;
     // Store the latest timeRanges loaded in the buffer
-    this.timeRanges = timeRanges;
-    Object.keys(timeRanges).forEach(elementaryStream => {
-      const timeRange = timeRanges[elementaryStream];
+    this.timeRanges = timeRanges as { [key in SourceBufferName]: TimeRanges };
+    Object.keys(timeRanges).forEach((elementaryStream: SourceBufferName) => {
+      const timeRange = timeRanges[elementaryStream] as TimeRanges;
       this.detectEvictedFragments(elementaryStream, timeRange);
       for (let i = 0; i < timeRange.length; i++) {
         frag.appendedPTS = Math.max(timeRange.end(i), frag.appendedPTS || 0);
@@ -311,8 +298,6 @@ export class FragmentTracker implements ComponentAPI {
 
   /**
    * Return true if fragment tracker has the fragment.
-   * @param {Object} fragment
-   * @returns {boolean}
    */
   hasFragment (fragment: Fragment): boolean {
     const fragKey = getFragmentKey(fragment);
@@ -321,7 +306,6 @@ export class FragmentTracker implements ComponentAPI {
 
   /**
    * Remove a fragment from fragment tracker until it is loaded again
-   * @param {Object} fragment The fragment to remove
    */
   removeFragment (fragment: Fragment): void {
     const fragKey = getFragmentKey(fragment);

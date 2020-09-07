@@ -145,11 +145,11 @@ export type HlsConfig =
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
 
     // Alt Audio
-    audioStreamController?: any, // TODO(typescript-audiostreamcontroller): Type once file is done
-    audioTrackController?: any, // TODO(typescript-audiotrackcontroller): Type once file is done
+    audioStreamController?: typeof AudioStreamController,
+    audioTrackController?: typeof AudioTrackController,
     // Subtitle
-    subtitleStreamController?: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
-    subtitleTrackController?: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
+    subtitleStreamController?: typeof SubtitleStreamController,
+    subtitleTrackController?: typeof SubtitleTrackController,
     timelineController?: typeof TimelineController,
     // EME
     emeController?: typeof EMEController,

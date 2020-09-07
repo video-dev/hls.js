@@ -28,7 +28,6 @@ import type { HlsEventEmitter } from '../events';
 export const State = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',
-  PAUSED: 'PAUSED',
   KEY_LOADING: 'KEY_LOADING',
   FRAG_LOADING: 'FRAG_LOADING',
   FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
@@ -252,7 +251,6 @@ export default class BaseStreamController extends TaskLoop {
         initSegment.data = new Uint8Array(data.payload);
         stats.parsing.start = stats.buffering.start = self.performance.now();
         stats.parsing.end = stats.buffering.end = self.performance.now();
-        // TODO: set id from calling class
 
         // Silence FRAG_BUFFERED event if fragCurrent is null
         if (data.frag === fragCurrent) {
@@ -266,7 +264,7 @@ export default class BaseStreamController extends TaskLoop {
 
   protected _fragLoadAborted (frag: Fragment | null) {
     const { fragCurrent } = this;
-    // TODO: Do frags in tracks have a level property? what abot track id?
+    // frag.level can refer to bitrate variant or media track index
     if (!frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn) {
       return true;
     }
@@ -620,17 +618,10 @@ export default class BaseStreamController extends TaskLoop {
   }
 
   private handleFragLoadAborted (frag: Fragment, part: Part | undefined) {
-    const { fragPrevious, transmuxer } = this;
-    // TODO: nextLoadPos should only be set on successful frag load
-    if (fragPrevious) {
-      this.nextLoadPosition = fragPrevious.start + fragPrevious.duration;
-    } else {
-      this.nextLoadPosition = this.lastCurrentTime;
-    }
+    const { transmuxer } = this;
     if (transmuxer && frag.sn !== 'initSegment') {
       transmuxer.flush(new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0, part ? part.index : -1));
     }
-
     Object.keys(frag.elementaryStreams).forEach(type => {
       frag.elementaryStreams[type] = null;
     });

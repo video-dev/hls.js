@@ -87,9 +87,8 @@ class AbrController implements ComponentAPI {
   /*
       This method monitors the download rate of the current fragment, and will downswitch if that fragment will not load
       quickly enough to prevent underbuffering
-      TODO: Can we enhance this method when progressively streaming?
-      TODO: Lots of magic numbers, are any suitable for configuration?
     */
+  // TODO: Prevent this from interfering with LL-HLS Part loading at or near playback speed (bwe of parts may be enough)
   private _abandonRulesCheck () {
     const { fragCurrent: frag, hls } = this;
     const { autoLevelEnabled, config, media } = hls;
@@ -182,8 +181,7 @@ class AbrController implements ComponentAPI {
 
       // compute level average bitrate
       if (this.hls.config.abrMaxWithRealBitrate) {
-        const level = (this.hls.levels[frag.level] as any);
-        // TODO: stats on level don't match with types, but it's likely true.
+        const level = this.hls.levels[frag.level];
         const loadedBytes = (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
         const loadedDuration = (level.loaded ? level.loaded.duration : 0) + frag.duration;
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
@@ -207,7 +205,6 @@ class AbrController implements ComponentAPI {
       return;
     }
     // Only count non-alt-audio frags which were actually buffered in our BW calculations
-    // TODO: Figure out a heuristical way to see if a frag was loaded from the cache
     if (frag.type !== 'main' || frag.sn === 'initSegment' || frag.bitrateTest) {
       return;
     }

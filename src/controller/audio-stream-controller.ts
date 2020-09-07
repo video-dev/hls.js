@@ -135,10 +135,6 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     case State.ERROR:
       // don't do anything in error state to avoid breaking further ...
       break;
-    case State.PAUSED:
-      // TODO: Remove useless PAUSED state
-      // don't do anything in paused state either ...
-      break;
     case State.IDLE:
       this.doTickIdle();
       break;
@@ -386,7 +382,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       // main audio track are handled by stream-controller, just do something if switching to alt audio track
       this.state = State.IDLE;
     } else {
-      this.state = State.PAUSED;
+      this.state = State.STOPPED;
     }
     this.tick();
   }

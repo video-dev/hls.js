@@ -271,8 +271,6 @@ export default class BufferController implements ComponentAPI {
         };
 
         if (err.code === DOMException.QUOTA_EXCEEDED_ERR) {
-          // TODO: enum MSE error codes
-          // TODO: Should queues be cleared on this error?
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
           // let's stop appending any segments, and report BUFFER_FULL_ERROR error
           event.details = ErrorDetails.BUFFER_FULL_ERROR;
@@ -339,7 +337,7 @@ export default class BufferController implements ComponentAPI {
 
     // console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
     if (buffersAppendedTo.length === 0) {
-      // TODO: Can this happen when switching audio tracks and be safely ignored?
+      logger.warn(`Fragments must have at least one ElementaryStreamType set. type: ${frag.type} level: ${frag.level} sn: ${frag.sn}`);
       onUnblocked();
       return;
     }

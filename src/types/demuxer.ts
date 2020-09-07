@@ -38,7 +38,7 @@ export interface DemuxedAudioTrack extends DemuxedTrack {
   manifestCodec?: string
 }
 
-export interface DemuxedAvcTrack extends DemuxedTrack {
+export interface DemuxedVideoTrack extends DemuxedTrack {
   width?: number
   height?: number
   pixelRatio?: number
@@ -46,7 +46,14 @@ export interface DemuxedAvcTrack extends DemuxedTrack {
   pps?: Array<number>
   sps?: Array<number>
   naluState?: number
+}
+
+export interface DemuxedAvcTrack extends DemuxedVideoTrack {
   samples: Array<AvcSample>
+}
+
+export interface PassthroughVideoTrack extends DemuxedVideoTrack {
+  samples: Uint8Array
 }
 
 export interface DemuxedMetadataTrack extends DemuxedTrack {

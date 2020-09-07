@@ -56,7 +56,7 @@ export class HlsUrlParameters {
       searchParams.set('_HLS_part', this.part.toString());
     }
     if (this.skip) {
-      // TODO: LL-HLS value is 'v2' when 'CAN-SKIP-DATERANGES=YES'
+      // TODO: When 'CAN-SKIP-DATERANGES=YES' then use _HLS_skip=v2 https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-07#section-6.3.7
       searchParams.set('_HLS_skip', 'YES');
     }
     searchParams.sort();
@@ -75,7 +75,7 @@ export class Level {
   public height: number;
   public id: number;
   public loadError: number = 0;
-  public loaded?: any;
+  public loaded?: { bytes: number, duration: number };
   public name: string | undefined;
   public realBitrate: number = 0;
   public textGroupIds?: string[];
