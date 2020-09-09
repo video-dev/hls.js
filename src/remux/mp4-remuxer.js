@@ -427,7 +427,7 @@ class MP4Remuxer {
     const dropped = track.dropped;
     track.nbNalu = 0;
     track.dropped = 0;
-    if (outputSamples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+    if (outputSamples.length && chromeVersion && chromeVersion < 70) {
       const flags = outputSamples[0].flags;
       // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
       // https://code.google.com/p/chromium/issues/detail?id=229412
