@@ -103,8 +103,8 @@ class ID3TrackController implements ComponentAPI {
         }
 
         const timeDiff = endTime - startTime;
-        if (timeDiff < MIN_CUE_DURATION) {
-          endTime += MIN_CUE_DURATION - timeDiff;
+        if (timeDiff <= 0) {
+          endTime = startTime + MIN_CUE_DURATION;
         }
 
         for (let j = 0; j < frames.length; j++) {
