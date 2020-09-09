@@ -1,7 +1,7 @@
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
-const merge = require('webpack-merge');
+const { merge } = require('webpack-merge');
 const importHelper = require('@babel/helper-module-imports');
 
 /* Allow to customise builds through env-vars */

@@ -255,7 +255,7 @@ const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
     }
 
     let index = 1;
-    const description: string = utf8ArrayToStr(frame.data.subarray(index));
+    const description: string = utf8ArrayToStr(frame.data.subarray(index), true);
 
     index += description.length + 1;
     const value: string = utf8ArrayToStr(frame.data.subarray(index));

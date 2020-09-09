@@ -598,10 +598,10 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
       this.fragmentTracker.detectEvictedFragments(ElementaryStreamTypes.AUDIO, media.buffered);
     }
-    // move to IDLE once flush complete. this should trigger new fragment loading
-    this.state = State.IDLE;
     // reset reference to frag
     this.fragPrevious = null;
+    // move to IDLE once flush complete. this should trigger new fragment loading
+    this.state = State.IDLE;
   }
 
   private _handleTransmuxComplete (transmuxResult: TransmuxerResult) {
