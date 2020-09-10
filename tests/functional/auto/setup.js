@@ -283,11 +283,8 @@ async function testSeekBackToStart (url, config) {
 let sauceConnectProcess;
 async function sauceConnect (tunnelIdentifier) {
   return new Promise(function (resolve, reject) {
-    console.log(`Running sauce-connect-launcher. Connect as ${process.env.SAUCE_USERNAME}. Tunnel id: ${tunnelIdentifier}`);
+    console.log(`Running sauce-connect-launcher. Tunnel id: ${tunnelIdentifier}`);
     sauceConnectLauncher({
-      username: process.env.SAUCE_USERNAME,
-      accessKey: process.env.SAUCE_ACCESS_KEY,
-      verbose: true,
       tunnelIdentifier
     }, function (err, sauceConnectProcess) {
       if (err) {
@@ -343,10 +340,10 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
       capabilities.build = 'HLSJS-' + process.env.TRAVIS_BUILD_NUMBER;
     } else if (useSauce) {
-      capabilities['tunnel-identifier'] = '' + Date.now();
-      sauceConnectProcess = await sauceConnect(capabilities['tunnel-identifier']);
+      capabilities['tunnel-identifier'] = `local-${Date.now()}`;
     }
     if (useSauce) {
+      sauceConnectProcess = await sauceConnect(capabilities['tunnel-identifier']);
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;

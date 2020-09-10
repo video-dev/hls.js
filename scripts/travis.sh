@@ -23,7 +23,7 @@ if [ "${TRAVIS_MODE}" = "build" ]; then
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
   npm run test:unit
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
-  npm run build
+  npm run build:ci
   n=0
   maxRetries=1
   until [ $n -ge ${maxRetries} ]
