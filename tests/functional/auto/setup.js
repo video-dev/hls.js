@@ -348,6 +348,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;
+      capabilities['record-screenshots'] = 'false';
       browser = browser.usingServer(`https://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.us-west-1.saucelabs.com:443/wd/hub`);
     }
 
@@ -410,17 +411,29 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   });
 
   afterEach(async function () {
-    if (printDebugLogs || this.currentTest.isFailed()) {
+    const failed = this.currentTest.isFailed();
+    if (printDebugLogs || failed) {
       const logString = await browser.executeScript('return logString');
       console.log(`${onTravis ? 'travis_fold:start:debug_logs' : ''}\n${logString}\n${onTravis ? 'travis_fold:end:debug_logs' : ''}`);
+      if (failed && useSauce) {
+        browser.executeScript('sauce:job-result=failed');
+      }
     }
   });
 
   after(async function () {
+    if (useSauce && this.currentTest && this.currentTest.parent) {
+      const tests = this.currentTest.parent.tests;
+      if (tests && tests.length && tests.every(test => test.isPassed())) {
+        browser.executeScript('sauce:job-result=passed');
+      }
+    }
     console.log('Quitting browser...');
     await browser.quit();
     console.log('Browser quit.');
-    await sauceDisconnect();
+    if (useSauce) {
+      await sauceDisconnect();
+    }
   });
 
   for (let name in streams) {
