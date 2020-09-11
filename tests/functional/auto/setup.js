@@ -1,14 +1,15 @@
 /* eslint-disable no-console */
 
+const sauceConnectLauncher = require('sauce-connect-launcher');
 const webdriver = require('selenium-webdriver');
 const By = webdriver.By;
 const until = webdriver.until;
 // requiring this automatically adds the chromedriver binary to the PATH
-// eslint-disable-next-line
-const chromedriver = require('chromedriver');
+require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
 const onTravis = !!process.env.TRAVIS;
+const useSauce = !!process.env.SAUCE || onTravis;
 const chai = require('chai');
 const expect = chai.expect;
 
@@ -25,7 +26,7 @@ let stream;
 let printDebugLogs = false;
 
 // Setup browser config data from env vars
-if (onTravis) {
+if (useSauce) {
   let UA = process.env.UA;
   if (!UA) {
     throw new Error('No test browser name.');
@@ -47,15 +48,15 @@ if (onTravis) {
 
 let browserDescription = browserConfig.name;
 
-if (browserConfig.version) {
-  browserDescription += ` (${browserConfig.version})`;
+if (browserConfig.version && browserConfig.version !== 'latest') {
+  browserDescription += ` ${browserConfig.version}`;
 }
 
 if (browserConfig.platform) {
   browserDescription += `, ${browserConfig.platform}`;
 }
 
-let hostname = onTravis ? 'localhost' : '127.0.0.1';
+let hostname = useSauce ? 'localhost' : '127.0.0.1';
 
 // Launch static server
 HttpServer.createServer({
@@ -278,6 +279,36 @@ async function testSeekBackToStart (url, config) {
   expect(result, stringifyResult(result)).to.have.property('playing').which.is.true;
 }
 
+let sauceConnectProcess;
+async function sauceConnect (tunnelIdentifier) {
+  return new Promise(function (resolve, reject) {
+    console.log(`Running sauce-connect-launcher. Tunnel id: ${tunnelIdentifier}`);
+    sauceConnectLauncher({
+      tunnelIdentifier
+    }, function (err, sauceConnectProcess) {
+      if (err) {
+        console.error(err.message);
+        reject(err);
+        return;
+      }
+      console.log('Sauce Connect ready');
+      resolve(sauceConnectProcess);
+    });
+  });
+}
+
+async function sauceDisconnect () {
+  return new Promise(function (resolve) {
+    if (!sauceConnectProcess) {
+      resolve();
+    }
+    sauceConnectProcess.close(function () {
+      console.log('Closed Sauce Connect process');
+      resolve();
+    });
+  });
+}
+
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
   before(async function () {
     // high timeout because sometimes getSession() takes a while
@@ -286,8 +317,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       throw new Error('Stream not defined');
     }
 
+    const labelBranch = process.env.TRAVIS_BRANCH || 'unknown';
     let capabilities = {
-      name: `"${stream.description}" on "${browserDescription}"`,
+      name: `hls.js@${labelBranch} on "${browserDescription}"`,
       browserName: browserConfig.name,
       platform: browserConfig.platform,
       version: browserConfig.version,
@@ -307,10 +339,16 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
       capabilities.build = 'HLSJS-' + process.env.TRAVIS_BUILD_NUMBER;
+    } else if (useSauce) {
+      capabilities['tunnel-identifier'] = `local-${Date.now()}`;
+    }
+    if (useSauce) {
+      sauceConnectProcess = await sauceConnect(capabilities['tunnel-identifier']);
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;
-      browser = browser.usingServer(`http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`);
+      capabilities['record-screenshots'] = 'false';
+      browser = browser.usingServer(`https://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.us-west-1.saucelabs.com:443/wd/hub`);
     }
 
     browser = browser.withCapabilities(capabilities).build();
@@ -325,13 +363,14 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           browser.getSession()
         ]);
         console.log(`Retrieved session in ${Date.now() - start}ms`);
-        if (onTravis) {
+        if (useSauce) {
           console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
         } else {
           console.log(`WebDriver SessionID: ${session.getId()}`);
         }
       });
     } catch (err) {
+      await sauceDisconnect();
       throw new Error(`failed setting up session: ${err}`);
     }
   });
@@ -371,16 +410,29 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   });
 
   afterEach(async function () {
-    if (printDebugLogs || this.currentTest.isFailed()) {
+    const failed = this.currentTest.isFailed();
+    if (printDebugLogs || failed) {
       const logString = await browser.executeScript('return logString');
       console.log(`${onTravis ? 'travis_fold:start:debug_logs' : ''}\n${logString}\n${onTravis ? 'travis_fold:end:debug_logs' : ''}`);
+      if (failed && useSauce) {
+        browser.executeScript('sauce:job-result=failed');
+      }
     }
   });
 
   after(async function () {
+    if (useSauce && this.currentTest && this.currentTest.parent) {
+      const tests = this.currentTest.parent.tests;
+      if (tests && tests.length && tests.every(test => test.isPassed())) {
+        browser.executeScript('sauce:job-result=passed');
+      }
+    }
     console.log('Quitting browser...');
     await browser.quit();
     console.log('Browser quit.');
+    if (useSauce) {
+      await sauceDisconnect();
+    }
   });
 
   for (let name in streams) {
