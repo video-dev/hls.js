@@ -319,7 +319,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     }
 
     let capabilities = {
-      name: `"${stream.description}" on "${browserDescription}"`,
+      name: `hls.js on "${browserDescription}"`,
       browserName: browserConfig.name,
       platform: browserConfig.platform,
       version: browserConfig.version,
