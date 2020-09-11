@@ -48,8 +48,8 @@ if (useSauce) {
 
 let browserDescription = browserConfig.name;
 
-if (browserConfig.version) {
-  browserDescription += ` (${browserConfig.version})`;
+if (browserConfig.version && browserConfig.version !== 'latest') {
+  browserDescription += ` ${browserConfig.version}`;
 }
 
 if (browserConfig.platform) {
