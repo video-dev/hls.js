@@ -37,7 +37,7 @@
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
-    "test:func:sauce": "SAUCE=1 UA=chrome OS='Windows 10' BABEL_ENV=development mocha tests/functional/auto/setup.js --timeout 40000 --exit",
+    "test:func:sauce": "SAUCE=1 UA=MicrosoftEdge OS='Windows 10' BABEL_ENV=development mocha tests/functional/auto/setup.js --timeout 40000 --exit",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch"
   },
