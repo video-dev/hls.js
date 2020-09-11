@@ -137,10 +137,12 @@ async function testSmoothSwitch (url, config) {
         if (data.level === highestLevel) {
           window.setTimeout(function () {
             let newCurrentTime = video.currentTime;
+            const paused = video.paused;
             console.log('[test] > currentTime delta: ' + (newCurrentTime - currentTime));
             callback({
               highestLevel: highestLevel,
               currentTimeDelta: newCurrentTime - currentTime,
+              paused,
               logs: window.logString
             });
           }, 2000);
@@ -180,12 +182,22 @@ async function testSeekOnVOD (url, config) {
       const video = window.video;
       video.onloadeddata = function () {
         window.setTimeout(function () {
-          video.currentTime = video.duration - 5;
+          const duration = video.duration;
+          // After seeking timeout if paused after 5 seconds
+          video.onseeked = function () {
+            window.setTimeout(function () {
+              const { currentTime, paused } = video;
+              if (video.currentTime === 0 || video.paused) {
+                callback({ code: 'paused', currentTime, paused, duration, logs: window.logString });
+              }
+            }, 5000);
+          };
+          video.currentTime = duration - 5;
           // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
           const allowedBufferedRanges = config.allowedBufferedRangesInSeekTest || 2;
           video.onprogress = function () {
             if (video.buffered.length > allowedBufferedRanges) {
-              callback({ code: 'buffer-gaps', bufferedRanges: video.buffered.length, logs: window.logString });
+              callback({ code: 'buffer-gaps', bufferedRanges: video.buffered.length, duration, logs: window.logString });
             }
           };
         }, 5000);
