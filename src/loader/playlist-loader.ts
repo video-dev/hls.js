@@ -60,6 +60,8 @@ class PlaylistLoader {
     [key: string]: Loader<LoaderContext>
   } = Object.create(null)
 
+  private checkAgeHeader: boolean = true;
+
   constructor (hls: Hls) {
     this.hls = hls;
     this._registerListeners();
@@ -129,6 +131,7 @@ class PlaylistLoader {
 
   private onManifestLoading (event: Events.MANIFEST_LOADING, data: ManifestLoadingData) {
     const { url } = data;
+    this.checkAgeHeader = true;
     this.load({
       id: null,
       level: 0,
@@ -352,11 +355,16 @@ class PlaylistLoader {
 
     const levelDetails: LevelDetails = M3U8Parser.parseLevelPlaylist(response.data as string, url, levelId!, levelType, levelUrlId!);
 
-    // set stats on level structure
+    // Update level stats
     levelDetails.tload = stats.loading.end;
+
+    // Estimate playlist last modified date
     const loaded = self.performance.timing.navigationStart + levelDetails.tload;
-    const ageHeader: string | null = loader.getResponseHeader('age');
+    // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
+    const checkAgeHeader = this.checkAgeHeader && levelDetails.live;
+    const ageHeader: string | null = checkAgeHeader ? loader.getResponseHeader('age') : null;
     const age = ageHeader ? parseFloat(ageHeader) : 0;
+    this.checkAgeHeader = !!ageHeader;
     levelDetails.lastModified = loaded - age * 1000;
 
     if (!levelDetails.fragments.length) {

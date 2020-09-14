@@ -167,8 +167,11 @@ class XhrLoader implements Loader<LoaderContext> {
 
   loadtimeout (): void {
     logger.warn(`timeout while loading ${this.context.url}`);
-    this.abortInternal();
-    this.callbacks!.onTimeout(this.stats, this.context, this.loader);
+    const callbacks = this.callbacks;
+    if (callbacks) {
+      this.abortInternal();
+      callbacks.onTimeout(this.stats, this.context, this.loader);
+    }
   }
 
   getResponseHeader (name: string): string | null {
