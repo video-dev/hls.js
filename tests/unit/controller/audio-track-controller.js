@@ -278,33 +278,72 @@ describe('AudioTrackController', function () {
       expect(audioTrackController.timer).to.equal(-1);
     });
 
-    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', function () {
-      const currentTrackId = 4;
+    it('should disable current track on network error, if a backup track is found (fallback mechanism)', function () {
+      const currentTrackId = 0;
       audioTrackController.trackId = currentTrackId;
-      audioTrackController.tracks = tracks;
+      audioTrackController.tracks = [{
+        groupId: '1',
+        id: 0,
+        default: true,
+        name: 'Alt'
+      }, {
+        groupId: '1',
+        id: 1,
+        default: false,
+        name: 'Alt'
+      }, {
+        groupId: '1',
+        id: 2,
+        name: 'Alt'
+      }];
+
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
+      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'does not disable track after media error').to.be.false;
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
+      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'does not disable track misc network error').to.be.false;
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: true,
-        context: {
-          id: 'foobarLoaderContextId'
-        }
+        fatal: false,
+        context: { id: 0 }
       });
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.true;
-      expect(audioTrackController.audioTrack).to.equal(1);
+      const newTrackId = 1;
+      expect(audioTrackController.audioTrack, 'track index/id switches from 0 to 1').to.equal(newTrackId);
+      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'disables track after audio track loading network error').to.be.true;
+
+      audioTrackController.restrictedTracks[newTrackId] = false;
+      audioTrackController.onError(Events.ERROR, {
+        type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT,
+        fatal: false,
+        context: { id: 1 }
+      });
+      expect(audioTrackController.audioTrack, 'track index/id switches from 1 to 2').to.equal(2);
+      expect(!!audioTrackController.restrictedTracks[newTrackId], 'disables track after audio track loading timeout error').to.be.true;
+    });
+
+    it('should not disable current track on network error, if a backup track is not found', function () {
+      const currentTrackId = 4;
+      audioTrackController.trackId = currentTrackId;
+      audioTrackController.tracks = tracks;
+
+      audioTrackController.onError(Events.ERROR, {
+        type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
+        fatal: false,
+        context: { id: 0 }
+      });
+      expect(audioTrackController.audioTrack, 'track index/id is not changed as there is no redundant track to choose from').to.equal(4);
+      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'disables track after audio track loading network error').to.be.false;
     });
   });
 });
