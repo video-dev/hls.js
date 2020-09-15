@@ -28,7 +28,6 @@ export default class LevelController extends BasePlaylistController {
   private _firstLevel: number = -1;
   private _startLevel?: number;
   private currentLevelIndex: number = -1;
-  private levelRetryCount: number = 0;
   private manualLevelIndex: number = -1;
 
   public onParsedComplete!: Function;
@@ -64,8 +63,6 @@ export default class LevelController extends BasePlaylistController {
 
   public startLoad (): void {
     const levels = this._levels;
-
-    this.levelRetryCount = 0;
 
     // clean up live level details to force reload them, and reset load errors
     levels.forEach(level => {
@@ -279,7 +276,6 @@ export default class LevelController extends BasePlaylistController {
       if (data.type === ErrorTypes.NETWORK_ERROR) {
         this.clearTimer();
       }
-
       return;
     }
 
@@ -294,6 +290,8 @@ export default class LevelController extends BasePlaylistController {
     case ErrorDetails.FRAG_LOAD_TIMEOUT:
     case ErrorDetails.KEY_LOAD_ERROR:
     case ErrorDetails.KEY_LOAD_TIMEOUT:
+      // FIXME: What distinguishes these fragment events from level or track fragments?
+      //   We shouldn't recover a level if the fragment or key is for a media track
       console.assert(data.frag, 'Event has a fragment defined.');
       levelIndex = (data.frag as Fragment).level;
       fragmentError = true;
@@ -326,31 +324,20 @@ export default class LevelController extends BasePlaylistController {
    * If redundant stream is not available, emergency switch down if ABR mode is enabled.
    */
   private recoverLevel (errorEvent: ErrorData, levelIndex: number, levelError: boolean, fragmentError: boolean, levelSwitch: boolean): void {
-    const { config } = this.hls;
     const { details: errorDetails } = errorEvent;
     const level = this._levels[levelIndex];
-    let redundantLevels, delay, nextLevel;
+    let redundantLevels, nextLevel;
 
     level.loadError++;
     level.fragmentError = fragmentError;
 
     if (levelError) {
-      if ((this.levelRetryCount + 1) <= config.levelLoadingMaxRetry) {
-        // exponential backoff capped to max retry timeout
-        delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
-        // Schedule level reload
-        this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
+      const retrying = this.retryLoadingOrFail(errorEvent);
+      if (retrying) {
         // boolean used to inform stream controller not to switch back to IDLE on non fatal error
         errorEvent.levelRetry = true;
-        this.levelRetryCount++;
-        logger.warn(`[level-controller]: ${errorDetails}, retry in ${delay} ms, current retry count is ${this.levelRetryCount}`);
       } else {
-        logger.error(`[level-controller]: cannot recover from ${errorDetails} error`);
         this.currentLevelIndex = -1;
-        // stopping live reloading timer if any
-        this.clearTimer();
-        // switch error to fatal
-        errorEvent.fatal = true;
         return;
       }
     }
@@ -392,7 +379,6 @@ export default class LevelController extends BasePlaylistController {
       if (level !== undefined) {
         level.fragmentError = false;
         level.loadError = 0;
-        this.levelRetryCount = 0;
       }
     }
   }
@@ -412,7 +398,7 @@ export default class LevelController extends BasePlaylistController {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if (!curLevel.fragmentError) {
         curLevel.loadError = 0;
-        this.levelRetryCount = 0;
+        this.retryCount = 0;
       }
       this.playlistLoaded(level, data, curLevel.details);
     }

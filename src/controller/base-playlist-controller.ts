@@ -6,11 +6,13 @@ import { logger } from '../utils/logger';
 import type LevelDetails from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type { AudioTrackLoadedData, LevelLoadedData, TrackLoadedData } from '../types/events';
+import { ErrorData } from '../types/events';
 
 export default class BasePlaylistController implements NetworkComponentAPI {
   protected hls: Hls;
   protected timer: number = -1;
   protected canLoad: boolean = false;
+  protected retryCount: number = 0;
 
   constructor (hls: Hls) {
     this.hls = hls;
@@ -27,6 +29,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
   public startLoad (): void {
     this.canLoad = true;
+    this.retryCount = 0;
     this.loadPlaylist();
   }
 
@@ -89,5 +92,31 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     } else {
       this.clearTimer();
     }
+  }
+
+  protected retryLoadingOrFail (errorEvent: ErrorData): boolean {
+    const { config } = this.hls;
+    const retry = this.retryCount < config.levelLoadingMaxRetry;
+    if (retry) {
+      this.retryCount++;
+      if (errorEvent.details.indexOf('LoadTimeOut') > -1 && errorEvent.context?.deliveryDirectives) {
+        // The LL-HLS request already timed out so retry immediately
+        logger.warn(`[${this.constructor.name}]: retry playlist loading #${this.retryCount} after "${errorEvent.details}"`);
+        this.loadPlaylist();
+      } else {
+        // exponential backoff capped to max retry timeout
+        const delay = Math.min(Math.pow(2, this.retryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
+        // Schedule level/track reload
+        this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
+        logger.warn(`[${this.constructor.name}]: retry playlist loading #${this.retryCount} in ${delay} ms after "${errorEvent.details}"`);
+      }
+    } else {
+      logger.error(`${this.constructor.name}]: cannot recover from error "${errorEvent.details}"`);
+      // stopping live reloading timer if any
+      this.clearTimer();
+      // switch error to fatal
+      errorEvent.fatal = true;
+    }
+    return retry;
   }
 }

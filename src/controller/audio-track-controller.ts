@@ -44,14 +44,14 @@ class AudioTrackController extends BasePlaylistController {
   private selectDefaultTrack: boolean = true;
   private trackId: number = -1;
 
-  private readonly trackIdBlacklist: { [key: number]: boolean };
+  private readonly restrictedTracks: { [key: number]: boolean } = Object.create(null);
 
   /**
    * @public
    * All tracks available
    * @member {AudioTrack[]}
    */
-  public tracks: MediaPlaylist[];
+  public tracks: MediaPlaylist[] = [];
 
   /**
    * @public
@@ -63,8 +63,6 @@ class AudioTrackController extends BasePlaylistController {
 
   constructor (hls: Hls) {
     super(hls);
-    this.tracks = [];
-    this.trackIdBlacklist = Object.create(null);
     this._registerListeners();
   }
 
@@ -135,6 +133,7 @@ class AudioTrackController extends BasePlaylistController {
     logger.log(`[audio-track-controller]: audioTrack ${id} loaded [${details.startSN}-${details.endSN}]`);
 
     if (id === this.trackId) {
+      this.retryCount = 0;
       this.playlistLoaded(id, data, curDetails);
     }
   }
@@ -178,23 +177,52 @@ class AudioTrackController extends BasePlaylistController {
   }
 
   protected onError (event: Events.ERROR, data: ErrorData): void {
-    // Only handle network errors
-    if (data.type !== ErrorTypes.NETWORK_ERROR) {
-      return;
-    }
-
-    // If fatal network error, cancel update task
     if (data.fatal) {
-      this.clearTimer();
-    }
-
-    // If not an audio-track loading error don't handle further
-    if (data.details !== ErrorDetails.AUDIO_TRACK_LOAD_ERROR) {
+      if (data.type === ErrorTypes.NETWORK_ERROR) {
+        this.clearTimer();
+      }
       return;
     }
 
-    logger.warn('[audio-track-controller]: Network failure on audio-track id:', data.context?.id);
-    this._handleLoadError();
+    switch (data.details) {
+    case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
+    case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
+      logger.warn(`[audio-track-controller]: Network error "${data.details}" data.details on audio-track id: ${data.context?.id}`);
+      if (data.context?.id === this.trackId) {
+        this.recoverTrack(data, this.trackId);
+      }
+      break;
+    }
+  }
+
+  private recoverTrack (errorEvent: ErrorData, trackId: number) {
+    // First, let's black list current track id
+    this.restrictedTracks[trackId] = true;
+
+    // Let's try to fall back on a functional audio-track with the same group ID
+    const track = this.tracks[trackId];
+    const { name, groupId } = track;
+
+    logger.warn(`[audio-track-controller]: Loading failed on audio track id: ${trackId}, group-id: ${groupId}, name/language: "${name}" / "${track.lang}"`);
+
+    // Find a non-blacklisted track ID with the same NAME
+    // At least a track that is not blacklisted, thus on another group-ID.
+    let newId = trackId;
+    for (let i = 0; i < this.tracks.length; i++) {
+      if (!this.restrictedTracks[i] && this.tracks[i].name === name) {
+        newId = i;
+        break;
+      }
+    }
+
+    if (newId === trackId) {
+      this.restrictedTracks[trackId] = false;
+      // perform retries
+      this.retryLoadingOrFail(errorEvent);
+    } else {
+      logger.log('[audio-track-controller]: Attempting audio-track fallback id:', newId, 'group-id:', this.tracks[newId].groupId);
+      this._setAudioTrack(newId);
+    }
   }
 
   get audioTracks (): MediaPlaylist[] {
@@ -315,37 +343,6 @@ class AudioTrackController extends BasePlaylistController {
         deliveryDirectives: hlsUrlParameters || null
       });
     }
-  }
-
-  private _handleLoadError (): void {
-    const previousId = this.trackId;
-
-    // First, let's black list current track id
-    this.trackIdBlacklist[previousId] = true;
-
-    // Let's try to fall back on a functional audio-track with the same group ID
-    const { name, lang, groupId } = this.tracks[previousId];
-
-    logger.warn(`[audio-track-controller]: Loading failed on audio track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${lang}"`);
-
-    // Find a non-blacklisted track ID with the same NAME
-    // At least a track that is not blacklisted, thus on another group-ID.
-    let newId = previousId;
-    for (let i = 0; i < this.tracks.length; i++) {
-      if (!this.trackIdBlacklist[i] && this.tracks[i].name === name) {
-        newId = i;
-        break;
-      }
-    }
-
-    if (newId === previousId) {
-      logger.warn(`[audio-track-controller]: No fallback audio-track found for name/language: "${name}" / "${lang}"`);
-      return;
-    }
-
-    logger.log('[audio-track-controller]: Attempting audio-track fallback id:', newId, 'group-id:', this.tracks[newId].groupId);
-
-    this._setAudioTrack(newId);
   }
 }
 

@@ -10,18 +10,18 @@
  */
 
 import { Events } from '../events';
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
 import { parseSegmentIndex } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
-import { LevelParsed } from '../types/level';
+import { Level, LevelParsed } from '../types/level';
+import type { Loader, LoaderContext, LoaderResponse, LoaderStats, PlaylistLoaderContext } from '../types/loader';
 import { LoaderConfiguration, PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import LevelDetails from './level-details';
 import Fragment from './fragment';
 import Hls from '../hls';
 import AttrList from '../utils/attr-list';
-import type { ManifestLoadingData, LevelLoadingData, TrackLoadingData, ErrorData } from '../types/events';
-import type { Loader, LoaderContext, LoaderResponse, LoaderStats, PlaylistLoaderContext } from '../types/loader';
+import type { ErrorData, LevelLoadingData, ManifestLoadingData, TrackLoadingData } from '../types/events';
 
 const { performance } = self;
 
@@ -210,10 +210,10 @@ class PlaylistLoader {
       maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
       break;
     case PlaylistContextType.LEVEL:
-      // Disable internal loader retry logic, since we are managing retries in Level Controller
+    case PlaylistContextType.AUDIO_TRACK:
+      // Manage retries in Level/Track Controller
       maxRetry = 0;
       timeout = config.levelLoadingTimeOut;
-      // TODO Introduce retry settings for audio-track and subtitle-track, it should not use level retry config
       break;
     default:
       maxRetry = config.levelLoadingMaxRetry;
@@ -224,6 +224,26 @@ class PlaylistLoader {
     }
 
     loader = this.createInternalLoader(context);
+
+    // Override level/track timeout for LL-HLS requests
+    // (the default of 10000ms is counter productive to blocking playlist reload requests)
+    if (context.deliveryDirectives && context.deliveryDirectives.part) {
+      let levelDetails: LevelDetails | undefined;
+      if (context.type === PlaylistContextType.LEVEL && context.level !== null) {
+        levelDetails = this.hls.levels[context.level].details;
+      } else if (context.type === PlaylistContextType.AUDIO_TRACK && context.id !== null) {
+        levelDetails = this.hls.audioTracks[context.id].details;
+      } else if (context.type === PlaylistContextType.SUBTITLE_TRACK && context.id !== null) {
+        levelDetails = this.hls.subtitleTracks[context.id].details;
+      }
+      if (levelDetails) {
+        const partTarget = levelDetails.partTarget;
+        const targetDuration = levelDetails.targetduration;
+        if (partTarget && targetDuration) {
+          timeout = Math.min(Math.max(partTarget * 3, targetDuration / 2) * 1000, timeout);
+        }
+      }
+    }
 
     const loaderConfig: LoaderConfiguration = {
       timeout,
