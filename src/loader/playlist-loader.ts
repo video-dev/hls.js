@@ -240,7 +240,7 @@ class PlaylistLoader {
         const partTarget = levelDetails.partTarget;
         const targetDuration = levelDetails.targetduration;
         if (partTarget && targetDuration) {
-          timeout = Math.min(Math.max(partTarget * 3, targetDuration / 2) * 1000, timeout);
+          timeout = Math.min(Math.max(partTarget * 3, targetDuration * 0.8) * 1000, timeout);
         }
       }
     }

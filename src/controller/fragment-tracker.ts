@@ -72,30 +72,18 @@ export class FragmentTracker implements ComponentAPI {
    */
   getBufferedFrag (position: number, levelType: PlaylistLevelType) : Fragment | null {
     const { fragments } = this;
-    const bufferedFrags = Object.keys(fragments).filter(key => {
-      const fragmentEntity = fragments[key];
-      if (!fragmentEntity || fragmentEntity.body.type !== levelType || !fragmentEntity.buffered) {
-        return false;
+    const keys = Object.keys(fragments);
+    for (let i = keys.length; i--;) {
+      const fragmentEntity = fragments[keys[i]];
+      if (fragmentEntity?.body.type === levelType && fragmentEntity.buffered) {
+        const frag = fragmentEntity.body;
+        // if (frag.startPTS !== undefined &&
+        if (frag.start <= position && position <= frag.end) {
+          return frag;
+        }
       }
-      const frag = fragmentEntity.body;
-      if (frag.startPTS === undefined) {
-        return false;
-      }
-      return frag.start <= position && position <= frag.end;
-    });
-    if (!bufferedFrags.length) {
-      return null;
     }
-    // https://github.com/video-dev/hls.js/pull/1545#discussion_r166229566
-    const bufferedFragKey = bufferedFrags.pop();
-    if (!bufferedFragKey) {
-      return null;
-    }
-    const fragEntity = fragments[bufferedFragKey];
-    if (!fragEntity) {
-      return null;
-    }
-    return fragEntity.body;
+    return null;
   }
 
   /**
@@ -131,7 +119,7 @@ export class FragmentTracker implements ComponentAPI {
    */
   detectPartialFragments (fragment: Fragment) {
     const { timeRanges, fragments } = this;
-    if (!timeRanges) {
+    if (!timeRanges || fragment.sn === 'initSegment') {
       return;
     }
 
@@ -258,15 +246,15 @@ export class FragmentTracker implements ComponentAPI {
    * Fires when a fragment loading is completed
    */
   onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData): void {
-    const fragment = data.frag;
+    const { frag } = data;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
-    if (!Number.isFinite(fragment.sn as number) || fragment.bitrateTest) {
+    if (frag.sn === 'initSegment' || frag.bitrateTest) {
       return;
     }
 
-    this.fragments[getFragmentKey(fragment)] = {
-      body: fragment,
+    this.fragments[getFragmentKey(frag)] = {
+      body: frag,
       range: Object.create(null),
       buffered: false
     };

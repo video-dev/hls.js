@@ -25,14 +25,14 @@ class PassThroughRemuxer implements Remuxer {
     this.lastEndDTS = null;
   }
 
-  resetInitSegment (initSegment, audioCodec, videoCodec) {
+  resetInitSegment (initSegment: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.generateInitSegment(initSegment);
     this.emitInitSegment = true;
   }
 
-  generateInitSegment (initSegment): void {
+  generateInitSegment (initSegment: Uint8Array): void {
     let { audioCodec, videoCodec } = this;
     if (!initSegment || !initSegment.byteLength) {
       this.initTracks = undefined;
@@ -59,14 +59,12 @@ class PassThroughRemuxer implements Remuxer {
         initSegment,
         id: 'main'
       };
+    } else if (initData.audio) {
+      tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment, id: 'audio' };
+    } else if (initData.video) {
+      tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment, id: 'main' };
     } else {
-      if (initData.audio) {
-        tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment, id: 'audio' };
-      }
-
-      if (initData.video) {
-        tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment, id: 'main' };
-      }
+      logger.warn('[passthrough-remuxer.ts]: initSegment does not contain moov or trak boxes.');
     }
     this.initTracks = tracks;
   }

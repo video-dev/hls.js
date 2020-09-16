@@ -691,16 +691,16 @@ export default class BufferController implements ComponentAPI {
   // upon completion, since we already do it here
   private blockBuffers (onUnblocked: Function, buffers: Array<SourceBufferName> = this.getSourceBufferTypes()) {
     if (!buffers.length) {
-      logger.log('[buffer-controller]: Blocking operation requested, but no SourceBuffers exist');
+      // logger.log('[buffer-controller]: Blocking operation requested, but no SourceBuffers exist');
       onUnblocked();
       return;
     }
     const { operationQueue } = this;
 
-    logger.log(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
+    // logger.log(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
     const blockingOperations = buffers.map(type => operationQueue.appendBlocker(type as SourceBufferName));
     Promise.all(blockingOperations).then(() => {
-      logger.log(`[buffer-controller]: Blocking operation resolved; unblocking ${buffers} SourceBuffer`);
+      // logger.log(`[buffer-controller]: Blocking operation resolved; unblocking ${buffers} SourceBuffer`);
       onUnblocked();
       buffers.forEach(type => {
         const sb = this.sourceBuffer[type];

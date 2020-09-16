@@ -360,9 +360,13 @@ export default class LevelController extends BasePlaylistController {
         if (this.manualLevelIndex === -1) {
           // When lowest level has been reached, let's start hunt from the top
           nextLevel = (levelIndex === 0) ? this._levels.length - 1 : levelIndex - 1;
-          logger.warn(`[level-controller]: ${errorDetails}: switch to ${nextLevel}`);
-          this.hls.nextAutoLevel = this.currentLevelIndex = nextLevel;
-        } else if (fragmentError) {
+          if (this.currentLevelIndex !== nextLevel) {
+            fragmentError = false;
+            logger.warn(`[level-controller]: ${errorDetails}: switch to ${nextLevel}`);
+            this.hls.nextAutoLevel = this.currentLevelIndex = nextLevel;
+          }
+        }
+        if (fragmentError) {
           // Allow fragment retry as long as configuration allows.
           // reset this._level so that another call to set level() will trigger again a frag load
           logger.warn(`[level-controller]: ${errorDetails}: reload a fragment`);

@@ -318,7 +318,7 @@ export default class BaseStreamController extends TaskLoop {
 
     this.updateLevelTiming(frag, level, partIndex);
     this.state = State.PARSED;
-    this.hls.trigger(Events.FRAG_PARSED, { frag });
+    this.hls.trigger(Events.FRAG_PARSED, { frag, partIndex });
   }
 
   protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, partIndex: number, level: Level } | null {
