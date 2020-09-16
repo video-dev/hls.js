@@ -278,7 +278,8 @@ export interface FragParsingMetadataData {
 }
 
 export interface FragParsedData {
-  frag: Fragment
+  frag: Fragment,
+  partIndex: number
 }
 
 export interface FragBufferedData {

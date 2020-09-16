@@ -270,6 +270,7 @@ export default class FragmentLoader {
 
   private updateStatsFromPart (fragStats: LoaderStats, partStats: LoaderStats) {
     fragStats.loaded += partStats.loaded;
+    fragStats.total += partStats.total;
     const fragLoading = fragStats.loading;
     if (fragLoading.start) {
       fragLoading.start += partStats.loading.start - fragLoading.end;

@@ -882,7 +882,7 @@ frag1.ts
     `;
       const result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
       expect(result.hasProgramDateTime).to.be.true;
-      expect(result.sn === 'initSegment').to.be.false;
+      expect(result.sn).to.not.equal('initSegment');
       expect(result.fragments[0].rawProgramDateTime).to.equal('2016-05-27T16:35:04Z');
       expect(result.fragments[0].programDateTime).to.equal(1464366904000);
     });
