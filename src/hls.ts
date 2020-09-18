@@ -739,7 +739,7 @@ export default class Hls extends Observer {
    * @returns {boolean} True if track was selected matching preferences
    */
   setPreferredAudioOptions (name, language = null) {
-    return this._setPreferredMediaOptions('audio', name, language);
+    return this._setPreferredMediaOptions(PlaylistLevelType.AUDIO, name, language);
   }
 
   /**
