@@ -749,7 +749,7 @@ export default class Hls extends Observer {
    * @returns {boolean} True if track was selected matching preferences
    */
   setPreferredSubtitleOptions (name, language = null) {
-    return this._setPreferredMediaOptions('subtitle', name, language);
+    return this._setPreferredMediaOptions(PlaylistLevelType.SUBTITLE, name, language);
   }
 
   /**
