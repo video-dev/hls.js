@@ -78,14 +78,10 @@ export default class LevelController implements NetworkComponentAPI {
     this.canLoad = true;
     this.levelRetryCount = 0;
 
-    // clean up live level details to force reload them, and reset load errors
+    // Reset load errors
     if (levels) {
       levels.forEach(level => {
         level.loadError = 0;
-        const levelDetails = level.details;
-        if (levelDetails?.live) {
-          level.details = undefined;
-        }
       });
     }
     // speed up live playlist refresh if timer exists

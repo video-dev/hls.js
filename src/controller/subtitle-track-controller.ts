@@ -131,7 +131,7 @@ class SubtitleTrackController implements ComponentAPI {
     currentTrack.details = data.details;
     logger.log(`[subtitle-track-controller]: subtitle track ${id} loaded [${details.startSN},${details.endSN}]`);
 
-    if (details.live) {
+    if (details.live && !this.stopped) {
       details.reloaded(curDetails);
       const reloadInterval = computeReloadInterval(details, data.stats);
       logger.log(`[subtitle-track-controller]: live subtitle track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
@@ -181,7 +181,7 @@ class SubtitleTrackController implements ComponentAPI {
   private _loadCurrentTrack (): void {
     const { trackId, tracks, hls } = this;
     const currentTrack = tracks[trackId];
-    if (trackId < 0 || !currentTrack || (currentTrack.details && !currentTrack.details.live)) {
+    if (this.stopped || trackId < 0 || !currentTrack || (currentTrack.details && !currentTrack.details.live)) {
       return;
     }
     logger.log(`[subtitle-track-controller]: Loading subtitle track ${trackId}`);
