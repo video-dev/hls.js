@@ -555,7 +555,7 @@ export default class BaseStreamController extends TaskLoop {
       sliding = newDetails.fragments[0].start;
       if (newDetails.PTSKnown && Number.isFinite(sliding)) {
         this.log(`Live playlist sliding:${sliding.toFixed(3)}`);
-      } else {
+      } else if (!sliding) {
         this.log('Live playlist - outdated PTS, unknown sliding');
         alignStream(this.fragPrevious, lastLevel, newDetails);
       }
