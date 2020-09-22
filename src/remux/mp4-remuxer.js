@@ -279,12 +279,16 @@ class MP4Remuxer {
     if (ptsDtsShift < 0) {
       if (ptsDtsShift < averageSampleDuration * -2) {
         // Fix for "CNN special report, with CC" in test-streams (including Safari browser)
-        logger.warn(`PTS < DTS detected in video samples, offsetting DTS to PTS ${toMsFromMpegTsClock(-averageSampleDuration, true)} ms`);
+        // With large PTS < DTS errors such as this, we want to correct CTS while maintaining increasing DTS values
+        logger.warn(`PTS < DTS detected in video samples, offsetting DTS from PTS by ${toMsFromMpegTsClock(-averageSampleDuration, true)} ms`);
+        let lastDts = ptsDtsShift;
         for (let i = 0; i < nbSamples; i++) {
-          inputSamples[i].dts = inputSamples[i].pts - averageSampleDuration;
+          inputSamples[i].dts = lastDts = Math.max(lastDts, inputSamples[i].pts - averageSampleDuration);
+          inputSamples[i].pts = Math.max(lastDts, inputSamples[i].pts);
         }
       } else {
         // Fix for "Custom IV with bad PTS DTS" in test-streams
+        // With smaller PTS < DTS errors we can simply move all DTS back. This increases CTS without causing buffer gaps or decode errors in Safari
         logger.warn(`PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(ptsDtsShift, true)} ms to overcome this issue`);
         for (let i = 0; i < nbSamples; i++) {
           inputSamples[i].dts = inputSamples[i].dts + ptsDtsShift;
