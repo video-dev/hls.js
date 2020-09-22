@@ -278,17 +278,23 @@ export default class Fragment extends BaseSegment {
 
   findIndependentPart (targetBufferTime: number): Part | null {
     const partList = this.partList;
+    let independentPart: Part | null = null;
     if (partList !== null) {
       let start = this.start;
       for (let i = 0, len = partList.length; i < len; i++) {
-        const part = partList[0];
-        if (part.independent && targetBufferTime < start + part.duration) {
-          return part;
+        const part = partList[i];
+        if (targetBufferTime < start + part.duration) {
+          if (part.independent) {
+            return part;
+          }
+          return independentPart;
+        } else if (part.independent) {
+          independentPart = part;
         }
         start += part.duration;
       }
     }
-    return null;
+    return independentPart;
   }
 
   isFinalPart (part: Part) {
