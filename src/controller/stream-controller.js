@@ -792,7 +792,7 @@ class StreamController extends BaseStreamController {
         this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
         if (newDetails.PTSKnown && Number.isFinite(sliding)) {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
-        } else {
+        } else if (!sliding) {
           logger.log('live playlist - outdated PTS, unknown sliding');
           alignStream(this.fragPrevious, lastLevel, newDetails);
         }
@@ -1297,8 +1297,8 @@ class StreamController extends BaseStreamController {
       return;
     }
 
-    // Check combined buffer
-    const buffered = media.buffered;
+    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+    const buffered = mediaBuffer.buffered;
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
