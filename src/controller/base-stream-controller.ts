@@ -532,7 +532,7 @@ export default class BaseStreamController extends TaskLoop {
     const lastLevel: Level | null = (levelLastLoaded !== null) ? levels![levelLastLoaded] : null;
 
     let sliding = 0;
-    if (oldDetails?.PTSKnown && newDetails.fragments.length > 0) {
+    if (oldDetails && newDetails.fragments.length > 0) {
       // we already have details for that level, merge them
       LevelHelper.mergeDetails(oldDetails, newDetails);
       // Update fragmentLoader if it's loading fragment parts

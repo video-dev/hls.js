@@ -1,6 +1,6 @@
 import Hls from '../hls';
 import { NetworkComponentAPI } from '../types/component-api';
-import { HlsUrlParameters } from '../types/level';
+import { getSkipValue, HlsUrlParameters } from '../types/level';
 import { computeReloadInterval } from './level-helper';
 import { logger } from '../utils/logger';
 import type LevelDetails from '../loader/level-details';
@@ -81,8 +81,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           }
           details.tuneInGoal = currentGoal;
         }
-        // TODO: LL-HLS enable skip parameter for delta playlists independent of canBlockReload
-        const skip = false;
+        const skip = getSkipValue(details);
         this.loadPlaylist(new HlsUrlParameters(msn, part, skip));
         return;
       }

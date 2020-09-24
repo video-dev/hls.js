@@ -29,6 +29,8 @@ export default class LevelDetails {
   public canBlockReload: boolean = false;
   public canSkipUntil: number = 0;
   public canSkipDateRanges: boolean = false;
+  public skippedSegments?: number;
+  public recentlyRemovedDateranges?: string[];
   public partHoldBack: number = 0;
   public holdBack: number = 0;
   public partTarget: number = 0;
