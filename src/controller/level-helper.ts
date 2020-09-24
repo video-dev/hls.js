@@ -158,14 +158,18 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
       newFrag.backtracked = oldFrag.backtracked;
       newFrag.dropped = oldFrag.dropped;
       PTSFrag = newFrag;
+
+      // PTS is known when any segment has startPTS and endPTS
+      newDetails.PTSKnown = true;
     }
     newFrag.stats = oldFrag.stats;
     newFrag.loader = oldFrag.loader;
     newFrag.urlId = oldFrag.urlId;
-
-    // PTS is known when there are overlapping segments
-    newDetails.PTSKnown = true;
   });
+
+  if (newDetails.skippedSegments) {
+    newDetails.startCC = newDetails.fragments[0].cc;
+  }
 
   if (!newDetails.PTSKnown) {
     return;
@@ -193,14 +197,18 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
   newDetails.PTSKnown = oldDetails.PTSKnown;
 }
 
-export function mergeSubtitlePlaylists (oldPlaylist: LevelDetails, newPlaylist: LevelDetails, referenceStart = 0): void {
+export function mergeSubtitlePlaylists (oldDetails: LevelDetails, newDetails: LevelDetails, referenceStart = 0): void {
   let lastIndex = -1;
-  mapFragmentIntersection(oldPlaylist, newPlaylist, (oldFrag, newFrag, index) => {
+  mapFragmentIntersection(oldDetails, newDetails, (oldFrag, newFrag, index) => {
     newFrag.start = oldFrag.start;
     lastIndex = index;
   });
 
-  const frags = newPlaylist.fragments;
+  if (newDetails.skippedSegments) {
+    newDetails.startCC = newDetails.fragments[0].cc;
+  }
+
+  const frags = newDetails.fragments;
   if (lastIndex < 0) {
     frags.forEach(frag => {
       frag.start += referenceStart;
@@ -213,25 +221,29 @@ export function mergeSubtitlePlaylists (oldPlaylist: LevelDetails, newPlaylist: 
   }
 }
 
-export function mapFragmentIntersection (oldPlaylist: LevelDetails, newPlaylist: LevelDetails, intersectionFn): void {
-  const start = Math.max(oldPlaylist.startSN, newPlaylist.startSN) - newPlaylist.startSN;
-  const end = Math.min(oldPlaylist.endSN, newPlaylist.endSN) - newPlaylist.startSN;
-  const delta = newPlaylist.startSN - oldPlaylist.startSN;
+export function mapFragmentIntersection (oldDetails: LevelDetails, newDetails: LevelDetails, intersectionFn): void {
+  const start = Math.max(oldDetails.startSN, newDetails.startSN) - newDetails.startSN;
+  const end = Math.min(oldDetails.endSN, newDetails.endSN) - newDetails.startSN;
+  const delta = newDetails.startSN - oldDetails.startSN;
+  const skippedSegments = newDetails.skippedSegments;
 
   for (let i = start; i <= end; i++) {
-    const oldFrag = oldPlaylist.fragments[delta + i];
-    const newFrag = newPlaylist.fragments[i];
-    if (!oldFrag || !newFrag) {
+    const oldFrag = oldDetails.fragments[delta + i];
+    let newFrag = newDetails.fragments[i];
+    if (!oldFrag) {
       break;
+    } else if (skippedSegments && !newFrag && i < skippedSegments) {
+      // Fill in skipped segments in delta playlist
+      newFrag = newDetails.fragments[i] = oldFrag;
     }
     intersectionFn(oldFrag, newFrag, i);
   }
 }
 
-export function adjustSliding (oldPlaylist: LevelDetails, newPlaylist: LevelDetails): void {
-  const delta = newPlaylist.startSN - oldPlaylist.startSN;
-  const oldFragments = oldPlaylist.fragments;
-  const newFragments = newPlaylist.fragments;
+export function adjustSliding (oldDetails: LevelDetails, newDetails: LevelDetails): void {
+  const delta = newDetails.startSN - oldDetails.startSN;
+  const oldFragments = oldDetails.fragments;
+  const newFragments = newDetails.fragments;
 
   if (delta < 0 || delta > oldFragments.length) {
     return;

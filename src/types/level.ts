@@ -37,12 +37,29 @@ export interface LevelAttributes extends AttrList {
   URI?: string
 }
 
+enum HlsSkip {
+  No = '',
+  Yes = 'YES',
+  v2 = 'v2'
+}
+
+export function getSkipValue (details: LevelDetails): HlsSkip {
+  const { canSkipUntil, canSkipDateRanges } = details;
+  if (canSkipUntil) {
+    if (canSkipDateRanges) {
+      return HlsSkip.v2;
+    }
+    return HlsSkip.Yes;
+  }
+  return HlsSkip.No;
+}
+
 export class HlsUrlParameters {
   msn: number;
   part?: number;
-  skip?: boolean;
+  skip?: HlsSkip;
 
-  constructor (msn: number, part?: number, skip?: boolean) {
+  constructor (msn: number, part?: number, skip?: HlsSkip) {
     this.msn = msn;
     this.part = part;
     this.skip = skip;
@@ -56,8 +73,7 @@ export class HlsUrlParameters {
       searchParams.set('_HLS_part', this.part.toString());
     }
     if (this.skip) {
-      // TODO: When 'CAN-SKIP-DATERANGES=YES' then use _HLS_skip=v2 https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-07#section-6.3.7
-      searchParams.set('_HLS_skip', 'YES');
+      searchParams.set('_HLS_skip', this.skip);
     }
     searchParams.sort();
     url.search = searchParams.toString();

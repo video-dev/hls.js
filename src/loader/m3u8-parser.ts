@@ -32,6 +32,7 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp([
   /#(EXTM3U)/.source,
   /#EXT-X-(PLAYLIST-TYPE):(.+)/.source,
   /#EXT-X-(MEDIA-SEQUENCE): *(\d+)/.source,
+  /#EXT-X-(SKIP):(.+)/.source,
   /#EXT-X-(TARGETDURATION): *(\d+)/.source,
   /#EXT-X-(KEY):(.+)/.source,
   /#EXT-X-(START):(.+)/.source,
@@ -251,6 +252,18 @@ export default class M3U8Parser {
         case 'MEDIA-SEQUENCE':
           currentSN = level.startSN = parseInt(value1);
           break;
+        case 'SKIP': {
+          const skipAttrs = new AttrList(value1);
+          const skippedSegments = level.skippedSegments = skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
+          // This will result in fragments[] containing undefined values, which we will fill in later
+          level.fragments.length = skippedSegments;
+          currentSN += skippedSegments;
+          const recentlyRemovedDateranges = skipAttrs.enumeratedString('RECENTLY-REMOVED-DATERANGES');
+          if (recentlyRemovedDateranges) {
+            level.recentlyRemovedDateranges = recentlyRemovedDateranges.split('\t');
+          }
+          break;
+        }
         case 'TARGETDURATION':
           level.targetduration = parseFloat(value1);
           break;
@@ -407,7 +420,9 @@ export default class M3U8Parser {
       level.endPart = lastFragment.partCount - 1;
       // If we have a complete fragment url, then all parts are accounted for
       level.lastPart = !!lastFragment.relurl;
-      level.startCC = level.fragments[0].cc;
+      if (level.fragments[0]) {
+        level.startCC = level.fragments[0].cc;
+      }
     } else {
       level.endSN = 0;
       level.startCC = 0;
@@ -422,7 +437,7 @@ export default class M3U8Parser {
         logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
 
         frag = new Fragment(type, baseurl);
-        frag.relurl = level.fragments[0].relurl;
+        frag.relurl = level.fragments[level.fragments.length - 1].relurl;
         frag.level = id;
         frag.sn = 'initSegment';
 
@@ -476,6 +491,9 @@ function backfillProgramDateTimes (fragments, startIndex) {
   let fragPrev = fragments[startIndex];
   for (let i = startIndex - 1; i >= 0; i--) {
     const frag = fragments[i];
+    if (!frag) {
+      return;
+    }
     frag.programDateTime = fragPrev.programDateTime - (frag.duration * 1000);
     fragPrev = frag;
   }
