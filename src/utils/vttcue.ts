@@ -15,7 +15,7 @@
  */
 
 declare interface VTTCuePolyfill extends VTTCue {
-  new(...args): VTTCue;
+  new(...args): VTTCuePolyfill;
   hasBeenReset: boolean;
   displayState: void;
 }
@@ -25,20 +25,19 @@ export default (function () {
     return self.VTTCue;
   }
 
-  const autoKeyword = 'auto';
-  enum DirectionSettings {
-    '' = '',
-    lr = 'lr',
-    rl = 'rl',
-  }
+  const DirectionSettings = {
+    '': true,
+    lr: true,
+    rl: true
+  };
   type DirectionSettingsStrings = keyof typeof DirectionSettings;
-  enum AlignSettings {
-    start = 'start',
-    middle = 'middle',
-    end = 'end',
-    left = 'left',
-    right = 'right',
-  }
+  const AlignSettings = {
+    start: true,
+    middle: true,
+    end: true,
+    left: true,
+    right: true
+  };
   type AlignSettingsStrings = keyof typeof AlignSettings;
 
   // generic for checking if a value is
@@ -61,7 +60,7 @@ export default (function () {
     return enumHas(AlignSettings, value);
   }
 
-  function extend (obj : Record<string, any>, ...rest : Record<string, any>[]) {
+  function extend (obj : Record<string, any>, ...rest: Record<string, any>[]) {
     let i = 1;
     for (; i < arguments.length; i++) {
       const cobj = arguments[i];
@@ -204,7 +203,7 @@ export default (function () {
         return _line;
       },
       set: function (value : number | 'auto') {
-        if (typeof value !== 'number' && value !== autoKeyword) {
+        if (typeof value !== 'number' && value !== 'auto') {
           throw new SyntaxError('An invalid number or illegal string was specified.');
         }
 
