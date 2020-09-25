@@ -91,7 +91,7 @@ function parseTTML (ttml: string, syncPTS: number): Array<VTTCue> {
         start: 'start',
         end: 'end'
       })[textAlign];
-      cue.align = textAlign;
+      cue.align = textAlign as AlignSetting;
     }
     Object.assign(cue, styles);
 
