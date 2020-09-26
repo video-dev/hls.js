@@ -49,20 +49,18 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
-      if (deliveryDirectives) {
-        console.assert(details.advanced, `blocking reload result sn-part: ${details.endSN}-${details.endPart}, requested ${deliveryDirectives.msn}-${deliveryDirectives.part}`);
-      }
       details.reloaded(previousDetails);
       if (previousDetails) {
-        logger.log(`[${this.constructor.name}] live playlist ${index} ${details.advanced ? ('REFRESHED ' + details.endSN + '-' + details.endPart) : 'MISSED'}`);
+        logger.log(`[${this.constructor.name}] live playlist ${index} ${details.advanced ? ('REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex) : 'MISSED'}`);
       }
       if (!this.canLoad) {
         return;
       }
       if (details.canBlockReload && details.endSN && details.advanced) {
         // Load level with LL-HLS delivery directives
-        let msn = details.lastPart ? details.endSN + 1 : details.endSN;
-        let part = details.lastPart ? 0 : details.endPart + 1;
+        const lastPartIndex = details.lastPartIndex;
+        let msn = lastPartIndex !== -1 ? details.lastPartSn : details.endSN + 1;
+        let part = lastPartIndex !== -1 ? lastPartIndex + 1 : undefined;
         // Low-Latency CDN Tune-in: "age" header and time since load indicates we're behind by more than one part
         // Update directives to obtain the Playlist that has the estimated additional duration of media
         let currentGoal = Math.min(details.age - details.partTarget, details.targetduration * 1.5);
@@ -74,10 +72,12 @@ export default class BasePlaylistController implements NetworkComponentAPI {
             currentGoal = 0;
           } else {
             const segments = Math.floor(currentGoal / details.targetduration);
-            const parts = Math.round((currentGoal % details.targetduration) / details.partTarget);
             msn += segments;
-            part += parts;
-            logger.log(`[${this.constructor.name}] CDN Tune-in age: ${details.age} goal: ${currentGoal} skip sn ${segments} parts ${parts}`);
+            if (part !== undefined) {
+              const parts = Math.round((currentGoal % details.targetduration) / details.partTarget);
+              part += parts;
+            }
+            logger.log(`[${this.constructor.name}] CDN Tune-in age: ${details.age} goal: ${currentGoal} skip sn ${segments} to part ${part}`);
           }
           details.tuneInGoal = currentGoal;
         }

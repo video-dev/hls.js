@@ -972,70 +972,71 @@ fileSequence1151226.ts`, 'http://dummy.url.com/playlist.m3u8', 0, PlaylistLevelT
       expect(details.partTarget).to.equal(1.004);
     });
 
-    it('Parses the PART tags (for complete fragments - incomplete ones will be exposed later)', function () {
+    it('Parses the PART tags', function () {
       const details = M3U8Parser.parseLevelPlaylist(playlist, 'http://dummy.url.com/playlist.m3u8', 0,
         PlaylistLevelType.MAIN, 0);
       // TODO: Partial Segments for a yet to be appended EXT-INF entry will be added to the fragments list
       //  once PartLoader is implemented to abstract away part loading complexity using progressive loader events
       expect(details.fragments).to.have.lengthOf(8);
-      expect(details.fragments[0].partList).to.equal(null);
-      expect(details.fragments[1].partList).to.equal(null);
-      expect(details.fragments[2].partList).to.equal(null);
-      expect(details.fragments[3].partList).to.equal(null);
-      expect(details.fragments[4].partList).to.equal(null);
-      expect(details.fragments[5].partList).to.equal(null);
-      expect(details.fragments[6].partList).to.be.an('array').which.has.lengthOf(4);
-      expect(details.fragments[7].partList).to.be.an('array').which.has.lengthOf(4);
-      expectWithJSONMessage(details.fragments[6].partList[0], '6-0').to.deep.include({
+      expect(details.partList).to.be.an('array').which.has.lengthOf(8);
+      expect(details.partList[0].fragment).to.equal(details.fragments[6]);
+      expect(details.partList[1].fragment).to.equal(details.fragments[6]);
+      expect(details.partList[2].fragment).to.equal(details.fragments[6]);
+      expect(details.partList[3].fragment).to.equal(details.fragments[6]);
+      expect(details.partList[4].fragment).to.equal(details.fragments[7]);
+      expect(details.partList[5].fragment).to.equal(details.fragments[7]);
+      expect(details.partList[6].fragment).to.equal(details.fragments[7]);
+      expect(details.partList[7].fragment).to.equal(details.fragments[7]);
+      expectWithJSONMessage(details.partList[0], '6-0').to.deep.include({
         duration: 1,
         gap: false,
         independent: true,
         index: 0,
         relurl: 'lowLatencyHLS.php?segment=filePart1151232.1.ts'
       });
-      expectWithJSONMessage(details.fragments[6].partList[1], '6-1').to.deep.include({
+      expectWithJSONMessage(details.partList[1], '6-1').to.deep.include({
         duration: 1.00001,
         gap: false,
         independent: false,
         index: 1,
         relurl: 'lowLatencyHLS.php?segment=filePart1151232.2.ts'
       });
-      expectWithJSONMessage(details.fragments[6].partList[2], '6-2').to.deep.include({
+      expectWithJSONMessage(details.partList[2], '6-2').to.deep.include({
         duration: 1,
         gap: false,
         independent: true,
         index: 2,
         relurl: 'lowLatencyHLS.php?segment=filePart1151232.3.ts'
       });
-      expectWithJSONMessage(details.fragments[6].partList[3], '6-3').to.deep.include({
+      expectWithJSONMessage(details.partList[3], '6-3').to.deep.include({
         duration: 1,
         gap: false,
         independent: true,
         index: 3,
         relurl: 'lowLatencyHLS.php?segment=filePart1151232.4.ts'
       });
-      expectWithJSONMessage(details.fragments[7].partList[0], '7-0').to.deep.include({
+      expectWithJSONMessage(details.partList[4], '7-0').to.deep.include({
         duration: 1,
         gap: false,
         independent: true,
         index: 0,
         relurl: 'lowLatencyHLS.php?segment=filePart1151233.1.ts'
       });
-      expectWithJSONMessage(details.fragments[7].partList[1], '7-1').to.deep.include({
+      expectWithJSONMessage(details.partList[5], '7-1').to.deep.include({
         duration: 0.99999,
         gap: false,
         independent: true,
         index: 1,
         relurl: 'lowLatencyHLS.php?segment=filePart1151233.2.ts'
       });
-      expectWithJSONMessage(details.fragments[7].partList[2], '7-2').to.deep.include({
+      expectWithJSONMessage(details.partList[6], '7-2').to.deep.include({
         duration: 1,
         gap: false,
         independent: false,
         index: 2,
         relurl: 'lowLatencyHLS.php?segment=filePart1151233.3.ts'
       });
-      expectWithJSONMessage(details.fragments[7].partList[3], '7-3').to.deep.include({
+      expectWithJSONMessage(details.partList[7], '7-3').to.deep.include({
         duration: 1,
         gap: true,
         independent: true,

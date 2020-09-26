@@ -54,7 +54,7 @@ export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number
     if (toIdx > fromIdx) {
       const contiguous = fragFrom.cc === fragTo.cc;
       // TODO: With part-loading end/durations we need to confirm the whole fragment is loaded before using (or setting) minEndPTS
-      if (contiguous && fragFrom.minEndPTS && !fragFrom.hasParts) {
+      if (contiguous && fragFrom.minEndPTS) {
         fragTo.start = fragFrom.start + (fragFrom.minEndPTS - fragFrom.start);
       } else {
         fragTo.start = fragFrom.start + fragFrom.duration;

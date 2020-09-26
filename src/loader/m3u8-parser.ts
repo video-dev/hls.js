@@ -1,6 +1,6 @@
 import * as URLToolkit from 'url-toolkit';
 
-import Fragment from './fragment';
+import Fragment, { Part } from './fragment';
 import LevelDetails from './level-details';
 import LevelKey from './level-key';
 
@@ -167,8 +167,10 @@ export default class M3U8Parser {
 
   static parseLevelPlaylist (string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number): LevelDetails {
     let currentSN = 0;
+    let currentPart = 0;
     let totalduration = 0;
     const level = new LevelDetails(baseurl);
+    level.m3u8 = string;
     let discontinuityCounter = 0;
     let prevFrag: Fragment | null = null;
     let frag: Fragment = new Fragment(type, baseurl);
@@ -180,20 +182,6 @@ export default class M3U8Parser {
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
-    const appendfragment = () => {
-      frag.start = totalduration;
-      if (levelkey) {
-        frag.levelkey = levelkey;
-      }
-      frag.sn = currentSN;
-      frag.level = id;
-      frag.cc = discontinuityCounter;
-      frag.urlId = levelUrlId;
-      if (level.fragments[level.fragments.length - 1] !== frag) {
-        level.fragments.push(frag);
-      }
-    };
-
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       const duration = result[1];
       if (duration) { // INF
@@ -204,7 +192,15 @@ export default class M3U8Parser {
         frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
       } else if (result[3]) { // url
         if (Number.isFinite(frag.duration)) {
-          appendfragment();
+          frag.start = totalduration;
+          if (levelkey) {
+            frag.levelkey = levelkey;
+          }
+          frag.sn = currentSN;
+          frag.level = id;
+          frag.cc = discontinuityCounter;
+          frag.urlId = levelUrlId;
+          level.fragments.push(frag);
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
           assignProgramDateTime(frag, prevFrag);
@@ -212,7 +208,9 @@ export default class M3U8Parser {
           totalduration += frag.duration;
 
           currentSN++;
+          currentPart = 0;
           frag = new Fragment(type, baseurl);
+          frag.sn = currentSN;
         }
       } else if (result[4]) { // X-BYTERANGE
         const data = (' ' + result[4]).slice(1);
@@ -311,7 +309,7 @@ export default class M3U8Parser {
             'com.widevine' // earlier widevine (v1)
           ];
 
-          if (unsupportedKnownKeyformatsInManifest.includes(decryptkeyformat)) {
+          if (unsupportedKnownKeyformatsInManifest.indexOf(decryptkeyformat) > -1) {
             logger.warn(`Keyformat ${decryptkeyformat} is not supported from the manifest`);
             continue;
           } else if (decryptkeyformat !== 'identity') {
@@ -384,10 +382,17 @@ export default class M3U8Parser {
           level.partTarget = partInfAttrs.decimalFloatingPoint('PART-TARGET');
           break;
         }
-        case 'PART':
-          frag.appendPart(new AttrList(value1));
-          appendfragment();
+        case 'PART': {
+          let partList = level.partList;
+          if (!partList) {
+            partList = level.partList = [];
+          }
+          const previousFragmentPart = currentPart > 0 ? partList[partList.length - 1] : undefined;
+          const index = currentPart++;
+          const part = new Part(new AttrList(value1), frag, baseurl, index, previousFragmentPart);
+          partList.push(part);
           break;
+        }
         case 'PRELOAD-HINT': {
           const preloadHintAttrs = new AttrList(value1);
           level.preloadHint = preloadHintAttrs;
@@ -407,7 +412,7 @@ export default class M3U8Parser {
     }
     const fragmentLength = level.fragments.length;
     // logger.log('found ' + fragmentLength + ' fragments');
-    if (prevFrag && !(prevFrag.relurl || prevFrag.partList)) {
+    if (prevFrag && !prevFrag.relurl) {
       level.fragments.pop();
       totalduration -= prevFrag.duration;
     }
@@ -417,9 +422,6 @@ export default class M3U8Parser {
       const lastFragment = level.fragments[fragmentLength - 1];
       const lastSn = lastFragment.sn;
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
-      level.endPart = lastFragment.partCount - 1;
-      // If we have a complete fragment url, then all parts are accounted for
-      level.lastPart = !!lastFragment.relurl;
       if (level.fragments[0]) {
         level.startCC = level.fragments[0].cc;
       }
