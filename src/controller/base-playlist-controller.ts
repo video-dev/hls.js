@@ -1,12 +1,13 @@
 import Hls from '../hls';
 import { NetworkComponentAPI } from '../types/component-api';
-import { getSkipValue, HlsUrlParameters } from '../types/level';
+import { getSkipValue, HlsSkip, HlsUrlParameters } from '../types/level';
 import { computeReloadInterval } from './level-helper';
 import { logger } from '../utils/logger';
 import type LevelDetails from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type { AudioTrackLoadedData, LevelLoadedData, TrackLoadedData } from '../types/events';
 import { ErrorData } from '../types/events';
+import * as LevelHelper from './level-helper';
 
 export default class BasePlaylistController implements NetworkComponentAPI {
   protected hls: Hls;
@@ -44,14 +45,18 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     return this.canLoad && track && !!track.url && (!track.details || track.details.live);
   }
 
-  protected playlistLoaded (index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails: LevelDetails | undefined) {
-    const { details, stats, deliveryDirectives } = data;
+  protected playlistLoaded (index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails) {
+    const { details, stats } = data;
 
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live) {
       details.reloaded(previousDetails);
       if (previousDetails) {
         logger.log(`[${this.constructor.name}] live playlist ${index} ${details.advanced ? ('REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex) : 'MISSED'}`);
+      }
+      // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
+      if (previousDetails && details.fragments.length > 0) {
+        LevelHelper.mergeDetails(previousDetails, details);
       }
       if (!this.canLoad) {
         return;
@@ -81,7 +86,14 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           }
           details.tuneInGoal = currentGoal;
         }
-        const skip = getSkipValue(details);
+        let skip = getSkipValue(details, msn);
+        if (data.deliveryDirectives?.skip) {
+          if (details.deltaUpdateFailed) {
+            msn = data.deliveryDirectives.msn;
+            part = data.deliveryDirectives.part;
+            skip = HlsSkip.No;
+          }
+        }
         this.loadPlaylist(new HlsUrlParameters(msn, part, skip));
         return;
       }

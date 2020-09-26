@@ -217,10 +217,5 @@ module.exports = {
     url: 'https://ll-hls-test.apple.com/cmaf/master.m3u8',
     description: 'Apple Low-Latency HLS sample (fMP4 segments)',
     live: true
-  },
-  AppleLowLatencyHlsHoldBack: {
-    url: 'https://playertest.longtailvideo.com/adaptive/low-latency-hls/archived/hold-back-8s.m3u8',
-    description: 'Apple Low-Latency HLS archived sample. No blocking, no delta, PART-HOLD-BACK=2.004,HOLD-BACK=8, Safari MediaError 4',
-    live: true
   }
 };

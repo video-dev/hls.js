@@ -16,7 +16,7 @@ import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
 import Fragment from '../loader/fragment';
 import { HlsConfig } from '../config';
-import { toMpegTsClockFromTimescale, toMsFromMpegTsClock } from '../utils/timescale-conversion';
+import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;

@@ -9,10 +9,8 @@ import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
-import { mergeSubtitlePlaylists } from './level-helper';
 import {
   ErrorData, FragLoadedData,
-  LevelUpdatedData,
   MediaAttachedData,
   SubtitleFragProcessed,
   SubtitleTracksUpdatedData,
@@ -38,9 +36,6 @@ export class SubtitleStreamController extends BaseStreamController implements Co
 
   private currentTrackId: number = -1;
   private tracksBuffered: Array<TimeRange[]>;
-  // lastAVStart stores the time in seconds for the start time of a level load
-  private lastAVStart: number = 0;
-  private readonly _onMediaSeeking: () => void;
 
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls);
@@ -49,10 +44,10 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     this.fragmentTracker = fragmentTracker;
     this.fragPrevious = null;
     this.media = null;
+    this.mediaBuffer = null;
     this.state = State.STOPPED;
     this.tracksBuffered = [];
     this.fragmentLoader = new FragmentLoader(hls.config);
-    this._onMediaSeeking = this.onMediaSeeking.bind(this);
 
     this._registerListeners();
   }
@@ -67,7 +62,6 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     hls.on(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
     hls.on(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
-    hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
   }
 
   private _unregisterListeners () {
@@ -80,7 +74,6 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     hls.off(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
     hls.off(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
-    hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
   }
 
   onHandlerDestroyed () {
@@ -128,7 +121,6 @@ export class SubtitleStreamController extends BaseStreamController implements Co
 
   onMediaAttached (event: Events.MEDIA_ATTACHED, { media }: MediaAttachedData) {
     this.media = media;
-    media.addEventListener('seeking', this._onMediaSeeking);
     this.state = State.IDLE;
   }
 
@@ -136,13 +128,13 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     if (!this.media) {
       return;
     }
-    this.media.removeEventListener('seeking', this._onMediaSeeking);
     this.fragmentTracker.removeAllFragments();
     this.currentTrackId = -1;
     this.levels.forEach((level: Level) => {
       this.tracksBuffered[level.id] = [];
     });
     this.media = null;
+    this.mediaBuffer = null;
     this.state = State.STOPPED;
   }
 
@@ -164,6 +156,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     this.levels.forEach((level: Level) => {
       this.tracksBuffered[level.id] = [];
     });
+    this.mediaBuffer = null;
   }
 
   onSubtitleTrackSwitch (event: Events.SUBTITLE_TRACK_SWITCH, data: TrackSwitchedData) {
@@ -177,7 +170,10 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     // Check if track has the necessary details to load fragments
     const currentTrack = this.levels[this.currentTrackId];
     if (currentTrack?.details) {
+      this.mediaBuffer = this.mediaBufferTimeRanges;
       this.setInterval(TICK_INTERVAL);
+    } else {
+      this.mediaBuffer = null;
     }
   }
 
@@ -192,9 +188,14 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     if (id >= levels.length || id !== currentTrackId || !currentTrack) {
       return;
     }
-
-    if (details.live && currentTrack.details) {
-      mergeSubtitlePlaylists(currentTrack.details, details, this.lastAVStart);
+    this.mediaBuffer = this.mediaBufferTimeRanges;
+    if (details.live) {
+      if (details.deltaUpdateFailed) {
+        return;
+      }
+      // TODO: Subtitle Fragments should be assigned startPTS and endPTS once VTT/TTML is parsed
+      //  otherwise this depends on DISCONTINUITY or PROGRAM-DATE-TIME tags to align playlists
+      this.alignPlaylists(details, currentTrack.details);
     }
     currentTrack.details = details;
     this.levelLastLoaded = id;
@@ -233,11 +234,6 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     }
   }
 
-  onLevelUpdated (event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData) {
-    const frags = details.fragments;
-    this.lastAVStart = frags.length ? frags[0].start : 0;
-  }
-
   doTick () {
     if (!this.media) {
       this.state = State.IDLE;
@@ -252,7 +248,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
 
       const { maxBufferHole, maxFragLookUpTolerance } = config;
       const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
-      const bufferedInfo = BufferHelper.bufferedInfo(this._getBuffered(), media.currentTime, maxBufferHole);
+      const bufferedInfo = BufferHelper.bufferedInfo(this.mediaBufferTimeRanges, media.currentTime, maxBufferHole);
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
 
       if (bufferLen > maxConfigBuffer) {
@@ -291,15 +287,10 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   }
 
   stopLoad () {
-    this.lastAVStart = 0;
     super.stopLoad();
   }
 
-  _getBuffered () {
+  get mediaBufferTimeRanges () {
     return this.tracksBuffered[this.currentTrackId] || [];
-  }
-
-  onMediaSeeking () {
-    this.fragPrevious = null;
   }
 }

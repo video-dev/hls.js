@@ -21,7 +21,7 @@ import {
   FragBufferedData,
   BufferCreatedData,
   AudioTrackSwitchingData,
-  FragParsingUserdataData, FragParsingMetadataData, FragLoadedData
+  FragParsingUserdataData, FragParsingMetadataData, FragLoadedData, InitPTSFoundData
 } from '../types/events';
 import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
@@ -39,7 +39,6 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
   private onvseeked: EventListener | null = null;
   private onvended: EventListener | null = null;
   private videoBuffer: any | null = null;
-  private initPTS: any = [];
   private videoTrackCC: number = -1;
   private waitingVideoCC: number = -1;
   private audioSwitch: boolean = false;
@@ -93,16 +92,18 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
   }
 
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
-  onInitPtsFound (event: Events.INIT_PTS_FOUND, { frag, initPTS }) {
+  onInitPtsFound (event: Events.INIT_PTS_FOUND, { frag, id, initPTS }: InitPTSFoundData) {
     // Always update the new INIT PTS
     // Can change due level switch
-    const cc = frag.cc;
-    this.initPTS[cc] = initPTS;
-    this.videoTrackCC = cc;
-    this.log(`InitPTS for cc: ${cc} found from main: ${initPTS}`);
-    // If we are waiting, tick immediately to unblock audio fragment transmuxing
-    if (this.state === State.WAITING_INIT_PTS) {
-      this.tick();
+    if (id === 'main') {
+      const cc = frag.cc;
+      this.initPTS[frag.cc] = initPTS;
+      this.log(`InitPTS for cc: ${cc} found from main: ${initPTS}`);
+      this.videoTrackCC = cc;
+      // If we are waiting, tick immediately to unblock audio fragment transmuxing
+      if (this.state === State.WAITING_INIT_PTS) {
+        this.tick();
+      }
     }
   }
 
@@ -399,9 +400,10 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     const track = levels[trackId];
     let sliding = 0;
     if (newDetails.live) {
-      sliding = this.mergeLivePlaylists(track.details, newDetails);
-    } else {
-      newDetails.PTSKnown = false;
+      if (newDetails.deltaUpdateFailed) {
+        return;
+      }
+      sliding = this.alignPlaylists(newDetails, track.details);
     }
     track.details = newDetails;
     this.levelLastLoaded = trackId;

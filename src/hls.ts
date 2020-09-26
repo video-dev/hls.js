@@ -683,4 +683,12 @@ export default class Hls implements HlsEventEmitter {
   set progressive (value) {
     setStreamingMode(this.config, value);
   }
+
+  get lowLatencyMode () {
+    return this.config.lowLatencyMode;
+  }
+
+  set lowLatencyMode (mode: boolean) {
+    this.config.lowLatencyMode = mode;
+  }
 }

@@ -147,8 +147,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
-  onInitPtsFound (event: Events.INIT_PTS_FOUND, data: InitPTSFoundData) {
-    const { frag, id, initPTS } = data;
+  onInitPtsFound (event: Events.INIT_PTS_FOUND, { frag, id, initPTS }: InitPTSFoundData) {
     const { unparsedVttFrags } = this;
     if (id === 'main') {
       this.initPTS[frag.cc] = initPTS;

@@ -311,6 +311,7 @@ Playlist tags
   - `#EXT-X-PART-INF:PART-TARGET=<n>`
   - `#EXT-X-PART:<attribute-list>`
   - `#EXT-X-PRELOAD-HINT:<attribute-list>`
+  - `#EXT-X-SKIP:<attribute-list>`
   - `#EXT-X-RENDITION-REPORT:<attribute-list>`
   - The following tags are added to their respective fragment's attribute list
       - `#EXT-X-DATERANGE:<attribute-list>`

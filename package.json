@@ -67,6 +67,7 @@
     "@itsjamie/esdoc-standard-plugin": "^0.3.0",
     "@itsjamie/esdoc-typescript-plugin": "^0.3.0",
     "@types/chai": "^4.2.11",
+    "@types/chart.js": "^2.9.24",
     "@types/mocha": "^8.0.0",
     "@types/sinon-chai": "^3.2.4",
     "@typescript-eslint/eslint-plugin": "^2.34.0",

@@ -380,12 +380,12 @@ export default class BufferController implements ComponentAPI {
     this._levelTargetDuration = details.levelTargetDuration;
     this._live = details.live;
 
-    const levelDuration = details.totalduration + details.fragments[0].start;
+    const levelEnd = details.fragments[0].start + details.totalduration;
     logger.log('[buffer-controller]: Duration update required; enqueueing duration change operation');
     if (this.getSourceBufferTypes().length) {
-      this.blockBuffers(this.updateMediaElementDuration.bind(this, levelDuration));
+      this.blockBuffers(this.updateMediaElementDuration.bind(this, levelEnd));
     } else {
-      this.updateMediaElementDuration(levelDuration);
+      this.updateMediaElementDuration(levelEnd);
       if (this.hls.config.liveDurationInfinity) {
         this.updateSeekableRange(details);
       }
@@ -509,8 +509,8 @@ export default class BufferController implements ComponentAPI {
     const fragments = levelDetails.fragments;
     const len = fragments.length;
     if (len && mediaSource?.setLiveSeekableRange) {
-      const start = fragments[0]?.start;
-      const end = fragments[len - 1].start + fragments[len - 1].duration;
+      const start = fragments[0].start;
+      const end = start + levelDetails.totalduration;
       mediaSource.setLiveSeekableRange(start, end);
     }
   }

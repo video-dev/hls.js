@@ -349,6 +349,8 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fragLoadingMaxRetryTimeout: 64000,
       startFragPrefetch: false,
       testBandwidth: true,
+      progressive: false,
+      lowLatencyMode: false,
       fpsDroppedMonitoringPeriod: 5000,
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 3,
@@ -658,6 +660,18 @@ Start prefetching start fragment although media not attached yet.
 
 Load the first fragment of the lowest level to establish a bandwidth estimate before selecting the first auto-level.
 Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
+
+### `progressive`
+                  
+(default: `false`)
+
+Stream segment data with fetch loader.
+
+### `lowLatencyMode`
+                  
+(default: `false`)
+
+Enable Low-Latency HLS part playlist and segment loading, and start live streams at playlist PART-HOLD-BACK rather than HOLD-BACK.
 
 ### `fpsDroppedMonitoringPeriod`
 

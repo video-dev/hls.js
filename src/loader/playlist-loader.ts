@@ -14,7 +14,7 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
 import { parseSegmentIndex } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
-import { Level, LevelParsed } from '../types/level';
+import { LevelParsed } from '../types/level';
 import type { Loader, LoaderContext, LoaderResponse, LoaderStats, PlaylistLoaderContext } from '../types/loader';
 import { LoaderConfiguration, PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import LevelDetails from './level-details';
@@ -24,11 +24,6 @@ import AttrList from '../utils/attr-list';
 import type { ErrorData, LevelLoadingData, ManifestLoadingData, TrackLoadingData } from '../types/events';
 
 const { performance } = self;
-
-function canHaveQualityLevels (type: PlaylistContextType): boolean {
-  return (type !== PlaylistContextType.AUDIO_TRACK &&
-    type !== PlaylistContextType.SUBTITLE_TRACK);
-}
 
 function mapContextToLevelType (context: PlaylistLoaderContext): PlaylistLevelType {
   const { type } = context;
@@ -452,7 +447,7 @@ class PlaylistLoader {
   }
 
   private _handleSidxRequest (response: LoaderResponse, context: PlaylistLoaderContext): void {
-    const sidxInfo = parseSegmentIndex(new Uint8Array(response.data as SharedArrayBuffer));
+    const sidxInfo = parseSegmentIndex(new Uint8Array(response.data as ArrayBuffer));
     // if provided fragment does not contain sidx, early return
     if (!sidxInfo) {
       return;
@@ -537,8 +532,9 @@ class PlaylistLoader {
       return;
     }
 
-    const canHaveLevels = canHaveQualityLevels(context.type);
-    if (canHaveLevels) {
+    switch (type) {
+    case PlaylistContextType.MANIFEST:
+    case PlaylistContextType.LEVEL:
       this.hls.trigger(Events.LEVEL_LOADED, {
         details: levelDetails,
         level: level || 0,
@@ -547,27 +543,25 @@ class PlaylistLoader {
         networkDetails,
         deliveryDirectives
       });
-    } else {
-      switch (type) {
-      case PlaylistContextType.AUDIO_TRACK:
-        this.hls.trigger(Events.AUDIO_TRACK_LOADED, {
-          details: levelDetails,
-          id: id || 0,
-          stats,
-          networkDetails,
-          deliveryDirectives
-        });
-        break;
-      case PlaylistContextType.SUBTITLE_TRACK:
-        this.hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
-          details: levelDetails,
-          id: id || 0,
-          stats,
-          networkDetails,
-          deliveryDirectives
-        });
-        break;
-      }
+      break;
+    case PlaylistContextType.AUDIO_TRACK:
+      this.hls.trigger(Events.AUDIO_TRACK_LOADED, {
+        details: levelDetails,
+        id: id || 0,
+        stats,
+        networkDetails,
+        deliveryDirectives
+      });
+      break;
+    case PlaylistContextType.SUBTITLE_TRACK:
+      this.hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
+        details: levelDetails,
+        id: id || 0,
+        stats,
+        networkDetails,
+        deliveryDirectives
+      });
+      break;
     }
   }
 }

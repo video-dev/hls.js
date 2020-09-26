@@ -1,10 +1,8 @@
 import { TrackSet } from './track';
 import {
   DemuxedAudioTrack,
-  DemuxedAvcTrack,
   DemuxedTrack, DemuxedVideoTrack,
   MetadataSample,
-  PassthroughVideoTrack,
   UserdataSample
 } from './demuxer';
 import { SourceBufferName } from './buffer';

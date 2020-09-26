@@ -11,10 +11,7 @@ import { MediaPlaylist, AudioGroup, MediaPlaylistType } from '../types/media-pla
 import { PlaylistLevelType } from '../types/loader';
 import { LevelAttributes, LevelParsed } from '../types/level';
 
-/**
- * M3U8 parser
- * @module
- */
+type M3U8ParserFragments = Array<Fragment | null>;
 
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)|#EXT-X-SESSION-DATA:([^\n\r]*)[\r\n]+/g;
@@ -166,21 +163,21 @@ export default class M3U8Parser {
   }
 
   static parseLevelPlaylist (string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number): LevelDetails {
+    const level = new LevelDetails(baseurl);
+    const fragments: M3U8ParserFragments = level.fragments;
     let currentSN = 0;
     let currentPart = 0;
     let totalduration = 0;
-    const level = new LevelDetails(baseurl);
-    level.m3u8 = string;
     let discontinuityCounter = 0;
     let prevFrag: Fragment | null = null;
     let frag: Fragment = new Fragment(type, baseurl);
     let result: RegExpExecArray | RegExpMatchArray | null;
     let i: number;
     let levelkey: LevelKey | undefined;
-
-    let firstPdtIndex: number | null = null;
+    let firstPdtIndex = -1;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
+    level.m3u8 = string;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       const duration = result[1];
@@ -200,17 +197,21 @@ export default class M3U8Parser {
           frag.level = id;
           frag.cc = discontinuityCounter;
           frag.urlId = levelUrlId;
-          level.fragments.push(frag);
+          fragments.push(frag);
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
           assignProgramDateTime(frag, prevFrag);
           prevFrag = frag;
           totalduration += frag.duration;
-
           currentSN++;
           currentPart = 0;
+
           frag = new Fragment(type, baseurl);
+          // setup the next fragment for part loading
+          frag.start = totalduration;
           frag.sn = currentSN;
+          frag.cc = discontinuityCounter;
+          frag.level = id;
         }
       } else if (result[4]) { // X-BYTERANGE
         const data = (' ' + result[4]).slice(1);
@@ -223,8 +224,8 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (firstPdtIndex === null) {
-          firstPdtIndex = level.fragments.length;
+        if (firstPdtIndex === -1) {
+          firstPdtIndex = fragments.length;
         }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
@@ -252,10 +253,15 @@ export default class M3U8Parser {
           break;
         case 'SKIP': {
           const skipAttrs = new AttrList(value1);
-          const skippedSegments = level.skippedSegments = skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
-          // This will result in fragments[] containing undefined values, which we will fill in later
-          level.fragments.length = skippedSegments;
-          currentSN += skippedSegments;
+          const skippedSegments = skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
+          if (Number.isFinite(skippedSegments)) {
+            level.skippedSegments = skippedSegments;
+            // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
+            for (let i = skippedSegments; i--;) {
+              fragments.unshift(null);
+            }
+            currentSN += skippedSegments;
+          }
           const recentlyRemovedDateranges = skipAttrs.enumeratedString('RECENTLY-REMOVED-DATERANGES');
           if (recentlyRemovedDateranges) {
             level.recentlyRemovedDateranges = recentlyRemovedDateranges.split('\t');
@@ -391,6 +397,7 @@ export default class M3U8Parser {
           const index = currentPart++;
           const part = new Part(new AttrList(value1), frag, baseurl, index, previousFragmentPart);
           partList.push(part);
+          frag.duration += part.duration;
           break;
         }
         case 'PRELOAD-HINT': {
@@ -410,43 +417,46 @@ export default class M3U8Parser {
         }
       }
     }
-    const fragmentLength = level.fragments.length;
-    // logger.log('found ' + fragmentLength + ' fragments');
     if (prevFrag && !prevFrag.relurl) {
-      level.fragments.pop();
+      fragments.pop();
       totalduration -= prevFrag.duration;
+      level.fragmentHint = prevFrag;
+    } else {
+      level.fragmentHint = frag;
     }
-    level.totalduration = totalduration;
-    if (totalduration > 0 && fragmentLength) {
+    const fragmentLength = fragments.length;
+    const firstFragment = fragments[0];
+    const lastFragment = fragments[fragmentLength - 1];
+    if (totalduration > 0 && fragmentLength && lastFragment) {
       level.averagetargetduration = totalduration / fragmentLength;
-      const lastFragment = level.fragments[fragmentLength - 1];
       const lastSn = lastFragment.sn;
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
-      if (level.fragments[0]) {
-        level.startCC = level.fragments[0].cc;
+      if (firstFragment) {
+        level.startCC = firstFragment.cc;
+        if (!level.initSegment) {
+          // this is a bit lurky but HLS really has no other way to tell us
+          // if the fragments are TS or MP4, except if we download them :/
+          // but this is to be able to handle SIDX.
+          if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl as string))) {
+            logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
+            frag = new Fragment(type, baseurl);
+            frag.relurl = lastFragment.relurl;
+            frag.level = id;
+            frag.sn = 'initSegment';
+            level.initSegment = frag;
+            level.needSidxRanges = true;
+          }
+        }
       }
     } else {
       level.endSN = 0;
       level.startCC = 0;
     }
-    level.endCC = discontinuityCounter;
-
-    if (!level.initSegment && fragmentLength) {
-      // this is a bit lurky but HLS really has no other way to tell us
-      // if the fragments are TS or MP4, except if we download them :/
-      // but this is to be able to handle SIDX.
-      if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl as string))) {
-        logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
-
-        frag = new Fragment(type, baseurl);
-        frag.relurl = level.fragments[level.fragments.length - 1].relurl;
-        frag.level = id;
-        frag.sn = 'initSegment';
-
-        level.initSegment = frag;
-        level.needSidxRanges = true;
-      }
+    if (level.partList) {
+      totalduration += level.fragmentHint.duration;
     }
+    level.totalduration = totalduration;
+    level.endCC = discontinuityCounter;
 
     /**
      * Backfill any missing PDT values
@@ -457,8 +467,8 @@ export default class M3U8Parser {
      * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
      * computed.
      */
-    if (firstPdtIndex) {
-      backfillProgramDateTimes(level.fragments, firstPdtIndex);
+    if (firstPdtIndex > 0) {
+      backfillProgramDateTimes(fragments, firstPdtIndex);
     }
 
     return level;
@@ -489,14 +499,15 @@ function assignCodec (media, groupItem, codecProperty) {
   }
 }
 
-function backfillProgramDateTimes (fragments, startIndex) {
-  let fragPrev = fragments[startIndex];
-  for (let i = startIndex - 1; i >= 0; i--) {
+function backfillProgramDateTimes (fragments: M3U8ParserFragments, firstPdtIndex: number) {
+  let fragPrev = fragments[firstPdtIndex] as Fragment;
+  for (let i = firstPdtIndex; i--;) {
     const frag = fragments[i];
+    // Exit on delta-playlist skipped segments
     if (!frag) {
       return;
     }
-    frag.programDateTime = fragPrev.programDateTime - (frag.duration * 1000);
+    frag.programDateTime = (fragPrev.programDateTime as number) - (frag.duration * 1000);
     fragPrev = frag;
   }
 }
