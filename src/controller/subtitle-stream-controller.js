@@ -41,7 +41,11 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   startLoad () {
+    this.stopLoad();
+    this.setInterval(TICK_INTERVAL);
+
     this.state = State.IDLE;
+    this.tick();
   }
 
   onSubtitleFragProcessed (data) {
