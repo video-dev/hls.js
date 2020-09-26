@@ -34,7 +34,7 @@ export default class FragmentLoader {
 
   load (frag: Fragment, targetBufferTime: number | null = null, onProgress?: FragmentLoadProgressCallback): Promise<FragLoadedData> {
     const url = frag.url;
-    if (!url && !frag.hasParts) {
+    if (!url) {
       return Promise.reject(new LoadError({
         type: ErrorTypes.NETWORK_ERROR,
         details: ErrorDetails.INTERNAL_EXCEPTION,
@@ -60,14 +60,6 @@ export default class FragmentLoader {
       maxRetryDelay: config.fragLoadingMaxRetryTimeout,
       highWaterMark: MIN_CHUNK_SIZE
     };
-
-    // TODO: If we had access to LevelDetails and currentTime/startPosition here we could reason whether loading parts or whole fragment would be best
-    targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    const canPartLoad = frag.hasParts && onProgress;
-    const skipPartLoading = canPartLoad && frag.hasAllParts && (targetBufferTime - frag.start < frag.partList![0].duration);
-    if (canPartLoad && !skipPartLoading) {
-      return this.loadFragmentParts(frag, targetBufferTime, loaderConfig, onProgress!);
-    }
 
     const loaderContext = createLoaderContext(frag);
 
@@ -125,161 +117,6 @@ export default class FragmentLoader {
         }
       });
     });
-  }
-
-  private loadFragmentParts (frag: Fragment, targetBufferTime: number, loaderConfig: LoaderConfiguration, onProgress: FragmentLoadProgressCallback): Promise<FragLoadedData> {
-    reset(frag.stats);
-
-    // Start loading parts at `targetBufferTime`
-    const part = frag.findIndependentPart(targetBufferTime) || frag.partList![0];
-
-    return new Promise((resolve, reject) => {
-      if (!part) {
-        return reject(new LoadError({
-          type: ErrorTypes.OTHER_ERROR,
-          details: ErrorDetails.INTERNAL_ABORTED,
-          fatal: false,
-          frag,
-          networkDetails: null
-        }, `Could not find fragment part at ${targetBufferTime}`));
-      }
-      const loader = this.loader as Loader<FragmentLoaderContext>;
-      this.partLoadTimeout = self.setTimeout(() => {
-        this.resetLoader(frag, loader);
-        reject(new LoadError({
-          type: ErrorTypes.NETWORK_ERROR,
-          details: ErrorDetails.FRAG_LOAD_TIMEOUT,
-          fatal: false,
-          frag,
-          part,
-          networkDetails: loader.loader
-        }));
-      }, loaderConfig.timeout);
-
-      // Get updated fragment with additional parts from merging live playlists
-      this.nextPartIndex = -1;
-      this.updateLiveFragment = (newFragment: Fragment) => {
-        const loadingParts = this.nextPartIndex !== -1;
-        if (frag.sn !== newFragment.sn || frag.level !== newFragment.level) {
-          // Stop loading parts for current fragment
-          this.resetLoader(frag, loader);
-          reject(new LoadError({
-            type: ErrorTypes.NETWORK_ERROR,
-            details: ErrorDetails.INTERNAL_ABORTED,
-            fatal: false,
-            frag,
-            networkDetails: loader.loader
-          }, `aborted part loading for sn ${frag.sn} level ${frag.level}. new sn ${frag.sn} level ${frag.level}`));
-          return;
-        }
-        if (newFragment.partList) {
-          frag.partList = newFragment.partList;
-        } else if (loadingParts) {
-          // Fragment parts are no longer available
-          this.abort();
-          return;
-        }
-        // nextPartIndex is set when we're waiting for the next part
-        if (loadingParts) {
-          const nextPart = newFragment.partList ? newFragment.partList[this.nextPartIndex] : null;
-          if (nextPart) {
-            newFragment.loader = loader;
-            this.loadPart(newFragment, nextPart, loader, loaderConfig, onProgress, resolve, reject);
-          } else if (newFragment.hasAllParts) {
-            // Fragment is complete
-            this.resetLoader(frag, loader);
-            resolve({
-              frag,
-              part,
-              payload: new ArrayBuffer(0),
-              networkDetails: loader.loader
-            });
-          }
-        }
-      };
-
-      this.loadPart(frag, part, loader, loaderConfig, onProgress, resolve, reject);
-    });
-  }
-
-  private loadPart (frag: Fragment, part: Part, loader: Loader<FragmentLoaderContext>, loaderConfig: LoaderConfiguration, onProgress: FragmentLoadProgressCallback, resolve: (value: FragLoadedData) => void, reject: (reason: LoadError) => void) {
-    const loaderContext = createLoaderContext(frag, part);
-
-    // Assign frag stats to the loader's stats reference
-    loader.stats = part.stats;
-    loader.load(loaderContext, loaderConfig, {
-      onSuccess: (response, stats, context, networkDetails) => {
-        this.updateStatsFromPart(frag.stats, part.stats);
-        onProgress({
-          frag,
-          part,
-          payload: response.data as ArrayBuffer,
-          networkDetails
-        });
-
-        if (frag.isFinalPart(part)) {
-          this.resetLoader(frag, loader);
-          resolve({
-            frag,
-            part,
-            payload: response.data as ArrayBuffer,
-            networkDetails
-          });
-        } else if (this.updateLiveFragment) {
-          // Load or wait to load the next part
-          this.nextPartIndex = part.index + 1;
-          this.updateLiveFragment(frag);
-        }
-      },
-      onError: (response, context, networkDetails) => {
-        this.resetLoader(frag, loader);
-        reject(new LoadError({
-          type: ErrorTypes.NETWORK_ERROR,
-          details: ErrorDetails.FRAG_LOAD_ERROR,
-          fatal: false,
-          frag,
-          part,
-          response,
-          networkDetails
-        }));
-      },
-      onAbort: (stats, context, networkDetails) => {
-        this.resetLoader(frag, loader);
-        reject(new LoadError({
-          type: ErrorTypes.NETWORK_ERROR,
-          details: ErrorDetails.INTERNAL_ABORTED,
-          fatal: false,
-          frag,
-          part,
-          networkDetails
-        }));
-      },
-      onTimeout: (response, context, networkDetails) => {
-        this.resetLoader(frag, loader);
-        reject(new LoadError({
-          type: ErrorTypes.NETWORK_ERROR,
-          details: ErrorDetails.FRAG_LOAD_TIMEOUT,
-          fatal: false,
-          frag,
-          part,
-          networkDetails
-        }));
-      }
-    });
-  }
-
-  private updateStatsFromPart (fragStats: LoaderStats, partStats: LoaderStats) {
-    fragStats.loaded += partStats.loaded;
-    fragStats.total += partStats.total;
-    const fragLoading = fragStats.loading;
-    if (fragLoading.start) {
-      fragLoading.start += partStats.loading.start - fragLoading.end;
-      fragLoading.first += partStats.loading.first - fragLoading.end;
-    } else {
-      fragLoading.start = partStats.loading.start;
-      fragLoading.first = partStats.loading.first;
-    }
-    fragLoading.end = partStats.loading.end;
   }
 
   private resetLoader (frag: Fragment, loader: Loader<FragmentLoaderContext>) {

@@ -133,8 +133,6 @@ export default class Fragment extends BaseSegment {
   public dropped: number = 0;
   // #EXTINF  segment title
   public title: string | null = null;
-  // #EXT-X-PART list
-  public partList: Part[] | null = null;
 
   constructor (type: PlaylistLevelType, baseurl: string) {
     super(baseurl);
@@ -252,55 +250,6 @@ export default class Fragment extends BaseSegment {
     info.startDTS = Math.min(info.startDTS, startDTS);
     info.endDTS = Math.max(info.endDTS, endDTS);
   }
-
-  appendPart (partAttr: AttrList) {
-    let partList = this.partList;
-    if (!partList) {
-      partList = this.partList = [];
-    }
-    const index = partList.length;
-    const part = new Part(partAttr, this.baseurl, index, partList[index - 1]);
-    partList.push(part);
-    this.duration += part.duration;
-  }
-
-  get hasParts (): boolean {
-    return this.partList !== null;
-  }
-
-  get hasAllParts () {
-    return !!this.relurl;
-  }
-
-  get partCount (): number {
-    return this.partList ? this.partList.length : 0;
-  }
-
-  findIndependentPart (targetBufferTime: number): Part | null {
-    const partList = this.partList;
-    let independentPart: Part | null = null;
-    if (partList !== null) {
-      let start = this.start;
-      for (let i = 0, len = partList.length; i < len; i++) {
-        const part = partList[i];
-        if (targetBufferTime < start + part.duration) {
-          if (part.independent) {
-            return part;
-          }
-          return independentPart;
-        } else if (part.independent) {
-          independentPart = part;
-        }
-        start += part.duration;
-      }
-    }
-    return independentPart;
-  }
-
-  isFinalPart (part: Part) {
-    // When the fragment has a url from EXT-INF entry, and this is the last part, there will be no more parts
-    return this.hasAllParts && this.partList && part.index === this.partList[this.partList.length - 1].index;
-  }
 }
 
 export class Part extends BaseSegment {
@@ -308,15 +257,17 @@ export class Part extends BaseSegment {
   public readonly gap: boolean = false;
   public readonly independent: boolean = false;
   public readonly relurl: string;
+  public readonly fragment: Fragment;
   public readonly index: number;
   public stats: LoadStats = new LoadStats();
 
-  constructor (partAttrs: AttrList, baseurl: string, index: number, previous: Part | undefined) {
+  constructor (partAttrs: AttrList, frag: Fragment, baseurl: string, index: number, previous?: Part) {
     super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');
     this.gap = partAttrs.bool('GAP');
     this.independent = partAttrs.bool('INDEPENDENT');
     this.relurl = partAttrs.enumeratedString('URI') as string;
+    this.fragment = frag;
     this.index = index;
     const byteRange = partAttrs.enumeratedString('BYTERANGE');
     if (byteRange) {
