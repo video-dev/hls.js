@@ -40,6 +40,10 @@ export class SubtitleStreamController extends BaseStreamController {
     this._onMediaSeeking = this.onMediaSeeking.bind(this);
   }
 
+  startLoad () {
+    this.state = State.IDLE;
+  }
+
   onSubtitleFragProcessed (data) {
     const { frag, success } = data;
     this.fragPrevious = frag;
