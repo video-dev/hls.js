@@ -5,8 +5,15 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (da
   const chart = this.chart;
   const scale = this._getValueScale();
   const datasets = chart.data.datasets;
+  if (!datasets) {
+    throw new Error(`Chart datasets are ${datasets}`);
+  }
   scale._parseValue = scaleParseValue;
-  const value = scale._parseValue(datasets[datasetIndex].data[index]);
+  const obj = datasets[datasetIndex].data[index];
+  if (obj.dataType === 'part') {
+    console.assert(obj.start === obj.fragment.start + obj.fragOffset);
+  }
+  const value = scale._parseValue(obj);
   const start = value.start === undefined ? 0 : value.max >= 0 && value.min >= 0 ? value.min : value.max;
   const length = value.start === undefined ? value.end : value.max >= 0 && value.min >= 0 ? value.max - value.min : value.min - value.max;
   const base = scale.getPixelForValue(start);
@@ -64,13 +71,17 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
     if (!isNaN(val.min) && !isNaN(val.max)) {
       const { dataType } = obj;
       let { stats } = obj;
-      const isFragment = dataType === 'fragment';
+      const isPart = dataType === 'part';
+      const isFragmentHint = dataType === 'fragmentHint';
+      const isFragment = dataType === 'fragment' || isPart || isFragmentHint;
       const isCue = dataType === 'cue';
       if (isCue) {
         view.y += (view.height * 0.5 * (i % 2)) - (view.height * 0.25);
+      } else if (isPart) {
+        view.height -= 22;
       }
       const bounds = boundingRects(view);
-      const drawText = bounds.w > lineHeight;
+      const drawText = bounds.w > lineHeight * 1.5 && !isFragmentHint;
       if (isFragment || isCue) {
         if (drawText) {
           view.borderWidth = 1;
@@ -83,7 +94,12 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
             view.borderWidth = 0;
           }
         }
-        view.backgroundColor = `rgba(0, 0, 0, ${0.05 + (i % 2) / 12})`;
+        if (isFragmentHint) {
+          view.borderWidth = 0;
+          view.backgroundColor = 'rgba(0, 0, 0, 0.1)';
+        } else {
+          view.backgroundColor = `rgba(0, 0, 0, ${0.05 + (i % 2) / 12})`;
+        }
       }
       rect.draw();
       if (isFragment) {
@@ -118,14 +134,14 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
               snBounds.w -= ccWidth;
             }
           }
-          const snLabel = `sn: ${obj.sn}`;
+          const snLabel = isPart ? `part: ${obj.index}` : `sn: ${obj.sn}`;
           const textWidth = Math.min(ctx.measureText(snLabel).width + 2, snBounds.w - 2);
           ctx.fillText(snLabel, snBounds.x + snBounds.w - textWidth, snBounds.y + lineHeight, snBounds.w - 4);
         }
         if (isCue) {
           const strLength = Math.min(30, Math.ceil(bounds.w / (lineHeight / 3)));
           ctx.fillText(('' + obj.content).substr(0, strLength), bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
-        } else {
+        } else if (!isPart) {
           const float = start !== (start | 0);
           const fixedDigits = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
           const startString = hhmmss(start, fixedDigits);
@@ -140,7 +156,7 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
 
 export function applyChartInstanceOverrides (chart) {
   Object.keys(chart.scales).forEach((axis) => {
-    const scale = chart.scales[axis];
+    const scale = chart.scales![axis];
     scale._parseValue = scaleParseValue;
   });
 }

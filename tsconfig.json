@@ -11,15 +11,18 @@
       "dom",
       "es2015"
     ],
-    "outDir": "./dist/"
+    "outDir": "./dist/",
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "src/**/*",
-    "tests/unit/**/*"
+    "tests/unit/**/*",
+    "demo/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist/**/*",
+    "demo/libs/**/*",
     "**/*.spec.*"
   ]
 }

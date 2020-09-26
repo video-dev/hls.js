@@ -5,7 +5,6 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import { Events } from '../events';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
 import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
-import PlaylistLoader from '../loader/playlist-loader';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
@@ -578,7 +577,6 @@ export default class StreamController extends BaseStreamController implements Ne
     const fragCurrent = this.fragCurrent;
     if (fragCurrent && (this.state === State.FRAG_LOADING || this.state === State.FRAG_LOADING_WAITING_RETRY)) {
       if (fragCurrent.level !== data.level && fragCurrent.loader) {
-        console.warn(`Aborting load frag for level ${fragCurrent.level} sn: ${fragCurrent.sn} context: ${JSON.stringify(fragCurrent.loader.context, null, 4)}`);
         this.state = State.IDLE;
         fragCurrent.loader.abort();
       }
@@ -587,12 +585,13 @@ export default class StreamController extends BaseStreamController implements Ne
     const curLevel = levels[newLevelId];
     let sliding = 0;
     if (newDetails.live) {
-      sliding = this.mergeLivePlaylists(curLevel.details, newDetails);
+      if (newDetails.deltaUpdateFailed) {
+        return;
+      }
+      sliding = this.alignPlaylists(newDetails, curLevel.details);
       if (sliding) {
         this._liveSyncPosition = this.computeLivePosition(sliding, newDetails);
       }
-    } else {
-      newDetails.PTSKnown = false;
     }
     // override level info
     curLevel.details = newDetails;
@@ -648,6 +647,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
     const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount, payload.byteLength, part ? part.index : -1);
     chunkMeta.transmuxing.start = performance.now();
+    const initPTS = this.initPTS[frag.cc];
 
     transmuxer.push(
       payload,
@@ -657,7 +657,8 @@ export default class StreamController extends BaseStreamController implements Ne
       frag,
       details.totalduration,
       accurateTimeOffset,
-      chunkMeta
+      chunkMeta,
+      initPTS
     );
   }
 
@@ -1011,8 +1012,10 @@ export default class StreamController extends BaseStreamController implements Ne
       }
 
       // This would be nice if Number.isFinite acted as a typeguard, but it doesn't. See: https://github.com/Microsoft/TypeScript/issues/10038
-      if (Number.isFinite(initSegment.initPTS as number)) {
-        hls.trigger(Events.INIT_PTS_FOUND, { frag, id, initPTS: initSegment.initPTS as number });
+      const initPTS = initSegment.initPTS as number;
+      if (Number.isFinite(initPTS)) {
+        this.initPTS[frag.cc] = initPTS;
+        hls.trigger(Events.INIT_PTS_FOUND, { frag, id, initPTS });
       }
     }
 

@@ -253,6 +253,7 @@ export default class Fragment extends BaseSegment {
 }
 
 export class Part extends BaseSegment {
+  public readonly fragOffset: number = 0;
   public readonly duration: number = 0;
   public readonly gap: boolean = false;
   public readonly independent: boolean = false;
@@ -273,5 +274,16 @@ export class Part extends BaseSegment {
     if (byteRange) {
       this.setByteRange(byteRange, previous);
     }
+    if (previous) {
+      this.fragOffset = previous.fragOffset + previous.duration;
+    }
+  }
+
+  get start (): number {
+    return this.fragment.start + this.fragOffset;
+  }
+
+  get end (): number {
+    return this.start + this.duration;
   }
 }

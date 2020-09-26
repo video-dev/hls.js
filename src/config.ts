@@ -159,6 +159,7 @@ export type HlsConfig =
     capLevelController: typeof CapLevelController,
     fpsController: typeof FPSController,
     progressive: boolean,
+    lowLatencyMode: boolean,
 
     userConfig: Partial<HlsConfig>
   } &
@@ -252,6 +253,7 @@ export const hlsDefaultConfig: HlsConfig = {
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
   progressive: false,
+  lowLatencyMode: false,
   userConfig: {},
 
   // Dynamic Modules

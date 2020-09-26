@@ -37,15 +37,16 @@ export interface LevelAttributes extends AttrList {
   URI?: string
 }
 
-enum HlsSkip {
+export enum HlsSkip {
   No = '',
   Yes = 'YES',
   v2 = 'v2'
 }
 
-export function getSkipValue (details: LevelDetails): HlsSkip {
-  const { canSkipUntil, canSkipDateRanges } = details;
-  if (canSkipUntil) {
+export function getSkipValue (details: LevelDetails, msn: number): HlsSkip {
+  const { canSkipUntil, canSkipDateRanges, endSN } = details;
+  const snChangeGoal = msn - endSN;
+  if (canSkipUntil && snChangeGoal < canSkipUntil) {
     if (canSkipDateRanges) {
       return HlsSkip.v2;
     }

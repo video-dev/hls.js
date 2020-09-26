@@ -13,12 +13,10 @@ import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import type { Bufferable } from '../utils/buffer-helper';
 import type Fragment from '../loader/fragment';
 import type { LoaderStats } from '../types/loader';
-import type LevelDetails from '../loader/level-details';
 import type Hls from '../hls';
 import type { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
-import LoadStats from '../loader/load-stats';
-import { Part } from '../loader/fragment';
+import type { Level } from '../types/level';
 
 const { performance } = self;
 
@@ -303,7 +301,7 @@ class AbrController implements ComponentAPI {
     }
   }
 
-  private _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Array<any>): number {
+  private _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Level[]): number {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
 
@@ -311,8 +309,8 @@ class AbrController implements ComponentAPI {
         continue;
       }
 
-      const levelDetails: LevelDetails = levelInfo.details;
-      const avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration;
+      const levelDetails = levelInfo.details;
+      const avgDuration = levelDetails?.averagetargetduration || currentFragDuration;
       const live = levelDetails ? levelDetails.live : false;
 
       let adjustedbw: number;

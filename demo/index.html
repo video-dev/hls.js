@@ -142,16 +142,20 @@
         <center>
           <p>
             <span>
-                <button type="button" class="btn btn-sm btn-info" title="video.play()" onclick="$('#video')[0].play()">Play</button>
-                <button type="button" class="btn btn-sm btn-info" title="video.pause()" onclick="$('#video')[0].pause()">Pause</button>
+              <button type="button" class="btn btn-sm btn-info" title="video.play()" onclick="$('#video')[0].play()">Play</button>
+              <button type="button" class="btn btn-sm btn-info" title="video.pause()" onclick="$('#video')[0].pause()">Pause</button>
             </span>
-              <span>
+            <span>
+              <button type="button" class="btn btn-sm btn-info" title="video.playbackRate = text input" onclick="$('#video')[0].defaultPlaybackRate=$('#video')[0].playbackRate=$('#playback_rate').val();">Playback rate </button>
+              <input type="number" value="1" id="playback_rate" size="8" style="width: 3em;" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].defaultPlaybackRate=$('#video')[0].playbackRate=$('#playback_rate').val();}">
+            </span>
+            <span>
               <button type="button" class="btn btn-sm btn-info" title="video.currentTime -= 10" onclick="$('#video')[0].currentTime-=10">- 10 s</button>
               <button type="button" class="btn btn-sm btn-info" title="video.currentTime += 10" onclick="$('#video')[0].currentTime+=10">+ 10 s</button>
             </span>
-              <span>
-              <button type="button" class="btn btn-sm btn-info" title="video.currentTime = text input" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">Seek to </button>
-              <input type="number" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}">
+            <span>
+              <button type="button" class="btn btn-sm btn-info" title="video.currentTime = text input" onclick="$('#video')[0].currentTime=$('#seek_pos').val();">Seek to </button>
+              <input type="number" id="seek_pos" size="8" style="width: 7em;" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}">
             </span>
           </p>
           <p>

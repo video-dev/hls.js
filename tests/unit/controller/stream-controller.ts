@@ -126,6 +126,7 @@ describe('StreamController', function () {
     describe('PDT Searching during a live stream', function () {
       it('PDT search choosing fragment after level loaded', function () {
         levelDetails.PTSKnown = false;
+        levelDetails.alignedSliding = false;
         levelDetails.live = true;
 
         const foundFragment = streamController['getInitialLiveFragment'](levelDetails, mockFragments);

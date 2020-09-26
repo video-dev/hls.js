@@ -62,6 +62,7 @@ export default class BaseStreamController extends TaskLoop {
   protected levelLastLoaded: number | null = null;
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
+  protected initPTS: Array<number> = [];
 
   protected readonly logPrefix: string = '';
 
@@ -316,7 +317,7 @@ export default class BaseStreamController extends TaskLoop {
     const { frag, partIndex, level } = context;
     frag.stats.parsing.end = performance.now();
 
-    this.updateLevelTiming(frag, level, partIndex);
+    this.updateLevelTiming(frag, level);
     this.state = State.PARSED;
     this.hls.trigger(Events.FRAG_PARSED, { frag, partIndex });
   }
@@ -337,7 +338,6 @@ export default class BaseStreamController extends TaskLoop {
       return null;
     }
     // Assign fragCurrent. References to fragments in the level details change between playlist refreshes.
-    // TODO: Preserve frag references between live playlist refreshes
     frag = fragCurrent!;
     return { frag, partIndex: chunkMeta.part, level: currentLevel };
   }
@@ -527,35 +527,24 @@ export default class BaseStreamController extends TaskLoop {
     return null;
   }
 
-  protected mergeLivePlaylists (oldDetails: LevelDetails | undefined, newDetails: LevelDetails): number {
-    const { levels, levelLastLoaded, fragmentLoader, fragCurrent } = this;
+  protected alignPlaylists (details: LevelDetails, previousDetails?: LevelDetails): number {
+    const { levels, levelLastLoaded } = this;
     const lastLevel: Level | null = (levelLastLoaded !== null) ? levels![levelLastLoaded] : null;
 
+    // FIXME: If not for `shouldAlignOnDiscontinuities` requiring fragPrevious.cc,
+    //  this could all go in LevelHelper.mergeDetails
     let sliding = 0;
-    if (oldDetails && newDetails.fragments.length > 0) {
-      // we already have details for that level, merge them
-      LevelHelper.mergeDetails(oldDetails, newDetails);
-      // Update fragmentLoader if it's loading fragment parts
-      if (fragCurrent && fragmentLoader.updateLiveFragment && fragCurrent.sn !== 'initSegment') {
-        const fragWithSn = newDetails.fragments[fragCurrent.sn - newDetails.startSN];
-        if (fragWithSn) {
-          fragmentLoader.updateLiveFragment(fragWithSn);
-        } else {
-          logger.warn(fragWithSn, `New playlist [${newDetails.startSN}-${newDetails.endSN}] does not overlap with current sn: ${fragCurrent.sn}`);
-          fragmentLoader.abort();
-        }
-      }
-      sliding = newDetails.fragments[0].start;
-      if (newDetails.PTSKnown && Number.isFinite(sliding)) {
+    if (previousDetails && details.fragments.length > 0) {
+      sliding = details.fragments[0].start;
+      if (details.alignedSliding && Number.isFinite(sliding)) {
         this.log(`Live playlist sliding:${sliding.toFixed(3)}`);
       } else if (!sliding) {
-        this.log('Live playlist - outdated PTS, unknown sliding');
-        alignStream(this.fragPrevious, lastLevel, newDetails);
+        this.warn(`[${this.constructor.name}] Live playlist - outdated PTS, unknown sliding`);
+        alignStream(this.fragPrevious, lastLevel, details);
       }
     } else {
       this.log('Live playlist - first load, unknown sliding');
-      newDetails.PTSKnown = false;
-      alignStream(this.fragPrevious, lastLevel, newDetails);
+      alignStream(this.fragPrevious, lastLevel, details);
     }
 
     return sliding;
@@ -595,8 +584,8 @@ export default class BaseStreamController extends TaskLoop {
 
   protected computeLivePosition (sliding: number, levelDetails: LevelDetails): number {
     const { holdBack, partHoldBack, targetduration, totalduration } = levelDetails;
-    const { liveSyncDuration, liveSyncDurationCount, userConfig } = this.config;
-    let targetLatency = partHoldBack || holdBack;
+    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode, userConfig } = this.config;
+    let targetLatency = lowLatencyMode ? partHoldBack || holdBack : holdBack;
     if (userConfig.liveSyncDuration || userConfig.liveSyncDurationCount || targetLatency === 0) {
       targetLatency = liveSyncDuration !== undefined ? liveSyncDuration : liveSyncDurationCount * targetduration;
     }
@@ -628,13 +617,13 @@ export default class BaseStreamController extends TaskLoop {
     this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer & resetting nextLoadPosition to ${this.nextLoadPosition}`);
   }
 
-  private updateLevelTiming (frag: Fragment, level: Level, partIndex: number) {
+  private updateLevelTiming (frag: Fragment, level: Level) {
     const details = level.details as LevelDetails;
     console.assert(!!details, 'level.details must be defined');
     Object.keys(frag.elementaryStreams).forEach(type => {
       const info = frag.elementaryStreams[type];
       if (info) {
-        const drift = LevelHelper.updateFragPTSDTS(details, frag, info.startPTS, info.endPTS, info.startDTS, info.endDTS, partIndex);
+        const drift = LevelHelper.updateFragPTSDTS(details, frag, info.startPTS, info.endPTS, info.startDTS, info.endDTS);
         this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
           details,
           level,

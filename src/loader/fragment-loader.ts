@@ -3,10 +3,8 @@ import Fragment from './fragment';
 import {
   Loader,
   LoaderConfiguration,
-  FragmentLoaderContext,
-  LoaderStats
+  FragmentLoaderContext
 } from '../types/loader';
-import { reset } from './load-stats';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
 import type { FragLoadedData } from '../types/events';
@@ -18,7 +16,6 @@ export default class FragmentLoader {
   private loader: Loader<FragmentLoaderContext> | null = null;
   private partLoadTimeout: number = -1;
   private nextPartIndex: number = -1;
-  public updateLiveFragment: ((newFragment: Fragment) => void) | null = null;
 
   constructor (config: HlsConfig) {
     this.config = config;
@@ -123,7 +120,6 @@ export default class FragmentLoader {
     frag.loader = null;
     if (this.loader === loader) {
       self.clearTimeout(this.partLoadTimeout);
-      this.updateLiveFragment = null;
       this.nextPartIndex = -1;
       this.loader = null;
     }
