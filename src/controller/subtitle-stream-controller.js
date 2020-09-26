@@ -42,10 +42,14 @@ export class SubtitleStreamController extends BaseStreamController {
 
   startLoad () {
     this.stopLoad();
-    this.setInterval(TICK_INTERVAL);
-
     this.state = State.IDLE;
-    this.tick();
+
+    // Check if we already have a track with necessary details to load fragments
+    const currentTrack = this.tracks[this.currentTrackId];
+    if (currentTrack && currentTrack.details) {
+      this.setInterval(TICK_INTERVAL);
+      this.tick();
+    }
   }
 
   onSubtitleFragProcessed (data) {
