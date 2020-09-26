@@ -25,39 +25,40 @@ export default (function () {
     return self.VTTCue;
   }
 
-  const DirectionSettings = {
-    '': true,
-    lr: true,
-    rl: true
-  };
-  type DirectionSettingsStrings = keyof typeof DirectionSettings;
-  const AlignSettings = {
-    start: true,
-    middle: true,
-    end: true,
-    left: true,
-    right: true
-  };
-  type AlignSettingsStrings = keyof typeof AlignSettings;
+  const AllowedDirections =
+    ['', 'lr', 'rl'] as const;
+  type Direction =
+    | typeof AllowedDirections[number];
 
-  // generic for checking if a value is
-  // in an enum using the same lookup strategy
-  function enumHas<A> (table : A, value : string): keyof A | false {
+  const AllowedAlignments =
+    ['start', 'middle', 'end', 'left', 'right'] as const;
+  type Alignment =
+    | typeof AllowedAlignments[number];
+
+  function isAllowedValue <T, A> (allowed : T, value : string) : A | false {
     if (typeof value !== 'string') {
       return false;
     }
-    if (value.toLowerCase() in table) {
-      return table[value.toLowerCase()];
+    // necessary for assuring the generic conforms to the Array interface
+    if (!Array.isArray(allowed)) {
+      return false;
     }
+    // reset the type so that the next narrowing works well
+    const lcValue = value.toLowerCase() as any;
+    // use the allow list to narrow the type to a specific subset of strings
+    if (~allowed.indexOf(lcValue)) {
+      return lcValue;
+    }
+
     return false;
   }
 
   function findDirectionSetting (value : string) {
-    return enumHas(DirectionSettings, value);
+    return isAllowedValue<typeof AllowedDirections, Direction>(AllowedDirections, value);
   }
 
   function findAlignSetting (value : string) {
-    return enumHas(AlignSettings, value);
+    return isAllowedValue<typeof AllowedAlignments, Alignment>(AllowedAlignments, value);
   }
 
   function extend (obj : Record<string, any>, ...rest: Record<string, any>[]) {
@@ -96,14 +97,14 @@ export default (function () {
     let _endTime = endTime;
     let _text = text;
     let _region = null;
-    let _vertical : DirectionSettingsStrings = '';
+    let _vertical : Direction = '';
     let _snapToLines = true;
     let _line : number | 'auto' = 'auto';
-    let _lineAlign : AlignSettingsStrings = 'start';
+    let _lineAlign : Alignment = 'start';
     let _position = 50;
-    let _positionAlign : AlignSettingsStrings = 'middle';
+    let _positionAlign : Alignment = 'middle';
     let _size = 50;
-    let _align : AlignSettingsStrings = 'middle';
+    let _align : Alignment = 'middle';
 
     Object.defineProperty(cue, 'id', extend({}, baseObj, {
       get: function () {
