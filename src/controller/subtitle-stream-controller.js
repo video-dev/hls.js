@@ -38,7 +38,6 @@ export class SubtitleStreamController extends BaseStreamController {
     // lastAVStart stores the time in seconds for the start time of a level load
     this.lastAVStart = 0;
     this._onMediaSeeking = this.onMediaSeeking.bind(this);
-    this._onMediaSeeked = this.onMediaSeeked.bind(this);
   }
 
   startLoad () {
@@ -92,7 +91,6 @@ export class SubtitleStreamController extends BaseStreamController {
   onMediaAttached ({ media }) {
     this.media = media;
     media.addEventListener('seeking', this._onMediaSeeking);
-    media.addEventListener('seeked', this._onMediaSeeked);
     this.state = State.IDLE;
   }
 
@@ -101,7 +99,6 @@ export class SubtitleStreamController extends BaseStreamController {
       return;
     }
     this.media.removeEventListener('seeking', this._onMediaSeeking);
-    this.media.removeEventListener('seeked', this._onMediaSeeked);
     this.fragmentTracker.removeAllFragments();
     this.currentTrackId = -1;
     this.tracks.forEach((track) => {
@@ -261,10 +258,18 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   onMediaSeeking () {
-    this.stopLoad();
-  }
+    let frag = this.fragCurrent;
+    if (frag) {
+      if (frag.loader) {
+        frag.loader.abort();
+      }
+      this.fragmentTracker.removeFragment(frag);
+    }
 
-  onMediaSeeked () {
-    this.startLoad();
+    this.fragCurrent = null;
+    this.fragPrevious = null;
+
+    this.state = State.IDLE;
+    this.tick();
   }
 }
