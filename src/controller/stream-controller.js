@@ -794,7 +794,7 @@ class StreamController extends BaseStreamController {
         this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
         if (newDetails.PTSKnown && Number.isFinite(sliding)) {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
-        } else {
+        } else if (!sliding) {
           logger.log('live playlist - outdated PTS, unknown sliding');
           alignStream(this.fragPrevious, lastLevel, newDetails);
         }
@@ -1305,7 +1305,7 @@ class StreamController extends BaseStreamController {
   _checkBuffer () {
     const { media } = this;
     if (!media || media.readyState === 0) {
-      // Exit early if we don't have media or if the media hasn't bufferd anything yet (readyState 0)
+      // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
 
