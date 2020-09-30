@@ -258,16 +258,25 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   onMediaSeeking () {
-    let frag = this.fragCurrent;
-    if (frag) {
-      if (frag.loader) {
-        frag.loader.abort();
+    if (this.state === State.FRAG_LOADING) {
+      const fragCurrent = this.fragCurrent;
+      const bufferInfo = BufferHelper.bufferedInfo(this._getBuffered(), media.currentTime, this.config.maxBufferHole);
+        const tolerance = this.config.maxFragLookUpTolerance;
+        const fragStartOffset = fragCurrent.start - tolerance;
+        const fragEndOffset = fragCurrent.start + fragCurrent.duration + tolerance;
+        // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
+        if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
+          if (fragCurrent.loader) {
+            fragCurrent.loader.abort();
+          }
+          this.fragCurrent = null;
+          this.fragPrevious = null;
+          this.fragmentTracker.removeFragment(fragCurrent);
+          // switch to IDLE state to load new fragment
+          this.state = State.IDLE;
+        }
       }
-      this.fragmentTracker.removeFragment(frag);
     }
-
-    this.fragCurrent = null;
-    this.fragPrevious = null;
 
     this.state = State.IDLE;
     this.tick();
