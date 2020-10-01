@@ -445,7 +445,7 @@ If sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AA
 
 (default 1)
 
-number of segments needed to start a playback of Live stream.
+number of segments needed to start a playback of Live stream. Playback will begin after N chunks regardless of ```liveSyncDurationCount``` - if you want playback to be ```liveSyncDurationCount``` chunks from the live edge at the beginning of a stream, set this to ```liveSyncDurationCount``` or higher.
 
 ### `maxBufferLength`
 
