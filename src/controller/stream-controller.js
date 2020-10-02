@@ -968,16 +968,23 @@ class StreamController extends BaseStreamController {
         track.levelCodec = audioCodec;
         track.id = data.id;
       }
+
       track = tracks.video;
       if (track) {
         track.levelCodec = this.levels[this.level].videoCodec;
+        track.id = data.id;
+      }
+
+      track = tracks.audiovideo;
+      if (track && this.levels[this.level]) {
         track.id = data.id;
       }
       this.hls.trigger(Event.BUFFER_CODECS, tracks);
       // loop through tracks that are going to be provided to bufferController
       for (trackName in tracks) {
         track = tracks[trackName];
-        logger.log(`main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
+        const levelCodec = trackName === 'audiovideo' ? this.levels[this.level].attrs.CODECS : this.levels[this.level][`${trackName}Codec`];
+        logger.log(`main track:${trackName},container:${track.container},codecs[level/parsed]=[${levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
           this.appended = true;
