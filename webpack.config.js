@@ -225,18 +225,6 @@ const multiConfig = [
       })
     ],
     devtool: 'source-map'
-  },
-  {
-    name: 'timeline',
-    entry: './demo-timeline/src/index',
-    mode: 'development',
-    output: {
-      filename: 'index.js',
-      path: path.resolve(__dirname, 'demo-timeline/dist'),
-      publicPath: '/demo-timeline/dist/'
-    },
-    plugins: mainPlugins,
-    devtool: 'source-map'
   }
 ].map(config => {
   const baseClone = merge({}, baseConfig);
