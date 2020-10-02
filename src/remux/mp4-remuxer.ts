@@ -154,9 +154,6 @@ export default class MP4Remuxer implements Remuxer {
           }
         } else if (enoughVideoSamples) {
           video = this.remuxVideo(videoTrack, videoTimeOffset, isVideoContiguous, 0);
-          if (video && audioTrack.codec) {
-            this.remuxEmptyAudio(audioTrack, audioTimeOffset, this.isAudioContiguous, video);
-          }
         }
       }
     }
