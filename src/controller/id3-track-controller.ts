@@ -1,7 +1,7 @@
 import { Events } from '../events';
-import { sendAddTrackEvent, clearCurrentCues, getClosestCue } from '../utils/texttrack-utils';
+import { sendAddTrackEvent, clearCurrentCues, getCuesInRange } from '../utils/texttrack-utils';
 import * as ID3 from '../demux/id3';
-import { FragParsingMetadataData, LiveBackBufferData, MediaAttachedData } from '../types/events';
+import { BufferFlushingData, FragParsingMetadataData, MediaAttachedData } from '../types/events';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
@@ -28,17 +28,19 @@ class ID3TrackController implements ComponentAPI {
   }
 
   private _registerListeners () {
-    this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    this.hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    this.hls.on(Events.FRAG_PARSING_METADATA, this.onFragParsingMetadata, this);
-    this.hls.on(Events.LIVE_BACK_BUFFER_REACHED, this.onLiveBackBufferReached, this);
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.FRAG_PARSING_METADATA, this.onFragParsingMetadata, this);
+    hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
   }
 
   private _unregisterListeners () {
-    this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    this.hls.off(Events.FRAG_PARSING_METADATA, this.onFragParsingMetadata, this);
-    this.hls.off(Events.LIVE_BACK_BUFFER_REACHED, this.onLiveBackBufferReached, this);
+    const { hls } = this;
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.FRAG_PARSING_METADATA, this.onFragParsingMetadata, this);
+    hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
   }
 
   // Add ID3 metatadata text track.
@@ -117,17 +119,17 @@ class ID3TrackController implements ComponentAPI {
     }
   }
 
-  onLiveBackBufferReached (event: Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd }: LiveBackBufferData) {
-    const { id3Track } = this;
-    if (!id3Track || !id3Track.cues || !id3Track.cues.length) {
-      return;
-    }
-    const foundCue = getClosestCue(id3Track.cues, bufferEnd);
-    if (!foundCue) {
-      return;
-    }
-    while (id3Track.cues[0] !== foundCue) {
-      id3Track.removeCue(id3Track.cues[0]);
+  onBufferFlushing (event: Events.BUFFER_FLUSHING, { startOffset, endOffset, type }: BufferFlushingData) {
+    if (!type || type === 'audio') {
+      // id3 cues come from parsed audio only remove cues when audio buffer is cleared
+      const { id3Track } = this;
+      if (!id3Track || !id3Track.cues || !id3Track.cues.length) {
+        return;
+      }
+      const cues = getCuesInRange(id3Track.cues, startOffset, endOffset);
+      for (let i = 0; i < cues.length; i++) {
+        id3Track.removeCue(cues[i]);
+      }
     }
   }
 }

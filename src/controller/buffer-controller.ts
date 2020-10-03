@@ -300,7 +300,7 @@ export default class BufferController implements ComponentAPI {
       },
       onComplete: () => {
         logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
-        this.hls.trigger(Events.BUFFER_FLUSHED, undefined);
+        this.hls.trigger(Events.BUFFER_FLUSHED, { type });
       },
       onError: (e) => {
         logger.warn(`[buffer-controller]: Failed to remove from ${type} SourceBuffer`, e);
@@ -457,16 +457,8 @@ export default class BufferController implements ComponentAPI {
         const buffered = sb.buffered;
         // when target buffer start exceeds actual buffer start
         if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
-          this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });
-          // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
-          // time will lead to playback freezing)
-          // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
-          logger.log(`[buffer-controller]: Enqueueing operation to flush ${type} back buffer`);
-          this.onBufferFlushing(Events.BUFFER_FLUSHING, {
-            startOffset: 0,
-            endOffset: targetBackBufferPosition,
-            type
-          });
+          hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });
+          hls.trigger(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: targetBackBufferPosition, type });
         }
       }
     });

@@ -60,6 +60,10 @@ export interface BufferFlushingData {
   type: SourceBufferName
 }
 
+export interface BufferFlushedData {
+  type: SourceBufferName
+}
+
 export interface ManifestLoadingData {
   url: string
 }

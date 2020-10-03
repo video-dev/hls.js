@@ -44,7 +44,7 @@ import {
   AudioTracksUpdatedData,
   FragLoadEmergencyAbortedData,
   LiveBackBufferData,
-  TrackLoadingData
+  TrackLoadingData, BufferFlushedData
 } from './types/events';
 
 /**
@@ -176,7 +176,7 @@ export interface HlsListeners {
   [Events.BUFFER_APPENDED]: (event: Events.BUFFER_APPENDED, data: BufferAppendedData) => void
   [Events.BUFFER_EOS]: (event: Events.BUFFER_EOS, data: BufferEOSData) => void
   [Events.BUFFER_FLUSHING]: (event: Events.BUFFER_FLUSHING, data: BufferFlushingData) => void
-  [Events.BUFFER_FLUSHED]: (event: Events.BUFFER_FLUSHED) => void
+  [Events.BUFFER_FLUSHED]: (event: Events.BUFFER_FLUSHED, data: BufferFlushedData) => void
   [Events.MANIFEST_LOADING]: (event: Events.MANIFEST_LOADING, data: ManifestLoadingData) => void
   [Events.MANIFEST_LOADED]: (event: Events.MANIFEST_LOADED, data: ManifestLoadedData) => void
   [Events.MANIFEST_PARSED]: (event: Events.MANIFEST_PARSED, data: ManifestParsedData) => void

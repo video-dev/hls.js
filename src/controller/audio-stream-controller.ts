@@ -21,7 +21,7 @@ import {
   FragBufferedData,
   BufferCreatedData,
   AudioTrackSwitchingData,
-  FragParsingUserdataData, FragParsingMetadataData, FragLoadedData, InitPTSFoundData
+  FragParsingUserdataData, FragParsingMetadataData, FragLoadedData, InitPTSFoundData, BufferFlushedData
 } from '../types/events';
 import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
@@ -596,12 +596,12 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
   }
 
-  onBufferFlushed () {
+  onBufferFlushed (event: Events.BUFFER_FLUSHED, { type }: BufferFlushedData) {
     /* after successful buffer flushing, filter flushed fragments from bufferedFrags
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    if (media) {
+    if (media && type === ElementaryStreamTypes.AUDIO) {
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
       this.fragmentTracker.detectEvictedFragments(ElementaryStreamTypes.AUDIO, media.buffered);
     }
