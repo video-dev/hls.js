@@ -29,7 +29,7 @@ import type {
   FragParsingMetadataData,
   FragParsingUserdataData,
   LevelLoadingData,
-  FragLoadedData
+  FragLoadedData, BufferFlushedData
 } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -262,7 +262,12 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     const targetBufferTime = bufferInfo.end;
-    const frag = this.getNextFragment(targetBufferTime, levelDetails);
+    let frag = this.getNextFragment(targetBufferTime, levelDetails);
+    // Avoid loop loading by using nextLoadPosition set for backtracking
+    // TODO: this could be improved to simply pick next sn fragment
+    if (frag && this.fragmentTracker.getState(frag) === FragmentState.OK && this.nextLoadPosition > targetBufferTime) {
+      frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
+    }
     if (!frag) {
       return;
     }
@@ -901,15 +906,13 @@ export default class StreamController extends BaseStreamController implements Ne
     this.tick();
   }
 
-  onBufferFlushed () {
+  onBufferFlushed (event: Events.BUFFER_FLUSHED, { type }: BufferFlushedData) {
     /* after successful buffer flushing, filter flushed fragments from bufferedFrags
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
-    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    if (media) {
-      // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      const elementaryStreamType = this.audioOnly ? ElementaryStreamTypes.AUDIO : ElementaryStreamTypes.VIDEO;
-      this.fragmentTracker.detectEvictedFragments(elementaryStreamType, media.buffered);
+    const media = (type === ElementaryStreamTypes.VIDEO ? this.videoBuffer : this.mediaBuffer) || this.media;
+    if (media && type !== ElementaryStreamTypes.AUDIO) {
+      this.fragmentTracker.detectEvictedFragments(type, media.buffered);
     }
     // reset reference to frag
     this.fragPrevious = null;

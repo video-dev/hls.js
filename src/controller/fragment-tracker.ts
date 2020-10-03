@@ -133,18 +133,21 @@ export class FragmentTracker implements ComponentAPI {
       if (!fragment.elementaryStreams[elementaryStream]) {
         return;
       }
-      fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.start, fragment.end, timeRanges[elementaryStream]);
+      fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment, timeRanges[elementaryStream]);
     });
   }
 
-  getBufferedTimes (startPTS: number, endPTS: number, timeRange: TimeRanges): FragmentBufferedRange {
+  getBufferedTimes (fragment: Fragment, timeRange: TimeRanges): FragmentBufferedRange {
     const fragmentTimes: Array<FragmentTimeRange> = [];
-    let startTime, endTime;
     let fragmentPartial = false;
     for (let i = 0; i < timeRange.length; i++) {
-      startTime = timeRange.start(i) - this.bufferPadding;
-      endTime = timeRange.end(i) + this.bufferPadding;
-      if (startPTS >= startTime && endPTS <= endTime) {
+      const startPTS = fragment.start;
+      const endPTS = fragment.end;
+      const minEndPTS = fragment.minEndPTS || endPTS;
+      const maxStartPTS = fragment.maxStartPTS || startPTS;
+      const startTime = timeRange.start(i) - this.bufferPadding;
+      const endTime = timeRange.end(i) + this.bufferPadding;
+      if (maxStartPTS >= startTime && minEndPTS <= endTime) {
         // Fragment is entirely contained in buffer
         // No need to check the other timeRange times since it's completely playable
         fragmentTimes.push({
