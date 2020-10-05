@@ -1,8 +1,12 @@
 import Chart from 'chart.js';
 import 'chartjs-plugin-zoom';
 import { applyChartInstanceOverrides, hhmmss } from './chartjs-horizontal-bar';
-import { TrackSet } from '../../src/types/track';
 import Fragment from '../../src/loader/fragment';
+import type { Level } from '../../src/types/level';
+import type { TrackSet } from '../../src/types/track';
+import type { MediaPlaylist } from '../../src/types/media-playlist';
+import type LevelDetails from '../../src/loader/level-details';
+import { FragChangedData, FragLoadedData, FragParsedData } from '../../src/types/events';
 
 declare global {
   interface Window {
@@ -13,6 +17,19 @@ declare global {
 }
 
 const X_AXIS_SECONDS = 'x-axis-seconds';
+
+interface ChartScale {
+  height: number,
+  min: number,
+  max: number,
+  options : any,
+  determineDataLimits: () => void,
+  buildTicks: () => void,
+  getLabelForIndex: (index: number, datasetIndex: number) => string,
+  getPixelForTick: (index: number) => number,
+  getPixelForValue: (value: number, index?: number, datasetIndex?: number) => number,
+  getValueForPixel: (pixel: number) => number
+}
 
 export class TimelineChart {
   private readonly chart: Chart;
@@ -25,6 +42,9 @@ export class TimelineChart {
 
   constructor (canvas: HTMLCanvasElement, chartJsOptions?: any) {
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error(`Could not get CanvasRenderingContext2D from canvas: ${canvas}`);
+    }
     const chart = this.chart = self.chart = new Chart(ctx, {
       type: 'horizontalBar',
       data: {
@@ -44,25 +64,27 @@ export class TimelineChart {
 
     // Log object on click and seek to position
     canvas.onclick = (event: MouseEvent) => {
+      const chart = this.chart;
       const element = chart.getElementAtEvent(event);
-      if (element.length) {
-        const dataset = chart.data.datasets[element[0]._datasetIndex];
-        const obj = dataset.data[element[0]._index];
+      if (element.length && chart.data.datasets) {
+        const dataset = chart.data.datasets[(element[0] as any)._datasetIndex];
+        const obj = dataset.data![(element[0] as any)._index];
+        // eslint-disable-next-line no-console
         console.log(obj);
         if (self.hls && self.hls.media) {
-          const scale = chart.scales[X_AXIS_SECONDS];
+          const scale = this.chartScales[X_AXIS_SECONDS];
           const pos = Chart.helpers.getRelativePosition(event, chart);
-          const time = scale.getValueForPixel(pos.x);
-          self.hls.media.currentTime = time;
+          self.hls.media.currentTime = scale.getValueForPixel(pos.x);
         }
       }
     };
 
     canvas.ondblclick = (event: MouseEvent) => {
+      const chart = this.chart;
       const chartArea: { left, top, right, bottom } = chart.chartArea;
       const element = chart.getElementAtEvent(event);
       const pos = Chart.helpers.getRelativePosition(event, chart);
-      const scale = chart.scales[X_AXIS_SECONDS];
+      const scale = this.chartScales[X_AXIS_SECONDS];
       const range = scale.max - scale.min;
       const newDiff = range * (event.getModifierState('Shift') ? -1.0 : 0.5);
       const minPercent = (scale.getValueForPixel(pos.x) - scale.min) / range;
@@ -84,22 +106,28 @@ export class TimelineChart {
     // TODO: Prevent zoom over y axis labels
   }
 
+  get chartScales (): { 'x-axis-seconds' : ChartScale } {
+    return (this.chart as any).scales;
+  }
+
   reset () {
-    const { labels, datasets } = this.chart.data;
-    const scale = this.chart.scales[X_AXIS_SECONDS];
+    const scale = this.chartScales[X_AXIS_SECONDS];
     scale.options.ticks.min = 0;
     scale.options.ticks.max = 60;
     const config = this.chart.config;
     if (config?.options) {
-      config.options.plugins.zoom.zoom.rangeMax.x = 60;
+      (config.options.plugins as any).zoom.zoom.rangeMax.x = 60;
     }
-    labels.length = 0;
-    datasets.length = 0;
-    this.resize(datasets);
+    const { labels, datasets } = this.chart.data;
+    if (labels && datasets) {
+      labels.length = 0;
+      datasets.length = 0;
+      this.resize(datasets);
+    }
   }
 
   update () {
-    if (this.hidden || !this.chart.ctx.canvas.width) {
+    if (this.hidden || !this.chart.ctx?.canvas.width) {
       return;
     }
     this.chart.update({
@@ -113,10 +141,13 @@ export class TimelineChart {
       return;
     }
     if (datasets?.length) {
-      const scale = this.chart.scales[X_AXIS_SECONDS];
+      const scale = this.chartScales[X_AXIS_SECONDS];
       const { top } = this.chart.chartArea;
       const height = top + datasets.reduce((val, dataset) => val + dataset.barThickness, 0) + scale.height + 5;
-      this.chart.canvas.parentNode.style.height = `${height}px`;
+      const container = this.chart.canvas?.parentElement;
+      if (container) {
+        container.style.height = `${height}px`;
+      }
     }
     self.cancelAnimationFrame(this.rafDebounceRequestId);
     this.rafDebounceRequestId = self.requestAnimationFrame(() => {
@@ -132,13 +163,18 @@ export class TimelineChart {
     this.hidden = true;
   }
 
-  updateLevels (levels: any[], levelSwitched) {
+  updateLevels (levels: Level[], levelSwitched) {
     const { labels, datasets } = this.chart.data;
+    if (!labels || !datasets) {
+      return;
+    }
     const { loadLevel, nextLoadLevel, nextAutoLevel } = self.hls;
+    // eslint-disable-next-line no-undefined
     const currentLevel = levelSwitched !== undefined ? levelSwitched : self.hls.currentLevel;
     levels.forEach((level, i) => {
-      labels.push(getLevelName(level, level.level || level.id || i));
-      let borderColor = null;
+      const index = level.id || i;
+      labels.push(getLevelName(level, index));
+      let borderColor: string | null = null;
       if (currentLevel === i) {
         borderColor = 'rgba(32, 32, 240, 1.0)';
       } else if (loadLevel === i) {
@@ -152,7 +188,7 @@ export class TimelineChart {
         url: Array.isArray(level.url) ? level.url[0] : level.url,
         trackType: 'level',
         borderColor,
-        level: level.level
+        level: index
       }));
       if (level.details) {
         this.updateLevelOrTrack(level.details);
@@ -161,10 +197,13 @@ export class TimelineChart {
     this.resize(datasets);
   }
 
-  updateAudioTracks (audioTracks: any[]) {
+  updateAudioTracks (audioTracks: MediaPlaylist[]) {
     const { labels, datasets } = this.chart.data;
+    if (!labels || !datasets) {
+      return;
+    }
     const { audioTrack } = self.hls;
-    audioTracks.forEach((track, i) => {
+    audioTracks.forEach((track: MediaPlaylist, i) => {
       labels.push(getAudioTrackName(track, i));
       datasets.push(datasetWithDefaults({
         url: Array.isArray(track.url) ? track.url[0] : track.url,
@@ -179,8 +218,11 @@ export class TimelineChart {
     this.resize(datasets);
   }
 
-  updateSubtitleTracks (subtitles: any[]) {
+  updateSubtitleTracks (subtitles: MediaPlaylist[]) {
     const { labels, datasets } = this.chart.data;
+    if (!labels || !datasets) {
+      return;
+    }
     const { subtitleTrack } = self.hls;
     subtitles.forEach((track, i) => {
       labels.push(getSubtitlesName(track, i));
@@ -199,20 +241,25 @@ export class TimelineChart {
 
   removeType (trackType: 'level' | 'audioTrack' | 'subtitleTrack' | 'textTrack') {
     const { labels, datasets } = this.chart.data;
+    if (!labels || !datasets) {
+      return;
+    }
     let i = datasets.length;
     while (i--) {
-      if (datasets[i].trackType === trackType) {
+      if ((datasets[i] as any).trackType === trackType) {
         datasets.splice(i, 1);
         labels.splice(i, 1);
       }
     }
   }
 
-  updateLevelOrTrack (details: any) {
+  updateLevelOrTrack (details: LevelDetails) {
     const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
     // eslint-disable-next-line no-restricted-properties
-    const levelDataSet = arrayFind(datasets, dataset => dataset.url && dataset.url.toString() === url);
+    const deliveryDirectivePattern = /[?&]_HLS_(?:msn|part|skip)=[^?&]+/g;
+    const levelDataSet = arrayFind(datasets, dataset =>
+      dataset.url?.toString().replace(deliveryDirectivePattern, '') === url.replace(deliveryDirectivePattern, ''));
     if (!levelDataSet) {
       return;
     }
@@ -227,8 +274,21 @@ export class TimelineChart {
         }, fragment));
       });
     }
-    const start = details.fragments && details.fragments.length ? details.fragments[0].start : 0;
-    this.maxZoom = Math.max(start + totalduration + targetduration, this.maxZoom);
+    if (details.partList) {
+      details.partList.forEach((part) => {
+        data.push(Object.assign({
+          dataType: 'part',
+          start: part.fragment.start + part.fragOffset
+        }, part));
+      });
+      if (details.fragmentHint) {
+        data.push(Object.assign({
+          dataType: 'fragmentHint'
+        }, details.fragmentHint));
+      }
+    }
+    const start = getPlaylistStart(details);
+    this.maxZoom = Math.max(start + totalduration + targetduration * 3, this.maxZoom);
     if (this.hidden) {
       return;
     }
@@ -237,7 +297,7 @@ export class TimelineChart {
 
   // @ts-ignore
   get minZoom (): number {
-    if (this.chart.config && this.chart.config.options) {
+    if (this.chart.config?.options?.plugins) {
       return this.chart.config.options.plugins.zoom.zoom.rangeMin.x;
     }
     return 60;
@@ -245,7 +305,7 @@ export class TimelineChart {
 
   // @ts-ignore
   get maxZoom (): number {
-    if (this.chart.config && this.chart.config.options) {
+    if (this.chart.config?.options?.plugins) {
       return this.chart.config.options.plugins.zoom.zoom.rangeMax.x;
     }
     return 60;
@@ -255,18 +315,18 @@ export class TimelineChart {
   set maxZoom (x: number) {
     const { chart } = this;
     const { config } = chart;
-    if (config?.options) {
+    if (config?.options?.plugins) {
       const currentZoom = config.options.plugins.zoom.zoom.rangeMax.x;
       const newZoom = Math.max(x, currentZoom);
       if (currentZoom === 60 && newZoom !== currentZoom) {
-        const scale = chart.scales[X_AXIS_SECONDS];
+        const scale = this.chartScales[X_AXIS_SECONDS];
         scale.options.ticks.max = newZoom;
       }
       config.options.plugins.zoom.zoom.rangeMax.x = newZoom;
     }
   }
 
-  updateFragment (data: any) {
+  updateFragment (data: FragLoadedData | FragParsedData | FragChangedData) {
     const { datasets } = this.chart.data;
     const frag: Fragment = data.frag;
     const levelDataSet = arrayFind(datasets, dataset => dataset.url === frag.baseurl);
@@ -286,6 +346,9 @@ export class TimelineChart {
 
   updateSourceBuffers (tracks: TrackSet, media: HTMLMediaElement) {
     const { labels, datasets } = this.chart.data;
+    if (!labels || !datasets) {
+      return;
+    }
     const trackTypes = Object.keys(tracks).sort((type) => type === 'video' ? 1 : -1);
     const mediaBufferData = [];
 
@@ -313,6 +376,7 @@ export class TimelineChart {
         try {
           replaceTimeRangeTuples(sourceBuffer.buffered, data);
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.warn(error);
           return;
         }
@@ -353,9 +417,12 @@ export class TimelineChart {
 
   removeSourceBuffers () {
     const { labels, datasets } = this.chart.data;
+    if (!labels || !datasets) {
+      return;
+    }
     let i = datasets.length;
     while (i--) {
-      if ((labels[0] || '').indexOf('buffer') > -1) {
+      if ((labels[0] || '').toString().indexOf('buffer') > -1) {
         datasets.splice(i, 1);
         labels.splice(i, 1);
       }
@@ -364,6 +431,9 @@ export class TimelineChart {
 
   setTextTracks (textTracks) {
     const { labels, datasets } = this.chart.data;
+    if (!labels || !datasets) {
+      return;
+    }
     this.removeType('textTrack');
     [].forEach.call(textTracks, (textTrack, i) => {
       if (textTrack.kind === 'subtitles' || textTrack.kind === 'captions') {
@@ -452,11 +522,11 @@ export class TimelineChart {
 
   drawCurrentTime () {
     const chart = this.chart;
-    if (self.hls && self.hls.media && chart.data.datasets.length) {
+    if (self.hls && self.hls.media && chart.data.datasets!.length) {
       const currentTime = self.hls.media.currentTime;
-      const scale = chart.scales[X_AXIS_SECONDS];
-      const ctx: CanvasRenderingContext2D = chart.ctx;
-      if (this.hidden || !ctx.canvas.width) {
+      const scale = this.chartScales[X_AXIS_SECONDS];
+      const ctx = chart.ctx;
+      if (this.hidden || !ctx || !ctx.canvas.width) {
         return;
       }
       const chartArea: { left, top, right, bottom } = chart.chartArea;
@@ -466,7 +536,7 @@ export class TimelineChart {
       this.drawLineX(ctx, x, chartArea);
       if (x > chartArea.left && x < chartArea.right) {
         ctx.fillStyle = this.getCurrentTimeColor(self.hls.media);
-        const y = chartArea.top + chart.data.datasets[0].barThickness + 1;
+        const y = chartArea.top + chart.data.datasets![0].barThickness + 1;
         ctx.fillText(hhmmss(currentTime, 5), x + 2, y, 100);
       }
       ctx.restore();
@@ -486,7 +556,7 @@ export class TimelineChart {
     return 'rgba(0, 0, 255, 0.9)';
   }
 
-  drawLineX (ctx, x, chartArea) {
+  drawLineX (ctx, x: number, chartArea) {
     if (!this.imageDataBuffer) {
       const devicePixelRatio = self.devicePixelRatio || 1;
       this.imageDataBuffer = ctx.getImageData(0, 0, chartArea.right * devicePixelRatio, chartArea.bottom * devicePixelRatio);
@@ -515,7 +585,11 @@ function datasetWithDefaults (options) {
   }, options);
 }
 
-function getLevelName (level: any, index: number) {
+function getPlaylistStart (details: LevelDetails): number {
+  return (details.fragments && details.fragments.length) ? details.fragments[0].start : 0;
+}
+
+function getLevelName (level: Level, index: number) {
   let label = '(main playlist)';
   if (level.attrs && level.attrs.BANDWIDTH) {
     label = `${getMainLevelAttribute(level)}@${level.attrs.BANDWIDTH}`;
@@ -528,16 +602,16 @@ function getLevelName (level: any, index: number) {
   return `${label} L-${index}`;
 }
 
-function getMainLevelAttribute (level: any) {
+function getMainLevelAttribute (level: Level) {
   return level.attrs.RESOLUTION || level.attrs.CODECS || level.attrs.AUDIO;
 }
 
-function getAudioTrackName (track: any, index: number) {
+function getAudioTrackName (track: MediaPlaylist, index: number) {
   const label = track.lang ? `${track.name}/${track.lang}` : track.name;
   return `${label} (${track.groupId || track.attrs['GROUP-ID']}) A-${index}`;
 }
 
-function getSubtitlesName (track: any, index: number) {
+function getSubtitlesName (track: MediaPlaylist, index: number) {
   const label = track.lang ? `${track.name}/${track.lang}` : track.name;
   return `${label} (${track.groupId || track.attrs['GROUP-ID']}) S-${index}`;
 }
@@ -676,5 +750,6 @@ function arrayFind (array, predicate) {
     }
     k++;
   }
+  // eslint-disable-next-line no-undefined
   return undefined;
 }

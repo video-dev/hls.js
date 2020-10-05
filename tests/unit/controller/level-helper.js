@@ -2,15 +2,16 @@ import * as LevelHelper from '../../../src/controller/level-helper';
 import LevelDetails from '../../../src/loader/level-details';
 import Fragment from '../../../src/loader/fragment';
 import LoadStats from '../../../src/loader/load-stats';
+import { PlaylistLevelType } from '../../../src/types/loader';
 
-const generatePlaylist = (sequenceNumbers) => {
+const generatePlaylist = (sequenceNumbers, offset = 0) => {
   const playlist = new LevelDetails('');
   playlist.startSN = sequenceNumbers[0];
   playlist.endSN = sequenceNumbers[sequenceNumbers.length - 1];
   playlist.fragments = sequenceNumbers.map((n, i) => {
-    const frag = new Fragment();
+    const frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.sn = n;
-    frag.start = i * 5;
+    frag.start = i * 5 + offset;
     frag.duration = 5;
     return frag;
   });
@@ -92,13 +93,21 @@ describe('LevelHelper Tests', function () {
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
+
+    it('does not apply sliding when segments meet but do not overlap', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3]);
+      const newPlaylist = generatePlaylist([4, 5, 6]);
+      LevelHelper.adjustSliding(oldPlaylist, newPlaylist);
+      const actual = newPlaylist.fragments.map(f => f.start);
+      expect(actual).to.deep.equal([0, 5, 10]);
+    });
   });
 
-  describe('mergeSubtitlePlaylists', function () {
+  describe('mergeDetails', function () {
     it('transfers start times where segments overlap, and extrapolates the start of any new segment', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3, 4]); // start times: 0, 5, 10, 15
       const newPlaylist = generatePlaylist([2, 3, 4, 5]);
-      LevelHelper.mergeSubtitlePlaylists(oldPlaylist, newPlaylist);
+      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([5, 10, 15, 20]);
     });
@@ -106,17 +115,9 @@ describe('LevelHelper Tests', function () {
     it('does not change start times when there is no segment overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
-      LevelHelper.mergeSubtitlePlaylists(oldPlaylist, newPlaylist);
+      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
-    });
-
-    it('adjusts sliding using the reference start if there is no segment overlap', function () {
-      const oldPlaylist = generatePlaylist([1, 2, 3]);
-      const newPlaylist = generatePlaylist([5, 6, 7]);
-      LevelHelper.mergeSubtitlePlaylists(oldPlaylist, newPlaylist, 30);
-      const actual = newPlaylist.fragments.map(f => f.start);
-      expect(actual).to.deep.equal([30, 35, 40]);
     });
 
     it('does not extrapolate if the new playlist starts before the old', function () {
@@ -125,9 +126,44 @@ describe('LevelHelper Tests', function () {
         f.start += 10;
       });
       const newPlaylist = generatePlaylist([1, 2, 3]);
-      LevelHelper.mergeSubtitlePlaylists(oldPlaylist, newPlaylist);
+      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
+    });
+
+    it('merges delta playlist updates', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      const newPlaylist = generatePlaylist([10, 11, 12]);
+      newPlaylist.skippedSegments = 7;
+      newPlaylist.startSN = 3;
+      newPlaylist.fragments.unshift(null, null, null, null, null, null, null);
+      const merged = generatePlaylist([3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 10);
+      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
+      expect(newPlaylist.deltaUpdateFailed).to.equal(false);
+      expect(newPlaylist.fragments.length).to.equal(merged.fragments.length);
+      newPlaylist.fragments.forEach((frag, i) => {
+        expect(frag, `Fragment sn: ${frag.sn} does not match expected:
+actual: ${JSON.stringify(frag)}
+expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[i]);
+      });
+    });
+
+    it('marks failed delta playlist updates', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3, 4, 5, 6, 7, 8]);
+      const newPlaylist = generatePlaylist([10, 11, 12]);
+      newPlaylist.skippedSegments = 5;
+      newPlaylist.startSN = 5;
+      newPlaylist.fragments.unshift(null, null, null, null, null);
+      // FIXME: An expected offset of 50 would be preferred, but there is nothing to sync playlist start with
+      const merged = generatePlaylist([10, 11, 12], 0);
+      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
+      expect(newPlaylist.deltaUpdateFailed).to.equal(true);
+      expect(newPlaylist.fragments.length).to.equal(3);
+      newPlaylist.fragments.forEach((frag, i) => {
+        expect(frag, `Fragment sn: ${frag.sn} does not match expected:
+actual: ${JSON.stringify(frag)}
+expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[i]);
+      });
     });
   });
 

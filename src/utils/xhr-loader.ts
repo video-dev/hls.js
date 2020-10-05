@@ -7,23 +7,23 @@ class XhrLoader implements Loader<LoaderContext> {
   private requestTimeout?: number;
   private retryTimeout?: number | undefined;
   private retryDelay: number;
-  private config!: LoaderConfiguration;
-  private callbacks!: LoaderCallbacks<LoaderContext>;
+  private config?: LoaderConfiguration;
+  private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public context!: LoaderContext;
 
-  public loader: XMLHttpRequest | null;
+  public loader: XMLHttpRequest | null = null;
   public stats: LoaderStats;
 
   constructor (config /* HlsConfig */) {
     this.xhrSetup = config ? config.xhrSetup : null;
-    this.loader = null;
     this.stats = new LoadStats();
     this.retryDelay = 0;
   }
 
   destroy (): void {
+    this.loader =
+      this.callbacks = null;
     this.abortInternal();
-    this.loader = null;
   }
 
   abortInternal (): void {
@@ -40,7 +40,7 @@ class XhrLoader implements Loader<LoaderContext> {
 
   abort (): void {
     this.abortInternal();
-    if (this.callbacks.onAbort) {
+    if (this.callbacks?.onAbort) {
       this.callbacks.onAbort(this.stats, this.context, this.loader);
     }
   }
@@ -80,7 +80,7 @@ class XhrLoader implements Loader<LoaderContext> {
       }
     } catch (e) {
       // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      this.callbacks.onError({ code: xhr.status, text: e.message }, context, xhr);
+      this.callbacks!.onError({ code: xhr.status, text: e.message }, context, xhr);
       return;
     }
 
@@ -91,14 +91,15 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
     // setup timeout before we perform request
-    this.requestTimeout = self.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
+    this.requestTimeout = self.setTimeout(this.loadtimeout.bind(this), (this.config as LoaderConfiguration).timeout);
     xhr.send();
   }
 
   readystatechange (event): void {
     const xhr = event.currentTarget;
     const readyState = xhr.readyState;
-    const { stats, context, config } = this;
+    const { stats, context } = this;
+    const config = this.config as LoaderConfiguration;
 
     // don't proceed if xhr has been aborted
     if (stats.aborted) {
@@ -129,7 +130,7 @@ class XhrLoader implements Loader<LoaderContext> {
           }
           stats.loaded = stats.total = len;
 
-          const onProgress = this.callbacks.onProgress;
+          const onProgress = this.callbacks!.onProgress;
           if (onProgress) {
             onProgress(stats, context, data, xhr);
           }
@@ -139,12 +140,12 @@ class XhrLoader implements Loader<LoaderContext> {
             data: data
           };
 
-          this.callbacks.onSuccess(response, stats, context, xhr);
+          this.callbacks!.onSuccess(response, stats, context, xhr);
         } else {
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
           if (stats.retry >= config.maxRetry || (status >= 400 && status < 499)) {
             logger.error(`${status} while loading ${context.url}`);
-            this.callbacks.onError({ code: status, text: xhr.statusText }, context, xhr);
+            this.callbacks!.onError({ code: status, text: xhr.statusText }, context, xhr);
           } else {
             // retry
             logger.warn(`${status} while loading ${context.url}, retrying in ${this.retryDelay}...`);
@@ -166,8 +167,11 @@ class XhrLoader implements Loader<LoaderContext> {
 
   loadtimeout (): void {
     logger.warn(`timeout while loading ${this.context.url}`);
-    this.abortInternal();
-    this.callbacks.onTimeout(this.stats, this.context, this.loader);
+    const callbacks = this.callbacks;
+    if (callbacks) {
+      this.abortInternal();
+      callbacks.onTimeout(this.stats, this.context, this.loader);
+    }
   }
 
   getResponseHeader (name: string): string | null {

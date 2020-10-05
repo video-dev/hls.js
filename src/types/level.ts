@@ -1,4 +1,5 @@
 import LevelDetails from '../loader/level-details';
+import AttrList from '../utils/attr-list';
 
 export interface LevelParsed {
   attrs: LevelAttributes
@@ -16,7 +17,7 @@ export interface LevelParsed {
   width?: number
 }
 
-export interface LevelAttributes {
+export interface LevelAttributes extends AttrList {
   AUDIO?: string
   AUTOSELECT?: string
   'AVERAGE-BANDWIDTH'?: string
@@ -36,6 +37,51 @@ export interface LevelAttributes {
   URI?: string
 }
 
+export enum HlsSkip {
+  No = '',
+  Yes = 'YES',
+  v2 = 'v2'
+}
+
+export function getSkipValue (details: LevelDetails, msn: number): HlsSkip {
+  const { canSkipUntil, canSkipDateRanges, endSN } = details;
+  const snChangeGoal = msn - endSN;
+  if (canSkipUntil && snChangeGoal < canSkipUntil) {
+    if (canSkipDateRanges) {
+      return HlsSkip.v2;
+    }
+    return HlsSkip.Yes;
+  }
+  return HlsSkip.No;
+}
+
+export class HlsUrlParameters {
+  msn: number;
+  part?: number;
+  skip?: HlsSkip;
+
+  constructor (msn: number, part?: number, skip?: HlsSkip) {
+    this.msn = msn;
+    this.part = part;
+    this.skip = skip;
+  }
+
+  addDirectives (uri: string): string | never {
+    const url: URL = new self.URL(uri);
+    const searchParams: URLSearchParams = url.searchParams;
+    searchParams.set('_HLS_msn', this.msn.toString());
+    if (this.part !== undefined) {
+      searchParams.set('_HLS_part', this.part.toString());
+    }
+    if (this.skip) {
+      searchParams.set('_HLS_skip', this.skip);
+    }
+    searchParams.sort();
+    url.search = searchParams.toString();
+    return url.toString();
+  }
+}
+
 export class Level {
   public attrs: LevelAttributes;
   public audioCodec?: string;
@@ -46,7 +92,7 @@ export class Level {
   public height: number;
   public id: number;
   public loadError: number = 0;
-  public loaded?: any;
+  public loaded?: { bytes: number, duration: number };
   public name: string | undefined;
   public realBitrate: number = 0;
   public textGroupIds?: string[];

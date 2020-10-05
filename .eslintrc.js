@@ -130,7 +130,7 @@ module.exports = {
       'files': ['*.ts'],
       'rules': {
         'no-unused-vars': 0,
-        '@typescript-eslint/no-unused-vars': 1,
+        '@typescript-eslint/no-unused-vars': [ 'error', { 'args': 'none' } ],
         '@typescript-eslint/prefer-optional-chain': 2,
         '@typescript-eslint/consistent-type-assertions': [ 2,
           {

@@ -1,5 +1,6 @@
 import Fragment from '../../../src/loader/fragment';
 import LevelKey from '../../../src/loader/level-key';
+import { PlaylistLevelType } from '../../../src/types/loader';
 
 describe('Fragment class tests', function () {
   /**
@@ -7,7 +8,7 @@ describe('Fragment class tests', function () {
    */
   let frag;
   beforeEach(function () {
-    frag = new Fragment();
+    frag = new Fragment(PlaylistLevelType.MAIN, '');
   });
 
   describe('encrypted', function () {
@@ -77,7 +78,7 @@ describe('Fragment class tests', function () {
     });
 
     it('set byte range with no offset and uses 0 as offset', function () {
-      const prevFrag = new Fragment();
+      const prevFrag = new Fragment(PlaylistLevelType.MAIN, '');
       prevFrag.setByteRange('1000@10000');
       frag.setByteRange('5000', prevFrag);
       expect(frag.byteRangeStartOffset).to.equal(11000);

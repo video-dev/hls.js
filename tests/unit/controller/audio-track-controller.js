@@ -117,15 +117,17 @@ describe('AudioTrackController', function () {
     expect(tracks[audioTrackController.audioTrack].name).to.equal(audioTrackName);
   });
 
-  describe('_needsTrackLoading', function () {
+  describe('shouldLoadTrack', function () {
     it('should not need loading because the audioTrack is embedded in the main playlist', function () {
-      expect(audioTrackController._needsTrackLoading({ details: { live: true } })).to.be.false;
-      expect(audioTrackController._needsTrackLoading({ details: null })).to.be.false;
+      audioTrackController.canLoad = true;
+      expect(audioTrackController.shouldLoadTrack({ details: { live: true } })).to.be.false;
+      expect(audioTrackController.shouldLoadTrack({ details: null })).to.be.false;
     });
 
     it('should need loading because the track has not been loaded yet', function () {
-      expect(audioTrackController._needsTrackLoading({ details: { live: true }, url: 'http://example.com/manifest.m3u8' })).to.be.true;
-      expect(audioTrackController._needsTrackLoading({ details: null, url: 'http://example.com/manifest.m3u8' })).to.be.true;
+      audioTrackController.canLoad = true;
+      expect(audioTrackController.shouldLoadTrack({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), 1).to.be.true;
+      expect(audioTrackController.shouldLoadTrack({ details: null, url: 'http://example.com/manifest.m3u8' }), 2).to.be.true;
     });
   });
 
@@ -181,7 +183,7 @@ describe('AudioTrackController', function () {
     });
 
     it('should load audio tracks with a url', function () {
-      const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
+      const shouldLoadTrack = sinon.spy(audioTrackController, 'shouldLoadTrack');
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithUrl = {
         groupId: '1',
@@ -205,16 +207,20 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
       });
+      audioTrackController.startLoad();
 
-      expect(needsTrackLoading).to.have.been.calledOnce;
-      expect(needsTrackLoading).to.have.been.calledWith(trackWithUrl);
-      expect(needsTrackLoading.firstCall.returnValue, true, 'expected _needsTrackLoading to return true');
+      expect(shouldLoadTrack).to.have.been.calledTwice;
+      expect(shouldLoadTrack).to.have.been.calledWith(trackWithUrl);
+      expect(shouldLoadTrack.firstCall.returnValue, false,
+        'expected shouldLoadTrack to return false before startLoad() is called');
+      expect(shouldLoadTrack.secondCall.returnValue, true,
+        'expected shouldLoadTrack to return true after startLoad() is called');
 
       expect(audioTrackLoadingCallback).to.have.been.calledOnce;
     });
 
     it('should not attempt to load audio tracks without a url', function () {
-      const needsTrackLoading = sinon.spy(audioTrackController, '_needsTrackLoading');
+      const shouldLoadTrack = sinon.spy(audioTrackController, 'shouldLoadTrack');
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithOutUrl = tracks[0];
 
@@ -232,10 +238,12 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
       });
+      audioTrackController.startLoad();
 
-      expect(needsTrackLoading).to.have.been.calledOnce;
-      expect(needsTrackLoading).to.have.been.calledWith(trackWithOutUrl);
-      expect(needsTrackLoading.firstCall.returnValue).to.be.false;
+      expect(shouldLoadTrack).to.have.been.calledTwice;
+      expect(shouldLoadTrack).to.have.been.calledWith(trackWithOutUrl);
+      expect(shouldLoadTrack.firstCall.returnValue).to.be.false;
+      expect(shouldLoadTrack.secondCall.returnValue).to.be.false;
       expect(audioTrackLoadingCallback).to.not.have.been.called;
     });
   });
@@ -267,36 +275,75 @@ describe('AudioTrackController', function () {
       });
 
       // fatal network error clears interval
-      expect(audioTrackController.timer).to.equal(null);
+      expect(audioTrackController.timer).to.equal(-1);
     });
 
-    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', function () {
-      const currentTrackId = 4;
-      audioTrackController._trackId = currentTrackId;
-      audioTrackController.tracks = tracks;
+    it('should disable current track on network error, if a backup track is found (fallback mechanism)', function () {
+      const currentTrackId = 0;
+      audioTrackController.trackId = currentTrackId;
+      audioTrackController.tracks = [{
+        groupId: '1',
+        id: 0,
+        default: true,
+        name: 'Alt'
+      }, {
+        groupId: '1',
+        id: 1,
+        default: false,
+        name: 'Alt'
+      }, {
+        groupId: '1',
+        id: 2,
+        name: 'Alt'
+      }];
+
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
+      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'does not disable track after media error').to.be.false;
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
+      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'does not disable track misc network error').to.be.false;
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: true,
-        context: {
-          id: 'foobarLoaderContextId'
-        }
+        fatal: false,
+        context: { id: 0 }
       });
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.true;
-      expect(audioTrackController.audioTrack).to.equal(1);
+      const newTrackId = 1;
+      expect(audioTrackController.audioTrack, 'track index/id switches from 0 to 1').to.equal(newTrackId);
+      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'disables track after audio track loading network error').to.be.true;
+
+      audioTrackController.restrictedTracks[newTrackId] = false;
+      audioTrackController.onError(Events.ERROR, {
+        type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT,
+        fatal: false,
+        context: { id: 1 }
+      });
+      expect(audioTrackController.audioTrack, 'track index/id switches from 1 to 2').to.equal(2);
+      expect(!!audioTrackController.restrictedTracks[newTrackId], 'disables track after audio track loading timeout error').to.be.true;
+    });
+
+    it('should not disable current track on network error, if a backup track is not found', function () {
+      const currentTrackId = 4;
+      audioTrackController.trackId = currentTrackId;
+      audioTrackController.tracks = tracks;
+
+      audioTrackController.onError(Events.ERROR, {
+        type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
+        fatal: false,
+        context: { id: 0 }
+      });
+      expect(audioTrackController.audioTrack, 'track index/id is not changed as there is no redundant track to choose from').to.equal(4);
+      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'disables track after audio track loading network error').to.be.false;
     });
   });
 });

@@ -1,8 +1,8 @@
 import { sliceUint8 } from './typed-array';
 import { ElementaryStreamTypes } from '../loader/fragment';
 
-// Todo: Optimize by using loops instead of array methods
 const UINT32_MAX = Math.pow(2, 32) - 1;
+const push = [].push;
 
 export function bin2str (buffer): string {
   return String.fromCharCode.apply(null, buffer);
@@ -45,34 +45,36 @@ export function writeUint32 (buffer, offset, value) {
 }
 
 // Find the data for a box specified by its path
-export function findBox (data, path): Array<any> {
-  let results = [] as Array<any>;
-  let i;
-  let size;
-  let type;
-  let end;
-  let subresults;
-  let start;
-  let endbox;
+type Mp4BoxData = {
+  data: Uint8Array
+  start: number
+  end: number
+};
 
-  if (data.data) {
-    start = data.start;
-    end = data.end;
-    data = data.data;
-  } else {
-    start = 0;
-    end = data.byteLength;
-  }
-
+export function findBox (input: Uint8Array | Mp4BoxData, path: Array<string>): Array<Mp4BoxData> {
+  const results = [] as Array<Mp4BoxData>;
   if (!path.length) {
     // short-circuit the search for empty paths
     return results;
   }
 
-  for (i = start; i < end;) {
-    size = readUint32(data, i);
-    type = bin2str(data.subarray(i + 4, i + 8));
-    endbox = size > 1 ? i + size : end;
+  let data: Uint8Array;
+  let start;
+  let end;
+  if ('data' in input) {
+    data = input.data;
+    start = input.start;
+    end = input.end;
+  } else {
+    data = input;
+    start = 0;
+    end = data.byteLength;
+  }
+
+  for (let i = start; i < end;) {
+    const size = readUint32(data, i);
+    const type = bin2str(data.subarray(i + 4, i + 8));
+    const endbox = size > 1 ? i + size : end;
 
     if (type === path[0]) {
       if (path.length === 1) {
@@ -81,9 +83,9 @@ export function findBox (data, path): Array<any> {
         results.push({ data: data, start: i + 8, end: endbox });
       } else {
         // recursively search for the next box along the path
-        subresults = findBox({ data: data, start: i + 8, end: endbox }, path.slice(1));
+        const subresults = findBox({ data: data, start: i + 8, end: endbox }, path.slice(1));
         if (subresults.length) {
-          results = results.concat(subresults);
+          push.apply(results, subresults);
         }
       }
     }
@@ -217,23 +219,21 @@ export interface InitData extends Array<any> {
   video?: InitDataTrack
 }
 
-export function parseInitSegment (initSegment): InitData {
+export function parseInitSegment (initSegment: Uint8Array): InitData {
   const result: InitData = [];
   const traks = findBox(initSegment, ['moov', 'trak']);
-
-  traks.forEach(trak => {
+  for (let i = 0; i < traks.length; i++) {
+    const trak = traks[i];
     const tkhd = findBox(trak, ['tkhd'])[0];
     if (tkhd) {
       let version = tkhd.data[tkhd.start];
       let index = version === 0 ? 12 : 20;
       const trackId = readUint32(tkhd, index);
-
       const mdhd = findBox(trak, ['mdia', 'mdhd'])[0];
       if (mdhd) {
         version = mdhd.data[mdhd.start];
         index = version === 0 ? 12 : 20;
         const timescale = readUint32(mdhd, index);
-
         const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
         if (hdlr) {
           const hdlrType = bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
@@ -252,7 +252,7 @@ export function parseInitSegment (initSegment): InitData {
         }
       }
     }
-  });
+  }
   return result;
 }
 

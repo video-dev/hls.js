@@ -1,7 +1,8 @@
-import { InitSegmentData, RemuxedTrack, Remuxer, RemuxerResult } from '../types/remuxer';
 import { getDuration, getStartDTS, offsetStartDTS, parseInitSegment, InitData } from '../utils/mp4-tools';
-import { TrackSet } from '../types/track';
 import { logger } from '../utils/logger';
+import type { TrackSet } from '../types/track';
+import type { InitSegmentData, RemuxedTrack, Remuxer, RemuxerResult } from '../types/remuxer';
+import type { DemuxedAudioTrack, DemuxedTrack, PassthroughVideoTrack } from '../types/demuxer';
 
 class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
@@ -24,14 +25,14 @@ class PassThroughRemuxer implements Remuxer {
     this.lastEndDTS = null;
   }
 
-  resetInitSegment (initSegment, audioCodec, videoCodec) {
+  resetInitSegment (initSegment: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.generateInitSegment(initSegment);
     this.emitInitSegment = true;
   }
 
-  generateInitSegment (initSegment): void {
+  generateInitSegment (initSegment: Uint8Array): void {
     let { audioCodec, videoCodec } = this;
     if (!initSegment || !initSegment.byteLength) {
       this.initTracks = undefined;
@@ -58,20 +59,17 @@ class PassThroughRemuxer implements Remuxer {
         initSegment,
         id: 'main'
       };
+    } else if (initData.audio) {
+      tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment, id: 'audio' };
+    } else if (initData.video) {
+      tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment, id: 'main' };
     } else {
-      if (initData.audio) {
-        tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment, id: 'audio' };
-      }
-
-      if (initData.video) {
-        tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment, id: 'main' };
-      }
+      logger.warn('[passthrough-remuxer.ts]: initSegment does not contain moov or trak boxes.');
     }
     this.initTracks = tracks;
   }
 
-  // TODO: utilize accurateTimeOffset
-  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, accurateTimeOffset): RemuxerResult {
+  remux (audioTrack: DemuxedAudioTrack, videoTrack: PassthroughVideoTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset: number): RemuxerResult {
     let { initPTS, lastEndDTS } = this;
     const result: RemuxerResult = {
       audio: undefined,

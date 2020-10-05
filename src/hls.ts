@@ -16,7 +16,7 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
 
-import { Events, HlsEventEmitter, HlsListeners } from './events';
+import { Events } from './events';
 import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
 import { MediaPlaylist } from './types/media-playlist';
@@ -27,14 +27,14 @@ import EMEController from './controller/eme-controller';
 import CapLevelController from './controller/cap-level-controller';
 import AbrController from './controller/abr-controller';
 import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
-import { Tail } from './types/tuples';
+import type { HlsEventEmitter, HlsListeners } from './events';
 
 /**
  * @module Hls
  * @class
  * @constructor
  */
-export default class Hls {
+export default class Hls implements HlsEventEmitter {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
 
@@ -96,9 +96,7 @@ export default class Hls {
    * @param {HlsConfig} config
    */
   constructor (userConfig: Partial<HlsConfig> = {}) {
-    const defaultConfig = Hls.DefaultConfig;
-    mergeConfig(defaultConfig, userConfig);
-    const config = this.config = userConfig as HlsConfig;
+    const config = this.config = mergeConfig(Hls.DefaultConfig, userConfig);
     enableLogs(config.debug);
 
     this._autoLevelCapping = -1;
@@ -172,16 +170,17 @@ export default class Hls {
   }
 
   // Delegate the EventEmitter through the public API of Hls.js
-  on<E extends Events, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
-    this._emitter.on(event, (...args: unknown[]) => {
-      if (this.config.debug) {
-        listener.apply(context, args);
+  on<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context) {
+    const hlsjs = this;
+    this._emitter.on(event, function (this: Context, ...args: unknown[]) {
+      if (hlsjs.config.debug) {
+        listener.apply(this, args);
       } else {
         try {
-          listener.apply(context, args);
+          listener.apply(this, args);
         } catch (e) {
           logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
-          this.trigger(Events.ERROR, {
+          hlsjs.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: false,
@@ -193,16 +192,17 @@ export default class Hls {
     }, context);
   }
 
-  once<E extends Events, Context = this> (event: E, listener: HlsListeners[E], context: Context | this = this) {
-    this._emitter.once(event, (...args: unknown[]) => {
-      if (this.config.debug) {
-        listener.apply(context, args);
+  once<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context) {
+    const hlsjs = this;
+    this._emitter.once(event, function (this: Context, ...args: unknown[]) {
+      if (hlsjs.config.debug) {
+        listener.apply(this, args);
       } else {
         try {
-          listener.apply(context, args);
+          listener.apply(this, args);
         } catch (e) {
           logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
-          this.trigger(Events.ERROR, {
+          hlsjs.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: false,
@@ -214,23 +214,27 @@ export default class Hls {
     }, context);
   }
 
-  removeAllListeners<E extends Events> (event?: E | undefined) {
+  removeAllListeners<E extends keyof HlsListeners> (event?: E | undefined) {
     this._emitter.removeAllListeners(event);
   }
 
-  off<E extends Events, Context = undefined> (event: E, listener?: HlsListeners[E] | undefined, context?: Context, once?: boolean | undefined) {
+  off<E extends keyof HlsListeners, Context = undefined> (event: E, listener?: HlsListeners[E] | undefined, context?: Context, once?: boolean | undefined) {
     this._emitter.off(event, listener, context, once);
   }
 
-  listeners<E extends Events> (event: E): HlsListeners[E][] {
+  listeners<E extends keyof HlsListeners> (event: E): HlsListeners[E][] {
     return this._emitter.listeners(event);
   }
 
-  trigger<E extends Events> (event: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean {
-    return this._emitter.emit(event, event, ...args);
+  emit<E extends keyof HlsListeners> (event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean {
+    return this._emitter.emit(event, name, eventObject);
   }
 
-  listenerCount<E extends Events> (event: E): number {
+  trigger<E extends keyof HlsListeners> (event: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean {
+    return this._emitter.emit(event, event, eventObject);
+  }
+
+  listenerCount<E extends keyof HlsListeners> (event: E): number {
     return this._emitter.listenerCount(event);
   }
 
@@ -239,11 +243,10 @@ export default class Hls {
    */
   destroy () {
     logger.log('destroy');
-    this.trigger(Events.DESTROYING);
+    this.trigger(Events.DESTROYING, undefined);
     this.detachMedia();
-    this.coreComponents.concat(this.networkControllers).forEach(component => {
-      component.destroy();
-    });
+    this.networkControllers.forEach(component => component.destroy());
+    this.coreComponents.forEach(component => component.destroy());
     this.url = null;
     this.removeAllListeners();
     this._autoLevelCapping = -1;
@@ -264,7 +267,7 @@ export default class Hls {
    */
   detachMedia () {
     logger.log('detachMedia');
-    this.trigger(Events.MEDIA_DETACHING);
+    this.trigger(Events.MEDIA_DETACHING, undefined);
     this._media = null;
   }
 
@@ -679,5 +682,13 @@ export default class Hls {
 
   set progressive (value) {
     setStreamingMode(this.config, value);
+  }
+
+  get lowLatencyMode () {
+    return this.config.lowLatencyMode;
+  }
+
+  set lowLatencyMode (mode: boolean) {
+    this.config.lowLatencyMode = mode;
   }
 }

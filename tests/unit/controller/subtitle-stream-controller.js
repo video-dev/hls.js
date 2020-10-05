@@ -117,26 +117,4 @@ describe('SubtitleStreamController', function () {
       expect(subtitleStreamController.setInterval).to.not.have.been.called;
     });
   });
-
-  describe('onLevelLoaded', function () {
-    it('records the start time of the last known A/V track', function () {
-      hls.trigger(Events.LEVEL_UPDATED, {
-        details: { fragments: [{ start: 5 }] }
-      });
-      expect(subtitleStreamController.lastAVStart).to.equal(5);
-
-      hls.trigger(Events.LEVEL_UPDATED, {
-        details: { fragments: [] }
-      });
-      expect(subtitleStreamController.lastAVStart).to.equal(0);
-    });
-  });
-
-  describe('onMediaSeeking', function () {
-    it('nulls fragPrevious', function () {
-      subtitleStreamController.fragPrevious = {};
-      subtitleStreamController.onMediaSeeking();
-      expect(subtitleStreamController.fragPrevious).to.not.exist;
-    });
-  });
 });

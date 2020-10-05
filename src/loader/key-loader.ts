@@ -6,7 +6,14 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import Hls from '../hls';
 import Fragment from './fragment';
-import { LoaderStats, LoaderResponse, LoaderContext, LoaderConfiguration, LoaderCallbacks } from '../types/loader';
+import {
+  LoaderStats,
+  LoaderResponse,
+  LoaderContext,
+  LoaderConfiguration,
+  LoaderCallbacks,
+  Loader, FragmentLoaderContext
+} from '../types/loader';
 import { ComponentAPI } from '../types/component-api';
 import { KeyLoadingData } from '../types/events';
 
@@ -67,7 +74,7 @@ export default class KeyLoader implements ComponentAPI {
         return;
       }
 
-      frag.loader = this.loaders[type] = new config.loader(config);
+      const fragLoader = frag.loader = this.loaders[type] = new config.loader(config) as Loader<FragmentLoaderContext>;
       this.decrypturl = uri;
       this.decryptkey = null;
 
@@ -94,7 +101,7 @@ export default class KeyLoader implements ComponentAPI {
         onTimeout: this.loadtimeout.bind(this)
       };
 
-      frag.loader.load(loaderContext, loaderConfig, loaderCallbacks);
+      fragLoader.load(loaderContext, loaderConfig, loaderCallbacks);
     } else if (this.decryptkey) {
       // Return the key if it's already been loaded
       frag.decryptdata.key = this.decryptkey;
@@ -111,7 +118,7 @@ export default class KeyLoader implements ComponentAPI {
     this.decryptkey = frag.decryptdata.key = new Uint8Array(response.data as ArrayBuffer);
 
     // detach fragment loader on load success
-    frag.loader = undefined;
+    frag.loader = null;
     delete this.loaders[frag.type];
     this.hls.trigger(Events.KEY_LOADED, { frag: frag });
   }

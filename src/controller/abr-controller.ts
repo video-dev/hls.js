@@ -13,10 +13,10 @@ import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import type { Bufferable } from '../utils/buffer-helper';
 import type Fragment from '../loader/fragment';
 import type { LoaderStats } from '../types/loader';
-import type LevelDetails from '../loader/level-details';
 import type Hls from '../hls';
 import type { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
+import type { Level } from '../types/level';
 
 const { performance } = self;
 
@@ -85,9 +85,8 @@ class AbrController implements ComponentAPI {
   /*
       This method monitors the download rate of the current fragment, and will downswitch if that fragment will not load
       quickly enough to prevent underbuffering
-      TODO: Can we enhance this method when progressively streaming?
-      TODO: Lots of magic numbers, are any suitable for configuration?
     */
+  // TODO: Prevent this from interfering with LL-HLS Part loading at or near playback speed (bwe of parts may be enough)
   private _abandonRulesCheck () {
     const { fragCurrent: frag, hls } = this;
     const { autoLevelEnabled, config, media } = hls;
@@ -180,15 +179,18 @@ class AbrController implements ComponentAPI {
 
       // compute level average bitrate
       if (this.hls.config.abrMaxWithRealBitrate) {
-        const level = (this.hls.levels[frag.level] as any);
-        // TODO: stats on level don't match with types, but it's likely true.
+        const level = this.hls.levels[frag.level];
         const loadedBytes = (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
         const loadedDuration = (level.loaded ? level.loaded.duration : 0) + frag.duration;
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
         level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
       }
       if (frag.bitrateTest) {
-        this.onFragBuffered(Events.FRAG_BUFFERED, data);
+        const fragBufferedData: Omit<FragBufferedData, 'id'> = {
+          stats: data.frag.stats,
+          frag: data.frag
+        };
+        this.onFragBuffered(Events.FRAG_BUFFERED, fragBufferedData);
       }
     }
   }
@@ -201,7 +203,6 @@ class AbrController implements ComponentAPI {
       return;
     }
     // Only count non-alt-audio frags which were actually buffered in our BW calculations
-    // TODO: Figure out a heuristical way to see if a frag was loaded from the cache
     if (frag.type !== 'main' || frag.sn === 'initSegment' || frag.bitrateTest) {
       return;
     }
@@ -300,7 +301,7 @@ class AbrController implements ComponentAPI {
     }
   }
 
-  private _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Array<any>): number {
+  private _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Level[]): number {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
 
@@ -308,8 +309,8 @@ class AbrController implements ComponentAPI {
         continue;
       }
 
-      const levelDetails: LevelDetails = levelInfo.details;
-      const avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration;
+      const levelDetails = levelInfo.details;
+      const avgDuration = levelDetails?.averagetargetduration || currentFragDuration;
       const live = levelDetails ? levelDetails.live : false;
 
       let adjustedbw: number;
