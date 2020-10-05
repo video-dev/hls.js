@@ -92,6 +92,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     const currentOnComplete = sandbox.spy();
     const currentOperation: BufferOperation = {
       execute: () => {},
+      onStart: () => {},
       onComplete: currentOnComplete,
       onError: () => {}
     };
@@ -99,6 +100,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     const nextExecute = sandbox.spy();
     const nextOperation: BufferOperation = {
       execute: nextExecute,
+      onStart: () => {},
       onComplete: () => {},
       onError: () => {}
     };
@@ -116,6 +118,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     const onError = sandbox.spy();
     const operation: BufferOperation = {
       execute: () => {},
+      onStart: () => {},
       onComplete: () => {},
       onError
     };
@@ -140,8 +143,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       queueNames.forEach((name, i) => {
         const buffer = buffers[name];
         const segmentData = new Uint8Array();
-        const frag = new Fragment();
-        frag.type = PlaylistLevelType.MAIN;
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
         const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
         const data: BufferAppendingData = {
           type: name,
@@ -176,7 +178,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
         bufferController.onBufferAppending(Events.BUFFER_APPENDING, {
           type: name,
           data: new Uint8Array(),
-          frag: new Fragment(),
+          frag: new Fragment(PlaylistLevelType.MAIN, ''),
           chunkMeta: new ChunkMetadata(0, 0, 0, 0)
         });
 
@@ -190,7 +192,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
   describe('onFragParsed', function () {
     it('should trigger FRAG_BUFFERED when all audio/video data has been buffered', function () {
       const flushLiveBackBufferSpy = sandbox.spy(bufferController, 'flushLiveBackBuffer');
-      const frag = new Fragment();
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
       frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 
@@ -274,7 +276,6 @@ describe('BufferController SourceBuffer operation queueing', function () {
   });
 
   describe('flushLiveBackBuffer', function () {
-    let bufferFlushingSpy;
     beforeEach(function () {
       bufferController._live = true;
       hls.config.liveBackBufferLength = 10;
@@ -284,19 +285,18 @@ describe('BufferController SourceBuffer operation queueing', function () {
         sb.setBuffered(0, 30);
       });
       mockMedia.currentTime = 30;
-      bufferFlushingSpy = sandbox.spy(bufferController, 'onBufferFlushing');
     });
 
     it('exits early if no media is defined', function () {
       delete bufferController.media;
       bufferController.flushLiveBackBuffer();
-      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
+      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to.have.not.been.called;
     });
 
     it('exits early if the stream is not live', function () {
       bufferController._live = false;
       bufferController.flushLiveBackBuffer();
-      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
+      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to.have.not.been.called;
     });
 
     it('exits early if the liveBackBufferLength config is not a finite number, or less than 0', function () {
@@ -306,15 +306,14 @@ describe('BufferController SourceBuffer operation queueing', function () {
       bufferController.flushLiveBackBuffer();
       hls.config.liveBackBufferLength = Infinity;
       bufferController.flushLiveBackBuffer();
-
-      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
+      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to.have.not.been.called;
     });
 
     it('should execute a remove operation if flushing a valid backBuffer range', function () {
       bufferController.flushLiveBackBuffer();
-      expect(bufferFlushingSpy).to.have.been.calledTwice;
+      expect(triggerSpy).to.have.callCount(4);
       queueNames.forEach(name => {
-        expect(bufferFlushingSpy, `onBufferFlushing should have been called for the ${name} SourceBuffer`).to.have.been.calledWith(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 20, type: name });
+        expect(triggerSpy, `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`).to.have.been.calledWith(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 20, type: name });
       });
     });
 
@@ -323,7 +322,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       hls.config.liveBackBufferLength = 5;
       bufferController.flushLiveBackBuffer();
       queueNames.forEach(name => {
-        expect(bufferFlushingSpy, `onBufferFlushing should have been called for the ${name} SourceBuffer`).to.have.been.calledWith(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 15, type: name });
+        expect(triggerSpy, `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`).to.have.been.calledWith(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 15, type: name });
       });
     });
 
@@ -334,7 +333,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
         buffer.setBuffered(10, 30);
       });
       bufferController.flushLiveBackBuffer();
-      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
+      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to.have.not.been.called;
     });
 
     it('does not remove if the buffer does not exist', function () {
@@ -347,7 +346,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       bufferController.sourceBuffer = {};
       bufferController.flushLiveBackBuffer();
 
-      expect(bufferFlushingSpy, 'onBufferFlushing should not have been called').to.have.not.been.called;
+      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to.have.not.been.called;
     });
   });
 

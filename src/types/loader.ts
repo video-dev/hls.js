@@ -1,5 +1,7 @@
-import type Fragment from '../loader/fragment';
+import Fragment from '../loader/fragment';
+import type { Part } from '../loader/fragment';
 import type LevelDetails from '../loader/level-details';
+import type { HlsUrlParameters } from './level';
 
 export interface LoaderContext {
   // target URL
@@ -15,7 +17,8 @@ export interface LoaderContext {
 }
 
 export interface FragmentLoaderContext extends LoaderContext {
-  frag: Fragment
+  frag: Fragment,
+  part: Part | null
 }
 
 export interface LoaderConfiguration {
@@ -35,7 +38,6 @@ export interface LoaderConfiguration {
 
 export interface LoaderResponse {
   url: string,
-  // TODO(jstackhouse): SharedArrayBuffer, es2017 extension to TS
   data: string | ArrayBuffer
 }
 
@@ -120,14 +122,10 @@ export interface Loader<T extends LoaderContext> {
   ): void
   getResponseHeader(name:string): string | null
   context: T
+  loader: any
   stats: LoaderStats
 }
 
-/**
- * `type` property values for this loaders' context object
- * @enum
- *
- */
 export enum PlaylistContextType {
   MANIFEST = 'manifest',
   LEVEL = 'level',
@@ -135,9 +133,6 @@ export enum PlaylistContextType {
   SUBTITLE_TRACK= 'subtitleTrack'
 }
 
-/**
- * @enum {string}
- */
 export enum PlaylistLevelType {
   MAIN = 'main',
   AUDIO = 'audio',
@@ -150,10 +145,12 @@ export interface PlaylistLoaderContext extends LoaderContext {
   type: PlaylistContextType
   // the level index to load
   level: number | null
-  // TODO: what is id?
+  // level or track id from LevelLoadingData / TrackLoadingData
   id: number | null
   // defines if the loader is handling a sidx request for the playlist
   isSidxRequest?: boolean
-  // internal reprsentation of a parsed m3u8 level playlist
-  levelDetails?: LevelDetails
+  // internal representation of a parsed m3u8 level playlist
+  levelDetails?: LevelDetails,
+  // Blocking playlist request delivery directives (or null id none were added to playlist url
+  deliveryDirectives: HlsUrlParameters | null
 }

@@ -3,76 +3,77 @@ import Fragment from './fragment';
 import {
   Loader,
   LoaderConfiguration,
-  FragmentLoaderContext,
-  LoaderCallbacks
+  FragmentLoaderContext
 } from '../types/loader';
+import type { HlsConfig } from '../config';
+import type { BaseSegment, Part } from './fragment';
+import type { FragLoadedData } from '../types/events';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
 export default class FragmentLoader {
-  private readonly config: any;
+  private readonly config: HlsConfig;
   private loader: Loader<FragmentLoaderContext> | null = null;
+  private partLoadTimeout: number = -1;
+  private nextPartIndex: number = -1;
 
-  constructor (config) {
+  constructor (config: HlsConfig) {
     this.config = config;
   }
 
-  load (frag: Fragment, onProgress?: FragmentLoadProgressCallback, highWaterMark?: number): Promise<FragLoadSuccessResult | LoadError> {
-    if (!frag.url) {
-      return Promise.reject(new LoadError(null, 'Fragment does not have a url'));
+  abort () {
+    if (this.loader) {
+      // Abort the loader for current fragment. Only one may load at any given time
+      console.log(`Abort frag loader ${this.loader.context.url}`, this.loader);
+      this.loader.abort();
+    }
+  }
+
+  load (frag: Fragment, targetBufferTime: number | null = null, onProgress?: FragmentLoadProgressCallback): Promise<FragLoadedData> {
+    const url = frag.url;
+    if (!url) {
+      return Promise.reject(new LoadError({
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.INTERNAL_EXCEPTION,
+        fatal: false,
+        frag,
+        networkDetails: null
+      }, `Fragment does not have a ${url ? 'part list' : 'url'}`));
     }
 
     const config = this.config;
     const FragmentILoader = config.fLoader;
     const DefaultILoader = config.loader;
 
-    let loader = this.loader;
-    if (loader) {
-      // Abort the loader for current fragment. Only one may load at any given time
-      loader.abort();
-    }
+    this.abort();
 
-    loader = this.loader = frag.loader =
-      config.fLoader ? new FragmentILoader(config) : new DefaultILoader(config);
-
-    const loaderContext: FragmentLoaderContext = {
-      frag,
-      responseType: 'arraybuffer',
-      url: frag.url,
-      rangeStart: 0,
-      rangeEnd: 0
-    };
-
-    const start = frag.byteRangeStartOffset;
-    const end = frag.byteRangeEndOffset;
-    if (Number.isFinite(start) && Number.isFinite(end)) {
-      loaderContext.rangeStart = start;
-      loaderContext.rangeEnd = end;
-    }
+    const loader = this.loader = frag.loader =
+      FragmentILoader ? new FragmentILoader(config) : new DefaultILoader(config) as Loader<FragmentLoaderContext>;
 
     const loaderConfig: LoaderConfiguration = {
       timeout: config.fragLoadingTimeOut,
       maxRetry: 0,
       retryDelay: 0,
       maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-      highWaterMark: Math.max(highWaterMark || 0, MIN_CHUNK_SIZE)
+      highWaterMark: MIN_CHUNK_SIZE
     };
 
+    const loaderContext = createLoaderContext(frag);
+
     return new Promise((resolve, reject) => {
-      if (!loader) {
-        reject(new LoadError(null, 'Loader was destroyed after fragment request'));
-        return;
-      }
-      const callbacks: LoaderCallbacks<FragmentLoaderContext> = {
+      // Assign frag stats to the loader's stats reference
+      loader.stats = frag.stats;
+      loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails) => {
-          this._resetLoader(frag);
+          this.resetLoader(frag, loader);
           resolve({
+            frag,
             payload: response.data as ArrayBuffer,
             networkDetails
           });
         },
         onError: (response, context, networkDetails) => {
-          this._resetLoader(frag);
+          this.resetLoader(frag, loader);
           reject(new LoadError({
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_ERROR,
@@ -83,7 +84,7 @@ export default class FragmentLoader {
           }));
         },
         onAbort: (stats, context, networkDetails) => {
-          this._resetLoader(frag);
+          this.resetLoader(frag, loader);
           reject(new LoadError({
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.INTERNAL_ABORTED,
@@ -93,7 +94,7 @@ export default class FragmentLoader {
           }));
         },
         onTimeout: (response, context, networkDetails) => {
-          this._resetLoader(frag);
+          this.resetLoader(frag, loader);
           reject(new LoadError({
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_TIMEOUT,
@@ -105,35 +106,51 @@ export default class FragmentLoader {
         onProgress: (stats, context, data, networkDetails) => {
           if (onProgress) {
             onProgress({
+              frag,
               payload: data as ArrayBuffer,
               networkDetails
             });
           }
         }
-      };
-      // Assign frag stats to the loader's stats reference
-      loader.stats = frag.stats;
-      loader.load(loaderContext, loaderConfig, callbacks);
+      });
     });
   }
 
-  _resetLoader (frag: Fragment) {
+  private resetLoader (frag: Fragment, loader: Loader<FragmentLoaderContext>) {
     frag.loader = null;
-    this.loader = null;
+    if (this.loader === loader) {
+      self.clearTimeout(this.partLoadTimeout);
+      this.nextPartIndex = -1;
+      this.loader = null;
+    }
   }
+}
+
+function createLoaderContext (frag: Fragment, part: Part | null = null): FragmentLoaderContext {
+  const segment: BaseSegment = part || frag;
+  const loaderContext: FragmentLoaderContext = {
+    frag,
+    part,
+    responseType: 'arraybuffer',
+    url: segment.url,
+    rangeStart: 0,
+    rangeEnd: 0
+  };
+  const start = segment.byteRangeStartOffset;
+  const end = segment.byteRangeEndOffset;
+  if (Number.isFinite(start) && Number.isFinite(end)) {
+    loaderContext.rangeStart = start;
+    loaderContext.rangeEnd = end;
+  }
+  return loaderContext;
 }
 
 export class LoadError extends Error {
-  private data: FragLoadFailResult | null;
-  constructor (data, ...params) {
+  public readonly data: FragLoadFailResult;
+  constructor (data: FragLoadFailResult, ...params) {
     super(...params);
     this.data = data;
   }
-}
-
-export interface FragLoadSuccessResult {
-  payload: ArrayBuffer
-  networkDetails: XMLHttpRequest | null
 }
 
 export interface FragLoadFailResult {
@@ -141,7 +158,14 @@ export interface FragLoadFailResult {
   details: string
   fatal: boolean
   frag: Fragment
-  networkDetails: XMLHttpRequest
+  part?: Part
+  response?: {
+    // error status code
+    code: number,
+    // error description
+    text: string,
+  }
+  networkDetails: any
 }
 
-export type FragmentLoadProgressCallback = (result: FragLoadSuccessResult) => void;
+export type FragmentLoadProgressCallback = (result: FragLoadedData) => void;

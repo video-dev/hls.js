@@ -25,23 +25,16 @@ export function clearCurrentCues (track: TextTrack) {
   }
 }
 
-/**
- *  Given a list of Cues, finds the closest cue matching the given time.
- *  Modified verison of binary search O(log(n)).
- *
- * @export
- * @param {(TextTrackCueList | TextTrackCue[])} cues - List of cues.
- * @param {number} time - Target time, to find closest cue to.
- * @returns {TextTrackCue}
- */
-export function getClosestCue (cues: TextTrackCueList | TextTrackCue[], time: number): TextTrackCue {
-  // If the offset is less than the first element, the first element is the closest.
-  if (time < cues[0].endTime) {
-    return cues[0];
+// Find first cue starting after given time.
+// Modified version of binary search O(log(n)).
+function getFirstCueIndexAfterTime (cues: TextTrackCueList | TextTrackCue[], time: number): number {
+  // If first cue starts after time, start there
+  if (time < cues[0].startTime) {
+    return 0;
   }
-  // If the offset is greater than the last cue, the last is the closest.
+  // If the last cue ends before time there is no overlap
   if (time > cues[cues.length - 1].endTime) {
-    return cues[cues.length - 1];
+    return -1;
   }
 
   let left = 0;
@@ -50,16 +43,32 @@ export function getClosestCue (cues: TextTrackCueList | TextTrackCue[], time: nu
   while (left <= right) {
     const mid = Math.floor((right + left) / 2);
 
-    if (time < cues[mid].endTime) {
+    if (time < cues[mid].startTime) {
       right = mid - 1;
-    } else if (time > cues[mid].endTime) {
+    } else if (time > cues[mid].startTime) {
       left = mid + 1;
     } else {
       // If it's not lower or higher, it must be equal.
-      return cues[mid];
+      return mid;
     }
   }
   // At this point, left and right have swapped.
   // No direct match was found, left or right element must be the closest. Check which one has the smallest diff.
-  return (cues[left].endTime - time) < (time - cues[right].endTime) ? cues[left] : cues[right];
+  return (cues[left].startTime - time) < (time - cues[right].startTime) ? left : right;
+}
+
+export function getCuesInRange (cues: TextTrackCueList | TextTrackCue[], start: number, end: number): TextTrackCue[] {
+  const cuesFound: TextTrackCue[] = [];
+  const firstCueInRange = getFirstCueIndexAfterTime(cues, start);
+  if (firstCueInRange > -1) {
+    for (let i = firstCueInRange, len = cues.length; i < len; i++) {
+      const cue = cues[i];
+      if (cue.startTime >= start && cue.endTime <= end) {
+        cuesFound.push(cue);
+      } else if (cue.startTime > end) {
+        return cuesFound;
+      }
+    }
+  }
+  return cuesFound;
 }

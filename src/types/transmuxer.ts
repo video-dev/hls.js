@@ -10,6 +10,7 @@ export interface TransmuxerResult {
 export class ChunkMetadata {
     public level: number;
     public sn: number;
+    public part: number;
     public id: number;
     public size: number;
     public transmuxing: HlsChunkPerformanceTiming = getNewPerformanceTiming();
@@ -19,11 +20,12 @@ export class ChunkMetadata {
       audiovideo: getNewPerformanceTiming()
     };
 
-    constructor (level, sn, id, size = 0) {
+    constructor (level, sn, id, size = 0, part = -1) {
       this.level = level;
       this.sn = sn;
       this.id = id;
       this.size = size;
+      this.part = part;
     }
 }
 

@@ -25,6 +25,8 @@ if (demoConfig) {
 const hlsjsDefaults = {
   debug: true,
   enableWorker: true,
+  lowLatencyMode: false,
+  progressive: false,
   liveBackBufferLength: 60 * 15
 };
 
@@ -1376,8 +1378,6 @@ function addChartEventListeners (hls) {
     chart.updateLevels(levels);
   });
   hls.on(Hls.Events.LEVEL_SWITCHED, (eventName, { level }) => {
-    // TODO: mutate level datasets
-    // Update currentLevel
     chart.removeType('level');
     chart.updateLevels(hls.levels, level);
   }, chart);
@@ -1468,10 +1468,10 @@ function hideAllTabs () {
   $('.demo-tab').hide();
 }
 
-function toggleTab (btn) {
+function toggleTab (btn, dontHideOpenTabs) {
   const tabElId = $(btn).data('tab');
   // eslint-disable-next-line no-restricted-globals
-  const modifierPressed = window.event && (window.event.metaKey || window.event.shiftKey);
+  const modifierPressed = dontHideOpenTabs || window.event && (window.event.metaKey || window.event.shiftKey);
   if (!modifierPressed) {
     hideAllTabs();
   }

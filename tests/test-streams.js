@@ -114,6 +114,12 @@ module.exports = {
     abr: true,
     blacklist_ua: ['internet explorer']
   },
+  // fmp4BitmovinHevc: {
+  //   url: 'https://bitmovin-a.akamaihd.net/content/dataset/multi-codec/hevc/stream_fmp4.m3u8',
+  //   description: 'HLS HEVC fMP4 by Bitmovin (Safari and Edge? only as of 2020-08)',
+  //   abr: true,
+  //   blacklist_ua: ['internet explorer']
+  // },
   offset_pts: {
     url: 'https://test-streams.mux.dev/pts_shift/master.m3u8',
     description: 'DK Turntable, PTS shifted by 2.3s',
@@ -170,11 +176,11 @@ module.exports = {
   //   url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/3cbf1114-b2f4-4320-afb3-f0f7eeeb8630/playlist.m3u8',
   //   description: 'Alternate audio track, but no video codec is signaled in the master manifest'
   // },
-  altAudioAndTracks: {
-    url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
-    description: 'Alternate audio tracks, and multiple VTT tracks',
-    abr: true
-  },
+  // altAudioAndTracks: {
+  //   url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
+  //   description: 'Alternate audio tracks, and multiple VTT tracks',
+  //   abr: true
+  // },
   altAudioAudioOnly: createTestStreamWithConfig({
     url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/sintel/playlist.m3u8',
     description: 'Audio only with alternate audio track (Sintel)',
@@ -201,5 +207,15 @@ module.exports = {
     // Disable smooth switch on this stream. Test is flakey because of what looks like (auto)play issue. To be expected with this large a gap (for now).
     // abr: true,
     startSeek: true
+  },
+  AppleLowLatencyHls: {
+    url: 'https://ll-hls-test.apple.com/master.m3u8',
+    description: 'Apple Low-Latency HLS sample (TS segments)',
+    live: true
+  },
+  AppleLowLatencyCmafHls: {
+    url: 'https://ll-hls-test.apple.com/cmaf/master.m3u8',
+    description: 'Apple Low-Latency HLS sample (fMP4 segments)',
+    live: true
   }
 };

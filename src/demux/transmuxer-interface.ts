@@ -7,31 +7,26 @@ import { getMediaSource } from '../utils/mediasource-helper';
 import { EventEmitter } from 'eventemitter3';
 import Fragment from '../loader/fragment';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import Hls from '../hls';
+import type Hls from '../hls';
+import type { HlsEventEmitter } from '../events';
+import type { PlaylistLevelType } from '../types/loader';
 
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
-// TOOD: Refactor this out
-class Observer extends EventEmitter {
-  trigger (event: any, ...args: any[]) {
-    this.emit(event, args);
-  }
-}
-
 export default class TransmuxerInterface {
   private hls: Hls;
-  private id: any;
-  private observer: Observer | null;
+  private id: PlaylistLevelType;
+  private observer: HlsEventEmitter;
   private frag?: Fragment;
   private worker: any;
   private onwmsg?: Function;
-  private transmuxer?: Transmuxer | null;
-  private onTransmuxComplete: (transmuxResult: TransmuxerResult) => {};
-  private onFlush: (chunkMeta: ChunkMetadata) => {};
+  private transmuxer: Transmuxer | null = null;
+  private onTransmuxComplete: (transmuxResult: TransmuxerResult) => void;
+  private onFlush: (chunkMeta: ChunkMetadata) => void;
 
   private currentTransmuxSession: ChunkMetadata | null = null;
 
-  constructor (hls: Hls, id, onTransmuxComplete, onFlush) {
+  constructor (hls: Hls, id: PlaylistLevelType, onTransmuxComplete: (transmuxResult: TransmuxerResult) => void, onFlush: (chunkMeta: ChunkMetadata) => void) {
     this.hls = hls;
     this.id = id;
     this.onTransmuxComplete = onTransmuxComplete;
@@ -47,7 +42,7 @@ export default class TransmuxerInterface {
     };
 
     // forward events to main thread
-    this.observer = new Observer();
+    this.observer = new EventEmitter() as HlsEventEmitter;
     this.observer.on(Events.FRAG_DECRYPTED, forwardMessage);
     this.observer.on(Events.ERROR, forwardMessage);
 
@@ -101,13 +96,13 @@ export default class TransmuxerInterface {
     const observer = this.observer;
     if (observer) {
       observer.removeAllListeners();
-      this.observer = null;
     }
+    delete this.observer;
   }
 
-  push (data: Uint8Array, initSegment: any, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {
+  push (data: ArrayBuffer, initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {
     const { currentTransmuxSession, transmuxer, worker } = this;
-    const timeOffset = Number.isFinite(frag.startPTS) ? frag.startPTS : frag.start;
+    const timeOffset = frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
 
@@ -125,7 +120,7 @@ export default class TransmuxerInterface {
         accurateTimeOffset: ${accurateTimeOffset}
         timeOffset: ${timeOffset}`);
       this.currentTransmuxSession = chunkMeta;
-      const config = new TransmuxConfig(audioCodec, videoCodec, new Uint8Array(initSegment), duration, defaultInitPTS);
+      const config = new TransmuxConfig(audioCodec, videoCodec, new Uint8Array(initSegmentData), duration, defaultInitPTS);
       const state = new TransmuxState(discontinuity, contiguous, accurateTimeOffset, trackSwitch, timeOffset);
       this.configureTransmuxer(config, state);
     }

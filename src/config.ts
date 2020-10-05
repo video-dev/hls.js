@@ -1,20 +1,21 @@
 import AbrController from './controller/abr-controller';
 import AudioStreamController from './controller/audio-stream-controller';
 import AudioTrackController from './controller/audio-track-controller';
+import { SubtitleStreamController } from './controller/subtitle-stream-controller';
+import SubtitleTrackController from './controller/subtitle-track-controller';
 import BufferController from './controller/buffer-controller';
+import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-
-import { TimelineController } from './controller/timeline-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
 import EMEController from './controller/eme-controller';
-
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import * as Cues from './utils/cues';
-import { SubtitleStreamController } from './controller/subtitle-stream-controller';
-import { requestMediaKeySystemAccess, MediaKeyFunc } from './utils/mediakeys-helper';
+import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { logger } from './utils/logger';
+
+import type { MediaKeyFunc } from './utils/mediakeys-helper';
+import type { FragmentLoaderContext, Loader, LoaderContext, PlaylistLoaderContext } from './types/loader';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
@@ -53,7 +54,7 @@ export type EMEControllerConfig = {
 };
 
 type FragmentLoaderConfig = {
-  fLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
+  fLoader?: { new(confg: HlsConfig): Loader<FragmentLoaderContext> },
 
   fragLoadingTimeOut: number,
   fragLoadingMaxRetry: number,
@@ -77,7 +78,7 @@ export type MP4RemuxerConfig = {
 };
 
 type PlaylistLoaderConfig = {
-  pLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
+  pLoader?: { new(confg: HlsConfig): Loader<PlaylistLoaderContext> },
 
   manifestLoadingTimeOut: number,
   manifestLoadingMaxRetry: number,
@@ -140,15 +141,15 @@ export type HlsConfig =
     enableWorker: boolean,
     enableSoftwareAES: boolean,
     minAutoBitrate: number,
-    loader: any, // TODO(typescript-xhrloader): Type once XHR is done
+    loader: { new(confg: HlsConfig): Loader<LoaderContext> },
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
 
     // Alt Audio
-    audioStreamController?: any, // TODO(typescript-audiostreamcontroller): Type once file is done
-    audioTrackController?: any, // TODO(typescript-audiotrackcontroller): Type once file is done
+    audioStreamController?: typeof AudioStreamController,
+    audioTrackController?: typeof AudioTrackController,
     // Subtitle
-    subtitleStreamController?: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
-    subtitleTrackController?: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
+    subtitleStreamController?: typeof SubtitleStreamController,
+    subtitleTrackController?: typeof SubtitleTrackController,
     timelineController?: typeof TimelineController,
     // EME
     emeController?: typeof EMEController,
@@ -157,7 +158,10 @@ export type HlsConfig =
     bufferController: typeof BufferController,
     capLevelController: typeof CapLevelController,
     fpsController: typeof FPSController,
-    progressive: boolean
+    progressive: boolean,
+    lowLatencyMode: boolean,
+
+    userConfig: Partial<HlsConfig>
   } &
   ABRControllerConfig &
   BufferControllerConfig &
@@ -249,6 +253,8 @@ export const hlsDefaultConfig: HlsConfig = {
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
   progressive: false,
+  lowLatencyMode: false,
+  userConfig: {},
 
   // Dynamic Modules
   ...timelineConfig(),
@@ -278,23 +284,20 @@ function timelineConfig (): TimelineControllerConfig {
   };
 }
 
-export function mergeConfig (defaultConfig, passedConfig) {
-  if ((passedConfig.liveSyncDurationCount || passedConfig.liveMaxLatencyDurationCount) && (passedConfig.liveSyncDuration || passedConfig.liveMaxLatencyDuration)) {
-    throw new Error('Illegal hls.js passedConfig: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+export function mergeConfig (defaultConfig: HlsConfig, userConfig: any): HlsConfig {
+  if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
+    throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
   }
 
-  for (const prop in defaultConfig) {
-    if (prop in passedConfig) continue;
-    passedConfig[prop] = defaultConfig[prop];
-  }
-
-  if (passedConfig.liveMaxLatencyDurationCount !== void 0 && passedConfig.liveMaxLatencyDurationCount <= passedConfig.liveSyncDurationCount) {
+  if (userConfig.liveMaxLatencyDurationCount !== void 0 && userConfig.liveMaxLatencyDurationCount <= userConfig.liveSyncDurationCount) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
   }
 
-  if (passedConfig.liveMaxLatencyDuration !== void 0 && (passedConfig.liveMaxLatencyDuration <= passedConfig.liveSyncDuration || passedConfig.liveSyncDuration === void 0)) {
+  if (userConfig.liveMaxLatencyDuration !== void 0 && (userConfig.liveMaxLatencyDuration <= userConfig.liveSyncDuration || userConfig.liveSyncDuration === void 0)) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
   }
+
+  return Object.assign({}, defaultConfig, userConfig, { userConfig });
 }
 
 const canStreamProgressively = fetchSupported();

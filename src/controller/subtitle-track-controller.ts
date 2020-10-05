@@ -1,48 +1,50 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
-import { computeReloadInterval } from './level-helper';
 import { clearCurrentCues } from '../utils/texttrack-utils';
 import { MediaPlaylist } from '../types/media-playlist';
-import { TrackLoadedData, ManifestLoadedData, MediaAttachedData, SubtitleTracksUpdatedData } from '../types/events';
-import { ComponentAPI } from '../types/component-api';
+import {
+  TrackLoadedData,
+  MediaAttachedData,
+  SubtitleTracksUpdatedData,
+  ManifestParsedData
+} from '../types/events';
+import BasePlaylistController from './base-playlist-controller';
 import Hls from '../hls';
+import { HlsUrlParameters } from '../types/level';
 
-class SubtitleTrackController implements ComponentAPI {
-  private hls: Hls;
+class SubtitleTrackController extends BasePlaylistController {
   private tracks: MediaPlaylist[];
   private trackId: number = -1;
   private media: HTMLMediaElement | null = null;
-  private stopped: boolean = true;
   private queuedDefaultTrack?: number;
   private trackChangeListener: () => void = () => this._onTextTracksChanged();
   private useTextTrackPolling: boolean = false;
   private subtitlePollingInterval: number = -1;
-  private timer: number | null = null;
 
   public subtitleDisplay: boolean = true; // Enable/disable subtitle display rendering
 
   constructor (hls: Hls) {
-    this.hls = hls;
+    super(hls);
     this.tracks = [];
-
     this._registerListeners();
   }
 
   public destroy () {
     this._unregisterListeners();
+    super.destroy();
   }
 
   private _registerListeners () {
     this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    this.hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    this.hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     this.hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
   }
 
   private _unregisterListeners () {
     this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    this.hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     this.hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
   }
 
@@ -94,14 +96,13 @@ class SubtitleTrackController implements ComponentAPI {
   }
 
   // Fired whenever a new manifest is loaded.
-  protected onManifestLoaded (event: Events.MANIFEST_LOADED, data: ManifestLoadedData): void {
-    const subtitleTracks = data.subtitles || [];
+  protected onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData): void {
+    const subtitleTracks = data.subtitleTracks;
     this.tracks = subtitleTracks;
     const subtitleTracksUpdated: SubtitleTracksUpdatedData = { subtitleTracks };
     this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
     // loop through available subtitle tracks and autoselect default if needed
-    // TODO: improve selection logic to handle forced, etc
     subtitleTracks.forEach((track: MediaPlaylist) => {
       if (track.default) {
         // setting this.subtitleTrack will trigger internal logic
@@ -119,38 +120,21 @@ class SubtitleTrackController implements ComponentAPI {
 
   protected onSubtitleTrackLoaded (event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void {
     const { id, details } = data;
-    const { trackId, tracks } = this;
-    const currentTrack = tracks[trackId];
-    const curDetails = currentTrack.details;
+    const { trackId } = this;
+    const currentTrack = this.tracks[trackId];
 
-    if (id >= tracks.length || id !== trackId || !currentTrack || this.stopped) {
-      this._clearReloadTimer();
+    if (!currentTrack) {
+      logger.warn('[subtitle-track-controller]: Invalid subtitle track id:', id);
       return;
     }
 
+    const curDetails = currentTrack.details;
     currentTrack.details = data.details;
-    logger.log(`[subtitle-track-controller]: subtitle track ${id} loaded [${details.startSN},${details.endSN}]`);
+    logger.log(`[subtitle-track-controller]: subtitle track ${id} loaded [${details.startSN}-${details.endSN}]`);
 
-    if (details.live && !this.stopped) {
-      details.reloaded(curDetails);
-      const reloadInterval = computeReloadInterval(details, data.stats);
-      logger.log(`[subtitle-track-controller]: live subtitle track ${details.updated ? 'REFRESHED' : 'MISSED'}, reload in ${Math.round(reloadInterval)} ms`);
-      this.timer = self.setTimeout(() => {
-        this._loadCurrentTrack();
-      }, reloadInterval);
-    } else {
-      this._clearReloadTimer();
+    if (id === this.trackId) {
+      this.playlistLoaded(id, data, curDetails);
     }
-  }
-
-  public startLoad (): void {
-    this.stopped = false;
-    this._loadCurrentTrack();
-  }
-
-  public stopLoad (): void {
-    this.stopped = true;
-    this._clearReloadTimer();
   }
 
   /** get alternate subtitle tracks list from playlist **/
@@ -171,21 +155,25 @@ class SubtitleTrackController implements ComponentAPI {
     }
   }
 
-  private _clearReloadTimer (): void {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
+  protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters): void {
+    const currentTrack = this.tracks[this.trackId];
+    if (this.shouldLoadTrack(currentTrack)) {
+      const id = currentTrack.id;
+      let url = currentTrack.url;
+      if (hlsUrlParameters) {
+        try {
+          url = hlsUrlParameters.addDirectives(url);
+        } catch (error) {
+          logger.warn(`[subtitle-track-controller] Could not construct new URL with HLS Delivery Directives: ${error}`);
+        }
+      }
+      logger.log(`[subtitle-track-controller]: Loading subtitle playlist for id ${id}`);
+      this.hls.trigger(Events.SUBTITLE_TRACK_LOADING, {
+        url,
+        id,
+        deliveryDirectives: hlsUrlParameters || null
+      });
     }
-  }
-
-  private _loadCurrentTrack (): void {
-    const { trackId, tracks, hls } = this;
-    const currentTrack = tracks[trackId];
-    if (this.stopped || trackId < 0 || !currentTrack || (currentTrack.details && !currentTrack.details.live)) {
-      return;
-    }
-    logger.log(`[subtitle-track-controller]: Loading subtitle track ${trackId}`);
-    hls.trigger(Events.SUBTITLE_TRACK_LOADING, { url: currentTrack.url, id: trackId });
   }
 
   /**
@@ -223,14 +211,16 @@ class SubtitleTrackController implements ComponentAPI {
      */
   private _setSubtitleTrackInternal (newId: number): void {
     const { hls, tracks } = this;
-    if (!Number.isFinite(newId) || newId < -1 || newId >= tracks.length) {
+    if (this.trackId === newId && this.tracks[this.trackId].details ||
+      newId < -1 || newId >= tracks.length) {
       return;
     }
 
     this.trackId = newId;
     logger.log(`[subtitle-track-controller]: Switching to subtitle track ${newId}`);
     hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
-    this._loadCurrentTrack();
+    // TODO: LL-HLS use RENDITION-REPORT if available
+    this.loadPlaylist();
   }
 
   private _onTextTracksChanged (): void {

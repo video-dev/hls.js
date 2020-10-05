@@ -111,7 +111,7 @@ export function parseWebVTT (
     // This helps timeline-controller to avoid showing repeated captions.
     cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);
 
-    // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
+    // Fix encoding of special characters
     cue.text = decodeURIComponent(encodeURIComponent(cue.text));
     if (cue.endTime > 0) {
       cues.push(cue);

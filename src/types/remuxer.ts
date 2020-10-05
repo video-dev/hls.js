@@ -1,10 +1,15 @@
 import { TrackSet } from './track';
-import { DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack, MetadataSample, UserdataSample } from './demuxer';
+import {
+  DemuxedAudioTrack,
+  DemuxedTrack, DemuxedVideoTrack,
+  MetadataSample,
+  UserdataSample
+} from './demuxer';
 import { SourceBufferName } from './buffer';
 
 export interface Remuxer {
   remux(audioTrack: DemuxedAudioTrack,
-        videoTrack: DemuxedAvcTrack,
+        videoTrack: DemuxedVideoTrack,
         id3Track: DemuxedTrack,
         textTrack: DemuxedTrack,
         timeOffset: number,

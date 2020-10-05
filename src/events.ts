@@ -1,5 +1,51 @@
-import { ManifestLoadedData, ManifestLoadingData, MediaAttachedData, MediaAttachingData, LevelLoadingData, LevelLoadedData, ManifestParsedData, LevelUpdatedData, LevelsUpdatedData, FragParsingUserdataData, FragDecryptedData, FragLoadedData, InitPTSFoundData, CuesParsedData, SubtitleFragProcessedData, NonNativeTextTracksData, FragLoadingData, AudioTrackLoadingData, AudioTrackLoadedData, SubtitleTrackLoadedData, SubtitleTrackLoadingData, ErrorData, AudioTrackSwitchingData, AudioTrackSwitchedData, KeyLoadedData, KeyLoadingData, SubtitleTrackSwitchData, SubtitleTracksUpdatedData, LevelSwitchedData, FragChangedData, BufferAppendingData, BufferCodecsData, FragParsingMetadataData, FragParsingInitSegmentData, FragBufferedData, BufferFlushingData, BufferEOSData, LevelSwitchingData, FPSDropLevelCappingData, FPSDropData, BufferCreatedData, BufferAppendedData, LevelPTSUpdatedData, FragParsedData, AudioTracksUpdatedData, FragLoadEmergencyAbortedData, LiveBackBufferData } from './types/events';
-import { Tail } from './types/tuples';
+import {
+  ManifestLoadedData,
+  ManifestLoadingData,
+  MediaAttachedData,
+  MediaAttachingData,
+  LevelLoadingData,
+  LevelLoadedData,
+  ManifestParsedData,
+  LevelUpdatedData,
+  LevelsUpdatedData,
+  FragParsingUserdataData,
+  FragDecryptedData,
+  FragLoadedData,
+  InitPTSFoundData,
+  CuesParsedData,
+  SubtitleFragProcessedData,
+  NonNativeTextTracksData,
+  FragLoadingData,
+  AudioTrackLoadedData,
+  SubtitleTrackLoadedData,
+  ErrorData,
+  AudioTrackSwitchingData,
+  AudioTrackSwitchedData,
+  KeyLoadedData,
+  KeyLoadingData,
+  SubtitleTrackSwitchData,
+  SubtitleTracksUpdatedData,
+  LevelSwitchedData,
+  FragChangedData,
+  BufferAppendingData,
+  BufferCodecsData,
+  FragParsingMetadataData,
+  FragParsingInitSegmentData,
+  FragBufferedData,
+  BufferFlushingData,
+  BufferEOSData,
+  LevelSwitchingData,
+  FPSDropLevelCappingData,
+  FPSDropData,
+  BufferCreatedData,
+  BufferAppendedData,
+  LevelPTSUpdatedData,
+  FragParsedData,
+  AudioTracksUpdatedData,
+  FragLoadEmergencyAbortedData,
+  LiveBackBufferData,
+  TrackLoadingData, BufferFlushedData
+} from './types/events';
 
 /**
  * @readonly
@@ -130,7 +176,7 @@ export interface HlsListeners {
   [Events.BUFFER_APPENDED]: (event: Events.BUFFER_APPENDED, data: BufferAppendedData) => void
   [Events.BUFFER_EOS]: (event: Events.BUFFER_EOS, data: BufferEOSData) => void
   [Events.BUFFER_FLUSHING]: (event: Events.BUFFER_FLUSHING, data: BufferFlushingData) => void
-  [Events.BUFFER_FLUSHED]: (event: Events.BUFFER_FLUSHED) => void
+  [Events.BUFFER_FLUSHED]: (event: Events.BUFFER_FLUSHED, data: BufferFlushedData) => void
   [Events.MANIFEST_LOADING]: (event: Events.MANIFEST_LOADING, data: ManifestLoadingData) => void
   [Events.MANIFEST_LOADED]: (event: Events.MANIFEST_LOADED, data: ManifestLoadedData) => void
   [Events.MANIFEST_PARSED]: (event: Events.MANIFEST_PARSED, data: ManifestParsedData) => void
@@ -144,12 +190,12 @@ export interface HlsListeners {
   [Events.AUDIO_TRACKS_UPDATED]: (event: Events.AUDIO_TRACKS_UPDATED, data: AudioTracksUpdatedData) => void
   [Events.AUDIO_TRACK_SWITCHING]: (event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) => void
   [Events.AUDIO_TRACK_SWITCHED]: (event: Events.AUDIO_TRACK_SWITCHED, data: AudioTrackSwitchedData) => void
-  [Events.AUDIO_TRACK_LOADING]: (event: Events.AUDIO_TRACK_LOADING, data: AudioTrackLoadingData) => void
+  [Events.AUDIO_TRACK_LOADING]: (event: Events.AUDIO_TRACK_LOADING, data: TrackLoadingData) => void
   [Events.AUDIO_TRACK_LOADED]: (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData) => void
   [Events.SUBTITLE_TRACKS_UPDATED]: (event: Events.SUBTITLE_TRACKS_UPDATED, data: SubtitleTracksUpdatedData) => void
   [Events.SUBTITLE_TRACKS_CLEARED]: (event: Events.SUBTITLE_TRACKS_CLEARED) => void
   [Events.SUBTITLE_TRACK_SWITCH]: (event: Events.SUBTITLE_TRACK_SWITCH, data: SubtitleTrackSwitchData) => void
-  [Events.SUBTITLE_TRACK_LOADING]: (event: Events.SUBTITLE_TRACK_LOADING, data: SubtitleTrackLoadingData) => void
+  [Events.SUBTITLE_TRACK_LOADING]: (event: Events.SUBTITLE_TRACK_LOADING, data: TrackLoadingData) => void
   [Events.SUBTITLE_TRACK_LOADED]: (event: Events.SUBTITLE_TRACK_LOADED, data: SubtitleTrackLoadedData) => void
   [Events.SUBTITLE_FRAG_PROCESSED]: (event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessedData) => void
   [Events.CUES_PARSED]: (event: Events.CUES_PARSED, data: CuesParsedData) => void
@@ -183,6 +229,6 @@ export interface HlsEventEmitter {
   off<E extends keyof HlsListeners, Context = undefined> (event: E, listener?: HlsListeners[E], context?: Context, once?: boolean): void
 
   listeners<E extends keyof HlsListeners> (event: E): HlsListeners[E][]
-  emit<E extends keyof HlsListeners> (event: E, name: E, ...args: Tail<Parameters<HlsListeners[E]>>): boolean
+  emit<E extends keyof HlsListeners> (event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean
   listenerCount<E extends keyof HlsListeners> (event: E): number
 }

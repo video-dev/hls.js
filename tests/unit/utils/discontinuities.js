@@ -1,4 +1,4 @@
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignPDT } from '../../../src/utils/discontinuities';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustSlidingStart, alignPDT } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,
@@ -36,7 +36,8 @@ describe('level-helper', function () {
   it('adjusts level fragments with overlapping CC range using a reference fragment', function () {
     const details = {
       fragments: mockFrags.slice(0),
-      PTSKnown: false
+      PTSKnown: false,
+      alignedSliding: false
     };
     const expected = [
       {
@@ -62,15 +63,16 @@ describe('level-helper', function () {
       }
     ];
 
-    adjustPts(mockReferenceFrag.start, details);
+    adjustSlidingStart(mockReferenceFrag.start, details);
     expect(expected).to.deep.equal(details.fragments);
-    expect(details.PTSKnown).to.be.true;
+    expect(details.alignedSliding).to.be.true;
   });
 
   it('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
     const lastLevel = {
       details: {
         PTSKnown: true,
+        alignedSliding: false,
         hasProgramDateTime: true,
         fragments: [
           {
@@ -125,6 +127,7 @@ describe('level-helper', function () {
         }
       ],
       PTSKnown: false,
+      alignedSliding: false,
       startCC: 2,
       endCC: 3,
       hasProgramDateTime: true
@@ -155,7 +158,8 @@ describe('level-helper', function () {
           cc: 3
         }
       ],
-      PTSKnown: true,
+      PTSKnown: false,
+      alignedSliding: true,
       startCC: 2,
       endCC: 3,
       hasProgramDateTime: true
@@ -239,19 +243,6 @@ describe('level-helper', function () {
     expect(actual).to.be.false;
   });
 
-  it('should not align when there is no previous level', function () {
-    const curDetails = {
-      startCC: 1,
-      endCC: 1
-    };
-    const lastFrag = {
-      cc: 1
-    };
-
-    const actual = shouldAlignOnDiscontinuities(lastFrag, null, curDetails);
-    expect(actual).to.be.false;
-  });
-
   it('should not align when there are no previous level details', function () {
     const lastLevel = {
     };
@@ -264,18 +255,6 @@ describe('level-helper', function () {
     };
 
     const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
-    expect(actual).to.be.false;
-  });
-
-  it('should not align when there are no current level details', function () {
-    const lastLevel = {
-      details: {}
-    };
-    const lastFrag = {
-      cc: 1
-    };
-
-    const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, null);
     expect(actual).to.be.false;
   });
 });

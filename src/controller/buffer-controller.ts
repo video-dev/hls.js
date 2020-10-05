@@ -182,7 +182,7 @@ export default class BufferController implements ComponentAPI {
       this.tracks = {};
     }
 
-    this.hls.trigger(Events.MEDIA_DETACHED);
+    this.hls.trigger(Events.MEDIA_DETACHED, undefined);
   }
 
   protected onBufferReset () {
@@ -271,8 +271,6 @@ export default class BufferController implements ComponentAPI {
         };
 
         if (err.code === DOMException.QUOTA_EXCEEDED_ERR) {
-          // TODO: enum MSE error codes
-          // TODO: Should queues be cleared on this error?
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
           // let's stop appending any segments, and report BUFFER_FULL_ERROR error
           event.details = ErrorDetails.BUFFER_FULL_ERROR;
@@ -302,7 +300,7 @@ export default class BufferController implements ComponentAPI {
       },
       onComplete: () => {
         logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
-        this.hls.trigger(Events.BUFFER_FLUSHED);
+        this.hls.trigger(Events.BUFFER_FLUSHED, { type });
       },
       onError: (e) => {
         logger.warn(`[buffer-controller]: Failed to remove from ${type} SourceBuffer`, e);
@@ -332,17 +330,18 @@ export default class BufferController implements ComponentAPI {
       }
     }
 
-    // TODO: Can this happen when switching audio tracks and be safely ignored?
-    // console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
-    if (buffersAppendedTo.length === 0) {
-      return;
-    }
-
-    logger.log('[buffer-controller]: All fragment chunks received, enqueueing operation to signal fragment buffered');
     const onUnblocked = () => {
       frag.stats.buffering.end = self.performance.now();
       this.hls.trigger(Events.FRAG_BUFFERED, { frag, stats: frag.stats, id: frag.type });
     };
+
+    // console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
+    if (buffersAppendedTo.length === 0) {
+      logger.warn(`Fragments must have at least one ElementaryStreamType set. type: ${frag.type} level: ${frag.level} sn: ${frag.sn}`);
+      onUnblocked();
+      return;
+    }
+
     this.blockBuffers(onUnblocked, buffersAppendedTo);
     this.flushLiveBackBuffer();
   }
@@ -381,12 +380,12 @@ export default class BufferController implements ComponentAPI {
     this._levelTargetDuration = details.levelTargetDuration;
     this._live = details.live;
 
-    const levelDuration = details.totalduration + details.fragments[0].start;
+    const levelEnd = details.fragments[0].start + details.totalduration;
     logger.log('[buffer-controller]: Duration update required; enqueueing duration change operation');
     if (this.getSourceBufferTypes().length) {
-      this.blockBuffers(this.updateMediaElementDuration.bind(this, levelDuration));
+      this.blockBuffers(this.updateMediaElementDuration.bind(this, levelEnd));
     } else {
-      this.updateMediaElementDuration(levelDuration);
+      this.updateMediaElementDuration(levelEnd);
       if (this.hls.config.liveDurationInfinity) {
         this.updateSeekableRange(details);
       }
@@ -458,16 +457,8 @@ export default class BufferController implements ComponentAPI {
         const buffered = sb.buffered;
         // when target buffer start exceeds actual buffer start
         if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
-          this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });
-          // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
-          // time will lead to playback freezing)
-          // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
-          logger.log(`[buffer-controller]: Enqueueing operation to flush ${type} back buffer`);
-          this.onBufferFlushing(Events.BUFFER_FLUSHING, {
-            startOffset: 0,
-            endOffset: targetBackBufferPosition,
-            type
-          });
+          hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });
+          hls.trigger(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: targetBackBufferPosition, type });
         }
       }
     });
@@ -510,8 +501,8 @@ export default class BufferController implements ComponentAPI {
     const fragments = levelDetails.fragments;
     const len = fragments.length;
     if (len && mediaSource?.setLiveSeekableRange) {
-      const start = fragments[0]?.start;
-      const end = fragments[len - 1].start + fragments[len - 1].duration;
+      const start = fragments[0].start;
+      const end = start + levelDetails.totalduration;
       mediaSource.setLiveSeekableRange(start, end);
     }
   }
@@ -692,16 +683,16 @@ export default class BufferController implements ComponentAPI {
   // upon completion, since we already do it here
   private blockBuffers (onUnblocked: Function, buffers: Array<SourceBufferName> = this.getSourceBufferTypes()) {
     if (!buffers.length) {
-      logger.log('[buffer-controller]: Blocking operation requested, but no SourceBuffers exist');
+      // logger.log('[buffer-controller]: Blocking operation requested, but no SourceBuffers exist');
       onUnblocked();
       return;
     }
     const { operationQueue } = this;
 
-    logger.log(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
+    // logger.log(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
     const blockingOperations = buffers.map(type => operationQueue.appendBlocker(type as SourceBufferName));
     Promise.all(blockingOperations).then(() => {
-      logger.log(`[buffer-controller]: Blocking operation resolved; unblocking ${buffers} SourceBuffer`);
+      // logger.log(`[buffer-controller]: Blocking operation resolved; unblocking ${buffers} SourceBuffer`);
       onUnblocked();
       buffers.forEach(type => {
         const sb = this.sourceBuffer[type];
