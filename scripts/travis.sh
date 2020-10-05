@@ -68,11 +68,11 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseAlpha" ] |
         echo "Cleared jsdelivr cache."
       elif [ "${TRAVIS_MODE}" = "release" ]; then
         tag=$(node ./scripts/get-version-tag.js)
-        if [ "${tag}" = "alpha" ]; then
-          # alpha (previously canary) is blacklisted because this is handled separately on every commit
-          echo "alpha (previously canary) not supported as explicit tag"
-          exit 1
-        fi
+        # if [ "${tag}" = "alpha" ]; then
+        #   # alpha (previously canary) is blacklisted because this is handled separately on every commit
+        #   echo "alpha (previously canary) not supported as explicit tag"
+        #   exit 1
+        # fi
         echo "Publishing tag: ${tag}"
         npm publish --tag "${tag}"
         curl "https://purge.jsdelivr.net/npm/hls.js@${tag}"
