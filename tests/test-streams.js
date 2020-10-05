@@ -137,7 +137,7 @@ module.exports = {
     abr: true,
     blacklist_ua: ['firefox', 'safari', 'internet explorer']
   }, {
-    widevineLicenseUrl: 'http://cwip-shaka-proxy.appspot.com/no_auth',
+    widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }),
   audioOnlyMultipleLevels: {
