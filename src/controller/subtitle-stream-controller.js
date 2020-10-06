@@ -115,6 +115,11 @@ export class SubtitleStreamController extends BaseStreamController {
     if (!frag || frag.type !== 'subtitle') {
       return;
     }
+
+    if (this.fragCurrent && this.fragCurrent.loader) {
+      this.fragCurrent.loader.abort();
+    }
+
     this.state = State.IDLE;
   }
 
