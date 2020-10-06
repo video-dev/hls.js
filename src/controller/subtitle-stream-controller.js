@@ -263,27 +263,31 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   onMediaSeeking () {
-    if (this.state === State.FRAG_LOADING) {
-      const fragCurrent = this.fragCurrent;
-      const bufferInfo = BufferHelper.bufferedInfo(this._getBuffered(), media.currentTime, this.config.maxBufferHole);
-        const tolerance = this.config.maxFragLookUpTolerance;
-        const fragStartOffset = fragCurrent.start - tolerance;
-        const fragEndOffset = fragCurrent.start + fragCurrent.duration + tolerance;
-        // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
-        if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
-          if (fragCurrent.loader) {
-            fragCurrent.loader.abort();
-          }
-          this.fragCurrent = null;
-          this.fragPrevious = null;
-          this.fragmentTracker.removeFragment(fragCurrent);
-          // switch to IDLE state to load new fragment
-          this.state = State.IDLE;
+    // if (this.state === State.FRAG_LOADING) {
+    // WIP not reliable as the loader is active in State.IDLE
+
+    if (this.fragCurrent) {
+      const currentTime = this.media ? this.media.currentTime : null;
+      const tolerance = this.config.maxFragLookUpTolerance;
+      const fragStartOffset = this.fragCurrent.start - tolerance;
+      const fragEndOffset = this.fragCurrent.start + this.fragCurrent.duration + tolerance;
+
+      // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
+      if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
+        if (this.fragCurrent.loader) {
+          this.fragCurrent.loader.abort();
         }
+
+        this.fragmentTracker.removeFragment(this.fragCurrent);
+        this.fragCurrent = null;
+        this.fragPrevious = null;
+
+        // switch to IDLE state to load new fragment
+        this.state = State.IDLE;
+
+        // speed up things
+        this.tick();
       }
     }
-
-    this.state = State.IDLE;
-    this.tick();
   }
 }
