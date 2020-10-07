@@ -58,9 +58,11 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
       // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
       cue.position = Math.max(0, Math.min(100, 100 * (indent / 32)));
       result.push(cue);
-      if (track) {
-        track.addCue(cue);
-      }
+    }
+  }
+  if (track && result.length) {
+    for (let i = result.length; i--;) {
+      track.addCue(result[i]);
     }
   }
   return result;
