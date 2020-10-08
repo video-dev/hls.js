@@ -264,7 +264,7 @@ export class SubtitleStreamController extends BaseStreamController {
 
   onMediaSeeking () {
     if (this.fragCurrent) {
-      const currentTime = this.media ? this.media.currentTime : null;
+      const currentTime = this.media ? this.media.currentTime : 0;
       const tolerance = this.config.maxFragLookUpTolerance;
       const fragStartOffset = this.fragCurrent.start - tolerance;
       const fragEndOffset = this.fragCurrent.start + this.fragCurrent.duration + tolerance;
