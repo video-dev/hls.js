@@ -272,7 +272,7 @@ export class SubtitleStreamController extends BaseStreamController {
       const fragStartOffset = this.fragCurrent.start - tolerance;
       const fragEndOffset = this.fragCurrent.start + this.fragCurrent.duration + tolerance;
 
-      // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
+      // check if position will be out of currently loaded frag range after seeking : if out, cancel frag load, if in, don't do anything
       if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
         if (this.fragCurrent.loader) {
           this.fragCurrent.loader.abort();
