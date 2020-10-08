@@ -263,9 +263,6 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   onMediaSeeking () {
-    // if (this.state === State.FRAG_LOADING) {
-    // WIP not reliable as the loader is active in State.IDLE
-
     if (this.fragCurrent) {
       const currentTime = this.media ? this.media.currentTime : null;
       const tolerance = this.config.maxFragLookUpTolerance;
