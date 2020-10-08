@@ -600,7 +600,7 @@ class StreamController extends BaseStreamController {
    */
   immediateLevelSwitchEnd () {
     const media = this.media;
-    if (media && media.buffered.length) {
+    if (media && BufferHelper.getBuffered(media).length) {
       this.immediateSwitch = false;
       if (media.currentTime > 0 && BufferHelper.isBuffered(media, media.currentTime)) {
         // only nudge if currentTime is buffered
@@ -1182,7 +1182,7 @@ class StreamController extends BaseStreamController {
       const frag = this.fragCurrent;
       if (frag) {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
+        logger.log(`main buffered : ${TimeRanges.toString(BufferHelper.getBuffered(media))}`);
         this.fragPrevious = frag;
         const stats = this.stats;
         stats.tbuffered = window.performance.now();
@@ -1298,7 +1298,7 @@ class StreamController extends BaseStreamController {
     }
 
     const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-    const buffered = mediaBuffer.buffered;
+    const buffered = BufferHelper.getBuffered(mediaBuffer);
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
@@ -1329,7 +1329,7 @@ class StreamController extends BaseStreamController {
     if (media) {
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
       const elementaryStreamType = this.audioOnly ? ElementaryStreamTypes.AUDIO : ElementaryStreamTypes.VIDEO;
-      this.fragmentTracker.detectEvictedFragments(elementaryStreamType, media.buffered);
+      this.fragmentTracker.detectEvictedFragments(elementaryStreamType, BufferHelper.getBuffered(media));
     }
     // reset reference to frag
     this.fragPrevious = null;
@@ -1359,7 +1359,8 @@ class StreamController extends BaseStreamController {
         logger.log(`could not seek to ${startPosition}, already seeking at ${currentTime}`);
         return;
       }
-      const bufferStart = media.buffered.length ? media.buffered.start(0) : 0;
+      const buffered = BufferHelper.getBuffered(media);
+      const bufferStart = buffered.length ? buffered.start(0) : 0;
       const delta = bufferStart - startPosition;
       if (delta > 0 && delta < this.config.maxBufferHole) {
         logger.log(`adjusting start position by ${delta} to match buffer start`);
