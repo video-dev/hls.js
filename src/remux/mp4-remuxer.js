@@ -52,7 +52,7 @@ class MP4Remuxer {
       } else {
         return sample.pts;
       }
-    }, videoSamples[0].pts);
+    }, PTSNormalize(videoSamples[0].pts, 0));
     if (rolloverDetected) {
       logger.debug('PTS rollover detected');
     }
@@ -76,7 +76,7 @@ class MP4Remuxer {
         // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
         // drift between audio and video streams
         const startPTS = this.getVideoStartPts(videoTrack.samples);
-        const tsDelta = audioTrack.samples[0].pts - startPTS;
+        const tsDelta = PTSNormalize(audioTrack.samples[0].pts, 0) - startPTS;
         const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
         audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
         videoTimeOffset += Math.max(0, -audiovideoTimestampDelta);
@@ -190,7 +190,7 @@ class MP4Remuxer {
       if (computePTSDTS) {
         const startPTS = this.getVideoStartPts(videoSamples);
         const startOffset = Math.round(inputTimeScale * timeOffset);
-        initDTS = Math.min(initDTS, videoSamples[0].dts - startOffset);
+        initDTS = Math.min(initDTS, PTSNormalize(videoSamples[0].dts, 0) - startOffset);
         initPTS = Math.min(initPTS, startPTS - startOffset);
         this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
       }
