@@ -323,8 +323,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxMaxBufferLength: 600,
       maxBufferSize: 60*1000*1000,
       maxBufferHole: 0.5,
-      lowBufferWatchdogPeriod: 0.5,
-      highBufferWatchdogPeriod: 3,
+      highBufferWatchdogPeriod: 2,
       nudgeOffset: 0.1,
       nudgeMaxRetry: 3,
       maxFragLookUpTolerance: 0.25,
@@ -489,15 +488,13 @@ max video loading delay used in  automatic start level selection : in that mode 
 
 ### `lowBufferWatchdogPeriod` (deprecated)
 
-(default 0.5s)
-
-if media element is expected to play and if currentTime has not moved for more than ```lowBufferWatchdogPeriod``` and if there are less than `maxBufferHole` seconds buffered upfront, hls.js will try to nudge playhead to recover playback
+```lowBufferWatchdogPeriod``` has been deprecated. Use `highBufferWatchdogPeriod` instead.
 
 ### `highBufferWatchdogPeriod`
 
 (default 3s)
 
-if media element is expected to play and if currentTime has not moved for more than ```highBufferWatchdogPeriod``` and if there are more than `maxBufferHole` seconds buffered upfront, hls.js will try to nudge playhead to recover playback
+if media element is expected to play and if currentTime has not moved for more than ```highBufferWatchdogPeriod``` and if there are more than `maxBufferHole` seconds buffered upfront, hls.js will jump buffer gaps, or try to nudge playhead to recover playback
 
 ### `nudgeOffset`
 

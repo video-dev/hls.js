@@ -100,7 +100,6 @@ type StreamControllerConfig = {
   maxBufferSize: number,
   maxBufferHole: number,
 
-  lowBufferWatchdogPeriod: number,
   highBufferWatchdogPeriod: number,
   nudgeOffset: number,
   nudgeMaxRetry: number,
@@ -159,9 +158,7 @@ export type HlsConfig =
     capLevelController: typeof CapLevelController,
     fpsController: typeof FPSController,
     progressive: boolean,
-    lowLatencyMode: boolean,
-
-    userConfig: Partial<HlsConfig>
+    lowLatencyMode: boolean
   } &
   ABRControllerConfig &
   BufferControllerConfig &
@@ -190,9 +187,7 @@ export const hlsDefaultConfig: HlsConfig = {
   maxBufferLength: 30, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.5, // used by stream-controller
-
-  lowBufferWatchdogPeriod: 0.5, // used by stream-controller
-  highBufferWatchdogPeriod: 3, // used by stream-controller
+  highBufferWatchdogPeriod: 2, // used by stream-controller
   nudgeOffset: 0.1, // used by stream-controller
   nudgeMaxRetry: 3, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
@@ -254,7 +249,6 @@ export const hlsDefaultConfig: HlsConfig = {
   testBandwidth: true,
   progressive: false,
   lowLatencyMode: false,
-  userConfig: {},
 
   // Dynamic Modules
   ...timelineConfig(),
@@ -297,7 +291,7 @@ export function mergeConfig (defaultConfig: HlsConfig, userConfig: any): HlsConf
     throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
   }
 
-  return Object.assign({}, defaultConfig, userConfig, { userConfig });
+  return Object.assign({}, defaultConfig, userConfig);
 }
 
 const canStreamProgressively = fetchSupported();

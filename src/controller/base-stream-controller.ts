@@ -117,7 +117,7 @@ export default class BaseStreamController extends TaskLoop {
   protected onMediaSeeking () {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
     const currentTime = media ? media.currentTime : null;
-    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
+    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, config.maxBufferHole);
 
     this.log(`media seeking to ${Number.isFinite(currentTime) ? currentTime.toFixed(3) : currentTime}, state: ${state}`);
 
@@ -584,7 +584,8 @@ export default class BaseStreamController extends TaskLoop {
 
   protected computeLivePosition (sliding: number, levelDetails: LevelDetails): number {
     const { holdBack, partHoldBack, targetduration, totalduration } = levelDetails;
-    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode, userConfig } = this.config;
+    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode } = this.config;
+    const userConfig = this.hls.userConfig;
     let targetLatency = lowLatencyMode ? partHoldBack || holdBack : holdBack;
     if (userConfig.liveSyncDuration || userConfig.liveSyncDurationCount || targetLatency === 0) {
       targetLatency = liveSyncDuration !== undefined ? liveSyncDuration : liveSyncDurationCount * targetduration;
