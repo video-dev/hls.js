@@ -71,7 +71,8 @@ type FPSControllerConfig = {
 };
 
 type LevelControllerConfig = {
-  startLevel?: number
+  startLevel?: number,
+  filterLevels?: (levels: any[]) => any[],
 };
 
 type MP4RemuxerConfig = {

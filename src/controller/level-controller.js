@@ -116,6 +116,10 @@ export default class LevelController extends EventHandler {
     levels = levels.filter(({ audioCodec, videoCodec }) => {
       return (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) && (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'));
     });
+    // filter levels by hls config
+    if (this.hls.config.filterLevels) {
+      levels = this.hls.config.filterLevels(levels);
+    }
 
     if (data.audioTracks) {
       audioTracks = data.audioTracks.filter(track => !track.audioCodec || isCodecSupportedInMp4(track.audioCodec, 'audio'));

@@ -339,6 +339,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       manifestLoadingRetryDelay: 1000,
       manifestLoadingMaxRetryTimeout: 64000,
       startLevel: undefined,
+      filterLevels: undefined, 
       levelLoadingTimeOut: 10000,
       levelLoadingMaxRetry: 4,
       levelLoadingRetryDelay: 1000,
@@ -613,6 +614,12 @@ Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
 (default: `undefined`)
 
 When set, use this level as the default hls.startLevel. Keep in mind that the startLevel set with the API takes precedence over config.startLevel configuration parameter.
+
+### `filterLevels`
+
+(default: `undefined`)
+
+When set, use filtered levels as hls.levels.
 
 ### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 
