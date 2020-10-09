@@ -37,6 +37,7 @@ import type { HlsEventEmitter, HlsListeners } from './events';
 export default class Hls implements HlsEventEmitter {
   public static defaultConfig?: HlsConfig;
   public config: HlsConfig;
+  public readonly userConfig: Partial<HlsConfig>;
 
   private coreComponents: ComponentAPI[];
   private networkControllers: NetworkComponentAPI[];
@@ -97,6 +98,7 @@ export default class Hls implements HlsEventEmitter {
    */
   constructor (userConfig: Partial<HlsConfig> = {}) {
     const config = this.config = mergeConfig(Hls.DefaultConfig, userConfig);
+    this.userConfig = userConfig;
     enableLogs(config.debug);
 
     this._autoLevelCapping = -1;
