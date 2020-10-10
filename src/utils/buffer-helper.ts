@@ -8,6 +8,8 @@
  * Also @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/buffered
 */
 
+import { logger } from '../utils/logger';
+
 type BufferTimeRange = {
   start: number
   end: number
@@ -24,6 +26,12 @@ export type BufferInfo = {
   nextStart?: number,
 };
 
+const noopBuffered: TimeRanges = {
+  length: 0,
+  start: () => 0,
+  end: () => 0
+};
+
 export class BufferHelper {
   /**
    * Return true if `media`'s buffered include `position`
@@ -34,7 +42,7 @@ export class BufferHelper {
   static isBuffered (media: Bufferable, position: number): boolean {
     try {
       if (media) {
-        const buffered = media.buffered;
+        const buffered = BufferHelper.getBuffered(media);
         for (let i = 0; i < buffered.length; i++) {
           if (position >= buffered.start(i) && position <= buffered.end(i)) {
             return true;
@@ -56,7 +64,7 @@ export class BufferHelper {
   ): BufferInfo {
     try {
       if (media) {
-        const vbuffered = media.buffered;
+        const vbuffered = BufferHelper.getBuffered(media);
         const buffered: BufferTimeRange[] = [];
         let i: number;
         for (i = 0; i < vbuffered.length; i++) {
@@ -147,5 +155,18 @@ export class BufferHelper {
       }
     }
     return { len: bufferLen, start: bufferStart || 0, end: bufferEnd || 0, nextStart: bufferStartNext };
+  }
+
+  /**
+   * Safe method to get buffered property.
+   * SourceBuffer.buffered may throw if SourceBuffer is removed from it's MediaSource
+   */
+  static getBuffered (media: Bufferable): TimeRanges {
+    try {
+      return media.buffered;
+    } catch (e) {
+      logger.log('failed to get media.buffered', e);
+      return noopBuffered;
+    }
   }
 }

@@ -1,10 +1,7 @@
-/*
- * Buffer Controller
- */
-
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { BufferHelper } from '../utils/buffer-helper';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { TrackSet } from '../types/track';
@@ -254,7 +251,7 @@ export default class BufferController implements ComponentAPI {
         const { sourceBuffer } = this;
         const timeRanges = {};
         for (const type in sourceBuffer) {
-          timeRanges[type] = sourceBuffer[type].buffered;
+          timeRanges[type] = BufferHelper.getBuffered(sourceBuffer[type]);
         }
         this.appendError = 0;
         this.hls.trigger(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, frag, chunkMeta });
@@ -454,7 +451,7 @@ export default class BufferController implements ComponentAPI {
     this.getSourceBufferTypes().forEach((type: SourceBufferName) => {
       const sb = sourceBuffer[type];
       if (sb) {
-        const buffered = sb.buffered;
+        const buffered = BufferHelper.getBuffered(sb);
         // when target buffer start exceeds actual buffer start
         if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
           hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, { bufferEnd: targetBackBufferPosition });

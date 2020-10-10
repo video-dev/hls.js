@@ -117,4 +117,13 @@ describe('SubtitleStreamController', function () {
       expect(subtitleStreamController.setInterval).to.not.have.been.called;
     });
   });
+
+  describe('onMediaSeeking', function () {
+    it('nulls fragPrevious when seeking away from fragCurrent', function () {
+      subtitleStreamController.fragCurrent = { start: 1000, duration: 10 };
+      subtitleStreamController.fragPrevious = {};
+      subtitleStreamController.onMediaSeeking();
+      expect(subtitleStreamController.fragPrevious).to.not.exist;
+    });
+  });
 });

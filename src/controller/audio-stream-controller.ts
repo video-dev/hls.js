@@ -503,7 +503,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     }
     this.fragPrevious = frag;
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    this.log(`Buffered fragment ${frag.sn} of level ${frag.level}. PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}], Buffered: ${TimeRanges.toString(media.buffered)}`);
+    this.log(`Buffered fragment ${frag.sn} of level ${frag.level}. PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}], Buffered: ${TimeRanges.toString(BufferHelper.getBuffered(media))}`);
     if (this.audioSwitch && frag.sn !== 'initSegment') {
       this.audioSwitch = false;
       this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: this.trackId });
@@ -603,7 +603,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
     if (media && type === ElementaryStreamTypes.AUDIO) {
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      this.fragmentTracker.detectEvictedFragments(ElementaryStreamTypes.AUDIO, media.buffered);
+      this.fragmentTracker.detectEvictedFragments(ElementaryStreamTypes.AUDIO, BufferHelper.getBuffered(media));
     }
     // reset reference to frag
     this.fragPrevious = null;
