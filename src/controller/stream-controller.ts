@@ -380,7 +380,7 @@ export default class StreamController extends BaseStreamController implements Ne
    */
   immediateLevelSwitchEnd () {
     const media = this.media;
-    if (media?.buffered.length) {
+    if (BufferHelper.getBuffered(media).length) {
       this.immediateSwitch = false;
       if (media.currentTime > 0 && BufferHelper.isBuffered(media, media.currentTime)) {
         // only nudge if currentTime is buffered
@@ -777,7 +777,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.fragPrevious = frag;
     this.fragLastKbps = Math.round(8 * stats.total / (stats.buffering.end - stats.loading.first));
 
-    this.log(`Buffered fragment ${frag.sn} of level ${frag.level}. PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}], Buffered: ${TimeRanges.toString(media.buffered)}`);
+    this.log(`Buffered fragment ${frag.sn} of level ${frag.level}. PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}], Buffered: ${TimeRanges.toString(BufferHelper.getBuffered(media))}`);
     this.state = State.IDLE;
     this.tick();
   }
@@ -880,7 +880,7 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     // Check combined buffer
-    const buffered = media.buffered;
+    const buffered = BufferHelper.getBuffered(media);
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
@@ -912,7 +912,7 @@ export default class StreamController extends BaseStreamController implements Ne
     */
     const media = (type === ElementaryStreamTypes.VIDEO ? this.videoBuffer : this.mediaBuffer) || this.media;
     if (media && type !== ElementaryStreamTypes.AUDIO) {
-      this.fragmentTracker.detectEvictedFragments(type, media.buffered);
+      this.fragmentTracker.detectEvictedFragments(type, BufferHelper.getBuffered(media));
     }
     // reset reference to frag
     this.fragPrevious = null;
@@ -943,7 +943,8 @@ export default class StreamController extends BaseStreamController implements Ne
         logger.log(`could not seek to ${startPosition}, already seeking at ${currentTime}`);
         return;
       }
-      const bufferStart = media.buffered.length ? media.buffered.start(0) : 0;
+      const buffered = BufferHelper.getBuffered(media);
+      const bufferStart = buffered.length ? buffered.start(0) : 0;
       const delta = bufferStart - startPosition;
       if (delta > 0 && delta < this.config.maxBufferHole) {
         logger.log(`adjusting start position by ${delta} to match buffer start`);

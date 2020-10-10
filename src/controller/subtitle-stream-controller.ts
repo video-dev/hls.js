@@ -76,6 +76,18 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     hls.off(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
   }
 
+  startLoad () {
+    this.stopLoad();
+    this.state = State.IDLE;
+
+    // Check if we already have a track with necessary details to load fragments
+    const currentTrack = this.levels[this.currentTrackId];
+    if (currentTrack?.details) {
+      this.setInterval(TICK_INTERVAL);
+      this.tick();
+    }
+  }
+
   onHandlerDestroyed () {
     delete this.fragmentTracker;
     this.state = State.STOPPED;
@@ -145,6 +157,11 @@ export class SubtitleStreamController extends BaseStreamController implements Co
     if (!frag || frag.type !== 'subtitle') {
       return;
     }
+
+    if (this.fragCurrent?.loader) {
+      this.fragCurrent.loader.abort();
+    }
+
     this.state = State.IDLE;
   }
 
@@ -287,6 +304,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   }
 
   stopLoad () {
+    this.fragPrevious = null;
     super.stopLoad();
   }
 
