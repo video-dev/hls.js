@@ -23,6 +23,7 @@ import type {
   MediaAttachedData,
   AudioTrackSwitchingData,
   LevelsUpdatedData,
+  LevelUpdatedData,
   AudioTrackSwitchedData,
   BufferCreatedData,
   ErrorData,
@@ -82,6 +83,7 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
     hls.on(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
@@ -100,6 +102,7 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
     hls.off(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
@@ -922,6 +925,19 @@ export default class StreamController extends BaseStreamController implements Ne
 
   onLevelsUpdated (event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {
     this.levels = data.levels;
+  }
+
+  onLevelUpdated (event: Events.LEVEL_UPDATED, data: LevelUpdatedData) {
+    const { media, mediaBuffer } = this;
+    const currentTime = media ? media.currentTime : null;
+    const levelDetails = data.details;
+    const fragments = levelDetails.fragments;
+    const fragLen = fragments.length;
+    const start = fragments[0].start;
+    const end = fragments[fragments.length - 1].start + fragments[fragLen - 1].duration;
+    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
+    const pos = bufferInfo.end;
+    this.synchronizeToLiveEdge(start, end, pos, levelDetails);
   }
 
   swapAudioCodec () {
