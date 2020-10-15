@@ -26,6 +26,7 @@ import ID3TrackController from './controller/id3-track-controller';
 import EMEController from './controller/eme-controller';
 import CapLevelController from './controller/cap-level-controller';
 import AbrController from './controller/abr-controller';
+import LatencyController from './controller/latency-controller';
 import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 import type { HlsEventEmitter, HlsListeners } from './events';
 
@@ -35,8 +36,9 @@ import type { HlsEventEmitter, HlsListeners } from './events';
  * @constructor
  */
 export default class Hls implements HlsEventEmitter {
-  public static defaultConfig?: HlsConfig;
-  public config: HlsConfig;
+  private static defaultConfig?: HlsConfig;
+
+  public readonly config: HlsConfig;
   public readonly userConfig: Partial<HlsConfig>;
 
   private coreComponents: ComponentAPI[];
@@ -46,6 +48,7 @@ export default class Hls implements HlsEventEmitter {
   private _autoLevelCapping: number;
   private abrController: AbrController;
   private capLevelController: CapLevelController;
+  private latencyController: LatencyController;
   private levelController: LevelController;
   private streamController: StreamController;
   private audioTrackController: AudioTrackController;
@@ -156,6 +159,7 @@ export default class Hls implements HlsEventEmitter {
     this.createController(config.subtitleStreamController, fragmentTracker, networkControllers);
     this.createController(config.timelineController, null, coreComponents);
     this.emeController = this.createController(config.emeController, null, coreComponents);
+    this.latencyController = this.createController(LatencyController, null, coreComponents);
 
     this.coreComponents = coreComponents;
   }
@@ -629,13 +633,6 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @type {Seconds}
-   */
-  get liveSyncPosition (): number | null {
-    return this.streamController.liveSyncPosition;
-  }
-
-  /**
    * get alternate subtitle tracks list from playlist
    * @type {MediaPlaylist[]}
    */
@@ -691,15 +688,43 @@ export default class Hls implements HlsEventEmitter {
     }
   }
 
+  /**
+   * Enable/disable streaming segment data with fetch loader
+   * @type {boolean}
+   */
   set progressive (value) {
     setStreamingMode(this.config, value);
   }
 
+  /**
+   * get mode for Low-Latency HLS loading
+   * @type {boolean}
+   */
   get lowLatencyMode () {
     return this.config.lowLatencyMode;
   }
 
+  /**
+   * Enable/disable Low-Latency HLS part playlist and segment loading, and start live streams at playlist PART-HOLD-BACK rather than HOLD-BACK.
+   * @type {boolean}
+   */
   set lowLatencyMode (mode: boolean) {
     this.config.lowLatencyMode = mode;
+  }
+
+  /**
+   * position (in seconds) of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
+   * @type {number}
+   */
+  get liveSyncPosition (): number | null {
+    return this.latencyController.liveSyncPosition;
+  }
+
+  /**
+   * estimated position (in seconds) of live edge (ie edge of live playlist plus time sync playlist advanced)
+   * @type {number}
+   */
+  get latency () {
+    return this.latencyController.latency;
   }
 }

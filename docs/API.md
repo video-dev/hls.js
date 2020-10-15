@@ -123,6 +123,7 @@
   - [`hls.subtitleDisplay`](#hlssubtitledisplay)
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
+  - [`hls.latency`](#hlslatency)
 - [Runtime Events](#runtime-events)
 - [Loader Composition](#loader-composition)
 - [Errors](#errors)
@@ -391,7 +392,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
 
 ### `Hls.DefaultConfig get/set`
 
-This getter/setter allows to retrieve and override Hls default configuration.
+This getter/setter allows retrieval and override of the Hls default configuration.
 This configuration will be applied by default to all instances.
 
 ### `capLevelToPlayerSize`
@@ -662,7 +663,7 @@ Disable this test if you'd like to provide your own estimate or use the default 
                   
 (default: `false`)
 
-Stream segment data with fetch loader.
+Enable streaming segment data with fetch loader (experimental).
 
 ### `lowLatencyMode`
                   
@@ -1304,6 +1305,10 @@ get/set : if set to true the active subtitle track mode will be set to `showing`
 ### `hls.liveSyncPosition`
 
 get : position of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
+
+### `hls.latency`
+
+get : estimated position of live edge (ie edge of live playlist plus time sync playlist advanced)
 
 ## Runtime Events
 

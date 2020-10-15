@@ -27,13 +27,13 @@ import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import Hls from '../hls';
-import type { ComponentAPI } from '../types/component-api';
+import { NetworkComponentAPI } from '../types/component-api';
 
 const { performance } = self;
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
-class AudioStreamController extends BaseStreamController implements ComponentAPI {
+class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
   private retryDate: number = 0;
   private onvseeking: EventListener | null = null;
   private onvseeked: EventListener | null = null;

@@ -261,6 +261,7 @@ export default class M3U8Parser {
               fragments.unshift(null);
             }
             currentSN += skippedSegments;
+            totalduration += skippedSegments * level.targetduration;
           }
           const recentlyRemovedDateranges = skipAttrs.enumeratedString('RECENTLY-REMOVED-DATERANGES');
           if (recentlyRemovedDateranges) {

@@ -15,7 +15,7 @@ class FPSController implements ComponentAPI {
   private hls: Hls;
   private isVideoPlaybackQualityAvailable: boolean = false;
   private timer?: number;
-  private video: HTMLVideoElement | null = null;
+  private media: HTMLVideoElement | null = null;
   private lastTime: any;
   private lastDroppedFrames: number = 0;
   private lastDecodedFrames: number = 0;
@@ -47,14 +47,15 @@ class FPSController implements ComponentAPI {
 
     this.unregisterListeners();
     this.isVideoPlaybackQualityAvailable = false;
+    this.media = null;
   }
 
   protected onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     const config = this.hls.config;
     if (config.capLevelOnFPSDrop) {
-      const video = data.media instanceof self.HTMLVideoElement ? data.media : null;
-      this.video = video;
-      if (video && typeof video.getVideoPlaybackQuality === 'function') {
+      const media = data.media instanceof self.HTMLVideoElement ? data.media : null;
+      this.media = media;
+      if (media && typeof media.getVideoPlaybackQuality === 'function') {
         this.isVideoPlaybackQualityAvailable = true;
       }
 
@@ -94,7 +95,7 @@ class FPSController implements ComponentAPI {
   }
 
   checkFPSInterval () {
-    const video = this.video;
+    const video = this.media;
     if (video) {
       if (this.isVideoPlaybackQualityAvailable) {
         const videoPlaybackQuality = video.getVideoPlaybackQuality();
