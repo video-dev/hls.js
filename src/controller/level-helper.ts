@@ -180,9 +180,9 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
     }
   }
 
+  const newFragments = newDetails.fragments;
   if (ccOffset) {
     logger.log('discontinuity sliding from playlist, take drift into account');
-    const newFragments = newDetails.fragments;
     for (let i = 0; i < newFragments.length; i++) {
       newFragments[i].cc += ccOffset;
     }
@@ -202,6 +202,10 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
     // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
     // in that case we also need to adjust start offset of all fragments
     adjustSliding(oldDetails, newDetails);
+  }
+
+  if (newFragments.length) {
+    newDetails.totalduration = newDetails.edge - newFragments[0].start;
   }
 }
 

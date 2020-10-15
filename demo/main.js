@@ -1009,10 +1009,11 @@ function checkBuffer () {
 
     if ($('#statsDisplayTab').is(':visible')) {
       let log = `Duration: ${video.duration}\nBuffered: ${timeRangesToString(video.buffered)}\nSeekable: ${timeRangesToString(video.seekable)}\nPlayed: ${timeRangesToString(video.played)}\n`;
-
+      log += `Latency: ${hls.latency}\n`;
+      log += `Playback rate: ${video.playbackRate.toFixed(2)}\n`;
       if (hls.media) {
         for (const type in tracks) {
-          log += 'Buffer for ' + type + ' contains: ' + timeRangesToString(tracks[type].buffer.buffered) + '\n';
+          log += `Buffer for ${type} contains:${timeRangesToString(tracks[type].buffer.buffered)}\n`;
         }
 
         const videoPlaybackQuality = video.getVideoPlaybackQuality;

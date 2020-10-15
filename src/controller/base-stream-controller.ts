@@ -24,6 +24,7 @@ import Hls from '../hls';
 import Decrypter from '../crypt/decrypter';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
+import { NetworkComponentAPI } from '../types/component-api';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -40,7 +41,7 @@ export const State = {
   WAITING_LEVEL: 'WAITING_LEVEL'
 };
 
-export default class BaseStreamController extends TaskLoop {
+export default class BaseStreamController extends TaskLoop implements NetworkComponentAPI {
   protected hls: Hls;
 
   protected fragPrevious: Fragment | null = null;
@@ -58,7 +59,6 @@ export default class BaseStreamController extends TaskLoop {
   protected fragLoadError: number = 0;
   protected levels: Array<Level> | null = null;
   protected fragmentLoader!: FragmentLoader;
-  protected _liveSyncPosition: number | null = null;
   protected levelLastLoaded: number | null = null;
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
@@ -512,18 +512,19 @@ export default class BaseStreamController extends TaskLoop {
 
   protected synchronizeToLiveEdge (start: number, end: number, bufferEnd: number, levelDetails: LevelDetails): number | null {
     const { config, media } = this;
-    const maxLatency = config.liveMaxLatencyDuration !== undefined
-      ? config.liveMaxLatencyDuration
-      : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
-
-    if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
-      const liveSyncPosition = this._liveSyncPosition = this.computeLivePosition(start, levelDetails);
-      this.warn(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
-      this.nextLoadPosition = liveSyncPosition;
-      if (media?.readyState && media.duration > liveSyncPosition && liveSyncPosition > media.currentTime) {
-        media.currentTime = liveSyncPosition;
+    const liveSyncPosition = this.hls.liveSyncPosition;
+    if (liveSyncPosition !== null) {
+      const maxLatency = config.liveMaxLatencyDuration !== undefined
+        ? config.liveMaxLatencyDuration
+        : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
+      if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
+        this.warn(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
+        this.nextLoadPosition = liveSyncPosition;
+        if (media?.readyState && media.duration > liveSyncPosition && liveSyncPosition > media.currentTime) {
+          media.currentTime = liveSyncPosition;
+        }
+        return liveSyncPosition;
       }
-      return liveSyncPosition;
     }
     return null;
   }
@@ -572,7 +573,7 @@ export default class BaseStreamController extends TaskLoop {
       } else {
         // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
         if (details.live) {
-          this.startPosition = this.computeLivePosition(sliding, details);
+          this.startPosition = this.hls.liveSyncPosition || sliding;
           this.log(`Configure startPosition to ${this.startPosition}`);
         } else {
           this.startPosition = 0;
@@ -581,18 +582,6 @@ export default class BaseStreamController extends TaskLoop {
       this.lastCurrentTime = this.startPosition;
     }
     this.nextLoadPosition = this.startPosition;
-  }
-
-  protected computeLivePosition (sliding: number, levelDetails: LevelDetails): number {
-    const { holdBack, partHoldBack, targetduration, totalduration } = levelDetails;
-    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode } = this.config;
-    const userConfig = this.hls.userConfig;
-    let targetLatency = lowLatencyMode ? partHoldBack || holdBack : holdBack;
-    if (userConfig.liveSyncDuration || userConfig.liveSyncDurationCount || targetLatency === 0) {
-      targetLatency = liveSyncDuration !== undefined ? liveSyncDuration : liveSyncDurationCount * targetduration;
-    }
-    const age = Math.min(targetduration, Math.max(levelDetails.age, 0));
-    return sliding + Math.max(0, totalduration - targetLatency) + age;
   }
 
   protected getLoadPosition (): number {

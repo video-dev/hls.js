@@ -77,9 +77,19 @@ export default class LevelDetails {
     return this.averagetargetduration || this.targetduration || DEFAULT_TARGET_DURATION;
   }
 
+  get edge (): number {
+    if (this.partList?.length) {
+      return this.partList[this.partList.length - 1].end;
+    }
+    if (this.fragments?.length) {
+      return this.fragments[this.fragments.length - 1].end;
+    }
+    return 0;
+  }
+
   get age (): number {
     if (this.lastModified) {
-      return (Date.now() - this.lastModified) / 1000;
+      return Math.max(Date.now() - this.lastModified, 0) / 1000;
     }
     return 0;
   }

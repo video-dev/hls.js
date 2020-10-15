@@ -596,9 +596,6 @@ export default class StreamController extends BaseStreamController implements Ne
         return;
       }
       sliding = this.alignPlaylists(newDetails, curLevel.details);
-      if (sliding) {
-        this._liveSyncPosition = this.computeLivePosition(sliding, newDetails);
-      }
     }
     // override level info
     curLevel.details = newDetails;
@@ -805,7 +802,7 @@ export default class StreamController extends BaseStreamController implements Ne
           // exponential backoff capped to config.fragLoadingMaxRetryTimeout
           const delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
           // @ts-ignore - frag is potentially null according to TS here
-          this.warn(`Fragment ${frag.sn} of level ${frag.level} failed to load, retrying in ${delay}ms`);
+          this.warn(`Fragment ${frag?.sn} of level ${frag?.level} failed to load, retrying in ${delay}ms`);
           this.retryDate = self.performance.now() + delay;
           // retry loading state
           // if loadedmetadata is not set, it means that we are emergency switch down on first frag
@@ -1058,17 +1055,19 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     if (id3?.samples?.length) {
-      const emittedID3: FragParsingMetadataData = Object.assign({
+      const emittedID3: FragParsingMetadataData = {
         frag,
-        id
-      }, id3);
+        id,
+        samples: id3.samples
+      };
       hls.trigger(Events.FRAG_PARSING_METADATA, emittedID3);
     }
     if (text) {
-      const emittedText: FragParsingUserdataData = Object.assign({
+      const emittedText: FragParsingUserdataData = {
         frag,
-        id
-      }, text);
+        id,
+        samples: text.samples
+      };
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
     }
   }
@@ -1180,10 +1179,6 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  get liveSyncPosition () {
-    return this._liveSyncPosition;
-  }
-
   get nextLevel () {
     const frag = this.nextBufferedFrag;
     if (frag) {
@@ -1213,10 +1208,6 @@ export default class StreamController extends BaseStreamController implements Ne
     } else {
       return null;
     }
-  }
-
-  set liveSyncPosition (value) {
-    this._liveSyncPosition = value;
   }
 
   get forceStartLoad () {

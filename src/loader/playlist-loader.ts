@@ -59,10 +59,10 @@ class PlaylistLoader {
 
   constructor (hls: Hls) {
     this.hls = hls;
-    this._registerListeners();
+    this.registerListeners();
   }
 
-  private _registerListeners () {
+  private registerListeners () {
     const { hls } = this;
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
@@ -70,7 +70,7 @@ class PlaylistLoader {
     hls.on(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading, this);
   }
 
-  private _unregisterListeners () {
+  private unregisterListeners () {
     const { hls } = this;
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.LEVEL_LOADING, this.onLevelLoading, this);
@@ -120,7 +120,7 @@ class PlaylistLoader {
   }
 
   public destroy (): void {
-    this._unregisterListeners();
+    this.unregisterListeners();
     this.destroyInternalLoaders();
   }
 
