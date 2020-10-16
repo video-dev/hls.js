@@ -784,7 +784,7 @@ class StreamController extends BaseStreamController {
 
     logger.log(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
 
-    if (newDetails.live) {
+    if (newDetails.live || (curLevel.details && curLevel.details.live)) {
       let curDetails = curLevel.details;
       if (curDetails && newDetails.fragments.length > 0) {
         // we already have details for that level, merge them
