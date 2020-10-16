@@ -375,8 +375,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
     // find fragment index, contiguous with end of buffer position
     const start = fragments[0].start;
-    const end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
-    let loadPosition = pos;
+    const end = levelDetails.edge;
     let frag;
 
     // If an initSegment is present, it must be buffered first
@@ -388,11 +387,6 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         this.warn(`Not enough fragments to start playback (have: ${fragLen}, need: ${initialLiveManifestSize})`);
         return null;
       }
-      // Check to see if we're within the live range; if not, this method will seek to the live edge and return the new position
-      const syncPos = this.synchronizeToLiveEdge(start, end, loadPosition, levelDetails);
-      if (syncPos !== null) {
-        loadPosition = syncPos;
-      }
       // The real fragment start times for a live stream are only known after the PTS range for that level is known.
       // In order to discover the range, we load the best matching fragment for that level and demux it.
       // Do not load using live logic if the starting frag is requested - we want to use getFragmentAtPosition() so that
@@ -400,14 +394,14 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       if (!levelDetails.PTSKnown && !startFragRequested) {
         frag = this.getInitialLiveFragment(levelDetails, fragments);
       }
-    } else if (loadPosition < start) {
+    } else if (pos < start) {
       // VoD playlist: if loadPosition before start of playlist, load first fragment
       frag = fragments[0];
     }
 
     // If we haven't run into any special cases already, just load the fragment most closely matching the requested position
     if (!frag) {
-      frag = this.getFragmentAtPosition(loadPosition, end, levelDetails);
+      frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
 
     return frag;
@@ -510,19 +504,22 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return frag;
   }
 
-  protected synchronizeToLiveEdge (start: number, end: number, bufferEnd: number, levelDetails: LevelDetails): number | null {
+  protected synchronizeToLiveEdge (levelDetails: LevelDetails): number | null {
     const { config, media } = this;
     const liveSyncPosition = this.hls.liveSyncPosition;
-    if (liveSyncPosition !== null) {
+    const currentTime = media.currentTime;
+    if (liveSyncPosition !== null && media?.readyState && media.duration > liveSyncPosition && liveSyncPosition > currentTime) {
       const maxLatency = config.liveMaxLatencyDuration !== undefined
         ? config.liveMaxLatencyDuration
         : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
-      if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
-        this.warn(`Buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
-        this.nextLoadPosition = liveSyncPosition;
-        if (media?.readyState && media.duration > liveSyncPosition && liveSyncPosition > media.currentTime) {
-          media.currentTime = liveSyncPosition;
+      const start = levelDetails.fragments[0].start;
+      const end = levelDetails.edge;
+      if (currentTime < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
+        this.warn(`Playback: ${currentTime.toFixed(3)} is located too far from the end of live sliding playlist: ${end}, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
+        if (!this.loadedmetadata) {
+          this.nextLoadPosition = liveSyncPosition;
         }
+        media.currentTime = liveSyncPosition;
         return liveSyncPosition;
       }
     }
