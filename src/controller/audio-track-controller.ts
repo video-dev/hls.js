@@ -240,29 +240,29 @@ class AudioTrackController extends BasePlaylistController {
   }
 
   private _setAudioTrack (newId: number): void {
+    const tracks = this.tracks;
     // noop on same audio track id as already set
-    if (this.trackId === newId && this.tracks[this.trackId].details) {
+    if (this.trackId === newId && tracks[newId]?.details) {
       return;
     }
 
     // check if level idx is valid
-    if (newId < 0 || newId >= this.tracks.length) {
+    if (newId < 0 || newId >= tracks.length) {
       logger.warn('[audio-track-controller]: Invalid id passed to audio-track controller');
       return;
     }
 
-    const audioTrack = this.tracks[newId];
-
-    logger.log(`[audio-track-controller]: Now switching to audio-track index ${newId}`);
-
     // stopping live reloading timer if any
     this.clearTimer();
-    this.trackId = newId;
 
-    const { url, type, id } = audioTrack;
+    const lastTrack = tracks[this.trackId];
+    const track = tracks[newId];
+    logger.log(`[audio-track-controller]: Now switching to audio-track index ${newId}`);
+    this.trackId = newId;
+    const { url, type, id } = track;
     this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
-    // TODO: LL-HLS use RENDITION-REPORT if available
-    this.loadPlaylist();
+    const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
+    this.loadPlaylist(hlsUrlParameters);
   }
 
   private _selectInitialAudioTrack (): void {

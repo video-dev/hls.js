@@ -18,7 +18,32 @@ describe('SubtitleTrackController', function () {
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = [{ id: 0, url: 'baz', details: { live: false } }, { id: 1, url: 'bar' }, { id: 2, details: { live: true }, url: 'foo' }];
+    subtitleTrackController.tracks = [{
+      id: 0,
+      groupId: 'default-text-group',
+      lang: 'en',
+      name: 'English',
+      type: 'SUBTITLES',
+      url: 'baz',
+      details: { live: false }
+    },
+    {
+      id: 1,
+      groupId: 'default-text-group',
+      lang: 'en',
+      name: 'English',
+      type: 'SUBTITLES',
+      url: 'bar'
+    },
+    {
+      id: 2,
+      groupId: 'default-text-group',
+      lang: 'en',
+      name: 'English',
+      type: 'SUBTITLES',
+      url: 'foo',
+      details: { live: true }
+    }];
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
@@ -95,7 +120,7 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 1;
 
       expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: 1 });
+      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: 1, type: 'SUBTITLES', url: 'bar' });
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track has no details', function () {
@@ -118,7 +143,7 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 0;
 
       expect(triggerSpy).to.have.been.calledOnce;
-      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: 0 });
+      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: 0, type: 'SUBTITLES', url: 'baz' });
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {

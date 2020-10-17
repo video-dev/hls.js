@@ -119,4 +119,8 @@ export class Level {
   get maxBitrate (): number {
     return Math.max(this.realBitrate, this.bitrate);
   }
+
+  get uri (): string {
+    return this.url[this.urlId] || '';
+  }
 }

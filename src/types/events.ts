@@ -155,6 +155,8 @@ export interface SubtitleTracksUpdatedData {
 }
 
 export interface SubtitleTrackSwitchData {
+  url?: string
+  type?: MediaPlaylistType | 'main'
   id: number
 }
 
