@@ -39,6 +39,29 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     this.clearTimer();
   }
 
+  protected switchParams (playlistUri: string, previous?: LevelDetails): HlsUrlParameters | undefined {
+    const renditionReports = previous?.renditionReports;
+    if (renditionReports) {
+      for (let i = 0; i < renditionReports.length; i++) {
+        const attr = renditionReports[i];
+        const uri = '' + attr.URI;
+        if (uri === playlistUri.substr(-uri.length)) {
+          const msn = parseInt(attr['LAST-MSN']);
+          let part = parseInt(attr['LAST-PART']);
+          if (previous && this.hls.config.lowLatencyMode) {
+            const currentGoal = Math.min(previous.age - previous.partTarget, previous.targetduration);
+            if (part !== undefined && currentGoal > previous.partTarget) {
+              part += 1;
+            }
+          }
+          if (Number.isFinite(msn)) {
+            return new HlsUrlParameters(msn, Number.isFinite(part) ? part : undefined, HlsSkip.No);
+          }
+        }
+      }
+    }
+  }
+
   protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters): void {}
 
   protected shouldLoadTrack (track: MediaPlaylist): boolean {
