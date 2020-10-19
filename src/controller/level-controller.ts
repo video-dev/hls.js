@@ -192,40 +192,38 @@ export default class LevelController extends BasePlaylistController {
 
   set level (newLevel: number) {
     const levels = this._levels;
-    newLevel = Math.min(newLevel, levels.length - 1);
-    if (this.currentLevelIndex !== newLevel || !levels[newLevel]?.details) {
-      const hls = this.hls;
-      // check if level idx is valid
-      if (newLevel >= 0 && newLevel < levels.length) {
-        // stopping live reloading timer if any
-        this.clearTimer();
-        if (this.currentLevelIndex !== newLevel) {
-          const lastLevel = this.currentLevelIndex;
-          logger.log(`[level-controller]: switching to level ${newLevel} from ${lastLevel}`);
-          this.currentLevelIndex = newLevel;
-          hls.trigger(Events.LEVEL_SWITCHING, Object.assign({}, levels[newLevel], {
-            level: newLevel
-          }));
-        }
-        const level = levels[newLevel];
-        const levelDetails = level.details;
+    if (this.currentLevelIndex === newLevel && levels[newLevel]?.details) {
+      return;
+    }
+    // check if level idx is valid
+    if (newLevel < 0 || newLevel >= levels.length) {
+      // invalid level id given, trigger error
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.OTHER_ERROR,
+        details: ErrorDetails.LEVEL_SWITCH_ERROR,
+        level: newLevel,
+        fatal: false,
+        reason: 'invalid level idx'
+      });
+      return;
+    }
+    // stopping live reloading timer if any
+    this.clearTimer();
 
-        // check if we need to load playlist for this level
-        if (!levelDetails || levelDetails.live) {
-          // level not retrieved yet, or live playlist we need to (re)load it
-          // TODO: LL-HLS use RENDITION-REPORT if available
-          this.loadPlaylist();
-        }
-      } else {
-        // invalid level id given, trigger error
-        hls.trigger(Events.ERROR, {
-          type: ErrorTypes.OTHER_ERROR,
-          details: ErrorDetails.LEVEL_SWITCH_ERROR,
-          level: newLevel,
-          fatal: false,
-          reason: 'invalid level idx'
-        });
-      }
+    const lastLevelIndex = this.currentLevelIndex;
+    const lastLevel = levels[lastLevelIndex];
+    const level = levels[newLevel];
+    logger.log(`[level-controller]: switching to level ${newLevel} from ${lastLevelIndex}`);
+    this.currentLevelIndex = newLevel;
+    this.hls.trigger(Events.LEVEL_SWITCHING, Object.assign({}, level, {
+      level: newLevel
+    }));
+    // check if we need to load playlist for this level
+    const levelDetails = level.details;
+    if (!levelDetails || levelDetails.live) {
+      // level not retrieved yet, or live playlist we need to (re)load it
+      const hlsUrlParameters = this.switchParams(level.uri, lastLevel?.details);
+      this.loadPlaylist(hlsUrlParameters);
     }
   }
 

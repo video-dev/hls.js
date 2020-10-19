@@ -1,16 +1,16 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { clearCurrentCues } from '../utils/texttrack-utils';
-import { MediaPlaylist } from '../types/media-playlist';
-import {
+import BasePlaylistController from './base-playlist-controller';
+import { HlsUrlParameters } from '../types/level';
+import type Hls from '../hls';
+import type {
   TrackLoadedData,
   MediaAttachedData,
   SubtitleTracksUpdatedData,
   ManifestParsedData
 } from '../types/events';
-import BasePlaylistController from './base-playlist-controller';
-import Hls from '../hls';
-import { HlsUrlParameters } from '../types/level';
+import type { MediaPlaylist } from '../types/media-playlist';
 
 class SubtitleTrackController extends BasePlaylistController {
   private tracks: MediaPlaylist[];
@@ -210,17 +210,28 @@ class SubtitleTrackController extends BasePlaylistController {
      * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
      */
   private _setSubtitleTrackInternal (newId: number): void {
-    const { hls, tracks } = this;
-    if (this.trackId === newId && this.tracks[this.trackId].details ||
-      newId < -1 || newId >= tracks.length) {
+    const tracks = this.tracks;
+    // noop on same audio track id as already set or invalid
+    if ((this.trackId === newId && tracks[newId]?.details) || newId < -1 || newId >= tracks.length) {
       return;
     }
 
-    this.trackId = newId;
+    // stopping live reloading timer if any
+    this.clearTimer();
+
+    const lastTrack = tracks[this.trackId];
+    const track = tracks[newId];
     logger.log(`[subtitle-track-controller]: Switching to subtitle track ${newId}`);
-    hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
-    // TODO: LL-HLS use RENDITION-REPORT if available
-    this.loadPlaylist();
+    this.trackId = newId;
+    if (track) {
+      const { url, type, id } = track;
+      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id, type, url });
+      const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
+      this.loadPlaylist(hlsUrlParameters);
+    } else {
+      // switch to -1
+      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
+    }
   }
 
   private _onTextTracksChanged (): void {
