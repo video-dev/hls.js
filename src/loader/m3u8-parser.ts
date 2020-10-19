@@ -275,16 +275,13 @@ export default class M3U8Parser {
           const decryptmethod = keyAttrs.enumeratedString('METHOD');
           const decrypturi = keyAttrs.URI;
           const decryptiv = keyAttrs.hexadecimalInteger('IV');
-          // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
-          const decryptkeyformat = keyAttrs.KEYFORMAT || 'identity';
-
-          if (decryptkeyformat === 'com.apple.streamingkeydelivery') {
-            logger.warn('Keyformat com.apple.streamingkeydelivery is not supported');
-            continue;
-          }
 
           if (decryptmethod) {
             levelkey = new LevelKey(baseurl, decrypturi);
+
+            // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
+            levelkey.format = keyAttrs.KEYFORMAT || 'identity';
+
             if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
               levelkey.method = decryptmethod;
               levelkey.key = null;
@@ -335,6 +332,7 @@ export default class M3U8Parser {
     level.endSN = currentSN - 1;
     level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
     level.endCC = discontinuityCounter;
+    level.key = levelkey;
 
     if (!level.initSegment && level.fragments.length) {
       // this is a bit lurky but HLS really has no other way to tell us

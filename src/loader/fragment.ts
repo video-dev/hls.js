@@ -149,6 +149,10 @@ export default class Fragment {
   }
 
   get encrypted () {
+    if (this.levelkey && this.levelkey.format === 'com.apple.streamingkeydelivery') {
+      return false;
+    }
+
     return !!((this.decryptdata && this.decryptdata.uri !== null) && (this.decryptdata.key === null));
   }
 
