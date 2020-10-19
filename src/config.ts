@@ -173,6 +173,23 @@ export type HlsConfig =
   TimelineControllerConfig &
   TSDemuxerConfig;
 
+function timelineConfig (): TimelineControllerConfig {
+  return {
+    cueHandler: Cues, // used by timeline-controller
+    enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
+    enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
+    captionsTextTrack1Label: 'English', // used by timeline-controller
+    captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
+    captionsTextTrack2Label: 'Spanish', // used by timeline-controller
+    captionsTextTrack2LanguageCode: 'es', // used by timeline-controller
+    captionsTextTrack3Label: 'Unknown CC', // used by timeline-controller
+    captionsTextTrack3LanguageCode: '', // used by timeline-controller
+    captionsTextTrack4Label: 'Unknown CC', // used by timeline-controller
+    captionsTextTrack4LanguageCode: '', // used by timeline-controller
+    renderTextTracksNatively: true
+  };
+}
+
 // If possible, keep hlsDefaultConfig shallow
 // It is cloned whenever a new Hls instance is created, by keeping the config
 // shallow the properties are cloned, and we don't end up manipulating the default
@@ -259,20 +276,3 @@ export const hlsDefaultConfig: HlsConfig = {
   audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : void 0,
   emeController: (__USE_EME_DRM__) ? EMEController : void 0
 };
-
-function timelineConfig (): TimelineControllerConfig {
-  return {
-    cueHandler: Cues, // used by timeline-controller
-    enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
-    enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
-    captionsTextTrack1Label: 'English', // used by timeline-controller
-    captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
-    captionsTextTrack2Label: 'Spanish', // used by timeline-controller
-    captionsTextTrack2LanguageCode: 'es', // used by timeline-controller
-    captionsTextTrack3Label: 'Unknown CC', // used by timeline-controller
-    captionsTextTrack3LanguageCode: '', // used by timeline-controller
-    captionsTextTrack4Label: 'Unknown CC', // used by timeline-controller
-    captionsTextTrack4LanguageCode: '', // used by timeline-controller
-    renderTextTracksNatively: true
-  };
-}
