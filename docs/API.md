@@ -1354,7 +1354,7 @@ Full list of Events is available below:
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest, audioTracks, subtitleTracks, stats, audio: boolean, video: boolean, altAudio: boolean }
   - `Hls.Events.LEVEL_SWITCHING`  - fired when a level switch is requested
-    -  data: { `level` object (please see [below](#level) for more information) }
+    -  data: { `level` and Level object properties (please see [below](#level) for more information) }
   - `Hls.Events.LEVEL_SWITCHED`  - fired when a level switch is effective
     -  data: { level : id of new level }
   - `Hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
@@ -1370,7 +1370,7 @@ Full list of Events is available below:
   - `Hls.Events.AUDIO_TRACKS_UPDATED`  - fired to notify that audio track lists has been updated
     -  data: { audioTracks : audioTracks }
   - `Hls.Events.AUDIO_TRACK_SWITCHING`  - fired when an audio track switching is requested
-    -  data: { id : audio track id }
+    -  data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL }
   - `Hls.Events.AUDIO_TRACK_SWITCHED`  - fired when an audio track switch actually occurs
     -  data: { id : audio track id }
   - `Hls.Events.AUDIO_TRACK_LOADING`  - fired when an audio track loading starts
@@ -1380,7 +1380,7 @@ Full list of Events is available below:
   - `Hls.Events.SUBTITLE_TRACKS_UPDATED`  - fired to notify that subtitle track lists has been updated
     -  data: { subtitleTracks : subtitleTracks }
   - `Hls.Events.SUBTITLE_TRACK_SWITCH`  - fired when a subtitle track switch occurs
-    -  data: { id : subtitle track id }
+    -  data: { id : subtitle track id, type? : playlist type ('SUBTITLES' | 'CLOSED-CAPTIONS'), url? : subtitle track URL  }
   - `Hls.Events.SUBTITLE_TRACK_LOADING`  - fired when a subtitle track loading starts
     -  data: { url : audio track URL, id : audio track id }
   - `Hls.Events.SUBTITLE_TRACK_LOADED`  - fired when a subtitle track loading finishes
