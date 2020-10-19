@@ -105,7 +105,7 @@ class SampleAesDecrypter {
         }
 
         let curUnit = curUnits[unitIndex];
-        if (curUnit.length <= 48 || (curUnit.type !== 1 && curUnit.type !== 5)) {
+        if (curUnit.data.length <= 48 || (curUnit.type !== 1 && curUnit.type !== 5)) {
           continue;
         }
 
