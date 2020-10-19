@@ -417,13 +417,13 @@ class AudioStreamController extends BaseStreamController {
     let newDetails = data.details,
       trackId = data.id,
       track = this.tracks[trackId],
+      curDetails = track.details,
       duration = newDetails.totalduration,
       sliding = 0;
 
     logger.log(`track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
 
-    if (newDetails.live) {
-      let curDetails = track.details;
+    if (newDetails.live || (curDetails && curDetails.live)) {
       if (curDetails && newDetails.fragments.length > 0) {
         // we already have details for that level, merge them
         LevelHelper.mergeDetails(curDetails, newDetails);
