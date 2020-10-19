@@ -112,14 +112,16 @@ module.exports = {
     'no-useless-catch': 0,
     'no-prototype-builtins': 0,
     'dot-notation': 0,
-    'lines-between-class-members': 0,
-    'no-prototype-builtins': 0
+    'lines-between-class-members': 0
   },
   'overrides': [
     {
       'files': ['*.ts'],
       'rules': {
         'no-unused-vars': 0,
+        'no-undef': 0,
+        'no-use-before-define': "off",
+        '@typescript-eslint/no-use-before-define': ["error"],
         '@typescript-eslint/no-unused-vars': 1,
         '@typescript-eslint/prefer-optional-chain': 2,
         '@typescript-eslint/consistent-type-assertions': [ 2,

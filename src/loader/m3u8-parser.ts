@@ -31,6 +31,28 @@ const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.
 
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
+function backfillProgramDateTimes (fragments, startIndex) {
+  let fragPrev = fragments[startIndex];
+  for (let i = startIndex - 1; i >= 0; i--) {
+    const frag = fragments[i];
+    frag.programDateTime = fragPrev.programDateTime - (frag.duration * 1000);
+    fragPrev = frag;
+  }
+}
+
+function assignProgramDateTime (frag, prevFrag) {
+  if (frag.rawProgramDateTime) {
+    frag.programDateTime = Date.parse(frag.rawProgramDateTime);
+  } else if (prevFrag?.programDateTime) {
+    frag.programDateTime = prevFrag.endProgramDateTime;
+  }
+
+  if (!Number.isFinite(frag.programDateTime)) {
+    frag.programDateTime = null;
+    frag.rawProgramDateTime = null;
+  }
+}
+
 export default class M3U8Parser {
   static findGroup (groups: Array<AudioGroup>, mediaGroupId: string): AudioGroup | undefined {
     for (let i = 0; i < groups.length; i++) {
@@ -369,27 +391,5 @@ export default class M3U8Parser {
     }
 
     return level;
-  }
-}
-
-function backfillProgramDateTimes (fragments, startIndex) {
-  let fragPrev = fragments[startIndex];
-  for (let i = startIndex - 1; i >= 0; i--) {
-    const frag = fragments[i];
-    frag.programDateTime = fragPrev.programDateTime - (frag.duration * 1000);
-    fragPrev = frag;
-  }
-}
-
-function assignProgramDateTime (frag, prevFrag) {
-  if (frag.rawProgramDateTime) {
-    frag.programDateTime = Date.parse(frag.rawProgramDateTime);
-  } else if (prevFrag?.programDateTime) {
-    frag.programDateTime = prevFrag.endProgramDateTime;
-  }
-
-  if (!Number.isFinite(frag.programDateTime)) {
-    frag.programDateTime = null;
-    frag.rawProgramDateTime = null;
   }
 }
