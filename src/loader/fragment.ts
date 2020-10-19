@@ -149,6 +149,7 @@ export default class Fragment {
   }
 
   get encrypted () {
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
     return !!((this.decryptdata && this.decryptdata.uri !== null) && (this.decryptdata.key === null));
   }
 

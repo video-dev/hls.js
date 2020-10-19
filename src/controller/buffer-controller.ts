@@ -14,7 +14,7 @@ import { Segment } from '../types/segment';
 import { BufferControllerConfig } from '../config';
 
 // Add extension properties to SourceBuffers from the DOM API.
-type ExtendedSourceBuffer = SourceBuffer & {
+type ExtendedSourceBuffer = SourceBuffer & { // eslint-disable-line no-restricted-globals
   ended?: boolean
 };
 

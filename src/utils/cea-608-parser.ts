@@ -173,6 +173,22 @@ enum VerboseLevel {
   DATA = 3,
 }
 
+function setLastCmd (a: number | null, b: number | null, cmdHistory: CmdHistory) {
+  cmdHistory.a = a;
+  cmdHistory.b = b;
+}
+
+function hasCmdRepeated (a: number, b: number, cmdHistory: CmdHistory) {
+  return cmdHistory.a === a && cmdHistory.b === b;
+}
+
+function createCmdHistory (): CmdHistory {
+  return {
+    a: null,
+    b: null
+  };
+}
+
 class CaptionsLogger {
   public time: number | null = null;
   public verboseLevel: VerboseLevel = VerboseLevel.ERROR;
@@ -1227,22 +1243,6 @@ class Cea608Parser {
       }
     }
   }
-}
-
-function setLastCmd (a: number | null, b: number | null, cmdHistory: CmdHistory) {
-  cmdHistory.a = a;
-  cmdHistory.b = b;
-}
-
-function hasCmdRepeated (a: number, b: number, cmdHistory: CmdHistory) {
-  return cmdHistory.a === a && cmdHistory.b === b;
-}
-
-function createCmdHistory (): CmdHistory {
-  return {
-    a: null,
-    b: null
-  };
 }
 
 export default Cea608Parser;
