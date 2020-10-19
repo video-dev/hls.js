@@ -35,6 +35,26 @@ type VTTCCs = {
   }
 };
 
+function canReuseVttTextTrack (inUseTrack, manifestTrack): boolean {
+  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
+}
+
+function intersection (x1: number, x2: number, y1: number, y2: number): number {
+  return Math.min(x2, y2) - Math.max(x1, y1);
+}
+
+function newVTTCCs (): VTTCCs {
+  return {
+    ccOffset: 0,
+    presentationOffset: 0,
+    0: {
+      start: 0,
+      prevCC: -1,
+      new: false
+    }
+  };
+}
+
 class TimelineController extends EventHandler {
   private media: HTMLMediaElement | null = null;
   private config: HlsConfig;
@@ -485,26 +505,6 @@ class TimelineController extends EventHandler {
     }
     return actualCCBytes;
   }
-}
-
-function canReuseVttTextTrack (inUseTrack, manifestTrack): boolean {
-  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
-}
-
-function intersection (x1: number, x2: number, y1: number, y2: number): number {
-  return Math.min(x2, y2) - Math.max(x1, y1);
-}
-
-function newVTTCCs (): VTTCCs {
-  return {
-    ccOffset: 0,
-    presentationOffset: 0,
-    0: {
-      start: 0,
-      prevCC: -1,
-      new: false
-    }
-  };
 }
 
 export default TimelineController;
