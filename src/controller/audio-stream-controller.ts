@@ -11,9 +11,14 @@ import BaseStreamController, { State } from './base-stream-controller';
 import { MAX_START_GAP_JUMP } from './gap-controller';
 import FragmentLoader from '../loader/fragment-loader';
 import ChunkCache from '../demux/chunk-cache';
-import LevelDetails from '../loader/level-details';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import {
+import { Level } from '../types/level';
+import { PlaylistLevelType } from '../types/loader';
+import { NetworkComponentAPI } from '../types/component-api';
+import type Hls from '../hls';
+import type LevelDetails from '../loader/level-details';
+import type { TrackSet } from '../types/track';
+import type {
   BufferAppendingData,
   TrackLoadedData,
   AudioTracksUpdatedData,
@@ -21,13 +26,12 @@ import {
   FragBufferedData,
   BufferCreatedData,
   AudioTrackSwitchingData,
-  FragParsingUserdataData, FragParsingMetadataData, FragLoadedData, InitPTSFoundData, BufferFlushedData
+  FragParsingUserdataData,
+  FragParsingMetadataData,
+  FragLoadedData,
+  InitPTSFoundData,
+  BufferFlushedData
 } from '../types/events';
-import { TrackSet } from '../types/track';
-import { Level } from '../types/level';
-import { PlaylistLevelType } from '../types/loader';
-import Hls from '../hls';
-import { NetworkComponentAPI } from '../types/component-api';
 
 const { performance } = self;
 
@@ -65,7 +69,6 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     hls.on(Events.AUDIO_TRACKS_UPDATED, this.onAudioTracksUpdated, this);
     hls.on(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
     hls.on(Events.AUDIO_TRACK_LOADED, this.onAudioTrackLoaded, this);
-    hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.BUFFER_RESET, this.onBufferReset, this);
     hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
@@ -81,7 +84,6 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     hls.off(Events.AUDIO_TRACKS_UPDATED, this.onAudioTracksUpdated, this);
     hls.off(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
     hls.off(Events.AUDIO_TRACK_LOADED, this.onAudioTrackLoaded, this);
-    hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.BUFFER_RESET, this.onBufferReset, this);
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
@@ -415,13 +417,6 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     this.tick();
   }
 
-  onKeyLoaded () {
-    if (this.state === State.KEY_LOADING) {
-      this.state = State.IDLE;
-      this.tick();
-    }
-  }
-
   _handleFragmentLoadProgress (data: FragLoadedData) {
     const { frag, payload } = data;
     const { config, trackId, levels } = this;
@@ -677,14 +672,14 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     this.tick();
   }
 
-  private loadFragment (frag: Fragment, targetBufferTime: number) {
+  protected loadFragment (frag: Fragment, targetBufferTime: number) {
     this.fragCurrent = frag;
     if (frag.sn === 'initSegment') {
       this._loadInitSegment(frag);
     } else if (Number.isFinite(this.initPTS[frag.cc])) {
       this.startFragRequested = true;
       this.nextLoadPosition = frag.start + frag.duration;
-      this._loadFragForPlayback(frag, targetBufferTime);
+      super.loadFragment(frag, targetBufferTime);
     } else {
       this.log(`Unknown video PTS for continuity counter ${frag.cc}, waiting for video PTS before loading audio fragment ${frag.sn} of level ${this.trackId}`);
       this.state = State.WAITING_INIT_PTS;

@@ -13,10 +13,10 @@ import FragmentLoader from '../loader/fragment-loader';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
-import LevelDetails from '../loader/level-details';
-import { TrackSet } from '../types/track';
 import { SourceBufferName } from '../types/buffer';
-import Hls from '../hls';
+import type Hls from '../hls';
+import type LevelDetails from '../loader/level-details';
+import type { TrackSet } from '../types/track';
 import type {
   LevelLoadedData,
   ManifestParsedData,
@@ -73,7 +73,6 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
     hls.on(Events.FRAG_LOAD_EMERGENCY_ABORTED, this.onFragLoadEmergencyAborted, this);
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
@@ -91,7 +90,6 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
     hls.off(Events.FRAG_LOAD_EMERGENCY_ABORTED, this.onFragLoadEmergencyAborted, this);
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
@@ -291,7 +289,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.hls.trigger(Events.KEY_LOADING, { frag });
   }
 
-  private loadFragment (frag: Fragment, targetBufferTime: number) {
+  protected loadFragment (frag: Fragment, targetBufferTime: number) {
     // Check if fragment is not loaded
     const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
@@ -310,7 +308,7 @@ export default class StreamController extends BaseStreamController implements Ne
         this._loadBitrateTestFrag(frag);
       } else {
         this.startFragRequested = true;
-        this._loadFragForPlayback(frag, targetBufferTime);
+        super.loadFragment(frag, targetBufferTime);
       }
     } else if (fragState === FragmentState.APPENDING) {
       // Lower the buffer size and try again
@@ -617,13 +615,6 @@ export default class StreamController extends BaseStreamController implements Ne
 
     // trigger handler right now
     this.tick();
-  }
-
-  onKeyLoaded () {
-    if (this.state === State.KEY_LOADING) {
-      this.state = State.IDLE;
-      this.tick();
-    }
   }
 
   _handleFragmentLoadProgress (data: FragLoadedData) {
