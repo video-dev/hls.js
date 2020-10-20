@@ -222,7 +222,7 @@ class PlaylistLoader {
 
     // Override level/track timeout for LL-HLS requests
     // (the default of 10000ms is counter productive to blocking playlist reload requests)
-    if (context.deliveryDirectives && context.deliveryDirectives.part) {
+    if (context.deliveryDirectives?.part) {
       let levelDetails: LevelDetails | undefined;
       if (context.type === PlaylistContextType.LEVEL && context.level !== null) {
         levelDetails = this.hls.levels[context.level].details;

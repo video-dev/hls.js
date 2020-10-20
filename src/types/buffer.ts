@@ -1,6 +1,6 @@
 export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 
-export type ExtendedSourceBuffer = SourceBuffer & {
+export type ExtendedSourceBuffer = SourceBuffer & { // eslint-disable-line no-restricted-globals
   ended?: boolean
 };
 

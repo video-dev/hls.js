@@ -48,8 +48,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
   protected readonly logPrefix = '[audio-stream-controller]';
 
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls);
-    this.fragmentTracker = fragmentTracker;
+    super(hls, fragmentTracker);
     this.fragmentLoader = new FragmentLoader(hls.config);
 
     this._registerListeners();
@@ -399,7 +398,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
 
     const track = levels[trackId];
     let sliding = 0;
-    if (newDetails.live) {
+    if (newDetails.live || track.details?.live) {
       if (newDetails.deltaUpdateFailed) {
         return;
       }

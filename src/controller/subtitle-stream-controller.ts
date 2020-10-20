@@ -38,10 +38,9 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   private tracksBuffered: Array<TimeRange[]>;
 
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls);
+    super(hls, fragmentTracker);
     this.config = hls.config;
     this.fragCurrent = null;
-    this.fragmentTracker = fragmentTracker;
     this.fragPrevious = null;
     this.media = null;
     this.mediaBuffer = null;
@@ -89,7 +88,6 @@ export class SubtitleStreamController extends BaseStreamController implements Co
   }
 
   onHandlerDestroyed () {
-    delete this.fragmentTracker;
     this.state = State.STOPPED;
     this._unregisterListeners();
     super.onHandlerDestroyed();
@@ -206,7 +204,7 @@ export class SubtitleStreamController extends BaseStreamController implements Co
       return;
     }
     this.mediaBuffer = this.mediaBufferTimeRanges;
-    if (details.live) {
+    if (details.live || currentTrack.details?.live) {
       if (details.deltaUpdateFailed) {
         return;
       }

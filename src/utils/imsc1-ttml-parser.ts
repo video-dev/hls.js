@@ -121,7 +121,7 @@ function getTextContent (element, trim): string {
   return [].slice.call(element.childNodes).reduce((str, node, i) => {
     if (node.nodeName === 'br' && i) {
       return str + '\n';
-    } if (node.childNodes && node.childNodes.length) {
+    } if (node.childNodes?.length) {
       return getTextContent(node, trim);
     } else if (trim) {
       return str + node.textContent.trim().replace(/\s+/g, ' ');
