@@ -129,12 +129,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
   }
 
   doTick () {
-    const { media } = this;
-
     switch (this.state) {
-    case State.ERROR:
-      // don't do anything in error state to avoid breaking further ...
-      break;
     case State.IDLE:
       this.doTickIdle();
       break;
@@ -153,7 +148,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       const now = performance.now();
       const retryDate = this.retryDate;
       // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-      if (!retryDate || (now >= retryDate) || media?.seeking) {
+      if (!retryDate || (now >= retryDate) || this.media?.seeking) {
         this.log('RetryDate reached, switch back to IDLE state');
         this.state = State.IDLE;
       }

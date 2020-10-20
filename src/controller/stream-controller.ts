@@ -152,7 +152,7 @@ export default class StreamController extends BaseStreamController implements Ne
   doTick () {
     switch (this.state) {
     case State.IDLE:
-      this._doTickIdle();
+      this.doTickIdle();
       break;
     case State.WAITING_LEVEL: {
       const { levels, level } = this;
@@ -190,7 +190,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.checkFragmentChanged();
   }
 
-  _doTickIdle () {
+  private doTickIdle () {
     const { hls, levelLastLoaded, levels, media } = this;
     const { config, nextLoadLevel: level } = hls;
 
