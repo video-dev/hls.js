@@ -472,6 +472,15 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * Get the current setting for capLevelToPlayerSize
+   *
+   * @type {boolean}
+   */
+  get capLevelToPlayerSize (): boolean {
+    return this.config.capLevelToPlayerSize;
+  }
+
+  /**
    * set  dynamically set capLevelToPlayerSize against (`CapLevelController`)
    *
    * @type {boolean}

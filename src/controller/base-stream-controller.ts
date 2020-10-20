@@ -45,7 +45,7 @@ export default class BaseStreamController extends TaskLoop {
 
   protected fragPrevious: Fragment | null = null;
   protected fragCurrent: Fragment | null = null;
-  protected fragmentTracker!: FragmentTracker;
+  protected fragmentTracker: FragmentTracker;
   protected transmuxer: TransmuxerInterface | null = null;
   protected _state: string = State.STOPPED;
   protected media?: any;
@@ -66,9 +66,10 @@ export default class BaseStreamController extends TaskLoop {
 
   protected readonly logPrefix: string = '';
 
-  constructor (hls: Hls) {
+  constructor (hls: Hls, fragmentTracker: FragmentTracker) {
     super();
     this.hls = hls;
+    this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls as HlsEventEmitter, hls.config);
   }

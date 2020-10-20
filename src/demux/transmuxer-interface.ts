@@ -97,7 +97,8 @@ export default class TransmuxerInterface {
     if (observer) {
       observer.removeAllListeners();
     }
-    delete this.observer;
+    // @ts-ignore
+    this.observer = null;
   }
 
   push (data: ArrayBuffer, initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {

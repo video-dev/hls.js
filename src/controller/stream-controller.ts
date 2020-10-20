@@ -59,9 +59,8 @@ export default class StreamController extends BaseStreamController implements Ne
   protected readonly logPrefix = '[stream-controller]';
 
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls);
+    super(hls, fragmentTracker);
     this.fragmentLoader = new FragmentLoader(hls.config);
-    this.fragmentTracker = fragmentTracker;
     this.state = State.STOPPED;
 
     this._registerListeners();
@@ -174,7 +173,7 @@ export default class StreamController extends BaseStreamController implements Ne
       const now = self.performance.now();
       const retryDate = this.retryDate;
       // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-      if (!retryDate || (now >= retryDate) || (this.media && this.media.seeking)) {
+      if (!retryDate || (now >= retryDate) || this.media?.seeking) {
         this.log('retryDate reached, switch back to IDLE state');
         this.state = State.IDLE;
       }
@@ -592,7 +591,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
     const curLevel = levels[newLevelId];
     let sliding = 0;
-    if (newDetails.live) {
+    if (newDetails.live || curLevel.details?.live) {
       if (newDetails.deltaUpdateFailed) {
         return;
       }

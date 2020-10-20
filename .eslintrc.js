@@ -1,43 +1,43 @@
 module.exports = {
-  'env': {
-    'browser': true,
-    'commonjs': true,
-    'es6': true
+  env: {
+    browser: true,
+    commonjs: true,
+    es6: true
   },
-  'globals': {
+  globals: {
     // Allowed globals
-    'console': true,
+    console: true,
 
     // Compile-time defines
-    '__VERSION__': true,
-    '__USE_SUBTITLES__': true,
-    '__USE_ALT_AUDIO__': true,
-    '__USE_EME_DRM__': true
+    __VERSION__: true,
+    __USE_SUBTITLES__: true,
+    __USE_ALT_AUDIO__: true,
+    __USE_EME_DRM__: true
   },
   // see https://standardjs.com/
   // see https://github.com/standard/eslint-config-standard
-  'extends': [
+  extends: [
     'eslint:recommended',
     'standard'
   ],
-  'parser': '@typescript-eslint/parser',
-  'parserOptions': {
-    'sourceType': 'module'
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    sourceType: 'module'
   },
-  'plugins': [
+  plugins: [
     '@typescript-eslint'
   ],
-  'rules': {
+  rules: {
     // our basic style rules
-    'semi': [
+    semi: [
       'error',
       'always'
     ],
-    'indent': [
+    indent: [
       'error',
       2
     ],
-    'quotes': [
+    quotes: [
       'error',
       'single'
     ],
@@ -47,14 +47,14 @@ module.exports = {
     ],
     // spacing
     'space-infix-ops': 2,
-    'space-unary-ops': [2, { 'words': true, 'nonwords': false }],
+    'space-unary-ops': [2, { words: true, nonwords: false }],
     'space-in-parens': ['error', 'never'],
-    'keyword-spacing': [2, { 'before': true, 'after': true }],
+    'keyword-spacing': [2, { before: true, after: true }],
     // enforce litteral objects on multiple lines
     'block-spacing': 'error',
-    'curly': 2,
+    curly: 2,
     'object-curly-spacing': ['error', 'always'],
-    'brace-style': ['error', '1tbs', { 'allowSingleLine': false }],
+    'brace-style': ['error', '1tbs', { allowSingleLine: false }],
 
     // limit code block and line length
     /*
@@ -75,26 +75,26 @@ module.exports = {
 
     'no-restricted-globals': [2,
       {
-        'name': 'window',
-        'message': 'Use `self` instead of `window` to access the global context everywhere (including workers).'
+        name: 'window',
+        message: 'Use `self` instead of `window` to access the global context everywhere (including workers).'
       },
       {
-        'name': 'SourceBuffer',
-        'message': 'Use `self.SourceBuffer`'
+        name: 'SourceBuffer',
+        message: 'Use `self.SourceBuffer`'
       },
       {
-        'name': 'setTimeout',
-        'message': 'Use `self.setTimeout`'
+        name: 'setTimeout',
+        message: 'Use `self.setTimeout`'
       },
       {
-        'name': 'setInterval',
-        'message': 'Use `self.setInterval`'
+        name: 'setInterval',
+        message: 'Use `self.setInterval`'
       }
     ],
 
     'no-restricted-properties': [2,
-      { 'property': 'findIndex' },  // Intended to block usage of Array.prototype.findIndex
-      { 'property': 'find' }        // Intended to block usage of Array.prototype.find
+      { property: 'findIndex' }, // Intended to block usage of Array.prototype.findIndex
+      { property: 'find' } // Intended to block usage of Array.prototype.find
     ],
 
     'standard/no-callback-literal': 1,
@@ -106,7 +106,7 @@ module.exports = {
     'no-console': [
       1,
       {
-        "allow": ["assert"]
+        allow: ['assert']
       }
     ],
     'no-fallthrough': 1,
@@ -125,17 +125,20 @@ module.exports = {
     'lines-between-class-members': 2,
     'no-prototype-builtins': 0
   },
-  'overrides': [
+  overrides: [
     {
-      'files': ['*.ts'],
-      'rules': {
+      files: ['*.ts'],
+      rules: {
         'no-unused-vars': 0,
-        '@typescript-eslint/no-unused-vars': [ 'error', { 'args': 'none' } ],
+        'no-undef': 0,
+        'no-use-before-define': 'off',
+        // '@typescript-eslint/no-use-before-define': ['error'],
+        '@typescript-eslint/no-unused-vars': ['error', { args: 'none' }],
         '@typescript-eslint/prefer-optional-chain': 2,
-        '@typescript-eslint/consistent-type-assertions': [ 2,
+        '@typescript-eslint/consistent-type-assertions': [2,
           {
-            'assertionStyle': 'as',
-            'objectLiteralTypeAssertions': 'never'
+            assertionStyle: 'as',
+            objectLiteralTypeAssertions: 'never'
           }
         ]
       }
