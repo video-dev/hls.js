@@ -17,7 +17,7 @@ import FragmentLoader, {
   LoadError
 } from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
-import { BufferAppendingData, ErrorData, FragLoadedData } from '../types/events';
+import { BufferAppendingData, ErrorData, FragLoadedData, KeyLoadedData } from '../types/events';
 import { Level } from '../types/level';
 import { RemuxedTrack } from '../types/remuxer';
 import Hls from '../hls';
@@ -72,6 +72,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls as HlsEventEmitter, hls.config);
+    hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
   }
 
   protected doTick () {
@@ -166,6 +167,13 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.startPosition = this.lastCurrentTime = 0;
   }
 
+  onKeyLoaded (event: Events.KEY_LOADED, data: KeyLoadedData) {
+    if (this.state === State.KEY_LOADING) {
+      this.state = State.IDLE;
+      this.loadFragment(data.frag, data.frag.start);
+    }
+  }
+
   protected onHandlerDestroying () {
     this.stopLoad();
     super.onHandlerDestroying();
@@ -173,10 +181,15 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
   protected onHandlerDestroyed () {
     this.state = State.STOPPED;
+    this.hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
     super.onHandlerDestroyed();
   }
 
-  protected _loadFragForPlayback (frag: Fragment, targetBufferTime: number) {
+  protected loadFragment (frag: Fragment, targetBufferTime: number) {
+    this._loadFragForPlayback(frag, targetBufferTime);
+  }
+
+  private _loadFragForPlayback (frag: Fragment, targetBufferTime: number) {
     const progressCallback: FragmentLoadProgressCallback = (data: FragLoadedData) => {
       if (this._fragLoadAborted(frag)) {
         this.warn(`Fragment ${frag.sn} of level ${frag.level} was aborted during progressive download.`);
@@ -267,10 +280,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   protected _fragLoadAborted (frag: Fragment | null) {
     const { fragCurrent } = this;
     // frag.level can refer to bitrate variant or media track index
-    if (!frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn) {
-      return true;
-    }
-    return false;
+    return !frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn;
   }
 
   protected _handleFragmentLoadComplete (fragLoadedData: FragLoadedData) {
@@ -375,7 +385,6 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
     // find fragment index, contiguous with end of buffer position
     const start = fragments[0].start;
-    const end = levelDetails.edge;
     let frag;
 
     // If an initSegment is present, it must be buffered first
@@ -401,6 +410,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
     // If we haven't run into any special cases already, just load the fragment most closely matching the requested position
     if (!frag) {
+      const end = levelDetails.fragmentEnd;
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
 

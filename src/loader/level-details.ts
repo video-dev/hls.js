@@ -78,9 +78,17 @@ export default class LevelDetails {
   }
 
   get edge (): number {
+    return this.partEnd || this.fragmentEnd;
+  }
+
+  get partEnd (): number {
     if (this.partList?.length) {
       return this.partList[this.partList.length - 1].end;
     }
+    return 0;
+  }
+
+  get fragmentEnd (): number {
     if (this.fragments?.length) {
       return this.fragments[this.fragments.length - 1].end;
     }
