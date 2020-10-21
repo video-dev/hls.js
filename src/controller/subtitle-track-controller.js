@@ -76,6 +76,12 @@ class SubtitleTrackController extends TaskLoop {
      * @member {boolean} selectDefaultTrack
      */
     this._selectDefaultTrack = true;
+
+    /**
+     * @private
+     * @member
+     */
+    this._pendingTrackId = -1;
   }
 
   doTick () {
@@ -369,7 +375,7 @@ class SubtitleTrackController extends TaskLoop {
       return;
     }
 
-    if (this.trackId === -1) {
+    if (this._pendingTrackId === -1) {
       return;
     }
 
