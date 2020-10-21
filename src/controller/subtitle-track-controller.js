@@ -391,8 +391,8 @@ class SubtitleTrackController extends TaskLoop {
 
     for (let id = 0; id < tracks.length; id++) {
       const track = tracks[id];
-      if ((track.mode === 'hidden' || track.mode === 'showing')
-        && (!this._subtitleGroupId || this.tracks[id].groupId === this._subtitleGroupId)) {
+      if ((track.mode === 'hidden' || track.mode === 'showing') &&
+        (!this._subtitleGroupId || this.tracks[id].groupId === this._subtitleGroupId)) {
         trackId = id;
         // Do not break in case there is a following track with showing.
         if (track.mode === 'showing') {

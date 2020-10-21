@@ -59,7 +59,11 @@ describe('SubtitleTrackController', function () {
     it('should set subtitleTrack to 0 if hidden', function () {
       expect(subtitleTrackController.subtitleTrack).to.equal(-1);
 
-      videoElement.textTracks[0].mode = 'hidden';
+      subtitleTrackController.subtitleDisplay = false;
+      subtitleTrackController.subtitleTrack = 0;
+
+      expect(videoElement.textTracks[0].mode).to.equal('hidden');
+
       subtitleTrackController._onTextTracksChanged();
 
       expect(subtitleTrackController.subtitleTrack).to.equal(0);
@@ -68,7 +72,11 @@ describe('SubtitleTrackController', function () {
     it('should set subtitleTrack to 0 if showing', function () {
       expect(subtitleTrackController.subtitleTrack).to.equal(-1);
 
-      videoElement.textTracks[0].mode = 'showing';
+      subtitleTrackController.subtitleDisplay = true;
+      subtitleTrackController.subtitleTrack = 0;
+
+      expect(videoElement.textTracks[0].mode).to.equal('showing');
+
       subtitleTrackController._onTextTracksChanged();
 
       expect(subtitleTrackController.subtitleTrack).to.equal(0);
