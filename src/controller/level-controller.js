@@ -57,7 +57,7 @@ export default class LevelController extends EventHandler {
 
     // clear timer if existing
     // and call for loadLevel immediately
-    this.clearTimer()
+    this.clearTimer();
     this.loadLevel();
   }
 
