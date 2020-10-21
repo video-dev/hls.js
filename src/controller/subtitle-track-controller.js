@@ -249,8 +249,7 @@ class SubtitleTrackController extends TaskLoop {
    */
   /** select a subtitle track, based on its index in subtitle track lists**/
   set subtitleTrack (subtitleTrackId) {
-    if (this.trackId !== subtitleTrackId) {
-      this._toggleTrackModes(subtitleTrackId);
+    if (this.trackId !== subtitleTrackId && this._pendingTrackId !== subtitleTrackId) {
       this._setSubtitleTrack(subtitleTrackId);
       this._selectDefaultTrack = false;
     }
@@ -302,7 +301,6 @@ class SubtitleTrackController extends TaskLoop {
     logger.log(`Selecting subtitle track id: ${selectedTrack.id}, name: ${selectedTrack.name}, group-ID: ${selectedTrack.groupId}`);
 
     if (this.media) {
-      this._toggleTrackModes(selectedTrack.id);
       this._setSubtitleTrack(selectedTrack.id);
     } else {
       this._queuedDefaultTrack = selectedTrack.id;
@@ -354,21 +352,15 @@ class SubtitleTrackController extends TaskLoop {
 
     // stopping live reloading timer if any
     this.clearInterval();
-    this.trackId = newId;
 
     logger.log(`Switching to subtitle track ${newId}`);
+
+    this._pendingTrackId = newId;
+    this._subtitleGroupId = newId !== -1 ? tracks[newId].groupId : null;
+    this._toggleTrackModes(newId);
+    this.trackId = newId;
     this._loadCurrentTrack();
     hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
-  }
-
-  /**
-   *
-   * @param {SubtitleTrack} track
-   * @param {'hidden' | 'showing'} mode
-   */
-  _isActiveTextTrackInMode (track, mode) {
-    return track.mode === mode &&
-      (!this._subtitleGroupId || track.groupId === this._subtitleGroupId);
   }
 
   _onTextTracksChanged () {
@@ -377,21 +369,30 @@ class SubtitleTrackController extends TaskLoop {
       return;
     }
 
+    if (this.trackId === -1) {
+      return;
+    }
+
     let trackId = -1;
     let tracks = filterSubtitleTracks(this.media.textTracks);
+
     for (let id = 0; id < tracks.length; id++) {
       const track = tracks[id];
-      if (this._isActiveTextTrackInMode(track, 'hidden')) {
+      if (tracks[id].mode === 'hidden') {
         // Do not break in case there is a following track with showing.
-        trackId = id;
-      } else if (this._isActiveTextTrackInMode(track, 'showing')) {
-        trackId = id;
+        if (!this._subtitleGroupId || this.tracks[id].groupId === this._subtitleGroupId) {
+          trackId = id;
+        }
+      } else if (tracks[id].mode === 'showing') {
+        if (!this._subtitleGroupId || this.tracks[id].groupId === this._subtitleGroupId) {
+          trackId = id;
+        }
         break;
       }
     }
 
     // Setting current subtitleTrack will invoke code.
-    // this.subtitleTrack = trackId;
+    this.subtitleTrack = trackId;
   }
 
   /**
