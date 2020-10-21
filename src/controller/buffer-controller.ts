@@ -4,6 +4,7 @@
 
 import Events from '../events';
 import EventHandler from '../event-handler';
+import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
@@ -13,7 +14,7 @@ import { Segment } from '../types/segment';
 import { BufferControllerConfig } from '../config';
 
 // Add extension properties to SourceBuffers from the DOM API.
-type ExtendedSourceBuffer = SourceBuffer & {
+type ExtendedSourceBuffer = SourceBuffer & { // eslint-disable-line no-restricted-globals
   ended?: boolean
 };
 
@@ -293,7 +294,7 @@ class BufferController extends EventHandler {
       if (!sb) {
         throw Error(`handling source buffer update end error: source buffer for ${streamType} uninitilized and unable to update buffered TimeRanges.`);
       }
-      timeRanges[streamType as SourceBufferName] = sb.buffered;
+      timeRanges[streamType as SourceBufferName] = BufferHelper.getBuffered(sb);
     }
 
     this.hls.trigger(Events.BUFFER_APPENDED, { parent, pending, timeRanges });
@@ -491,7 +492,7 @@ class BufferController extends EventHandler {
       const bufferType = bufferTypes[index];
       const sb = sourceBuffer[bufferType as SourceBufferName];
       if (sb) {
-        const buffered = sb.buffered;
+        const buffered = BufferHelper.getBuffered(sb);
         // when target buffer start exceeds actual buffer start
         if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
           // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
@@ -596,17 +597,11 @@ class BufferController extends EventHandler {
       // let's recompute this.appended, which is used to avoid flush looping
       let appended = 0;
       let sourceBuffer = this.sourceBuffer;
-      try {
-        for (let type in sourceBuffer) {
-          const sb = sourceBuffer[type];
-          if (sb) {
-            appended += sb.buffered.length;
-          }
+      for (let type in sourceBuffer) {
+        const sb = sourceBuffer[type];
+        if (sb) {
+          appended += BufferHelper.getBuffered(sb).length;
         }
-      } catch (error) {
-        // error could be thrown while accessing buffered, in case sourcebuffer has already been removed from MediaSource
-        // this is harmess at this stage, catch this to avoid reporting an internal exception
-        logger.error('error while accessing sourceBuffer.buffered');
       }
       this.appended = appended;
       this.hls.trigger(Events.BUFFER_FLUSHED);
@@ -742,9 +737,10 @@ class BufferController extends EventHandler {
    */
   removeBufferRange (type: string, sb: ExtendedSourceBuffer, startOffset: number, endOffset: number): boolean {
     try {
-      for (let i = 0; i < sb.buffered.length; i++) {
-        let bufStart = sb.buffered.start(i);
-        let bufEnd = sb.buffered.end(i);
+      const buffered = BufferHelper.getBuffered(sb);
+      for (let i = 0; i < buffered.length; i++) {
+        let bufStart = buffered.start(i);
+        let bufEnd = buffered.end(i);
         let removeStart = Math.max(bufStart, startOffset);
         let removeEnd = Math.min(bufEnd, endOffset);
 

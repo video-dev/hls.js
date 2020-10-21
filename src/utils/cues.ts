@@ -53,21 +53,23 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
         indent++;
       }
 
-      // VTTCue.line get's flakey when using controls, so let's now include line 13&14
-      // also, drop line 1 since it's to close to the top
-      if (navigator.userAgent.match(/Firefox\//)) {
-        cue.line = r + 1;
-      } else {
-        cue.line = (r > 7 ? r - 2 : r + 1);
-      }
-
+      cue.line = r + 1;
       cue.align = 'left';
       // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
       cue.position = Math.max(0, Math.min(100, 100 * (indent / 32)));
       result.push(cue);
-      if (track) {
-        track.addCue(cue);
+    }
+  }
+  if (track && result.length) {
+    // Sort bottom cues in reverse order so that they render in line order when overlapping in Chrome
+    const sortedCues = result.sort((cueA, cueB) => {
+      if (cueA.line > 8 && cueB.line > 8) {
+        return cueB.line - cueA.line;
       }
+      return cueA.line - cueB.line;
+    });
+    for (let i = 0; i < sortedCues.length; i++) {
+      track.addCue(sortedCues[i]);
     }
   }
   return result;

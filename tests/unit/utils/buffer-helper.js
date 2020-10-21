@@ -282,4 +282,26 @@ describe('BufferHelper', function () {
       });
     });
   });
+
+  describe('getBuffered', function () {
+    it('should return buffered if no error is thrown', function () {
+      const media = {
+        buffered: {
+          length: 10,
+          start () {},
+          end () {}
+        }
+      };
+      expect(BufferHelper.getBuffered(media)).to.eql(media.buffered);
+    });
+
+    it('should return return noop value if error is thrown', function () {
+      const media = {
+        get buffered () {
+          throw new Error();
+        }
+      };
+      expect(BufferHelper.getBuffered(media).length).to.eql(0);
+    });
+  });
 });

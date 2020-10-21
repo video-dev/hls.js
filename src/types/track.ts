@@ -4,7 +4,7 @@ export interface TrackSet {
 }
 
 export interface AudioTrack {
-  buffer: SourceBuffer;
+  buffer: SourceBuffer; // eslint-disable-line no-restricted-globals
   container: string;
   codec: string;
   id: string;
@@ -13,7 +13,7 @@ export interface AudioTrack {
 }
 
 export interface VideoTrack {
-  buffer: SourceBuffer;
+  buffer: SourceBuffer; // eslint-disable-line no-restricted-globals
   container: string;
   codec: string;
   id: string;
