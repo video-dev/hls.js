@@ -81,7 +81,7 @@ class SubtitleTrackController extends TaskLoop {
      * @private
      * @member
      */
-    this._pendingTrackId = -1;
+    this._pendingTrackId = null;
   }
 
   doTick () {
@@ -291,8 +291,6 @@ class SubtitleTrackController extends TaskLoop {
       return;
     }
 
-    logger.log('Looking for selectable subtitle track...');
-
     const defaultTracks = tracks.filter((track) => track.default);
 
     if (this.selectDefaultTrack && defaultTracks.length) {
@@ -346,7 +344,8 @@ class SubtitleTrackController extends TaskLoop {
 
   /**
    * @private
-   * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
+   * Dispatches the SUBTITLE_TRACK_SWITCH event,
+   * which instructs the subtitle-stream-controller to load the selected track.
    * @param newId - The id of the subtitle track to activate.
    */
   _setSubtitleTrack (newId) {
@@ -360,13 +359,21 @@ class SubtitleTrackController extends TaskLoop {
     this.clearInterval();
 
     logger.log(`Switching to subtitle track ${newId}`);
-
+    // The order here matters,
+    // we need to set up this state before calling _toggleTrackModes
+    // in order to avoid re-entrant calls
+    // via the text-track event handlers
+    // and make sure that group-id is considered in toggling track modes.
+    // Then, the new trackId MUST be set only after,
+    // to allow _toggleTrackModes to differentiate old from new track state.
     this._pendingTrackId = newId;
     this._subtitleGroupId = newId !== -1 ? tracks[newId].groupId : null;
     this._toggleTrackModes(newId);
     this.trackId = newId;
-    this._loadCurrentTrack();
+    // It is intentional to emit SUBTITLE_TRACK_SWITCH
+    // before SUBTITLE_TRACK_LOADING
     hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
+    this._loadCurrentTrack();
   }
 
   _onTextTracksChanged () {
@@ -375,7 +382,7 @@ class SubtitleTrackController extends TaskLoop {
       return;
     }
 
-    if (this._pendingTrackId === -1) {
+    if (this._pendingTrackId === null) {
       return;
     }
 
@@ -384,16 +391,13 @@ class SubtitleTrackController extends TaskLoop {
 
     for (let id = 0; id < tracks.length; id++) {
       const track = tracks[id];
-      if (tracks[id].mode === 'hidden') {
+      if ((track.mode === 'hidden' || track.mode === 'showing')
+        && (!this._subtitleGroupId || this.tracks[id].groupId === this._subtitleGroupId)) {
+        trackId = id;
         // Do not break in case there is a following track with showing.
-        if (!this._subtitleGroupId || this.tracks[id].groupId === this._subtitleGroupId) {
-          trackId = id;
+        if (track.mode === 'showing') {
+          break;
         }
-      } else if (tracks[id].mode === 'showing') {
-        if (!this._subtitleGroupId || this.tracks[id].groupId === this._subtitleGroupId) {
-          trackId = id;
-        }
-        break;
       }
     }
 
