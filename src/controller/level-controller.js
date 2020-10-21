@@ -54,10 +54,11 @@ export default class LevelController extends EventHandler {
         level.loadError = 0;
       });
     }
-    // speed up live playlist refresh if timer exists
-    if (this.timer !== null) {
-      this.loadLevel();
-    }
+
+    // clear timer if existing
+    // and call for loadLevel immediately
+    this.clearTimer()
+    this.loadLevel();
   }
 
   stopLoad () {
