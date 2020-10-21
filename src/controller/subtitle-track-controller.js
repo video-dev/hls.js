@@ -357,8 +357,18 @@ class SubtitleTrackController extends TaskLoop {
     this.trackId = newId;
 
     logger.log(`Switching to subtitle track ${newId}`);
-    hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
     this._loadCurrentTrack();
+    hls.trigger(Event.SUBTITLE_TRACK_SWITCH, { id: newId });
+  }
+
+  /**
+   *
+   * @param {SubtitleTrack} track
+   * @param {'hidden' | 'showing'} mode
+   */
+  _isActiveTextTrackInMode (track, mode) {
+    return track.mode === mode &&
+      (!this._subtitleGroupId || track.groupId === this._subtitleGroupId);
   }
 
   _onTextTracksChanged () {
@@ -370,17 +380,18 @@ class SubtitleTrackController extends TaskLoop {
     let trackId = -1;
     let tracks = filterSubtitleTracks(this.media.textTracks);
     for (let id = 0; id < tracks.length; id++) {
-      if (tracks[id].mode === 'hidden') {
+      const track = tracks[id];
+      if (this._isActiveTextTrackInMode(track, 'hidden')) {
         // Do not break in case there is a following track with showing.
         trackId = id;
-      } else if (tracks[id].mode === 'showing') {
+      } else if (this._isActiveTextTrackInMode(track, 'showing')) {
         trackId = id;
         break;
       }
     }
 
     // Setting current subtitleTrack will invoke code.
-    this.subtitleTrack = trackId;
+    // this.subtitleTrack = trackId;
   }
 
   /**
