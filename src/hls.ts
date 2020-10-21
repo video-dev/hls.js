@@ -21,7 +21,46 @@ import { hlsDefaultConfig, HlsConfig } from './config';
 import HlsEvents from './events';
 
 import { Observer } from './observer';
-import { PlaylistLevelType } from './types/loader';
+import { MediaType, PlaylistLevelType } from './types/loader';
+import { MediaPlaylist } from './types/media-playlist';
+
+function _setPreferredMediaOptions (mediaType: MediaType, name: string, language: string | null = null) {
+  let tracks;
+  switch (mediaType) {
+  case PlaylistLevelType.AUDIO:
+    tracks = this.audioTracksForCurrentLevel;
+    break;
+  case PlaylistLevelType.SUBTITLE:
+    tracks = this.subtitleTracksForCurrentLevel;
+    break;
+  }
+
+  const trackOption = tracks
+    .filter((track) => {
+      if (name === track.name &&
+        (language === null || language === track.lang)) {
+        return true;
+      }
+      return false;
+    })[0];
+
+  if (trackOption) {
+    switch (mediaType) {
+    case PlaylistLevelType.AUDIO:
+      this.audioTrack = trackOption.id;
+      break;
+    case PlaylistLevelType.SUBTITLE:
+      this.subtitleTrack = trackOption.id;
+      break;
+    default:
+      throw new Error('Internal asssertion failed, not a media-type: ' + mediaType);
+    }
+    return true;
+  } else {
+    logger.warn(`Could not find any ${mediaType}-track in current-level respective media-group matching name="${name}" and language="${language}"`);
+    return false;
+  }
+}
 
 /**
  * @module Hls
@@ -615,11 +654,8 @@ export default class Hls extends Observer {
     this.abrController.nextAutoLevel = Math.max(this.minAutoLevel, nextLevel);
   }
 
-  /**
-   * @type {AudioTrack[]}
-   */
   // todo(typescript-audioTrackController)
-  get audioTracks (): any[] {
+  get audioTracks (): MediaPlaylist[] {
     const audioTrackController = this.audioTrackController;
     return audioTrackController ? audioTrackController.audioTracks : [];
   }
@@ -656,7 +692,7 @@ export default class Hls extends Observer {
    * @type {SubtitleTrack[]}
    */
   // todo(typescript-subtitleTrackController)
-  get subtitleTracks (): any[] {
+  get subtitleTracks (): MediaPlaylist[] {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
@@ -700,18 +736,8 @@ export default class Hls extends Observer {
     }
   }
 
-  /**
-   * @returns {QualityLevel}
-   */
-  getActiveQualityLevel () {
-    return this.levels[this.currentLevel];
-  }
-
-  /**
-   * @returns {AudioTrack[]}
-   */
-  getAudioGroupTracks () {
-    const level = this.getActiveQualityLevel();
+  get audioTracksForCurrentLevel (): MediaPlaylist[] {
+    const level = this.levels[this.currentLevel];
     if (!level) {
       return [];
     }
@@ -724,11 +750,8 @@ export default class Hls extends Observer {
     return this.audioTracks.filter((track) => track.groupId === currentGroupId);
   }
 
-  /**
-   * @returns {SubtitleTrack[]}
-   */
-  getSubtitleGroupTracks () {
-    const level = this.getActiveQualityLevel();
+  get subtitleTracksForCurrentLevel (): MediaPlaylist[] {
+    const level = this.levels[this.currentLevel];
     if (!level) {
       return [];
     }
@@ -742,68 +765,21 @@ export default class Hls extends Observer {
   }
 
   /**
-   *
-   * @param {string} name Relates to NAME attribute of alternate media.
-   * @param {string} language Relates to LANGUAGE attribute of alternate media. Optional, ignored when null
-   * @returns {boolean} True if track was selected matching preferences
+   * @param name Relates to NAME attribute of alternate media.
+   * @param language Relates to LANGUAGE attribute of alternate media. Optional.
+   * @returns True if track was selected matching preferences
    */
-  setPreferredAudioOptions (name, language = null) {
-    return this._setPreferredMediaOptions(PlaylistLevelType.AUDIO, name, language);
+  selectAudioTrack (name: string, language?: string): boolean {
+    return _setPreferredMediaOptions.call(this, PlaylistLevelType.AUDIO, name, language);
   }
 
   /**
    *
-   * @param {string} name Relates to NAME attribute of alternate media.
-   * @param {string} language Relates to LANGUAGE attribute of alternate media. Optional, ignored when null
-   * @returns {boolean} True if track was selected matching preferences
+   * @param name Relates to NAME attribute of alternate media.
+   * @param language Relates to LANGUAGE attribute of alternate media. Optional.
+   * @returns True if track was selected matching preferences
    */
-  setPreferredSubtitleOptions (name, language = null) {
-    return this._setPreferredMediaOptions(PlaylistLevelType.SUBTITLE, name, language);
-  }
-
-  /**
-   * @private
-   * @param {'audio' | 'subtitle'} mediaType
-   * @param {string} name
-   * @param {string} language Optional, ignored when null
-   * @returns {boolean} True if track was selected matching preferences
-   */
-  _setPreferredMediaOptions (mediaType, name, language = null) {
-    let tracks;
-    switch (mediaType) {
-    case PlaylistLevelType.AUDIO:
-      tracks = this.getAudioGroupTracks();
-      break;
-    case PlaylistLevelType.SUBTITLE:
-      tracks = this.getSubtitleGroupTracks();
-      break;
-    default:
-      throw new Error('Internal asssertion failed, not a media-type: ' + mediaType);
-    }
-
-    const trackOption = tracks
-      .filter((track) => {
-        if (name === track.name &&
-          (language === null || language === track.lang)) {
-          return true;
-        }
-        return false;
-      })[0];
-    if (trackOption) {
-      switch (mediaType) {
-      case PlaylistLevelType.AUDIO:
-        this.audioTrack = trackOption.id;
-        break;
-      case PlaylistLevelType.SUBTITLE:
-        this.subtitleTrack = trackOption.id;
-        break;
-      default:
-        throw new Error('Internal asssertion failed, not a media-type: ' + mediaType);
-      }
-      return true;
-    } else {
-      logger.warn(`Could not find any ${mediaType}-track in current-level respective media-group matching name="${name}" and language="${language}"`);
-      return false;
-    }
+  selectSubtitleTrack (name: string, language?: string) {
+    return _setPreferredMediaOptions.call(this, PlaylistLevelType.SUBTITLE, name, language);
   }
 }

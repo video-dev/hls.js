@@ -117,6 +117,8 @@ export enum PlaylistLevelType {
   SUBTITLE = 'subtitle'
 }
 
+export type MediaType = PlaylistLevelType.AUDIO | PlaylistLevelType.SUBTITLE;
+
 export interface PlaylistLoaderContext extends LoaderContext {
   loader?: Loader<PlaylistLoaderContext>
 

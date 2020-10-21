@@ -121,6 +121,11 @@
   - [`hls.subtitleTracks`](#hlssubtitletracks)
   - [`hls.subtitleTrack`](#hlssubtitletrack)
   - [`hls.subtitleDisplay`](#hlssubtitledisplay)
+- [Group-ID Aware Media Selection API](#group-id-aware-media-selection-api)
+  - [`hls.audioTracksForCurrentLevel`](#hlsaudiotracksforcurrentlevel)
+  - [`hls.subtitleTracksForCurrentLevel`](#hlssubtitletracksforcurrentlevel)
+  - [`hls.selectAudioTrack(name, language?)`](#hlsselectaudiotracknamelanguage)
+  - [`hls.selectSubtitleTrack(name, language?)`](#hlsselectsubtitletracknamelanguage)
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
 - [Runtime Events](#runtime-events)
@@ -1288,6 +1293,28 @@ get/set : subtitle track id (returned by). Returns -1 if no track is visible. Se
 (default: `true`)
 
 get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`.
+
+## Group-ID Aware Media Selection API
+
+Using these methods is required in order to manage track selection in the context of backup/redundant media. Setting the track via `audioTracks` or `subtitlesTrack` in this case, can lead to switching to for example a failover group unintentionaly, which would cause an immediate level switch and all other media tracks to fallback to the then new active media groups of this level. In this context, track selection should only be done via the media properties (which *can* exist redundantly across groups of same media type, and *should* in case of redundant failover levels), to avoid the said effects causing unnecessary rebuffering instead of seamless switching.
+
+You can however also use these methods anyway to facilitate media selection in an application at a higher level than what the fundamental track switching API allows for, without any groups existing explicitely in a media presentation.
+
+### `hls.selectAudioTrack(name, language?)`
+
+Select an audio track among the ones with `GROUP-ID` equal to the current level playlist `AUDIO` attribute, based on its media properties. This will effectively set the `audioTrack` property to the resulting value automatically.
+
+### `hls.audioTracksForCurrentLevel`
+
+get: Returns a filtered array of `MediaPlaylist` type objects (from `get audioTracks`), such that their group-id is equal to the current level playlist `AUDIO` group-id attribute.
+
+### `hls.selectSubtitleTrack(name, language?)`
+
+Select a subtitles track among the ones with `GROUP-ID` equal to the current level playlist `SUBTITLES` attribute, based on its media properties. This will effectively set the `subtitlesTrack` property to the resulting value automatically. 
+
+### `hls.audioTracksForCurrentLevel`
+
+get: Returns a filtered array of `MediaPlaylist` type objects (from `get subtitleTracks`), such that their group-id is equal to the current level playlist `SUBTITLES` group-id attribute.
 
 ## Live stream API
 
