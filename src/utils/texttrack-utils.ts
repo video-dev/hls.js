@@ -58,3 +58,28 @@ export function getClosestCue (cues: TextTrackCueList | TextTrackCue[], time: nu
   // No direct match was found, left or right element must be the closest. Check which one has the smallest diff.
   return (cues[left].endTime - time) < (time - cues[right].endTime) ? cues[left] : cues[right];
 }
+
+/**
+ * Safely adds a cue to TextTrack
+ */
+export function addCue (track: TextTrack, vttCue: TextTrackCue): void {
+  try {
+    // eslint-disable-next-line no-restricted-properties
+    track.addCue(vttCue);
+  } catch {
+    // Old Edge an IE will throw an exception if cues are not inserted in time order
+    // so we need to remove older cues and re-insert them in correct order
+    const temp: TextTrackCue[] = [vttCue];
+    const cues = track.cues!;
+    for (let i = cues.length - 1; i >= 0; i--) {
+      if (cues[i].startTime > vttCue.startTime) {
+        temp.push(cues[i]);
+        track.removeCue(cues[i]);
+      } else {
+        break;
+      }
+    }
+    // eslint-disable-next-line no-restricted-properties
+    temp.forEach((cue) => track.addCue(cue));
+  }
+}

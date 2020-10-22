@@ -4,7 +4,7 @@ import Cea608Parser, { CaptionScreen } from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
-import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
+import { sendAddTrackEvent, clearCurrentCues, addCue } from '../utils/texttrack-utils';
 import Fragment from '../loader/fragment';
 import { HlsConfig } from '../config';
 import { CuesInterface } from '../utils/cues';
@@ -425,7 +425,7 @@ class TimelineController extends EventHandler {
           // This avoid showing duplicated cues with same timecode and text.
           if (!currentTrack.cues!.getCueById(cue.id)) {
             try {
-              currentTrack.addCue(cue);
+              addCue(currentTrack, cue);
               if (!currentTrack.cues!.getCueById(cue.id)) {
                 throw new Error(`addCue is failed for: ${cue}`);
               }
@@ -433,7 +433,7 @@ class TimelineController extends EventHandler {
               logger.debug(`Failed occurred on adding cues: ${err}`);
               const textTrackCue = new (window as any).TextTrackCue(cue.startTime, cue.endTime, cue.text);
               textTrackCue.id = cue.id;
-              currentTrack.addCue(textTrackCue);
+              addCue(currentTrack, textTrackCue);
             }
           }
         });

@@ -1,4 +1,4 @@
-import { sendAddTrackEvent, clearCurrentCues } from '../../../src/utils/texttrack-utils';
+import { sendAddTrackEvent, clearCurrentCues, addCue } from '../../../src/utils/texttrack-utils';
 import sinon from 'sinon';
 
 describe('text track utils', function () {
@@ -19,6 +19,7 @@ describe('text track utils', function () {
     video = document.createElement('video');
     track = video.addTextTrack('subtitles', 'test');
     cues.forEach((cue) => {
+      // eslint-disable-next-line no-restricted-properties
       track.addCue(new VTTCue(cue.begin, cue.end, cue.text));
     });
   });
@@ -60,6 +61,31 @@ describe('text track utils', function () {
     it('should clear the cues from track', function () {
       clearCurrentCues(track);
       expect(track.cues.length).to.equal(0);
+    });
+  });
+
+  describe('adds cue', function () {
+    it('should add cue', function () {
+      const cue = new VTTCue(100, 110, 'foobar');
+      addCue(track, cue);
+      expect(track.cues.length).to.equal(3);
+    });
+
+    it('should add cue if track.addCue throws an error', function () {
+      const cue = new VTTCue(4, 6, 'foobar');
+      /* eslint-disable no-restricted-properties */
+      let originalAddCue = track.addCue;
+      track.addCue = () => {
+        track.addCue = originalAddCue;
+        throw new Error('test error');
+      };
+      /* eslint-enable no-restricted-properties */
+      addCue(track, cue);
+      expect(track.cues.length).to.equal(3);
+      // check cues order
+      expect(track.cues[0].text).to.equal(cues[0].text);
+      expect(track.cues[1].text).to.equal(cue.text);
+      expect(track.cues[2].text).to.equal(cues[1].text);
     });
   });
 });

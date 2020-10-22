@@ -1,5 +1,6 @@
 import { fixLineBreaks } from './vttparser';
 import { CaptionScreen, Row } from './cea-608-parser';
+import { addCue } from './texttrack-utils';
 
 export interface CuesInterface {
   newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[]
@@ -69,7 +70,7 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
       return cueA.line - cueB.line;
     });
     for (let i = 0; i < sortedCues.length; i++) {
-      track.addCue(sortedCues[i]);
+      addCue(track, sortedCues[i]);
     }
   }
   return result;

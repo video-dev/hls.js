@@ -5,7 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
-import { sendAddTrackEvent, clearCurrentCues, getClosestCue } from '../utils/texttrack-utils';
+import { sendAddTrackEvent, clearCurrentCues, getClosestCue, addCue } from '../utils/texttrack-utils';
 
 const MIN_CUE_DURATION = 0.25;
 
@@ -89,7 +89,7 @@ class ID3TrackController extends EventHandler {
           if (!ID3.isTimeStampFrame(frame)) {
             const cue = new Cue(startTime, endTime, '');
             cue.value = frame;
-            this.id3Track.addCue(cue);
+            addCue(this.id3Track, cue);
           }
         }
       }
