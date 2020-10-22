@@ -1,4 +1,5 @@
 language: node_js
+node_js: node
 # so that chrome works
 # see https://github.com/video-dev/hls.js/pull/1710#discussion_r187754754
 sudo: required
