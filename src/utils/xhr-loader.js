@@ -81,8 +81,10 @@ class XhrLoader {
   }
 
   readystatechange (event) {
-    let xhr = event.currentTarget,
-      readyState = xhr.readyState,
+    //On production build, event.currentTarget is null, error "cannot read property 'readyState' of null"
+    //Must use this.loader on production build
+    let xhr = event.currentTarget || this.loader,
+      readyState = xhr.readyState || this.loader.readyState,
       stats = this.stats,
       context = this.context,
       config = this.config;
