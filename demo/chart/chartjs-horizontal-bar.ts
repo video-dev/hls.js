@@ -103,6 +103,10 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
         if (!stats) {
           stats = {};
         }
+        if (isPart) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+        }
         if (stats.aborted) {
           ctx.fillStyle = 'rgba(100, 0, 0, 0.3)';
           ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
