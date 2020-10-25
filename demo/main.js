@@ -37,6 +37,7 @@ let autoRecoverError = getDemoConfigPropOrDefault('autoRecoverError', true);
 let levelCapping = getDemoConfigPropOrDefault('levelCapping', -1);
 let limitMetrics = getDemoConfigPropOrDefault('limitMetrics', -1);
 let dumpfMP4 = getDemoConfigPropOrDefault('dumpfMP4', false);
+let stopOnStall = getDemoConfigPropOrDefault('stopOnStall', false);
 
 let bufferingIdx = -1;
 let selectedTestStream = null;
@@ -138,6 +139,11 @@ $(document).ready(function () {
     onDemoConfigChanged();
   });
 
+  $('#stopOnStall').click(function () {
+    stopOnStall = this.checked;
+    onDemoConfigChanged();
+  });
+
   $('#dumpfMP4').click(function () {
     dumpfMP4 = this.checked;
     $('.btn-dump').toggle(dumpfMP4);
@@ -157,6 +163,7 @@ $(document).ready(function () {
   $('#limitMetrics').val(limitMetrics);
   $('#enableStreaming').prop('checked', enableStreaming);
   $('#autoRecoverError').prop('checked', autoRecoverError);
+  $('#stopOnStall').prop('checked', stopOnStall);
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
@@ -703,6 +710,10 @@ function loadSelectedStream () {
       break;
     case Hls.ErrorDetails.BUFFER_STALLED_ERROR:
       logError('Buffer stalled error');
+      if (stopOnStall) {
+        hls.stopLoad();
+        video.pause();
+      }
       break;
     default:
       break;
@@ -1259,6 +1270,7 @@ function onDemoConfigChanged () {
   demoConfig = {
     enableStreaming,
     autoRecoverError,
+    stopOnStall,
     dumpfMP4,
     levelCapping,
     limitMetrics
