@@ -58,7 +58,7 @@ if (data) {
 }
 
 function updateMetrics() {
-  var hlsLink = document.URL.substr(0,document.URL.lastIndexOf("/")+1) + 'index.html?src=' + encodeURIComponent(events.url);
+  var hlsLink = new URL('index.html?src=' + encodeURIComponent(events.url), window.location.href).href;
   var playlistLink = document.createElement("a");
   playlistLink.setAttribute("href", events.url);
   playlistLink.textContent = events.url;
