@@ -175,7 +175,7 @@ $(document).ready(function () {
 
   const version = Hls.version;
   if (version) {
-    const $a = $('<a />').attr('target', '_blank').attr('href', getVersionLink(version)).text('v' + version);
+    const $a = $('<a />').attr('target', '_blank').attr('rel', 'noopener noreferrer').attr('href', getVersionLink(version)).text('v' + version);
     $('.title').append($a);
   }
 
