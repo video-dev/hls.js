@@ -4,6 +4,7 @@
 
 import Events from '../events';
 import EventHandler from '../event-handler';
+import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
@@ -13,7 +14,7 @@ import { Segment } from '../types/segment';
 import { BufferControllerConfig } from '../config';
 
 // Add extension properties to SourceBuffers from the DOM API.
-type ExtendedSourceBuffer = SourceBuffer & {
+type ExtendedSourceBuffer = SourceBuffer & { // eslint-disable-line no-restricted-globals
   ended?: boolean
 };
 
@@ -102,7 +103,7 @@ class BufferController extends EventHandler {
     EventHandler.prototype.destroy.call(this);
   }
 
-  onLevelPtsUpdated (data: { type: SourceBufferName, start: number }) {
+  onLevelPtsUpdated (data: { details, type: SourceBufferName, start: number }) {
     let type = data.type;
     let audioTrack = this.tracks.audio;
 
@@ -139,14 +140,23 @@ class BufferController extends EventHandler {
         }
       }
     }
+
+    if (this.config.liveDurationInfinity) {
+      this.updateSeekableRange(data.details);
+    }
   }
 
-  onManifestParsed (data: { altAudio: boolean }) {
-    // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
+  onManifestParsed (data: { altAudio: boolean, audio: boolean, video: boolean }) {
+    // in case of alt audio (where all tracks have urls) 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
-    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = data.altAudio ? 2 : 1;
+    let codecEvents: number = 2;
+    if (data.audio && !data.video || !data.altAudio) {
+      codecEvents = 1;
+    }
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
+
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
@@ -284,7 +294,7 @@ class BufferController extends EventHandler {
       if (!sb) {
         throw Error(`handling source buffer update end error: source buffer for ${streamType} uninitilized and unable to update buffered TimeRanges.`);
       }
-      timeRanges[streamType as SourceBufferName] = sb.buffered;
+      timeRanges[streamType as SourceBufferName] = BufferHelper.getBuffered(sb);
     }
 
     this.hls.trigger(Events.BUFFER_APPENDED, { parent, pending, timeRanges });
@@ -482,7 +492,7 @@ class BufferController extends EventHandler {
       const bufferType = bufferTypes[index];
       const sb = sourceBuffer[bufferType as SourceBufferName];
       if (sb) {
-        const buffered = sb.buffered;
+        const buffered = BufferHelper.getBuffered(sb);
         // when target buffer start exceeds actual buffer start
         if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
           // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
@@ -502,6 +512,9 @@ class BufferController extends EventHandler {
       this._levelTargetDuration = details.averagetargetduration || details.targetduration || 10;
       this._live = details.live;
       this.updateMediaElementDuration();
+      if (this.config.liveDurationInfinity) {
+        this.updateSeekableRange(details);
+      }
     }
   }
 
@@ -537,7 +550,7 @@ class BufferController extends EventHandler {
       this._msDuration = this.mediaSource.duration;
     }
 
-    if (this._live === true && config.liveDurationInfinity === true) {
+    if (this._live === true && config.liveDurationInfinity) {
       // Override duration to Infinity
       logger.log('Media Source duration is set to Infinity');
       this._msDuration = this.mediaSource.duration = Infinity;
@@ -548,6 +561,17 @@ class BufferController extends EventHandler {
       // flushing already buffered portion when switching between quality level
       logger.log(`Updating Media Source duration to ${this._levelDuration.toFixed(3)}`);
       this._msDuration = this.mediaSource.duration = this._levelDuration;
+    }
+  }
+
+  updateSeekableRange (levelDetails) {
+    const mediaSource = this.mediaSource;
+    const fragments = levelDetails.fragments;
+    const len = fragments.length;
+    if (len && mediaSource?.setLiveSeekableRange) {
+      const start = fragments[0]?.start;
+      const end = fragments[len - 1].start + fragments[len - 1].duration;
+      mediaSource.setLiveSeekableRange(start, end);
     }
   }
 
@@ -573,17 +597,11 @@ class BufferController extends EventHandler {
       // let's recompute this.appended, which is used to avoid flush looping
       let appended = 0;
       let sourceBuffer = this.sourceBuffer;
-      try {
-        for (let type in sourceBuffer) {
-          const sb = sourceBuffer[type];
-          if (sb) {
-            appended += sb.buffered.length;
-          }
+      for (let type in sourceBuffer) {
+        const sb = sourceBuffer[type];
+        if (sb) {
+          appended += BufferHelper.getBuffered(sb).length;
         }
-      } catch (error) {
-        // error could be thrown while accessing buffered, in case sourcebuffer has already been removed from MediaSource
-        // this is harmess at this stage, catch this to avoid reporting an internal exception
-        logger.error('error while accessing sourceBuffer.buffered');
       }
       this.appended = appended;
       this.hls.trigger(Events.BUFFER_FLUSHED);
@@ -719,9 +737,10 @@ class BufferController extends EventHandler {
    */
   removeBufferRange (type: string, sb: ExtendedSourceBuffer, startOffset: number, endOffset: number): boolean {
     try {
-      for (let i = 0; i < sb.buffered.length; i++) {
-        let bufStart = sb.buffered.start(i);
-        let bufEnd = sb.buffered.end(i);
+      const buffered = BufferHelper.getBuffered(sb);
+      for (let i = 0; i < buffered.length; i++) {
+        let bufStart = buffered.start(i);
+        let bufEnd = buffered.end(i);
         let removeStart = Math.max(bufStart, startOffset);
         let removeEnd = Math.min(bufEnd, endOffset);
 

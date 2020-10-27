@@ -65,11 +65,11 @@ class DemuxerInline {
 
   pushDecrypted (data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
     let demuxer = this.demuxer;
+    let remuxer = this.remuxer;
     if (!demuxer ||
       // in case of continuity change, or track switch
       // we might switch from content type (AAC container to TS container, or TS to fmp4 for example)
-      // so let's check that current demuxer is still valid
-      ((discontinuity || trackSwitch) && !this.probe(data))) {
+      (discontinuity || trackSwitch)) {
       const observer = this.observer;
       const typeSupported = this.typeSupported;
       const config = this.config;
@@ -82,23 +82,28 @@ class DemuxerInline {
       ];
 
       // probe for content type
+      let mux;
       for (let i = 0, len = muxConfig.length; i < len; i++) {
-        const mux = muxConfig[i];
-        const probe = mux.demux.probe;
-        if (probe(data)) {
-          const remuxer = this.remuxer = new mux.remux(observer, config, typeSupported, this.vendor);
-          demuxer = new mux.demux(observer, remuxer, config, typeSupported);
-          this.probe = probe;
+        mux = muxConfig[i];
+        if (mux.demux.probe(data)) {
           break;
         }
       }
-      if (!demuxer) {
+      if (!mux) {
         observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
         return;
       }
+      // so let's check that current remuxer and demuxer are still valid
+      if (!remuxer || !(remuxer instanceof mux.remux)) {
+        remuxer = new mux.remux(observer, config, typeSupported, this.vendor);
+      }
+      if (!demuxer || !(demuxer instanceof mux.demux)) {
+        demuxer = new mux.demux(observer, remuxer, config, typeSupported);
+        this.probe = mux.demux.probe;
+      }
       this.demuxer = demuxer;
+      this.remuxer = remuxer;
     }
-    const remuxer = this.remuxer;
 
     if (discontinuity || trackSwitch) {
       demuxer.resetInitSegment(initSegment, audioCodec, videoCodec, duration);

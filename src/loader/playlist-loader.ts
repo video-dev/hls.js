@@ -283,7 +283,7 @@ class PlaylistLoader extends EventHandler {
     const string = response.data as string;
 
     const url = PlaylistLoader.getResponseUrl(response, context);
-    const levels = M3U8Parser.parseMasterPlaylist(string, url);
+    const { levels, sessionData } = M3U8Parser.parseMasterPlaylist(string, url);
     if (!levels.length) {
       this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
       return;
@@ -297,6 +297,7 @@ class PlaylistLoader extends EventHandler {
 
     const audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
     const subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    const captions = M3U8Parser.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -319,7 +320,9 @@ class PlaylistLoader extends EventHandler {
           default: false,
           autoselect: false,
           forced: false,
-          id: -1
+          id: -1,
+          attrs: {},
+          url: ''
         });
       }
     }
@@ -328,9 +331,11 @@ class PlaylistLoader extends EventHandler {
       levels,
       audioTracks,
       subtitles,
+      captions,
       url,
       stats,
-      networkDetails
+      networkDetails,
+      sessionData
     });
   }
 
@@ -352,6 +357,18 @@ class PlaylistLoader extends EventHandler {
     // TODO(jstackhouse): why? mixing concerns, is it just treated as value bag?
     (levelDetails as any).tload = stats.tload;
 
+    if (!levelDetails.fragments.length) {
+      hls.trigger(Event.ERROR, {
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.LEVEL_EMPTY_ERROR,
+        fatal: false,
+        url: url,
+        reason: 'no fragments found in level',
+        level: typeof context.level === 'number' ? context.level : undefined
+      });
+      return;
+    }
+
     // We have done our first request (Manifest-type) and receive
     // not a master playlist but a chunk-list (track/level)
     // We fire the manifest-loaded event anyway with the parsed level-details
@@ -367,7 +384,8 @@ class PlaylistLoader extends EventHandler {
         audioTracks: [],
         url,
         stats,
-        networkDetails
+        networkDetails,
+        sessionData: null
       });
     }
 

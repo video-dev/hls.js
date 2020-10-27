@@ -42,10 +42,16 @@ type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean
 };
 
+export type DRMSystemOptions = {
+  audioRobustness?: string,
+  videoRobustness?: string,
+}
+
 export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
   widevineLicenseUrl?: string,
+  drmSystemOptions: DRMSystemOptions,
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null,
 };
 
@@ -108,16 +114,22 @@ type StreamControllerConfig = {
   maxMaxBufferLength: number,
 
   startFragPrefetch: boolean,
+  testBandwidth: boolean
 };
 
 type TimelineControllerConfig = {
-  cueHandler: any, // TODO(typescript-cues): Type once file is done
+  cueHandler: Cues.CuesInterface,
   enableCEA708Captions: boolean,
   enableWebVTT: boolean,
   captionsTextTrack1Label: string,
   captionsTextTrack1LanguageCode: string,
   captionsTextTrack2Label: string,
   captionsTextTrack2LanguageCode: string,
+  captionsTextTrack3Label: string,
+  captionsTextTrack3LanguageCode: string,
+  captionsTextTrack4Label: string,
+  captionsTextTrack4LanguageCode: string,
+  renderTextTracksNatively: boolean,
 };
 
 type TSDemuxerConfig = {
@@ -158,8 +170,25 @@ export type HlsConfig =
   MP4RemuxerConfig &
   PlaylistLoaderConfig &
   StreamControllerConfig &
-  Partial<TimelineControllerConfig> &
+  TimelineControllerConfig &
   TSDemuxerConfig;
+
+function timelineConfig (): TimelineControllerConfig {
+  return {
+    cueHandler: Cues, // used by timeline-controller
+    enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
+    enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
+    captionsTextTrack1Label: 'English', // used by timeline-controller
+    captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
+    captionsTextTrack2Label: 'Spanish', // used by timeline-controller
+    captionsTextTrack2LanguageCode: 'es', // used by timeline-controller
+    captionsTextTrack3Label: 'Unknown CC', // used by timeline-controller
+    captionsTextTrack3LanguageCode: '', // used by timeline-controller
+    captionsTextTrack4Label: 'Unknown CC', // used by timeline-controller
+    captionsTextTrack4LanguageCode: '', // used by timeline-controller
+    renderTextTracksNatively: true
+  };
+}
 
 // If possible, keep hlsDefaultConfig shallow
 // It is cloned whenever a new Hls instance is created, by keeping the config
@@ -234,7 +263,9 @@ export const hlsDefaultConfig: HlsConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: void 0, // used by eme-controller
+  drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
+  testBandwidth: true,
 
   // Dynamic Modules
   ...timelineConfig(),
@@ -245,20 +276,3 @@ export const hlsDefaultConfig: HlsConfig = {
   audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : void 0,
   emeController: (__USE_EME_DRM__) ? EMEController : void 0
 };
-
-function timelineConfig (): TimelineControllerConfig {
-  if (!__USE_SUBTITLES__) {
-    // intentionally doing this over returning Partial<TimelineControllerConfig> above
-    // this has the added nice property of still requiring the object below to completely define all props.
-    return {} as any;
-  }
-  return {
-    cueHandler: Cues, // used by timeline-controller
-    enableCEA708Captions: true, // used by timeline-controller
-    enableWebVTT: true, // used by timeline-controller
-    captionsTextTrack1Label: 'English', // used by timeline-controller
-    captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
-    captionsTextTrack2Label: 'Spanish', // used by timeline-controller
-    captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
-  };
-}

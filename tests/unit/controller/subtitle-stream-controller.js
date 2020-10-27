@@ -130,7 +130,8 @@ describe('SubtitleStreamController', function () {
   });
 
   describe('onMediaSeeking', function () {
-    it('nulls fragPrevious', function () {
+    it('nulls fragPrevious when seeking away from fragCurrent', function () {
+      subtitleStreamController.fragCurrent = { start: 1000, duration: 10 };
       subtitleStreamController.fragPrevious = {};
       subtitleStreamController.onMediaSeeking();
       expect(subtitleStreamController.fragPrevious).to.not.exist;
