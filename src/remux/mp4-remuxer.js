@@ -197,7 +197,7 @@ class MP4Remuxer {
       }
     } else if (computePTSDTS && tracks.audio) {
       // initPTS found for audio-only stream with main and alt audio
-      initPTS90Khz = toMpegTsClockFromTimescale(initPTS, inputTimeScale);
+      initPTS90Khz = toMpegTsClockFromTimescale(initPTS, audioTrack.inputTimeScale);
       this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, initPTS90Khz: initPTS90Khz });
     }
 
