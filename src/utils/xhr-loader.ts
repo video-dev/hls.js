@@ -21,9 +21,8 @@ class XhrLoader implements Loader<LoaderContext> {
   }
 
   destroy (): void {
-    this.loader =
-      this.callbacks = null;
     this.abortInternal();
+    this.loader = this.callbacks = null;
   }
 
   abortInternal (): void {
