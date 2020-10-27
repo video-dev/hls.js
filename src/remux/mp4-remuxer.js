@@ -8,7 +8,7 @@ import MP4 from './mp4-generator';
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-import { toMsFromMpegTsClock, toMpegTsClockFromTimescale, toTimescaleFromScale } from '../utils/timescale-conversion';
+import { toMsFromMpegTsClock, toMpegTsClockFromTimescale } from '../utils/timescale-conversion';
 
 import { logger } from '../utils/logger';
 
@@ -113,7 +113,7 @@ class MP4Remuxer {
       tracks = {},
       data = { tracks: tracks },
       computePTSDTS = (this._initPTS === undefined),
-      initPTS, initDTS;
+      initPTS, initDTS, initPTS90Khz;
 
     if (computePTSDTS) {
       initPTS = initDTS = Infinity;
@@ -165,7 +165,8 @@ class MP4Remuxer {
       if (computePTSDTS) {
         initPTS = Math.min(initPTS, videoSamples[0].pts - inputTimeScale * timeOffset);
         initDTS = Math.min(initDTS, videoSamples[0].dts - inputTimeScale * timeOffset);
-        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS });
+        initPTS90Khz = toMpegTsClockFromTimescale(initPTS, inputTimeScale);
+        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, initPTS90Khz: initPTS90Khz });
       }
     }
 
