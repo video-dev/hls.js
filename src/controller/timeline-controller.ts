@@ -82,11 +82,11 @@ class TimelineController extends EventHandler {
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
-  onInitPtsFound (data: { id: string, frag: Fragment, initPTS: number}) {
-    const { frag, id, initPTS } = data;
+  onInitPtsFound (data: { id: string, frag: Fragment, initPTS: number, initPTS90Khz: number}) {
+    const { frag, id, initPTS90Khz } = data;
     const { unparsedVttFrags } = this;
     if (id === 'main') {
-      this.initPTS[frag.cc] = initPTS;
+      this.initPTS[frag.cc] = initPTS90Khz;
     }
 
     // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.

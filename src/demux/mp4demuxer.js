@@ -3,6 +3,7 @@
  */
 import { logger } from '../utils/logger';
 import Event from '../events';
+import { toMpegTsClockFromTimescale } from '../utils/timescale-conversion';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 
@@ -386,7 +387,8 @@ class MP4Demuxer {
     if (initPTS === undefined) {
       let startDTS = MP4Demuxer.getStartDTS(initData, data);
       this.initPTS = initPTS = startDTS - timeOffset;
-      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS });
+      const initPTS90Khz = toMpegTsClockFromTimescale(initPTS);
+      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, initPTS90Khz: initPTS90Khz });
     }
     MP4Demuxer.offsetStartDTS(initData, data, initPTS);
     startDTS = MP4Demuxer.getStartDTS(initData, data);
