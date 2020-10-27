@@ -2,59 +2,6 @@ import BinarySearch from '../utils/binary-search';
 import Fragment from '../loader/fragment';
 
 /**
- * Returns first fragment whose endPdt value exceeds the given PDT.
- * @param {Array<Fragment>} fragments - The array of candidate fragments
- * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
- * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start/end can be within in order to be considered contiguous
- * @returns {*|null} fragment - The best matching fragment
- */
-export function findFragmentByPDT (fragments: Array<Fragment>, PDTValue: number | null, maxFragLookUpTolerance: number): Fragment | null {
-  if (PDTValue === null || !Array.isArray(fragments) || !fragments.length || !Number.isFinite(PDTValue)) {
-    return null;
-  }
-
-  // if less than start
-  const startPDT = fragments[0].programDateTime;
-  if (PDTValue < (startPDT || 0)) {
-    return null;
-  }
-
-  const endPDT = fragments[fragments.length - 1].endProgramDateTime;
-  if (PDTValue >= (endPDT || 0)) {
-    return null;
-  }
-
-  maxFragLookUpTolerance = maxFragLookUpTolerance || 0;
-  for (let seg = 0; seg < fragments.length; ++seg) {
-    let frag = fragments[seg];
-    if (pdtWithinToleranceTest(PDTValue, maxFragLookUpTolerance, frag)) {
-      return frag;
-    }
-  }
-
-  return null;
-}
-
-/**
- * Finds a fragment based on the SN of the previous fragment; or based on the needs of the current buffer.
- * This method compensates for small buffer gaps by applying a tolerance to the start of any candidate fragment, thus
- * breaking any traps which would cause the same fragment to be continuously selected within a small range.
- * @param {*} fragPrevious - The last frag successfully appended
- * @param {Array<Fragment>} fragments - The array of candidate fragments
- * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
- * @returns {*} foundFrag - The best matching fragment
- */
-export function findFragmentByPTS (fragPrevious: Fragment, fragments: Array<Fragment>, bufferEnd: number = 0, maxFragLookUpTolerance: number = 0): Fragment | null {
-  const fragNext = fragPrevious ? fragments[fragPrevious.sn as number - (fragments[0].sn as number) + 1] : null;
-  // Prefer the next fragment if it's within tolerance
-  if (fragNext && !fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext)) {
-    return fragNext;
-  }
-  return BinarySearch.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
-}
-
-/**
  * The test function used by the findFragmentBySn's BinarySearch to look for the best match to the current buffer conditions.
  * @param {*} candidate - The fragment to test
  * @param {number} [bufferEnd = 0] - The end of the current buffered range the playhead is currently within
@@ -101,4 +48,68 @@ export function pdtWithinToleranceTest (pdtBufferEnd: number, maxFragLookUpToler
   // endProgramDateTime can be null, default to zero
   const endProgramDateTime = candidate.endProgramDateTime || 0;
   return endProgramDateTime - candidateLookupTolerance > pdtBufferEnd;
+}
+
+/**
+ * Returns first fragment whose endPdt value exceeds the given PDT.
+ * @param {Array<Fragment>} fragments - The array of candidate fragments
+ * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
+ * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start/end can be within in order to be considered contiguous
+ * @returns {*|null} fragment - The best matching fragment
+ */
+export function findFragmentByPDT (fragments: Array<Fragment>, PDTValue: number | null, maxFragLookUpTolerance: number): Fragment | null {
+  if (PDTValue === null || !Array.isArray(fragments) || !fragments.length || !Number.isFinite(PDTValue)) {
+    return null;
+  }
+
+  // if less than start
+  const startPDT = fragments[0].programDateTime;
+  if (PDTValue < (startPDT || 0)) {
+    return null;
+  }
+
+  const endPDT = fragments[fragments.length - 1].endProgramDateTime;
+  if (PDTValue >= (endPDT || 0)) {
+    return null;
+  }
+
+  maxFragLookUpTolerance = maxFragLookUpTolerance || 0;
+  for (let seg = 0; seg < fragments.length; ++seg) {
+    let frag = fragments[seg];
+    if (pdtWithinToleranceTest(PDTValue, maxFragLookUpTolerance, frag)) {
+      return frag;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Finds a fragment based on the SN of the previous fragment; or based on the needs of the current buffer.
+ * This method compensates for small buffer gaps by applying a tolerance to the start of any candidate fragment, thus
+ * breaking any traps which would cause the same fragment to be continuously selected within a small range.
+ * @param {*} fragPrevious - The last frag successfully appended
+ * @param {Array<Fragment>} fragments - The array of candidate fragments
+ * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
+ * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
+ * @returns {*} foundFrag - The best matching fragment
+ */
+export function findFragmentByPTS (fragPrevious: Fragment, fragments: Array<Fragment>, bufferEnd: number = 0, maxFragLookUpTolerance: number = 0): Fragment | null {
+  let fragNext: Fragment | null = null;
+  if (fragPrevious) {
+    fragNext = fragments[fragPrevious.sn as number - (fragments[0].sn as number) + 1];
+  } else if (bufferEnd === 0 && fragments[0].start === 0) {
+    fragNext = fragments[0];
+  }
+  // Prefer the next fragment if it's within tolerance
+  if (fragNext && fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext) === 0) {
+    return fragNext;
+  }
+  // We might be seeking past the tolerance so find the best match
+  const foundFragment = BinarySearch.search(fragments, fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance));
+  if (foundFragment) {
+    return foundFragment;
+  }
+  // If no match was found return the next fragment after fragPrevious, or null
+  return fragNext;
 }

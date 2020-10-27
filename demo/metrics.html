@@ -43,7 +43,7 @@
 
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
-  <script src="jsonpack.js"></script>
+  <script src="libs/jsonpack.js"></script>
   <script>
 
 
@@ -58,22 +58,22 @@ if (data) {
 }
 
 function updateMetrics() {
-  var hlsLink = document.URL.substr(0,document.URL.lastIndexOf("/")+1) + 'index.html?src=' + encodeURIComponent(events.url);
+  var hlsLink = new URL('index.html?src=' + encodeURIComponent(events.url), window.location.href).href;
   var playlistLink = document.createElement("a");
   playlistLink.setAttribute("href", events.url);
   playlistLink.textContent = events.url;
-  
+
   var replayLink = document.createElement("a");
   replayLink.setAttribute("href", hlsLink);
   replayLink.textContent = hlsLink;
-  
+
   var fragment = document.createDocumentFragment();
   fragment.appendChild(document.createTextNode('playlist: '));
   fragment.appendChild(playlistLink);
   fragment.appendChild(document.createElement("br"));
   fragment.appendChild(document.createTextNode('replay: '));
   fragment.appendChild(replayLink);
-  
+
   $("#StreamPermalink").html(fragment);
   $("#HlsDate").text("session Start Date:" + new Date(events.t0));
   metricsDisplayed=true;

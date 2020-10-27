@@ -5,7 +5,9 @@ export function isSupported (): boolean {
   if (!mediaSource) {
     return false;
   }
-  const sourceBuffer = self.SourceBuffer || (self as any).WebKitSourceBuffer as SourceBuffer;
+  const sourceBuffer = self.SourceBuffer ||
+    (self as any).WebKitSourceBuffer as SourceBuffer; // eslint-disable-line no-restricted-globals
+
   const isTypeSupported = mediaSource &&
     typeof mediaSource.isTypeSupported === 'function' &&
     mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');

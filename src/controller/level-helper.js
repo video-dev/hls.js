@@ -46,7 +46,8 @@ export function updatePTS (fragments, fromIdx, toIdx) {
   } else {
     // we dont know startPTS[toIdx]
     if (toIdx > fromIdx) {
-      fragTo.start = fragFrom.start + fragFrom.duration;
+      const contiguous = fragFrom.cc === fragTo.cc;
+      fragTo.start = fragFrom.start + ((contiguous && fragFrom.minEndPTS) ? fragFrom.minEndPTS - fragFrom.start : fragFrom.duration);
     } else {
       fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
     }
@@ -56,6 +57,7 @@ export function updatePTS (fragments, fromIdx, toIdx) {
 export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, endDTS) {
   // update frag PTS/DTS
   let maxStartPTS = startPTS;
+  let minEndPTS = endPTS;
   if (Number.isFinite(frag.startPTS)) {
     // delta PTS between audio and video
     let deltaPTS = Math.abs(frag.startPTS - startPTS);
@@ -67,6 +69,7 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
 
     maxStartPTS = Math.max(startPTS, frag.startPTS);
     startPTS = Math.min(startPTS, frag.startPTS);
+    minEndPTS = Math.min(endPTS, frag.endPTS);
     endPTS = Math.max(endPTS, frag.endPTS);
     startDTS = Math.min(startDTS, frag.startDTS);
     endDTS = Math.max(endDTS, frag.endDTS);
@@ -76,6 +79,7 @@ export function updateFragPTSDTS (details, frag, startPTS, endPTS, startDTS, end
   frag.start = frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.endPTS = endPTS;
+  frag.minEndPTS = minEndPTS;
   frag.startDTS = startDTS;
   frag.endDTS = endDTS;
   frag.duration = endPTS - startPTS;

@@ -80,6 +80,42 @@ describe('AudioTrackController', function () {
     });
   });
 
+  it('should select audioGroupId and trigger AUDIO_TRACK_SWITCHING', function (done) {
+    hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, (event, data) => {
+      done();
+    });
+
+    const levels = [
+      {
+        urlId: 1,
+        audioGroupIds: ['1', '2']
+      }
+    ];
+
+    hls.levelController = {
+      levels
+    };
+
+    const newLevelInfo = levels[0];
+    const newGroupId = newLevelInfo.audioGroupIds[newLevelInfo.urlId];
+
+    audioTrackController.audioGroupId = '1';
+    audioTrackController.tracks = tracks;
+    audioTrackController.audioTrack = 2;
+
+    // current track name
+    const audioTrackName = tracks[audioTrackController.audioTrack].name;
+
+    audioTrackController.onManifestParsed({
+      audioTracks: tracks
+    });
+
+    // group has switched
+    expect(audioTrackController.audioGroupId).to.equal(newGroupId);
+    // name is still the same
+    expect(tracks[audioTrackController.audioTrack].name).to.equal(audioTrackName);
+  });
+
   describe('_needsTrackLoading', function () {
     it('should not need loading because the audioTrack is embedded in the main playlist', function () {
       expect(audioTrackController._needsTrackLoading({ details: { live: true } })).to.be.false;

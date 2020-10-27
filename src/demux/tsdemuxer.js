@@ -41,6 +41,7 @@ class TSDemuxer {
     this.typeSupported = typeSupported;
     this.remuxer = remuxer;
     this.sampleAes = null;
+    this.pmtUnknownTypes = {};
   }
 
   setDecryptData (decryptdata) {
@@ -114,6 +115,7 @@ class TSDemuxer {
   resetInitSegment (initSegment, audioCodec, videoCodec, duration) {
     this.pmtParsed = false;
     this._pmtId = -1;
+    this.pmtUnknownTypes = {};
 
     this._avcTrack = TSDemuxer.createTrack('video', duration);
     this._audioTrack = TSDemuxer.createTrack('audio', duration);
@@ -139,6 +141,7 @@ class TSDemuxer {
   append (data, timeOffset, contiguous, accurateTimeOffset) {
     let start, len = data.length, stt, pid, atf, offset, pes,
       unknownPIDs = false;
+    this.pmtUnknownTypes = {};
     this.contiguous = contiguous;
     let pmtParsed = this.pmtParsed,
       avcTrack = this._avcTrack,
@@ -152,7 +155,7 @@ class TSDemuxer {
       audioData = audioTrack.pesData,
       id3Data = id3Track.pesData,
       parsePAT = this._parsePAT,
-      parsePMT = this._parsePMT,
+      parsePMT = this._parsePMT.bind(this),
       parsePES = this._parsePES,
       parseAVCPES = this._parseAVCPES.bind(this),
       parseAACPES = this._parseAACPES.bind(this),
@@ -352,6 +355,19 @@ class TSDemuxer {
     // logger.log('PMT PID:'  + this._pmtId);
   }
 
+  _trackUnknownPmt (type, logLevel, message) {
+    // Only log unknown and unsupported stream types once per append or stream (by resetting this.pmtUnknownTypes)
+    // For more information on elementary stream types see:
+    // https://en.wikipedia.org/wiki/Program-specific_information#Elementary_stream_types
+    const result = this.pmtUnknownTypes[type] || 0;
+    if (result === 0) {
+      this.pmtUnknownTypes[type] = 0;
+      logLevel.call(logger, message);
+    }
+    this.pmtUnknownTypes[type]++;
+    return result;
+  }
+
   _parsePMT (data, offset, mpegSupported, isSampleAes) {
     let sectionLength, tableEnd, programInfoLength, pid, result = { audio: -1, avc: -1, id3: -1, isAAC: true };
     sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
@@ -366,7 +382,7 @@ class TSDemuxer {
       switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
-          logger.log('unknown stream type:' + data[offset]);
+          this._trackUnknownPmt(data[offset], logger.warn, 'ADTS AAC with AES-128-CBC frame encryption found in unencrypted stream');
           break;
         }
         /* falls through */
@@ -391,7 +407,7 @@ class TSDemuxer {
 
       case 0xdb: // SAMPLE-AES AVC
         if (!isSampleAes) {
-          logger.log('unknown stream type:' + data[offset]);
+          this._trackUnknownPmt(data[offset], logger.warn, 'H.264 with AES-128-CBC slice encryption found in unencrypted stream');
           break;
         }
         /* falls through */
@@ -411,7 +427,7 @@ class TSDemuxer {
       case 0x04:
         // logger.log('MPEG PID:'  + pid);
         if (!mpegSupported) {
-          logger.log('MPEG audio found, not supported in this browser for now');
+          this._trackUnknownPmt(data[offset], logger.warn, 'MPEG audio found, not supported in this browser');
         } else if (result.audio === -1) {
           result.audio = pid;
           result.isAAC = false;
@@ -419,11 +435,11 @@ class TSDemuxer {
         break;
 
       case 0x24:
-        logger.warn('HEVC stream type found, not supported for now');
+        this._trackUnknownPmt(data[offset], logger.warn, 'Unsupported HEVC stream type found');
         break;
 
       default:
-        logger.log('unknown stream type:' + data[offset]);
+        this._trackUnknownPmt(data[offset], logger.log, 'Unknown stream type:' + data[offset]);
         break;
       }
       // move to the next table entry
@@ -471,22 +487,14 @@ class TSDemuxer {
           (frag[11] & 0xFE) * 16384 +// 1 << 14
           (frag[12] & 0xFF) * 128 +// 1 << 7
           (frag[13] & 0xFE) / 2;
-        // check if greater than 2^32 -1
-        if (pesPts > 4294967295) {
-          // decrement 2^33
-          pesPts -= 8589934592;
-        }
+
         if (pesFlags & 0x40) {
           pesDts = (frag[14] & 0x0E) * 536870912 +// 1 << 29
             (frag[15] & 0xFF) * 4194304 +// 1 << 22
             (frag[16] & 0xFE) * 16384 +// 1 << 14
             (frag[17] & 0xFF) * 128 +// 1 << 7
             (frag[18] & 0xFE) / 2;
-          // check if greater than 2^32 -1
-          if (pesDts > 4294967295) {
-            // decrement 2^33
-            pesDts -= 8589934592;
-          }
+
           if (pesPts - pesDts > 60 * 90000) {
             logger.warn(`${Math.round((pesPts - pesDts) / 90000)}s delta between PTS and DTS, align them`);
             pesPts = pesDts;
@@ -1036,17 +1044,19 @@ class TSDemuxer {
 
     // scan for aac samples
     while (offset < len) {
-      if (ADTS.isHeader(data, offset) && (offset + 5) < len) {
-        let frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
-        if (frame) {
-          // logger.log(`${Math.round(frame.sample.pts)} : AAC`);
-          offset += frame.length;
-          stamp = frame.sample.pts;
-          frameIndex++;
-        } else {
-          // logger.log('Unable to parse AAC frame');
-          break;
+      if (ADTS.isHeader(data, offset)) {
+        if ((offset + 5) < len) {
+          const frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
+          if (frame) {
+            offset += frame.length;
+            stamp = frame.sample.pts;
+            frameIndex++;
+            continue;
+          }
         }
+        // We are at an ADTS header, but do not have enough data for a frame
+        // Remaining data will be added to aacOverFlow
+        break;
       } else {
         // nothing found, keep looking
         offset++;

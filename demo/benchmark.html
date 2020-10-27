@@ -8,15 +8,24 @@
 <script src="../dist/hls.js"></script>
 <video id="video" controls></video>
 <script>
-    /* get stream from query string */
-    function getParameterByName(name) {
-        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
-        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
-                results = regex.exec(location.search);
-        return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+    function parseQuery(queryString) {
+        var query = {};
+        var pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
+        for (var i = 0; i < pairs.length; i++) {
+            var pair = pairs[i].split('=');
+            query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+        }
+        return query;
     }
 
-    var stream = getParameterByName('stream') || 'https://video-dev.github.io/streams/x36xhzz/url_8/193039199_mp4_h264_aac_fhd_7.m3u8';
+
+    /* get stream from query string */
+    function getParameterByName(name) {
+        var query = parseQuery(window.location.search);
+        return query.hasOwnProperty(name) ? query[name] : undefined;
+    }
+
+    var stream = getParameterByName('stream') || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 </script>
 <script>
     if(Hls.isSupported()) {
@@ -24,8 +33,9 @@
         var hls = new Hls();
         hls.loadSource(stream);
         hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED,function() {
-            video.play();
+        hls.on(Hls.Events.MEDIA_ATTACHED, function() {
+          video.muted = true;
+          video.play();
         });
     }
 </script>
