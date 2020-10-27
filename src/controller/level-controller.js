@@ -9,7 +9,6 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, computeReloadInterval } from './level-helper';
 
-const { performance } = window;
 let chromeOrFirefox;
 
 export default class LevelController extends EventHandler {
@@ -51,10 +50,6 @@ export default class LevelController extends EventHandler {
     if (levels) {
       levels.forEach(level => {
         level.loadError = 0;
-        const levelDetails = level.details;
-        if (levelDetails && levelDetails.live) {
-          level.details = undefined;
-        }
       });
     }
     // speed up live playlist refresh if timer exists
@@ -104,7 +99,6 @@ export default class LevelController extends EventHandler {
 
       if (attributes) {
         if (attributes.AUDIO) {
-          audioCodecFound = true;
           addGroupId(levelFromSet || level, 'audio', attributes.AUDIO);
         }
         if (attributes.SUBTITLES) {
@@ -146,7 +140,9 @@ export default class LevelController extends EventHandler {
         }
       }
 
-      // Audio is only alternate if manifest include a URI along with the audio group tag
+      // Audio is only alternate if manifest include a URI along with the audio group tag,
+      // and this is not an audio-only stream where levels contain audio-only
+      const audioOnly = audioCodecFound && !videoCodecFound;
       this.hls.trigger(Event.MANIFEST_PARSED, {
         levels,
         audioTracks,
@@ -154,7 +150,7 @@ export default class LevelController extends EventHandler {
         stats: data.stats,
         audio: audioCodecFound,
         video: videoCodecFound,
-        altAudio: audioTracks.some(t => !!t.url)
+        altAudio: !audioOnly && audioTracks.some(t => !!t.url)
       });
     } else {
       this.hls.trigger(Event.ERROR, {
@@ -464,5 +460,32 @@ export default class LevelController extends EventHandler {
     if (this.manualLevelIndex === -1) {
       this.hls.nextAutoLevel = nextLevel;
     }
+  }
+
+  removeLevel (levelIndex, urlId) {
+    const levels = this.levels.filter((level, index) => {
+      if (index !== levelIndex) {
+        return true;
+      }
+
+      if (level.url.length > 1 && urlId !== undefined) {
+        level.url = level.url.filter((url, id) => id !== urlId);
+        level.urlId = 0;
+        return true;
+      }
+      return false;
+    }).map((level, index) => {
+      const { details } = level;
+      if (details && details.fragments) {
+        details.fragments.forEach((fragment) => {
+          fragment.level = index;
+        });
+      }
+      return level;
+    });
+
+    this._levels = levels;
+
+    this.hls.trigger(Event.LEVELS_UPDATED, { levels });
   }
 }

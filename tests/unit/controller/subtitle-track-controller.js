@@ -91,6 +91,7 @@ describe('SubtitleTrackController', function () {
 
     it('should trigger SUBTITLE_TRACK_SWITCH', function () {
       const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.stopped = false;
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
 
@@ -100,6 +101,7 @@ describe('SubtitleTrackController', function () {
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track has no details', function () {
       const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.stopped = false;
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 1;
 
@@ -126,6 +128,7 @@ describe('SubtitleTrackController', function () {
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {
       const triggerSpy = sandbox.spy(subtitleTrackController.hls, 'trigger');
+      subtitleTrackController.stopped = false;
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = 2;
 

@@ -7,7 +7,7 @@ describe('BufferController tests', function () {
   let bufferController;
   let flushSpy;
   let removeStub;
-  const sandbox = sinon.sandbox.create();
+  const sandbox = sinon.createSandbox();
 
   beforeEach(function () {
     hls = new Hls({});
@@ -179,6 +179,11 @@ describe('BufferController tests', function () {
     it('expects two bufferCodec events if altAudio is signaled', function () {
       bufferController.onManifestParsed({ altAudio: true });
       expect(bufferController.bufferCodecEventsExpected).to.equal(2);
+    });
+
+    it('expects one bufferCodec event if altAudio is signaled with audio only', function () {
+      bufferController.onManifestParsed({ altAudio: true, audio: true, video: false });
+      expect(bufferController.bufferCodecEventsExpected).to.equal(1);
     });
 
     it('creates sourceBuffers when no more BUFFER_CODEC events are expected', function () {

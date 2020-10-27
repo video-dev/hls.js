@@ -106,12 +106,15 @@ select option {
 }
 
 #toggleButtons button {
-  width: 19%;
+  width: 16%;
   display : inline-block;
   text-align: center;
   font-size: 10pt;
   font-weight: bolder;
-  background-color: rgb(181, 222, 255)
+  background-color: rgb(181, 222, 255);
+  padding: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #statusOut {

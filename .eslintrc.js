@@ -20,9 +20,9 @@ module.exports = {
     'eslint:recommended',
     'standard'
   ],
-  'parser': 'typescript-eslint-parser',
+  'parser': '@typescript-eslint/parser',
   'plugins': [
-      'typescript'
+      '@typescript-eslint'
   ],
   'parserOptions': {
     'sourceType': 'module'
@@ -101,6 +101,36 @@ module.exports = {
     'no-self-assign': 1,
     'new-cap': 1,
     'no-undefined': 1,
-    'no-global-assign': 2
-  }
+    'no-global-assign': 2,
+
+    // new rules that we should probably evaluate at some point
+    'no-void': 0,
+    'prefer-const': 0,
+    'indent': 0,
+    'array-bracket-spacing': 0,
+    'quote-props': 0,
+    'no-useless-catch': 0,
+    'no-prototype-builtins': 0,
+    'dot-notation': 0,
+    'lines-between-class-members': 0
+  },
+  'overrides': [
+    {
+      'files': ['*.ts'],
+      'rules': {
+        'no-unused-vars': 0,
+        'no-undef': 0,
+        'no-use-before-define': "off",
+        '@typescript-eslint/no-use-before-define': ["error"],
+        '@typescript-eslint/no-unused-vars': 1,
+        '@typescript-eslint/prefer-optional-chain': 2,
+        '@typescript-eslint/consistent-type-assertions': [ 2,
+          {
+            'assertionStyle': 'as',
+            'objectLiteralTypeAssertions': 'never'
+          }
+        ]
+      }
+    }
+  ]
 };

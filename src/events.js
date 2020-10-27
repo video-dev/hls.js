@@ -45,6 +45,8 @@ const HlsEvents = {
   LEVEL_UPDATED: 'hlsLevelUpdated',
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
+  // fired to notify that levels have changed after removing a level - data: { levels : [available quality levels] }
+  LEVELS_UPDATED: 'hlsLevelsUpdated',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
   // fired when an audio track switching is requested - data: { id : audio track id }
@@ -65,6 +67,10 @@ const HlsEvents = {
   SUBTITLE_TRACK_LOADED: 'hlsSubtitleTrackLoaded',
   // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag }
   SUBTITLE_FRAG_PROCESSED: 'hlsSubtitleFragProcessed',
+  // fired when a set of VTTCues to be managed externally has been parsed - data: { type: string, track: string, cues: [ VTTCue ] }
+  CUES_PARSED: 'hlsCuesParsed',
+  // fired when a text track to be managed externally is found - data: { tracks: [ { label: string, kind: string, default: boolean } ] }
+  NON_NATIVE_TEXT_TRACKS_FOUND: 'hlsNonNativeTextTracksFound',
   // fired when the first timestamp is found - data: { id : demuxer id, initPTS: initPTS, frag : fragment object }
   INIT_PTS_FOUND: 'hlsInitPtsFound',
   // fired when a fragment loading starts - data: { frag : fragment object }

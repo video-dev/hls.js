@@ -5,8 +5,9 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
-import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues, getClosestCue } from '../utils/texttrack-utils';
+
+const MIN_CUE_DURATION = 0.25;
 
 class ID3TrackController extends EventHandler {
   constructor (hls) {
@@ -70,15 +71,16 @@ class ID3TrackController extends EventHandler {
     for (let i = 0; i < samples.length; i++) {
       const frames = ID3.getID3Frames(samples[i].data);
       if (frames) {
-        const startTime = samples[i].pts;
+        // Ensure the pts is positive - sometimes it's reported as a small negative number
+        let startTime = Math.max(samples[i].pts, 0);
         let endTime = i < samples.length - 1 ? samples[i + 1].pts : fragment.endPTS;
+        if (!endTime) {
+          endTime = fragment.start + fragment.duration;
+        }
 
-        if (startTime === endTime) {
-          // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
-          endTime += 0.0001;
-        } else if (startTime > endTime) {
-          logger.warn('detected an id3 sample with endTime < startTime, adjusting endTime to (startTime + 0.25)');
-          endTime = startTime + 0.25;
+        const timeDiff = endTime - startTime;
+        if (timeDiff <= 0) {
+          endTime = startTime + MIN_CUE_DURATION;
         }
 
         for (let j = 0; j < frames.length; j++) {
