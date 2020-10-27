@@ -14,7 +14,6 @@ id=$currentCommit
 root="./netlify"
 version=$(jq -r -e '.version' "./package.json")
 idShort="$(echo "$id" | cut -c 1-8) ($version)"
-latestSiteId="642d9ad4-f002-4104-9309-40ed9cd81a1f"
 stableSiteId="deef7ecf-4c3e-4de0-b6bb-676b02e1c20e"
 
 deploy () {
@@ -32,11 +31,6 @@ echo "Created site '$commitSiteId'."
 
 deploy "$commitSiteId"
 
-if [ $currentCommit = $masterLatestCommit ]; then
-  echo "On latest master commit."
-  deploy "$latestSiteId"
-fi
-
 if [[ $version != *"-"* ]]; then
   echo "Detected new version: $version"
   deploy "$stableSiteId"
@@ -46,7 +40,7 @@ echo "Finished deploying to netlify."
 echo "Updating deployments branch."
 git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b deployments "$root/deployments"
 cd "$root/deployments"
-echo "- [\`$idShort\`](https://github.com/video-dev/hls.js/commit/$id): [https://$commitSiteName.netlify.com/](https://$commitSiteName.netlify.com/)" >> "README.md"
+echo "- [\`$idShort\`](https://github.com/video-dev/hls.js/commit/$id): [https://$commitSiteName.netlify.app/](https://$commitSiteName.netlify.app/)" >> "README.md"
 git add "README.md"
 git -c user.name="HLS.JS CI" commit -m "update for $id"
 git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"

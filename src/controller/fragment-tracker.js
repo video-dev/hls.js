@@ -71,23 +71,23 @@ export class FragmentTracker extends EventHandler {
    * @param {TimeRanges} timeRange TimeRange object from a sourceBuffer
    */
   detectEvictedFragments (elementaryStream, timeRange) {
-    let fragmentTimes, time;
     // Check if any flagged fragments have been unloaded
     Object.keys(this.fragments).forEach(key => {
       const fragmentEntity = this.fragments[key];
-      if (fragmentEntity.buffered === true) {
-        const esData = fragmentEntity.range[elementaryStream];
-        if (esData) {
-          fragmentTimes = esData.time;
-          for (let i = 0; i < fragmentTimes.length; i++) {
-            time = fragmentTimes[i];
-
-            if (this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
-              // Unregister partial fragment as it needs to load again to be reused
-              this.removeFragment(fragmentEntity.body);
-              break;
-            }
-          }
+      if (!fragmentEntity || !fragmentEntity.buffered) {
+        return;
+      }
+      const esData = fragmentEntity.range[elementaryStream];
+      if (!esData) {
+        return;
+      }
+      const fragmentTimes = esData.time;
+      for (let i = 0; i < fragmentTimes.length; i++) {
+        const time = fragmentTimes[i];
+        if (!this.isTimeBuffered(time.startPTS, time.endPTS, timeRange)) {
+          // Unregister partial fragment as it needs to load again to be reused
+          this.removeFragment(fragmentEntity.body);
+          break;
         }
       }
     });

@@ -77,7 +77,6 @@ class AbrController extends EventHandler {
     }
 
     const loader = frag.loader;
-    const minAutoLevel = hls.minAutoLevel;
 
     // if loader has been destroyed or loading has been aborted, stop timer and return
     if (!loader || (loader.stats && loader.stats.aborted)) {
@@ -101,6 +100,9 @@ class AbrController extends EventHandler {
 
         // compute expected fragment length using frag duration and level bitrate. also ensure that expected len is gte than already loaded size
         const level = levels[frag.level];
+        if (!level) {
+          return;
+        }
         const levelBitrate = level.realBitrate ? Math.max(level.realBitrate, level.bitrate) : level.bitrate;
         const expectedLen = stats.total ? stats.total : Math.max(stats.loaded, Math.round(frag.duration * levelBitrate / 8));
         const pos = video.currentTime;
@@ -111,6 +113,7 @@ class AbrController extends EventHandler {
         // time to finish loading current fragment is bigger than buffer starvation delay
         // ie if we risk buffer starvation if bw does not increase quickly
         if ((bufferStarvationDelay < (2 * frag.duration / playbackRate)) && (fragLoadedDelay > bufferStarvationDelay)) {
+          const minAutoLevel = hls.minAutoLevel;
           let fragLevelNextLoadedDelay;
           let nextLoadLevel;
           // lets iterate through lower level and try to find the biggest one that could avoid rebuffering

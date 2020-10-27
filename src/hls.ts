@@ -34,8 +34,8 @@ export default class Hls extends Observer {
   private _autoLevelCapping: number;
   private abrController: any;
   private capLevelController: any;
-  private levelController: any;
-  private streamController: any;
+  private levelController: LevelController;
+  private streamController: StreamController;
   private networkControllers: any[];
   private audioTrackController: any;
   private subtitleTrackController: any;
@@ -281,6 +281,12 @@ export default class Hls extends Observer {
    * @param {string} url
    */
   loadSource (url: string) {
+    this.stopLoad();
+    const media = this.media;
+    if (media && this.url) {
+      this.detachMedia();
+      this.attachMedia(media);
+    }
     url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
@@ -336,6 +342,18 @@ export default class Hls extends Observer {
   }
 
   /**
+   * Remove a loaded level from the list of levels, or a level url in from a list of redundant level urls.
+   * This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user
+   * or hls.js can choose from.
+   *
+   * @param levelIndex {number} The quality level index to of the level to remove
+   * @param urlId {number} The quality level url index in the case that fallback levels are available. Defaults to 0.
+   */
+  removeLevel (levelIndex, urlId = 0) {
+    this.levelController.removeLevel(levelIndex, urlId);
+  }
+
+  /**
    * @type {QualityLevel[]}
    */
   // todo(typescript-levelController)
@@ -355,7 +373,7 @@ export default class Hls extends Observer {
    * Set quality level index immediately .
    * This will flush the current buffer to replace the quality asap.
    * That means playback will interrupt at least shortly to re-buffer and re-sync eventually.
-   * @type {number} -1 for automatic level selection
+   * @param newLevel {number} -1 for automatic level selection
    */
   set currentLevel (newLevel: number) {
     logger.log(`set currentLevel:${newLevel}`);
@@ -463,6 +481,15 @@ export default class Hls extends Observer {
     }
 
     this.levelController.startLevel = newLevel;
+  }
+
+  /**
+   * Get the current setting for capLevelToPlayerSize
+   *
+   * @type {boolean}
+   */
+  get capLevelToPlayerSize (): boolean {
+    return this.config.capLevelToPlayerSize;
   }
 
   /**

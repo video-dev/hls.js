@@ -1,20 +1,20 @@
-export function sortObject(obj) {
-  if(typeof obj !== 'object') {
+export function sortObject (obj) {
+  if (typeof obj !== 'object') {
     return obj;
   }
   let temp = {};
   let keys = [];
-  for(let key in obj) {
+  for (let key in obj) {
     keys.push(key);
   }
   keys.sort();
-  for(let index in keys) {
+  for (let index in keys) {
     temp[keys[index]] = sortObject(obj[keys[index]]);
   }
   return temp;
 }
 
-export function copyTextToClipboard(text) {
+export function copyTextToClipboard (text) {
   let textArea = document.createElement('textarea');
   textArea.value = text;
   document.body.appendChild(textArea);
@@ -28,4 +28,3 @@ export function copyTextToClipboard(text) {
   }
   document.body.removeChild(textArea);
 }
-

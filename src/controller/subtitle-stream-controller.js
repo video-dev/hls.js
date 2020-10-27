@@ -40,6 +40,18 @@ export class SubtitleStreamController extends BaseStreamController {
     this._onMediaSeeking = this.onMediaSeeking.bind(this);
   }
 
+  startLoad () {
+    this.stopLoad();
+    this.state = State.IDLE;
+
+    // Check if we already have a track with necessary details to load fragments
+    const currentTrack = this.tracks[this.currentTrackId];
+    if (currentTrack && currentTrack.details) {
+      this.setInterval(TICK_INTERVAL);
+      this.tick();
+    }
+  }
+
   onSubtitleFragProcessed (data) {
     const { frag, success } = data;
     this.fragPrevious = frag;
@@ -103,6 +115,11 @@ export class SubtitleStreamController extends BaseStreamController {
     if (!frag || frag.type !== 'subtitle') {
       return;
     }
+
+    if (this.fragCurrent && this.fragCurrent.loader) {
+      this.fragCurrent.loader.abort();
+    }
+
     this.state = State.IDLE;
   }
 
@@ -237,6 +254,7 @@ export class SubtitleStreamController extends BaseStreamController {
 
   stopLoad () {
     this.lastAVStart = 0;
+    this.fragPrevious = null;
     super.stopLoad();
   }
 
@@ -245,6 +263,28 @@ export class SubtitleStreamController extends BaseStreamController {
   }
 
   onMediaSeeking () {
-    this.fragPrevious = null;
+    if (this.fragCurrent) {
+      const currentTime = this.media ? this.media.currentTime : 0;
+      const tolerance = this.config.maxFragLookUpTolerance;
+      const fragStartOffset = this.fragCurrent.start - tolerance;
+      const fragEndOffset = this.fragCurrent.start + this.fragCurrent.duration + tolerance;
+
+      // check if position will be out of currently loaded frag range after seeking : if out, cancel frag load, if in, don't do anything
+      if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
+        if (this.fragCurrent.loader) {
+          this.fragCurrent.loader.abort();
+        }
+
+        this.fragmentTracker.removeFragment(this.fragCurrent);
+        this.fragCurrent = null;
+        this.fragPrevious = null;
+
+        // switch to IDLE state to load new fragment
+        this.state = State.IDLE;
+
+        // speed up things
+        this.tick();
+      }
+    }
   }
 }
