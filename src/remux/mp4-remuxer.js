@@ -138,7 +138,7 @@ class MP4Remuxer {
       tracks = {},
       data = { tracks },
       computePTSDTS = (this._initPTS === undefined),
-      initPTS, initDTS, initPTS90Khz;
+      initPTS, initDTS;
 
     if (computePTSDTS) {
       initPTS = initDTS = Infinity;
@@ -192,13 +192,11 @@ class MP4Remuxer {
         const startOffset = Math.round(inputTimeScale * timeOffset);
         initDTS = Math.min(initDTS, PTSNormalize(videoSamples[0].dts, startPTS) - startOffset);
         initPTS = Math.min(initPTS, startPTS - startOffset);
-        initPTS90Khz = toMpegTsClockFromTimescale(initPTS, inputTimeScale);
-        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, initPTS90Khz: initPTS90Khz });
+        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, timescale: inputTimeScale });
       }
     } else if (computePTSDTS && tracks.audio) {
       // initPTS found for audio-only stream with main and alt audio
-      initPTS90Khz = toMpegTsClockFromTimescale(initPTS, audioTrack.inputTimeScale);
-      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, initPTS90Khz: initPTS90Khz });
+      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, timescale: audioTrack.inputTimeScale });
     }
 
     if (Object.keys(tracks).length) {
