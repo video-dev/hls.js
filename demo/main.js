@@ -1009,7 +1009,10 @@ function checkBuffer () {
 
     if ($('#statsDisplayTab').is(':visible')) {
       let log = `Duration: ${video.duration}\nBuffered: ${timeRangesToString(video.buffered)}\nSeekable: ${timeRangesToString(video.seekable)}\nPlayed: ${timeRangesToString(video.played)}\n`;
+      log += `Max Latency: ${hls.maxLatency}\n`;
+      log += `Target Latency: ${hls.targetLatency}\n`;
       log += `Latency: ${hls.latency}\n`;
+      log += `Edge Stall: ${hls.latencyController.edgeStalled}\n`;
       log += `Playback rate: ${video.playbackRate.toFixed(2)}\n`;
       if (hls.media) {
         for (const type in tracks) {
