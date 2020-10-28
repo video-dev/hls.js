@@ -720,9 +720,9 @@ export default class MP4Remuxer implements Remuxer {
     this.nextAudioPts = nextAudioPts = lastPTS! + scaleFactor * lastSample.duration;
 
     // Set the track samples from inputSamples to outputSamples before remuxing
-    const moof = rawMPEG ? new Uint8Array(0) : MP4.moof(track.sequenceNumber++, firstPTS! / scaleFactor, Object.assign({}, track, {
-      samples: outputSamples
-    }));
+    const moof = rawMPEG
+      ? new Uint8Array(0)
+      : MP4.moof(track.sequenceNumber++, firstPTS! / scaleFactor, Object.assign({}, track, { samples: outputSamples }));
 
     // Clear the track samples. This also clears the samples array in the demuxer, since the reference is shared
     track.samples = [];
