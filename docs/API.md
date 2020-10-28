@@ -40,6 +40,8 @@
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
+  - [`minLiveSyncPlaybackRate`](#minLiveSyncPlaybackRate)
+  - [`maxLiveSyncPlaybackRate`](#maxLiveSyncPlaybackRate)
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`liveBackBufferLength`](#livebackbufferlength)
   - [`enableWorker`](#enableworker)
@@ -124,6 +126,8 @@
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
   - [`hls.latency`](#hlslatency)
+  - [`hls.maxLatency`](#hlsmaxlatency)
+  - [`hls.targetLatency`](#hlstargetlatency)
 - [Runtime Events](#runtime-events)
 - [Loader Composition](#loader-composition)
 - [Errors](#errors)
@@ -582,6 +586,20 @@ If defined in the configuration object, `liveMaxLatencyDuration` will take prece
 If set, this value must be stricly superior to `liveSyncDuration` which must be defined as well.
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
+
+### `minLiveSyncPlaybackRate`
+
+(default: `0.75` min: `0.5` max: `1`)
+
+Decrease `video.playbackRate` down to this value when latency falls below target (`liveSyncDuration(Count)` or manifest (PART-)HOLD-BACK) in a live stream.
+Set both `minLiveSyncPlaybackRate` and `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
+
+### `maxLiveSyncPlaybackRate`
+
+(default: `1.5` min: `1` max: `2`)
+
+Increase `video.playbackRate` up to this value to catch up to target latency (`liveSyncDuration(Count)` or manifest (PART-)HOLD-BACK) in a live stream.
+Set both `minLiveSyncPlaybackRate` and `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
 
 ### `liveDurationInfinity`
 
@@ -1308,7 +1326,18 @@ get : position of live sync point (ie edge of live position minus safety delay d
 
 ### `hls.latency`
 
-get : estimated position of live edge (ie edge of live playlist plus time sync playlist advanced)
+get : estimated position (in seconds) of live edge (ie edge of live playlist plus time sync playlist advanced)
+returns 0 before first playlist is loaded
+
+### `hls.maxLatency`
+
+get : maximum distance from the edge before the player seeks forward to ```hls.liveSyncPosition```
+configured using ```liveMaxLatencyDurationCount``` (multiple of target duration) or ```liveMaxLatencyDuration```
+returns 0 before first playlist is loaded
+
+### `hls.targetLatency`
+
+get : target distance from the edge as calculated by the latency controller
 
 ## Runtime Events
 

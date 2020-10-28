@@ -8,15 +8,8 @@ import type Hls from '../hls';
 import type { HlsConfig } from '../config';
 
 // TODO: LatencyController config options:
-//  - maxLiveSyncPlaybackRate
-//  - minLiveSyncPlaybackRate
-//  - maxLevelUpdateAge (rename or existing option we could use?)
-//  - adjustLatencyOnErrorMax
 //  - liveSyncOnStallIncrease
 //  - maxLiveSyncOnStallIncrease
-const L = 1.5; // Change playback rate by up to 1.5x
-const k = 0.75;
-const sigmoid = (x, x0) => L / (1 + Math.exp(-k * (x - x0)));
 
 // TODO: LatencyController unit tests
 //  - latency estimate
@@ -47,9 +40,26 @@ export default class LatencyController implements ComponentAPI {
     if (liveEdge === null || targetLatency === null || this.levelDetails === null) {
       return null;
     }
-    const maxLevelUpdateAge = this.levelDetails.targetduration * 3;
-    const edgeStalled = Math.max(this.levelDetails.age - maxLevelUpdateAge, 0);
-    return Math.min(this.levelDetails.edge, liveEdge - targetLatency - edgeStalled);
+    return Math.min(this.levelDetails.edge, liveEdge - targetLatency - this.edgeStalled);
+  }
+
+  get edgeStalled (): number {
+    const { levelDetails } = this;
+    if (levelDetails === null) {
+      return 0;
+    }
+    const maxLevelUpdateAge = ((this.config.lowLatencyMode && levelDetails.partTarget) || levelDetails.targetduration) * 3;
+    return Math.max(levelDetails.age - maxLevelUpdateAge, 0);
+  }
+
+  get maxLatency (): number {
+    const { config, levelDetails } = this;
+    if (levelDetails === null) {
+      return 0;
+    }
+    return config.liveMaxLatencyDuration !== undefined
+      ? config.liveMaxLatencyDuration
+      : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
   }
 
   public destroy (): void {
@@ -126,9 +136,21 @@ export default class LatencyController implements ComponentAPI {
     if (latencyTarget === null) {
       return;
     }
-    const distance = latency - latencyTarget;
-    if (distance && levelDetails.live) {
-      media.playbackRate = Math.max(0.1, sigmoid(latency, latencyTarget));
+    const { minLiveSyncPlaybackRate, maxLiveSyncPlaybackRate } = this.config;
+    if (minLiveSyncPlaybackRate === 1 && maxLiveSyncPlaybackRate === 1) {
+      return;
+    }
+    const distanceFromTarget = latency - latencyTarget;
+    if (distanceFromTarget && levelDetails.live) {
+      const distanceFromEdge = levelDetails.edge - this.currentTime;
+      const min = Math.min(1, Math.max(0.5, minLiveSyncPlaybackRate));
+      if (distanceFromEdge > 0.5) {
+        const max = Math.min(2, Math.max(1.0, maxLiveSyncPlaybackRate));
+        const rate = 2 / (1 + Math.exp(-0.75 * distanceFromTarget - this.edgeStalled));
+        media.playbackRate = Math.min(max, Math.max(min, rate));
+      } else {
+        media.playbackRate = Math.min(1, Math.max(min, media.playbackRate - 0.125));
+      }
     } else if (media.playbackRate !== 1) {
       media.playbackRate = 1;
     }
@@ -150,7 +172,7 @@ export default class LatencyController implements ComponentAPI {
     return liveEdge - this.currentTime;
   }
 
-  private computeTargetLatency (): number | null {
+  public computeTargetLatency (): number | null {
     const { levelDetails } = this;
     if (levelDetails === null) {
       return null;

@@ -568,7 +568,6 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         this.log(`Start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
         this.startPosition = startTimeOffset;
       } else {
-        // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
         if (details.live) {
           this.startPosition = this.hls.liveSyncPosition || sliding;
           this.log(`Configure startPosition to ${this.startPosition}`);

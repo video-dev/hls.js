@@ -722,9 +722,28 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * estimated position (in seconds) of live edge (ie edge of live playlist plus time sync playlist advanced)
+   * returns 0 before first playlist is loaded
    * @type {number}
    */
   get latency () {
     return this.latencyController.latency;
+  }
+
+  /**
+   * maximum distance from the edge before the player seeks forward to ```hls.liveSyncPosition```
+   * configured using ```liveMaxLatencyDurationCount``` (multiple of target duration) or ```liveMaxLatencyDuration```
+   * returns 0 before first playlist is loaded
+   * @type {number}
+   */
+  get maxLatency (): number {
+    return this.latencyController.maxLatency;
+  }
+
+  /**
+   * target distance from the edge as calculated by the latency controller
+   * @type {number}
+   */
+  get targetLatency (): number | null {
+    return this.latencyController.computeTargetLatency();
   }
 }
