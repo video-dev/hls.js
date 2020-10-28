@@ -1377,7 +1377,7 @@ Full list of Events is available below:
   - `Hls.Events.SUBTITLE_FRAG_PROCESSED`  - fired when a subtitle fragment has been processed
     -  data: { success : boolean, frag : the processed frag }
   - `Hls.Events.INIT_PTS_FOUND`  - fired when the first timestamp is found
-    -  data: { d : demuxer id, initPTS: initPTS, initPTS90Khz: initPTS, frag : fragment object }
+    -  data: { d : demuxer id, initPTS: initPTS, timescale: timescale, frag : fragment object }
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
     -  data: { frag : fragment object }
   - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress

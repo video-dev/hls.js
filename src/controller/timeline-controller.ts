@@ -63,6 +63,7 @@ class TimelineController extends EventHandler {
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
+  private timescale: Array<number> = [];
   private unparsedVttFrags: Array<{ frag: Fragment, payload: ArrayBuffer }> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
@@ -150,11 +151,12 @@ class TimelineController extends EventHandler {
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
-  onInitPtsFound (data: { id: string, frag: Fragment, initPTS: number, initPTS90Khz: number}) {
-    const { frag, id, initPTS90Khz } = data;
+  onInitPtsFound (data: { id: string, frag: Fragment, initPTS: number, timescale: number}) {
+    const { frag, id, initPTS, timescale } = data;
     const { unparsedVttFrags } = this;
     if (id === 'main') {
-      this.initPTS[frag.cc] = initPTS90Khz;
+      this.initPTS[frag.cc] = initPTS;
+      this.timescale[frag.cc] = timescale;
     }
 
     // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.
@@ -284,6 +286,7 @@ class TimelineController extends EventHandler {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
+    this.timescale = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
       this.cea608Parser1.reset();
       this.cea608Parser2.reset();
@@ -406,7 +409,7 @@ class TimelineController extends EventHandler {
       this.prevCC = frag.cc;
     }
     // Parse the WebVTT file contents.
-    WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
+    WebVTTParser.parse(payload, this.initPTS[frag.cc], this.timescale[frag.cc], vttCCs, frag.cc, (cues) => {
       if (this.config.renderTextTracksNatively) {
         const currentTrack = textTracks[frag.level];
         // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
