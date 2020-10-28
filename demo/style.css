@@ -22,6 +22,66 @@ select option {
   float: right;
 }
 
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #ddd;
+    background-color: #111;
+  }
+
+  button, optgroup, select {
+    background-color: rgb(0, 40, 70);
+  }
+
+  input, textarea {
+    background-color: #222;
+  }
+
+  label {
+    font-weight: initial;
+  }
+
+  a {
+    color: #337ab7;
+  }
+
+  pre {
+    background-color: #050505;
+    border-color: #333;
+    color: #ccc;
+  }
+
+  .ace-github {
+    background: #000;
+    color: #fff;
+  }
+
+  .ace-github .ace_gutter {
+    background: #181818;
+    color: #888;
+  }
+
+  .ace-github .ace_marker-layer .ace_active-line {
+    background: #111;
+  }
+
+  .ace-github.ace_focus .ace_marker-layer .ace_active-line {
+    background: #321;
+  }
+
+  div.config-editor-commands {
+    background-color: #444;
+    border-color: #333;
+  }
+
+  button.btn {
+    color: #050505;
+  }
+
+  canvas {
+    background: #bbb;
+  }
+}
+
 #controls {
   display: flex;
   flex-direction: column;
