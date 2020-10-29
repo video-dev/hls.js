@@ -145,6 +145,7 @@ jobs:
   test_functional_optional:
     needs: test_functional_required
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       fail-fast: false
       max-parallel: 8
