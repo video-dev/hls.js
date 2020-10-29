@@ -298,8 +298,7 @@ export default class M3U8Parser {
           break;
         case 'KEY': {
           // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
-          const decryptparams = value1;
-          const keyAttrs = new AttrList(decryptparams);
+          const keyAttrs = new AttrList(value1);
           const decryptmethod = keyAttrs.enumeratedString('METHOD');
           const decrypturi = keyAttrs.URI;
           const decryptiv = keyAttrs.hexadecimalInteger('IV');

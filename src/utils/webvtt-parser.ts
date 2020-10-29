@@ -91,7 +91,7 @@ export function parseWebVTT (
 
     // Update offsets for new discontinuities
     if (currCC?.new) {
-      if (localTime !== void 0) {
+      if (localTime !== undefined) {
         // When local time is provided, offset = discontinuity start time - local time
         cueOffset = vttCCs.ccOffset = currCC.start;
       } else {

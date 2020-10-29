@@ -377,7 +377,7 @@ VTTParser.prototype = {
           // 35 - If we have the special substring '-->' then report the cue,
           // but do not collect the line as we need to process the current
           // one as a new cue.
-          if (!line || hasSubstring && (alreadyCollectedLine = true)) {
+          if (!line || (hasSubstring && (alreadyCollectedLine = true))) {
             // We are done parsing self cue.
             if (_this.oncue) {
               _this.oncue(_this.cue);

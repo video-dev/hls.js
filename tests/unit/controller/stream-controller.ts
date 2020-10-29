@@ -143,6 +143,7 @@ describe('StreamController', function () {
 
     let triggerSpy;
     let frag;
+    let levelDetails;
     beforeEach(function () {
       const attrs: LevelAttributes = new AttrList({});
       streamController['levels'] = [new Level({
@@ -155,6 +156,8 @@ describe('StreamController', function () {
       frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.level = 0;
       frag.url = 'file';
+      levelDetails = new LevelDetails('');
+      levelDetails.fragments.push(frag);
     });
 
     function assertLoadingState (frag) {
@@ -169,32 +172,32 @@ describe('StreamController', function () {
 
     it('should load a complete fragment which has not been previously appended', function () {
       fragStateStub(FragmentState.NOT_LOADED);
-      streamController['loadFragment'](frag, 0);
+      streamController['loadFragment'](frag, levelDetails, 0);
       assertLoadingState(frag);
     });
 
     it('should load a partial fragment', function () {
       fragStateStub(FragmentState.PARTIAL);
-      streamController['loadFragment'](frag, 0);
+      streamController['loadFragment'](frag, levelDetails, 0);
       assertLoadingState(frag);
     });
 
     it('should load a frag which has backtracked', function () {
       fragStateStub(FragmentState.OK);
       frag.backtracked = true;
-      streamController['loadFragment'](frag, 0);
+      streamController['loadFragment'](frag, levelDetails, 0);
       assertLoadingState(frag);
     });
 
     it('should not load a fragment which has completely & successfully loaded', function () {
       fragStateStub(FragmentState.OK);
-      streamController['loadFragment'](frag, 0);
+      streamController['loadFragment'](frag, levelDetails, 0);
       assertNotLoadingState();
     });
 
     it('should not load a fragment while it is appending', function () {
       fragStateStub(FragmentState.APPENDING);
-      streamController['loadFragment'](frag, 0);
+      streamController['loadFragment'](frag, levelDetails, 0);
       assertNotLoadingState();
     });
   });

@@ -15,7 +15,6 @@ export default class FragmentLoader {
   private readonly config: HlsConfig;
   private loader: Loader<FragmentLoaderContext> | null = null;
   private partLoadTimeout: number = -1;
-  private nextPartIndex: number = -1;
 
   constructor (config: HlsConfig) {
     this.config = config;
@@ -24,32 +23,29 @@ export default class FragmentLoader {
   abort () {
     if (this.loader) {
       // Abort the loader for current fragment. Only one may load at any given time
-      console.log(`Abort frag loader ${this.loader.context.url}`, this.loader);
       this.loader.abort();
     }
   }
 
-  load (frag: Fragment, targetBufferTime: number | null = null, onProgress?: FragmentLoadProgressCallback): Promise<FragLoadedData> {
+  load (frag: Fragment, onProgress?: FragmentLoadProgressCallback): Promise<FragLoadedData> {
     const url = frag.url;
     if (!url) {
       return Promise.reject(new LoadError({
         type: ErrorTypes.NETWORK_ERROR,
-        details: ErrorDetails.INTERNAL_EXCEPTION,
+        details: ErrorDetails.FRAG_LOAD_ERROR,
         fatal: false,
         frag,
         networkDetails: null
       }, `Fragment does not have a ${url ? 'part list' : 'url'}`));
     }
+    this.abort();
 
     const config = this.config;
     const FragmentILoader = config.fLoader;
     const DefaultILoader = config.loader;
-
-    this.abort();
-
     const loader = this.loader = frag.loader =
       FragmentILoader ? new FragmentILoader(config) : new DefaultILoader(config) as Loader<FragmentLoaderContext>;
-
+    const loaderContext = createLoaderContext(frag);
     const loaderConfig: LoaderConfiguration = {
       timeout: config.fragLoadingTimeOut,
       maxRetry: 0,
@@ -57,8 +53,6 @@ export default class FragmentLoader {
       maxRetryDelay: config.fragLoadingMaxRetryTimeout,
       highWaterMark: MIN_CHUNK_SIZE
     };
-
-    const loaderContext = createLoaderContext(frag);
 
     return new Promise((resolve, reject) => {
       // Assign frag stats to the loader's stats reference
@@ -116,11 +110,103 @@ export default class FragmentLoader {
     });
   }
 
+  public loadPart (frag: Fragment, part: Part, onProgress: FragmentLoadProgressCallback): Promise<FragLoadedData> {
+    this.abort();
+
+    const config = this.config;
+    const FragmentILoader = config.fLoader;
+    const DefaultILoader = config.loader;
+    const loader = this.loader = frag.loader =
+      FragmentILoader ? new FragmentILoader(config) : new DefaultILoader(config) as Loader<FragmentLoaderContext>;
+    const loaderConfig: LoaderConfiguration = {
+      timeout: config.fragLoadingTimeOut,
+      maxRetry: 0,
+      retryDelay: 0,
+      maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+      highWaterMark: MIN_CHUNK_SIZE
+    };
+    return new Promise((resolve, reject) => {
+      const loaderContext = createLoaderContext(frag, part);
+      // Assign part stats to the loader's stats reference
+      loader.stats = part.stats;
+      loader.load(loaderContext, loaderConfig, {
+        onSuccess: (response, stats, context, networkDetails) => {
+          this.resetLoader(frag, loader);
+          this.updateStatsFromPart(frag, part);
+          const partLoadedData: FragLoadedData = {
+            frag,
+            part,
+            payload: response.data as ArrayBuffer,
+            networkDetails
+          };
+          onProgress(partLoadedData);
+          resolve(partLoadedData);
+        },
+        onError: (response, context, networkDetails) => {
+          this.resetLoader(frag, loader);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.FRAG_LOAD_ERROR,
+            fatal: false,
+            frag,
+            part,
+            response,
+            networkDetails
+          }));
+        },
+        onAbort: (stats, context, networkDetails) => {
+          frag.stats.aborted = part.stats.aborted;
+          this.resetLoader(frag, loader);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.INTERNAL_ABORTED,
+            fatal: false,
+            frag,
+            part,
+            networkDetails
+          }));
+        },
+        onTimeout: (response, context, networkDetails) => {
+          this.resetLoader(frag, loader);
+          reject(new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.FRAG_LOAD_TIMEOUT,
+            fatal: false,
+            frag,
+            part,
+            networkDetails
+          }));
+        }
+      });
+    });
+  }
+
+  private updateStatsFromPart (frag: Fragment, part: Part) {
+    const fragStats = frag.stats;
+    const partStats = part.stats;
+    const partTotal = partStats.total;
+    fragStats.loaded += partStats.loaded;
+    if (partTotal) {
+      const estLoadedParts = Math.round(fragStats.loaded / partTotal);
+      const estTotalParts = Math.round(frag.duration / part.duration);
+      const estRemainingParts = estTotalParts - estLoadedParts;
+      fragStats.total = fragStats.loaded + partStats.total + estRemainingParts * Math.round(fragStats.loaded / estLoadedParts);
+    }
+    const fragLoading = fragStats.loading;
+    if (fragLoading.start) {
+      // add to fragment loader latency
+      fragLoading.first += partStats.loading.first - partStats.loading.start;
+    } else {
+      fragLoading.start = partStats.loading.start;
+      fragLoading.first = partStats.loading.first;
+    }
+    fragLoading.end = partStats.loading.end;
+  }
+
   private resetLoader (frag: Fragment, loader: Loader<FragmentLoaderContext>) {
     frag.loader = null;
     if (this.loader === loader) {
       self.clearTimeout(this.partLoadTimeout);
-      this.nextPartIndex = -1;
       this.loader = null;
     }
   }

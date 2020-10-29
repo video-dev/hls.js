@@ -110,7 +110,7 @@ export default class BufferController implements ComponentAPI {
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
     let codecEvents: number = 2;
-    if (data.audio && !data.video || !data.altAudio) {
+    if ((data.audio && !data.video) || !data.altAudio) {
       codecEvents = 1;
     }
     this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
@@ -134,7 +134,7 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onMediaDetaching () {
-    logger.log('media source detaching');
+    logger.log('[buffer-controller]: media source detaching');
     const { media, mediaSource, _objectUrl } = this;
     if (mediaSource) {
       if (mediaSource.readyState === 'open') {
@@ -145,7 +145,7 @@ export default class BufferController implements ComponentAPI {
           // let's just avoid this exception to propagate
           mediaSource.endOfStream();
         } catch (err) {
-          logger.warn(`onMediaDetaching:${err.message} while calling endOfStream`);
+          logger.warn(`[buffer-controller]: onMediaDetaching: ${err.message} while calling endOfStream`);
         }
       }
       // Clean up the SourceBuffers by invoking onBufferReset
@@ -167,7 +167,7 @@ export default class BufferController implements ComponentAPI {
           media.removeAttribute('src');
           media.load();
         } else {
-          logger.warn('media.src was changed by a third party - skip cleanup');
+          logger.warn('[buffer-controller]: media.src was changed by a third party - skip cleanup');
         }
       }
 
@@ -197,7 +197,7 @@ export default class BufferController implements ComponentAPI {
           sourceBuffer[type] = undefined;
         }
       } catch (err) {
-        logger.warn(`Failed to reset the ${type} buffer`, err);
+        logger.warn(`[buffer-controller]: Failed to reset the ${type} buffer`, err);
       }
     });
     this._initSourceBuffer();
@@ -226,7 +226,7 @@ export default class BufferController implements ComponentAPI {
     const chunkStats = chunkMeta.buffering[type];
     const fragStats = frag.stats.buffering;
 
-    const start = performance.now();
+    const start = self.performance.now();
     chunkStats.start = start;
     if (!fragStats.start) {
       fragStats.start = start;
@@ -234,7 +234,7 @@ export default class BufferController implements ComponentAPI {
 
     const operation: BufferOperation = {
       execute: () => {
-        chunkStats.executeStart = performance.now();
+        chunkStats.executeStart = self.performance.now();
         this.appendExecutor(data, type);
       },
       onStart: () => {
@@ -242,7 +242,7 @@ export default class BufferController implements ComponentAPI {
       },
       onComplete: () => {
         logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
-        const end = performance.now();
+        const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
         if (!fragStats.first) {
           fragStats.first = end;
@@ -313,16 +313,16 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onFragParsed (event: Events.FRAG_PARSED, data: FragParsedData) {
-    const { frag } = data;
+    const { frag, part } = data;
     const buffersAppendedTo: Array<SourceBufferName> = [];
-
-    if (frag.elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO]) {
+    const elementaryStreams = part ? part.elementaryStreams : frag.elementaryStreams;
+    if (elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO]) {
       buffersAppendedTo.push('audiovideo');
     } else {
-      if (frag.elementaryStreams[ElementaryStreamTypes.AUDIO]) {
+      if (elementaryStreams[ElementaryStreamTypes.AUDIO]) {
         buffersAppendedTo.push('audio');
       }
-      if (frag.elementaryStreams[ElementaryStreamTypes.VIDEO]) {
+      if (elementaryStreams[ElementaryStreamTypes.VIDEO]) {
         buffersAppendedTo.push('video');
       }
     }
@@ -332,10 +332,9 @@ export default class BufferController implements ComponentAPI {
       this.hls.trigger(Events.FRAG_BUFFERED, { frag, stats: frag.stats, id: frag.type });
     };
 
-    // console.assert(buffersAppendedTo.length, 'Fragments must have at least one ElementaryStreamType set', frag);
     if (buffersAppendedTo.length === 0) {
       logger.warn(`Fragments must have at least one ElementaryStreamType set. type: ${frag.type} level: ${frag.level} sn: ${frag.sn}`);
-      onUnblocked();
+      Promise.resolve(onUnblocked);
       return;
     }
 
@@ -361,12 +360,9 @@ export default class BufferController implements ComponentAPI {
       if (!mediaSource || mediaSource.readyState !== 'open') {
         return;
       }
-
-      logger.log('[buffer-controller]: Signaling end of stream');
       // Allow this to throw and be caught by the enqueueing function
       mediaSource.endOfStream();
     };
-    logger.log('[buffer-controller: End of stream signalled, enqueuing end of stream operation');
     this.blockBuffers(endStream);
   }
 
@@ -378,7 +374,6 @@ export default class BufferController implements ComponentAPI {
     this._live = details.live;
 
     const levelEnd = details.fragments[0].start + details.totalduration;
-    logger.log('[buffer-controller]: Duration update required; enqueueing duration change operation');
     if (this.getSourceBufferTypes().length) {
       this.blockBuffers(this.updateMediaElementDuration.bind(this, levelEnd));
     } else {
@@ -423,8 +418,8 @@ export default class BufferController implements ComponentAPI {
           audioBuffer.timestampOffset = data.start;
         }
       },
-      onError (e) {
-        logger.warn('[buffer-controller]: Failed to abort the audio SourceBuffer', e);
+      onError (error) {
+        logger.warn('[buffer-controller]: Failed to abort the audio SourceBuffer', error);
       }
     };
     operationQueue.insertAbort(operation, type);
@@ -538,7 +533,7 @@ export default class BufferController implements ComponentAPI {
         // use levelCodec as first priority
         const codec = track.levelCodec || track.codec;
         const mimeType = `${track.container};codecs=${codec}`;
-        logger.log(`creating sourceBuffer(${mimeType})`);
+        logger.log(`[buffer-controller]: creating sourceBuffer(${mimeType})`);
         try {
           const sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
           const sbName = trackName as SourceBufferName;
@@ -553,7 +548,7 @@ export default class BufferController implements ComponentAPI {
             id: track.id
           };
         } catch (err) {
-          logger.error(`error while trying to add sourceBuffer:${err.message}`);
+          logger.error(`[buffer-controller]: error while trying to add sourceBuffer: ${err.message}`);
           this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_ADD_CODEC_ERROR,
@@ -570,11 +565,9 @@ export default class BufferController implements ComponentAPI {
   // Keep as arrow functions so that we can directly reference these functions directly as event listeners
   private _onMediaSourceOpen = () => {
     const { hls, media, mediaSource } = this;
-    logger.log('media source opened');
+    logger.log('[buffer-controller]: Media source opened');
     if (media) {
       hls.trigger(Events.MEDIA_ATTACHED, { media });
-    } else {
-      logger.log('[buffer-controller]: Media source opened, and no media was attached');
     }
 
     if (mediaSource) {
