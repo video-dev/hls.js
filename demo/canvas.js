@@ -328,7 +328,7 @@ function canvasBitrateEventUpdate (canvas, minTime, maxTime, windowMinTime, wind
   var event; var maxLevel; var minLevel; var sumLevel; var maxBitrate; var minBitrate; var sumDuration;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (levelEvents.length === 0) {
+  if (levelEvents.length === 0 || bitrateEvents.length === 0) {
     return;
   }
 

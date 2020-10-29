@@ -85,7 +85,7 @@ export default class LevelDetails {
     if (this.partList?.length) {
       return this.partList[this.partList.length - 1].end;
     }
-    return 0;
+    return this.fragmentEnd;
   }
 
   get fragmentEnd (): number {

@@ -33,8 +33,6 @@ import type {
   BufferFlushedData
 } from '../types/events';
 
-const { performance } = self;
-
 const TICK_INTERVAL = 100; // how often to tick in ms
 
 class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
@@ -191,8 +189,6 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
         this.state = State.IDLE;
       }
     }
-    default:
-      break;
     }
 
     this.onTickEnd();
@@ -256,46 +252,50 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       return;
     }
 
-    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
-    const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
-    const maxBufferHole = pos < config.maxBufferHole ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole) : config.maxBufferHole;
-    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer, pos, maxBufferHole);
-    const mainBufferInfo = BufferHelper.bufferInfo(videoBuffer, pos, maxBufferHole);
-    const bufferLen = bufferInfo.len;
-    const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
-    const maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len);
-    const audioSwitch = this.audioSwitch;
+    let frag = trackDetails.initSegment;
+    let targetBufferTime = 0;
+    if (!frag || frag.data) {
+      const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
+      const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
+      const maxBufferHole = pos < config.maxBufferHole ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole) : config.maxBufferHole;
+      const bufferInfo = BufferHelper.bufferInfo(mediaBuffer, pos, maxBufferHole);
+      const mainBufferInfo = BufferHelper.bufferInfo(videoBuffer, pos, maxBufferHole);
+      const bufferLen = bufferInfo.len;
+      const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
+      const maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len);
+      const audioSwitch = this.audioSwitch;
 
-    // if buffer length is less than maxBufLen try to load a new fragment
-    if (bufferLen >= maxBufLen && !audioSwitch) {
-      return;
-    }
+      // if buffer length is less than maxBufLen try to load a new fragment
+      if (bufferLen >= maxBufLen && !audioSwitch) {
+        return;
+      }
 
-    if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
-      hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
-      this.state = State.ENDED;
-      return;
-    }
+      if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
+        hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
+        this.state = State.ENDED;
+        return;
+      }
 
-    const fragments = trackDetails.fragments;
-    const start = fragments[0].start;
-    let targetBufferTime = bufferInfo.end;
+      const fragments = trackDetails.fragments;
+      const start = fragments[0].start;
+      targetBufferTime = bufferInfo.end;
 
-    if (audioSwitch) {
-      targetBufferTime = pos;
-      // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
-      if (trackDetails.PTSKnown && pos < start) {
-        // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
-        if (bufferInfo.end > start || bufferInfo.nextStart) {
-          this.log('Alt audio track ahead of main track, seek to start of alt audio track');
-          media.currentTime = start + 0.05;
+      if (audioSwitch) {
+        targetBufferTime = pos;
+        // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
+        if (trackDetails.PTSKnown && pos < start) {
+          // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
+          if (bufferInfo.end > start || bufferInfo.nextStart) {
+            this.log('Alt audio track ahead of main track, seek to start of alt audio track');
+            media.currentTime = start + 0.05;
+          }
         }
       }
-    }
 
-    const frag = this.getNextFragment(targetBufferTime, trackDetails);
-    if (!frag) {
-      return;
+      frag = this.getNextFragment(targetBufferTime, trackDetails);
+      if (!frag) {
+        return;
+      }
     }
 
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
@@ -303,15 +303,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       this.state = State.KEY_LOADING;
       hls.trigger(Events.KEY_LOADING, { frag });
     } else {
-      // only load if fragment is not loaded or if in audio switch
-      // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
-      const fragState = this.fragmentTracker.getState(frag);
-      if (this.audioSwitch || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
-        this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN}-${trackDetails.endSN}], track ${trackId}, ${
-          this.loadedmetadata ? 'currentTime' : 'nextLoadPosition'
-        }: ${pos.toFixed(3)}-${targetBufferTime.toFixed(3)}`);
-        this.loadFragment(frag, targetBufferTime);
-      }
+      this.loadFragment(frag, trackDetails, targetBufferTime);
     }
   }
 
@@ -396,6 +388,9 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     const track = levels[trackId];
     let sliding = 0;
     if (newDetails.live || track.details?.live) {
+      if (!newDetails.fragments[0]) {
+        newDetails.deltaUpdateFailed = true;
+      }
       if (newDetails.deltaUpdateFailed) {
         return;
       }
@@ -418,7 +413,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
   }
 
   _handleFragmentLoadProgress (data: FragLoadedData) {
-    const { frag, payload } = data;
+    const { frag, part, payload } = data;
     const { config, trackId, levels } = this;
     if (!levels) {
       this.warn(`Audio tracks were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
@@ -445,8 +440,10 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
       const accurateTimeOffset = false; // details.PTSKnown || !details.live;
-      const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount, payload.byteLength);
-      transmuxer.push(payload, initSegmentData, audioCodec, '', frag, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
+      const partIndex = part ? part.index : -1;
+      const partial = partIndex !== -1;
+      const chunkMeta = new ChunkMetadata(frag.level, frag.sn as number, frag.stats.chunkCount, payload.byteLength, partIndex, partial);
+      transmuxer.push(payload, initSegmentData, audioCodec, '', frag, part, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
     } else {
       logger.log(`Unknown video PTS for cc ${frag.cc}, waiting for video PTS before demuxing audio frag ${frag.sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       const { cache } = this.waitingData = this.waitingData || { frag, cache: new ChunkCache(), complete: false };
@@ -610,8 +607,14 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       this.warn(`The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`);
       return;
     }
-    const { frag } = context;
+    const { frag, part } = context;
     const { audio, text, id3, initSegment } = remuxResult;
+
+    // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
+    // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
+    if (this._fragLoadAborted(frag)) {
+      return;
+    }
 
     this.state = State.PARSING;
     if (this.audioSwitch && audio) {
@@ -624,7 +627,11 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       // Only flush audio from old audio tracks when PTS is known on new audio track
     }
     if (audio) {
-      frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, audio.startPTS, audio.endPTS, audio.startDTS, audio.endDTS);
+      const { startPTS, endPTS, startDTS, endDTS } = audio;
+      if (part) {
+        part.elementaryStreams[ElementaryStreamTypes.AUDIO] = { startPTS, endPTS, startDTS, endDTS };
+      }
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, startPTS, endPTS, startDTS, endDTS);
       this.bufferFragmentData(audio, frag, chunkMeta);
     }
 
@@ -672,17 +679,27 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     this.tick();
   }
 
-  protected loadFragment (frag: Fragment, targetBufferTime: number) {
+  protected loadFragment (frag: Fragment, trackDetails: LevelDetails, targetBufferTime: number) {
+    // only load if fragment is not loaded or if in audio switch
+    const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
-    if (frag.sn === 'initSegment') {
-      this._loadInitSegment(frag);
-    } else if (Number.isFinite(this.initPTS[frag.cc])) {
-      this.startFragRequested = true;
-      this.nextLoadPosition = frag.start + frag.duration;
-      super.loadFragment(frag, targetBufferTime);
-    } else {
-      this.log(`Unknown video PTS for continuity counter ${frag.cc}, waiting for video PTS before loading audio fragment ${frag.sn} of level ${this.trackId}`);
-      this.state = State.WAITING_INIT_PTS;
+
+    // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
+    if (this.audioSwitch || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
+      this.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN}-${trackDetails.endSN}], track ${
+        frag.level
+      }, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`);
+
+      if (frag.sn === 'initSegment') {
+        this._loadInitSegment(frag);
+      } else if (Number.isFinite(this.initPTS[frag.cc])) {
+        this.startFragRequested = true;
+        this.nextLoadPosition = frag.start + frag.duration;
+        super.loadFragment(frag, trackDetails, targetBufferTime);
+      } else {
+        this.log(`Unknown video PTS for continuity counter ${frag.cc}, waiting for video PTS before loading audio fragment ${frag.sn} of level ${this.trackId}`);
+        this.state = State.WAITING_INIT_PTS;
+      }
     }
   }
 

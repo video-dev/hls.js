@@ -77,7 +77,6 @@ export class FragmentTracker implements ComponentAPI {
       const fragmentEntity = fragments[keys[i]];
       if (fragmentEntity?.body.type === levelType && fragmentEntity.buffered) {
         const frag = fragmentEntity.body;
-        // if (frag.startPTS !== undefined &&
         if (frag.start <= position && position <= frag.end) {
           return frag;
         }
@@ -138,41 +137,39 @@ export class FragmentTracker implements ComponentAPI {
   }
 
   getBufferedTimes (fragment: Fragment, timeRange: TimeRanges): FragmentBufferedRange {
-    const fragmentTimes: Array<FragmentTimeRange> = [];
-    let fragmentPartial = false;
+    const buffered: FragmentBufferedRange = {
+      time: [],
+      partial: false
+    };
+    const startPTS = fragment.start;
+    const endPTS = fragment.end;
+    const minEndPTS = fragment.minEndPTS || endPTS;
+    const maxStartPTS = fragment.maxStartPTS || startPTS;
     for (let i = 0; i < timeRange.length; i++) {
-      const startPTS = fragment.start;
-      const endPTS = fragment.end;
-      const minEndPTS = fragment.minEndPTS || endPTS;
-      const maxStartPTS = fragment.maxStartPTS || startPTS;
       const startTime = timeRange.start(i) - this.bufferPadding;
       const endTime = timeRange.end(i) + this.bufferPadding;
       if (maxStartPTS >= startTime && minEndPTS <= endTime) {
         // Fragment is entirely contained in buffer
         // No need to check the other timeRange times since it's completely playable
-        fragmentTimes.push({
+        buffered.time.push({
           startPTS: Math.max(startPTS, timeRange.start(i)),
           endPTS: Math.min(endPTS, timeRange.end(i))
         });
         break;
       } else if (startPTS < endTime && endPTS > startTime) {
+        buffered.partial = true;
         // Check for intersection with buffer
         // Get playable sections of the fragment
-        fragmentTimes.push({
+        buffered.time.push({
           startPTS: Math.max(startPTS, timeRange.start(i)),
           endPTS: Math.min(endPTS, timeRange.end(i))
         });
-        fragmentPartial = true;
       } else if (endPTS <= startTime) {
         // No need to check the rest of the timeRange as it is in order
         break;
       }
     }
-
-    return {
-      time: fragmentTimes,
-      partial: fragmentPartial
-    };
+    return buffered;
   }
 
   /**

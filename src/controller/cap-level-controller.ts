@@ -198,7 +198,7 @@ class CapLevelController implements ComponentAPI {
     let pixelRatio = 1;
     try {
       pixelRatio = self.devicePixelRatio;
-    } catch (e) {}
+    } catch (e) { /* no-op */ }
     return pixelRatio;
   }
 

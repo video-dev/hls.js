@@ -244,6 +244,7 @@ export interface InitPTSFoundData {
 
 export interface FragLoadingData {
   frag: Fragment,
+  part?: Part,
   targetBufferTime: number | null
 }
 
@@ -256,7 +257,12 @@ export interface FragLoadedData {
   frag: Fragment
   part?: Part
   payload: ArrayBuffer
-  networkDetails: any
+  networkDetails: unknown
+}
+
+export interface FragLoadedEndData {
+  frag: Fragment
+  partsLoaded?: FragLoadedData[]
 }
 
 export interface FragDecryptedData {
@@ -286,7 +292,7 @@ export interface FragParsingMetadataData {
 
 export interface FragParsedData {
   frag: Fragment,
-  partIndex: number
+  part: Part | null
 }
 
 export interface FragBufferedData {

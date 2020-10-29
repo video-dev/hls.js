@@ -88,7 +88,7 @@ describe('TransmuxerInterface tests', function () {
     newFrag.level = 1;
     newFrag.start = 1000;
     newFrag.startPTS = 1000;
-
+    const part = undefined;
     const data = new ArrayBuffer(8);
     const initSegmentData = new Uint8Array(0);
     const audioCodec = '';
@@ -99,7 +99,7 @@ describe('TransmuxerInterface tests', function () {
 
     const stub = sinon.stub(transmuxerInterfacePrivates.worker, 'postMessage');
 
-    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, chunkMeta);
+    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, newFrag, part, duration, accurateTimeOffset, chunkMeta);
 
     expect(stub).to.have.been.calledTwice;
     const firstCall = stub.args[0][0];
@@ -140,7 +140,7 @@ describe('TransmuxerInterface tests', function () {
     newFrag.sn = 5;
     newFrag.level = 2;
     newFrag.start = 1000;
-
+    const part = undefined;
     const data = new Uint8Array(new ArrayBuffer(8));
     const initSegmentData = new Uint8Array(0);
     const audioCodec = '';
@@ -152,7 +152,7 @@ describe('TransmuxerInterface tests', function () {
     const configureStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'configure');
     const pushStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'push');
     pushStub.returns(Promise.reject(new Error('Stubbed transmux result')));
-    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, chunkMeta);
+    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, newFrag, part, duration, accurateTimeOffset, chunkMeta);
 
     const tConfig = new TransmuxConfig('', '', initSegmentData, 0);
     const state = new TransmuxState(true, false, true, true, 1000);

@@ -1,15 +1,9 @@
-/*
- * FPS Controller
-*/
-
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 import { MediaAttachingData } from '../types/events';
 import StreamController from './stream-controller';
-
-const { performance } = self;
 
 class FPSController implements ComponentAPI {
   private hls: Hls;

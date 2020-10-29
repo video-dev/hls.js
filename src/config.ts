@@ -183,7 +183,7 @@ export type HlsConfig =
 export const hlsDefaultConfig: HlsConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
-  defaultAudioCodec: void 0, // used by stream-controller
+  defaultAudioCodec: undefined, // used by stream-controller
   debug: false, // used by logger
   capLevelOnFPSDrop: false, // used by fps-controller
   capLevelToPlayerSize: false, // used by cap-level-controller
@@ -197,8 +197,8 @@ export const hlsDefaultConfig: HlsConfig = {
   maxFragLookUpTolerance: 0.25, // used by stream-controller
   liveSyncDurationCount: 3, // used by latency-controller
   liveMaxLatencyDurationCount: Infinity, // used by latency-controller
-  liveSyncDuration: void 0, // used by latency-controller
-  liveMaxLatencyDuration: void 0, // used by latency-controller
+  liveSyncDuration: undefined, // used by latency-controller
+  liveMaxLatencyDuration: undefined, // used by latency-controller
   minLiveSyncPlaybackRate: 0.75, // used by latency-controller
   maxLiveSyncPlaybackRate: 1.5, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
@@ -210,7 +210,7 @@ export const hlsDefaultConfig: HlsConfig = {
   manifestLoadingMaxRetry: 1, // used by playlist-loader
   manifestLoadingRetryDelay: 1000, // used by playlist-loader
   manifestLoadingMaxRetryTimeout: 64000, // used by playlist-loader
-  startLevel: void 0, // used by level-controller
+  startLevel: undefined, // used by level-controller
   levelLoadingTimeOut: 10000, // used by playlist-loader
   levelLoadingMaxRetry: 4, // used by playlist-loader
   levelLoadingRetryDelay: 1000, // used by playlist-loader
@@ -225,11 +225,10 @@ export const hlsDefaultConfig: HlsConfig = {
   appendErrorMaxRetry: 3, // used by buffer-controller
   loader: XhrLoader,
   // loader: FetchLoader,
-  fLoader: void 0, // used by fragment-loader
-  pLoader: void 0, // used by playlist-loader
-  xhrSetup: void 0, // used by xhr-loader
-  licenseXhrSetup: void 0, // used by eme-controller
-  // fetchSetup: void 0,
+  fLoader: undefined, // used by fragment-loader
+  pLoader: undefined, // used by playlist-loader
+  xhrSetup: undefined, // used by xhr-loader
+  licenseXhrSetup: undefined, // used by eme-controller
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,
@@ -249,7 +248,7 @@ export const hlsDefaultConfig: HlsConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
-  widevineLicenseUrl: void 0, // used by eme-controller
+  widevineLicenseUrl: undefined, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
@@ -258,12 +257,12 @@ export const hlsDefaultConfig: HlsConfig = {
 
   // Dynamic Modules
   ...timelineConfig(),
-  subtitleStreamController: (__USE_SUBTITLES__) ? SubtitleStreamController : void 0,
-  subtitleTrackController: (__USE_SUBTITLES__) ? SubtitleTrackController : void 0,
-  timelineController: (__USE_SUBTITLES__) ? TimelineController : void 0,
-  audioStreamController: (__USE_ALT_AUDIO__) ? AudioStreamController : void 0,
-  audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : void 0,
-  emeController: (__USE_EME_DRM__) ? EMEController : void 0
+  subtitleStreamController: (__USE_SUBTITLES__) ? SubtitleStreamController : undefined,
+  subtitleTrackController: (__USE_SUBTITLES__) ? SubtitleTrackController : undefined,
+  timelineController: (__USE_SUBTITLES__) ? TimelineController : undefined,
+  audioStreamController: (__USE_ALT_AUDIO__) ? AudioStreamController : undefined,
+  audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : undefined,
+  emeController: (__USE_EME_DRM__) ? EMEController : undefined
 };
 
 function timelineConfig (): TimelineControllerConfig {
@@ -284,16 +283,16 @@ function timelineConfig (): TimelineControllerConfig {
   };
 }
 
-export function mergeConfig (defaultConfig: HlsConfig, userConfig: any): HlsConfig {
+export function mergeConfig (defaultConfig: HlsConfig, userConfig: Partial<HlsConfig>): HlsConfig {
   if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
     throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
   }
 
-  if (userConfig.liveMaxLatencyDurationCount !== void 0 && userConfig.liveMaxLatencyDurationCount <= userConfig.liveSyncDurationCount) {
+  if (userConfig.liveMaxLatencyDurationCount !== undefined && (userConfig.liveSyncDurationCount === undefined || userConfig.liveMaxLatencyDurationCount <= userConfig.liveSyncDurationCount)) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
   }
 
-  if (userConfig.liveMaxLatencyDuration !== void 0 && (userConfig.liveMaxLatencyDuration <= userConfig.liveSyncDuration || userConfig.liveSyncDuration === void 0)) {
+  if (userConfig.liveMaxLatencyDuration !== undefined && (userConfig.liveSyncDuration === undefined || userConfig.liveMaxLatencyDuration <= userConfig.liveSyncDuration)) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
   }
 

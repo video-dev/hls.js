@@ -391,6 +391,9 @@ export default class LevelController extends BasePlaylistController {
 
     if (!curLevel) {
       logger.warn('[level-controller]: Invalid level index:', level);
+      if (data.deliveryDirectives?.skip) {
+        details.deltaUpdateFailed = true;
+      }
       return;
     }
     logger.log(`[level-controller]: level ${level} loaded [${details.startSN}-${details.endSN}]`);
@@ -403,6 +406,9 @@ export default class LevelController extends BasePlaylistController {
         this.retryCount = 0;
       }
       this.playlistLoaded(level, data, curLevel.details);
+    } else if (data.deliveryDirectives?.skip) {
+      // received a delta playlist update that cannot be merged
+      details.deltaUpdateFailed = true;
     }
   }
 

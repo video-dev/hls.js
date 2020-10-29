@@ -35,7 +35,7 @@ export default class Decrypter {
         } else {
           this.config.enableSoftwareAES = true;
         }
-      } catch (e) {}
+      } catch (e) { /* no-op */ }
     }
   }
 

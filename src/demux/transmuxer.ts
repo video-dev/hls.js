@@ -288,12 +288,14 @@ export default class Transmuxer {
     // so let's check that current remuxer and demuxer are still valid
     let demuxer = this.demuxer;
     let remuxer = this.remuxer;
-    if (!remuxer || !(remuxer instanceof mux.remux)) {
-      remuxer = this.remuxer = new mux.remux(observer, config, typeSupported, vendor);
+    const Remuxer = mux.remux;
+    const Demuxer = mux.demux;
+    if (!remuxer || !(remuxer instanceof Remuxer)) {
+      remuxer = this.remuxer = new Remuxer(observer, config, typeSupported, vendor);
     }
-    if (!demuxer || !(demuxer instanceof mux.demux)) {
-      demuxer = this.demuxer = new mux.demux(observer, config, typeSupported);
-      this.probe = mux.demux.probe;
+    if (!demuxer || !(demuxer instanceof Demuxer)) {
+      demuxer = this.demuxer = new Demuxer(observer, config, typeSupported);
+      this.probe = Demuxer.probe;
     }
     // Ensure that muxers are always initialized with an initSegment
     this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);

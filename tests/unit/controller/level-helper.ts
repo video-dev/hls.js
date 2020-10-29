@@ -1,8 +1,21 @@
-import * as LevelHelper from '../../../src/controller/level-helper';
+import {
+  adjustSliding,
+  computeReloadInterval,
+  mapFragmentIntersection,
+  mapPartIntersection,
+  mergeDetails
+} from '../../../src/controller/level-helper';
 import LevelDetails from '../../../src/loader/level-details';
-import Fragment from '../../../src/loader/fragment';
+import Fragment, { Part } from '../../../src/loader/fragment';
 import LoadStats from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import * as sinon from 'sinon';
+import * as chai from 'chai';
+import * as sinonChai from 'sinon-chai';
+import AttrList from '../../../src/utils/attr-list';
+
+chai.use(sinonChai);
+const expect = chai.expect;
 
 const generatePlaylist = (sequenceNumbers, offset = 0) => {
   const playlist = new LevelDetails('');
@@ -19,12 +32,12 @@ const generatePlaylist = (sequenceNumbers, offset = 0) => {
 };
 
 const getIteratedSequence = (oldPlaylist, newPlaylist) => {
-  const actual = [];
-  LevelHelper.mapFragmentIntersection(oldPlaylist, newPlaylist, (oldFrag, newFrag) => {
+  const actual: number[] = [];
+  mapFragmentIntersection(oldPlaylist, newPlaylist, (oldFrag, newFrag) => {
     if (oldFrag.sn !== newFrag.sn) {
       throw new Error('Expected old frag and new frag to have the same SN');
     }
-    actual.push(newFrag.sn);
+    actual.push(newFrag.sn as number);
   });
   return actual;
 };
@@ -76,12 +89,42 @@ describe('LevelHelper Tests', function () {
     });
   });
 
+  describe('mapPartIntersection', function () {
+    it('finds overlapping parts and executes callback for each', function () {
+      const oldFrags = generatePlaylist([1, 2, 3]).fragments;
+      const newFrags = generatePlaylist([2, 3, 4]).fragments;
+      const attr = new AttrList('DURATION=1');
+      const oldParts: Part[] = [
+        new Part(attr, oldFrags[1], '', 0),
+        new Part(attr, oldFrags[1], '', 1),
+        new Part(attr, oldFrags[1], '', 2),
+        new Part(attr, oldFrags[2], '', 0),
+        new Part(attr, oldFrags[2], '', 1),
+        new Part(attr, oldFrags[2], '', 2)
+      ];
+      const newParts: Part[] = [
+        new Part(attr, newFrags[1], '', 0),
+        new Part(attr, newFrags[1], '', 1),
+        new Part(attr, newFrags[1], '', 2),
+        new Part(attr, newFrags[2], '', 0),
+        new Part(attr, newFrags[2], '', 1),
+        new Part(attr, newFrags[2], '', 2)
+      ];
+      const intersectionFn = sinon.spy();
+      mapPartIntersection(oldParts, newParts, intersectionFn);
+      expect(intersectionFn).to.have.been.calledThrice;
+      expect(intersectionFn.firstCall).to.have.been.calledWith(oldParts[3], newParts[0]);
+      expect(intersectionFn.secondCall).to.have.been.calledWith(oldParts[4], newParts[1]);
+      expect(intersectionFn.thirdCall).to.have.been.calledWith(oldParts[5], newParts[2]);
+    });
+  });
+
   describe('adjustSliding', function () {
     // generatePlaylist creates fragments with a duration of 5 seconds
     it('adds the start time of the first comment segment to all other segment', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]); // start times: 0, 5, 10
       const newPlaylist = generatePlaylist([3, 4, 5]);
-      LevelHelper.adjustSliding(oldPlaylist, newPlaylist);
+      adjustSliding(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([10, 15, 20]);
     });
@@ -89,7 +132,7 @@ describe('LevelHelper Tests', function () {
     it('does not apply sliding if no common segments exist', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
-      LevelHelper.adjustSliding(oldPlaylist, newPlaylist);
+      adjustSliding(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
@@ -97,7 +140,7 @@ describe('LevelHelper Tests', function () {
     it('does not apply sliding when segments meet but do not overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([4, 5, 6]);
-      LevelHelper.adjustSliding(oldPlaylist, newPlaylist);
+      adjustSliding(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
@@ -107,7 +150,7 @@ describe('LevelHelper Tests', function () {
     it('transfers start times where segments overlap, and extrapolates the start of any new segment', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3, 4]); // start times: 0, 5, 10, 15
       const newPlaylist = generatePlaylist([2, 3, 4, 5]);
-      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([5, 10, 15, 20]);
     });
@@ -115,7 +158,7 @@ describe('LevelHelper Tests', function () {
     it('does not change start times when there is no segment overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
-      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
@@ -126,7 +169,7 @@ describe('LevelHelper Tests', function () {
         f.start += 10;
       });
       const newPlaylist = generatePlaylist([1, 2, 3]);
-      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map(f => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
@@ -136,9 +179,10 @@ describe('LevelHelper Tests', function () {
       const newPlaylist = generatePlaylist([10, 11, 12]);
       newPlaylist.skippedSegments = 7;
       newPlaylist.startSN = 3;
+      // @ts-ignore
       newPlaylist.fragments.unshift(null, null, null, null, null, null, null);
       const merged = generatePlaylist([3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 10);
-      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist);
       expect(newPlaylist.deltaUpdateFailed).to.equal(false);
       expect(newPlaylist.fragments.length).to.equal(merged.fragments.length);
       newPlaylist.fragments.forEach((frag, i) => {
@@ -153,10 +197,11 @@ expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[
       const newPlaylist = generatePlaylist([10, 11, 12]);
       newPlaylist.skippedSegments = 5;
       newPlaylist.startSN = 5;
+      // @ts-ignore
       newPlaylist.fragments.unshift(null, null, null, null, null);
       // FIXME: An expected offset of 50 would be preferred, but there is nothing to sync playlist start with
       const merged = generatePlaylist([10, 11, 12], 0);
-      LevelHelper.mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist);
       expect(newPlaylist.deltaUpdateFailed).to.equal(true);
       expect(newPlaylist.fragments.length).to.equal(3);
       newPlaylist.fragments.forEach((frag, i) => {
@@ -172,20 +217,20 @@ expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5;
       newPlaylist.updated = true;
-      const actual = LevelHelper.computeReloadInterval(newPlaylist, null);
+      const actual = computeReloadInterval(newPlaylist, new LoadStats());
       expect(actual).to.equal(5000);
     });
 
     it('returns the targetduration of the new level if averagetargetduration is falsy', function () {
       const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = null;
+      newPlaylist.averagetargetduration = undefined;
       newPlaylist.targetduration = 4;
       newPlaylist.updated = true;
-      let actual = LevelHelper.computeReloadInterval(newPlaylist, null);
+      let actual = computeReloadInterval(newPlaylist, new LoadStats());
       expect(actual).to.equal(4000);
 
-      newPlaylist.averagetargetduration = null;
-      actual = LevelHelper.computeReloadInterval(newPlaylist, null);
+      newPlaylist.averagetargetduration = undefined;
+      actual = computeReloadInterval(newPlaylist, new LoadStats());
       expect(actual).to.equal(4000);
     });
 
@@ -193,7 +238,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[
       const newPlaylist = generatePlaylist([1, 2]);
       newPlaylist.updated = false;
       newPlaylist.averagetargetduration = 5;
-      const actual = LevelHelper.computeReloadInterval(newPlaylist, null);
+      const actual = computeReloadInterval(newPlaylist, new LoadStats());
       expect(actual).to.equal(2500);
     });
 
@@ -201,7 +246,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.averagetargetduration = 5.9999;
       newPlaylist.updated = true;
-      const actual = LevelHelper.computeReloadInterval(newPlaylist, null);
+      const actual = computeReloadInterval(newPlaylist, new LoadStats());
       expect(actual).to.equal(6000);
     });
 
@@ -212,7 +257,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[
       const stats = new LoadStats();
       stats.loading.start = 0;
       stats.loading.end = 1000;
-      const actual = LevelHelper.computeReloadInterval(newPlaylist, stats);
+      const actual = computeReloadInterval(newPlaylist, stats);
       expect(actual).to.equal(4000);
     });
 
@@ -223,7 +268,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[
       const stats = new LoadStats();
       stats.loading.start = 0;
       stats.loading.end = 1000;
-      const actual = LevelHelper.computeReloadInterval(newPlaylist, stats);
+      const actual = computeReloadInterval(newPlaylist, stats);
       expect(actual).to.equal(2500);
     });
   });
