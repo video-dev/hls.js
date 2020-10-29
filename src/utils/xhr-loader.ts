@@ -1,13 +1,13 @@
 import { logger } from '../utils/logger';
 import { LoaderCallbacks, LoaderContext, LoaderStats, Loader, LoaderConfiguration } from '../types/loader';
-import LoadStats, { reset } from '../loader/load-stats';
+import LoadStats from '../loader/load-stats';
 
 class XhrLoader implements Loader<LoaderContext> {
   private xhrSetup: Function | null;
   private requestTimeout?: number;
   private retryTimeout?: number | undefined;
   private retryDelay: number;
-  private config?: LoaderConfiguration;
+  private config: LoaderConfiguration | null = null;
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public context!: LoaderContext;
 
@@ -24,6 +24,7 @@ class XhrLoader implements Loader<LoaderContext> {
     this.callbacks = null;
     this.abortInternal();
     this.loader = null;
+    this.config = null;
   }
 
   abortInternal (): void {
@@ -46,11 +47,13 @@ class XhrLoader implements Loader<LoaderContext> {
   }
 
   load (context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void {
+    if (this.stats.loading.start) {
+      throw new Error('Loader can only be used once.');
+    }
+    this.stats.loading.start = self.performance.now();
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
-    reset(this.stats);
-    this.stats.loading.start = self.performance.now();
     this.retryDelay = config.retryDelay;
     this.loadInternal();
   }

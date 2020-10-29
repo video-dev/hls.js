@@ -43,20 +43,20 @@ export default class FragmentLoader {
     const config = this.config;
     const FragmentILoader = config.fLoader;
     const DefaultILoader = config.loader;
-    const loader = this.loader = frag.loader =
-      FragmentILoader ? new FragmentILoader(config) : new DefaultILoader(config) as Loader<FragmentLoaderContext>;
-    const loaderContext = createLoaderContext(frag);
-    const loaderConfig: LoaderConfiguration = {
-      timeout: config.fragLoadingTimeOut,
-      maxRetry: 0,
-      retryDelay: 0,
-      maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-      highWaterMark: MIN_CHUNK_SIZE
-    };
 
     return new Promise((resolve, reject) => {
+      const loader = this.loader = frag.loader =
+        FragmentILoader ? new FragmentILoader(config) : new DefaultILoader(config) as Loader<FragmentLoaderContext>;
+      const loaderContext = createLoaderContext(frag);
+      const loaderConfig: LoaderConfiguration = {
+        timeout: config.fragLoadingTimeOut,
+        maxRetry: 0,
+        retryDelay: 0,
+        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+        highWaterMark: MIN_CHUNK_SIZE
+      };
       // Assign frag stats to the loader's stats reference
-      loader.stats = frag.stats;
+      frag.stats = loader.stats;
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
@@ -116,19 +116,20 @@ export default class FragmentLoader {
     const config = this.config;
     const FragmentILoader = config.fLoader;
     const DefaultILoader = config.loader;
-    const loader = this.loader = frag.loader =
-      FragmentILoader ? new FragmentILoader(config) : new DefaultILoader(config) as Loader<FragmentLoaderContext>;
-    const loaderConfig: LoaderConfiguration = {
-      timeout: config.fragLoadingTimeOut,
-      maxRetry: 0,
-      retryDelay: 0,
-      maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-      highWaterMark: MIN_CHUNK_SIZE
-    };
+
     return new Promise((resolve, reject) => {
+      const loader = this.loader = frag.loader =
+        FragmentILoader ? new FragmentILoader(config) : new DefaultILoader(config) as Loader<FragmentLoaderContext>;
       const loaderContext = createLoaderContext(frag, part);
+      const loaderConfig: LoaderConfiguration = {
+        timeout: config.fragLoadingTimeOut,
+        maxRetry: 0,
+        retryDelay: 0,
+        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+        highWaterMark: MIN_CHUNK_SIZE
+      };
       // Assign part stats to the loader's stats reference
-      loader.stats = part.stats;
+      part.stats = loader.stats;
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
