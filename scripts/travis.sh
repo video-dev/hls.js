@@ -23,24 +23,6 @@ if [ "${TRAVIS_MODE}" = "build" ]; then
   node -e 'require("./" + require("./package.json").main)'
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
   npm run test:unit
-elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
-  npm run build:ci
-  n=0
-  maxRetries=1
-  until [ $n -ge ${maxRetries} ]
-  do
-    if [ $n -gt 0 ]; then
-      echo "Retrying... Attempt: $((n+1))"
-      delay=$((n*60))
-      echo "Waiting ${delay} seconds..."
-      sleep $delay
-    fi
-    npm run test:func && break
-    n=$[$n+1]
-  done
-  if [ ${n} = ${maxRetries} ]; then
-    exit 1
-  fi
 elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseAlpha" ] || [ "${TRAVIS_MODE}" = "netlifyPr" ] || [ "${TRAVIS_MODE}" = "netlifyBranch" ]; then
   # update the version
   if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
