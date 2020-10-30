@@ -215,7 +215,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     const decryptData = frag.decryptdata;
     const hls = this.hls;
 
-    if (this._fragLoadAborted(frag)) {
+    if (this.fragContextChanged(frag)) {
       return;
     }
     // check to see if the payload needs to be decrypted

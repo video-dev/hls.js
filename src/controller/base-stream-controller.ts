@@ -193,8 +193,8 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
   private _loadFragForPlayback (frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
     const progressCallback: FragmentLoadProgressCallback = (data: FragLoadedData) => {
-      if (this._fragLoadAborted(frag)) {
-        this.warn(`Fragment ${frag.sn} of level ${frag.level} was aborted during progressive download.`);
+      if (this.fragContextChanged(frag)) {
+        this.warn(`Fragment ${frag.sn} of level ${frag.level} was dropped during download.`);
         this.fragmentTracker.removeFragment(frag);
         return;
       }
@@ -205,8 +205,11 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this._doFragLoad(frag, levelDetails, targetBufferTime, progressCallback)
       .then((data: FragLoadedData | null) => {
         this.fragLoadError = 0;
-        const aborted = this._fragLoadAborted(frag);
-        if (!data || aborted) {
+        if (!data) {
+          // if we're here we probably needed to backtrack
+          return;
+        }
+        if (this.fragContextChanged(frag)) {
           if (this.state === State.FRAG_LOADING) {
             this.state = State.IDLE;
           }
@@ -222,7 +225,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   protected _loadInitSegment (frag: Fragment) {
     this._doFragLoad(frag)
       .then((data: FragLoadedData | null) => {
-        if (!data || this._fragLoadAborted(frag) || !this.levels) {
+        if (!data || this.fragContextChanged(frag) || !this.levels) {
           throw new Error('init load aborted');
         }
 
@@ -282,7 +285,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       });
   }
 
-  protected _fragLoadAborted (frag: Fragment | null) {
+  protected fragContextChanged (frag: Fragment | null) {
     const { fragCurrent } = this;
     return !frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn || frag.urlId !== fragCurrent.urlId;
   }

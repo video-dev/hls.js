@@ -481,7 +481,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     if (frag && frag.type !== 'audio') {
       return;
     }
-    if (this._fragLoadAborted(frag)) {
+    if (this.fragContextChanged(frag)) {
       // If a level switch was requested while a fragment was buffering, it will emit the FRAG_BUFFERED event upon completion
       // Avoid setting state back to IDLE or concluding the audio switch; otherwise, the switched-to track will not buffer
       this.warn(`Fragment ${frag.sn} of level ${frag.level} finished buffering, but was aborted. state: ${this.state}, audioSwitch: ${this.audioSwitch}`);
@@ -612,7 +612,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
 
     // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
-    if (this._fragLoadAborted(frag)) {
+    if (this.fragContextChanged(frag)) {
       return;
     }
 

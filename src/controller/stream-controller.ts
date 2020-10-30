@@ -763,7 +763,7 @@ export default class StreamController extends BaseStreamController implements Ne
     if (frag && frag.type !== 'main') {
       return;
     }
-    if (this._fragLoadAborted(frag)) {
+    if (this.fragContextChanged(frag)) {
       // If a level switch was requested while a fragment was buffering, it will emit the FRAG_BUFFERED event upon completion
       // Avoid setting state back to IDLE, since that will interfere with a level switch
       this.warn(`Fragment ${frag.sn} of level ${frag.level} finished buffering, but was aborted. state: ${this.state}`);
@@ -973,7 +973,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this._doFragLoad(frag)
       .then((data) => {
         const { hls } = this;
-        if (!data || hls.nextLoadLevel || this._fragLoadAborted(frag)) {
+        if (!data || hls.nextLoadLevel || this.fragContextChanged(frag)) {
           return;
         }
         this.fragLoadError = 0;
@@ -1006,7 +1006,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
     // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
-    if (this._fragLoadAborted(frag)) {
+    if (this.fragContextChanged(frag)) {
       return;
     }
 

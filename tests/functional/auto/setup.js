@@ -179,7 +179,7 @@ async function testSeekOnVOD (url, config) {
         video.onseeked = function () {
           self.setTimeout(function () {
             const { currentTime, paused } = video;
-            if (video.currentTime === 0 || video.paused) {
+            if (currentTime === 0 || paused) {
               callback({ code: 'paused', currentTime, paused, duration, logs: self.logString });
             }
           }, 5000);
