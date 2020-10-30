@@ -191,17 +191,19 @@ export default class FragmentLoader {
       const estLoadedParts = Math.round(fragStats.loaded / partTotal);
       const estTotalParts = Math.round(frag.duration / part.duration);
       const estRemainingParts = estTotalParts - estLoadedParts;
-      fragStats.total = fragStats.loaded + partStats.total + estRemainingParts * Math.round(fragStats.loaded / estLoadedParts);
+      const estRemainingBytes = estRemainingParts * Math.round(fragStats.loaded / estLoadedParts);
+      fragStats.total = fragStats.loaded + estRemainingBytes;
     }
     const fragLoading = fragStats.loading;
+    const partLoading = partStats.loading;
     if (fragLoading.start) {
       // add to fragment loader latency
-      fragLoading.first += partStats.loading.first - partStats.loading.start;
+      fragLoading.first += partLoading.first - partLoading.start;
     } else {
-      fragLoading.start = partStats.loading.start;
-      fragLoading.first = partStats.loading.first;
+      fragLoading.start = partLoading.start;
+      fragLoading.first = partLoading.first;
     }
-    fragLoading.end = partStats.loading.end;
+    fragLoading.end = partLoading.end;
   }
 
   private resetLoader (frag: Fragment, loader: Loader<FragmentLoaderContext>) {
