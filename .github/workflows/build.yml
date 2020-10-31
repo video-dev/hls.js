@@ -29,7 +29,7 @@ jobs:
         with:
           script: |
             const prefix = '/refs/tags/';
-            const ref = context.payload.ref;
+            const ref = context.ref;
             return ref.startsWith(prefix) ? ref.substring(prefix.length) : '';   
           result-encoding: string
 
