@@ -5,14 +5,13 @@ const versionParser = require('./version-parser.js');
 const packageJson = require('../package.json');
 const { isValidStableVersion, incrementPatch } = require('./version-parser.js');
 
-const TRAVIS_MODE = process.env.TRAVIS_MODE;
 const latestVersion = getLatestVersionTag();
 let newVersion = '';
 
 try {
-  if (TRAVIS_MODE === 'release') {
+  if (process.env.TAG) {
     // write the version field in the package json to the version in the git tag
-    const tag = process.env.TRAVIS_TAG;
+    const tag = process.env.TAG;
     if (!versionParser.isValidVersion(tag)) {
       throw new Error(`Unsupported tag for release: "${tag}"`);
     }
@@ -25,7 +24,7 @@ try {
       // 1.2.3-0.aaalpha.custom.0.alpha.503 => now lower than 1.2.3-0.alpha.501
       throw new Error(`It's possible that "${newVersion}" has a lower precedense than an existing alpha version which is not allowed.`);
     }
-  } else if (TRAVIS_MODE === 'releaseAlpha' || TRAVIS_MODE === 'netlifyPr' || TRAVIS_MODE === 'netlifyBranch') {
+  } else {
     // bump patch in version from latest git tag
     let intermediateVersion = latestVersion;
     const isStable = isValidStableVersion(intermediateVersion);
@@ -40,15 +39,13 @@ try {
     // remove v
     intermediateVersion = intermediateVersion.substring(1);
 
-    const suffix = TRAVIS_MODE === 'netlifyPr'
+    const suffix = process.env.NETLIFY && process.env.CONTEXT === 'deploy-preview'
       ? `pr.${process.env.REVIEW_ID/* set by netlify */}.${getCommitHash().substr(0, 8)}`
-      : TRAVIS_MODE === 'netlifyBranch'
+      : process.env.NETLIFY && process.env.CONTEXT === 'branch-deploy'
         ? `branch.${process.env.BRANCH/* set by netlify */.replace(/[^a-zA-Z0-9]/g, '-')}.${getCommitHash().substr(0, 8)}`
         : `0.alpha.${getCommitNum()}`;
 
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
-  } else {
-    throw new Error('Unsupported travis mode: ' + TRAVIS_MODE);
   }
 
   if (!versionParser.isGreaterOrEqual(newVersion, latestVersion)) {
