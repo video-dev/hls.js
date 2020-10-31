@@ -63,12 +63,6 @@ elif [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseAlpha" ] |
       echo "Already published."
     fi
   fi
-  npm run docs
-
-  ./scripts/build-netlify.sh
-  if [ "${TRAVIS_MODE}" = "release" ] || [ "${TRAVIS_MODE}" = "releaseAlpha" ]; then
-    ./scripts/deploy-netlify.sh
-  fi
 else
   echo "Unknown travis mode: ${TRAVIS_MODE}" 1>&2
   exit 1
