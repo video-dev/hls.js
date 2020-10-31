@@ -37,11 +37,13 @@ export interface LevelAttributes extends AttrList {
   URI?: string
 }
 
+/* eslint-disable no-restricted-syntax */
 export enum HlsSkip {
   No = '',
   Yes = 'YES',
   v2 = 'v2'
 }
+/* eslint-enable no-restricted-syntax */
 
 export function getSkipValue (details: LevelDetails, msn: number): HlsSkip {
   const { canSkipUntil, canSkipDateRanges, endSN } = details;

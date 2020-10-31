@@ -7,12 +7,14 @@ import { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 import { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
 
+/* eslint-disable no-restricted-syntax */
 export enum FragmentState {
   NOT_LOADED = 'NOT_LOADED',
   APPENDING = 'APPENDING',
   PARTIAL = 'PARTIAL',
   OK = 'OK'
 }
+/* eslint-enable no-restricted-syntax */
 
 export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;

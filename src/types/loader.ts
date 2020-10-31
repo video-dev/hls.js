@@ -126,6 +126,7 @@ export interface Loader<T extends LoaderContext> {
   stats: LoaderStats
 }
 
+/* eslint-disable no-restricted-syntax */
 export enum PlaylistContextType {
   MANIFEST = 'manifest',
   LEVEL = 'level',
@@ -138,6 +139,7 @@ export enum PlaylistLevelType {
   AUDIO = 'audio',
   SUBTITLE = 'subtitle'
 }
+/* eslint-enable no-restricted-syntax */
 
 export interface PlaylistLoaderContext extends LoaderContext {
   loader?: Loader<PlaylistLoaderContext>

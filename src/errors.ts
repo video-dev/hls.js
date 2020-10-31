@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 export enum ErrorTypes {
   // Identifier for a network error (loading error / timeout ...)
   NETWORK_ERROR = 'networkError',
@@ -75,3 +76,4 @@ export enum ErrorDetails {
   // Identifier for an internal call to abort a loader
   INTERNAL_ABORTED = 'aborted'
 }
+/* eslint-enable no-restricted-syntax */

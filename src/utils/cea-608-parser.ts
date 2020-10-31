@@ -164,6 +164,7 @@ const rowsHighCh2 = { 0x19: 2, 0x1A: 4, 0x1D: 6, 0x1E: 8, 0x1F: 10, 0x1B: 13, 0x
 
 const backgroundColors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'black', 'transparent'];
 
+/* eslint-disable no-restricted-syntax */
 enum VerboseLevel {
   ERROR = 0,
   TEXT = 1,
@@ -172,6 +173,7 @@ enum VerboseLevel {
   DEBUG = 3,
   DATA = 3,
 }
+/* eslint-enable no-restricted-syntax */
 
 class CaptionsLogger {
   public time: number | null = null;

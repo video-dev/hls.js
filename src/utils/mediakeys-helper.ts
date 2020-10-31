@@ -1,10 +1,12 @@
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
  */
+/* eslint-disable no-restricted-syntax */
 export enum KeySystems {
   WIDEVINE = 'com.widevine.alpha',
   PLAYREADY = 'com.microsoft.playready',
 }
+/* eslint-enable no-restricted-syntax */
 
 export type MediaKeyFunc = (keySystem: KeySystems, supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>;
 const requestMediaKeySystemAccess = (function (): MediaKeyFunc | null {

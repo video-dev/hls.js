@@ -6,11 +6,13 @@ import LoadStats from './load-stats';
 import AttrList from '../utils/attr-list';
 import type { FragmentLoaderContext, Loader, PlaylistLevelType } from '../types/loader';
 
+/* eslint-disable no-restricted-syntax */
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
   VIDEO = 'video',
   AUDIOVIDEO = 'audiovideo'
 }
+/* eslint-enable no-restricted-syntax */
 
 interface ElementaryStreamInfo {
   startPTS: number

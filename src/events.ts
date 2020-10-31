@@ -51,6 +51,7 @@ import {
  * @readonly
  * @enum {string}
  */
+/* eslint-disable no-restricted-syntax */
 export enum Events {
   // Fired before MediaSource is attaching to media element
   MEDIA_ATTACHING = 'hlsMediaAttaching',
@@ -221,6 +222,8 @@ export interface HlsListeners {
   [Events.KEY_LOADED]: (event: Events.KEY_LOADED, data: KeyLoadedData) => void
   [Events.LIVE_BACK_BUFFER_REACHED]: (event: Events.LIVE_BACK_BUFFER_REACHED, data: LiveBackBufferData) => void
 }
+/* eslint-enable no-restricted-syntax */
+
 export interface HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context): void
   once<E extends keyof HlsListeners, Context = undefined> (event: E, listener: HlsListeners[E], context?: Context): void

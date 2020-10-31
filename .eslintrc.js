@@ -97,6 +97,14 @@ module.exports = {
       { property: 'find' } // Intended to block usage of Array.prototype.find
     ],
 
+    'no-restricted-syntax': [
+      2,
+      {
+        selector: 'TSEnumDeclaration',
+        message: 'Don\'t declare enums'
+      }
+    ],
+
     'standard/no-callback-literal': 1,
     'import/first': 1,
     'no-var': 1,
