@@ -479,9 +479,10 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.FRAG_BUFFERED, function (eventName, data) {
     const event = {
-      type: data.frag.type + ' fragment',
+      type: data.frag.type + (data.part ? ' part' : ' fragment'),
       id: data.frag.level,
       id2: data.frag.sn,
+      id3: data.part ? data.part.index : undefined,
       time: data.stats.loading.start - events.t0,
       latency: data.stats.loading.first - data.stats.loading.start,
       load: data.stats.loading.end - data.stats.loading.first,
@@ -798,10 +799,10 @@ function loadSelectedStream () {
   video.addEventListener('loadeddata', handleVideoEvent);
   video.addEventListener('durationchange', handleVideoEvent);
   video.addEventListener('volumechange', (evt) => {
-      localStorage.setItem(STORAGE_KEYS.volume, JSON.stringify({
-        muted: video.muted,
-        volume: video.volume
-      }));
+    localStorage.setItem(STORAGE_KEYS.volume, JSON.stringify({
+      muted: video.muted,
+      volume: video.volume
+    }));
   });
 }
 
@@ -1023,7 +1024,6 @@ function checkBuffer () {
         for (const type in tracks) {
           log += `Buffer for ${type} contains:${timeRangesToString(tracks[type].buffer.buffered)}\n`;
         }
-
         const videoPlaybackQuality = video.getVideoPlaybackQuality;
         if (videoPlaybackQuality && typeof (videoPlaybackQuality) === typeof (Function)) {
           log += `Dropped frames: ${video.getVideoPlaybackQuality().droppedVideoFrames}\n`;
@@ -1032,7 +1032,7 @@ function checkBuffer () {
           log += `Dropped frames: ${video.webkitDroppedFrameCount}\n`;
         }
       }
-
+      log += `Bandwidth Estimate: ${hls.bandwidthEstimate.toFixed(3)}\n`;
       if (events.isLive) {
         log += 'Live Stats:\n' +
           `  Max Latency: ${hls.maxLatency}\n` +
@@ -1517,7 +1517,7 @@ function toggleTabClick (btn) {
 function toggleTab (btn, dontHideOpenTabs) {
   const tabElId = $(btn).data('tab');
   // eslint-disable-next-line no-restricted-globals
-  const modifierPressed = dontHideOpenTabs || self.event && (self.event.metaKey || self.event.shiftKey);
+  const modifierPressed = dontHideOpenTabs || (self.event && (self.event.metaKey || self.event.shiftKey));
   if (!modifierPressed) {
     hideAllTabs();
   }

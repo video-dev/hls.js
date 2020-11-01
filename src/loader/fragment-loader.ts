@@ -62,6 +62,7 @@ export default class FragmentLoader {
           this.resetLoader(frag, loader);
           resolve({
             frag,
+            part: null,
             payload: response.data as ArrayBuffer,
             networkDetails
           });
@@ -101,6 +102,7 @@ export default class FragmentLoader {
           if (onProgress) {
             onProgress({
               frag,
+              part: null,
               payload: data as ArrayBuffer,
               networkDetails
             });

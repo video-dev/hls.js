@@ -277,7 +277,12 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
         // Silence FRAG_BUFFERED event if fragCurrent is null
         if (data.frag === fragCurrent) {
-          hls.trigger(Events.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
+          hls.trigger(Events.FRAG_BUFFERED, {
+            stats,
+            frag: fragCurrent,
+            part: null,
+            id: frag.type
+          });
         }
         this.tick();
       }).catch(reason => {
@@ -305,7 +310,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected _handleFragmentLoadProgress (frag: FragLoadedData) {}
 
-  protected _doFragLoad (frag: Fragment, details?: LevelDetails, targetBufferTime: number | null = null, progressCallback?: FragmentLoadProgressCallback): Promise<FragLoadedEndData | null> {
+  protected _doFragLoad (frag: Fragment, details?: LevelDetails, targetBufferTime: number | null = null, progressCallback?: FragmentLoadProgressCallback): Promise<FragLoadedEndData | FragLoadedData | null> {
     if (!this.levels) {
       throw new Error('frag load aborted, missing levels');
     }
@@ -390,8 +395,11 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       return;
     }
     const { frag, part, level } = context;
-    // TODO: Part stats
-    frag.stats.parsing.end = self.performance.now();
+    const now = self.performance.now();
+    frag.stats.parsing.end = now;
+    if (part) {
+      part.stats.parsing.end = now;
+    }
     this.updateLevelTiming(frag, level, chunkMeta.partial);
     this.state = State.PARSED;
     this.hls.trigger(Events.FRAG_PARSED, { frag, part });
@@ -413,7 +421,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return { frag, part, level };
   }
 
-  protected bufferFragmentData (data: RemuxedTrack, frag: Fragment, chunkMeta: ChunkMetadata) {
+  protected bufferFragmentData (data: RemuxedTrack, frag: Fragment, part: Part | null, chunkMeta: ChunkMetadata) {
     if (!data || this.state !== State.PARSING) {
       return;
     }
@@ -429,7 +437,13 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       return;
     }
 
-    const segment: BufferAppendingData = { type: data.type, data: buffer, frag, chunkMeta };
+    const segment: BufferAppendingData = {
+      type: data.type,
+      data: buffer,
+      frag,
+      part,
+      chunkMeta
+    };
     this.hls.trigger(Events.BUFFER_APPENDING, segment);
     this.tick();
   }

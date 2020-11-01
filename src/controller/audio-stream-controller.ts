@@ -6,7 +6,7 @@ import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
-import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
+import Fragment, { ElementaryStreamTypes, Part } from '../loader/fragment';
 import BaseStreamController, { State } from './base-stream-controller';
 import { MAX_START_GAP_JUMP } from './gap-controller';
 import FragmentLoader from '../loader/fragment-loader';
@@ -35,6 +35,13 @@ import type {
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
+type WaitingForPTSData = {
+  frag: Fragment,
+  part: Part | null,
+  cache: ChunkCache,
+  complete: boolean
+};
+
 class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
   private retryDate: number = 0;
   private onvseeking: EventListener | null = null;
@@ -45,7 +52,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
   private waitingVideoCC: number = -1;
   private audioSwitch: boolean = false;
   private trackId: number = -1;
-  private waitingData: { frag: Fragment, cache: ChunkCache, complete: boolean } | null = null;
+  private waitingData: WaitingForPTSData | null = null;
 
   protected readonly logPrefix = '[audio-stream-controller]';
 
@@ -158,13 +165,14 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       // Ensure we don't get stuck in the WAITING_INIT_PTS state if the waiting frag CC doesn't match any initPTS
       const waitingData = this.waitingData;
       if (waitingData) {
-        const { frag, cache, complete } = waitingData;
+        const { frag, part, cache, complete } = waitingData;
         if (this.initPTS[frag.cc] !== undefined) {
           this.waitingData = null;
           this.state = State.FRAG_LOADING;
           const payload = cache.flush();
           const data: FragLoadedData = {
             frag,
+            part,
             payload,
             networkDetails: null
           };
@@ -446,7 +454,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       transmuxer.push(payload, initSegmentData, audioCodec, '', frag, part, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
     } else {
       logger.log(`Unknown video PTS for cc ${frag.cc}, waiting for video PTS before demuxing audio frag ${frag.sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
-      const { cache } = this.waitingData = this.waitingData || { frag, cache: new ChunkCache(), complete: false };
+      const { cache } = this.waitingData = this.waitingData || { frag, part, cache: new ChunkCache(), complete: false };
       cache.push(new Uint8Array(payload));
       this.waitingVideoCC = this.videoTrackCC;
       this.state = State.WAITING_INIT_PTS;
@@ -632,7 +640,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
         part.elementaryStreams[ElementaryStreamTypes.AUDIO] = { startPTS, endPTS, startDTS, endDTS };
       }
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, startPTS, endPTS, startDTS, endDTS);
-      this.bufferFragmentData(audio, frag, chunkMeta);
+      this.bufferFragmentData(audio, frag, part, chunkMeta);
     }
 
     if (id3?.samples?.length) {
@@ -672,7 +680,13 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     this.log(`Audio, container:${track.container}, codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
     const initSegment = track.initSegment;
     if (initSegment) {
-      const segment: BufferAppendingData = { type: 'audio', data: initSegment, frag, chunkMeta };
+      const segment: BufferAppendingData = {
+        type: 'audio',
+        data: initSegment,
+        frag,
+        part: null,
+        chunkMeta
+      };
       this.hls.trigger(Events.BUFFER_APPENDING, segment);
     }
     // trigger handler right now

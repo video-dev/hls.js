@@ -36,6 +36,7 @@ export interface BufferAppendingData {
   type: SourceBufferName;
   data: Uint8Array;
   frag: Fragment;
+  part: Part | null;
   chunkMeta: ChunkMetadata
 }
 
@@ -255,7 +256,7 @@ export interface FragLoadEmergencyAbortedData {
 
 export interface FragLoadedData {
   frag: Fragment
-  part?: Part
+  part: Part | null
   payload: ArrayBuffer
   networkDetails: unknown
 }
@@ -297,7 +298,8 @@ export interface FragParsedData {
 
 export interface FragBufferedData {
   stats: LoadStats
-  frag: Fragment
+  frag: Fragment,
+  part: Part | null
   id: string
 }
 

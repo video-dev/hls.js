@@ -118,6 +118,7 @@ describe('LatencyController', function () {
       levelDetails.holdBack = 8;
       levelDetails.partHoldBack = 3;
       levelDetails.age = 0;
+      latencyController['config'].lowLatencyMode = false;
       expect(latencyController.targetLatency).to.equal(8);
       latencyController['config'].lowLatencyMode = true;
       expect(latencyController.targetLatency).to.equal(3);

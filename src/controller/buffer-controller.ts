@@ -222,14 +222,18 @@ export default class BufferController implements ComponentAPI {
 
   protected onBufferAppending (event: Events.BUFFER_APPENDING, eventData: BufferAppendingData) {
     const { hls, operationQueue } = this;
-    const { data, type, frag, chunkMeta } = eventData;
+    const { data, type, frag, part, chunkMeta } = eventData;
     const chunkStats = chunkMeta.buffering[type];
-    const fragStats = frag.stats.buffering;
 
     const start = self.performance.now();
     chunkStats.start = start;
-    if (!fragStats.start) {
-      fragStats.start = start;
+    const fragBuffering = frag.stats.buffering;
+    const partBuffering = part ? part.stats.buffering : null;
+    if (fragBuffering.start === 0) {
+      fragBuffering.start = start;
+    }
+    if (partBuffering && partBuffering.start === 0) {
+      partBuffering.start = start;
     }
 
     const operation: BufferOperation = {
@@ -244,8 +248,11 @@ export default class BufferController implements ComponentAPI {
         logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
         const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
-        if (!fragStats.first) {
-          fragStats.first = end;
+        if (fragBuffering.first === 0) {
+          fragBuffering.first = end;
+        }
+        if (partBuffering && partBuffering.first === 0) {
+          partBuffering.first = end;
         }
 
         const { sourceBuffer } = this;
@@ -328,8 +335,18 @@ export default class BufferController implements ComponentAPI {
     }
 
     const onUnblocked = () => {
-      frag.stats.buffering.end = self.performance.now();
-      this.hls.trigger(Events.FRAG_BUFFERED, { frag, stats: frag.stats, id: frag.type });
+      const now = self.performance.now();
+      frag.stats.buffering.end = now;
+      if (part) {
+        part.stats.buffering.end = now;
+      }
+      const stats = part ? part.stats : frag.stats;
+      this.hls.trigger(Events.FRAG_BUFFERED, {
+        frag,
+        part,
+        stats,
+        id: frag.type
+      });
     };
 
     if (buffersAppendedTo.length === 0) {

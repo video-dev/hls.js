@@ -354,7 +354,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       startFragPrefetch: false,
       testBandwidth: true,
       progressive: false,
-      lowLatencyMode: false,
+      lowLatencyMode: true,
       fpsDroppedMonitoringPeriod: 5000,
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 3,
@@ -685,7 +685,7 @@ Enable streaming segment data with fetch loader (experimental).
 
 ### `lowLatencyMode`
                   
-(default: `false`)
+(default: `true`)
 
 Enable Low-Latency HLS part playlist and segment loading, and start live streams at playlist PART-HOLD-BACK rather than HOLD-BACK.
 

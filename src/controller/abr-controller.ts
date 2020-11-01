@@ -185,18 +185,20 @@ class AbrController implements ComponentAPI {
         level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
       }
       if (frag.bitrateTest) {
-        const fragBufferedData: Omit<FragBufferedData, 'id'> = {
+        const fragBufferedData: FragBufferedData = {
           stats: data.frag.stats,
-          frag: data.frag
+          frag: data.frag,
+          part: data.part,
+          id: frag.type
         };
         this.onFragBuffered(Events.FRAG_BUFFERED, fragBufferedData);
       }
     }
   }
 
-  protected onFragBuffered (event: Events.FRAG_BUFFERED, data: Omit<FragBufferedData, 'id'>) {
-    const frag = data.frag;
-    const stats = frag.stats;
+  protected onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+    const { frag, part } = data;
+    const stats = part ? part.stats : frag.stats;
 
     if (stats.aborted) {
       return;
@@ -208,11 +210,11 @@ class AbrController implements ComponentAPI {
     // Use the difference between parsing and request instead of buffering and request to compute fragLoadingProcessing;
     // rationale is that buffer appending only happens once media is attached. This can happen when config.startFragPrefetch
     // is used. If we used buffering in that case, our BW estimate sample will be very large.
-    const fragLoadingProcessingMs = stats.parsing.end - stats.loading.start;
-    this.bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+    const processingMs = stats.parsing.end - stats.loading.start;
+    this.bwEstimator.sample(processingMs, stats.loaded);
     stats.bwEstimate = this.bwEstimator.getEstimate();
     if (frag.bitrateTest) {
-      this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
+      this.bitrateTestDelay = processingMs / 1000;
     } else {
       this.bitrateTestDelay = 0;
     }

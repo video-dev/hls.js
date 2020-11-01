@@ -149,6 +149,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
           type: name,
           data: segmentData,
           frag,
+          part: null,
           chunkMeta
         };
 
