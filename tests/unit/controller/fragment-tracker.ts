@@ -447,14 +447,16 @@ function createFragBufferedData (frag: Fragment, aborted?: boolean): FragBuffere
   }
   return {
     stats,
-    id: frag.type,
-    frag
+    frag,
+    part: null,
+    id: frag.type
   };
 }
 
 function createFragLoadedData (frag: Fragment): FragLoadedData {
   return {
     frag,
+    part: null,
     payload: new ArrayBuffer(0),
     networkDetails: null
   };

@@ -17,8 +17,8 @@ export default class TransmuxerInterface {
   private hls: Hls;
   private id: PlaylistLevelType;
   private observer: HlsEventEmitter;
-  private frag?: Fragment;
-  private part: Part | undefined;
+  private frag: Fragment | null = null;
+  private part: Part | null = null;
   private worker: any;
   private onwmsg?: Function;
   private transmuxer: Transmuxer | null = null;
@@ -102,7 +102,7 @@ export default class TransmuxerInterface {
     this.observer = null;
   }
 
-  push (data: ArrayBuffer, initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, part: Part | undefined, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {
+  push (data: ArrayBuffer, initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, part: Part | null, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {
     chunkMeta.transmuxing.start = self.performance.now();
     const { currentTransmuxSession, transmuxer, worker } = this;
     const timeOffset = part ? part.start : frag.start;
@@ -110,7 +110,15 @@ export default class TransmuxerInterface {
     const lastFrag = this.frag;
 
     if (startingNewTransmuxSession(currentTransmuxSession, chunkMeta)) {
-      frag.stats.parsing.start = self.performance.now();
+      const now = self.performance.now();
+      if (part) {
+        part.stats.parsing.start = now;
+        if (frag.stats.parsing.start === 0) {
+          frag.stats.parsing.start = now;
+        }
+      } else {
+        frag.stats.parsing.start = now;
+      }
       const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
       const trackSwitch = !(lastFrag && (chunkMeta.level === lastFrag.level));
       const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;

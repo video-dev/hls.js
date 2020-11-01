@@ -984,7 +984,12 @@ export default class StreamController extends BaseStreamController implements Ne
         const stats = frag.stats;
         // Bitrate tests fragments are neither parsed nor buffered
         stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = self.performance.now();
-        hls.trigger(Events.FRAG_BUFFERED, { stats, frag, id: 'main' });
+        hls.trigger(Events.FRAG_BUFFERED, {
+          stats,
+          frag,
+          part: null,
+          id: 'main'
+        });
         this.tick();
       });
   }
@@ -1040,7 +1045,7 @@ export default class StreamController extends BaseStreamController implements Ne
           part.elementaryStreams[video.type] = { startPTS, endPTS, startDTS, endDTS };
         }
         frag.setElementaryStreamInfo(video.type as ElementaryStreamTypes, startPTS, endPTS, startDTS, endDTS);
-        this.bufferFragmentData(video, frag, chunkMeta);
+        this.bufferFragmentData(video, frag, part, chunkMeta);
       }
     }
 
@@ -1050,7 +1055,7 @@ export default class StreamController extends BaseStreamController implements Ne
         part.elementaryStreams[ElementaryStreamTypes.AUDIO] = { startPTS, endPTS, startDTS, endDTS };
       }
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, startPTS, endPTS, startDTS, endDTS);
-      this.bufferFragmentData(audio, frag, chunkMeta);
+      this.bufferFragmentData(audio, frag, part, chunkMeta);
     }
 
     if (id3?.samples?.length) {
@@ -1122,7 +1127,13 @@ export default class StreamController extends BaseStreamController implements Ne
       const initSegment = track.initSegment;
       this.log(`Main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
       if (initSegment) {
-        this.hls.trigger(Events.BUFFER_APPENDING, { type: trackName as SourceBufferName, data: initSegment, frag, chunkMeta });
+        this.hls.trigger(Events.BUFFER_APPENDING, {
+          type: trackName as SourceBufferName,
+          data: initSegment,
+          frag,
+          part: null,
+          chunkMeta
+        });
       }
     });
     // trigger handler right now

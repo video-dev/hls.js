@@ -530,6 +530,9 @@ function canvasDrawLoadEvent (ctx, yoffset, event, minTime, maxTime) {
   if (event.id2 !== undefined) {
     legend += ' ' + event.id2;
   }
+  if (event.id3 !== undefined) {
+    legend += '/' + event.id3;
+  }
   if (event.id !== undefined) {
     if (event.type.indexOf('fragment') !== -1) {
       legend += ' @';

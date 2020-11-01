@@ -88,7 +88,7 @@ describe('TransmuxerInterface tests', function () {
     newFrag.level = 1;
     newFrag.start = 1000;
     newFrag.startPTS = 1000;
-    const part = undefined;
+    const part = null;
     const data = new ArrayBuffer(8);
     const initSegmentData = new Uint8Array(0);
     const audioCodec = '';
@@ -140,7 +140,7 @@ describe('TransmuxerInterface tests', function () {
     newFrag.sn = 5;
     newFrag.level = 2;
     newFrag.start = 1000;
-    const part = undefined;
+    const part = null;
     const data = new Uint8Array(new ArrayBuffer(8));
     const initSegmentData = new Uint8Array(0);
     const audioCodec = '';

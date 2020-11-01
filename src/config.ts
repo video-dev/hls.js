@@ -253,7 +253,7 @@ export const hlsDefaultConfig: HlsConfig = {
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
   progressive: false,
-  lowLatencyMode: false,
+  lowLatencyMode: true,
 
   // Dynamic Modules
   ...timelineConfig(),

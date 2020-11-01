@@ -75,6 +75,7 @@ describe('FragmentLoader tests', function () {
         .then(data => {
           expect(data).to.deep.equal({
             frag,
+            part: null,
             payload: response.data,
             networkDetails
           });
@@ -84,6 +85,7 @@ describe('FragmentLoader tests', function () {
           expect(onProgress).to.have.been.calledOnce;
           expect(onProgress).to.have.been.calledWith({
             frag,
+            part: null,
             payload: response.data,
             networkDetails
           });
