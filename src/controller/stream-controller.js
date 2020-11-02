@@ -299,7 +299,7 @@ class StreamController extends BaseStreamController {
     if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
       let liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
       bufferEnd = liveSyncPosition;
-      if (media && !media.paused && media.readyState && media.duration > liveSyncPosition && liveSyncPosition > media.currentTime) {
+      if (media && media.readyState && media.duration > liveSyncPosition && liveSyncPosition > media.currentTime) {
         logger.warn(`buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
         media.currentTime = liveSyncPosition;
       }
