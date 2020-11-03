@@ -17,7 +17,7 @@ jobs:
       - name: check sauce access
         id: check_sauce_access
         run: |
-          if ! [[  -z "$SAUCE_USERNAME" ]] && ! [[ -z "$SAUCE_ACCESS_KEY" ]]; then
+          if ! [[ -z "$SAUCE_USERNAME" ]] && ! [[ -z "$SAUCE_ACCESS_KEY" ]]; then
             echo "::set-output name=result::true"
           fi
         env:
@@ -29,7 +29,7 @@ jobs:
         uses: actions/github-script@v3
         with:
           script: |
-            const prefix = '/refs/tags/';
+            const prefix = 'refs/tags/';
             const ref = context.ref;
             return ref.startsWith(prefix) ? ref.substring(prefix.length) : '';   
           result-encoding: string
