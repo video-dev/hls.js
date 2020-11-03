@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [master]
+    tags: ['v*']
   pull_request:
 
 jobs:
@@ -181,6 +182,90 @@ jobs:
           CI: true
           GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
           NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
+
+  release_github:
+    needs: [config, test_unit]
+    if: needs.config.outputs.tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+
+      - name: build release zip
+        run: |
+          zip -r dist.zip dist
+
+      - name: create github release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload assets to github release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist.zip
+          asset_name: release.zip
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release_npm:
+    needs: [config, test_unit]
+    if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
+    runs-on: ubuntu-latest
+    steps:  
+      - uses: actions/checkout@v2
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: publish to npm
+        run: |
+          ./scripts/publish-npm.sh
+        env:
+          CI: true
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TAG: ${{ needs.config.outputs.tag }}
 
   test_functional_required:
     needs: [config, test_unit]
