@@ -1,14 +1,9 @@
 #!/bin/bash
 set -e
 
-# GITHUB_TOKEN and NETLIFY_ACCESS_TOKEN set in travis
-
-# ensure we have fetched origin/master
-git remote set-branches origin master
-git fetch
+# GITHUB_TOKEN and NETLIFY_ACCESS_TOKEN required
 
 currentCommit=$(git rev-parse HEAD)
-masterLatestCommit=$(git rev-parse origin/master)
 
 id=$currentCommit
 root="./netlify"
