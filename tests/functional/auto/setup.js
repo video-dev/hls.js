@@ -333,7 +333,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       throw new Error('Stream not defined');
     }
 
-    const labelBranch = process.env.TRAVIS_BRANCH || 'unknown';
+    const labelBranch = process.env.GITHUB_REF || 'unknown';
     let capabilities = {
       name: `hls.js@${labelBranch} on "${browserDescription}"`,
       browserName: browserConfig.name,
