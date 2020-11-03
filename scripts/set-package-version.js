@@ -17,12 +17,12 @@ try {
     }
     // remove v
     newVersion = tag.substring(1);
-    if (!versionParser.isDefinitelyGreaterThanAlphas(newVersion)) {
-      // 1.2.3-0.alpha.500
-      // 1.2.3-0.alpha.501
-      // 1.2.3-0.aaalpha.custom => bad
-      // 1.2.3-0.aaalpha.custom.0.alpha.503 => now lower than 1.2.3-0.alpha.501
-      throw new Error(`It's possible that "${newVersion}" has a lower precedense than an existing alpha version which is not allowed.`);
+    if (!versionParser.isDefinitelyGreaterThanCanaries(newVersion)) {
+      // 1.2.3-0.canary.500
+      // 1.2.3-0.canary.501
+      // 1.2.3-0.caaanary.custom => bad
+      // 1.2.3-0.caaanary.custom.0.canary.503 => now lower than 1.2.3-0.canary.501
+      throw new Error(`It's possible that "${newVersion}" has a lower precedense than an existing canary version which is not allowed.`);
     }
   } else {
     // bump patch in version from latest git tag
