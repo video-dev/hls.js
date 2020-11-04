@@ -6,9 +6,14 @@ import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import Fragment from '../loader/fragment';
-import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData, InitPTSFoundData } from '../types/events';
-import { PlaylistLevelType } from '../types/loader';
-
+import {
+  FragParsingUserdataData,
+  FragLoadedData,
+  FragDecryptedData,
+  MediaAttachingData,
+  ManifestLoadedData,
+  InitPTSFoundData
+} from '../types/events';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type { HlsConfig } from '../config';
@@ -40,6 +45,7 @@ export class TimelineController implements ComponentAPI {
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
+  private timescale: Array<number> = [];
   private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
@@ -101,7 +107,6 @@ export class TimelineController implements ComponentAPI {
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
-    hls.on(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment, this);
     hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
   }
 
@@ -115,7 +120,6 @@ export class TimelineController implements ComponentAPI {
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
-    hls.off(Events.FRAG_PARSING_INIT_SEGMENT, this.onFragParsingInitSegment, this);
     hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
   }
 
@@ -147,10 +151,11 @@ export class TimelineController implements ComponentAPI {
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
-  onInitPtsFound (event: Events.INIT_PTS_FOUND, { frag, id, initPTS }: InitPTSFoundData) {
+  onInitPtsFound (event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale }: InitPTSFoundData) {
     const { unparsedVttFrags } = this;
     if (id === 'main') {
       this.initPTS[frag.cc] = initPTS;
+      this.timescale[frag.cc] = timescale;
     }
 
     // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.
@@ -281,6 +286,7 @@ export class TimelineController implements ComponentAPI {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
+    this.timescale = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
       this.cea608Parser1.reset();
       this.cea608Parser2.reset();
@@ -407,7 +413,7 @@ export class TimelineController implements ComponentAPI {
 
   private _parseIMSC1 (frag: Fragment, payload: ArrayBuffer) {
     const hls = this.hls;
-    parseIMSC1(payload, this.initPTS[frag.cc], (cues) => {
+    parseIMSC1(payload, this.initPTS[frag.cc], this.timescale[frag.cc], (cues) => {
       this._appendCues(cues, frag.level);
       hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     }, (error) => {
@@ -419,7 +425,7 @@ export class TimelineController implements ComponentAPI {
   private _parseVTTs (frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
     const hls = this.hls;
     // Parse the WebVTT file contents.
-    parseWebVTT(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
+    parseWebVTT(payload, this.initPTS[frag.cc], this.timescale[frag.cc], vttCCs, frag.cc, (cues) => {
       this._appendCues(cues, frag.level);
       hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
     }, (error) => {
@@ -434,7 +440,7 @@ export class TimelineController implements ComponentAPI {
     // If textCodec is unknown, try parsing as IMSC1. Set textCodec based on the result
     const trackPlaylistMedia = this.tracks[frag.level];
     if (!trackPlaylistMedia.textCodec) {
-      parseIMSC1(payload, this.initPTS[frag.cc], () => {
+      parseIMSC1(payload, this.initPTS[frag.cc], this.timescale[frag.cc], () => {
         trackPlaylistMedia.textCodec = IMSC1_CODEC;
         this._parseIMSC1(frag, payload);
       }, () => {
@@ -508,14 +514,6 @@ export class TimelineController implements ComponentAPI {
         cea608Parser1.addData(data.samples[i].pts, ccdatas[0]);
         cea608Parser2.addData(data.samples[i].pts, ccdatas[1]);
       }
-    }
-  }
-
-  onFragParsingInitSegment () {
-    // If we receive this event, we have not received an onInitPtsFound event. This happens when the video track has no samples (but has audio)
-    // In order to have captions display, which requires an initPTS, we assume one of 90000
-    if (typeof this.initPTS === 'undefined') {
-      this.onInitPtsFound(Events.INIT_PTS_FOUND, { id: '', frag: new Fragment(PlaylistLevelType.MAIN, ''), initPTS: 90000 });
     }
   }
 

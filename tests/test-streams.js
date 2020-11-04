@@ -176,11 +176,13 @@ module.exports = {
   //   url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/3cbf1114-b2f4-4320-afb3-f0f7eeeb8630/playlist.m3u8',
   //   description: 'Alternate audio track, but no video codec is signaled in the master manifest'
   // },
-  // altAudioAndTracks: {
-  //   url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
-  //   description: 'Alternate audio tracks, and multiple VTT tracks',
-  //   abr: true
-  // },
+  altAudioAndTracks: {
+    url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
+    altUrl: 'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/index.m3u8',
+    description: 'Alternate audio tracks, and multiple VTT tracks',
+    vendor: 'wowza',
+    abr: true
+  },
   altAudioAudioOnly: createTestStreamWithConfig({
     url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/sintel/playlist.m3u8',
     description: 'Audio only with alternate audio track (Sintel)',

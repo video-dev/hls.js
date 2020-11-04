@@ -185,8 +185,9 @@ export default class MP4Remuxer implements Remuxer {
     const tracks: TrackSet = {};
     const computePTSDTS = (!Number.isFinite(this._initPTS));
     let container = 'audio/mp4';
-    let initPTS;
-    let initDTS;
+    let initPTS: number | undefined;
+    let initDTS: number | undefined;
+    let timescale: number | undefined;
 
     if (computePTSDTS) {
       initPTS = initDTS = Infinity;
@@ -217,15 +218,16 @@ export default class MP4Remuxer implements Remuxer {
         }
       };
       if (computePTSDTS) {
+        timescale = audioTrack.inputTimeScale;
         // remember first PTS of this demuxing context. for audio, PTS = DTS
-        initPTS = initDTS = audioSamples[0].pts - Math.round(audioTrack.inputTimeScale * timeOffset);
+        initPTS = initDTS = audioSamples[0].pts - Math.round(timescale * timeOffset);
       }
     }
 
     if (videoTrack.sps && videoTrack.pps && videoSamples.length) {
       // let's use input time scale as MP4 video timescale
       // we use input time scale straight away to avoid rounding issues on frame duration / cts computation
-      const inputTimeScale = videoTrack.timescale = videoTrack.inputTimeScale;
+      videoTrack.timescale = videoTrack.inputTimeScale;
       tracks.video = {
         id: 'main',
         container: 'video/mp4',
@@ -237,23 +239,25 @@ export default class MP4Remuxer implements Remuxer {
         }
       };
       if (computePTSDTS) {
+        timescale = videoTrack.inputTimeScale;
         const startPTS = this.getVideoStartPts(videoSamples);
-        const startOffset = Math.round(inputTimeScale * timeOffset);
-        initDTS = Math.min(initDTS, PTSNormalize(videoSamples[0].dts, startPTS) - startOffset);
-        initPTS = Math.min(initPTS, startPTS - startOffset);
+        const startOffset = Math.round(timescale * timeOffset);
+        initDTS = Math.min(initDTS as number, PTSNormalize(videoSamples[0].dts, startPTS) - startOffset);
+        initPTS = Math.min(initPTS as number, startPTS - startOffset);
       }
     }
 
     if (Object.keys(tracks).length) {
       this.ISGenerated = true;
       if (computePTSDTS) {
-        this._initPTS = initPTS;
-        this._initDTS = initDTS;
+        this._initPTS = initPTS as number;
+        this._initDTS = initDTS as number;
       }
 
       return {
         tracks,
-        initPTS
+        initPTS,
+        timescale
       };
     }
   }
