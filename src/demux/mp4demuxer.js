@@ -386,7 +386,8 @@ class MP4Demuxer {
     if (initPTS === undefined) {
       let startDTS = MP4Demuxer.getStartDTS(initData, data);
       this.initPTS = initPTS = startDTS - timeOffset;
-      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS });
+      // getStartDTS - convert base time to seconds => timescale: 1
+      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, timescale: 1 });
     }
     MP4Demuxer.offsetStartDTS(initData, data, initPTS);
     startDTS = MP4Demuxer.getStartDTS(initData, data);
