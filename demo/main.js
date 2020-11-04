@@ -1009,11 +1009,6 @@ function checkBuffer () {
 
     if ($('#statsDisplayTab').is(':visible')) {
       let log = `Duration: ${video.duration}\nBuffered: ${timeRangesToString(video.buffered)}\nSeekable: ${timeRangesToString(video.seekable)}\nPlayed: ${timeRangesToString(video.played)}\n`;
-      log += `Max Latency: ${hls.maxLatency}\n`;
-      log += `Target Latency: ${hls.targetLatency}\n`;
-      log += `Latency: ${hls.latency}\n`;
-      log += `Edge Stall: ${hls.latencyController.edgeStalled}\n`;
-      log += `Playback rate: ${video.playbackRate.toFixed(2)}\n`;
       if (hls.media) {
         for (const type in tracks) {
           log += `Buffer for ${type} contains:${timeRangesToString(tracks[type].buffer.buffered)}\n`;
@@ -1024,8 +1019,17 @@ function checkBuffer () {
           log += `Dropped frames: ${video.getVideoPlaybackQuality().droppedVideoFrames}\n`;
           log += `Corrupted frames: ${video.getVideoPlaybackQuality().corruptedVideoFrames}\n`;
         } else if (video.webkitDroppedFrameCount) {
-          log += `Dropped frames: ${video.webkitDroppedFrameCount}`;
+          log += `Dropped frames: ${video.webkitDroppedFrameCount}\n`;
         }
+      }
+
+      if (events.isLive) {
+        log += 'Live Stats:\n' +
+          `  Max Latency: ${hls.maxLatency}\n` +
+          `  Target Latency: ${hls.targetLatency}\n` +
+          `  Latency: ${hls.latency}\n` +
+          `  Edge Stall: ${hls.latencyController.edgeStalled}\n` +
+          `  Playback rate: ${video.playbackRate.toFixed(2)}\n`;
       }
 
       $('#bufferedOut').text(log);
