@@ -93,7 +93,11 @@ class PassThroughRemuxer implements Remuxer {
       return result;
     }
 
-    const initSegment: InitSegmentData = {};
+    const initSegment: InitSegmentData = {
+      tracks: {},
+      initPTS: undefined,
+      timescale: 1
+    };
     let initData = this.initData;
     if (!initData || !initData.length) {
       this.generateInitSegment(data);
@@ -105,7 +109,7 @@ class PassThroughRemuxer implements Remuxer {
       return result;
     }
     if (this.emitInitSegment) {
-      initSegment.tracks = this.initTracks;
+      initSegment.tracks = this.initTracks as TrackSet;
       this.emitInitSegment = false;
     }
 

@@ -10,9 +10,6 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (da
   }
   scale._parseValue = scaleParseValue;
   const obj = datasets[datasetIndex].data[index];
-  if (obj.dataType === 'part') {
-    console.assert(obj.start === obj.fragment.start + obj.fragOffset);
-  }
   const value = scale._parseValue(obj);
   const start = value.start === undefined ? 0 : value.max >= 0 && value.min >= 0 ? value.min : value.max;
   const length = value.start === undefined ? value.end : value.max >= 0 && value.min >= 0 ? value.max - value.min : value.min - value.max;

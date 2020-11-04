@@ -1,5 +1,6 @@
 import VTTParser from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
+import { toMpegTsClockFromTimescale } from './timescale-conversion';
 import type { VTTCCs } from '../types/vtt';
 
 // String.prototype.startsWith is not supported in IE11
@@ -61,7 +62,7 @@ const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
 
 // TODO(typescript-vttparser): When VTT parser is typed, errorCallback needs to get the proper typing here.
 export function parseWebVTT (
-  vttByteArray: ArrayBuffer, syncPTS: number, vttCCs: VTTCCs,
+  vttByteArray: ArrayBuffer, initPTS: number, timescale: number, vttCCs: VTTCCs,
   cc: number, callBack: (cues: VTTCue[]) => void, errorCallBack: (arg0: any) => void
 ) {
   // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
@@ -69,6 +70,7 @@ export function parseWebVTT (
   // Uint8Array.prototype.reduce is not implemented in IE11
   const vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
 
+  let syncPTS = toMpegTsClockFromTimescale(initPTS, timescale);
   let cueTime = '00:00.000';
   let mpegTs = 0;
   let localTime = 0;

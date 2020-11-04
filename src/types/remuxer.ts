@@ -22,23 +22,23 @@ export interface Remuxer {
 }
 
 export interface RemuxedTrack {
-    data1: Uint8Array
-    data2?: Uint8Array
-    startPTS: number
-    endPTS: number
-    startDTS: number
-    endDTS: number
-    type: SourceBufferName
-    hasAudio: boolean
-    hasVideo: boolean
-    nb: number
-    transferredData1?: ArrayBuffer
-    transferredData2?: ArrayBuffer
-    dropped?: number
+  data1: Uint8Array
+  data2?: Uint8Array
+  startPTS: number
+  endPTS: number
+  startDTS: number
+  endDTS: number
+  type: SourceBufferName
+  hasAudio: boolean
+  hasVideo: boolean
+  nb: number
+  transferredData1?: ArrayBuffer
+  transferredData2?: ArrayBuffer
+  dropped?: number
 }
 
 export interface RemuxedMetadata {
-    samples: MetadataSample[]
+  samples: MetadataSample[]
 }
 
 export interface RemuxedUserdata {
@@ -46,14 +46,15 @@ export interface RemuxedUserdata {
 }
 
 export interface RemuxerResult {
-    audio?: RemuxedTrack
-    video?: RemuxedTrack
-    text?: RemuxedUserdata
-    id3?: RemuxedMetadata
-    initSegment?: InitSegmentData
+  audio?: RemuxedTrack
+  video?: RemuxedTrack
+  text?: RemuxedUserdata
+  id3?: RemuxedMetadata
+  initSegment?: InitSegmentData
 }
 
 export interface InitSegmentData {
-    tracks?: TrackSet
-    initPTS?: number
+  tracks: TrackSet
+  initPTS: number | undefined
+  timescale: number | undefined
 }

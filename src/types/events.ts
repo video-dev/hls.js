@@ -239,6 +239,7 @@ export interface InitPTSFoundData {
   id: string
   frag: Fragment
   initPTS: number
+  timescale: number
 }
 
 export interface FragLoadingData {
