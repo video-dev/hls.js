@@ -656,12 +656,14 @@ class TSDemuxer {
         // skip frameType
         expGolombDecoder.readUByte();
 
+        const ATSC1_DATA_GA94 = 0x47413934;
+        const AFD_DATA_DTG1 = 0x44544731;
         var payloadType = 0;
         var payloadSize = 0;
-        var endOfCaptions = false;
+        // var endOfCaptions = false;
         var b = 0;
 
-        while (!endOfCaptions && expGolombDecoder.bytesAvailable > 1) {
+        while (expGolombDecoder.bytesAvailable > 1) {
           payloadType = 0;
           do {
             b = expGolombDecoder.readUByte();
@@ -678,7 +680,8 @@ class TSDemuxer {
           // TODO: there can be more than one payload in an SEI packet...
           // TODO: need to read type and size in a while loop to get them all
           if (payloadType === 4 && expGolombDecoder.bytesAvailable !== 0) {
-            endOfCaptions = true;
+            // FIXME: commenting out this line to attempt to parse all packets
+            // endOfCaptions = true;
 
             let countryCode = expGolombDecoder.readUByte();
 
@@ -688,7 +691,7 @@ class TSDemuxer {
               if (providerCode === 49) {
                 let userStructure = expGolombDecoder.readUInt();
 
-                if (userStructure === 0x47413934) {
+                if (userStructure === ATSC1_DATA_GA94) {
                   let userDataType = expGolombDecoder.readUByte();
 
                   // Raw CEA-608 bytes wrapped in CEA-708 packet
@@ -708,11 +711,15 @@ class TSDemuxer {
 
                     this._insertSampleInOrder(this._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
                   }
+                } else if (userStructure === AFD_DATA_DTG1) {
+                  for (i = 0; i < payloadSize; i++) {
+                    expGolombDecoder.readUByte();
+                  }
                 }
               }
             }
           } else if (payloadType === 5 && expGolombDecoder.bytesAvailable !== 0) {
-            endOfCaptions = true;
+            // endOfCaptions = true;
 
             if (payloadSize > 16) {
               const uuidStrArray = [];
