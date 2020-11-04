@@ -171,8 +171,9 @@ module.exports = {
   //   description: 'Alternate audio track, but no video codec is signaled in the master manifest'
   // },
   altAudioAndTracks: {
-    url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
+    url: 'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/index.m3u8',
     description: 'Alternate audio tracks, and multiple VTT tracks',
+    vendor: 'wowza',
     abr: true
   },
   altAudioAudioOnly: createTestStreamWithConfig({

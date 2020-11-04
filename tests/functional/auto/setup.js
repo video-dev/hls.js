@@ -8,8 +8,7 @@ const until = webdriver.until;
 require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
-const onTravis = !!process.env.TRAVIS;
-const useSauce = !!process.env.SAUCE || onTravis;
+const useSauce = !!process.env.SAUCE || !!process.env.SAUCE_TUNNEL_ID;
 const chai = require('chai');
 const expect = chai.expect;
 
@@ -35,6 +34,10 @@ if (useSauce) {
   let OS = process.env.OS;
   if (!OS) {
     throw new Error('No test browser platform.');
+  }
+
+  if (!process.env.SAUCE_ACCESS_KEY || !process.env.SAUCE_USERNAME) {
+    throw new Error('Missing sauce auth.');
   }
 
   let UA_VERSION = process.env.UA_VERSION;
@@ -298,7 +301,7 @@ async function sauceConnect (tunnelIdentifier) {
     console.log(`Running sauce-connect-launcher. Tunnel id: ${tunnelIdentifier}`);
     sauceConnectLauncher({
       tunnelIdentifier
-    }, function (err, sauceConnectProcess) {
+    }, (err, sauceConnectProcess) => {
       if (err) {
         console.error(err.message);
         reject(err);
@@ -330,7 +333,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       throw new Error('Stream not defined');
     }
 
-    const labelBranch = process.env.TRAVIS_BRANCH || 'unknown';
+    const labelBranch = process.env.GITHUB_REF || 'unknown';
     let capabilities = {
       name: `hls.js@${labelBranch} on "${browserDescription}"`,
       browserName: browserConfig.name,
@@ -349,14 +352,16 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     }
 
     browser = new webdriver.Builder();
-    if (onTravis) {
-      capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
-      capabilities.build = 'HLSJS-' + process.env.TRAVIS_BUILD_NUMBER;
-    } else if (useSauce) {
-      capabilities['tunnel-identifier'] = `local-${Date.now()}`;
-    }
     if (useSauce) {
-      sauceConnectProcess = await sauceConnect(capabilities['tunnel-identifier']);
+      if (process.env.SAUCE_TUNNEL_ID) {
+        capabilities['tunnel-identifier'] = process.env.SAUCE_TUNNEL_ID;
+        capabilities.build = 'HLSJS-' + process.env.SAUCE_TUNNEL_ID;
+      } else {
+        capabilities['tunnel-identifier'] = `local-${Date.now()}`;
+      }
+      if (!process.env.SAUCE_TUNNEL_ID) {
+        sauceConnectProcess = await sauceConnect(capabilities['tunnel-identifier']);
+      }
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;
@@ -426,7 +431,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     const failed = this.currentTest.isFailed();
     if (printDebugLogs || failed) {
       const logString = await browser.executeScript('return logString');
-      console.log(`${onTravis ? 'travis_fold:start:debug_logs' : ''}\n${logString}\n${onTravis ? 'travis_fold:end:debug_logs' : ''}`);
+      console.log(logString);
       if (failed && useSauce) {
         browser.executeScript('sauce:job-result=failed');
       }
