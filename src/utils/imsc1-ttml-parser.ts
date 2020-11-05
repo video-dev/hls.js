@@ -2,7 +2,7 @@ import { findBox } from './mp4-tools';
 import { parseTimeStamp } from './vttparser';
 import VTTCue from './vttcue';
 import { utf8ArrayToStr } from '../demux/id3';
-import { toMpegTsClockFromTimescale } from './timescale-conversion';
+import { toTimescaleFromScale } from './timescale-conversion';
 
 export const IMSC1_CODEC = 'stpp.ttml.im1t';
 
@@ -20,16 +20,16 @@ export function parseIMSC1 (payload: ArrayBuffer, initPTS: number, timescale: nu
   }
   const mdat = results[0];
   const ttml = utf8ArrayToStr(new Uint8Array(payload, mdat.start, mdat.end - mdat.start));
-  const syncPTS = toMpegTsClockFromTimescale(initPTS, timescale);
+  const syncTime = toTimescaleFromScale(initPTS, 1, timescale);
 
   try {
-    callBack(parseTTML(ttml, syncPTS));
+    callBack(parseTTML(ttml, syncTime));
   } catch (error) {
     errorCallBack(error);
   }
 }
 
-function parseTTML (ttml: string, syncPTS: number): Array<VTTCue> {
+function parseTTML (ttml: string, syncTime: number): Array<VTTCue> {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(ttml, 'text/xml');
   const tt = xmlDoc.getElementsByTagName('tt')[0];
@@ -71,7 +71,7 @@ function parseTTML (ttml: string, syncPTS: number): Array<VTTCue> {
       }
       endTime = startTime + duration;
     }
-    const cue = new VTTCue(startTime - syncPTS, endTime - syncPTS, cueText);
+    const cue = new VTTCue(startTime - syncTime, endTime - syncTime, cueText);
 
     const region = regionElements[cueElement.getAttribute('region')];
     const style = styleElements[cueElement.getAttribute('style')];
