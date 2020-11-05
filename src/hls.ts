@@ -744,6 +744,6 @@ export default class Hls implements HlsEventEmitter {
    * @type {number}
    */
   get targetLatency (): number | null {
-    return this.latencyController.computeTargetLatency();
+    return this.latencyController.targetLatency;
   }
 }
