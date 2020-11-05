@@ -7,13 +7,6 @@ import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { HlsConfig } from '../config';
 
-// TODO: LatencyController config options:
-//  - liveSyncOnStallIncrease
-//  - maxLiveSyncOnStallIncrease
-
-// TODO: LatencyController unit tests
-//  - latency estimate
-
 export default class LatencyController implements ComponentAPI {
   private readonly hls: Hls;
   private readonly config: HlsConfig;
@@ -34,9 +27,34 @@ export default class LatencyController implements ComponentAPI {
     return this._latency || 0;
   }
 
+  get maxLatency (): number {
+    const { config, levelDetails } = this;
+    if (config.liveMaxLatencyDuration !== undefined) {
+      return config.liveMaxLatencyDuration;
+    }
+    return levelDetails ? config.liveMaxLatencyDurationCount * levelDetails.targetduration : 0;
+  }
+
+  get targetLatency (): number | null {
+    const { levelDetails } = this;
+    if (levelDetails === null) {
+      return null;
+    }
+    const { holdBack, partHoldBack, targetduration } = levelDetails;
+    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode } = this.config;
+    const userConfig = this.hls.userConfig;
+    let targetLatency = lowLatencyMode ? partHoldBack || holdBack : holdBack;
+    if (userConfig.liveSyncDuration || userConfig.liveSyncDurationCount || targetLatency === 0) {
+      targetLatency = liveSyncDuration !== undefined ? liveSyncDuration : liveSyncDurationCount * targetduration;
+    }
+    const maxLiveSyncOnStallIncrease = levelDetails.targetduration;
+    const liveSyncOnStallIncrease = 1.0;
+    return targetLatency + Math.min(this.stallCount * liveSyncOnStallIncrease, maxLiveSyncOnStallIncrease);
+  }
+
   get liveSyncPosition (): number | null {
     const liveEdge = this.estimateLiveEdge();
-    const targetLatency = this.computeTargetLatency();
+    const targetLatency = this.targetLatency;
     if (liveEdge === null || targetLatency === null || this.levelDetails === null) {
       return null;
     }
@@ -50,16 +68,6 @@ export default class LatencyController implements ComponentAPI {
     }
     const maxLevelUpdateAge = ((this.config.lowLatencyMode && levelDetails.partTarget) || levelDetails.targetduration) * 3;
     return Math.max(levelDetails.age - maxLevelUpdateAge, 0);
-  }
-
-  get maxLatency (): number {
-    const { config, levelDetails } = this;
-    if (levelDetails === null) {
-      return 0;
-    }
-    return config.liveMaxLatencyDuration !== undefined
-      ? config.liveMaxLatencyDuration
-      : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
   }
 
   public destroy (): void {
@@ -132,15 +140,15 @@ export default class LatencyController implements ComponentAPI {
     }
     this._latency = latency;
 
-    const latencyTarget = this.computeTargetLatency();
-    if (latencyTarget === null) {
+    const targetLatency = this.targetLatency;
+    if (targetLatency === null) {
       return;
     }
     const { minLiveSyncPlaybackRate, maxLiveSyncPlaybackRate } = this.config;
     if (minLiveSyncPlaybackRate === 1 && maxLiveSyncPlaybackRate === 1) {
       return;
     }
-    const distanceFromTarget = latency - latencyTarget;
+    const distanceFromTarget = latency - targetLatency;
     if (distanceFromTarget && levelDetails.live) {
       const distanceFromEdge = levelDetails.edge - this.currentTime;
       const min = Math.min(1, Math.max(0.5, minLiveSyncPlaybackRate));
@@ -170,22 +178,5 @@ export default class LatencyController implements ComponentAPI {
       return null;
     }
     return liveEdge - this.currentTime;
-  }
-
-  public computeTargetLatency (): number | null {
-    const { levelDetails } = this;
-    if (levelDetails === null) {
-      return null;
-    }
-    const { holdBack, partHoldBack, targetduration } = levelDetails;
-    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode } = this.config;
-    const userConfig = this.hls.userConfig;
-    let targetLatency = lowLatencyMode ? partHoldBack || holdBack : holdBack;
-    if (userConfig.liveSyncDuration || userConfig.liveSyncDurationCount || targetLatency === 0) {
-      targetLatency = liveSyncDuration !== undefined ? liveSyncDuration : liveSyncDurationCount * targetduration;
-    }
-    const maxLiveSyncOnStallIncrease = levelDetails.targetduration;
-    const liveSyncOnStallIncrease = 1.0;
-    return targetLatency + Math.min(this.stallCount * liveSyncOnStallIncrease, maxLiveSyncOnStallIncrease);
   }
 }

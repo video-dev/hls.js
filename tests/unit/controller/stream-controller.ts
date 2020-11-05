@@ -10,11 +10,11 @@ import LevelDetails from '../../../src/loader/level-details';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import AttrList from '../../../src/utils/attr-list';
+import { Level, LevelAttributes } from '../../../src/types/level';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
-import { Level, LevelAttributes } from '../../../src/types/level';
 
 chai.use(sinonChai);
 const expect = chai.expect;
