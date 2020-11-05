@@ -16,7 +16,7 @@ import type { LoaderStats } from '../types/loader';
 import type Hls from '../hls';
 import type { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
-import type { Level } from '../types/level';
+import { Part } from '../loader/fragment';
 
 class AbrController implements ComponentAPI {
   protected hls: Hls;
@@ -25,6 +25,7 @@ class AbrController implements ComponentAPI {
   private timer?: number;
   private onCheck: Function = this._abandonRulesCheck.bind(this);
   private fragCurrent: Fragment | null = null;
+  private partCurrent: Part | null = null;
   private bitrateTestDelay: number = 0;
 
   public readonly bwEstimator: EwmaBandWidthEstimator;
@@ -66,6 +67,7 @@ class AbrController implements ComponentAPI {
     if (frag.type === 'main') {
       if (!this.timer) {
         this.fragCurrent = frag;
+        this.partCurrent = data.part ?? null;
         this.timer = self.setInterval(this.onCheck, 100);
       }
     }
@@ -159,16 +161,16 @@ class AbrController implements ComponentAPI {
     this.bwEstimator.sample(requestDelay, stats.loaded);
     if (frag.loader) {
       frag.loader.abort();
-      this.fragCurrent = null;
+      this.fragCurrent = this.partCurrent = null;
     }
     this.clearTimer();
     hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
   }
 
-  protected onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData) {
-    const frag = data.frag;
-    const stats = frag.stats;
+  protected onFragLoaded (event: Events.FRAG_LOADED, { frag, part }: FragLoadedData) {
     if (frag.type === 'main' && Number.isFinite(frag.sn as number)) {
+      const stats = part ? part.stats : frag.stats;
+      const duration = part ? part.duration : frag.duration;
       // stop monitoring bw once frag loaded
       this.clearTimer();
       // store level id after successful fragment load
@@ -180,15 +182,15 @@ class AbrController implements ComponentAPI {
       if (this.hls.config.abrMaxWithRealBitrate) {
         const level = this.hls.levels[frag.level];
         const loadedBytes = (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
-        const loadedDuration = (level.loaded ? level.loaded.duration : 0) + frag.duration;
+        const loadedDuration = (level.loaded ? level.loaded.duration : 0) + duration;
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
         level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
       }
       if (frag.bitrateTest) {
         const fragBufferedData: FragBufferedData = {
-          stats: data.frag.stats,
-          frag: data.frag,
-          part: data.part,
+          stats,
+          frag,
+          part,
           id: frag.type
         };
         this.onFragBuffered(Events.FRAG_BUFFERED, fragBufferedData);
@@ -257,9 +259,9 @@ class AbrController implements ComponentAPI {
   }
 
   get _nextABRAutoLevel () {
-    const { fragCurrent, hls, lastLoadedFragLevel: currentLevel } = this;
-    const { maxAutoLevel, levels, config, minAutoLevel, media } = hls;
-    const currentFragDuration = fragCurrent ? fragCurrent.duration : 0;
+    const { fragCurrent, partCurrent, hls } = this;
+    const { maxAutoLevel, config, minAutoLevel, media } = hls;
+    const currentFragDuration = partCurrent ? partCurrent.duration : (fragCurrent ? fragCurrent.duration : 0);
     const pos = (media ? media.currentTime : 0);
 
     // playbackRate is the absolute value of the playback rate; if media.playbackRate is 0, we use 1 to load as
@@ -270,7 +272,7 @@ class AbrController implements ComponentAPI {
     const bufferStarvationDelay = (BufferHelper.bufferInfo(media as Bufferable, pos, config.maxBufferHole).end - pos) / playbackRate;
 
     // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
-    let bestLevel = this._findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+    let bestLevel = this._findBestLevel(avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor);
     if (bestLevel >= 0) {
       return bestLevel;
     } else {
@@ -297,12 +299,16 @@ class AbrController implements ComponentAPI {
           bwFactor = bwUpFactor = 1;
         }
       }
-      bestLevel = this._findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, bwFactor, bwUpFactor, levels);
+      bestLevel = this._findBestLevel(avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, bwFactor, bwUpFactor);
       return Math.max(bestLevel, 0);
     }
   }
 
-  private _findBestLevel (currentLevel: number, currentFragDuration: number, currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number, levels: Level[]): number {
+  private _findBestLevel (currentBw: number, minAutoLevel: number, maxAutoLevel: number, maxFetchDuration: number, bwFactor: number, bwUpFactor: number): number {
+    const { fragCurrent, partCurrent, lastLoadedFragLevel: currentLevel } = this;
+    const { levels } = this.hls;
+    const live = levels[currentLevel]?.details?.live || false;
+    const currentFragDuration = partCurrent ? partCurrent.duration : (fragCurrent ? fragCurrent.duration : 0);
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
 
@@ -311,8 +317,7 @@ class AbrController implements ComponentAPI {
       }
 
       const levelDetails = levelInfo.details;
-      const avgDuration = levelDetails?.averagetargetduration || currentFragDuration;
-      const live = levelDetails ? levelDetails.live : false;
+      const avgDuration = (partCurrent ? levelDetails?.partTarget : levelDetails?.averagetargetduration) || currentFragDuration;
 
       let adjustedbw: number;
       // follow algorithm captured from stagefright :
