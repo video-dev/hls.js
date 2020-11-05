@@ -261,8 +261,9 @@ export interface FragLoadedData {
   networkDetails: unknown
 }
 
-export interface FragLoadedEndData {
+export interface PartsLoadedData {
   frag: Fragment
+  part: Part | null
   partsLoaded?: FragLoadedData[]
 }
 
