@@ -54,7 +54,7 @@ export interface RemuxerResult {
 }
 
 export interface InitSegmentData {
-  tracks: TrackSet
+  tracks?: TrackSet
   initPTS: number | undefined
   timescale: number | undefined
 }
