@@ -298,7 +298,7 @@ export default class Transmuxer {
     // Ensure that muxers are always initialized with an initSegment
     this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
     this.resetInitialTimestamp(defaultInitPts);
-    logger.log(`[transmuxer.ts]: Probe succeeded with a data length of ${data.length}.`);
+    logger.log(`[transmuxer]: Probe succeeded with a data length of ${data.length}.`);
     return { demuxer, remuxer };
   }
 

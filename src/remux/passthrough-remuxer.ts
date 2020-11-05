@@ -94,7 +94,6 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     const initSegment: InitSegmentData = {
-      tracks: {},
       initPTS: undefined,
       timescale: 1
     };
