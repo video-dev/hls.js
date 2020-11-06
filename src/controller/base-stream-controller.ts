@@ -325,19 +325,20 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     if (!this.levels) {
       throw new Error('frag load aborted, missing levels');
     }
-
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    const partList = details?.partList;
-    if (partList && progressCallback) {
-      const partIndex = this.getNextPart(partList, frag, targetBufferTime);
-      if (partIndex > -1) {
-        this.state = State.FRAG_LOADING;
-        this.hls.trigger(Events.FRAG_LOADING, { frag, part: partList[partIndex], targetBufferTime });
-        return this.doFragPartsLoad(frag, partList, partIndex, progressCallback)
-          .catch((error: LoadError) => this.handleFragError(error));
-      } else if (!frag.url || this.loadedEndOfParts(partList, targetBufferTime)) {
-        // Fragment hint has no parts
-        return Promise.resolve(null);
+    if (this.config.lowLatencyMode) {
+      const partList = details?.partList;
+      if (partList && progressCallback) {
+        const partIndex = this.getNextPart(partList, frag, targetBufferTime);
+        if (partIndex > -1) {
+          this.state = State.FRAG_LOADING;
+          this.hls.trigger(Events.FRAG_LOADING, { frag, part: partList[partIndex], targetBufferTime });
+          return this.doFragPartsLoad(frag, partList, partIndex, progressCallback)
+            .catch((error: LoadError) => this.handleFragError(error));
+        } else if (!frag.url || this.loadedEndOfParts(partList, targetBufferTime)) {
+          // Fragment hint has no parts
+          return Promise.resolve(null);
+        }
       }
     }
 
