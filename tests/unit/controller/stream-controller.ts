@@ -10,11 +10,11 @@ import LevelDetails from '../../../src/loader/level-details';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import AttrList from '../../../src/utils/attr-list';
+import { Level, LevelAttributes } from '../../../src/types/level';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
-import { Level, LevelAttributes } from '../../../src/types/level';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -111,8 +111,8 @@ describe('StreamController', function () {
       expect(foundFragment).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
     });
 
-    // TODO: This test fails if using a real instance of Hls
     it('PTS search choosing the right segment if fragPrevious is not available', function () {
+      streamController['fragPrevious'] = null;
       const foundFragment = streamController['getNextFragment'](bufferEnd, levelDetails);
       const resultSN = foundFragment ? foundFragment.sn : -1;
       expect(foundFragment).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);

@@ -99,20 +99,23 @@ type StreamControllerConfig = {
   maxBufferLength: number,
   maxBufferSize: number,
   maxBufferHole: number,
-
   highBufferWatchdogPeriod: number,
   nudgeOffset: number,
   nudgeMaxRetry: number,
   maxFragLookUpTolerance: number,
+  maxMaxBufferLength: number,
+  startFragPrefetch: boolean,
+  testBandwidth: boolean
+};
+
+type LatencyControllerConfig = {
   liveSyncDurationCount: number,
   liveMaxLatencyDurationCount: number,
   liveSyncDuration?: number,
   liveMaxLatencyDuration?: number,
-  maxMaxBufferLength: number,
-
-  startFragPrefetch: boolean,
-  testBandwidth: boolean
-};
+  maxLiveSyncPlaybackRate: number,
+  minLiveSyncPlaybackRate: number
+}
 
 type TimelineControllerConfig = {
   cueHandler: Cues.CuesInterface,
@@ -170,6 +173,7 @@ export type HlsConfig =
   MP4RemuxerConfig &
   PlaylistLoaderConfig &
   StreamControllerConfig &
+  LatencyControllerConfig &
   TimelineControllerConfig &
   TSDemuxerConfig;
 
@@ -191,10 +195,12 @@ export const hlsDefaultConfig: HlsConfig = {
   nudgeOffset: 0.1, // used by stream-controller
   nudgeMaxRetry: 3, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
-  liveSyncDurationCount: 3, // used by stream-controller
-  liveMaxLatencyDurationCount: Infinity, // used by stream-controller
-  liveSyncDuration: void 0, // used by stream-controller
-  liveMaxLatencyDuration: void 0, // used by stream-controller
+  liveSyncDurationCount: 3, // used by latency-controller
+  liveMaxLatencyDurationCount: Infinity, // used by latency-controller
+  liveSyncDuration: void 0, // used by latency-controller
+  liveMaxLatencyDuration: void 0, // used by latency-controller
+  minLiveSyncPlaybackRate: 0.75, // used by latency-controller
+  maxLiveSyncPlaybackRate: 1.5, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
   liveBackBufferLength: Infinity, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller

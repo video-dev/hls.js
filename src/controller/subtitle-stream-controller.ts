@@ -19,7 +19,7 @@ import {
 } from '../types/events';
 import { Level } from '../types/level';
 import LevelDetails from '../loader/level-details';
-import { ComponentAPI } from '../types/component-api';
+import { NetworkComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
 const { performance } = self;
@@ -31,7 +31,7 @@ interface TimeRange {
   end: number
 }
 
-export class SubtitleStreamController extends BaseStreamController implements ComponentAPI {
+export class SubtitleStreamController extends BaseStreamController implements NetworkComponentAPI {
   protected levels: Array<Level> = [];
 
   private currentTrackId: number = -1;

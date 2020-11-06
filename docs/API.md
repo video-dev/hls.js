@@ -40,6 +40,8 @@
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
+  - [`minLiveSyncPlaybackRate`](#minLiveSyncPlaybackRate)
+  - [`maxLiveSyncPlaybackRate`](#maxLiveSyncPlaybackRate)
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`liveBackBufferLength`](#livebackbufferlength)
   - [`enableWorker`](#enableworker)
@@ -123,6 +125,9 @@
   - [`hls.subtitleDisplay`](#hlssubtitledisplay)
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
+  - [`hls.latency`](#hlslatency)
+  - [`hls.maxLatency`](#hlsmaxlatency)
+  - [`hls.targetLatency`](#hlstargetlatency)
 - [Runtime Events](#runtime-events)
 - [Loader Composition](#loader-composition)
 - [Errors](#errors)
@@ -391,7 +396,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
 
 ### `Hls.DefaultConfig get/set`
 
-This getter/setter allows to retrieve and override Hls default configuration.
+This getter/setter allows retrieval and override of the Hls default configuration.
 This configuration will be applied by default to all instances.
 
 ### `capLevelToPlayerSize`
@@ -582,6 +587,20 @@ If set, this value must be stricly superior to `liveSyncDuration` which must be 
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
 
+### `minLiveSyncPlaybackRate`
+
+(default: `0.75` min: `0.5` max: `1`)
+
+Decrease `video.playbackRate` down to this value when latency falls below target (`liveSyncDuration(Count)` or manifest (PART-)HOLD-BACK) in a live stream.
+Set both `minLiveSyncPlaybackRate` and `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
+
+### `maxLiveSyncPlaybackRate`
+
+(default: `1.5` min: `1` max: `2`)
+
+Increase `video.playbackRate` up to this value to catch up to target latency (`liveSyncDuration(Count)` or manifest (PART-)HOLD-BACK) in a live stream.
+Set both `minLiveSyncPlaybackRate` and `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
+
 ### `liveDurationInfinity`
 
 (default: `false`)
@@ -662,7 +681,7 @@ Disable this test if you'd like to provide your own estimate or use the default 
                   
 (default: `false`)
 
-Stream segment data with fetch loader.
+Enable streaming segment data with fetch loader (experimental).
 
 ### `lowLatencyMode`
                   
@@ -1304,6 +1323,21 @@ get/set : if set to true the active subtitle track mode will be set to `showing`
 ### `hls.liveSyncPosition`
 
 get : position of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
+
+### `hls.latency`
+
+get : estimated position (in seconds) of live edge (ie edge of live playlist plus time sync playlist advanced)
+returns 0 before first playlist is loaded
+
+### `hls.maxLatency`
+
+get : maximum distance from the edge before the player seeks forward to ```hls.liveSyncPosition```
+configured using ```liveMaxLatencyDurationCount``` (multiple of target duration) or ```liveMaxLatencyDuration```
+returns 0 before first playlist is loaded
+
+### `hls.targetLatency`
+
+get : target distance from the edge as calculated by the latency controller
 
 ## Runtime Events
 
