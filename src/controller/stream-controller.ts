@@ -23,7 +23,6 @@ import type {
   MediaAttachedData,
   AudioTrackSwitchingData,
   LevelsUpdatedData,
-  LevelUpdatedData,
   AudioTrackSwitchedData,
   BufferCreatedData,
   ErrorData,
@@ -82,7 +81,6 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
     hls.on(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
-    hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
@@ -101,7 +99,6 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
     hls.off(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
-    hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
@@ -155,7 +152,7 @@ export default class StreamController extends BaseStreamController implements Ne
   doTick () {
     switch (this.state) {
     case State.IDLE:
-      this._doTickIdle();
+      this.doTickIdle();
       break;
     case State.WAITING_LEVEL: {
       const { levels, level } = this;
@@ -193,7 +190,7 @@ export default class StreamController extends BaseStreamController implements Ne
     this.checkFragmentChanged();
   }
 
-  _doTickIdle () {
+  private doTickIdle () {
     const { hls, levelLastLoaded, levels, media } = this;
     const { config, nextLoadLevel: level } = hls;
 
@@ -596,9 +593,6 @@ export default class StreamController extends BaseStreamController implements Ne
         return;
       }
       sliding = this.alignPlaylists(newDetails, curLevel.details);
-      if (sliding) {
-        this._liveSyncPosition = this.computeLivePosition(sliding, newDetails);
-      }
     }
     // override level info
     curLevel.details = newDetails;
@@ -617,6 +611,8 @@ export default class StreamController extends BaseStreamController implements Ne
 
     if (!this.startFragRequested) {
       this.setStartPosition(newDetails, sliding);
+    } else if (newDetails.live) {
+      this.synchronizeToLiveEdge(newDetails);
     }
 
     // trigger handler right now
@@ -805,7 +801,7 @@ export default class StreamController extends BaseStreamController implements Ne
           // exponential backoff capped to config.fragLoadingMaxRetryTimeout
           const delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
           // @ts-ignore - frag is potentially null according to TS here
-          this.warn(`Fragment ${frag.sn} of level ${frag.level} failed to load, retrying in ${delay}ms`);
+          this.warn(`Fragment ${frag?.sn} of level ${frag?.level} failed to load, retrying in ${delay}ms`);
           this.retryDate = self.performance.now() + delay;
           // retry loading state
           // if loadedmetadata is not set, it means that we are emergency switch down on first frag
@@ -924,19 +920,6 @@ export default class StreamController extends BaseStreamController implements Ne
 
   onLevelsUpdated (event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {
     this.levels = data.levels;
-  }
-
-  onLevelUpdated (event: Events.LEVEL_UPDATED, data: LevelUpdatedData) {
-    const { media, mediaBuffer } = this;
-    const currentTime = media ? media.currentTime : null;
-    const levelDetails = data.details;
-    const fragments = levelDetails.fragments;
-    const fragLen = fragments.length;
-    const start = fragments[0].start;
-    const end = fragments[fragments.length - 1].start + fragments[fragLen - 1].duration;
-    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, this.config.maxBufferHole);
-    const pos = bufferInfo.end;
-    this.synchronizeToLiveEdge(start, end, pos, levelDetails);
   }
 
   swapAudioCodec () {
@@ -1058,17 +1041,19 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     if (id3?.samples?.length) {
-      const emittedID3: FragParsingMetadataData = Object.assign({
+      const emittedID3: FragParsingMetadataData = {
         frag,
-        id
-      }, id3);
+        id,
+        samples: id3.samples
+      };
       hls.trigger(Events.FRAG_PARSING_METADATA, emittedID3);
     }
     if (text) {
-      const emittedText: FragParsingUserdataData = Object.assign({
+      const emittedText: FragParsingUserdataData = {
         frag,
-        id
-      }, text);
+        id,
+        samples: text.samples
+      };
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
     }
   }
@@ -1180,10 +1165,6 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  get liveSyncPosition () {
-    return this._liveSyncPosition;
-  }
-
   get nextLevel () {
     const frag = this.nextBufferedFrag;
     if (frag) {
@@ -1213,10 +1194,6 @@ export default class StreamController extends BaseStreamController implements Ne
     } else {
       return null;
     }
-  }
-
-  set liveSyncPosition (value) {
-    this._liveSyncPosition = value;
   }
 
   get forceStartLoad () {

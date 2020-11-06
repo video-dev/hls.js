@@ -27,13 +27,13 @@ import { TrackSet } from '../types/track';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import Hls from '../hls';
-import type { ComponentAPI } from '../types/component-api';
+import { NetworkComponentAPI } from '../types/component-api';
 
 const { performance } = self;
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
-class AudioStreamController extends BaseStreamController implements ComponentAPI {
+class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
   private retryDate: number = 0;
   private onvseeking: EventListener | null = null;
   private onvseeked: EventListener | null = null;
@@ -129,12 +129,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
   }
 
   doTick () {
-    const { media } = this;
-
     switch (this.state) {
-    case State.ERROR:
-      // don't do anything in error state to avoid breaking further ...
-      break;
     case State.IDLE:
       this.doTickIdle();
       break;
@@ -153,7 +148,7 @@ class AudioStreamController extends BaseStreamController implements ComponentAPI
       const now = performance.now();
       const retryDate = this.retryDate;
       // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-      if (!retryDate || (now >= retryDate) || media?.seeking) {
+      if (!retryDate || (now >= retryDate) || this.media?.seeking) {
         this.log('RetryDate reached, switch back to IDLE state');
         this.state = State.IDLE;
       }
