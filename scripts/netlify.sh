@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+git remote -v
+
 if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
   # make sure everything is fetched
   git fetch --unshallow
