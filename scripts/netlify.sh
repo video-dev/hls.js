@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+echo 'remote'
 git remote -v
 
 if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
