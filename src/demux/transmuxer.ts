@@ -14,7 +14,7 @@ import ChunkCache from './chunk-cache';
 import { appendUint8Array } from '../utils/mp4-tools';
 
 import { logger } from '../utils/logger';
-import { HlsConfig } from '../config';
+import { HlsConfig, KeyidValue } from '../config';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -56,12 +56,18 @@ export default class Transmuxer {
   private transmuxConfig!: TransmuxConfig;
   private currentTransmuxState!: TransmuxState;
   private cache: ChunkCache = new ChunkCache();
+  private emeEnabled: boolean;
+  private clearkeyServerUrl?: string;
+  private clearkeyPair: KeyidValue | null;
 
   constructor (observer: HlsEventEmitter, typeSupported, config: HlsConfig, vendor) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
     this.vendor = vendor;
+    this.emeEnabled = this.config.emeEnabled;
+    this.clearkeyServerUrl = this.config.clearkeyServerUrl;
+    this.clearkeyPair = this.config.clearkeyPair;
   }
 
   configure (transmuxConfig: TransmuxConfig, state: TransmuxState) {
@@ -246,7 +252,13 @@ export default class Transmuxer {
   private transmux (data: Uint8Array, decryptData: Uint8Array, encryptionType: string | null, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata): TransmuxerResult | Promise<TransmuxerResult> {
     let result: TransmuxerResult | Promise<TransmuxerResult>;
     if (encryptionType === 'SAMPLE-AES') {
-      result = this.transmuxSampleAes(data, decryptData, timeOffset, accurateTimeOffset, chunkMeta);
+      // May Get the URI from the manifest
+      logger.log('Check if the clearkeyPair or clearkeyServerUrl is specified to play SAMPLE-AES cbcs fMP4');
+      if (this.emeEnabled && (this.clearkeyPair || this.clearkeyServerUrl)) {
+        result = this.transmuxUnencrypted(data, timeOffset, accurateTimeOffset, chunkMeta);
+      } else {
+        result = this.transmuxSampleAes(data, decryptData, timeOffset, accurateTimeOffset, chunkMeta);
+      }
     } else {
       result = this.transmuxUnencrypted(data, timeOffset, accurateTimeOffset, chunkMeta);
     }

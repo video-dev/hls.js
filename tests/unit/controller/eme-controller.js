@@ -90,6 +90,8 @@ describe('EMEController', function () {
         audioRobustness: 'HW_SECURE_ALL',
         videoRobustness: 'HW_SECURE_ALL'
       },
+      clearkeyPair: null,
+      clearkeyServerUrl: void 0,
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
     });
 
