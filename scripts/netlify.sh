@@ -4,6 +4,8 @@ set -e
 echo 'remote'
 git remote -v
 
+git fetch --tags --all
+
 if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
   # make sure everything is fetched
   git fetch --unshallow
