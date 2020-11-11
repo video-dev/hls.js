@@ -24,6 +24,7 @@ import Decrypter from '../crypt/decrypter';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import { NetworkComponentAPI } from '../types/component-api';
+import TimeRanges from '../utils/time-ranges';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -64,9 +65,13 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   protected initPTS: Array<number> = [];
 
   protected readonly logPrefix: string = '';
+  protected readonly log: (msg: any) => void;
+  protected readonly warn: (msg: any) => void;
 
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
     super();
+    this.log = logger.log.bind(logger, `${this.logPrefix}:`);
+    this.warn = logger.warn.bind(logger, `${this.logPrefix}:`);
     this.hls = hls;
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
@@ -194,7 +199,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   private _loadFragForPlayback (frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
     const progressCallback: FragmentLoadProgressCallback = (data: FragLoadedData) => {
       if (this.fragContextChanged(frag)) {
-        this.warn(`Fragment ${frag.sn} of level ${frag.level} was dropped during download.`);
+        this.warn(`Fragment ${frag.sn}${data.part ? ' p: ' + data.part.index : ''} of level ${frag.level} was dropped during download.`);
         this.fragmentTracker.removeFragment(frag);
         return;
       }
@@ -219,13 +224,6 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         if ('payload' in data) {
           this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
           this.hls.trigger(Events.FRAG_LOADED, data);
-        } else {
-          const partsLoaded = data.partsLoaded;
-          if (partsLoaded?.length) {
-            const partLoadedData = partsLoaded[partsLoaded.length - 1];
-            this.log(`Loaded fragment ${frag.sn} part ${partLoadedData.part?.index} of level ${frag.level}`);
-            this.hls.trigger(Events.FRAG_LOADED, partLoadedData);
-          }
         }
 
         // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
@@ -306,6 +304,16 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return !frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn || frag.urlId !== fragCurrent.urlId;
   }
 
+  protected fragBufferedComplete (frag: Fragment, part: Part | null) {
+    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const timestampInfo = frag.startPTS ? `PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}]` : `start-end:[${frag.start}-${frag.end}]`;
+    this.log(`Buffered ${frag.type} sn: ${frag.sn}${part ? ' part: ' + part.index : ''} of ${
+      this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+    } ${frag.level}. ${timestampInfo}, Buffered: ${TimeRanges.toString(BufferHelper.getBuffered(media))}`);
+    this.state = State.IDLE;
+    this.tick();
+  }
+
   protected _handleFragmentLoadComplete (fragLoadedEndData: PartsLoadedData) {
     const { transmuxer } = this;
     if (!transmuxer) {
@@ -326,11 +334,15 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       throw new Error('frag load aborted, missing levels');
     }
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    if (this.config.lowLatencyMode) {
-      const partList = details?.partList;
+    if (this.config.lowLatencyMode && details) {
+      const partList = details.partList;
       if (partList && progressCallback) {
         const partIndex = this.getNextPart(partList, frag, targetBufferTime);
         if (partIndex > -1) {
+          const part = partList[partIndex];
+          this.log(`Loading part sn: ${frag.sn} p: ${part.index} cc: ${frag.cc} of playlist [${details.startSN}-${details.endSN}] parts [0-${partIndex}-${partList.length - 1}] ${
+            this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+          }: ${frag.level}, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`);
           this.state = State.FRAG_LOADING;
           this.hls.trigger(Events.FRAG_LOADING, { frag, part: partList[partIndex], targetBufferTime });
           return this.doFragPartsLoad(frag, partList, partIndex, progressCallback)
@@ -341,6 +353,10 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         }
       }
     }
+
+    this.log(`Loading fragment ${frag.sn} cc: ${frag.cc} ${
+      details ? 'of [' + details.startSN + '-' + details.endSN + '] ' : ''
+    }${this.logPrefix === '[stream-controller]' ? 'level' : 'track'}: ${frag.level}, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`);
 
     this.state = State.FRAG_LOADING;
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
@@ -357,6 +373,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         this.fragmentLoader.loadPart(frag, part, progressCallback).then((partLoadedData: FragLoadedData) => {
           partsLoaded[part.index] = partLoadedData;
           const loadedPart = partLoadedData.part as Part;
+          this.hls.trigger(Events.FRAG_LOADED, partLoadedData);
           const nextPart = partList[index + 1];
           if (nextPart && nextPart.fragment === frag) {
             loadPartIndex(index + 1);
@@ -740,13 +757,5 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
   get state () {
     return this._state;
-  }
-
-  protected log (msg) {
-    logger.log(`${this.logPrefix}: ${msg}`);
-  }
-
-  protected warn (msg) {
-    logger.warn(`${this.logPrefix}: ${msg}`);
   }
 }

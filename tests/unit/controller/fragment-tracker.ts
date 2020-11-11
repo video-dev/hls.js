@@ -432,6 +432,7 @@ function createBufferAppendedData (video: PtsTimeRanges, audio?: PtsTimeRanges):
   return {
     chunkMeta: new ChunkMetadata(0, 0, 0, 0),
     frag: new Fragment(PlaylistLevelType.MAIN, ''),
+    part: null,
     parent: PlaylistLevelType.MAIN,
     timeRanges: {
       video: createMockBuffer(video),

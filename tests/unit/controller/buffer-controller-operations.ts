@@ -166,6 +166,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
             video: buffers.video.buffered
           },
           frag,
+          part: null,
           chunkMeta
         });
         expect(shiftAndExecuteNextSpy, 'The queue should have been cycled').to.have.callCount(i + 1);

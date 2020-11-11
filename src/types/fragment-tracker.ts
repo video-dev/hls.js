@@ -1,8 +1,9 @@
-import Fragment from '../loader/fragment';
+import Fragment, { Part } from '../loader/fragment';
 import { SourceBufferName } from './buffer';
 
 export interface FragmentEntity {
-  body: Fragment
+  body: Fragment,
+  part: Part | null,
   range: { [key in SourceBufferName]: FragmentBufferedRange }
   buffered: boolean
 }

@@ -87,15 +87,16 @@ class AbrController implements ComponentAPI {
       quickly enough to prevent underbuffering
     */
   private _abandonRulesCheck () {
-    const { fragCurrent: frag, hls } = this;
+    const { fragCurrent: frag, partCurrent: part, hls } = this;
     const { autoLevelEnabled, config, media } = hls;
     if (!frag || !media) {
       return;
     }
 
-    const stats: LoaderStats = frag.stats;
+    const stats: LoaderStats = part ? part.stats : frag.stats;
+    const duration = part ? part.duration : frag.duration;
     // If loading has been aborted and not in lowLatencyMode, stop timer and return
-    if (stats.aborted && !config.lowLatencyMode) {
+    if (stats.aborted) {
       logger.warn('frag loader destroy or aborted, disarm abandonRules');
       this.clearTimer();
       // reset forced auto level value so that next level will be selected
@@ -111,13 +112,13 @@ class AbrController implements ComponentAPI {
     const requestDelay = performance.now() - stats.loading.start;
     const playbackRate = Math.abs(media.playbackRate);
     // In order to work with a stable bandwidth, only begin monitoring bandwidth after half of the fragment has been loaded
-    if (requestDelay <= (500 * frag.duration / playbackRate)) {
+    if (requestDelay <= (500 * duration / playbackRate)) {
       return;
     }
 
     const { levels, minAutoLevel } = hls;
     const level = levels[frag.level];
-    const expectedLen = stats.total || Math.max(stats.loaded, Math.round(frag.duration * level.maxBitrate / 8));
+    const expectedLen = stats.total || Math.max(stats.loaded, Math.round(duration * level.maxBitrate / 8));
     const loadRate = Math.max(1, stats.bwEstimate ? (stats.bwEstimate / 8) : (stats.loaded * 1000 / requestDelay));
     // fragLoadDelay is an estimate of the time (in seconds) it will take to buffer the entire fragment
     const fragLoadedDelay = (expectedLen - stats.loaded) / loadRate;
@@ -128,7 +129,7 @@ class AbrController implements ComponentAPI {
 
     // Attempt an emergency downswitch only if less than 2 fragment lengths are buffered, and the time to finish loading
     // the current fragment is greater than the amount of buffer we have left
-    if ((bufferStarvationDelay >= (2 * frag.duration / playbackRate)) || (fragLoadedDelay <= bufferStarvationDelay)) {
+    if ((bufferStarvationDelay >= (2 * duration / playbackRate)) || (fragLoadedDelay <= bufferStarvationDelay)) {
       return;
     }
 
@@ -140,7 +141,7 @@ class AbrController implements ComponentAPI {
       // 0.8 : consider only 80% of current bw to be conservative
       // 8 = bits per byte (bps/Bps)
       const levelNextBitrate = levels[nextLoadLevel].maxBitrate;
-      fragLevelNextLoadedDelay = frag.duration * levelNextBitrate / (8 * 0.8 * loadRate);
+      fragLevelNextLoadedDelay = duration * levelNextBitrate / (8 * 0.8 * loadRate);
 
       if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
         break;
@@ -152,19 +153,21 @@ class AbrController implements ComponentAPI {
       return;
     }
     const bwEstimate: number = this.bwEstimator.getEstimate();
-    logger.warn(`Fragment ${frag.sn} of level ${frag.level} is loading too slowly and will cause an underbuffer; aborting and switching to level ${nextLoadLevel}
+    logger.warn(`Fragment ${frag.sn}${part ? ' part ' + part.index : ''} of level ${
+      frag.level
+    } is loading too slowly and will cause an underbuffer; aborting and switching to level ${nextLoadLevel}
       Current BW estimate: ${Number.isFinite(bwEstimate) ? (bwEstimate / 1024).toFixed(3) : 'Unknown'} Kb/s
       Estimated load time for current fragment: ${fragLoadedDelay.toFixed(3)} s
       Estimated load time for the next fragment: ${fragLevelNextLoadedDelay.toFixed(3)} s
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s`);
     hls.nextLoadLevel = nextLoadLevel;
     this.bwEstimator.sample(requestDelay, stats.loaded);
-    if (frag.loader) {
-      frag.loader.abort();
-      this.fragCurrent = this.partCurrent = null;
-    }
     this.clearTimer();
-    hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, stats });
+    if (frag.loader) {
+      this.fragCurrent = this.partCurrent = null;
+      frag.loader.abort();
+    }
+    hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, part, stats });
   }
 
   protected onFragLoaded (event: Events.FRAG_LOADED, { frag, part }: FragLoadedData) {

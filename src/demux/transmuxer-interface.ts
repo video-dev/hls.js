@@ -25,8 +25,6 @@ export default class TransmuxerInterface {
   private onTransmuxComplete: (transmuxResult: TransmuxerResult) => void;
   private onFlush: (chunkMeta: ChunkMetadata) => void;
 
-  private currentTransmuxSession: ChunkMetadata | null = null;
-
   constructor (hls: Hls, id: PlaylistLevelType, onTransmuxComplete: (transmuxResult: TransmuxerResult) => void, onFlush: (chunkMeta: ChunkMetadata) => void) {
     this.hls = hls;
     this.id = id;
@@ -104,34 +102,31 @@ export default class TransmuxerInterface {
 
   push (data: ArrayBuffer, initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, part: Part | null, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {
     chunkMeta.transmuxing.start = self.performance.now();
-    const { currentTransmuxSession, transmuxer, worker } = this;
+    const { transmuxer, worker } = this;
     const timeOffset = part ? part.start : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
 
-    if (startingNewTransmuxSession(currentTransmuxSession, chunkMeta)) {
-      const now = self.performance.now();
-      if (part) {
-        part.stats.parsing.start = now;
-        if (frag.stats.parsing.start === 0) {
-          frag.stats.parsing.start = now;
-        }
-      } else {
-        frag.stats.parsing.start = now;
-      }
-      const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
-      const trackSwitch = !(lastFrag && (chunkMeta.level === lastFrag.level));
-      const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
-      const partDiff = this.part ? (chunkMeta.part - this.part.index) : -1;
-      const contiguous = !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
+    const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
+    const trackSwitch = !(lastFrag && (chunkMeta.level === lastFrag.level));
+    const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
+    const partDiff = this.part ? (chunkMeta.part - this.part.index) : -1;
+    const contiguous = !discontinuity && !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
+    const now = self.performance.now();
 
+    if (trackSwitch || snDiff || frag.stats.parsing.start === 0) {
+      frag.stats.parsing.start = now;
+    }
+    if (part && (partDiff || !contiguous)) {
+      part.stats.parsing.start = now;
+    }
+    if (!contiguous) {
       logger.log(`[transmuxer-interface, ${frag.type}]: Starting new transmux session for sn: ${chunkMeta.sn} p: ${chunkMeta.part} level: ${chunkMeta.level} id: ${chunkMeta.id}
         discontinuity: ${discontinuity}
         trackSwitch: ${trackSwitch}
         contiguous: ${contiguous}
         accurateTimeOffset: ${accurateTimeOffset}
         timeOffset: ${timeOffset}`);
-      this.currentTransmuxSession = chunkMeta;
       const config = new TransmuxConfig(audioCodec, videoCodec, new Uint8Array(initSegmentData), duration, defaultInitPTS);
       const state = new TransmuxState(discontinuity, contiguous, accurateTimeOffset, trackSwitch, timeOffset);
       this.configureTransmuxer(config, state);
@@ -164,7 +159,6 @@ export default class TransmuxerInterface {
   flush (chunkMeta: ChunkMetadata) {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
-    this.currentTransmuxSession = null;
     if (worker) {
       worker.postMessage({
         cmd: 'flush',
@@ -237,11 +231,4 @@ export default class TransmuxerInterface {
     result.chunkMeta.transmuxing.end = self.performance.now();
     this.onTransmuxComplete(result);
   }
-}
-
-function startingNewTransmuxSession (currentIdentifier: ChunkMetadata | null, newIdentifier: ChunkMetadata) {
-  if (!currentIdentifier) {
-    return true;
-  }
-  return currentIdentifier.sn !== newIdentifier.sn || currentIdentifier.level !== newIdentifier.level;
 }

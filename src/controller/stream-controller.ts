@@ -1,35 +1,36 @@
 import BaseStreamController, { State } from './base-stream-controller';
 import { NetworkComponentAPI } from '../types/component-api';
-import { BufferHelper } from '../utils/buffer-helper';
-import TransmuxerInterface from '../demux/transmuxer-interface';
 import { Events } from '../events';
+import { BufferHelper } from '../utils/buffer-helper';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
-import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
-import TimeRanges from '../utils/time-ranges';
-import { ErrorDetails } from '../errors';
-import { logger } from '../utils/logger';
-import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
-import FragmentLoader from '../loader/fragment-loader';
-import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
-import { SourceBufferName } from '../types/buffer';
+import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
+import FragmentLoader from '../loader/fragment-loader';
+import TransmuxerInterface from '../demux/transmuxer-interface';
+import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
+import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
+import { ErrorDetails } from '../errors';
+import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type LevelDetails from '../loader/level-details';
 import type { TrackSet } from '../types/track';
+import type { SourceBufferName } from '../types/buffer';
 import type {
-  LevelLoadedData,
-  ManifestParsedData,
   MediaAttachedData,
-  AudioTrackSwitchingData,
-  LevelsUpdatedData,
-  AudioTrackSwitchedData,
   BufferCreatedData,
-  ErrorData,
+  ManifestParsedData,
+  LevelLoadingData,
+  LevelLoadedData,
+  LevelsUpdatedData,
+  AudioTrackSwitchingData,
+  AudioTrackSwitchedData,
+  FragLoadedData,
   FragParsingMetadataData,
   FragParsingUserdataData,
-  LevelLoadingData,
-  FragLoadedData, BufferFlushedData
+  FragBufferedData,
+  BufferFlushedData,
+  ErrorData
 } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -300,10 +301,6 @@ export default class StreamController extends BaseStreamController implements Ne
 
     // Allow backtracked fragments to load
     if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
-      this.log(`Loading fragment ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${
-        frag.level
-      }, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`);
-
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
       } else if (this.bitrateTest) {
@@ -758,25 +755,21 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  onFragBuffered (event: Events.FRAG_BUFFERED, data: { frag: Fragment }) {
-    const { frag } = data;
+  onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+    const { frag, part } = data;
     if (frag && frag.type !== 'main') {
       return;
     }
     if (this.fragContextChanged(frag)) {
       // If a level switch was requested while a fragment was buffering, it will emit the FRAG_BUFFERED event upon completion
       // Avoid setting state back to IDLE, since that will interfere with a level switch
-      this.warn(`Fragment ${frag.sn} of level ${frag.level} finished buffering, but was aborted. state: ${this.state}`);
+      this.warn(`Fragment ${frag.sn}${part ? ' p: ' + part.index : ''} of level ${frag.level} finished buffering, but was aborted. state: ${this.state}`);
       return;
     }
-    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    const stats = frag.stats;
-    this.fragPrevious = frag;
+    const stats = part ? part.stats : frag.stats;
     this.fragLastKbps = Math.round(8 * stats.total / (stats.buffering.end - stats.loading.first));
-
-    this.log(`Buffered fragment ${frag.sn} of level ${frag.level}. PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}], Buffered: ${TimeRanges.toString(BufferHelper.getBuffered(media))}`);
-    this.state = State.IDLE;
-    this.tick();
+    this.fragPrevious = frag;
+    this.fragBufferedComplete(frag, part);
   }
 
   onError (event: Events.ERROR, data: ErrorData) {

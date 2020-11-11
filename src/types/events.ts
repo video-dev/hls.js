@@ -33,16 +33,17 @@ export interface BufferCreatedData {
 }
 
 export interface BufferAppendingData {
-  type: SourceBufferName;
-  data: Uint8Array;
-  frag: Fragment;
-  part: Part | null;
+  type: SourceBufferName
+  data: Uint8Array
+  frag: Fragment
+  part: Part | null
   chunkMeta: ChunkMetadata
 }
 
 export interface BufferAppendedData {
   chunkMeta: ChunkMetadata
   frag: Fragment
+  part: Part | null
   parent: PlaylistLevelType
   timeRanges: {
     audio?: TimeRanges
@@ -244,13 +245,14 @@ export interface InitPTSFoundData {
 }
 
 export interface FragLoadingData {
-  frag: Fragment,
-  part?: Part,
+  frag: Fragment
+  part?: Part
   targetBufferTime: number | null
 }
 
 export interface FragLoadEmergencyAbortedData {
   frag: Fragment
+  part: Part | null
   stats: LoaderStats
 }
 

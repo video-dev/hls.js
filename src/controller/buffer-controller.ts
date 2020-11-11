@@ -261,7 +261,7 @@ export default class BufferController implements ComponentAPI {
           timeRanges[type] = BufferHelper.getBuffered(sourceBuffer[type]);
         }
         this.appendError = 0;
-        this.hls.trigger(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, frag, chunkMeta });
+        this.hls.trigger(Events.BUFFER_APPENDED, { parent: frag.type, timeRanges, frag, part, chunkMeta });
       },
       onError: (err) => {
         // in case any error occured while appending, put back segment in segments table
@@ -690,16 +690,16 @@ export default class BufferController implements ComponentAPI {
   // upon completion, since we already do it here
   private blockBuffers (onUnblocked: Function, buffers: Array<SourceBufferName> = this.getSourceBufferTypes()) {
     if (!buffers.length) {
-      // logger.log('[buffer-controller]: Blocking operation requested, but no SourceBuffers exist');
-      onUnblocked();
+      logger.log('[buffer-controller]: Blocking operation requested, but no SourceBuffers exist');
+      Promise.resolve(onUnblocked);
       return;
     }
     const { operationQueue } = this;
 
-    // logger.log(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
+    // logger.debug(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
     const blockingOperations = buffers.map(type => operationQueue.appendBlocker(type as SourceBufferName));
     Promise.all(blockingOperations).then(() => {
-      // logger.log(`[buffer-controller]: Blocking operation resolved; unblocking ${buffers} SourceBuffer`);
+      // logger.debug(`[buffer-controller]: Blocking operation resolved; unblocking ${buffers} SourceBuffer`);
       onUnblocked();
       buffers.forEach(type => {
         const sb = this.sourceBuffer[type];
