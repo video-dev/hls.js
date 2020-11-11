@@ -195,7 +195,7 @@ export default class Transmuxer {
     }
 
     const { audioTrack, avcTrack, id3Track, textTrack } = demuxer.flush(timeOffset);
-    logger.log(`[transmuxer.ts]: Flushed fragment ${chunkMeta.sn} of level ${chunkMeta.level}`);
+    logger.log(`[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''} of level ${chunkMeta.level}`);
     transmuxResults.push({
       remuxResult: remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
       chunkMeta

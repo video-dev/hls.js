@@ -100,7 +100,7 @@ export default class Fragment extends BaseSegment {
   public readonly type: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
   public loader: Loader<FragmentLoaderContext> | null = null;
-  // The level index to which the fragment belongs
+  // The level/track index to which the fragment belongs
   public level: number = -1;
   // The continuity counter of the fragment
   public cc: number = 0;
@@ -250,6 +250,13 @@ export default class Fragment extends BaseSegment {
     info.endPTS = Math.max(info.endPTS, endPTS);
     info.startDTS = Math.min(info.startDTS, startDTS);
     info.endDTS = Math.max(info.endDTS, endDTS);
+  }
+
+  clearElementaryStreamInfo () {
+    const { elementaryStreams } = this;
+    elementaryStreams[ElementaryStreamTypes.AUDIO] = null;
+    elementaryStreams[ElementaryStreamTypes.VIDEO] = null;
+    elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO] = null;
   }
 }
 

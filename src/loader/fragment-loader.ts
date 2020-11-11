@@ -190,11 +190,13 @@ export default class FragmentLoader {
     const partTotal = partStats.total;
     fragStats.loaded += partStats.loaded;
     if (partTotal) {
-      const estLoadedParts = Math.round(fragStats.loaded / partTotal);
       const estTotalParts = Math.round(frag.duration / part.duration);
+      const estLoadedParts = Math.min(Math.round(fragStats.loaded / partTotal), estTotalParts);
       const estRemainingParts = estTotalParts - estLoadedParts;
       const estRemainingBytes = estRemainingParts * Math.round(fragStats.loaded / estLoadedParts);
       fragStats.total = fragStats.loaded + estRemainingBytes;
+    } else {
+      fragStats.total = Math.max(fragStats.loaded, fragStats.total);
     }
     const fragLoading = fragStats.loading;
     const partLoading = partStats.loading;
