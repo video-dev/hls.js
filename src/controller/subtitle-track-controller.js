@@ -295,12 +295,9 @@ class SubtitleTrackController extends TaskLoop {
 
     if (this.selectDefaultTrack && defaultTracks.length) {
       selectedTrack = defaultTracks[0];
-    } else if (tracks.length) {
-      selectedTrack = tracks[0];
-    } else {
-      logger.warn('No selectable subtitle tracks found');
-      return;
     }
+
+    selectedTrack = tracks[0];
 
     logger.log(`Selecting subtitle track id: ${selectedTrack.id}, name: ${selectedTrack.name}, group-ID: ${selectedTrack.groupId}`);
 
