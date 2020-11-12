@@ -45,6 +45,7 @@ export default class LevelController extends EventHandler {
   startLoad () {
     let levels = this._levels;
 
+    // enable loadLevel guard
     this.canload = true;
     this.levelRetryCount = 0;
 
@@ -55,9 +56,7 @@ export default class LevelController extends EventHandler {
       });
     }
 
-    // clear timer if existing
-    // and call for loadLevel immediately
-    this.clearTimer();
+    // now call for loadLevel immediately
     this.loadLevel();
   }
 
@@ -183,42 +182,50 @@ export default class LevelController extends EventHandler {
     if (levels) {
       newLevel = Math.min(newLevel, levels.length - 1);
       if (this.currentLevelIndex !== newLevel || !levels[newLevel].details) {
-        this.setLevelInternal(newLevel);
+        this._setLevelInternal(newLevel);
       }
     }
   }
 
-  setLevelInternal (newLevel) {
+  _setLevelInternal (newLevelIdx) {
+    logger.debug('_setLevelInternal', newLevelIdx, this._levels.length);
     const levels = this._levels;
     const hls = this.hls;
-    // check if level idx is valid
-    if (newLevel >= 0 && newLevel < levels.length) {
-      // stopping live reloading timer if any
-      this.clearTimer();
-      if (this.currentLevelIndex !== newLevel) {
-        logger.log(`switching to level ${newLevel}`);
-        this.currentLevelIndex = newLevel;
-        const levelProperties = levels[newLevel];
-        levelProperties.level = newLevel;
-        hls.trigger(Event.LEVEL_SWITCHING, levelProperties);
-      }
-      const level = levels[newLevel];
-      const levelDetails = level.details;
 
-      // check if we need to load playlist for this level
-      if (!levelDetails || levelDetails.live) {
-        // level not retrieved yet, or live playlist we need to (re)load it
-        let urlId = level.urlId;
-        hls.trigger(Event.LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
-      }
-    } else {
-      // invalid level id given, trigger error
+    // stopping live reloading timer if any
+    this.clearTimer();
+
+    // check if level index arg is valid
+    if (newLevelIdx < 0 || newLevelIdx >= levels.length) {
       hls.trigger(Event.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
         details: ErrorDetails.LEVEL_SWITCH_ERROR,
-        level: newLevel,
+        level: newLevelIdx,
         fatal: false,
         reason: 'invalid level idx'
+      });
+      return;
+    }
+
+    if (this.currentLevelIndex !== newLevelIdx) {
+      logger.log(`switching to level ${newLevelIdx}`);
+      this.currentLevelIndex = newLevelIdx;
+      const levelProperties = levels[newLevelIdx];
+      levelProperties.level = newLevelIdx;
+      hls.trigger(Event.LEVEL_SWITCHING, levelProperties);
+    }
+
+    const level = levels[newLevelIdx];
+    const levelDetails = level.details;
+
+    // check if we need to load playlist for this level
+    if (!levelDetails || levelDetails.live) {
+      // level not retrieved yet, or live playlist we need to (re)load it
+      let urlId = level.urlId;
+      hls.trigger(Event.LEVEL_LOADING, {
+        url: level.url[urlId],
+        level: newLevelIdx,
+        id: urlId
       });
     }
   }
@@ -419,15 +426,14 @@ export default class LevelController extends EventHandler {
     }
 
     if (currentLevel.audioGroupIds) {
-      let urlId = -1;
-
-      for (let i = 0; i < currentLevel.audioGroupIds.length; i++) {
-        if (currentLevel.audioGroupIds[i] === audioGroupId) {
-          urlId = i;
-          break;
-        }
+      // eslint-disable-next-line no-restricted-properties
+      let urlId = currentLevel.audioGroupIds.findIndex((groupId) => groupId === audioGroupId);
+      // there is no redundant level with a matching audio group-ID,
+      // we will go with further automatic selection over the subset
+      // of levels with matching group-id.
+      if (urlId === -1) {
+        urlId = 0;
       }
-
       if (urlId !== currentLevel.urlId) {
         currentLevel.urlId = urlId;
         this.startLoad();
@@ -450,7 +456,13 @@ export default class LevelController extends EventHandler {
 
     if (currentLevel.subtitleGroupIds) {
       // eslint-disable-next-line no-restricted-properties
-      const urlId = currentLevel.subtitleGroupIds.findIndex((groupId) => groupId === subtitleGroupId);
+      let urlId = currentLevel.subtitleGroupIds.findIndex((groupId) => groupId === subtitleGroupId);
+      // there is no redundant level with a matching audio group-ID,
+      // we will go with further automatic selection over the subset
+      // of levels with matching group-id.
+      if (urlId === -1) {
+        urlId = 0;
+      }
       if (urlId !== currentLevel.urlId) {
         currentLevel.urlId = urlId;
         this.startLoad();
@@ -459,26 +471,9 @@ export default class LevelController extends EventHandler {
   }
 
   loadLevel () {
-    logger.debug('call to loadLevel');
-
+    logger.debug('LevelController.loadLevel called');
     if (this.currentLevelIndex !== null && this.canload) {
-      const levelObject = this._levels[this.currentLevelIndex];
-
-      if (typeof levelObject === 'object' &&
-        levelObject.url.length > 0) {
-        const level = this.currentLevelIndex;
-        const id = levelObject.urlId;
-        const url = levelObject.url[id];
-
-        logger.log(`Attempt loading level index ${level} with URL-id ${id}`);
-
-        // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
-        // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
-
-        this.clearTimer();
-
-        this.hls.trigger(Event.LEVEL_LOADING, { url, level, id });
-      }
+      this._setLevelInternal(this.currentLevelIndex);
     }
   }
 
