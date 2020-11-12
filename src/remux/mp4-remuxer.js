@@ -192,11 +192,11 @@ class MP4Remuxer {
         const startOffset = Math.round(inputTimeScale * timeOffset);
         initDTS = Math.min(initDTS, PTSNormalize(videoSamples[0].dts, startPTS) - startOffset);
         initPTS = Math.min(initPTS, startPTS - startOffset);
-        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
+        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, timescale: inputTimeScale });
       }
     } else if (computePTSDTS && tracks.audio) {
       // initPTS found for audio-only stream with main and alt audio
-      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
+      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, timescale: audioTrack.inputTimeScale });
     }
 
     if (Object.keys(tracks).length) {
