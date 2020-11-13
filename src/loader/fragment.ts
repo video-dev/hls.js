@@ -19,6 +19,8 @@ interface ElementaryStreamInfo {
   endDTS: number
 }
 
+type ElementaryStreams = Record<ElementaryStreamTypes, ElementaryStreamInfo | null>;
+
 export class BaseSegment {
   private _byteRange: number[] | null = null;
   private _url: string | null = null;
@@ -27,6 +29,12 @@ export class BaseSegment {
   public readonly baseurl: string;
   // relurl is the portion of the URL that comes from inside the playlist.
   public relurl?: string;
+  // Holds the types of data this fragment supports
+  public elementaryStreams: ElementaryStreams = {
+    [ElementaryStreamTypes.AUDIO]: null,
+    [ElementaryStreamTypes.VIDEO]: null,
+    [ElementaryStreamTypes.AUDIOVIDEO]: null
+  };
 
   constructor (baseurl: string) {
     this.baseurl = baseurl;
@@ -76,13 +84,6 @@ export class BaseSegment {
 export default class Fragment extends BaseSegment {
   private _decryptdata: LevelKey | null = null;
 
-  // Holds the types of data this fragment supports
-  public elementaryStreams: Record<ElementaryStreamTypes, ElementaryStreamInfo | null> = {
-    [ElementaryStreamTypes.AUDIO]: null,
-    [ElementaryStreamTypes.VIDEO]: null,
-    [ElementaryStreamTypes.AUDIOVIDEO]: null
-  };
-
   public rawProgramDateTime: string | null = null;
   public programDateTime: number | null = null;
   public tagList: Array<string[]> = [];
@@ -99,7 +100,7 @@ export default class Fragment extends BaseSegment {
   public readonly type: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
   public loader: Loader<FragmentLoaderContext> | null = null;
-  // The level index to which the fragment belongs
+  // The level/track index to which the fragment belongs
   public level: number = -1;
   // The continuity counter of the fragment
   public cc: number = 0;
@@ -250,6 +251,13 @@ export default class Fragment extends BaseSegment {
     info.startDTS = Math.min(info.startDTS, startDTS);
     info.endDTS = Math.max(info.endDTS, endDTS);
   }
+
+  clearElementaryStreamInfo () {
+    const { elementaryStreams } = this;
+    elementaryStreams[ElementaryStreamTypes.AUDIO] = null;
+    elementaryStreams[ElementaryStreamTypes.VIDEO] = null;
+    elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO] = null;
+  }
 }
 
 export class Part extends BaseSegment {
@@ -266,7 +274,7 @@ export class Part extends BaseSegment {
     super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');
     this.gap = partAttrs.bool('GAP');
-    this.independent = partAttrs.bool('INDEPENDENT');
+    this.independent = partAttrs.INDEPENDENT ? partAttrs.bool('INDEPENDENT') : true;
     this.relurl = partAttrs.enumeratedString('URI') as string;
     this.fragment = frag;
     this.index = index;
@@ -285,5 +293,10 @@ export class Part extends BaseSegment {
 
   get end (): number {
     return this.start + this.duration;
+  }
+
+  get loaded (): boolean {
+    const { elementaryStreams } = this;
+    return !!(elementaryStreams.audio || elementaryStreams.video || elementaryStreams.audiovideo);
   }
 }

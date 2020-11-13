@@ -97,11 +97,11 @@ module.exports = {
       { property: 'find' } // Intended to block usage of Array.prototype.find
     ],
 
-    'standard/no-callback-literal': 1,
+    'standard/no-callback-literal': 0,
     'import/first': 1,
     'no-var': 1,
     'no-empty': 1,
-    'no-mixed-operators': 1,
+    'no-mixed-operators': 2,
     'no-unused-vars': 2,
     'no-console': [
       1,
@@ -114,13 +114,13 @@ module.exports = {
     'no-irregular-whitespace': 1,
     'no-self-assign': 1,
     'new-cap': 1,
-    'no-undefined': 1,
+    'no-undefined': 0,
     'no-global-assign': 2,
     'prefer-const': 2,
     'dot-notation': 2,
     'array-bracket-spacing': 2,
     'quote-props': 2,
-    'no-void': 0,
+    'no-void': 2,
     'no-useless-catch': 2,
     'lines-between-class-members': 2,
     'no-prototype-builtins': 0

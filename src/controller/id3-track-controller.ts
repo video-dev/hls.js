@@ -46,9 +46,6 @@ class ID3TrackController implements ComponentAPI {
   // Add ID3 metatadata text track.
   protected onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void {
     this.media = data.media;
-    if (!this.media) {
-
-    }
   }
 
   protected onMediaDetaching (): void {

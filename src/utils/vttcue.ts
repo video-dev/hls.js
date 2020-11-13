@@ -291,7 +291,7 @@ export default (function () {
      */
 
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-video-element.html#text-track-cue-display-state
-    cue.displayState = void 0;
+    cue.displayState = undefined;
   }
 
   /**

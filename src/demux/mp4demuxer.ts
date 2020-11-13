@@ -4,10 +4,17 @@
 import { Demuxer, DemuxerResult, DemuxedTrack } from '../types/demuxer';
 import { findBox, segmentValidRange, appendUint8Array } from '../utils/mp4-tools';
 import { dummyTrack } from './dummy-demuxed-track';
+import type { HlsEventEmitter } from '../events';
+import type { HlsConfig } from '../config';
 
 class MP4Demuxer implements Demuxer {
   static readonly minProbeByteLength = 1024;
   private remainderData: Uint8Array | null = null;
+  private config: HlsConfig;
+
+  constructor (observer: HlsEventEmitter, config: HlsConfig) {
+    this.config = config;
+  }
 
   resetTimeStamp () {
   }
@@ -26,16 +33,20 @@ class MP4Demuxer implements Demuxer {
   demux (data): DemuxerResult {
     // Load all data into the avc track. The CMAF remuxer will look for the data in the samples object; the rest of the fields do not matter
     let avcSamples = data;
-    if (this.remainderData) {
-      avcSamples = appendUint8Array(this.remainderData, data);
-    }
-    // Split the bytestream into two ranges: one encompassing all data up until the start of the last moof, and everything else.
-    // This is done to guarantee that we're sending valid data to MSE - when demuxing progressively, we have no guarantee
-    // that the fetch loader gives us flush moof+mdat pairs. If we push jagged data to MSE, it will throw an exception.
-    const segmentedData = segmentValidRange(avcSamples);
-    this.remainderData = segmentedData.remainder;
     const avcTrack = dummyTrack();
-    avcTrack.samples = segmentedData.valid;
+    if (this.config.progressive) {
+      // Split the bytestream into two ranges: one encompassing all data up until the start of the last moof, and everything else.
+      // This is done to guarantee that we're sending valid data to MSE - when demuxing progressively, we have no guarantee
+      // that the fetch loader gives us flush moof+mdat pairs. If we push jagged data to MSE, it will throw an exception.
+      if (this.remainderData) {
+        avcSamples = appendUint8Array(this.remainderData, data);
+      }
+      const segmentedData = segmentValidRange(avcSamples);
+      this.remainderData = segmentedData.remainder;
+      avcTrack.samples = segmentedData.valid;
+    } else {
+      avcTrack.samples = avcSamples;
+    }
 
     return {
       audioTrack: dummyTrack(),

@@ -8,25 +8,27 @@ export interface TransmuxerResult {
 }
 
 export class ChunkMetadata {
-    public level: number;
-    public sn: number;
-    public part: number;
-    public id: number;
-    public size: number;
-    public transmuxing: HlsChunkPerformanceTiming = getNewPerformanceTiming();
-    public buffering: { [key in SourceBufferName]: HlsChunkPerformanceTiming } = {
-      audio: getNewPerformanceTiming(),
-      video: getNewPerformanceTiming(),
-      audiovideo: getNewPerformanceTiming()
-    };
+  public readonly level: number;
+  public readonly sn: number;
+  public readonly part: number;
+  public readonly id: number;
+  public readonly size: number;
+  public readonly partial: boolean;
+  public readonly transmuxing: HlsChunkPerformanceTiming = getNewPerformanceTiming();
+  public readonly buffering: { [key in SourceBufferName]: HlsChunkPerformanceTiming } = {
+    audio: getNewPerformanceTiming(),
+    video: getNewPerformanceTiming(),
+    audiovideo: getNewPerformanceTiming()
+  };
 
-    constructor (level, sn, id, size = 0, part = -1) {
-      this.level = level;
-      this.sn = sn;
-      this.id = id;
-      this.size = size;
-      this.part = part;
-    }
+  constructor (level: number, sn: number, id: number, size = 0, part = -1, partial = false) {
+    this.level = level;
+    this.sn = sn;
+    this.id = id;
+    this.size = size;
+    this.part = part;
+    this.partial = partial;
+  }
 }
 
 function getNewPerformanceTiming (): HlsChunkPerformanceTiming {
