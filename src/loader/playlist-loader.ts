@@ -23,8 +23,6 @@ import Hls from '../hls';
 import AttrList from '../utils/attr-list';
 import type { ErrorData, LevelLoadingData, ManifestLoadingData, TrackLoadingData } from '../types/events';
 
-const { performance } = self;
-
 function mapContextToLevelType (context: PlaylistLoaderContext): PlaylistLevelType {
   const { type } = context;
 

@@ -50,14 +50,22 @@
 
           <input id="streamURL" class="innerControls" type=text value=""/>
 
-          <label class="innerControls">
+          <label class="innerControls"
+                 title="Uncheck this to disable loading of streams selected from the drop-down above.">
             Enable streaming:
             <input id="enableStreaming" type=checkbox checked/>
           </label>
 
-          <label class="innerControls">
+          <label class="innerControls"
+                 title="When a media error occurs, attempt to recover playback by calling `hls.recoverMediaError()`.">
             Auto-recover media-errors:
             <input id="autoRecoverError" type=checkbox checked/>
+          </label>
+
+          <label class="innerControls"
+                 title="Stop loading and playback if playback under-buffer stalls. This can help debug stall errors.">
+            Stop on first stall:
+            <input id="stopOnStall" type=checkbox unchecked/>
           </label>
 
           <label class="innerControls">

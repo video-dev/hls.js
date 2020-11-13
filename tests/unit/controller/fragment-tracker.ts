@@ -432,6 +432,7 @@ function createBufferAppendedData (video: PtsTimeRanges, audio?: PtsTimeRanges):
   return {
     chunkMeta: new ChunkMetadata(0, 0, 0, 0),
     frag: new Fragment(PlaylistLevelType.MAIN, ''),
+    part: null,
     parent: PlaylistLevelType.MAIN,
     timeRanges: {
       video: createMockBuffer(video),
@@ -447,14 +448,16 @@ function createFragBufferedData (frag: Fragment, aborted?: boolean): FragBuffere
   }
   return {
     stats,
-    id: frag.type,
-    frag
+    frag,
+    part: null,
+    id: frag.type
   };
 }
 
 function createFragLoadedData (frag: Fragment): FragLoadedData {
   return {
     frag,
+    part: null,
     payload: new ArrayBuffer(0),
     networkDetails: null
   };

@@ -12,12 +12,11 @@ import { findFragmentByPDT, findFragmentByPTS, findFragWithCC } from './fragment
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import Fragment, { Part } from '../loader/fragment';
 import FragmentLoader, {
-  FragLoadFailResult,
   FragmentLoadProgressCallback,
   LoadError
 } from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
-import { BufferAppendingData, ErrorData, FragLoadedData } from '../types/events';
+import { BufferAppendingData, ErrorData, FragLoadedData, PartsLoadedData, KeyLoadedData } from '../types/events';
 import { Level } from '../types/level';
 import { RemuxedTrack } from '../types/remuxer';
 import Hls from '../hls';
@@ -25,6 +24,7 @@ import Decrypter from '../crypt/decrypter';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import { NetworkComponentAPI } from '../types/component-api';
+import TimeRanges from '../utils/time-ranges';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -65,13 +65,18 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   protected initPTS: Array<number> = [];
 
   protected readonly logPrefix: string = '';
+  protected readonly log: (msg: any) => void;
+  protected readonly warn: (msg: any) => void;
 
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
     super();
+    this.log = logger.log.bind(logger, `${this.logPrefix}:`);
+    this.warn = logger.warn.bind(logger, `${this.logPrefix}:`);
     this.hls = hls;
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls as HlsEventEmitter, hls.config);
+    hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
   }
 
   protected doTick () {
@@ -166,6 +171,16 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.startPosition = this.lastCurrentTime = 0;
   }
 
+  onKeyLoaded (event: Events.KEY_LOADED, data: KeyLoadedData) {
+    if (this.state === State.KEY_LOADING && this.levels) {
+      this.state = State.IDLE;
+      const levelDetails = this.levels[data.frag.level].details;
+      if (levelDetails) {
+        this.loadFragment(data.frag, levelDetails, data.frag.start);
+      }
+    }
+  }
+
   protected onHandlerDestroying () {
     this.stopLoad();
     super.onHandlerDestroying();
@@ -173,13 +188,18 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
   protected onHandlerDestroyed () {
     this.state = State.STOPPED;
+    this.hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
     super.onHandlerDestroyed();
   }
 
-  protected _loadFragForPlayback (frag: Fragment, targetBufferTime: number) {
+  protected loadFragment (frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
+    this._loadFragForPlayback(frag, levelDetails, targetBufferTime);
+  }
+
+  private _loadFragForPlayback (frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
     const progressCallback: FragmentLoadProgressCallback = (data: FragLoadedData) => {
-      if (this._fragLoadAborted(frag)) {
-        this.warn(`Fragment ${frag.sn} of level ${frag.level} was aborted during progressive download.`);
+      if (this.fragContextChanged(frag)) {
+        this.warn(`Fragment ${frag.sn}${data.part ? ' p: ' + data.part.index : ''} of level ${frag.level} was dropped during download.`);
         this.fragmentTracker.removeFragment(frag);
         return;
       }
@@ -187,15 +207,25 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       this._handleFragmentLoadProgress(data);
     };
 
-    this._doFragLoad(frag, targetBufferTime, progressCallback)
-      .then((data: FragLoadedData | null) => {
+    this._doFragLoad(frag, levelDetails, targetBufferTime, progressCallback)
+      .then((data) => {
         this.fragLoadError = 0;
-        const aborted = this._fragLoadAborted(frag);
-        if (!data || aborted) {
+        if (!data) {
+          // if we're here we probably needed to backtrack or are waiting for more parts
           return;
         }
-        this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
-        this.hls.trigger(Events.FRAG_LOADED, data);
+        if (this.fragContextChanged(frag)) {
+          if (this.state === State.FRAG_LOADING) {
+            this.state = State.IDLE;
+          }
+          return;
+        }
+
+        if ('payload' in data) {
+          this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
+          this.hls.trigger(Events.FRAG_LOADED, data);
+        }
+
         // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
         this._handleFragmentLoadComplete(data);
       });
@@ -203,8 +233,8 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
   protected _loadInitSegment (frag: Fragment) {
     this._doFragLoad(frag)
-      .then((data: FragLoadedData | null) => {
-        if (!data || this._fragLoadAborted(frag) || !this.levels) {
+      .then((data) => {
+        if (!data || this.fragContextChanged(frag) || !this.levels) {
           throw new Error('init load aborted');
         }
 
@@ -217,10 +247,10 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
         // check to see if the payload needs to be decrypted
         if (payload && payload.byteLength > 0 && decryptData && decryptData.key && decryptData.iv && decryptData.method === 'AES-128') {
-          const startTime = performance.now();
+          const startTime = self.performance.now();
           // decrypt the subtitles
           return this.decrypter.webCryptoDecrypt(new Uint8Array(payload), decryptData.key.buffer, decryptData.iv.buffer).then((decryptedData) => {
-            const endTime = performance.now();
+            const endTime = self.performance.now();
             hls.trigger(Events.FRAG_DECRYPTED, {
               frag,
               payload: decryptedData,
@@ -256,7 +286,12 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
         // Silence FRAG_BUFFERED event if fragCurrent is null
         if (data.frag === fragCurrent) {
-          hls.trigger(Events.FRAG_BUFFERED, { stats, frag: fragCurrent, id: frag.type });
+          hls.trigger(Events.FRAG_BUFFERED, {
+            stats,
+            frag: fragCurrent,
+            part: null,
+            id: frag.type
+          });
         }
         this.tick();
       }).catch(reason => {
@@ -264,45 +299,104 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       });
   }
 
-  protected _fragLoadAborted (frag: Fragment | null) {
+  protected fragContextChanged (frag: Fragment | null) {
     const { fragCurrent } = this;
-    // frag.level can refer to bitrate variant or media track index
-    if (!frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn) {
-      return true;
-    }
-    return false;
+    return !frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn || frag.urlId !== fragCurrent.urlId;
   }
 
-  protected _handleFragmentLoadComplete (fragLoadedData: FragLoadedData) {
+  protected fragBufferedComplete (frag: Fragment, part: Part | null) {
+    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const timestampInfo = frag.startPTS ? `PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}]` : `start-end:[${frag.start}-${frag.end}]`;
+    this.log(`Buffered ${frag.type} sn: ${frag.sn}${part ? ' part: ' + part.index : ''} of ${
+      this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+    } ${frag.level}. ${timestampInfo}, Buffered: ${TimeRanges.toString(BufferHelper.getBuffered(media))}`);
+    this.state = State.IDLE;
+    this.tick();
+  }
+
+  protected _handleFragmentLoadComplete (fragLoadedEndData: PartsLoadedData) {
     const { transmuxer } = this;
     if (!transmuxer) {
       return;
     }
-    const { frag, part } = fragLoadedData;
-    const partIndex = part ? part.index : -1;
-    const chunkMeta = new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0, partIndex);
-    chunkMeta.transmuxing.start = performance.now();
+    const { frag, part, partsLoaded } = fragLoadedEndData;
+    // If we did not load parts, or loaded all parts, we have complete (not partial) fragment data
+    const complete = !partsLoaded || (partsLoaded && (partsLoaded.length === 0 || partsLoaded.some(fragLoaded => !fragLoaded)));
+    const chunkMeta = new ChunkMetadata(frag.level, frag.sn as number, frag.stats.chunkCount + 1, 0, part ? part.index : -1, !complete);
     transmuxer.flush(chunkMeta);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected _handleFragmentLoadProgress (frag: FragLoadedData) {}
 
-  protected _doFragLoad (frag: Fragment, targetBufferTime: number | null = null, progressCallback?: FragmentLoadProgressCallback): Promise<FragLoadedData | null> {
+  protected _doFragLoad (frag: Fragment, details?: LevelDetails, targetBufferTime: number | null = null, progressCallback?: FragmentLoadProgressCallback): Promise<PartsLoadedData | FragLoadedData | null> {
+    if (!this.levels) {
+      throw new Error('frag load aborted, missing levels');
+    }
+    targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
+    if (this.config.lowLatencyMode && details) {
+      const partList = details.partList;
+      if (partList && progressCallback) {
+        const partIndex = this.getNextPart(partList, frag, targetBufferTime);
+        if (partIndex > -1) {
+          const part = partList[partIndex];
+          this.log(`Loading part sn: ${frag.sn} p: ${part.index} cc: ${frag.cc} of playlist [${details.startSN}-${details.endSN}] parts [0-${partIndex}-${partList.length - 1}] ${
+            this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+          }: ${frag.level}, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`);
+          this.state = State.FRAG_LOADING;
+          this.hls.trigger(Events.FRAG_LOADING, { frag, part: partList[partIndex], targetBufferTime });
+          return this.doFragPartsLoad(frag, partList, partIndex, progressCallback)
+            .catch((error: LoadError) => this.handleFragError(error));
+        } else if (!frag.url || this.loadedEndOfParts(partList, targetBufferTime)) {
+          // Fragment hint has no parts
+          return Promise.resolve(null);
+        }
+      }
+    }
+
+    this.log(`Loading fragment ${frag.sn} cc: ${frag.cc} ${
+      details ? 'of [' + details.startSN + '-' + details.endSN + '] ' : ''
+    }${this.logPrefix === '[stream-controller]' ? 'level' : 'track'}: ${frag.level}, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`);
+
     this.state = State.FRAG_LOADING;
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
 
-    return this.fragmentLoader.load(frag, targetBufferTime, progressCallback)
-      .catch((e: LoadError) => {
-        const errorData: FragLoadFailResult = e.data;
+    return this.fragmentLoader.load(frag, progressCallback)
+      .catch((error: LoadError) => this.handleFragError(error));
+  }
 
-        if (errorData && errorData.details === ErrorDetails.INTERNAL_ABORTED) {
-          this.handleFragLoadAborted(frag, errorData.part);
-        } else {
-          this.hls.trigger(Events.ERROR, errorData as ErrorData);
-        }
-        return null;
-      });
+  private doFragPartsLoad (frag: Fragment, partList: Part[], partIndex: number, progressCallback: FragmentLoadProgressCallback): Promise<PartsLoadedData | null> {
+    return new Promise((resolve: (FragLoadedEndData) => void, reject: (LoadError) => void) => {
+      const partsLoaded: FragLoadedData[] = [];
+      const loadPartIndex = (index: number) => {
+        const part = partList[index];
+        this.fragmentLoader.loadPart(frag, part, progressCallback).then((partLoadedData: FragLoadedData) => {
+          partsLoaded[part.index] = partLoadedData;
+          const loadedPart = partLoadedData.part as Part;
+          this.hls.trigger(Events.FRAG_LOADED, partLoadedData);
+          const nextPart = partList[index + 1];
+          if (nextPart && nextPart.fragment === frag) {
+            loadPartIndex(index + 1);
+          } else {
+            return resolve({
+              frag,
+              part: loadedPart,
+              partsLoaded
+            });
+          }
+        }).catch(reject);
+      };
+      loadPartIndex(partIndex);
+    });
+  }
+
+  private handleFragError ({ data }: LoadError) {
+    if (data && data.details === ErrorDetails.INTERNAL_ABORTED) {
+      this.handleFragLoadAborted(data.frag, data.part);
+    } else {
+      this.hls.trigger(Events.ERROR, data as ErrorData);
+    }
+    return null;
   }
 
   protected _handleTransmuxerFlush (chunkMeta: ChunkMetadata) {
@@ -315,35 +409,34 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     if (!context) {
       return;
     }
-    const { frag, partIndex, level } = context;
-    frag.stats.parsing.end = performance.now();
-
-    this.updateLevelTiming(frag, level);
+    const { frag, part, level } = context;
+    const now = self.performance.now();
+    frag.stats.parsing.end = now;
+    if (part) {
+      part.stats.parsing.end = now;
+    }
+    this.updateLevelTiming(frag, level, chunkMeta.partial);
     this.state = State.PARSED;
-    this.hls.trigger(Events.FRAG_PARSED, { frag, partIndex });
+    this.hls.trigger(Events.FRAG_PARSED, { frag, part });
   }
 
-  protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, partIndex: number, level: Level } | null {
-    const { fragCurrent, levels } = this;
-    const { level, sn } = chunkMeta;
-    if (!levels || !levels[level]) {
-      this.warn(`Levels object was unset while buffering fragment ${sn} of level ${level}. The current chunk will not be buffered.`);
+  protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, part: Part | null, level: Level } | null {
+    const { levels } = this;
+    const { level: levelIndex, sn, part: partIndex } = chunkMeta;
+    if (!levels || !levels[levelIndex]) {
+      this.warn(`Levels object was unset while buffering fragment ${sn} of level ${levelIndex}. The current chunk will not be buffered.`);
       return null;
     }
-    const currentLevel = levels[level];
-
-    // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
-    // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
-    let frag = LevelHelper.getFragmentWithSN(currentLevel, sn);
-    if (this._fragLoadAborted(frag)) {
+    const level = levels[levelIndex];
+    const part = (partIndex > -1) ? LevelHelper.getPartWith(level, sn, partIndex) : null;
+    const frag = part ? part.fragment : LevelHelper.getFragmentWithSN(level, sn);
+    if (!frag) {
       return null;
     }
-    // Assign fragCurrent. References to fragments in the level details change between playlist refreshes.
-    frag = fragCurrent!;
-    return { frag, partIndex: chunkMeta.part, level: currentLevel };
+    return { frag, part, level };
   }
 
-  protected bufferFragmentData (data: RemuxedTrack, frag: Fragment, chunkMeta: ChunkMetadata) {
+  protected bufferFragmentData (data: RemuxedTrack, frag: Fragment, part: Part | null, chunkMeta: ChunkMetadata) {
     if (!data || this.state !== State.PARSING) {
       return;
     }
@@ -359,7 +452,13 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       return;
     }
 
-    const segment: BufferAppendingData = { type: data.type, data: buffer, frag, chunkMeta };
+    const segment: BufferAppendingData = {
+      type: data.type,
+      data: buffer,
+      frag,
+      part,
+      chunkMeta
+    };
     this.hls.trigger(Events.BUFFER_APPENDING, segment);
     this.tick();
   }
@@ -375,7 +474,6 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
     // find fragment index, contiguous with end of buffer position
     const start = fragments[0].start;
-    const end = levelDetails.edge;
     let frag;
 
     // If an initSegment is present, it must be buffered first
@@ -394,17 +492,40 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       if (!levelDetails.PTSKnown && !startFragRequested) {
         frag = this.getInitialLiveFragment(levelDetails, fragments);
       }
-    } else if (pos < start) {
+    } else if (pos <= start) {
       // VoD playlist: if loadPosition before start of playlist, load first fragment
       frag = fragments[0];
     }
 
     // If we haven't run into any special cases already, just load the fragment most closely matching the requested position
     if (!frag) {
+      const end = config.lowLatencyMode ? levelDetails.partEnd : levelDetails.fragmentEnd;
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
 
     return frag;
+  }
+
+  getNextPart (partList: Part[], frag: Fragment, targetBufferTime: number): number {
+    let nextPart = -1;
+    let contiguous = false;
+    for (let i = 0, len = partList.length; i < len; i++) {
+      const part = partList[i];
+      if (nextPart > -1 && targetBufferTime < part.start) {
+        break;
+      }
+      const loaded = part.loaded;
+      if (!loaded && (contiguous || part.independent) && part.fragment === frag) {
+        nextPart = i;
+      }
+      contiguous = loaded;
+    }
+    return nextPart;
+  }
+
+  private loadedEndOfParts (partList: Part[], targetBufferTime: number): boolean {
+    const lastPart = partList[partList.length - 1];
+    return lastPart && targetBufferTime > lastPart.start && lastPart.loaded;
   }
 
   /*
@@ -450,8 +571,15 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
    */
   protected getFragmentAtPosition (bufferEnd: number, end: number, levelDetails: LevelDetails): Fragment | null {
     const { config, fragPrevious } = this;
-    const fragments = levelDetails.fragments;
+    let { fragments, endSN, fragmentHint } = levelDetails;
     const tolerance = config.maxFragLookUpTolerance;
+
+    const loadingParts = !!(config.lowLatencyMode && levelDetails.partList && fragmentHint);
+    if (loadingParts && fragmentHint) {
+      // Include incomplete fragment with parts at end
+      fragments = fragments.concat(fragmentHint);
+      endSN = fragmentHint.sn as number;
+    }
 
     let frag;
     if (bufferEnd < end) {
@@ -471,9 +599,9 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       const nextFrag = fragments[curSNIdx + 1];
       // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
       // non-uniform fragment durations
-      if (fragPrevious && frag.sn === fragPrevious.sn) {
+      if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
         if (sameLevel && !frag.backtracked) {
-          if (frag.sn < levelDetails.endSN) {
+          if (frag.sn < endSN) {
             frag = nextFrag;
             if (this.fragmentTracker.getState(frag) !== FragmentState.OK) {
               this.log(`SN just loaded, load next one: ${frag.sn}`);
@@ -594,23 +722,19 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   }
 
   private handleFragLoadAborted (frag: Fragment, part: Part | undefined) {
-    const { transmuxer } = this;
-    if (transmuxer && frag.sn !== 'initSegment') {
-      transmuxer.flush(new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0, part ? part.index : -1));
+    if (this.transmuxer && frag.sn !== 'initSegment') {
+      this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer`);
+      this.transmuxer.flush(new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0, part ? part.index : -1, true));
     }
-    Object.keys(frag.elementaryStreams).forEach(type => {
-      frag.elementaryStreams[type] = null;
-    });
-    this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer & resetting nextLoadPosition to ${this.nextLoadPosition}`);
   }
 
-  private updateLevelTiming (frag: Fragment, level: Level) {
+  private updateLevelTiming (frag: Fragment, level: Level, partial: boolean) {
     const details = level.details as LevelDetails;
     console.assert(!!details, 'level.details must be defined');
     Object.keys(frag.elementaryStreams).forEach(type => {
       const info = frag.elementaryStreams[type];
       if (info) {
-        const drift = LevelHelper.updateFragPTSDTS(details, frag, info.startPTS, info.endPTS, info.startDTS, info.endDTS);
+        const drift = partial ? 0 : LevelHelper.updateFragPTSDTS(details, frag, info.startPTS, info.endPTS, info.startDTS, info.endDTS);
         this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
           details,
           level,
@@ -633,13 +757,5 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
   get state () {
     return this._state;
-  }
-
-  protected log (msg) {
-    logger.log(`${this.logPrefix}: ${msg}`);
-  }
-
-  protected warn (msg) {
-    logger.warn(`${this.logPrefix}: ${msg}`);
   }
 }

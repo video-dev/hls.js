@@ -261,7 +261,6 @@ export default class M3U8Parser {
               fragments.unshift(null);
             }
             currentSN += skippedSegments;
-            totalduration += skippedSegments * level.targetduration;
           }
           const recentlyRemovedDateranges = skipAttrs.enumeratedString('RECENTLY-REMOVED-DATERANGES');
           if (recentlyRemovedDateranges) {
@@ -299,8 +298,7 @@ export default class M3U8Parser {
           break;
         case 'KEY': {
           // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
-          const decryptparams = value1;
-          const keyAttrs = new AttrList(decryptparams);
+          const keyAttrs = new AttrList(value1);
           const decryptmethod = keyAttrs.enumeratedString('METHOD');
           const decrypturi = keyAttrs.URI;
           const decryptiv = keyAttrs.hexadecimalInteger('IV');
@@ -428,6 +426,7 @@ export default class M3U8Parser {
     const fragmentLength = fragments.length;
     const firstFragment = fragments[0];
     const lastFragment = fragments[fragmentLength - 1];
+    totalduration += level.skippedSegments * level.targetduration;
     if (totalduration > 0 && fragmentLength && lastFragment) {
       level.averagetargetduration = totalduration / fragmentLength;
       const lastSn = lastFragment.sn;

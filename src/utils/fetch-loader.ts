@@ -6,7 +6,7 @@ import {
   LoaderConfiguration,
   LoaderOnProgress
 } from '../types/loader';
-import LoadStats, { reset } from '../loader/load-stats';
+import LoadStats from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
 
 export function fetchSupported () {
@@ -26,7 +26,7 @@ class FetchLoader implements Loader<LoaderContext> {
   private response!: Response;
   private controller: AbortController;
   public context!: LoaderContext;
-  private config?: LoaderConfiguration;
+  private config: LoaderConfiguration | null = null;
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public stats: LoaderStats;
   public loader: Response | null = null;
@@ -57,7 +57,9 @@ class FetchLoader implements Loader<LoaderContext> {
 
   load (context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void {
     const stats = this.stats;
-    reset(stats);
+    if (stats.loading.start) {
+      throw new Error('Loader can only be used once.');
+    }
     stats.loading.start = self.performance.now();
 
     const initParams = getRequestParameters(context, this.controller.signal);

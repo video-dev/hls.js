@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { EventEmitter } from 'eventemitter3';
-import Fragment from '../loader/fragment';
+import Fragment, { Part } from '../loader/fragment';
 import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type Hls from '../hls';
 import type { HlsEventEmitter } from '../events';
@@ -17,14 +17,13 @@ export default class TransmuxerInterface {
   private hls: Hls;
   private id: PlaylistLevelType;
   private observer: HlsEventEmitter;
-  private frag?: Fragment;
+  private frag: Fragment | null = null;
+  private part: Part | null = null;
   private worker: any;
   private onwmsg?: Function;
   private transmuxer: Transmuxer | null = null;
   private onTransmuxComplete: (transmuxResult: TransmuxerResult) => void;
   private onFlush: (chunkMeta: ChunkMetadata) => void;
-
-  private currentTransmuxSession: ChunkMetadata | null = null;
 
   constructor (hls: Hls, id: PlaylistLevelType, onTransmuxComplete: (transmuxResult: TransmuxerResult) => void, onFlush: (chunkMeta: ChunkMetadata) => void) {
     this.hls = hls;
@@ -101,32 +100,41 @@ export default class TransmuxerInterface {
     this.observer = null;
   }
 
-  push (data: ArrayBuffer, initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {
-    const { currentTransmuxSession, transmuxer, worker } = this;
-    const timeOffset = frag.start;
+  push (data: ArrayBuffer, initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, part: Part | null, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {
+    chunkMeta.transmuxing.start = self.performance.now();
+    const { transmuxer, worker } = this;
+    const timeOffset = part ? part.start : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
 
-    if (startingNewTransmuxSession(currentTransmuxSession, chunkMeta)) {
-      frag.stats.parsing.start = performance.now();
-      const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
-      const trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
-      const nextSN = !!(lastFrag && (frag.sn === (lastFrag.sn as number + 1)));
-      const contiguous = !trackSwitch && nextSN;
+    const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
+    const trackSwitch = !(lastFrag && (chunkMeta.level === lastFrag.level));
+    const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
+    const partDiff = this.part ? (chunkMeta.part - this.part.index) : -1;
+    const contiguous = !discontinuity && !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
+    const now = self.performance.now();
 
-      logger.log(`[transmuxer-interface, ${frag.type}]: Starting new transmux session for fragment ${frag.sn}, of level ${frag.level}:
+    if (trackSwitch || snDiff || frag.stats.parsing.start === 0) {
+      frag.stats.parsing.start = now;
+    }
+    if (part && (partDiff || !contiguous)) {
+      part.stats.parsing.start = now;
+    }
+    if (!contiguous) {
+      logger.log(`[transmuxer-interface, ${frag.type}]: Starting new transmux session for sn: ${chunkMeta.sn} p: ${chunkMeta.part} level: ${chunkMeta.level} id: ${chunkMeta.id}
         discontinuity: ${discontinuity}
         trackSwitch: ${trackSwitch}
         contiguous: ${contiguous}
         accurateTimeOffset: ${accurateTimeOffset}
         timeOffset: ${timeOffset}`);
-      this.currentTransmuxSession = chunkMeta;
       const config = new TransmuxConfig(audioCodec, videoCodec, new Uint8Array(initSegmentData), duration, defaultInitPTS);
       const state = new TransmuxState(discontinuity, contiguous, accurateTimeOffset, trackSwitch, timeOffset);
       this.configureTransmuxer(config, state);
     }
 
     this.frag = frag;
+    this.part = part;
+
     // Frags with sn of 'initSegment' are not transmuxed
     if (worker) {
       // post fragment payload as transferable objects for ArrayBuffer (no copy)
@@ -149,9 +157,8 @@ export default class TransmuxerInterface {
   }
 
   flush (chunkMeta: ChunkMetadata) {
+    chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
-    this.currentTransmuxSession = null;
-    chunkMeta.transmuxing.start = performance.now();
     if (worker) {
       worker.postMessage({
         cmd: 'flush',
@@ -221,14 +228,7 @@ export default class TransmuxerInterface {
   }
 
   private handleTransmuxComplete (result: TransmuxerResult) {
-    result.chunkMeta.transmuxing.end = performance.now();
+    result.chunkMeta.transmuxing.end = self.performance.now();
     this.onTransmuxComplete(result);
   }
-}
-
-function startingNewTransmuxSession (currentIdentifier: ChunkMetadata | null, newIdentifier: ChunkMetadata) {
-  if (!currentIdentifier) {
-    return true;
-  }
-  return currentIdentifier.sn !== newIdentifier.sn || currentIdentifier.level !== newIdentifier.level;
 }

@@ -8,7 +8,6 @@
  */
 
 import { Events } from '../events';
-import Fragment from '../loader/fragment';
 import { logger } from '../utils/logger';
 import Hls from '../hls';
 import { FragBufferedData } from '../types/events';
@@ -26,18 +25,19 @@ export default class PerformanceMonitor {
   }
 
   onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData) {
-    logFragStats(data.frag);
+    logFragStats(data);
   }
 }
 
-function logFragStats (frag: Fragment) {
-  const stats = frag.stats;
+function logFragStats (data: FragBufferedData) {
+  const { frag, part } = data;
+  const stats = part ? part.stats : frag.stats;
   const tLoad = stats.loading.end - stats.loading.start;
   const tBuffer = stats.buffering.end - stats.buffering.start;
   const tParse = stats.parsing.end - stats.parsing.start;
   const tTotal = stats.buffering.end - stats.loading.start;
 
-  logger.log(`[performance-monitor]: Stats for fragment ${frag.sn} of level ${frag.level}:
+  logger.log(`[performance-monitor]: Stats for fragment ${frag.sn} ${part ? (' part ' + part.index) : ''} of level ${frag.level}:
         Size:                       ${((stats.total / 1024)).toFixed(3)} kB
         Chunk Count:                ${stats.chunkCount}
 

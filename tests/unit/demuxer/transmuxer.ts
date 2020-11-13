@@ -75,6 +75,7 @@ describe('TransmuxerInterface tests', function () {
     const id = PlaylistLevelType.MAIN;
     const transmuxerInterface = new TransmuxerInterface(hls, id, onTransmuxComplete, onFlush);
     const transmuxerInterfacePrivates = transmuxerInterface as any;
+    const stub = sinon.stub(transmuxerInterfacePrivates.worker, 'postMessage');
     const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
     currentFrag.cc = 100;
     currentFrag.sn = 5;
@@ -82,36 +83,43 @@ describe('TransmuxerInterface tests', function () {
     // Config for push
     transmuxerInterfacePrivates.frag = currentFrag;
 
-    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
-    newFrag.cc = 100;
-    newFrag.sn = 6;
-    newFrag.level = 1;
-    newFrag.start = 1000;
-    newFrag.startPTS = 1000;
-
+    const part = null;
     const data = new ArrayBuffer(8);
     const initSegmentData = new Uint8Array(0);
     const audioCodec = '';
     const videoCodec = '';
     const duration = 0;
     const accurateTimeOffset = true;
-    const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
-
-    const stub = sinon.stub(transmuxerInterfacePrivates.worker, 'postMessage');
-
-    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, chunkMeta);
+    let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn, 0);
+    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, currentFrag, part, duration, accurateTimeOffset, chunkMeta);
 
     expect(stub).to.have.been.calledTwice;
     const firstCall = stub.args[0][0];
     const secondCall = stub.args[1][0];
-
-    expect(firstCall, 'Configure call').to.deep.equal({
+    expect(firstCall, 'Configure call ' + JSON.stringify(firstCall, null, 2)).to.deep.equal({
       cmd: 'configure',
       config: new TransmuxConfig('', '', initSegmentData, 0),
-      state: new TransmuxState(false, true, true, false, 1000)
+      state: new TransmuxState(false, false, true, false, 0)
+    });
+    expect(secondCall, 'Demux call 1' + JSON.stringify(secondCall, null, 2)).to.deep.equal({
+      cmd: 'demux',
+      data,
+      decryptdata: currentFrag.decryptdata,
+      chunkMeta
     });
 
-    expect(secondCall, 'Demux call').to.deep.equal({
+    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    newFrag.cc = 100;
+    newFrag.sn = 6;
+    newFrag.level = 1;
+    newFrag.start = 1000;
+    newFrag.startPTS = 1000;
+    chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
+    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, currentFrag, part, duration, accurateTimeOffset, chunkMeta);
+
+    expect(stub).to.have.been.calledThrice;
+    const thirdCall = stub.args[2][0];
+    expect(thirdCall, 'Demux call 2' + JSON.stringify(thirdCall, null, 2)).to.deep.equal({
       cmd: 'demux',
       data,
       decryptdata: newFrag.decryptdata,
@@ -140,7 +148,7 @@ describe('TransmuxerInterface tests', function () {
     newFrag.sn = 5;
     newFrag.level = 2;
     newFrag.start = 1000;
-
+    const part = null;
     const data = new Uint8Array(new ArrayBuffer(8));
     const initSegmentData = new Uint8Array(0);
     const audioCodec = '';
@@ -152,7 +160,7 @@ describe('TransmuxerInterface tests', function () {
     const configureStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'configure');
     const pushStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'push');
     pushStub.returns(Promise.reject(new Error('Stubbed transmux result')));
-    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, newFrag, duration, accurateTimeOffset, chunkMeta);
+    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, newFrag, part, duration, accurateTimeOffset, chunkMeta);
 
     const tConfig = new TransmuxConfig('', '', initSegmentData, 0);
     const state = new TransmuxState(true, false, true, true, 1000);

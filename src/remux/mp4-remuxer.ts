@@ -112,7 +112,7 @@ export default class MP4Remuxer implements Remuxer {
     const hasVideo = videoTrack.pid > -1;
     const enoughAudioSamples = audioTrack.samples.length > 0;
     const enoughVideoSamples = videoTrack.samples.length > 1;
-    const canRemuxAvc = (!hasAudio || enoughAudioSamples) && (!hasVideo || enoughVideoSamples) || this.ISGenerated;
+    const canRemuxAvc = ((!hasAudio || enoughAudioSamples) && (!hasVideo || enoughVideoSamples)) || this.ISGenerated;
 
     if (canRemuxAvc) {
       if (!this.ISGenerated) {

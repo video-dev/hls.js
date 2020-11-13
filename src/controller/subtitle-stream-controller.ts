@@ -1,7 +1,3 @@
-/**
- * @class SubtitleStreamController
- */
-
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -9,7 +5,12 @@ import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import { FragmentState, FragmentTracker } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
-import {
+import { Level } from '../types/level';
+import { NetworkComponentAPI } from '../types/component-api';
+import type Hls from '../hls';
+import type LevelDetails from '../loader/level-details';
+import type Fragment from '../loader/fragment';
+import type {
   ErrorData, FragLoadedData,
   MediaAttachedData,
   SubtitleFragProcessed,
@@ -17,12 +18,6 @@ import {
   TrackLoadedData,
   TrackSwitchedData
 } from '../types/events';
-import { Level } from '../types/level';
-import LevelDetails from '../loader/level-details';
-import { NetworkComponentAPI } from '../types/component-api';
-import Hls from '../hls';
-
-const { performance } = self;
 
 const TICK_INTERVAL = 500; // how often to tick in ms
 
@@ -56,7 +51,6 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.on(Events.ERROR, this.onError, this);
-    hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
     hls.on(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.on(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
@@ -68,7 +62,6 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.off(Events.ERROR, this.onError, this);
-    hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
     hls.off(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.off(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
@@ -217,18 +210,12 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     this.setInterval(TICK_INTERVAL);
   }
 
-  onKeyLoaded () {
-    if (this.state === State.KEY_LOADING) {
-      this.state = State.IDLE;
-    }
-  }
-
   _handleFragmentLoadComplete (fragLoadedData: FragLoadedData) {
     const { frag, payload } = fragLoadedData;
     const decryptData = frag.decryptdata;
     const hls = this.hls;
 
-    if (this._fragLoadAborted(frag)) {
+    if (this.fragContextChanged(frag)) {
       return;
     }
     // check to see if the payload needs to be decrypted
@@ -295,10 +282,14 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
         this.hls.trigger(Events.KEY_LOADING, { frag: foundFrag });
       } else if (foundFrag && fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED) {
         // only load if fragment is not loaded
-        this.fragCurrent = foundFrag;
-        this._loadFragForPlayback(foundFrag, targetBufferTime);
+        this.loadFragment(foundFrag, trackDetails, targetBufferTime);
       }
     }
+  }
+
+  protected loadFragment (frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
+    this.fragCurrent = frag;
+    super.loadFragment(frag, levelDetails, targetBufferTime);
   }
 
   stopLoad () {

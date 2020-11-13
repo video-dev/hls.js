@@ -105,8 +105,6 @@ export default class Hls implements HlsEventEmitter {
     enableLogs(config.debug);
 
     this._autoLevelCapping = -1;
-    // Try to enable progressive streaming by default. Whether it will be enabled depends on API support
-    this.progressive = config.progressive;
 
     // core controllers and network loaders
     const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap

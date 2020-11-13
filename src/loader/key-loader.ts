@@ -73,8 +73,8 @@ export default class KeyLoader implements ComponentAPI {
         logger.warn('key uri is falsy');
         return;
       }
-
-      const fragLoader = frag.loader = this.loaders[type] = new config.loader(config) as Loader<FragmentLoaderContext>;
+      const Loader = config.loader;
+      const fragLoader = frag.loader = this.loaders[type] = new Loader(config) as Loader<FragmentLoaderContext>;
       this.decrypturl = uri;
       this.decryptkey = null;
 
