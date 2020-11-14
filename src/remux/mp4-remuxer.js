@@ -325,7 +325,7 @@ class MP4Remuxer {
       }
     }
 
-    if (this.requiresPositiveDts) {
+    if (requiresPositiveDts) {
       firstDTS = Math.max(0, firstDTS);
     }
     let nbNalu = 0;
