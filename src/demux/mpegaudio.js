@@ -2,6 +2,9 @@
  *  MPEG parser helper
  */
 
+var match = navigator.userAgent.match(/Chrome\/(\d+)/i);
+const needChromeFix = match && parseInt(match[1]) <= 87;
+
 const MpegAudio = {
 
   BitratesMap: [
@@ -75,21 +78,28 @@ const MpegAudio = {
   },
 
   parseHeader: function (data, offset) {
-    let headerB = (data[offset + 1] >> 3) & 3;
-    let headerC = (data[offset + 1] >> 1) & 3;
-    let headerE = (data[offset + 2] >> 4) & 15;
-    let headerF = (data[offset + 2] >> 2) & 3;
-    let headerG = (data[offset + 2] >> 1) & 1;
-    if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
-      let columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
-      let bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
-      let columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-      let sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
-      let channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-      let sampleCoefficient = MpegAudio.SamplesCoefficients[headerB][headerC];
-      let bytesInSlot = MpegAudio.BytesInSlot[headerC];
+    let mpegVersion = (data[offset + 1] >> 3) & 3;
+    let mpegLayer = (data[offset + 1] >> 1) & 3;
+    let bitRateIndex = (data[offset + 2] >> 4) & 15;
+    let sampleRateIndex = (data[offset + 2] >> 2) & 3;
+    let paddingBit = (data[offset + 2] >> 1) & 1;
+    let channelMode = data[offset + 3] >> 6;
+
+    if (mpegVersion !== 1 && bitRateIndex !== 0 && bitRateIndex !== 15 && sampleRateIndex !== 3) {
+      let columnInBitrates = mpegVersion === 3 ? (3 - mpegLayer) : (mpegLayer === 3 ? 3 : 4);
+      let bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + bitRateIndex - 1] * 1000;
+      let columnInSampleRates = mpegVersion === 3 ? 0 : mpegVersion === 2 ? 1 : 2;
+      let sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + sampleRateIndex];
+      let channelCount = channelMode === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+      let sampleCoefficient = MpegAudio.SamplesCoefficients[mpegVersion][mpegLayer];
+      let bytesInSlot = MpegAudio.BytesInSlot[mpegLayer];
       let samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
-      let frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
+      let frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + paddingBit, 10) * bytesInSlot;
+
+      if (needChromeFix && mpegLayer === 2 && bitRate >= 224000 && channelMode === 0) {
+        // Work around bug in Chromium by setting channelMode to dual-channel (01) instead of stereo (00)
+        data[offset + 3] = data[offset + 3] | 0x80;
+      }
 
       return { sampleRate, channelCount, frameLength, samplesPerFrame };
     }
