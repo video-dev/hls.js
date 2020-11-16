@@ -23,6 +23,8 @@ const AAC_SAMPLES_PER_FRAME = 1024;
 const MPEG_AUDIO_SAMPLE_PER_FRAME = 1152;
 
 let chromeVersion: number | null = null;
+let safariWebkitVersion: number | null = null;
+let requiresPositiveDts: boolean = false;
 
 export default class MP4Remuxer implements Remuxer {
   private observer: HlsEventEmitter;
@@ -47,6 +49,11 @@ export default class MP4Remuxer implements Remuxer {
       const result = userAgent.match(/Chrome\/(\d+)/i);
       chromeVersion = result ? parseInt(result[1]) : 0;
     }
+    if (safariWebkitVersion === null) {
+      const result = navigator.userAgent.match(/Safari\/(\d+)/i);
+      safariWebkitVersion = result ? parseInt(result[1]) : 0;
+    }
+    requiresPositiveDts = (!!chromeVersion && chromeVersion < 75) || (!!safariWebkitVersion && safariWebkitVersion < 600);
   }
 
   destroy () {
@@ -362,7 +369,7 @@ export default class MP4Remuxer implements Remuxer {
       }
     }
 
-    if (chromeVersion && chromeVersion < 75) {
+    if (requiresPositiveDts) {
       firstDTS = Math.max(0, firstDTS);
     }
     let nbNalu = 0;
