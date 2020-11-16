@@ -99,8 +99,11 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.send();
   }
 
-  readystatechange (event): void {
-    const xhr = event.currentTarget;
+  readystatechange (): void {
+    const xhr = this.loader;
+    if (!xhr) {
+      return;
+    }
     const readyState = xhr.readyState;
     const { stats, context } = this;
     const config = this.config as LoaderConfiguration;
