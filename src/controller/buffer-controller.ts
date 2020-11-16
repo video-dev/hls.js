@@ -242,10 +242,10 @@ export default class BufferController implements ComponentAPI {
         this.appendExecutor(data, type);
       },
       onStart: () => {
-        logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
+        // logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
       },
       onComplete: () => {
-        logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
+        // logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
         const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
         if (fragBuffering.first === 0) {
@@ -300,10 +300,10 @@ export default class BufferController implements ComponentAPI {
     const flushOperation = (type): BufferOperation => ({
       execute: this.removeExecutor.bind(this, type, data.startOffset, data.endOffset),
       onStart: () => {
-        logger.debug(`[buffer-controller]: Started flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
+        // logger.debug(`[buffer-controller]: Started flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
       },
       onComplete: () => {
-        logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
+        // logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
         this.hls.trigger(Events.BUFFER_FLUSHED, { type });
       },
       onError: (e) => {

@@ -6,7 +6,6 @@ const DEFAULT_TARGET_DURATION = 10;
 export default class LevelDetails {
   public PTSKnown: boolean = false;
   public alignedSliding: boolean = false;
-  public availabilityDelay?: number; // Manifest reload synchronization
   public averagetargetduration?: number;
   public endCC: number = 0;
   public endSN: number = 0;
@@ -14,19 +13,20 @@ export default class LevelDetails {
   public fragmentHint?: Fragment;
   public partList: Part[] | null = null;
   public initSegment: Fragment | null = null;
-  public lastModified?: number;
   public live: boolean = true;
+  public ageHeader: number = 0;
+  public advancedDateTime?: number;
+  public updated: boolean = true;
+  public advanced: boolean = true;
+  public availabilityDelay?: number; // Manifest reload synchronization
+  public misses: number = 0;
   public needSidxRanges: boolean = false;
   public startCC: number = 0;
   public startSN: number = 0;
   public startTimeOffset: number | null = null;
   public targetduration: number = 0;
-  public tload?: number;
   public totalduration: number = 0;
   public type: string | null = null;
-  public updated: boolean = true;
-  public advanced: boolean = true;
-  public misses: number = 0;
   public url: string;
   public m3u8: string = '';
   public version: number | null = null;
@@ -96,8 +96,8 @@ export default class LevelDetails {
   }
 
   get age (): number {
-    if (this.lastModified) {
-      return Math.max(Date.now() - this.lastModified, 0) / 1000;
+    if (this.advancedDateTime) {
+      return Math.max(Date.now() - this.advancedDateTime, 0) / 1000;
     }
     return 0;
   }

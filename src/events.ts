@@ -78,7 +78,7 @@ export enum Events {
   BUFFER_FLUSHED = 'hlsBufferFlushed',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING = 'hlsManifestLoading',
-  // fired after manifest has been loaded - data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
+  // fired after manifest has been loaded - data: { levels : [available quality levels], audioTracks : [ available audio tracks ], url : manifestURL, stats : LoaderStats }
   MANIFEST_LOADED = 'hlsManifestLoaded',
   // fired after manifest has been parsed - data: { levels : [available quality levels], firstLevel : index of first quality level appearing in Manifest}
   MANIFEST_PARSED = 'hlsManifestParsed',
@@ -88,7 +88,7 @@ export enum Events {
   LEVEL_SWITCHED = 'hlsLevelSwitched',
   // fired when a level playlist loading starts - data: { url : level URL, level : id of level being loaded}
   LEVEL_LOADING = 'hlsLevelLoading',
-  // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
+  // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : LoaderStats }
   LEVEL_LOADED = 'hlsLevelLoaded',
   // fired when a level's details have been updated based on previous details, after it has been loaded - data: { details : levelDetails object, level : id of updated level }
   LEVEL_UPDATED = 'hlsLevelUpdated',
@@ -104,7 +104,7 @@ export enum Events {
   AUDIO_TRACK_SWITCHED = 'hlsAudioTrackSwitched',
   // fired when an audio track loading starts - data: { url : audio track URL, id : audio track id }
   AUDIO_TRACK_LOADING = 'hlsAudioTrackLoading',
-  // fired when an audio track loading finishes - data: { details : levelDetails object, id : audio track id, stats : { trequest, tfirst, tload, mtime } }
+  // fired when an audio track loading finishes - data: { details : levelDetails object, id : audio track id, stats : LoaderStats }
   AUDIO_TRACK_LOADED = 'hlsAudioTrackLoaded',
   // fired to notify that subtitle track lists has been updated - data: { subtitleTracks : subtitleTracks }
   SUBTITLE_TRACKS_UPDATED = 'hlsSubtitleTracksUpdated',
@@ -114,7 +114,7 @@ export enum Events {
   SUBTITLE_TRACK_SWITCH = 'hlsSubtitleTrackSwitch',
     // fired when a subtitle track loading starts - data: { url : subtitle track URL, id : subtitle track id }
   SUBTITLE_TRACK_LOADING = 'hlsSubtitleTrackLoading',
-  // fired when a subtitle track loading finishes - data: { details : levelDetails object, id : subtitle track id, stats : { trequest, tfirst, tload, mtime } }
+  // fired when a subtitle track loading finishes - data: { details : levelDetails object, id : subtitle track id, stats : LoaderStats }
   SUBTITLE_TRACK_LOADED = 'hlsSubtitleTrackLoaded',
   // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag }
   SUBTITLE_FRAG_PROCESSED = 'hlsSubtitleFragProcessed',
@@ -130,7 +130,7 @@ export enum Events {
   // FRAG_LOAD_PROGRESS = 'hlsFragLoadProgress',
   // Identifier for fragment load aborting for emergency switch down - data: { frag : fragment object }
   FRAG_LOAD_EMERGENCY_ABORTED = 'hlsFragLoadEmergencyAborted',
-  // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length } }
+  // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : LoaderStats }
   FRAG_LOADED = 'hlsFragLoaded',
   // fired when a fragment has finished decrypting - data: { id : demuxer id, frag: fragment object, payload : fragment payload, stats : { tstart, tdecrypt } }
   FRAG_DECRYPTED = 'hlsFragDecrypted',
@@ -144,7 +144,7 @@ export enum Events {
   // FRAG_PARSING_DATA = 'hlsFragParsingData',
   // fired when fragment parsing is completed - data: { id : demuxer id, frag: fragment object }
   FRAG_PARSED = 'hlsFragParsed',
-  // fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer - data: { id : demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length, bwEstimate } }
+  // fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer - data: { id : demuxer id, frag : fragment object, stats : LoaderStats }
   FRAG_BUFFERED = 'hlsFragBuffered',
   // fired when fragment matching with current media position is changing - data : { id : demuxer id, frag : fragment object }
   FRAG_CHANGED = 'hlsFragChanged',
@@ -158,7 +158,7 @@ export enum Events {
   DESTROYING = 'hlsDestroying',
   // fired when a decrypt key loading starts - data: { frag : fragment object }
   KEY_LOADING = 'hlsKeyLoading',
-  // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length } }
+  // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : LoaderStats }
   KEY_LOADED = 'hlsKeyLoaded',
   // fired when the live back buffer is reached defined by the liveBackBufferLength config option - data : { bufferEnd: number }
   LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached',

@@ -284,7 +284,7 @@ export function adjustSliding (oldDetails: LevelDetails, newDetails: LevelDetail
 export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderStats): number {
   const reloadInterval = 1000 * newDetails.levelTargetDuration;
   const reloadIntervalAfterMiss = reloadInterval / 2;
-  const timeSinceLastModified = newDetails.lastModified ? +new Date() - newDetails.lastModified : 0;
+  const timeSinceLastModified = newDetails.age;
   const useLastModified = timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;
   const roundTrip = stats.loading.end - stats.loading.start;
 

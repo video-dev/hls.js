@@ -71,8 +71,12 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   protected playlistLoaded (index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails) {
     const { details, stats } = data;
 
+    // Set last updated date-time
+    const elapsed = stats.loading.end ? Math.max(0, self.performance.now() - stats.loading.end) : 0;
+    details.advancedDateTime = Date.now() - elapsed;
+
     // if current playlist is a live playlist, arm a timer to reload it
-    if (details.live) {
+    if (details.live || previousDetails?.live) {
       details.reloaded(previousDetails);
       if (previousDetails) {
         logger.log(`[${this.constructor.name}] live playlist ${index} ${details.advanced ? ('REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex) : 'MISSED'}`);
@@ -80,8 +84,11 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
         LevelHelper.mergeDetails(previousDetails, details);
+        if (!details.advanced) {
+          details.advancedDateTime = previousDetails.advancedDateTime;
+        }
       }
-      if (!this.canLoad) {
+      if (!this.canLoad || !details.live) {
         return;
       }
       if (details.canBlockReload && details.endSN && details.advanced) {
@@ -101,7 +108,9 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         }
         // Low-Latency CDN Tune-in: "age" header and time since load indicates we're behind by more than one part
         // Update directives to obtain the Playlist that has the estimated additional duration of media
-        let currentGoal = Math.min(details.age - details.partTarget, details.targetduration * 1.5);
+        const lastAdvanced = details.age;
+        const cdnAge = lastAdvanced + details.ageHeader;
+        let currentGoal = Math.min(cdnAge - details.partTarget, details.targetduration * 1.5);
         if (currentGoal > 0) {
           if (previousDetails && currentGoal > previousDetails.tuneInGoal) {
             // If we attempted to get the next or latest playlist update, but currentGoal increased,
@@ -115,7 +124,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
               const parts = Math.round((currentGoal % details.targetduration) / details.partTarget);
               part += parts;
             }
-            logger.log(`[${this.constructor.name}] CDN Tune-in age: ${details.age} goal: ${currentGoal} skip sn ${segments} to part ${part}`);
+            logger.log(`[${this.constructor.name}] CDN Tune-in age: ${details.ageHeader}s last advanced ${lastAdvanced.toFixed(2)}s goal: ${currentGoal} skip sn ${segments} to part ${part}`);
           }
           details.tuneInGoal = currentGoal;
         }

@@ -2,7 +2,7 @@
  * Push the performance monitor as the last core component in hls.ts
  * so that it is the last class to handle events.
  *
- * coreComponents.push(new PerformancMonitor(this));
+ * coreComponents.push(new PerformanceMonitor(this));
  *
  * TODO: Add this to the demo page or a performance test page
  */
