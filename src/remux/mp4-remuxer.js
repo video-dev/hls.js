@@ -16,6 +16,8 @@ const MAX_SILENT_FRAME_DURATION_90KHZ = toMpegTsClockFromTimescale(10);
 const PTS_DTS_SHIFT_TOLERANCE_90KHZ = toMpegTsClockFromTimescale(0.2);
 
 let chromeVersion = null;
+let safariWebkitVersion = null;
+let requiresPositiveDts = false;
 
 class MP4Remuxer {
   constructor (observer, config, typeSupported, vendor) {
@@ -27,6 +29,11 @@ class MP4Remuxer {
       const result = navigator.userAgent.match(/Chrome\/(\d+)/i);
       chromeVersion = result ? parseInt(result[1]) : 0;
     }
+    if (safariWebkitVersion === null) {
+      const result = navigator.userAgent.match(/Safari\/(\d+)/i);
+      safariWebkitVersion = result ? parseInt(result[1]) : 0;
+    }
+    requiresPositiveDts = (chromeVersion && chromeVersion < 75) || (safariWebkitVersion && safariWebkitVersion < 600);
   }
 
   destroy () {
@@ -318,7 +325,7 @@ class MP4Remuxer {
       }
     }
 
-    if (chromeVersion && chromeVersion < 75) {
+    if (requiresPositiveDts) {
       firstDTS = Math.max(0, firstDTS);
     }
     let nbNalu = 0;
