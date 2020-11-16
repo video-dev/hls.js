@@ -1377,16 +1377,18 @@ function addChartEventListeners (hls) {
     if (data.stats) {
       // Convert 0.x stats to partial v1 stats
       const { retry, loaded, total, trequest, tfirst, tload } = data.stats;
-      data.frag.stats = {
-        loaded,
-        retry,
-        total,
-        loading: {
-          start: trequest,
-          first: tfirst,
-          end: tload
-        }
-      };
+      if (trequest && tload) {
+        data.frag.stats = {
+          loaded,
+          retry,
+          total,
+          loading: {
+            start: trequest,
+            first: tfirst,
+            end: tload
+          }
+        };
+      }
     }
     chart.updateFragment(data);
   };

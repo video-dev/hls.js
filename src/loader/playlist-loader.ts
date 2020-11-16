@@ -174,7 +174,7 @@ class PlaylistLoader {
   private load (context: PlaylistLoaderContext): void {
     const config = this.hls.config;
 
-    logger.debug(`[playlist-loader]: Loading playlist of type ${context.type}, level: ${context.level}, id: ${context.id}`);
+    // logger.debug(`[playlist-loader]: Loading playlist of type ${context.type}, level: ${context.level}, id: ${context.id}`);
 
     // Check if a loader for this context already exists
     let loader = this.getInternalLoader(context);
@@ -252,7 +252,7 @@ class PlaylistLoader {
       onTimeout: this.loadtimeout.bind(this)
     };
 
-    logger.debug(`[playlist-loader]: Calling internal loader delegate for URL: ${context.url}`);
+    // logger.debug(`[playlist-loader]: Calling internal loader delegate for URL: ${context.url}`);
 
     loader.load(context, loaderConfig, loaderCallbacks);
   }
@@ -356,29 +356,13 @@ class PlaylistLoader {
 
   private _handleTrackOrLevelPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
     const hls = this.hls;
-    const { id, level, type, loader } = context;
-    if (!loader) {
-      return;
-    }
-    const url = getResponseUrl(response, context);
+    const { id, level, type } = context;
 
+    const url = getResponseUrl(response, context);
     const levelUrlId = Number.isFinite(id as number) ? id : 0;
     const levelId = Number.isFinite(level as number) ? level : levelUrlId;
     const levelType = mapContextToLevelType(context);
-
     const levelDetails: LevelDetails = M3U8Parser.parseLevelPlaylist(response.data as string, url, levelId!, levelType, levelUrlId!);
-
-    // Update level stats
-    levelDetails.tload = stats.loading.end;
-
-    // Estimate playlist last modified date
-    const loaded = self.performance.timing.navigationStart + levelDetails.tload;
-    // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
-    const checkAgeHeader = this.checkAgeHeader && levelDetails.live;
-    const ageHeader: string | null = checkAgeHeader ? loader.getResponseHeader('age') : null;
-    const age = ageHeader ? parseFloat(ageHeader) : 0;
-    this.checkAgeHeader = !!ageHeader;
-    levelDetails.lastModified = loaded - age * 1000;
 
     if (!levelDetails.fragments.length) {
       hls.trigger(Events.ERROR, {
@@ -523,12 +507,21 @@ class PlaylistLoader {
   }
 
   private _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
-    const { type, level, id, levelDetails, deliveryDirectives } = context;
+    const { type, level, id, loader, levelDetails, deliveryDirectives } = context;
 
     if (!levelDetails?.targetduration) {
       this._handleManifestParsingError(response, context, 'invalid target duration', networkDetails);
       return;
     }
+    if (!loader) {
+      return;
+    }
+
+    // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
+    const checkAgeHeader = this.checkAgeHeader && levelDetails.live;
+    const ageHeader: string | null = checkAgeHeader ? loader.getResponseHeader('age') : null;
+    levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
+    this.checkAgeHeader = !!ageHeader;
 
     switch (type) {
     case PlaylistContextType.MANIFEST:

@@ -210,7 +210,7 @@ describe('SubtitleTrackController', function () {
         subtitleTrackController.canLoad = true;
         subtitleTrackController.trackId = 1;
 
-        const mockLoadedEvent = { id: 999, details: { foo: 'bar' } };
+        const mockLoadedEvent = { id: 999, details: { foo: 'bar' }, stats: new LoadStats() };
         subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
         expect(subtitleTrackController.timer).to.equal(-1);
         expect(playlistLoadedSpy).to.have.not.been.called;
