@@ -214,7 +214,14 @@ interface InitDataTrack {
 type HdlrType = ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO;
 
 export interface InitData extends Array<any> {
-  [index: number]: { timescale: number, type: HdlrType };
+  [index: number]: {
+    timescale: number
+    type: HdlrType
+    default?: {
+      duration: number;
+      flags: number;
+    }
+  };
   audio?: InitDataTrack
   video?: InitDataTrack
 }
@@ -253,6 +260,18 @@ export function parseInitSegment (initSegment: Uint8Array): InitData {
       }
     }
   }
+
+  const trex = findBox(initSegment, ['moov', 'mvex', 'trex']);
+  trex.forEach(trex => {
+    const trackId = readUint32(trex, 4);
+    if (result[trackId]) {
+      result[trackId].default = {
+        duration: readUint32(trex, 12),
+        flags: readUint32(trex, 20)
+      };
+    }
+  });
+
   return result;
 }
 
@@ -320,7 +339,7 @@ export function getStartDTS (initData, fragment) {
      unsigned int(32)  default_sample_flags
   }
  */
-export function getDuration (data, initData) {
+export function getDuration (data: Uint8Array, initData: InitData) {
   let rawDuration = 0;
   let totalDuration = 0;
   let videoDuration = 0;
@@ -332,10 +351,13 @@ export function getDuration (data, initData) {
     // and only look for a single trun then, but for ISOBMFF we should check
     // for multiple track runs.
     const tfhd = findBox(traf, ['tfhd'])[0];
+    // get the track id from the tfhd
+    const id = readUint32(tfhd, 4);
+    const track = initData[id];
     const truns = findBox(traf, ['trun']);
-    const tfhdFlags = readUint32(tfhd, 0);
+    const tfhdFlags = readUint32(tfhd, 0) | track.default?.flags!;
 
-    let sampleDuration: number | undefined;
+    let sampleDuration: number | undefined = track.default?.duration;
     if (tfhdFlags & 0x000008) {
       // 0x000008 indicates the presence of the default_sample_duration field
       if (tfhdFlags & 0x000002) {
@@ -356,8 +378,6 @@ export function getDuration (data, initData) {
         rawDuration = computeRawDurationFromSamples(truns[j]);
       }
 
-      const id = readUint32(tfhd, 4);
-      const track = initData[id];
       const scale = track.timescale || 90e3;
       totalDuration += rawDuration / scale;
       if (track && track.type === ElementaryStreamTypes.VIDEO) {
