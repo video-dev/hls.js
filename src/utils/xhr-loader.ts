@@ -5,7 +5,7 @@ import LoadStats from '../loader/load-stats';
 class XhrLoader implements Loader<LoaderContext> {
   private xhrSetup: Function | null;
   private requestTimeout?: number;
-  private retryTimeout?: number | undefined;
+  private retryTimeout?: number;
   private retryDelay: number;
   private config: LoaderConfiguration | null = null;
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
@@ -34,9 +34,7 @@ class XhrLoader implements Loader<LoaderContext> {
       loader.abort();
     }
     self.clearTimeout(this.requestTimeout);
-    this.requestTimeout = -1;
     self.clearTimeout(this.retryTimeout);
-    this.retryTimeout = -1;
   }
 
   abort (): void {
@@ -59,7 +57,10 @@ class XhrLoader implements Loader<LoaderContext> {
   }
 
   loadInternal (): void {
-    const context = this.context;
+    const { config, context } = this;
+    if (!config) {
+      return;
+    }
     const xhr = this.loader = new self.XMLHttpRequest();
 
     const stats = this.stats;
@@ -95,17 +96,17 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.onprogress = this.loadprogress.bind(this);
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
     // setup timeout before we perform request
-    this.requestTimeout = self.setTimeout(this.loadtimeout.bind(this), (this.config as LoaderConfiguration).timeout);
+    self.clearTimeout(this.requestTimeout);
+    this.requestTimeout = self.setTimeout(this.loadtimeout.bind(this), config.timeout);
     xhr.send();
   }
 
   readystatechange (): void {
-    const xhr = this.loader;
-    if (!xhr) {
+    const { context, loader: xhr, stats } = this;
+    if (!context || !xhr) {
       return;
     }
     const readyState = xhr.readyState;
-    const { stats, context } = this;
     const config = this.config as LoaderConfiguration;
 
     // don't proceed if xhr has been aborted
@@ -156,9 +157,11 @@ class XhrLoader implements Loader<LoaderContext> {
           } else {
             // retry
             logger.warn(`${status} while loading ${context.url}, retrying in ${this.retryDelay}...`);
-            // aborts and resets internal state
-            this.destroy();
+            // abort and reset internal state
+            this.abortInternal();
+            this.loader = null;
             // schedule retry
+            self.clearTimeout(this.retryTimeout);
             this.retryTimeout = self.setTimeout(this.loadInternal.bind(this), this.retryDelay);
             // set exponential backoff
             this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
@@ -167,6 +170,7 @@ class XhrLoader implements Loader<LoaderContext> {
         }
       } else {
         // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
+        self.clearTimeout(this.requestTimeout);
         this.requestTimeout = self.setTimeout(this.loadtimeout.bind(this), config.timeout);
       }
     }
