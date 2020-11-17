@@ -71,7 +71,7 @@ const HlsEvents = {
   CUES_PARSED: 'hlsCuesParsed',
   // fired when a text track to be managed externally is found - data: { tracks: [ { label: string, kind: string, default: boolean } ] }
   NON_NATIVE_TEXT_TRACKS_FOUND: 'hlsNonNativeTextTracksFound',
-  // fired when the first timestamp is found - data: { id : demuxer id, initPTS: initPTS, frag : fragment object }
+  // fired when the first timestamp is found - data: { id : demuxer id, initPTS: initPTS, timescale: timescale, frag : fragment object }
   INIT_PTS_FOUND: 'hlsInitPtsFound',
   // fired when a fragment loading starts - data: { frag : fragment object }
   FRAG_LOADING: 'hlsFragLoading',

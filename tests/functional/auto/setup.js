@@ -1,14 +1,14 @@
 /* eslint-disable no-console */
 
+const sauceConnectLauncher = require('sauce-connect-launcher');
 const webdriver = require('selenium-webdriver');
 const By = webdriver.By;
 const until = webdriver.until;
 // requiring this automatically adds the chromedriver binary to the PATH
-// eslint-disable-next-line
-const chromedriver = require('chromedriver');
+require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
-const onTravis = !!process.env.TRAVIS;
+const useSauce = !!process.env.SAUCE || !!process.env.SAUCE_TUNNEL_ID;
 const chai = require('chai');
 const expect = chai.expect;
 
@@ -22,8 +22,10 @@ const browserConfig = {
  */
 let browser;
 let stream;
+let printDebugLogs = false;
+
 // Setup browser config data from env vars
-if (onTravis) {
+if (useSauce) {
   let UA = process.env.UA;
   if (!UA) {
     throw new Error('No test browser name.');
@@ -32,6 +34,10 @@ if (onTravis) {
   let OS = process.env.OS;
   if (!OS) {
     throw new Error('No test browser platform.');
+  }
+
+  if (!process.env.SAUCE_ACCESS_KEY || !process.env.SAUCE_USERNAME) {
+    throw new Error('Missing sauce auth.');
   }
 
   let UA_VERSION = process.env.UA_VERSION;
@@ -45,15 +51,15 @@ if (onTravis) {
 
 let browserDescription = browserConfig.name;
 
-if (browserConfig.version) {
-  browserDescription += ` (${browserConfig.version})`;
+if (browserConfig.version && browserConfig.version !== 'latest') {
+  browserDescription += ` ${browserConfig.version}`;
 }
 
 if (browserConfig.platform) {
   browserDescription += `, ${browserConfig.platform}`;
 }
 
-let hostname = onTravis ? 'localhost' : '127.0.0.1';
+let hostname = useSauce ? 'localhost' : '127.0.0.1';
 
 // Launch static server
 HttpServer.createServer({
@@ -62,6 +68,7 @@ HttpServer.createServer({
   root: './'
 }).listen(8000, hostname);
 
+const stringifyResult = (result) => JSON.stringify(result, Object.keys(result).filter(k => k !== 'logs'), 2);
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function retry (attempt, numAttempts = 5, interval = 2000) {
   try {
@@ -77,9 +84,8 @@ async function retry (attempt, numAttempts = 5, interval = 2000) {
 }
 
 async function testLoadedData (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -89,12 +95,11 @@ async function testLoadedData (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('loadeddata');
 }
 
 async function testIdleBufferLength (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
+  const result = await browser.executeAsyncScript(function (url, config) {
       const callback = arguments[arguments.length - 1];
       const autoplay = false;
       window.startStream(url, config, callback, autoplay);
@@ -105,8 +110,9 @@ async function testIdleBufferLength (url, config) {
         if (buffered.length) {
           const bufferEnd = buffered.end(buffered.length - 1);
           const duration = video.duration;
-          console.log(`[log] > progress: ${bufferEnd.toFixed(2)}/${duration.toFixed(2)} buffered.length: ${buffered.length}`);
-          if (bufferEnd >= maxBufferLength || bufferEnd > duration - 1) {
+          console.log('[test] > progress: ' + bufferEnd.toFixed(2) + '/' + duration.toFixed(2) +
+            ' buffered.length: ' + buffered.length);
+          if (bufferEnd >= maxBufferLength || bufferEnd > duration - (config.avBufferOffset || 1)) {
             callback({ code: 'loadeddata', logs: window.logString });
           }
         }
@@ -115,30 +121,31 @@ async function testIdleBufferLength (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('loadeddata');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('loadeddata');
 }
 
 async function testSmoothSwitch (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
-      window.hls.once(window.Hls.Events.FRAG_CHANGED, (event, data) => {
+      window.hls.once(window.Hls.Events.FRAG_CHANGED, function (eventName, data) {
+        console.log('[test] > ' + eventName + ' frag.level: ' + data.frag.level);
         window.switchToHighestLevel('next');
       });
-      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, (event, data) => {
-        console.log(`[test] > level switched: ${data.level}`);
+      window.hls.on(window.Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
+        console.log('[test] > ' + eventName + ' data.level: ' + data.level);
         let currentTime = video.currentTime;
-        if (data.level === window.hls.levels.length - 1) {
-          console.log(`[test] > switched on level: ${data.level}`);
+        const highestLevel = (window.hls.levels.length - 1);
+        if (data.level === highestLevel) {
           window.setTimeout(function () {
             let newCurrentTime = video.currentTime;
-            console.log(
-              `[test] > currentTime delta : ${newCurrentTime - currentTime}`
-            );
+            const paused = video.paused;
+            console.log('[test] > currentTime delta: ' + (newCurrentTime - currentTime));
             callback({
-              code: newCurrentTime > currentTime,
+              highestLevel: highestLevel,
+              currentTimeDelta: newCurrentTime - currentTime,
+              paused,
               logs: window.logString
             });
           }, 2000);
@@ -148,13 +155,12 @@ async function testSmoothSwitch (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals(true);
+  expect(result, stringifyResult(result)).to.have.property('currentTimeDelta').which.is.gt(0);
 }
 
 async function testSeekOnLive (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -169,18 +175,34 @@ async function testSeekOnLive (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('seeked');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('seeked');
 }
 
 async function testSeekOnVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
         window.setTimeout(function () {
-          video.currentTime = video.duration - 5;
+          const duration = video.duration;
+          // After seeking timeout if paused after 5 seconds
+          video.onseeked = function () {
+            window.setTimeout(function () {
+              const { currentTime, paused } = video;
+              if (video.currentTime === 0 || video.paused) {
+                callback({ code: 'paused', currentTime, paused, duration, logs: window.logString });
+              }
+            }, 5000);
+          };
+          video.currentTime = duration - 5;
+          // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
+          const allowedBufferedRanges = config.allowedBufferedRangesInSeekTest || 2;
+          video.onprogress = function () {
+            if (video.buffered.length > allowedBufferedRanges) {
+              callback({ code: 'buffer-gaps', bufferedRanges: video.buffered.length, duration, logs: window.logString });
+            }
+          };
         }, 5000);
       };
       video.onended = function () {
@@ -190,13 +212,12 @@ async function testSeekOnVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('ended');
 }
 
 async function testSeekEndVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -211,13 +232,12 @@ async function testSeekEndVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('code').which.equals('ended');
+  expect(result, stringifyResult(result)).to.have.property('code').which.equals('ended');
 }
 
 async function testIsPlayingVOD (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.onloadeddata = function () {
@@ -229,15 +249,13 @@ async function testIsPlayingVOD (url, config) {
         let currentTime = video.currentTime;
         if (expectedPlaying) {
           window.setTimeout(function () {
-            console.log(
-              `[test] > video expected playing. [last currentTime/new currentTime]=[${currentTime}/${video.currentTime}]`
-            );
+            console.log('[test] > video expected playing. last currentTime/new currentTime=' +
+              currentTime + '/' + video.currentTime);
             callback({ playing: currentTime !== video.currentTime });
           }, 5000);
         } else {
-          console.log(
-            `[test] > video not playing. [paused/ended/buffered.length]=[${video.paused}/${video.ended}/${video.buffered.length}]`
-          );
+          console.log('[test] > video not playing. paused/ended/buffered.length=' +
+            video.paused + '/' + video.ended + '/' + video.buffered.length);
           callback({ playing: false });
         }
       };
@@ -245,13 +263,12 @@ async function testIsPlayingVOD (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('playing').which.is.true;
+  expect(result, stringifyResult(result)).to.have.property('playing').which.is.true;
 }
 
 async function testSeekBackToStart (url, config) {
-  const result = await browser.executeAsyncScript(
-    (url, config) => {
-      let callback = arguments[arguments.length - 1];
+  const result = await browser.executeAsyncScript(function (url, config) {
+      const callback = arguments[arguments.length - 1];
       window.startStream(url, config, callback);
       const video = window.video;
       video.ontimeupdate = function () {
@@ -275,7 +292,37 @@ async function testSeekBackToStart (url, config) {
     url,
     config
   );
-  expect(result, JSON.stringify(result, null, 2)).to.have.property('playing').which.is.true;
+  expect(result, stringifyResult(result)).to.have.property('playing').which.is.true;
+}
+
+let sauceConnectProcess;
+async function sauceConnect (tunnelIdentifier) {
+  return new Promise(function (resolve, reject) {
+    console.log(`Running sauce-connect-launcher. Tunnel id: ${tunnelIdentifier}`);
+    sauceConnectLauncher({
+      tunnelIdentifier
+    }, (err, sauceConnectProcess) => {
+      if (err) {
+        console.error(err.message);
+        reject(err);
+        return;
+      }
+      console.log('Sauce Connect ready');
+      resolve(sauceConnectProcess);
+    });
+  });
+}
+
+async function sauceDisconnect () {
+  return new Promise(function (resolve) {
+    if (!sauceConnectProcess) {
+      resolve();
+    }
+    sauceConnectProcess.close(function () {
+      console.log('Closed Sauce Connect process');
+      resolve();
+    });
+  });
 }
 
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
@@ -286,8 +333,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       throw new Error('Stream not defined');
     }
 
+    const labelBranch = process.env.GITHUB_REF || 'unknown';
     let capabilities = {
-      name: `"${stream.description}" on "${browserDescription}"`,
+      name: `hls.js@${labelBranch} on "${browserDescription}"`,
       browserName: browserConfig.name,
       platform: browserConfig.platform,
       version: browserConfig.version,
@@ -304,13 +352,21 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     }
 
     browser = new webdriver.Builder();
-    if (onTravis) {
-      capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
-      capabilities.build = 'HLSJS-' + process.env.TRAVIS_BUILD_NUMBER;
+    if (useSauce) {
+      if (process.env.SAUCE_TUNNEL_ID) {
+        capabilities['tunnel-identifier'] = process.env.SAUCE_TUNNEL_ID;
+        capabilities.build = 'HLSJS-' + process.env.SAUCE_TUNNEL_ID;
+      } else {
+        capabilities['tunnel-identifier'] = `local-${Date.now()}`;
+      }
+      if (!process.env.SAUCE_TUNNEL_ID) {
+        sauceConnectProcess = await sauceConnect(capabilities['tunnel-identifier']);
+      }
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
       capabilities.avoidProxy = true;
-      browser = browser.usingServer(`http://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.saucelabs.com:80/wd/hub`);
+      capabilities['record-screenshots'] = 'false';
+      browser = browser.usingServer(`https://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.us-west-1.saucelabs.com:443/wd/hub`);
     }
 
     browser = browser.withCapabilities(capabilities).build();
@@ -325,13 +381,14 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           browser.getSession()
         ]);
         console.log(`Retrieved session in ${Date.now() - start}ms`);
-        if (onTravis) {
+        if (useSauce) {
           console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
         } else {
           console.log(`WebDriver SessionID: ${session.getId()}`);
         }
       });
     } catch (err) {
+      await sauceDisconnect();
       throw new Error(`failed setting up session: ${err}`);
     }
   });
@@ -339,15 +396,17 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   beforeEach(async function () {
     try {
       await retry(async () => {
-        console.log('Loading test page...');
+        if (printDebugLogs) {
+          console.log('Loading test page...');
+        }
         try {
           await browser.get(`http://${hostname}:8000/tests/functional/auto/index.html`);
         } catch (e) {
           throw new Error('failed to open test page');
         }
-        console.log('Test page loaded.');
-
-        console.log('Locating ID \'hlsjs-functional-tests\'');
+        if (printDebugLogs) {
+          console.log('Test page loaded.');
+        }
         try {
           await browser.wait(
             until.elementLocated(By.css('body#hlsjs-functional-tests')),
@@ -359,7 +418,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           console.log(source);
           throw e;
         }
-        console.log('Located the ID, page confirmed loaded');
+        if (printDebugLogs) {
+          console.log('Test harness found, page confirmed loaded');
+        }
       });
     } catch (e) {
       throw new Error(`error getting test page loaded: ${e}`);
@@ -367,16 +428,29 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   });
 
   afterEach(async function () {
-    // if (onTravis || (!onTravis && this.currentTest.isFailed())) {
+    const failed = this.currentTest.isFailed();
+    if (printDebugLogs || failed) {
       const logString = await browser.executeScript('return logString');
-      console.log(`${onTravis ? 'travis_fold:start:debug_logs' : ''}\n${logString}\n${onTravis ? 'travis_fold:end:debug_logs' : ''}`);
-    // }
+      console.log(logString);
+      if (failed && useSauce) {
+        browser.executeScript('sauce:job-result=failed');
+      }
+    }
   });
 
   after(async function () {
+    if (useSauce && this.currentTest && this.currentTest.parent) {
+      const tests = this.currentTest.parent.tests;
+      if (tests && tests.length && tests.every(test => test.isPassed())) {
+        browser.executeScript('sauce:job-result=passed');
+      }
+    }
     console.log('Quitting browser...');
     await browser.quit();
     console.log('Browser quit.');
+    if (useSauce) {
+      await sauceDisconnect();
+    }
   });
 
   for (let name in streams) {
@@ -421,7 +495,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           testIsPlayingVOD.bind(null, url, config)
         );
         it(
-          `should seek 5s from end and receive video ended event for ${stream.description}`,
+          `should seek 5s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
           testSeekOnVOD.bind(null, url, config)
         );
         // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));

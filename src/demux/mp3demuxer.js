@@ -39,9 +39,9 @@ class MP3Demuxer {
 
   // feed incoming data to the front of the parsing pipeline
   append (data, timeOffset, contiguous, accurateTimeOffset) {
-    let id3Data = ID3.getID3Data(data, 0);
+    let id3Data = ID3.getID3Data(data, 0) || [];
     let timestamp = ID3.getTimeStamp(id3Data);
-    let pts = timestamp ? 90 * timestamp : timeOffset * 90000;
+    let pts = timestamp !== undefined ? 90 * timestamp : timeOffset * 90000;
     let offset = id3Data.length;
     let length = data.length;
     let frameIndex = 0, stamp = 0;

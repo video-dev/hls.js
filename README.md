@@ -1,7 +1,7 @@
-[![Build Status](https://api.travis-ci.org/video-dev/hls.js.svg?branch=master)](https://travis-ci.org/video-dev/hls.js)
 [![npm](https://img.shields.io/npm/v/hls.js.svg?style=flat)](https://npmjs.org/package/hls.js)
-[![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
+[![npm](https://img.shields.io/npm/v/hls.js/alpha.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/alpha)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
+[![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
 
 [![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
 
@@ -58,8 +58,8 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent canary version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
+<!-- Or if you want a more recent alpha version -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
@@ -88,6 +88,46 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
   else if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = videoSrc;
     video.addEventListener('loadedmetadata', function() {
+      video.play();
+    });
+  }
+</script>
+```
+
+#### Alternative setup
+
+Note that the example code above will check for hls.js support _first_ and then
+fallback to check if the browser natively supports HLS. If you want to check for
+native browser support first, and then fallback to Hls.js you will want to swap
+those conditionals.
+
+The order of these checks depends on if you want to use hls.js whenever possible
+see [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-670021358) to understand some of the tradeoffs.
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<!-- Or if you want a more recent alpha version -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
+<video id="video"></video>
+<script>
+  var video = document.getElementById('video');
+  var videoSrc = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+  //
+  // First check for native browser HLS support
+  //
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = videoSrc;
+    video.addEventListener('loadedmetadata', function() {
+      video.play();
+    });
+  //
+  // If no native HLS support, check if hls.js is supported
+  //
+  } else if (Hls.isSupported()) {
+    var hls = new Hls();
+    hls.loadSource(videoSrc);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, function() {
       video.play();
     });
   }
@@ -147,9 +187,9 @@ If you want to bundle the application yourself, use node
 ```
 npm install hls.js
 ```
-or for the version from master (canary)
+or for the version from master (alpha)
 ```
-npm install hls.js@canary
+npm install hls.js@alpha
 ```
 
 **NOTE:** `hls.light.*.js` dist files do not include subtitling and alternate-audio features.
@@ -362,6 +402,7 @@ npm run test:func
 
 Click [here](/docs/design.md) for details.
 
-### Tested With
+### Test Status
 
-[<img src="https://cloud.githubusercontent.com/assets/7864462/12837037/452a17c6-cb73-11e5-9f39-fc96893bc9bf.png" alt="Browser Stack Logo" width="300">](https://www.browserstack.com/)
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/robwalch.svg)](https://saucelabs.com/u/robwalch)
+[![Testing Powered By SauceLabs](https://opensource.saucelabs.com/images/opensauce/powered-by-saucelabs-badge-gray.png?sanitize=true "Testing Powered By SauceLabs")](https://saucelabs.com)

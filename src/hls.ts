@@ -281,6 +281,12 @@ export default class Hls extends Observer {
    * @param {string} url
    */
   loadSource (url: string) {
+    this.stopLoad();
+    const media = this.media;
+    if (media && this.url) {
+      this.detachMedia();
+      this.attachMedia(media);
+    }
     url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
@@ -475,6 +481,15 @@ export default class Hls extends Observer {
     }
 
     this.levelController.startLevel = newLevel;
+  }
+
+  /**
+   * Get the current setting for capLevelToPlayerSize
+   *
+   * @type {boolean}
+   */
+  get capLevelToPlayerSize (): boolean {
+    return this.config.capLevelToPlayerSize;
   }
 
   /**

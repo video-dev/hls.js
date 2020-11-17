@@ -57,7 +57,7 @@ export default class GapController {
     }
 
     // The playhead should not be moving
-    if (media.paused || media.ended || media.playbackRate === 0 || !media.buffered.length) {
+    if (media.paused || media.ended || media.playbackRate === 0 || !BufferHelper.getBuffered(media).length) {
       return;
     }
 
@@ -88,7 +88,14 @@ export default class GapController {
     if (!this.moved && this.stalled) {
       // Jump start gaps within jump threshold
       const startJump = Math.max(nextStart, bufferInfo.start || 0) - currentTime;
-      if (startJump > 0 && startJump <= MAX_START_GAP_JUMP) {
+
+      // When joining a live stream with audio tracks, account for live playlist window sliding by allowing
+      // a larger jump over start gaps caused by the audio-stream-controller buffering a start fragment
+      // that begins over 1 target duration after the video start position.
+      const level = this.hls.levels ? this.hls.levels[this.hls.currentLevel] : null;
+      const isLive = level?.details?.live;
+      const maxStartGapJump = isLive ? level.details.targetduration * 2 : MAX_START_GAP_JUMP;
+      if (startJump > 0 && startJump <= maxStartGapJump) {
         this._trySkipBufferHole(null);
         return;
       }
@@ -178,8 +185,9 @@ export default class GapController {
     const currentTime = media.currentTime;
     let lastEndTime = 0;
     // Check if currentTime is between unbuffered regions of partial fragments
-    for (let i = 0; i < media.buffered.length; i++) {
-      const startTime = media.buffered.start(i);
+    const buffered = BufferHelper.getBuffered(media);
+    for (let i = 0; i < buffered.length; i++) {
+      const startTime = buffered.start(i);
       if (currentTime + config.maxBufferHole >= lastEndTime && currentTime < startTime) {
         const targetTime = Math.max(startTime + SKIP_BUFFER_RANGE_START, media.currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS);
         logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`);
@@ -197,7 +205,7 @@ export default class GapController {
         }
         return targetTime;
       }
-      lastEndTime = media.buffered.end(i);
+      lastEndTime = buffered.end(i);
     }
     return 0;
   }
