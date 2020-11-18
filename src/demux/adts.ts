@@ -4,10 +4,18 @@
  */
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { Events, HlsEventEmitter } from '../events';
+import { DemuxedAudioTrack } from '../types/demuxer';
 
-import { Events } from '../events';
+type AudioConfig = {
+  config: number[],
+  samplerate: number,
+  channelCount: number,
+  codec: string,
+  manifestCodec: string
+};
 
-export function getAudioConfig (observer, data, offset, audioCodec) {
+export function getAudioConfig (observer, data: Uint8Array, offset: number, audioCodec: string): AudioConfig | void {
   let adtsObjectType; // :int
   let adtsExtensionSampleingIndex; // :int
   let adtsChanelConfig; // :int
@@ -190,9 +198,12 @@ export function probe (data, offset) {
   return false;
 }
 
-export function initTrackConfig (track, observer, data, offset, audioCodec) {
+export function initTrackConfig (track: DemuxedAudioTrack, observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string) {
   if (!track.samplerate) {
     const config = getAudioConfig(observer, data, offset, audioCodec);
+    if (!config) {
+      return;
+    }
     track.config = config.config;
     track.samplerate = config.samplerate;
     track.channelCount = config.channelCount;
