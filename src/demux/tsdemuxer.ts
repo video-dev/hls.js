@@ -938,8 +938,9 @@ class TSDemuxer implements Demuxer {
     }
 
     ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
+
     frameIndex = 0;
-    const frameDuration = ADTS.getFrameDuration(track.samplerate);
+    const frameDuration = ADTS.getFrameDuration(track.samplerate as number);
 
     // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
     // first sample PTS should be equal to last sample PTS + frameDuration

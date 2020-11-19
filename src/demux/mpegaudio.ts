@@ -141,9 +141,7 @@ export function probe (data: Uint8Array, offset: number): boolean {
     }
 
     const newOffset = offset + frameLength;
-    if (newOffset === data.length || (newOffset + 1 < data.length && isHeaderPattern(data, newOffset))) {
-      return true;
-    }
+    return newOffset === data.length || isHeader(data, newOffset);
   }
   return false;
 }
