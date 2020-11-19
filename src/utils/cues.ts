@@ -46,28 +46,26 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
         indent++;
       }
 
-      // VTTCue.line get's flakey when using controls, so let's now include line 13&14
-      // also, drop line 1 since it's to close to the top
-      if (navigator.userAgent.match(/Firefox\//)) {
-        cue.line = r + 1;
-      } else {
-        cue.line = (r > 7 ? r - 2 : r + 1);
-      }
-
-      // Assume that if there's the same amount of white space (indent) before and after cue.text,
-      // the text should be centered.
-      // Account for slight overflow by using a tolerance of 2 columns
-      if (Math.abs(32 - (cue.text.length + indent * 2)) > 2) {
-        // The column width is defined as 2.5% of the video width, because CEA-608 requires 32 columns of characters
-        // to be rendered on 80% of the video's width.
-        // https://dvcs.w3.org/hg/text-tracks/raw-file/default/608toVTT/608toVTT.html#positioning-in-cea-608
-        cue.align = 'left';
-        cue.position = Math.max(10, Math.min(90, 10 + 2.5 * indent));
-      }
+      cue.line = r + 1;
+      cue.align = 'left';
+      // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
+      cue.position = Math.max(0, Math.min(100, 100 * (indent / 32)));
       result.push(cue);
-      if (track) {
-        track.addCue(cue);
+    }
+  }
+  if (track && result.length) {
+    // Sort bottom cues in reverse order so that they render in line order when overlapping in Chrome
+    const sortedCues = result.sort((cueA, cueB) => {
+      if (cueA.line === 'auto' || cueB.line === 'auto') {
+        return 0;
       }
+      if (cueA.line > 8 && cueB.line > 8) {
+        return cueB.line - cueA.line;
+      }
+      return cueA.line - cueB.line;
+    });
+    for (let i = 0; i < sortedCues.length; i++) {
+      track.addCue(sortedCues[i]);
     }
   }
   return result;

@@ -6,6 +6,9 @@ node_modules/*
 npm-debug.log
 bower_components/*
 
+# NYC
+.nyc_output/
+
 # Coverage
 coverage/
 
@@ -14,6 +17,6 @@ coverage/
 
 # Build
 /dist
+/dist.zip
 /netlify
 /api-docs
-/demo-timeline/dist

@@ -12,7 +12,6 @@ echo "Building netlify..."
 echo "/ /demo" > "$root/_redirects"
 cp -r "./dist" "$root/dist"
 cp -r "./demo" "$root/demo"
-cp -r "./demo-timeline" "$root/demo-timeline"
 cp -r "./api-docs" "$root/api-docs"
 
 echo "Built netlify."

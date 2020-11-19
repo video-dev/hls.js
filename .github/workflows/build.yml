@@ -1,0 +1,427 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      canUseSauce: ${{ steps.check_sauce_access.outputs.result == 'true' }}
+      tag: ${{ steps.extract_tag.outputs.result }}
+      isMainBranch: ${{ github.ref == 'refs/heads/master' }}
+    steps:
+      - name: check sauce access
+        id: check_sauce_access
+        run: |
+          if ! [[ -z "$SAUCE_USERNAME" ]] && ! [[ -z "$SAUCE_ACCESS_KEY" ]]; then
+            echo "::set-output name=result::true"
+          fi
+        env:
+          CI: true
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      - name: extract tag
+        id: extract_tag
+        uses: actions/github-script@v3
+        with:
+          script: |
+            const prefix = 'refs/tags/';
+            const ref = context.ref;
+            return ref.startsWith(prefix) ? ref.substring(prefix.length) : '';   
+          result-encoding: string
+
+  build:
+    needs: config
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+      
+      - name: set version
+        run: |
+          node ./scripts/set-package-version.js
+        env:
+          CI: true
+          TAG: ${{ needs.config.outputs.tag }}
+
+      - name: build
+        run: |
+          npm run lint
+          npm run type-check
+          npm run build
+          npm run docs
+          # check that hls.js doesn't error if requiring in node
+          # see https://github.com/video-dev/hls.js/pull/1642
+          node -e 'require("./" + require("./package.json").main)'
+        env:
+          CI: true
+
+      - name: upload build
+        uses: actions/upload-artifact@v2
+        with:
+          name: build
+          path: |
+            **
+            !**/[.]*/**
+            !**/node_modules/
+
+  test_unit:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: run unit tests
+        run: |
+          npm run test:unit
+        env:
+          CI: true
+
+  netlify:
+    needs: [config, test_unit]
+    if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: build netlify
+        run: |
+          ./scripts/build-netlify.sh
+        env:
+          CI: true
+
+      - name: deploy netlify
+        run: |
+          ./scripts/deploy-netlify.sh
+        env:
+          CI: true
+          GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+          NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
+
+  release_github:
+    needs: [config, test_unit]
+    if: needs.config.outputs.tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+
+      - name: build release zip
+        run: |
+          zip -r dist.zip dist
+
+      - name: create github release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload assets to github release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist.zip
+          asset_name: release.zip
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release_npm:
+    needs: [config, test_unit]
+    if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
+    runs-on: ubuntu-latest
+    steps:  
+      - uses: actions/checkout@v2
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: publish to npm
+        run: |
+          ./scripts/publish-npm.sh
+        env:
+          CI: true
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TAG: ${{ needs.config.outputs.tag }}
+
+  test_functional_required:
+    needs: [config, test_unit]
+    if: needs.config.outputs.canUseSauce == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      max-parallel: 8
+      matrix:
+        config: [chrome-win_10]
+
+        include:
+          - config: chrome-win_10
+            ua: chrome
+            os: Windows 10
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+
+      - name: start SauceConnect tunnel
+        uses: saucelabs/sauce-connect-action@a0930f1
+        with:
+          username: ${{ secrets.SAUCE_USERNAME }}
+          accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
+          tunnelIdentifier: ${{ github.run_id }}-${{ matrix.config }}
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: run functional tests
+        run: |
+          npm run test:func
+        env:
+          CI: true
+          SAUCE_TUNNEL_ID: ${{ github.run_id }}-${{ matrix.config }}
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          UA: ${{ matrix.ua }}
+          UA_VERSION: ${{ matrix.uaVersion }}
+          OS: ${{ matrix.os }}
+
+  test_functional_optional:
+    needs: test_functional_required
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        config:
+          - safari-osx_10.15
+          - firefox-win_10
+          - chrome-osx_10.11-79.0
+          - internet_explorer-win_10
+          - internet_explorer-win_8.1-11.0
+          - chrome-win_7-69.0
+          - safari-osx_10.12-10.1
+
+        include:
+          - config: safari-osx_10.15
+            ua: safari
+            os: OS X 10.15
+          - config: firefox-win_10
+            ua: firefox
+            os: Windows 10
+          - config: chrome-osx_10.11-79.0
+            ua: chrome
+            os: OS X 10.11
+            uaVersion: "79.0"
+          - config: internet_explorer-win_10
+            ua: internet explorer
+            os: Windows 10
+          - config: internet_explorer-win_8.1-11.0
+            ua: internet explorer
+            os: Windows 8.1
+            uaVersion: "11.0"
+          - config: chrome-win_7-69.0
+            ua: chrome
+            os: Windows 7
+            uaVersion: "69.0"
+          - config: safari-osx_10.12-10.1
+            ua: safari
+            os: OS X 10.12
+            uaVersion: "10.1"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+
+      - name: start SauceConnect tunnel
+        uses: saucelabs/sauce-connect-action@a0930f1
+        with:
+          username: ${{ secrets.SAUCE_USERNAME }}
+          accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
+          tunnelIdentifier: ${{ github.run_id }}-${{ matrix.config }}
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: run functional tests
+        run: |
+          npm run test:func
+        env:
+          CI: true
+          SAUCE_TUNNEL_ID: ${{ github.run_id }}-${{ matrix.config }}
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          UA: ${{ matrix.ua }}
+          UA_VERSION: ${{ matrix.uaVersion }}
+          OS: ${{ matrix.os }}

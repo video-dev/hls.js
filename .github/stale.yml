@@ -1,14 +1,15 @@
 # Number of days of inactivity before an issue becomes stale
-daysUntilStale: 30
+daysUntilStale: 21
 
 # Number of days of inactivity before a stale issue is closed
-daysUntilClose: 7
+daysUntilClose: 3
 
 # Issues with these labels will never be considered stale
 exemptLabels:
   - pinned
   - security
   - Confirmed
+  - Chore
   - Enhancement
   - Feature proposal
   - Question
@@ -38,4 +39,4 @@ closeComment: >
   ask them to label it accordingly.
 
 # Limit the number of actions per hour, from 1-30. Default is 30
-limitPerRun: 1
+limitPerRun: 3

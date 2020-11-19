@@ -6,15 +6,13 @@ import {
   LoaderConfiguration,
   LoaderOnProgress
 } from '../types/loader';
-import LoadStats, { reset } from '../loader/load-stats';
+import LoadStats from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
 
-const { fetch, AbortController, ReadableStream, Request, Headers, performance } = self;
-
 export function fetchSupported () {
-  if (fetch && AbortController && ReadableStream && Request) {
+  if (self.fetch && self.AbortController && self.ReadableStream && self.Request) {
     try {
-      new ReadableStream({}); // eslint-disable-line no-new
+      new self.ReadableStream({}); // eslint-disable-line no-new
       return true;
     } catch (e) { /* noop */ }
   }
@@ -28,17 +26,20 @@ class FetchLoader implements Loader<LoaderContext> {
   private response!: Response;
   private controller: AbortController;
   public context!: LoaderContext;
-  private config!: LoaderConfiguration;
-  private callbacks!: LoaderCallbacks<LoaderContext>;
+  private config: LoaderConfiguration | null = null;
+  private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public stats: LoaderStats;
+  public loader: Response | null = null;
 
   constructor (config /* HlsConfig */) {
     this.fetchSetup = config.fetchSetup || getRequest;
-    this.controller = new AbortController();
+    this.controller = new self.AbortController();
     this.stats = new LoadStats();
   }
 
   destroy (): void {
+    this.loader =
+      this.callbacks = null;
     this.abortInternal();
   }
 
@@ -49,15 +50,17 @@ class FetchLoader implements Loader<LoaderContext> {
 
   abort (): void {
     this.abortInternal();
-    if (this.callbacks.onAbort) {
+    if (this.callbacks?.onAbort) {
       this.callbacks.onAbort(this.stats, this.context, this.response);
     }
   }
 
   load (context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void {
     const stats = this.stats;
-    reset(stats);
-    stats.loading.start = performance.now();
+    if (stats.loading.start) {
+      throw new Error('Loader can only be used once.');
+    }
+    stats.loading.start = self.performance.now();
 
     const initParams = getRequestParameters(context, this.controller.signal);
     const onProgress: LoaderOnProgress<LoaderContext> | undefined = callbacks.onProgress;
@@ -68,19 +71,20 @@ class FetchLoader implements Loader<LoaderContext> {
     this.config = config;
     this.callbacks = callbacks;
     this.request = this.fetchSetup(context, initParams);
+    self.clearTimeout(this.requestTimeout);
     this.requestTimeout = self.setTimeout(() => {
       this.abortInternal();
       callbacks.onTimeout(stats, context, this.response);
     }, config.timeout);
 
-    fetch(this.request).then((response: Response): Promise<string | ArrayBuffer> => {
-      this.response = response;
+    self.fetch(this.request).then((response: Response): Promise<string | ArrayBuffer> => {
+      this.response = this.loader = response;
 
       if (!response.ok) {
         const { status, statusText } = response;
         throw new FetchError(statusText || 'fetch, bad network response', status, response);
       }
-      stats.loading.first = Math.max(performance.now(), stats.loading.start);
+      stats.loading.first = Math.max(self.performance.now(), stats.loading.start);
       stats.total = parseInt(response.headers.get('Content-Length') || '0');
 
       if (onProgress && Number.isFinite(config.highWaterMark)) {
@@ -93,8 +97,8 @@ class FetchLoader implements Loader<LoaderContext> {
       return response.text();
     }).then((responseData: string | ArrayBuffer) => {
       const { response } = this;
-      clearTimeout(this.requestTimeout);
-      stats.loading.end = Math.max(performance.now(), stats.loading.first);
+      self.clearTimeout(this.requestTimeout);
+      stats.loading.end = Math.max(self.performance.now(), stats.loading.first);
       stats.loaded = stats.total = responseData[LENGTH];
 
       const loaderResponse = {
@@ -108,7 +112,7 @@ class FetchLoader implements Loader<LoaderContext> {
 
       callbacks.onSuccess(loaderResponse, stats, context, response);
     }).catch((error) => {
-      clearTimeout(this.requestTimeout);
+      self.clearTimeout(this.requestTimeout);
       if (stats.aborted) {
         return;
       }
@@ -172,7 +176,7 @@ function getRequestParameters (context: LoaderContext, signal): any {
   };
 
   if (context.rangeEnd) {
-    initParams.headers = new Headers({
+    initParams.headers = new self.Headers({
       Range: 'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1)
     });
   }
@@ -181,7 +185,7 @@ function getRequestParameters (context: LoaderContext, signal): any {
 }
 
 function getRequest (context: LoaderContext, initParams: any): Request {
-  return new Request(context.url, initParams);
+  return new self.Request(context.url, initParams);
 }
 
 class FetchError extends Error {

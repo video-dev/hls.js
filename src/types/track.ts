@@ -6,7 +6,7 @@ export interface TrackSet {
 
 export interface Track {
   id: 'audio' | 'main'
-  buffer?: SourceBuffer
+  buffer?: SourceBuffer // eslint-disable-line no-restricted-globals
   container: string;
   codec?: string;
   initSegment?: Uint8Array

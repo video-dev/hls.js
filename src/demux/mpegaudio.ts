@@ -1,6 +1,11 @@
 /**
  *  MPEG parser helper
  */
+import {
+  DemuxedAudioTrack
+} from '../types/demuxer';
+
+let chromeVersion: number | null = null;
 
 const BitratesMap = [
   32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
@@ -50,7 +55,7 @@ const BytesInSlot = [
   4 // Layer1
 ];
 
-export function appendFrame (track, data, offset, pts, frameIndex) {
+export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number) {
   // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
   if (offset + 24 > data.length) {
     return;
@@ -71,45 +76,58 @@ export function appendFrame (track, data, offset, pts, frameIndex) {
   }
 }
 
-export function parseHeader (data, offset) {
-  const headerB = (data[offset + 1] >> 3) & 3;
-  const headerC = (data[offset + 1] >> 1) & 3;
-  const headerE = (data[offset + 2] >> 4) & 15;
-  const headerF = (data[offset + 2] >> 2) & 3;
-  const headerG = (data[offset + 2] >> 1) & 1;
-  if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
-    const columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
-    const bitRate = BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
-    const columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-    const sampleRate = SamplingRateMap[columnInSampleRates * 3 + headerF];
-    const channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-    const sampleCoefficient = SamplesCoefficients[headerB][headerC];
-    const bytesInSlot = BytesInSlot[headerC];
+export function parseHeader (data: Uint8Array, offset: number) {
+  const mpegVersion = (data[offset + 1] >> 3) & 3;
+  const mpegLayer = (data[offset + 1] >> 1) & 3;
+  const bitRateIndex = (data[offset + 2] >> 4) & 15;
+  const sampleRateIndex = (data[offset + 2] >> 2) & 3;
+  if (mpegVersion !== 1 && bitRateIndex !== 0 && bitRateIndex !== 15 && sampleRateIndex !== 3) {
+    const paddingBit = (data[offset + 2] >> 1) & 1;
+    const channelMode = data[offset + 3] >> 6;
+    const columnInBitrates = mpegVersion === 3 ? (3 - mpegLayer) : (mpegLayer === 3 ? 3 : 4);
+    const bitRate = BitratesMap[columnInBitrates * 14 + bitRateIndex - 1] * 1000;
+    const columnInSampleRates = mpegVersion === 3 ? 0 : mpegVersion === 2 ? 1 : 2;
+    const sampleRate = SamplingRateMap[columnInSampleRates * 3 + sampleRateIndex];
+    const channelCount = channelMode === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+    const sampleCoefficient = SamplesCoefficients[mpegVersion][mpegLayer];
+    const bytesInSlot = BytesInSlot[mpegLayer];
     const samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
-    const frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
+    const frameLength = Math.floor(sampleCoefficient * bitRate / sampleRate + paddingBit) * bytesInSlot;
+
+    if (chromeVersion === null) {
+      const userAgent = navigator.userAgent || '';
+      const result = userAgent.match(/Chrome\/(\d+)/i);
+      chromeVersion = result ? parseInt(result[1]) : 0;
+    }
+    const needChromeFix = !!chromeVersion && chromeVersion <= 87;
+
+    if (needChromeFix && mpegLayer === 2 && bitRate >= 224000 && channelMode === 0) {
+      // Work around bug in Chromium by setting channelMode to dual-channel (01) instead of stereo (00)
+      data[offset + 3] = data[offset + 3] | 0x80;
+    }
 
     return { sampleRate, channelCount, frameLength, samplesPerFrame };
   }
 }
 
-export function isHeaderPattern (data, offset) {
+export function isHeaderPattern (data: Uint8Array, offset: number): boolean {
   return data[offset] === 0xff && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00;
 }
 
-export function isHeader (data, offset) {
+export function isHeader (data: Uint8Array, offset: number): boolean {
   // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
   // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
   // More info http://www.mp3-tech.org/programmer/frame_header.html
   return offset + 1 < data.length && isHeaderPattern(data, offset);
 }
 
-export function canParse (data, offset) {
+export function canParse (data: Uint8Array, offset: number): boolean {
   const headerSize = 4;
 
   return isHeaderPattern(data, offset) && data.length - offset >= headerSize;
 }
 
-export function probe (data, offset) {
+export function probe (data: Uint8Array, offset: number): boolean {
   // same as isHeader but we also check that MPEG frame follows last MPEG frame
   // or end of data is reached
   if (offset + 1 < data.length && isHeaderPattern(data, offset)) {
@@ -118,7 +136,7 @@ export function probe (data, offset) {
     // MPEG frame Length
     const header = parseHeader(data, offset);
     let frameLength = headerLength;
-    if (header && header.frameLength) {
+    if (header?.frameLength) {
       frameLength = header.frameLength;
     }
 
