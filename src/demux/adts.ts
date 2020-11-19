@@ -4,16 +4,21 @@
  */
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import {
-  DemuxedAudioTrack
-} from '../types/demuxer';
-
 import { Events, HlsEventEmitter } from '../events';
+import { DemuxedAudioTrack } from '../types/demuxer';
 
-export function getAudioConfig (observer, data: Uint8Array, offset: number, audioCodec: string) {
-  let adtsObjectType: number; // :int
-  let adtsExtensionSampleingIndex: number; // :int
-  let adtsChanelConfig: number; // :int
+type AudioConfig = {
+  config: number[],
+  samplerate: number,
+  channelCount: number,
+  codec: string,
+  manifestCodec: string
+};
+
+export function getAudioConfig (observer, data: Uint8Array, offset: number, audioCodec: string): AudioConfig | void {
+  let adtsObjectType: number;
+  let adtsExtensionSampleingIndex: number;
+  let adtsChanelConfig: number;
   let config: number[];
   const userAgent = navigator.userAgent.toLowerCase();
   const manifestCodec = audioCodec;
@@ -72,9 +77,9 @@ export function getAudioConfig (observer, data: Uint8Array, offset: number, audi
     } else {
       // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
       // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
-      if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && ((adtsSampleingIndex >= 6 && adtsChanelConfig === 1) ||
-            /vivaldi/i.test(userAgent)) ||
-        (!audioCodec && adtsChanelConfig === 1)) {
+      if ((audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 &&
+          ((adtsSampleingIndex >= 6 && adtsChanelConfig === 1) || /vivaldi/i.test(userAgent))) ||
+          (!audioCodec && adtsChanelConfig === 1)) {
         adtsObjectType = 2;
         config = new Array(2);
       }
@@ -130,7 +135,13 @@ export function getAudioConfig (observer, data: Uint8Array, offset: number, audi
     config[2] |= 2 << 2;
     config[3] = 0;
   }
-  return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: ('mp4a.40.' + adtsObjectType), manifestCodec: manifestCodec };
+  return {
+    config,
+    samplerate: adtsSampleingRates[adtsSampleingIndex],
+    channelCount: adtsChanelConfig,
+    codec: ('mp4a.40.' + adtsObjectType),
+    manifestCodec
+  };
 }
 
 export function isHeaderPattern (data: Uint8Array, offset: number): boolean {
@@ -155,11 +166,7 @@ export function isHeader (data: Uint8Array, offset: number): boolean {
   // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
   // Layer bits (position 14 and 15) in header should be always 0 for ADTS
   // More info https://wiki.multimedia.cx/index.php?title=ADTS
-  if (offset + 1 < data.length && isHeaderPattern(data, offset)) {
-    return true;
-  }
-
-  return false;
+  return offset + 1 < data.length && isHeaderPattern(data, offset);
 }
 
 export function canParse (data: Uint8Array, offset: number): boolean {
@@ -176,27 +183,27 @@ export function probe (data: Uint8Array, offset: number): boolean {
   if (isHeader(data, offset)) {
     // ADTS header Length
     const headerLength = getHeaderLength(data, offset);
+    if (offset + headerLength >= data.length) {
+      return false;
+    }
     // ADTS frame Length
-    let frameLength = headerLength;
-    if (offset + 5 < data.length) {
-      frameLength = getFullFrameLength(data, offset);
+    const frameLength = getFullFrameLength(data, offset);
+    if (frameLength <= headerLength) {
+      return false;
     }
 
     const newOffset = offset + frameLength;
-    if (newOffset === data.length || (newOffset + 1 < data.length && isHeaderPattern(data, newOffset))) {
-      return true;
-    }
+    return newOffset === data.length || isHeader(data, newOffset);
   }
   return false;
 }
 
-export function initTrackConfig (track: DemuxedAudioTrack, observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string): void {
+export function initTrackConfig (track: DemuxedAudioTrack, observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string) {
   if (!track.samplerate) {
     const config = getAudioConfig(observer, data, offset, audioCodec);
     if (!config) {
       return;
     }
-
     track.config = config.config;
     track.samplerate = config.samplerate;
     track.channelCount = config.channelCount;
@@ -210,7 +217,7 @@ export function getFrameDuration (samplerate: number): number {
   return 1024 * 90000 / samplerate;
 }
 
-export function parseFrameHeader (data: Uint8Array, offset: number, pts: number, frameIndex: number, frameDuration: number) {
+export function parseFrameHeader (data: Uint8Array, offset: number, pts: number, frameIndex: number, frameDuration: number): { headerLength, frameLength, stamp } {
   const length = data.length;
 
   // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
@@ -226,7 +233,7 @@ export function parseFrameHeader (data: Uint8Array, offset: number, pts: number,
   }
 }
 
-export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number) {
+export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number): { sample, length } {
   const frameDuration = getFrameDuration(track.samplerate as number);
   const header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
   if (header) {

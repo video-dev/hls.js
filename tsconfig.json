@@ -9,16 +9,20 @@
     "strictPropertyInitialization": true,
     "lib": [
       "dom",
-      "es2015",
+      "es2015"
     ],
     "outDir": "./dist/",
+    "allowSyntheticDefaultImports": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "tests/unit/**/*",
+    "demo/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist/**/*",
+    "demo/libs/**/*",
     "**/*.spec.*"
   ]
 }

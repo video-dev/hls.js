@@ -2,7 +2,7 @@
  * MP3 demuxer
  */
 import BaseAudioDemuxer from './base-audio-demuxer';
-import ID3 from '../demux/id3';
+import * as ID3 from '../demux/id3';
 import { logger } from '../utils/logger';
 import * as MpegAudio from './mpegaudio';
 
@@ -52,6 +52,9 @@ class MP3Demuxer extends BaseAudioDemuxer {
   }
 
   appendFrame (track, data, offset) {
+    if (this.initPTS === null) {
+      return;
+    }
     return MpegAudio.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
   }
 }

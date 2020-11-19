@@ -4,7 +4,7 @@
 import BaseAudioDemuxer from './base-audio-demuxer';
 import * as ADTS from './adts';
 import { logger } from '../utils/logger';
-import ID3 from '../demux/id3';
+import * as ID3 from '../demux/id3';
 import { HlsEventEmitter } from '../events';
 import { HlsConfig } from '../config';
 

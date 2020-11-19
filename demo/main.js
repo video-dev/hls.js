@@ -1,16 +1,20 @@
-/* global $, Hls */
+/* global $, Hls, __NETLIFY__ */
 /* eslint camelcase: 0 */
 
 import { sortObject, copyTextToClipboard } from './demo-utils';
 import { TimelineChart } from './chart/timeline-chart';
 
+const NETLIFY = __NETLIFY__; // replaced in build
+
 const STORAGE_KEYS = {
   Editor_Persistence: 'hlsjs:config-editor-persist',
-  Hls_Config: 'hlsjs:config'
+  Hls_Config: 'hlsjs:config',
+  volume: 'hlsjs:volume',
+  demo_tabs: 'hlsjs:demo-tabs'
 };
 
 const testStreams = require('../tests/test-streams');
-const defaultTestStreamUrl = testStreams.bbb.url;
+const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
 let demoConfig = getURLParam('demoConfig', null);
@@ -23,7 +27,8 @@ if (demoConfig) {
 const hlsjsDefaults = {
   debug: true,
   enableWorker: true,
-  liveBackBufferLength: 60 * 15
+  lowLatencyMode: true,
+  liveBackBufferLength: 60 * 1.5
 };
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
@@ -31,10 +36,12 @@ let autoRecoverError = getDemoConfigPropOrDefault('autoRecoverError', true);
 let levelCapping = getDemoConfigPropOrDefault('levelCapping', -1);
 let limitMetrics = getDemoConfigPropOrDefault('limitMetrics', -1);
 let dumpfMP4 = getDemoConfigPropOrDefault('dumpfMP4', false);
+let stopOnStall = getDemoConfigPropOrDefault('stopOnStall', false);
 
 let bufferingIdx = -1;
 let selectedTestStream = null;
-const video = $('#video')[0];
+
+const video = document.querySelector('#video');
 const startTime = Date.now();
 
 let lastSeekingIdx;
@@ -50,20 +57,60 @@ let fmp4Data;
 let configPersistenceEnabled = false;
 let configEditor = null;
 let chart;
+let resizeAsyncCallbackId = -1;
+
+const requestAnimationFrame = self.requestAnimationFrame || self.setTimeout;
+const cancelAnimationFrame = self.cancelAnimationFrame || self.clearTimeout;
+const resizeHandlers = [];
+const resize = () => {
+  cancelAnimationFrame(resizeAsyncCallbackId);
+  resizeAsyncCallbackId = requestAnimationFrame(() => {
+    resizeHandlers.forEach(handler => {
+      handler();
+    });
+  });
+};
+
+self.onresize = resize;
+if (self.screen && self.screen.orientation) {
+  self.screen.orientation.onchange = resize;
+}
+
+const playerResize = () => {
+  const bounds = video.getBoundingClientRect();
+  $('#currentSize').html(`${Math.round(bounds.width * 10) / 10} x ${Math.round(bounds.height * 10) / 10}`);
+};
+resizeHandlers.push(playerResize);
 
 $(document).ready(function () {
   setupConfigEditor();
 
   chart = setupTimelineChart();
 
-  Object.keys(testStreams).forEach((key) => {
+  Object.keys(testStreams).forEach((key, index) => {
     const stream = testStreams[key];
     const option = new Option(stream.description, key);
     $('#streamSelect').append(option);
+    if (stream.url === sourceURL) {
+      document.querySelector('#streamSelect').selectedIndex = index + 1;
+    }
   });
 
+  const videoWidth = video.style.width;
+  if (videoWidth) {
+    $('#videoSize option').each(function (i, option) {
+      if (option.value === videoWidth) {
+        document.querySelector('#videoSize').selectedIndex = i;
+        $('#bufferedCanvas').width(videoWidth);
+        resize();
+        return false;
+      }
+    });
+  }
+
   $('#streamSelect').change(function () {
-    selectedTestStream = testStreams[$('#streamSelect').val()];
+    const key = $('#streamSelect').val() || Object.keys(testStreams)[0];
+    selectedTestStream = testStreams[key];
     const streamUrl = selectedTestStream.url;
     $('#streamURL').val(streamUrl);
     loadSelectedStream();
@@ -77,6 +124,8 @@ $(document).ready(function () {
   $('#videoSize').change(function () {
     $('#video').width($('#videoSize').val());
     $('#bufferedCanvas').width($('#videoSize').val());
+    checkBuffer();
+    resize();
   });
 
   $('#enableStreaming').click(function () {
@@ -89,8 +138,14 @@ $(document).ready(function () {
     onDemoConfigChanged();
   });
 
+  $('#stopOnStall').click(function () {
+    stopOnStall = this.checked;
+    onDemoConfigChanged();
+  });
+
   $('#dumpfMP4').click(function () {
     dumpfMP4 = this.checked;
+    $('.btn-dump').toggle(dumpfMP4);
     onDemoConfigChanged();
   });
 
@@ -107,35 +162,73 @@ $(document).ready(function () {
   $('#limitMetrics').val(limitMetrics);
   $('#enableStreaming').prop('checked', enableStreaming);
   $('#autoRecoverError').prop('checked', autoRecoverError);
+  $('#stopOnStall').prop('checked', stopOnStall);
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
-  $('h2').append('&nbsp;<a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
-  $('#currentVersion').html('Hls version:' + Hls.version);
+  // link to version on npm if canary
+  // github branch for a branch version
+  // github tag for a normal tag
+  // github PR for a pr
+  function getVersionLink (version) {
+    const alphaRegex = /[-.]0\.alpha\./;
+    if (alphaRegex.test(version)) {
+      return `https://www.npmjs.com/package/hls.js/v/${encodeURIComponent(version)}`;
+    } else if (NETLIFY.reviewID) {
+      return `https://github.com/video-dev/hls.js/pull/${NETLIFY.reviewID}`;
+    } else if (NETLIFY.branch) {
+      return `https://github.com/video-dev/hls.js/tree/${encodeURIComponent(NETLIFY.branch)}`;
+    }
+    return `https://github.com/video-dev/hls.js/releases/tag/v${encodeURIComponent(version)}`;
+  }
+
+  const version = Hls.version;
+  if (version) {
+    const $a = $('<a />').attr('target', '_blank').attr('rel', 'noopener noreferrer').attr('href', getVersionLink(version)).text('v' + version);
+    $('.title').append($a);
+  }
 
   $('#streamURL').val(sourceURL);
 
-  video.volume = 0.05;
+  const volumeSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.volume)) || {
+    volume: 0.05,
+    muted: false
+  };
+  video.volume = volumeSettings.volume;
+  video.muted = volumeSettings.muted;
 
-  hideAllTabs();
-  // $('#timelineTab').show();
+  $('.btn-dump').toggle(dumpfMP4);
+  $('#toggleButtons').show();
 
   $('#metricsButtonWindow').toggle(self.windowSliding);
   $('#metricsButtonFixed').toggle(!self.windowSliding);
 
   loadSelectedStream();
+
+  let tabIndexesCSV = localStorage.getItem(STORAGE_KEYS.demo_tabs);
+  if (tabIndexesCSV === null) {
+    tabIndexesCSV = '0,1,2';
+  }
+  if (tabIndexesCSV) {
+    tabIndexesCSV.split(',').forEach(indexString => {
+      toggleTab($('.demo-tab-btn')[parseInt(indexString) || 0], true);
+    });
+  }
 });
 
 function setupGlobals () {
   self.events = events = {
     url: url,
-    t0: performance.now(),
+    t0: self.performance.now(),
     load: [],
     buffer: [],
     video: [],
     level: [],
     bitrate: []
   };
+  lastAudioTrackSwitchingIdx = undefined;
+  lastSeekingIdx = undefined;
+  bufferingIdx = -1;
 
   // actual values, only on window
   self.recoverDecodingErrorDate = null;
@@ -150,6 +243,7 @@ function setupGlobals () {
   self.createfMP4 = createfMP4;
   self.goToMetricsPermaLink = goToMetricsPermaLink;
   self.toggleTab = toggleTab;
+  self.toggleTabClick = toggleTabClick;
   self.applyConfigEditorValue = applyConfigEditorValue;
 }
 
@@ -190,10 +284,7 @@ function loadSelectedStream () {
 
   if (hls) {
     hls.destroy();
-    if (hls.bufferTimer) {
-      clearInterval(hls.bufferTimer);
-      hls.bufferTimer = undefined;
-    }
+    clearInterval(hls.bufferTimer);
     hls = null;
   }
 
@@ -230,7 +321,7 @@ function loadSelectedStream () {
     logStatus('Media element attached');
     bufferingIdx = -1;
     events.video.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'Media attached'
     });
     trimEventHistory();
@@ -238,19 +329,27 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.MEDIA_DETACHED, function () {
     logStatus('Media element detached');
+    clearInterval(hls.bufferTimer);
     bufferingIdx = -1;
     tracks = [];
     events.video.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'Media detached'
     });
     trimEventHistory();
   });
 
+  hls.on(Hls.Events.DESTROYING, function () {
+    clearInterval(hls.bufferTimer);
+  });
+  hls.on(Hls.Events.BUFFER_RESET, function () {
+    clearInterval(hls.bufferTimer);
+  });
+
   hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (eventName, data) {
     showCanvas();
     events.video.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: data.id + ' init segment'
     });
     trimEventHistory();
@@ -262,7 +361,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.LEVEL_SWITCHING, function (eventName, data) {
     events.level.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       id: data.level,
       bitrate: Math.round(hls.levels[data.level].bitrate / 1000)
     });
@@ -276,10 +375,10 @@ function loadSelectedStream () {
       name: '',
       start: 0,
       end: data.levels.length,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      duration: data.stats.loading.end - data.stats.loading.first
     });
     trimEventHistory();
     self.refreshCanvas();
@@ -305,7 +404,7 @@ function loadSelectedStream () {
     logStatus('Audio track switching...');
     updateAudioTrackInfo();
     events.video.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'audio switching',
       name: '@' + data.id
     });
@@ -317,7 +416,7 @@ function loadSelectedStream () {
     logStatus('Audio track switched');
     updateAudioTrackInfo();
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'audio switched',
       name: '@' + data.id
     };
@@ -336,14 +435,14 @@ function loadSelectedStream () {
       id: data.level,
       start: data.details.startSN,
       end: data.details.endSN,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      duration: data.stats.loading.end - data.stats.loading.first
     };
 
-    const parsingDuration = data.stats.tparsed - data.stats.tload;
+    const parsingDuration = data.stats.parsing.end - data.stats.loading.end;
     if (stats.levelParsed) {
       this.sumLevelParsingMs += parsingDuration;
     } else {
@@ -367,11 +466,11 @@ function loadSelectedStream () {
       id: data.id,
       start: data.details.startSN,
       end: data.details.endSN,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      duration: data.stats.loading.end - data.stats.loading.first
     };
     events.load.push(event);
     trimEventHistory();
@@ -380,41 +479,43 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.FRAG_BUFFERED, function (eventName, data) {
     const event = {
-      type: data.frag.type + ' fragment',
+      type: data.frag.type + (data.part ? ' part' : ' fragment'),
       id: data.frag.level,
       id2: data.frag.sn,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      buffer: data.stats.tbuffered - data.stats.tparsed,
-      duration: data.stats.tbuffered - data.stats.tfirst,
-      bw: Math.round(8 * data.stats.total / (data.stats.tbuffered - data.stats.trequest)),
+      id3: data.part ? data.part.index : undefined,
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      buffer: data.stats.buffering.end - data.stats.parsing.end,
+      duration: data.stats.buffering.end - data.stats.loading.first,
+      bw: Math.round(8 * data.stats.total / (data.stats.buffering.end - data.stats.loading.start)),
       size: data.stats.total
     };
     events.load.push(event);
     events.bitrate.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       bitrate: event.bw,
       duration: data.frag.duration,
       level: event.id
     });
-    if (hls.bufferTimer === undefined) {
+    if (events.buffer.length === 0) {
       events.buffer.push({
         time: 0,
         buffer: 0,
         pos: 0
       });
-      hls.bufferTimer = self.setInterval(checkBuffer, 100);
     }
+    clearInterval(hls.bufferTimer);
+    hls.bufferTimer = self.setInterval(checkBuffer, 100);
     trimEventHistory();
     self.refreshCanvas();
     updateLevelInfo();
 
-    const latency = data.stats.tfirst - data.stats.trequest;
-    const parsing = data.stats.tparsed - data.stats.tload;
-    const process = data.stats.tbuffered - data.stats.trequest;
-    const bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
+    const latency = data.stats.loading.first - data.stats.loading.start;
+    const parsing = data.stats.parsing.end - data.stats.loading.end;
+    const process = data.stats.buffering.end - data.stats.loading.start;
+    const bitrate = Math.round(8 * data.stats.total / (data.stats.buffering.end - data.stats.loading.first));
 
     if (stats.fragBuffered) {
       stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
@@ -456,7 +557,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'level switched',
       name: data.level
     };
@@ -468,7 +569,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.FRAG_CHANGED, function (eventName, data) {
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'frag changed',
       name: data.frag.sn + ' @ ' + data.frag.level
     };
@@ -561,15 +662,18 @@ function loadSelectedStream () {
       break;
     case Hls.ErrorDetails.LEVEL_EMPTY_ERROR:
       logError('Loaded level contains no fragments ' + data.level + ' ' + data.url);
-      handleLevelError(data);
+      // handleLevelError demonstrates how to remove a level that errors followed by a downswitch
+      // handleLevelError(data);
       break;
     case Hls.ErrorDetails.LEVEL_LOAD_ERROR:
       logError('Error while loading level playlist ' + data.context.level + ' ' + data.url);
-      handleLevelError(data);
+      // handleLevelError demonstrates how to remove a level that errors followed by a downswitch
+      // handleLevelError(data);
       break;
     case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
       logError('Timeout while loading level playlist ' + data.context.level + ' ' + data.url);
-      handleLevelError(data);
+      // handleLevelError demonstrates how to remove a level that errors followed by a downswitch
+      // handleLevelError(data);
       break;
     case Hls.ErrorDetails.LEVEL_SWITCH_ERROR:
       logError('Error while trying to switch to level ' + data.level);
@@ -606,6 +710,10 @@ function loadSelectedStream () {
       break;
     case Hls.ErrorDetails.BUFFER_STALLED_ERROR:
       logError('Buffer stalled error');
+      if (stopOnStall) {
+        hls.stopLoad();
+        video.pause();
+      }
       break;
     default:
       break;
@@ -660,7 +768,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.FPS_DROP, function (eventName, data) {
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'frame drop',
       name: data.currentDropped + '/' + data.currentDecoded
     };
@@ -690,6 +798,12 @@ function loadSelectedStream () {
   video.addEventListener('loadedmetadata', handleVideoEvent);
   video.addEventListener('loadeddata', handleVideoEvent);
   video.addEventListener('durationchange', handleVideoEvent);
+  video.addEventListener('volumechange', (evt) => {
+    localStorage.setItem(STORAGE_KEYS.volume, JSON.stringify({
+      muted: video.muted,
+      volume: video.volume
+    }));
+  });
 }
 
 function handleUnsupported () {
@@ -713,6 +827,7 @@ function handleVideoEvent (evt) {
     break;
   case 'resize':
     data = evt.target.videoWidth + '/' + evt.target.videoHeight;
+    playerResize();
     break;
   case 'loadedmetadata':
   case 'loadeddata':
@@ -761,7 +876,7 @@ function handleVideoEvent (evt) {
   }
 
   const event = {
-    time: performance.now() - events.t0,
+    time: self.performance.now() - events.t0,
     type: evt.type,
     name: data
   };
@@ -795,14 +910,14 @@ function handleLevelError (data) {
 
 function handleMediaError () {
   if (autoRecoverError) {
-    const now = performance.now();
+    const now = self.performance.now();
     if (!self.recoverDecodingErrorDate || (now - self.recoverDecodingErrorDate) > 3000) {
-      self.recoverDecodingErrorDate = performance.now();
+      self.recoverDecodingErrorDate = self.performance.now();
       $('#statusOut').append(', trying to recover media error.');
       hls.recoverMediaError();
     } else {
       if (!self.recoverSwapAudioCodecDate || (now - self.recoverSwapAudioCodecDate) > 3000) {
-        self.recoverSwapAudioCodecDate = performance.now();
+        self.recoverSwapAudioCodecDate = self.performance.now();
         $('#statusOut').append(', trying to swap audio codec and recover media error.');
         hls.swapAudioCodec();
         hls.recoverMediaError();
@@ -823,44 +938,42 @@ function timeRangesToString (r) {
 }
 
 function checkBuffer () {
-  const v = $('#video')[0];
-  const canvas = $('#bufferedCanvas')[0];
+  const canvas = document.querySelector('#bufferedCanvas');
   const ctx = canvas.getContext('2d');
-  const r = v.buffered;
+  const r = video.buffered;
   let bufferingDuration;
-  ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'gray';
   if (r) {
-    if (!canvas.width || canvas.width !== v.clientWidth) {
-      canvas.width = v.clientWidth;
+    ctx.fillStyle = 'black';
+    if (!canvas.width || canvas.width !== video.clientWidth) {
+      canvas.width = video.clientWidth;
     }
-
-    const pos = v.currentTime;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const pos = video.currentTime;
     let bufferLen = 0;
+    ctx.fillStyle = 'gray';
     for (let i = 0; i < r.length; i++) {
-      const start = r.start(i) / v.duration * canvas.width;
-      const end = r.end(i) / v.duration * canvas.width;
-      ctx.fillRect(start, 3, Math.max(2, end - start), 10);
+      const start = r.start(i) / video.duration * canvas.width;
+      const end = r.end(i) / video.duration * canvas.width;
+      ctx.fillRect(start, 2, Math.max(2, end - start), 11);
       if (pos >= r.start(i) && pos < r.end(i)) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferLen = r.end(i) - pos;
       }
     }
     // check if we are in buffering / or playback ended state
-    if (bufferLen <= 0.1 && v.paused === false && (pos - lastStartPosition) > 0.5) {
+    if (bufferLen <= 0.1 && video.paused === false && (pos - lastStartPosition) > 0.5) {
       if (lastDuration - pos <= 0.5 && events.isLive === false) {
         // don't create buffering event if we are at the end of the playlist, don't report ended for live playlist
       } else {
         // we are not at the end of the playlist ... real buffering
         if (bufferingIdx !== -1) {
-          bufferingDuration = performance.now() - events.t0 - events.video[bufferingIdx].time;
+          bufferingDuration = self.performance.now() - events.t0 - events.video[bufferingIdx].time;
           events.video[bufferingIdx].duration = bufferingDuration;
           events.video[bufferingIdx].name = bufferingDuration;
         } else {
           events.video.push({
             type: 'buffering',
-            time: performance.now() - events.t0
+            time: self.performance.now() - events.t0
           });
           trimEventHistory();
           // we are in buffering state
@@ -870,7 +983,7 @@ function checkBuffer () {
     }
 
     if (bufferLen > 0.1 && bufferingIdx !== -1) {
-      bufferingDuration = performance.now() - events.t0 - events.video[bufferingIdx].time;
+      bufferingDuration = self.performance.now() - events.t0 - events.video[bufferingIdx].time;
       events.video[bufferingIdx].duration = bufferingDuration;
       events.video[bufferingIdx].name = bufferingDuration;
       // we are out of buffering state
@@ -879,7 +992,7 @@ function checkBuffer () {
 
     // update buffer/position for current Time
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       buffer: Math.round(bufferLen * 1000),
       pos: Math.round(pos * 1000)
     };
@@ -905,27 +1018,40 @@ function checkBuffer () {
     trimEventHistory();
     self.refreshCanvas();
 
-    let log = `Duration: ${v.duration}\nBuffered: ${timeRangesToString(v.buffered)}\nSeekable: ${timeRangesToString(v.seekable)}\nPlayed: ${timeRangesToString(v.played)}\n`;
-
-    if (hls.media) {
-      for (const type in tracks) {
-        log += 'Buffer for ' + type + ' contains: ' + timeRangesToString(tracks[type].buffer.buffered) + '\n';
+    if ($('#statsDisplayTab').is(':visible')) {
+      let log = `Duration: ${video.duration}\nBuffered: ${timeRangesToString(video.buffered)}\nSeekable: ${timeRangesToString(video.seekable)}\nPlayed: ${timeRangesToString(video.played)}\n`;
+      if (hls.media) {
+        for (const type in tracks) {
+          log += `Buffer for ${type} contains:${timeRangesToString(tracks[type].buffer.buffered)}\n`;
+        }
+        const videoPlaybackQuality = video.getVideoPlaybackQuality;
+        if (videoPlaybackQuality && typeof (videoPlaybackQuality) === typeof (Function)) {
+          log += `Dropped frames: ${video.getVideoPlaybackQuality().droppedVideoFrames}\n`;
+          log += `Corrupted frames: ${video.getVideoPlaybackQuality().corruptedVideoFrames}\n`;
+        } else if (video.webkitDroppedFrameCount) {
+          log += `Dropped frames: ${video.webkitDroppedFrameCount}\n`;
+        }
+      }
+      log += `Bandwidth Estimate: ${hls.bandwidthEstimate.toFixed(3)}\n`;
+      if (events.isLive) {
+        log += 'Live Stats:\n' +
+          `  Max Latency: ${hls.maxLatency}\n` +
+          `  Target Latency: ${hls.targetLatency}\n` +
+          `  Latency: ${hls.latency}\n` +
+          `  Edge Stall: ${hls.latencyController.edgeStalled}\n` +
+          `  Playback rate: ${video.playbackRate.toFixed(2)}\n`;
       }
 
-      const videoPlaybackQuality = v.getVideoPlaybackQuality;
-      if (videoPlaybackQuality && typeof (videoPlaybackQuality) === typeof (Function)) {
-        log += `Dropped frames: ${v.getVideoPlaybackQuality().droppedVideoFrames}\n`;
-        log += `Corrupted frames: ${v.getVideoPlaybackQuality().corruptedVideoFrames}\n`;
-      } else if (v.webkitDroppedFrameCount) {
-        log += `Dropped frames: ${v.webkitDroppedFrameCount}`;
-      }
+      $('#bufferedOut').text(log);
+      $('#statisticsOut').text(JSON.stringify(sortObject(stats), null, '\t'));
     }
 
-    $('#bufferedOut').text(log);
-    $('#statisticsOut').text(JSON.stringify(sortObject(stats), null, '\t'));
     ctx.fillStyle = 'blue';
-    const x = v.currentTime / v.duration * canvas.width;
+    const x = video.currentTime / video.duration * canvas.width;
     ctx.fillRect(x, 0, 2, 15);
+  } else if (ctx.fillStyle !== 'black') {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 }
 
@@ -966,10 +1092,9 @@ function goToMetricsPermaLink () {
 }
 
 function onClickBufferedRange (event) {
-  const canvas = $('#bufferedCanvas')[0];
-  const v = $('#video')[0];
-  const target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
-  v.currentTime = target;
+  const canvas = document.querySelector('#bufferedCanvas');
+  const target = (event.clientX - canvas.offsetLeft) / canvas.width * video.duration;
+  video.currentTime = target;
 }
 
 function updateLevelInfo () {
@@ -1060,10 +1185,8 @@ function updateLevelInfo () {
     html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
   }
 
-  const v = $('#video')[0];
-
-  if (v.videoWidth && v.videoHeight) {
-    $('#currentResolution').html(v.videoWidth + ' x ' + v.videoHeight);
+  if (video.videoWidth && video.videoHeight) {
+    $('#currentResolution').html(`${video.videoWidth} x ${video.videoHeight}`);
   }
 
   if ($('#currentLevelControl').html() !== html1) {
@@ -1146,6 +1269,7 @@ function onDemoConfigChanged () {
   demoConfig = {
     enableStreaming,
     autoRecoverError,
+    stopOnStall,
     dumpfMP4,
     levelCapping,
     limitMetrics
@@ -1236,10 +1360,10 @@ function setupTimelineChart () {
     responsive: false
   });
 
-  self.onresize = () => chart.resize();
-  if (self.screen && self.screen.orientation) {
-    self.screen.orientation.addEventListener('change', self.onresize);
-  }
+  resizeHandlers.push(() => {
+    chart.resize();
+  });
+
   chart.resize();
 
   return chart;
@@ -1253,16 +1377,18 @@ function addChartEventListeners (hls) {
     if (data.stats) {
       // Convert 0.x stats to partial v1 stats
       const { retry, loaded, total, trequest, tfirst, tload } = data.stats;
-      data.frag.stats = {
-        loaded,
-        retry,
-        total,
-        loading: {
-          start: trequest,
-          first: tfirst,
-          end: tload
-        }
-      };
+      if (trequest && tload) {
+        data.frag.stats = {
+          loaded,
+          retry,
+          total,
+          loading: {
+            start: trequest,
+            first: tfirst,
+            end: tload
+          }
+        };
+      }
     }
     chart.updateFragment(data);
   };
@@ -1284,13 +1410,33 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);
   }, chart);
+  hls.on(Hls.Events.BUFFER_RESET, () => {
+    chart.removeSourceBuffers();
+  }, chart);
   hls.on(Hls.Events.LEVELS_UPDATED, (eventName, { levels }) => {
     chart.removeType('level');
     chart.updateLevels(levels);
   });
-  hls.on(Hls.Events.LEVEL_UPDATED, (eventName, { details, level }) => {
+  hls.on(Hls.Events.LEVEL_SWITCHED, (eventName, { level }) => {
+    chart.removeType('level');
+    chart.updateLevels(hls.levels, level);
+  }, chart);
+  hls.on(Hls.Events.LEVEL_LOADING, () => {
+    // TODO: mutate level datasets
+    // Update loadLevel
+    chart.removeType('level');
+    chart.updateLevels(hls.levels);
+  }, chart);
+  hls.on(Hls.Events.FRAG_LOADING, () => {
+    // TODO: mutate level datasets
+    // Update loadLevel
+    chart.removeType('level');
+    chart.updateLevels(hls.levels);
+  }, chart);
+  hls.on(Hls.Events.LEVEL_UPDATED, (eventName, { details }) => {
     chart.updateLevelOrTrack(details);
   }, chart);
+
   hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (eventName, { audioTracks }) => {
     chart.removeType('audioTrack');
     chart.updateAudioTracks(audioTracks);
@@ -1298,6 +1444,17 @@ function addChartEventListeners (hls) {
   hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (eventName, { subtitleTracks }) => {
     chart.removeType('subtitleTrack');
     chart.updateSubtitleTracks(subtitleTracks);
+  }, chart);
+
+  hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (eventName) => {
+    // TODO: mutate level datasets
+    chart.removeType('audioTrack');
+    chart.updateAudioTracks(hls.audioTracks);
+  }, chart);
+  hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH, (eventName) => {
+    // TODO: mutate level datasets
+    chart.removeType('subtitleTrack');
+    chart.updateSubtitleTracks(hls.subtitleTracks);
   }, chart);
   hls.on(Hls.Events.AUDIO_TRACK_LOADED, updateLevelOrTrack, chart);
   hls.on(Hls.Events.SUBTITLE_TRACK_LOADED, updateLevelOrTrack, chart);
@@ -1328,6 +1485,8 @@ function createfMP4 (type) {
     const filename = type + '-' + new Date().toISOString() + '.mp4';
     self.saveAs(blob, filename);
     // $('body').append('<a download="hlsjs-' + filename + '" href="' + self.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
+  } else if (!dumpfMP4) {
+    console.error('Check "Dump transmuxed fMP4 data" first to make appended media available for saving.');
   }
 }
 
@@ -1345,20 +1504,36 @@ function arrayConcat (inputArray) {
 }
 
 function hideAllTabs () {
-  $('#timelineTab').hide();
-  $('#playbackControlTab').hide();
-  $('#qualityLevelControlTab').hide();
-  $('#audioTrackControlTab').hide();
-  $('#metricsDisplayTab').hide();
-  $('#statsDisplayTab').hide();
+  $('.demo-tab-btn').css('background-color', '');
+  $('.demo-tab').hide();
 }
 
-function toggleTab (tabElId) {
-  hideAllTabs();
-  self.hideMetrics();
-  $('#' + tabElId).show();
+function toggleTabClick (btn) {
+  toggleTab(btn);
+  const tabIndexes = $('.demo-tab-btn').toArray()
+    .map((el, i) => $('#' + $(el).data('tab')).is(':visible') ? i : null)
+    .filter(i => i !== null);
+  localStorage.setItem(STORAGE_KEYS.demo_tabs, tabIndexes.join(','));
+}
+
+function toggleTab (btn, dontHideOpenTabs) {
+  const tabElId = $(btn).data('tab');
+  // eslint-disable-next-line no-restricted-globals
+  const modifierPressed = dontHideOpenTabs || (self.event && (self.event.metaKey || self.event.shiftKey));
+  if (!modifierPressed) {
+    hideAllTabs();
+  }
+  if (modifierPressed) {
+    $(`#${tabElId}`).toggle();
+  } else {
+    $(`#${tabElId}`).show();
+  }
+  $(btn).css('background-color', $(`#${tabElId}`).is(':visible') ? 'orange' : '');
+  if (!$('#statsDisplayTab').is(':visible')) {
+    self.hideMetrics();
+  }
   if (hls) {
-    if (tabElId === 'timelineTab') {
+    if ($('#timelineTab').is(':visible')) {
       chart.show();
       chart.resize(chart.chart.data ? chart.chart.data.datasets : null);
     } else {

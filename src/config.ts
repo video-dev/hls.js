@@ -1,19 +1,21 @@
 import AbrController from './controller/abr-controller';
 import AudioStreamController from './controller/audio-stream-controller';
 import AudioTrackController from './controller/audio-track-controller';
+import { SubtitleStreamController } from './controller/subtitle-stream-controller';
+import SubtitleTrackController from './controller/subtitle-track-controller';
 import BufferController from './controller/buffer-controller';
+import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-import TimelineController from './controller/timeline-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
 import EMEController from './controller/eme-controller';
-
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import * as Cues from './utils/cues';
-import { SubtitleStreamController } from './controller/subtitle-stream-controller';
-import { requestMediaKeySystemAccess, MediaKeyFunc } from './utils/mediakeys-helper';
+import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { logger } from './utils/logger';
+
+import type { MediaKeyFunc } from './utils/mediakeys-helper';
+import type { FragmentLoaderContext, Loader, LoaderContext, PlaylistLoaderContext } from './types/loader';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number,
@@ -38,15 +40,21 @@ type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean
 };
 
+export type DRMSystemOptions = {
+  audioRobustness?: string,
+  videoRobustness?: string,
+}
+
 export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
   emeEnabled: boolean,
   widevineLicenseUrl?: string,
+  drmSystemOptions: DRMSystemOptions,
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null,
 };
 
 type FragmentLoaderConfig = {
-  fLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
+  fLoader?: { new(confg: HlsConfig): Loader<FragmentLoaderContext> },
 
   fragLoadingTimeOut: number,
   fragLoadingMaxRetry: number,
@@ -70,7 +78,7 @@ export type MP4RemuxerConfig = {
 };
 
 type PlaylistLoaderConfig = {
-  pLoader: any, // TODO(typescript-loader): Once Loader is typed fill this in
+  pLoader?: { new(confg: HlsConfig): Loader<PlaylistLoaderContext> },
 
   manifestLoadingTimeOut: number,
   manifestLoadingMaxRetry: number,
@@ -91,21 +99,23 @@ type StreamControllerConfig = {
   maxBufferLength: number,
   maxBufferSize: number,
   maxBufferHole: number,
-
-  lowBufferWatchdogPeriod: number,
   highBufferWatchdogPeriod: number,
   nudgeOffset: number,
   nudgeMaxRetry: number,
   maxFragLookUpTolerance: number,
+  maxMaxBufferLength: number,
+  startFragPrefetch: boolean,
+  testBandwidth: boolean
+};
+
+type LatencyControllerConfig = {
   liveSyncDurationCount: number,
   liveMaxLatencyDurationCount: number,
   liveSyncDuration?: number,
   liveMaxLatencyDuration?: number,
-  maxMaxBufferLength: number,
-
-  startFragPrefetch: boolean,
-  testBandwidth: boolean
-};
+  maxLiveSyncPlaybackRate: number,
+  minLiveSyncPlaybackRate: number
+}
 
 type TimelineControllerConfig = {
   cueHandler: Cues.CuesInterface,
@@ -133,16 +143,16 @@ export type HlsConfig =
     enableWorker: boolean,
     enableSoftwareAES: boolean,
     minAutoBitrate: number,
-    loader: any, // TODO(typescript-xhrloader): Type once XHR is done
+    loader: { new(confg: HlsConfig): Loader<LoaderContext> },
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
 
     // Alt Audio
-    audioStreamController?: any, // TODO(typescript-audiostreamcontroller): Type once file is done
-    audioTrackController?: any, // TODO(typescript-audiotrackcontroller): Type once file is done
+    audioStreamController?: typeof AudioStreamController,
+    audioTrackController?: typeof AudioTrackController,
     // Subtitle
-    subtitleStreamController?: any, // TODO(typescript-subtitlestreamcontroller): Type once file is done
-    subtitleTrackController?: any, // TODO(typescript-subtitletrackcontroller): Type once file is done
-    timelineController?: any, // TODO(typescript-timelinecontroller): Type once file is done
+    subtitleStreamController?: typeof SubtitleStreamController,
+    subtitleTrackController?: typeof SubtitleTrackController,
+    timelineController?: typeof TimelineController,
     // EME
     emeController?: typeof EMEController,
 
@@ -150,7 +160,8 @@ export type HlsConfig =
     bufferController: typeof BufferController,
     capLevelController: typeof CapLevelController,
     fpsController: typeof FPSController,
-    progressive: boolean
+    progressive: boolean,
+    lowLatencyMode: boolean
   } &
   ABRControllerConfig &
   BufferControllerConfig &
@@ -162,6 +173,7 @@ export type HlsConfig =
   MP4RemuxerConfig &
   PlaylistLoaderConfig &
   StreamControllerConfig &
+  LatencyControllerConfig &
   TimelineControllerConfig &
   TSDemuxerConfig;
 
@@ -171,7 +183,7 @@ export type HlsConfig =
 export const hlsDefaultConfig: HlsConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
-  defaultAudioCodec: void 0, // used by stream-controller
+  defaultAudioCodec: undefined, // used by stream-controller
   debug: false, // used by logger
   capLevelOnFPSDrop: false, // used by fps-controller
   capLevelToPlayerSize: false, // used by cap-level-controller
@@ -179,16 +191,16 @@ export const hlsDefaultConfig: HlsConfig = {
   maxBufferLength: 30, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.5, // used by stream-controller
-
-  lowBufferWatchdogPeriod: 0.5, // used by stream-controller
-  highBufferWatchdogPeriod: 3, // used by stream-controller
+  highBufferWatchdogPeriod: 2, // used by stream-controller
   nudgeOffset: 0.1, // used by stream-controller
   nudgeMaxRetry: 3, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
-  liveSyncDurationCount: 3, // used by stream-controller
-  liveMaxLatencyDurationCount: Infinity, // used by stream-controller
-  liveSyncDuration: void 0, // used by stream-controller
-  liveMaxLatencyDuration: void 0, // used by stream-controller
+  liveSyncDurationCount: 3, // used by latency-controller
+  liveMaxLatencyDurationCount: Infinity, // used by latency-controller
+  liveSyncDuration: undefined, // used by latency-controller
+  liveMaxLatencyDuration: undefined, // used by latency-controller
+  minLiveSyncPlaybackRate: 0.75, // used by latency-controller
+  maxLiveSyncPlaybackRate: 1.5, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
   liveBackBufferLength: Infinity, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
@@ -198,7 +210,7 @@ export const hlsDefaultConfig: HlsConfig = {
   manifestLoadingMaxRetry: 1, // used by playlist-loader
   manifestLoadingRetryDelay: 1000, // used by playlist-loader
   manifestLoadingMaxRetryTimeout: 64000, // used by playlist-loader
-  startLevel: void 0, // used by level-controller
+  startLevel: undefined, // used by level-controller
   levelLoadingTimeOut: 10000, // used by playlist-loader
   levelLoadingMaxRetry: 4, // used by playlist-loader
   levelLoadingRetryDelay: 1000, // used by playlist-loader
@@ -213,11 +225,10 @@ export const hlsDefaultConfig: HlsConfig = {
   appendErrorMaxRetry: 3, // used by buffer-controller
   loader: XhrLoader,
   // loader: FetchLoader,
-  fLoader: void 0, // used by fragment-loader
-  pLoader: void 0, // used by playlist-loader
-  xhrSetup: void 0, // used by xhr-loader
-  licenseXhrSetup: void 0, // used by eme-controller
-  // fetchSetup: void 0,
+  fLoader: undefined, // used by fragment-loader
+  pLoader: undefined, // used by playlist-loader
+  xhrSetup: undefined, // used by xhr-loader
+  licenseXhrSetup: undefined, // used by eme-controller
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,
@@ -237,19 +248,21 @@ export const hlsDefaultConfig: HlsConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
-  widevineLicenseUrl: void 0, // used by eme-controller
+  widevineLicenseUrl: undefined, // used by eme-controller
+  drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,
-  progressive: true,
+  progressive: false,
+  lowLatencyMode: true,
 
   // Dynamic Modules
   ...timelineConfig(),
-  subtitleStreamController: (__USE_SUBTITLES__) ? SubtitleStreamController : void 0,
-  subtitleTrackController: (__USE_SUBTITLES__) ? SubtitleTrackController : void 0,
-  timelineController: (__USE_SUBTITLES__) ? TimelineController : void 0,
-  audioStreamController: (__USE_ALT_AUDIO__) ? AudioStreamController : void 0,
-  audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : void 0,
-  emeController: (__USE_EME_DRM__) ? EMEController : void 0
+  subtitleStreamController: (__USE_SUBTITLES__) ? SubtitleStreamController : undefined,
+  subtitleTrackController: (__USE_SUBTITLES__) ? SubtitleTrackController : undefined,
+  timelineController: (__USE_SUBTITLES__) ? TimelineController : undefined,
+  audioStreamController: (__USE_ALT_AUDIO__) ? AudioStreamController : undefined,
+  audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : undefined,
+  emeController: (__USE_EME_DRM__) ? EMEController : undefined
 };
 
 function timelineConfig (): TimelineControllerConfig {
@@ -270,23 +283,20 @@ function timelineConfig (): TimelineControllerConfig {
   };
 }
 
-export function mergeConfig (defaultConfig, passedConfig) {
-  if ((passedConfig.liveSyncDurationCount || passedConfig.liveMaxLatencyDurationCount) && (passedConfig.liveSyncDuration || passedConfig.liveMaxLatencyDuration)) {
-    throw new Error('Illegal hls.js passedConfig: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+export function mergeConfig (defaultConfig: HlsConfig, userConfig: Partial<HlsConfig>): HlsConfig {
+  if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
+    throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
   }
 
-  for (const prop in defaultConfig) {
-    if (prop in passedConfig) continue;
-    passedConfig[prop] = defaultConfig[prop];
-  }
-
-  if (passedConfig.liveMaxLatencyDurationCount !== void 0 && passedConfig.liveMaxLatencyDurationCount <= passedConfig.liveSyncDurationCount) {
+  if (userConfig.liveMaxLatencyDurationCount !== undefined && (userConfig.liveSyncDurationCount === undefined || userConfig.liveMaxLatencyDurationCount <= userConfig.liveSyncDurationCount)) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
   }
 
-  if (passedConfig.liveMaxLatencyDuration !== void 0 && (passedConfig.liveMaxLatencyDuration <= passedConfig.liveSyncDuration || passedConfig.liveSyncDuration === void 0)) {
+  if (userConfig.liveMaxLatencyDuration !== undefined && (userConfig.liveSyncDuration === undefined || userConfig.liveMaxLatencyDuration <= userConfig.liveSyncDuration)) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
   }
+
+  return Object.assign({}, defaultConfig, userConfig);
 }
 
 const canStreamProgressively = fetchSupported();

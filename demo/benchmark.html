@@ -8,12 +8,21 @@
 <script src="../dist/hls.js"></script>
 <video id="video" controls></video>
 <script>
+    function parseQuery(queryString) {
+        var query = {};
+        var pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
+        for (var i = 0; i < pairs.length; i++) {
+            var pair = pairs[i].split('=');
+            query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+        }
+        return query;
+    }
+
+
     /* get stream from query string */
     function getParameterByName(name) {
-        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
-        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
-                results = regex.exec(location.search);
-        return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+        var query = parseQuery(window.location.search);
+        return query.hasOwnProperty(name) ? query[name] : undefined;
     }
 
     var stream = getParameterByName('stream') || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
