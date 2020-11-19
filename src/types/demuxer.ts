@@ -90,6 +90,17 @@ export interface AvcSampleUnit {
   data: Uint8Array;
 }
 
+type AudioSample = {
+  unit: Uint8Array,
+  pts: number,
+  dts: number
+}
+
+export type AppendedAudioFrame = {
+  sample: AudioSample,
+  length: number
+};
+
 export interface ElementaryStreamData {
   data: Array<Uint8Array>
   size: number
