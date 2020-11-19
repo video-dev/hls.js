@@ -1,5 +1,5 @@
 import * as ID3 from '../demux/id3';
-import { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack } from '../types/demuxer';
+import { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack, AppendedAudioFrame } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
@@ -33,9 +33,7 @@ class BaseAudioDemuxer implements Demuxer {
     return false;
   }
 
-  appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number): { sample, length } | undefined {
-    return undefined;
-  }
+  appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number): AppendedAudioFrame | void {}
 
   // feed incoming data to the front of the parsing pipeline
   demux (data: Uint8Array, timeOffset: number): DemuxerResult {
