@@ -896,8 +896,8 @@ class StreamController extends BaseStreamController {
           });
         }
 
-        // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
-        const accurateTimeOffset = !(media && media.seeking) && (details.PTSKnown || !details.live);
+        // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+        const accurateTimeOffset = details.PTSKnown || !details.live;
         const initSegmentData = details.initSegment ? details.initSegment.data : [];
         const audioCodec = this._getAudioCodec(currentLevel);
 
