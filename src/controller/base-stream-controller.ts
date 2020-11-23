@@ -734,6 +734,16 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     Object.keys(frag.elementaryStreams).forEach(type => {
       const info = frag.elementaryStreams[type];
       if (info) {
+        const parsedDuration = info.startPTS - info.endPTS;
+        if (parsedDuration <= 0) {
+          // Destroy the transmuxer after it's next time offset failed to advance because duration was <= 0.
+          // The new transmuxer will be configured with a time offset matching the next fragment start, preventing the timeline from shifting.
+          logger.warn(`Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration}) resetting transmuxer to fallback to playlist timing`);
+          if (this.transmuxer) {
+            this.transmuxer.destroy();
+            this.transmuxer = null;
+          }
+        }
         const drift = partial ? 0 : LevelHelper.updateFragPTSDTS(details, frag, info.startPTS, info.endPTS, info.startDTS, info.endDTS);
         this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
           details,

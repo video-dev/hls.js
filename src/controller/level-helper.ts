@@ -71,6 +71,12 @@ function updateFromToPTS (fragFrom: Fragment, fragTo: Fragment) {
 }
 
 export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
+  const parsedMediaDuration = endPTS - startPTS;
+  if (parsedMediaDuration <= 0) {
+    logger.warn('Fragment should have a positive duration', frag);
+    endPTS = startPTS + frag.duration;
+    endDTS = startDTS + frag.duration;
+  }
   let maxStartPTS = startPTS;
   let minEndPTS = endPTS;
   const fragStartPts = frag.startPTS as number;
@@ -92,8 +98,8 @@ export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragm
     endPTS = Math.max(endPTS, fragEndPts);
     endDTS = Math.max(endDTS, frag.endDTS);
   }
+  frag.duration = endPTS - startPTS;
 
-  const parsedMediaDuration = endPTS - startPTS;
   const drift = startPTS - frag.start;
   frag.appendedPTS = endPTS;
   frag.start = frag.startPTS = startPTS;
@@ -102,9 +108,6 @@ export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragm
   frag.endPTS = endPTS;
   frag.minEndPTS = minEndPTS;
   frag.endDTS = endDTS;
-  frag.duration = parsedMediaDuration;
-
-  console.assert(frag.duration > 0, 'Fragment should have a positive duration', frag);
 
   const sn = frag.sn as number; // 'initSegment'
   // exit if sn out of range
