@@ -623,7 +623,7 @@ export default class StreamController extends BaseStreamController implements Ne
 
   _handleFragmentLoadProgress (data: FragLoadedData) {
     const { frag, part, payload } = data;
-    const { levels, media } = this;
+    const { levels } = this;
     if (!levels) {
       this.warn(`Levels were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
       return;
@@ -633,8 +633,8 @@ export default class StreamController extends BaseStreamController implements Ne
     console.assert(details, 'Audio track details are defined on fragment load progress');
     const videoCodec = currentLevel.videoCodec;
 
-    // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
-    const accurateTimeOffset = !(media?.seeking) && (details.PTSKnown || !details.live);
+    // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+    const accurateTimeOffset = details.PTSKnown || !details.live;
     const initSegmentData = details.initSegment?.data || new Uint8Array(0);
     const audioCodec = this._getAudioCodec(currentLevel);
 
