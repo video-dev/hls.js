@@ -312,7 +312,7 @@ git clone https://github.com/video-dev/hls.js.git
 # setup dev environment
 cd hls.js
 npm install
-# build dist/hls.js, watch file change for rebuild and launch demo page
+# runs dev-server for demo page (recompiles on file-watch, but doesn't write to actual dist fs artifacts)
 npm run dev
 # lint
 npm run lint
@@ -331,25 +331,25 @@ npm install
 
 ## Build system (Webpack)
 
-Build all flavors:
+Build all flavors (suitable for prod-mode/CI):
 ```
 npm install
 npm run build
 ```
 
-Only debug:
+Only debug-mode artifacts:
 ```
 npm run build:debug
 ```
 
-Build and watch
+Build and watch (customized dev setups where you'll want to host through another server than webpacks' - for example in a sub-module/project)
 ```
 npm run build:watch
 ```
 
 Only specific flavor (known configs are: debug, dist, light, light-dist, demo):
 ```
-npm run build -- --env.dist # replace "dist" by other configuration name, see above ^
+npm run build -- --env dist # replace "dist" by other configuration name, see above ^
 ```
 Note: The "demo" config is always built.
 
