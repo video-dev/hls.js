@@ -1,6 +1,8 @@
 import { fixLineBreaks } from './vttparser';
 import { CaptionScreen, Row } from './cea-608-parser';
 
+const WHITESPACE_CHAR = /\s/;
+
 export interface CuesInterface {
   newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[]
 }
@@ -23,7 +25,7 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
 
     if (!row.isEmpty()) {
       for (let c = 0; c < row.chars.length; c++) {
-        if (row.chars[c].uchar.match(/\s/) && indenting) {
+        if (WHITESPACE_CHAR.test(row.chars[c].uchar) && indenting) {
           indent++;
         } else {
           text += row.chars[c].uchar;
@@ -48,8 +50,10 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
 
       cue.line = r + 1;
       cue.align = 'left';
-      // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
-      cue.position = Math.max(0, Math.min(100, 100 * (indent / 32)));
+      // Clamp the position between 10 and 80 percent (CEA-608 PAC indent code)
+      // https://dvcs.w3.org/hg/text-tracks/raw-file/default/608toVTT/608toVTT.html#positioning-in-cea-608
+      // Firefox throws an exception and captions break with out of bounds 0-100 values
+      cue.position = 10 + Math.min(80, Math.floor(indent * 8 / 32) * 10);
       result.push(cue);
     }
   }
