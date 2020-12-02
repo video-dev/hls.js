@@ -109,9 +109,12 @@ export function parseWebVTT (
       cue.endTime += cueOffset - localTime;
     }
 
-    // Create a unique hash id for a cue based on start/end times and text.
+    // If the cue was not assigned an id from the VTT file (line above the content),
+    // then create a unique hash id for a cue based on start/end times.
     // This helps timeline-controller to avoid showing repeated captions.
-    cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);
+    if (!cue.id) {
+      cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);
+    }
 
     // Fix encoding of special characters
     cue.text = decodeURIComponent(encodeURIComponent(cue.text));
