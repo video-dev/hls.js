@@ -48,9 +48,7 @@ export default class StreamController extends BaseStreamController implements Ne
   private previouslyPaused: boolean = false;
   private immediateSwitch: boolean = false;
   private onvplaying: EventListener | null = null;
-  private onvseeking: EventListener | null = null;
   private onvseeked: EventListener | null = null;
-  private onvended: EventListener | null = null;
   private fragLastKbps: number = 0;
   private stalled: boolean = false;
   private audioCodecSwitch: boolean = false;
@@ -455,30 +453,17 @@ export default class StreamController extends BaseStreamController implements Ne
   }
 
   onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachedData) {
-    const media = this.media = this.mediaBuffer = data.media;
+    super.onMediaAttached(event, data);
+    const media = data.media;
     this.onvplaying = this.onMediaPlaying.bind(this);
-    this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvseeked = this.onMediaSeeked.bind(this);
-    this.onvended = this.onMediaEnded.bind(this);
     media.addEventListener('playing', this.onvplaying as EventListener);
-    media.addEventListener('seeking', this.onvseeking as EventListener);
     media.addEventListener('seeked', this.onvseeked as EventListener);
-    media.addEventListener('ended', this.onvended as EventListener);
-    const config = this.config;
-    if (this.levels && config.autoStartLoad) {
-      this.hls.startLoad(config.startPosition);
-    }
-
-    this.gapController = new GapController(config, media, this.fragmentTracker, this.hls);
+    this.gapController = new GapController(this.config, media, this.fragmentTracker, this.hls);
   }
 
   onMediaDetaching () {
     const { levels, media } = this;
-    if (media?.ended) {
-      this.log('MSE detaching and video ended, reset startPosition');
-      this.startPosition = this.lastCurrentTime = 0;
-    }
-
     // reset fragment backtracked flag
     if (levels) {
       levels.forEach(level => {
@@ -492,14 +477,11 @@ export default class StreamController extends BaseStreamController implements Ne
     // remove video listeners
     if (media) {
       media.removeEventListener('playing', this.onvplaying);
-      media.removeEventListener('seeking', this.onvseeking);
       media.removeEventListener('seeked', this.onvseeked);
-      media.removeEventListener('ended', this.onvended);
-      this.onvplaying = this.onvseeking = this.onvseeked = this.onvended = null;
+      this.onvplaying = this.onvseeked = null;
     }
-    this.media = this.mediaBuffer = null;
-    this.loadedmetadata = false;
-    this.stopLoad();
+
+    super.onMediaDetaching();
   }
 
   onMediaPlaying () {
