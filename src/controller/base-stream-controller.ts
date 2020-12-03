@@ -734,7 +734,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     Object.keys(frag.elementaryStreams).forEach(type => {
       const info = frag.elementaryStreams[type];
       if (info) {
-        const parsedDuration = info.startPTS - info.endPTS;
+        const parsedDuration = info.endPTS - info.startPTS;
         if (parsedDuration <= 0) {
           // Destroy the transmuxer after it's next time offset failed to advance because duration was <= 0.
           // The new transmuxer will be configured with a time offset matching the next fragment start, preventing the timeline from shifting.
