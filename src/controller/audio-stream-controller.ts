@@ -736,7 +736,7 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
   private completeAudioSwitch () {
     const { hls, media, trackId } = this;
     if (media) {
-      this.warn('Switching audio track : flushing all audio');
+      this.log('Switching audio track : flushing all audio');
       hls.trigger(Events.BUFFER_FLUSHING, {
         startOffset: 0,
         endOffset: Number.POSITIVE_INFINITY,
