@@ -111,7 +111,7 @@ export default class TransmuxerInterface {
     const trackSwitch = !(lastFrag && (chunkMeta.level === lastFrag.level));
     const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
     const partDiff = this.part ? (chunkMeta.part - this.part.index) : -1;
-    const contiguous = !discontinuity && !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
+    const contiguous = !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
     const now = self.performance.now();
 
     if (trackSwitch || snDiff || frag.stats.parsing.start === 0) {
@@ -120,7 +120,7 @@ export default class TransmuxerInterface {
     if (part && (partDiff || !contiguous)) {
       part.stats.parsing.start = now;
     }
-    if (!contiguous) {
+    if (!contiguous || discontinuity) {
       logger.log(`[transmuxer-interface, ${frag.type}]: Starting new transmux session for sn: ${chunkMeta.sn} p: ${chunkMeta.part} level: ${chunkMeta.level} id: ${chunkMeta.id}
         discontinuity: ${discontinuity}
         trackSwitch: ${trackSwitch}
