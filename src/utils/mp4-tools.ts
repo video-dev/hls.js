@@ -349,8 +349,8 @@ export function getStartDTS (initData: InitData, fmp4: Uint8Array): number {
  */
 export function getDuration (data: Uint8Array, initData: InitData) {
   let rawDuration = 0;
-  let totalDuration = 0;
   let videoDuration = 0;
+  let audioDuration = 0;
   const trafs = findBox(data, ['moof', 'traf']);
   for (let i = 0; i < trafs.length; i++) {
     const traf = trafs[i];
@@ -389,13 +389,14 @@ export function getDuration (data: Uint8Array, initData: InitData) {
       } else {
         rawDuration = computeRawDurationFromSamples(truns[j]);
       }
-      totalDuration += rawDuration / timescale;
       if (track.type === ElementaryStreamTypes.VIDEO) {
         videoDuration += rawDuration / timescale;
+      } else if (track.type === ElementaryStreamTypes.AUDIO) {
+        audioDuration += rawDuration / timescale;
       }
     }
   }
-  if (totalDuration === 0) {
+  if (videoDuration === 0 && audioDuration === 0) {
     // If duration samples are not available in the traf use sidx subsegment_duration
     const sidx = parseSegmentIndex(data);
     if (sidx?.references) {
@@ -403,10 +404,9 @@ export function getDuration (data: Uint8Array, initData: InitData) {
     }
   }
   if (videoDuration) {
-    // Only return duration of the video track. We don't want the combined duration of video and audio.
     return videoDuration;
   }
-  return totalDuration;
+  return audioDuration;
 }
 
 /*
