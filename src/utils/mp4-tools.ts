@@ -1,15 +1,21 @@
 import { sliceUint8 } from './typed-array';
 import { ElementaryStreamTypes } from '../loader/fragment';
 
+type Mp4BoxData = {
+  data: Uint8Array
+  start: number
+  end: number
+};
+
 const UINT32_MAX = Math.pow(2, 32) - 1;
 const push = [].push;
 
-export function bin2str (buffer): string {
+export function bin2str (buffer: Uint8Array): string {
   return String.fromCharCode.apply(null, buffer);
 }
 
-export function readUint16 (buffer, offset): number {
-  if (buffer.data) {
+export function readUint16 (buffer: Uint8Array | Mp4BoxData, offset: number): number {
+  if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
   }
@@ -20,8 +26,8 @@ export function readUint16 (buffer, offset): number {
   return val < 0 ? 65536 + val : val;
 }
 
-export function readUint32 (buffer, offset): number {
-  if (buffer.data) {
+export function readUint32 (buffer: Uint8Array | Mp4BoxData, offset: number): number {
+  if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
   }
@@ -33,8 +39,8 @@ export function readUint32 (buffer, offset): number {
   return val < 0 ? 4294967296 + val : val;
 }
 
-export function writeUint32 (buffer, offset, value) {
-  if (buffer.data) {
+export function writeUint32 (buffer: Uint8Array | Mp4BoxData, offset: number, value: number) {
+  if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
   }
@@ -45,12 +51,6 @@ export function writeUint32 (buffer, offset, value) {
 }
 
 // Find the data for a box specified by its path
-type Mp4BoxData = {
-  data: Uint8Array
-  start: number
-  end: number
-};
-
 export function findBox (input: Uint8Array | Mp4BoxData, path: Array<string>): Array<Mp4BoxData> {
   const results = [] as Array<Mp4BoxData>;
   if (!path.length) {
@@ -96,7 +96,16 @@ export function findBox (input: Uint8Array | Mp4BoxData, path: Array<string>): A
   return results;
 }
 
-export function parseSegmentIndex (initSegment) {
+type SidxInfo = {
+  earliestPresentationTime: number,
+  timescale: number,
+  version: number,
+  referencesCount: number,
+  references: any[],
+  moovEndOffset: number | null
+}
+
+export function parseSegmentIndex (initSegment: Uint8Array): SidxInfo | null {
   const moovBox = findBox(initSegment, ['moov']);
   const moov = moovBox ? moovBox[0] : null;
   const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
@@ -149,7 +158,7 @@ export function parseSegmentIndex (initSegment) {
     if (referenceType === 1) {
       // eslint-disable-next-line no-console
       console.warn('SIDX has hierarchical references (not supported)');
-      return;
+      return null;
     }
 
     const subsegmentDuration = readUint32(sidx, referenceIndex);
@@ -200,7 +209,7 @@ export function parseSegmentIndex (initSegment) {
  * moov > trak > mdia > mdhd.timescale
  * moov > trak > mdia > hdlr
  * ```
- * @param init {Uint8Array} the bytes of the init segment
+ * @param initSegment {Uint8Array} the bytes of the init segment
  * @return {InitData} a hash of track type to timescale values or null if
  * the init segment is malformed.
  */
@@ -221,7 +230,7 @@ export interface InitData extends Array<any> {
       duration: number;
       flags: number;
     }
-  };
+  } | undefined;
   audio?: InitDataTrack
   video?: InitDataTrack
 }
@@ -264,8 +273,9 @@ export function parseInitSegment (initSegment: Uint8Array): InitData {
   const trex = findBox(initSegment, ['moov', 'mvex', 'trex']);
   trex.forEach(trex => {
     const trackId = readUint32(trex, 4);
-    if (result[trackId]) {
-      result[trackId].default = {
+    const track = result[trackId];
+    if (track) {
+      track.default = {
         duration: readUint32(trex, 12),
         flags: readUint32(trex, 20)
       };
@@ -287,43 +297,41 @@ export function parseInitSegment (initSegment: Uint8Array): InitData {
  * ```
  * It requires the timescale value from the mdhd to interpret.
  *
- * @param timescale {object} a hash of track ids to timescale values.
+ * @param initData {InitData} a hash of track type to timescale values
+ * @param fmp4 {Uint8Array} the bytes of the mp4 fragment
  * @return {number} the earliest base media decode start time for the
  * fragment, in seconds
  */
-export function getStartDTS (initData, fragment) {
+export function getStartDTS (initData: InitData, fmp4: Uint8Array): number {
   // we need info from two children of each track fragment box
-  const trafs = findBox(fragment, ['moof', 'traf']);
-
-  // determine the start times for each track
-  const baseTimes = [].concat.apply([], trafs.map(function (traf) {
-    return findBox(traf, ['tfhd']).map(function (tfhd) {
+  return findBox(fmp4, ['moof', 'traf']).reduce((result: number | null, traf) => {
+    const tfdt = findBox(traf, ['tfdt'])[0];
+    const version = tfdt.data[tfdt.start];
+    const start = findBox(traf, ['tfhd']).reduce((result: number | null, tfhd) => {
       // get the track id from the tfhd
       const id = readUint32(tfhd, 4);
-      // assume a 90kHz clock if no timescale was specified
-      const scale = initData[id].timescale || 90e3;
-
-      // get the base media decode time from the tfdt
-      const baseTime = findBox(traf, ['tfdt']).map(function (tfdt) {
-        let result;
-
-        const version = tfdt.data[tfdt.start];
-        result = readUint32(tfdt, 4);
+      const track = initData[id];
+      if (track) {
+        let baseTime = readUint32(tfdt, 4);
         if (version === 1) {
-          result *= Math.pow(2, 32);
-
-          result += readUint32(tfdt, 8);
+          baseTime *= Math.pow(2, 32);
+          baseTime += readUint32(tfdt, 8);
         }
-        return result;
-      })[0];
-      // convert base time to seconds
-      return baseTime / scale;
-    });
-  }));
-
-  // return the minimum
-  const result = Math.min.apply(null, baseTimes);
-  return isFinite(result) ? result : 0;
+        // assume a 90kHz clock if no timescale was specified
+        const scale = track.timescale || 90e3;
+        // convert base time to seconds
+        const startTime = baseTime / scale;
+        if (isFinite(startTime) && (result === null || startTime < result)) {
+          return startTime;
+        }
+      }
+      return result;
+    }, null);
+    if (start !== null && isFinite(start) && (result === null || start < result)) {
+      return start;
+    }
+    return result;
+  }, null) || 0;
 }
 
 /*
@@ -354,10 +362,12 @@ export function getDuration (data: Uint8Array, initData: InitData) {
     // get the track id from the tfhd
     const id = readUint32(tfhd, 4);
     const track = initData[id];
-    const truns = findBox(traf, ['trun']);
-    const tfhdFlags = readUint32(tfhd, 0) | track.default?.flags!;
-
-    let sampleDuration: number | undefined = track.default?.duration;
+    if (!track) {
+      continue;
+    }
+    const trackDefault = track.default;
+    const tfhdFlags = readUint32(tfhd, 0) | trackDefault?.flags!;
+    let sampleDuration: number | undefined = trackDefault?.duration;
     if (tfhdFlags & 0x000008) {
       // 0x000008 indicates the presence of the default_sample_duration field
       if (tfhdFlags & 0x000002) {
@@ -369,7 +379,9 @@ export function getDuration (data: Uint8Array, initData: InitData) {
         sampleDuration = readUint32(tfhd, 8);
       }
     }
-
+    // assume a 90kHz clock if no timescale was specified
+    const timescale = track.timescale || 90e3;
+    const truns = findBox(traf, ['trun']);
     for (let j = 0; j < truns.length; j++) {
       if (sampleDuration) {
         const sampleCount = readUint32(truns[j], 4);
@@ -377,11 +389,9 @@ export function getDuration (data: Uint8Array, initData: InitData) {
       } else {
         rawDuration = computeRawDurationFromSamples(truns[j]);
       }
-
-      const scale = track.timescale || 90e3;
-      totalDuration += rawDuration / scale;
-      if (track && track.type === ElementaryStreamTypes.VIDEO) {
-        videoDuration += rawDuration / scale;
+      totalDuration += rawDuration / timescale;
+      if (track.type === ElementaryStreamTypes.VIDEO) {
+        videoDuration += rawDuration / timescale;
       }
     }
   }
@@ -458,16 +468,19 @@ export function computeRawDurationFromSamples (trun): number {
   return duration;
 }
 
-export function offsetStartDTS (initData, fragment, timeOffset) {
-  findBox(fragment, ['moof', 'traf']).map(function (traf) {
-    return findBox(traf, ['tfhd']).map(function (tfhd) {
+export function offsetStartDTS (initData: InitData, fmp4: Uint8Array, timeOffset: number) {
+  findBox(fmp4, ['moof', 'traf']).forEach(function (traf) {
+    findBox(traf, ['tfhd']).forEach(function (tfhd) {
       // get the track id from the tfhd
       const id = readUint32(tfhd, 4);
+      const track = initData[id];
+      if (!track) {
+        return;
+      }
       // assume a 90kHz clock if no timescale was specified
-      const timescale = initData[id].timescale || 90e3;
-
+      const timescale = track.timescale || 90e3;
       // get the base media decode time from the tfdt
-      findBox(traf, ['tfdt']).map(function (tfdt) {
+      findBox(traf, ['tfdt']).forEach(function (tfdt) {
         const version = tfdt.data[tfdt.start];
         let baseMediaDecodeTime = readUint32(tfdt, 4);
         if (version === 0) {
