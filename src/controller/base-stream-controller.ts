@@ -16,7 +16,14 @@ import FragmentLoader, {
   LoadError
 } from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
-import { BufferAppendingData, ErrorData, FragLoadedData, PartsLoadedData, KeyLoadedData } from '../types/events';
+import {
+  BufferAppendingData,
+  ErrorData,
+  FragLoadedData,
+  PartsLoadedData,
+  KeyLoadedData,
+  MediaAttachingData
+} from '../types/events';
 import { Level } from '../types/level';
 import { RemuxedTrack } from '../types/remuxer';
 import Hls from '../hls';
@@ -63,6 +70,8 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
   protected initPTS: Array<number> = [];
+  protected onvseeking: EventListener | null = null;
+  protected onvended: EventListener | null = null;
 
   protected readonly logPrefix: string = '';
   protected readonly log: (msg: any) => void;
@@ -118,6 +127,37 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       return fragState === FragmentState.PARTIAL || fragState === FragmentState.OK;
     }
     return false;
+  }
+
+  protected onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachingData) {
+    const media = this.media = this.mediaBuffer = data.media;
+    this.onvseeking = this.onMediaSeeking.bind(this);
+    this.onvended = this.onMediaEnded.bind(this);
+    media.addEventListener('seeking', this.onvseeking as EventListener);
+    media.addEventListener('ended', this.onvended as EventListener);
+    const config = this.config;
+    if (this.levels && config.autoStartLoad && this.state === State.STOPPED) {
+      this.startLoad(config.startPosition);
+    }
+  }
+
+  protected onMediaDetaching () {
+    const media = this.media;
+    if (media?.ended) {
+      this.log('MSE detaching and video ended, reset startPosition');
+      this.startPosition = this.lastCurrentTime = 0;
+    }
+
+    // remove video listeners
+    if (media) {
+      media.removeEventListener('seeking', this.onvseeking);
+      media.removeEventListener('ended', this.onvended);
+      this.onvseeking = this.onvended = null;
+    }
+    this.media = this.mediaBuffer = null;
+    this.loadedmetadata = false;
+    this.fragmentTracker.removeAllFragments();
+    this.stopLoad();
   }
 
   protected onMediaSeeking () {
