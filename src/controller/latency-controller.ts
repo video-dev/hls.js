@@ -70,6 +70,15 @@ export default class LatencyController implements ComponentAPI {
     return Math.max(levelDetails.age - maxLevelUpdateAge, 0);
   }
 
+  private get forwardBufferLength (): number {
+    const { media, levelDetails } = this;
+    if (!media || !levelDetails) {
+      return 0;
+    }
+    const bufferedRanges = media.buffered.length;
+    return bufferedRanges ? media.buffered.end(bufferedRanges - 1) : levelDetails.edge - this.currentTime;
+  }
+
   public destroy (): void {
     this.unregisterListeners();
     this.onMediaDetaching();
@@ -140,26 +149,25 @@ export default class LatencyController implements ComponentAPI {
     }
     this._latency = latency;
 
+    // Adapt playbackRate to meet target latency in low-latency mode
+    const { lowLatencyMode, maxLiveSyncPlaybackRate } = this.config;
+    if (!lowLatencyMode || maxLiveSyncPlaybackRate === 1) {
+      return;
+    }
     const targetLatency = this.targetLatency;
     if (targetLatency === null) {
       return;
     }
-    const { minLiveSyncPlaybackRate, maxLiveSyncPlaybackRate } = this.config;
-    if (minLiveSyncPlaybackRate === 1 && maxLiveSyncPlaybackRate === 1) {
-      return;
-    }
     const distanceFromTarget = latency - targetLatency;
-    if (distanceFromTarget && levelDetails.live) {
-      const distanceFromEdge = levelDetails.edge - this.currentTime;
-      const min = Math.min(1, Math.max(0.5, minLiveSyncPlaybackRate));
-      if (distanceFromEdge > 0.5) {
-        const max = Math.min(2, Math.max(1.0, maxLiveSyncPlaybackRate));
-        const rate = 2 / (1 + Math.exp(-0.75 * distanceFromTarget - this.edgeStalled));
-        media.playbackRate = Math.min(max, Math.max(min, rate));
-      } else {
-        media.playbackRate = Math.min(1, Math.max(min, media.playbackRate - 0.125));
-      }
-    } else if (media.playbackRate !== 1) {
+    // Only adjust playbackRate when within one target duration of targetLatency.
+    // Further back can be considered DVR playback.
+    const liveMinLatencyDuration = Math.min(this.maxLatency, targetLatency + levelDetails.targetduration);
+    const inLiveRange = distanceFromTarget < liveMinLatencyDuration;
+    if (levelDetails.live && inLiveRange && Math.abs(distanceFromTarget) > 0.05 && this.forwardBufferLength > 0.5) {
+      const max = Math.min(2, Math.max(1.0, maxLiveSyncPlaybackRate));
+      const rate = Math.round((2 / (1 + Math.exp(-0.75 * distanceFromTarget - this.edgeStalled))) * 20) / 20;
+      media.playbackRate = Math.min(max, Math.max(1, rate));
+    } else if (media.playbackRate !== 1 && media.playbackRate !== 0) {
       media.playbackRate = 1;
     }
   }

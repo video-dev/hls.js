@@ -18,7 +18,12 @@ interface TestLevelDetails extends LevelDetails { age: number, edge: number }
 describe('LatencyController', function () {
   let latencyController: LatencyController;
   let hls: Hls;
-  let media: { currentTime: number, playbackRate: number };
+  let media: {
+    currentTime: number,
+    playbackRate: number,
+    buffered: TimeRanges
+  };
+  let mockTimeRanges: [number, number][] = [];
   let levelDetails: TestLevelDetails;
 
   beforeEach(function () {
@@ -47,7 +52,18 @@ describe('LatencyController', function () {
     // @ts-ignore
     media = latencyController['media'] = {
       currentTime: 0,
-      playbackRate: 1
+      playbackRate: 1,
+      buffered: {
+        get length () {
+          return mockTimeRanges.length;
+        },
+        start (index) {
+          return mockTimeRanges[index][0];
+        },
+        end (index) {
+          return mockTimeRanges[index][1];
+        }
+      }
     };
     const currentTimeStub = sinon.stub(media, 'currentTime');
     currentTimeStub.get(() => currentTime);
@@ -229,14 +245,14 @@ describe('LatencyController', function () {
     });
   });
 
-  describe('when minLiveSyncPlaybackRate or maxLiveSyncPlaybackRate is set', function () {
+  describe('when maxLiveSyncPlaybackRate is set', function () {
     beforeEach(function () {
-      latencyController['config'].minLiveSyncPlaybackRate = 0.5;
       latencyController['config'].maxLiveSyncPlaybackRate = 2;
     });
 
     it('increases playbackRate when latency is greater than target latency on timeupdate', function () {
       levelDetails.edge = 12;
+      mockTimeRanges = [[0, 12]];
       levelDetails.holdBack = 6;
       media.currentTime = 6;
       expect(media.playbackRate).to.equal(1);
@@ -246,26 +262,6 @@ describe('LatencyController', function () {
       expect(media.playbackRate).to.be.within(1.6, 1.7);
       media.currentTime = 1;
       expect(media.playbackRate).to.be.within(1.9, 2);
-    });
-
-    it('decreases playbackRate when latency is less than target latency on timeupdate', function () {
-      levelDetails.edge = 12;
-      levelDetails.holdBack = 6;
-      media.currentTime = 6;
-      expect(media.playbackRate).to.equal(1);
-      media.currentTime = 7;
-      expect(media.playbackRate).to.be.within(0.6, 0.7);
-      media.currentTime = 8;
-      expect(media.playbackRate).to.equal(0.5);
-    });
-
-    it('decreases playbackRate when playback is at risk of stalling on timeupdate', function () {
-      levelDetails.edge = 12;
-      levelDetails.holdBack = 6;
-      media.currentTime = 11;
-      expect(media.playbackRate).to.equal(0.5);
-      levelDetails.age = 1;
-      expect(media.playbackRate).to.equal(0.5);
     });
 
     it('resets latency estimates when a new manifest is loading', function () {
