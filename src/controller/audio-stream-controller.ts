@@ -19,7 +19,6 @@ import type Hls from '../hls';
 import type LevelDetails from '../loader/level-details';
 import type { TrackSet } from '../types/track';
 import type {
-  MediaAttachingData,
   BufferCreatedData,
   AudioTracksUpdatedData,
   AudioTrackSwitchingData,
@@ -45,9 +44,6 @@ type WaitingForPTSData = {
 
 class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
   private retryDate: number = 0;
-  private onvseeking: EventListener | null = null;
-  private onvseeked: EventListener | null = null;
-  private onvended: EventListener | null = null;
   private videoBuffer: any | null = null;
   private videoTrackCC: number = -1;
   private waitingVideoCC: number = -1;
@@ -321,35 +317,9 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     }
   }
 
-  onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachingData) {
-    const media = this.media = this.mediaBuffer = data.media;
-    this.onvseeking = this.onMediaSeeking.bind(this);
-    this.onvended = this.onMediaEnded.bind(this);
-    media.addEventListener('seeking', this.onvseeking as EventListener);
-    media.addEventListener('ended', this.onvended as EventListener);
-    const config = this.config;
-    if (this.levels && config.autoStartLoad) {
-      this.startLoad(config.startPosition);
-    }
-  }
-
   onMediaDetaching () {
-    const media = this.media;
-    if (media?.ended) {
-      this.log('MSE detaching and video ended, reset startPosition');
-      this.startPosition = this.lastCurrentTime = 0;
-    }
-
-    // remove video listeners
-    if (media) {
-      media.removeEventListener('seeking', this.onvseeking);
-      media.removeEventListener('ended', this.onvended);
-      this.onvseeking = this.onvseeked = this.onvended = null;
-    }
-    this.media = this.mediaBuffer = this.videoBuffer = null;
-    this.loadedmetadata = false;
-    this.fragmentTracker.removeAllFragments();
-    this.stopLoad();
+    this.videoBuffer = null;
+    super.onMediaDetaching();
   }
 
   onAudioTracksUpdated (event: Events.AUDIO_TRACKS_UPDATED, { audioTracks }: AudioTracksUpdatedData) {
