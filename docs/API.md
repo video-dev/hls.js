@@ -40,7 +40,6 @@
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
-  - [`minLiveSyncPlaybackRate`](#minLiveSyncPlaybackRate)
   - [`maxLiveSyncPlaybackRate`](#maxLiveSyncPlaybackRate)
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`liveBackBufferLength`](#livebackbufferlength)
@@ -587,19 +586,12 @@ If set, this value must be stricly superior to `liveSyncDuration` which must be 
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
 
-### `minLiveSyncPlaybackRate`
-
-(default: `0.75` min: `0.5` max: `1`)
-
-Decrease `video.playbackRate` down to this value when latency falls below target (`liveSyncDuration(Count)` or manifest (PART-)HOLD-BACK) in a live stream.
-Set both `minLiveSyncPlaybackRate` and `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
-
 ### `maxLiveSyncPlaybackRate`
 
 (default: `1.5` min: `1` max: `2`)
 
 Increase `video.playbackRate` up to this value to catch up to target latency (`liveSyncDuration(Count)` or manifest (PART-)HOLD-BACK) in a live stream.
-Set both `minLiveSyncPlaybackRate` and `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
+Set `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
 
 ### `liveDurationInfinity`
 
