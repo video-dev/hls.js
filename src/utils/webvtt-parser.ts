@@ -153,7 +153,7 @@ export function parseWebVTT (
         });
         try {
           // Calculate subtitle offset in milliseconds.
-          if (syncPTS + ((vttCCs[cc].start * 90000) || 0) < 0) {
+          if (Math.abs(syncPTS - ((vttCCs[cc].start * 90000) || 0)) > 4294967296) {
             syncPTS += 8589934592;
           }
           // Adjust MPEGTS by sync PTS.
