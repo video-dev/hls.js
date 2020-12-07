@@ -159,11 +159,12 @@ export default class LatencyController implements ComponentAPI {
       return;
     }
     const distanceFromTarget = latency - targetLatency;
-    // Only adjust playbackRate when within one target duration of targetLatency.
-    // Further back can be considered DVR playback.
+    // Only adjust playbackRate when within one target duration of targetLatency
+    // and more than one second from under-buffering.
+    // Playback further than one target duration from target can be considered DVR playback.
     const liveMinLatencyDuration = Math.min(this.maxLatency, targetLatency + levelDetails.targetduration);
     const inLiveRange = distanceFromTarget < liveMinLatencyDuration;
-    if (levelDetails.live && inLiveRange && Math.abs(distanceFromTarget) > 0.05 && this.forwardBufferLength > 0.5) {
+    if (levelDetails.live && inLiveRange && distanceFromTarget > 0.05 && this.forwardBufferLength > 1) {
       const max = Math.min(2, Math.max(1.0, maxLiveSyncPlaybackRate));
       const rate = Math.round((2 / (1 + Math.exp(-0.75 * distanceFromTarget - this.edgeStalled))) * 20) / 20;
       media.playbackRate = Math.min(max, Math.max(1, rate));
