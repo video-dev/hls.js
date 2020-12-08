@@ -14,7 +14,7 @@ import LevelController from './controller/level-controller';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import { HlsConfig, hlsDefaultConfig, mergeConfig, setStreamingMode } from './config';
+import { HlsConfig, hlsDefaultConfig, mergeConfig } from './config';
 
 import { Events } from './events';
 import { EventEmitter } from 'eventemitter3';
@@ -648,10 +648,6 @@ export default class Hls implements HlsEventEmitter {
     return subtitleTrackController ? subtitleTrackController.subtitleTrack : -1;
   }
 
-  get progressive () {
-    return this.config.progressive;
-  }
-
   get media () {
     return this._media;
   }
@@ -684,14 +680,6 @@ export default class Hls implements HlsEventEmitter {
     if (subtitleTrackController) {
       subtitleTrackController.subtitleDisplay = value;
     }
-  }
-
-  /**
-   * Enable/disable streaming segment data with fetch loader
-   * @type {boolean}
-   */
-  set progressive (value) {
-    setStreamingMode(this.config, value);
   }
 
   /**
