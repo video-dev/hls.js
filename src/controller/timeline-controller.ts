@@ -35,6 +35,26 @@ type VTTCCs = {
   }
 };
 
+function canReuseVttTextTrack (inUseTrack, manifestTrack): boolean {
+  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
+}
+
+function intersection (x1: number, x2: number, y1: number, y2: number): number {
+  return Math.min(x2, y2) - Math.max(x1, y1);
+}
+
+function newVTTCCs (): VTTCCs {
+  return {
+    ccOffset: 0,
+    presentationOffset: 0,
+    0: {
+      start: 0,
+      prevCC: -1,
+      new: false
+    }
+  };
+}
+
 class TimelineController extends EventHandler {
   private media: HTMLMediaElement | null = null;
   private config: HlsConfig;
@@ -43,6 +63,7 @@ class TimelineController extends EventHandler {
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: Array<number> = [];
+  private timescale: Array<number> = [];
   private unparsedVttFrags: Array<{ frag: Fragment, payload: ArrayBuffer }> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
@@ -130,11 +151,12 @@ class TimelineController extends EventHandler {
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
-  onInitPtsFound (data: { id: string, frag: Fragment, initPTS: number}) {
-    const { frag, id, initPTS } = data;
+  onInitPtsFound (data: { id: string, frag: Fragment, initPTS: number, timescale: number}) {
+    const { frag, id, initPTS, timescale } = data;
     const { unparsedVttFrags } = this;
     if (id === 'main') {
       this.initPTS[frag.cc] = initPTS;
+      this.timescale[frag.cc] = timescale;
     }
 
     // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.
@@ -264,6 +286,7 @@ class TimelineController extends EventHandler {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
+    this.timescale = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
       this.cea608Parser1.reset();
       this.cea608Parser2.reset();
@@ -386,7 +409,7 @@ class TimelineController extends EventHandler {
       this.prevCC = frag.cc;
     }
     // Parse the WebVTT file contents.
-    WebVTTParser.parse(payload, this.initPTS[frag.cc], vttCCs, frag.cc, (cues) => {
+    WebVTTParser.parse(payload, this.initPTS[frag.cc], this.timescale[frag.cc], vttCCs, frag.cc, (cues) => {
       if (this.config.renderTextTracksNatively) {
         const currentTrack = textTracks[frag.level];
         // WebVTTParser.parse is an async method and if the currently selected text track mode is set to "disabled"
@@ -485,26 +508,6 @@ class TimelineController extends EventHandler {
     }
     return actualCCBytes;
   }
-}
-
-function canReuseVttTextTrack (inUseTrack, manifestTrack): boolean {
-  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
-}
-
-function intersection (x1: number, x2: number, y1: number, y2: number): number {
-  return Math.min(x2, y2) - Math.max(x1, y1);
-}
-
-function newVTTCCs (): VTTCCs {
-  return {
-    ccOffset: 0,
-    presentationOffset: 0,
-    0: {
-      start: 0,
-      prevCC: -1,
-      new: false
-    }
-  };
 }
 
 export default TimelineController;

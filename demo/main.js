@@ -8,7 +8,9 @@ const NETLIFY = __NETLIFY__; // replaced in build
 
 const STORAGE_KEYS = {
   Editor_Persistence: 'hlsjs:config-editor-persist',
-  Hls_Config: 'hlsjs:config'
+  Hls_Config: 'hlsjs:config',
+  volume: 'hlsjs:volume',
+  demo_tabs: 'hlsjs:demo-tabs'
 };
 
 const testStreams = require('../tests/test-streams');
@@ -173,27 +175,39 @@ $(document).ready(function () {
 
   const version = Hls.version;
   if (version) {
-    const $a = $('<a />').attr('target', '_blank').attr('href', getVersionLink(version)).text('v' + version);
+    const $a = $('<a />').attr('target', '_blank').attr('rel', 'noopener noreferrer').attr('href', getVersionLink(version)).text('v' + version);
     $('.title').append($a);
   }
 
   $('#streamURL').val(sourceURL);
 
-  video.volume = 0.05;
+  const volumeSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.volume)) || {
+    volume: 0.05,
+    muted: false
+  };
+  video.volume = volumeSettings.volume;
+  video.muted = volumeSettings.muted;
 
   $('.btn-dump').toggle(dumpfMP4);
   $('#toggleButtons').show();
-  toggleTab(document.querySelector('.demo-tab-btn'));
 
   $('#metricsButtonWindow').toggle(self.windowSliding);
   $('#metricsButtonFixed').toggle(!self.windowSliding);
 
   loadSelectedStream();
 
-  // Uncomment to show the second and third tabs under the first (Playback, Timeline, Quality-levels)
-  // toggleTab($('.demo-tab-btn')[1], true);
-  // toggleTab($('.demo-tab-btn')[2], true);
+  let tabIndexesCSV = localStorage.getItem(STORAGE_KEYS.demo_tabs);
+  if (tabIndexesCSV === null) {
+    tabIndexesCSV = '0,1,2';
+  }
+  if (tabIndexesCSV) {
+    tabIndexesCSV.split(',').forEach(indexString => {
+      toggleTab($('.demo-tab-btn')[parseInt(indexString) || 0], true);
+    });
+  }
 });
+
+
 
 function setupGlobals () {
   self.events = events = {
@@ -219,6 +233,7 @@ function setupGlobals () {
   self.createfMP4 = createfMP4;
   self.goToMetricsPermaLink = goToMetricsPermaLink;
   self.toggleTab = toggleTab;
+  self.toggleTabClick = toggleTabClick;
   self.applyConfigEditorValue = applyConfigEditorValue;
 }
 
@@ -766,6 +781,12 @@ function loadSelectedStream () {
   video.addEventListener('loadedmetadata', handleVideoEvent);
   video.addEventListener('loadeddata', handleVideoEvent);
   video.addEventListener('durationchange', handleVideoEvent);
+  video.addEventListener('volumechange', (evt) => {
+      localStorage.setItem(STORAGE_KEYS.volume, JSON.stringify({
+        muted: video.muted,
+        volume: video.volume
+      }));
+  });
 }
 
 function handleUnsupported () {
@@ -1461,10 +1482,18 @@ function hideAllTabs () {
   $('.demo-tab').hide();
 }
 
-function toggleTab (btn) {
+function toggleTabClick (btn) {
+  toggleTab(btn);
+  const tabIndexes = $('.demo-tab-btn').toArray()
+    .map((el, i) => $('#' + $(el).data('tab')).is(':visible') ? i : null)
+    .filter(i => i !== null);
+  localStorage.setItem(STORAGE_KEYS.demo_tabs, tabIndexes.join(','));
+}
+
+function toggleTab (btn, dontHideOpenTabs) {
   const tabElId = $(btn).data('tab');
   // eslint-disable-next-line no-restricted-globals
-  const modifierPressed = window.event && (window.event.metaKey || window.event.shiftKey);
+  const modifierPressed = dontHideOpenTabs || window.event && (window.event.metaKey || window.event.shiftKey);
   if (!modifierPressed) {
     hideAllTabs();
   }

@@ -1,7 +1,7 @@
-[![Build Status](https://api.travis-ci.org/video-dev/hls.js.svg?branch=master)](https://travis-ci.org/video-dev/hls.js)
 [![npm](https://img.shields.io/npm/v/hls.js.svg?style=flat)](https://npmjs.org/package/hls.js)
 [![npm](https://img.shields.io/npm/v/hls.js/alpha.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/alpha)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
+[![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
 
 [![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
 
@@ -68,9 +68,6 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
     var hls = new Hls();
     hls.loadSource(videoSrc);
     hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-      video.play();
-    });
   }
   // hls.js is not supported on platforms that do not have Media Source
   // Extensions (MSE) enabled.
@@ -87,9 +84,6 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
   // listened-for when the URL is not on the white-list is 'loadedmetadata'.
   else if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = videoSrc;
-    video.addEventListener('loadedmetadata', function() {
-      video.play();
-    });
   }
 </script>
 ```
@@ -117,9 +111,6 @@ see [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-67
   //
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = videoSrc;
-    video.addEventListener('loadedmetadata', function() {
-      video.play();
-    });
   //
   // If no native HLS support, check if hls.js is supported
   //
@@ -127,9 +118,6 @@ see [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-67
     var hls = new Hls();
     hls.loadSource(videoSrc);
     hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-      video.play();
-    });
   }
 </script>
 ```
@@ -312,7 +300,7 @@ git clone https://github.com/video-dev/hls.js.git
 # setup dev environment
 cd hls.js
 npm install
-# build dist/hls.js, watch file change for rebuild and launch demo page
+# runs dev-server for demo page (recompiles on file-watch, but doesn't write to actual dist fs artifacts)
 npm run dev
 # lint
 npm run lint
@@ -331,25 +319,25 @@ npm install
 
 ## Build system (Webpack)
 
-Build all flavors:
+Build all flavors (suitable for prod-mode/CI):
 ```
 npm install
 npm run build
 ```
 
-Only debug:
+Only debug-mode artifacts:
 ```
 npm run build:debug
 ```
 
-Build and watch
+Build and watch (customized dev setups where you'll want to host through another server than webpacks' - for example in a sub-module/project)
 ```
 npm run build:watch
 ```
 
 Only specific flavor (known configs are: debug, dist, light, light-dist, demo):
 ```
-npm run build -- --env.dist # replace "dist" by other configuration name, see above ^
+npm run build -- --env dist # replace "dist" by other configuration name, see above ^
 ```
 Note: The "demo" config is always built.
 
@@ -402,6 +390,7 @@ npm run test:func
 
 Click [here](/docs/design.md) for details.
 
-### Tested With
+### Test Status
 
-[<img src="https://cloud.githubusercontent.com/assets/7864462/12837037/452a17c6-cb73-11e5-9f39-fc96893bc9bf.png" alt="Browser Stack Logo" width="300">](https://www.browserstack.com/)
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/robwalch.svg)](https://saucelabs.com/u/robwalch)
+[![Testing Powered By SauceLabs](https://opensource.saucelabs.com/images/opensauce/powered-by-saucelabs-badge-gray.png?sanitize=true "Testing Powered By SauceLabs")](https://saucelabs.com)

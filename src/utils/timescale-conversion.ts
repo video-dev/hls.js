@@ -1,12 +1,12 @@
 const MPEG_TS_CLOCK_FREQ_HZ = 90000;
 
-export function toTimescaleFromScale (value, destScale: number, srcScale: number = 1, round: boolean = false): number {
-  return toTimescaleFromBase(value, destScale, 1 / srcScale);
-}
-
 export function toTimescaleFromBase (value, destScale: number, srcBase: number = 1, round: boolean = false): number {
   const result = value * destScale * srcBase; // equivalent to `(value * scale) / (1 / base)`
   return round ? Math.round(result) : result;
+}
+
+export function toTimescaleFromScale (value, destScale: number, srcScale: number = 1, round: boolean = false): number {
+  return toTimescaleFromBase(value, destScale, 1 / srcScale);
 }
 
 export function toMsFromMpegTsClock (value: number, round: boolean = false): number {

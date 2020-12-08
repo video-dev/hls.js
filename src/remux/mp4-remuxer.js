@@ -16,6 +16,8 @@ const MAX_SILENT_FRAME_DURATION_90KHZ = toMpegTsClockFromTimescale(10);
 const PTS_DTS_SHIFT_TOLERANCE_90KHZ = toMpegTsClockFromTimescale(0.2);
 
 let chromeVersion = null;
+let safariWebkitVersion = null;
+let requiresPositiveDts = false;
 
 class MP4Remuxer {
   constructor (observer, config, typeSupported, vendor) {
@@ -27,6 +29,11 @@ class MP4Remuxer {
       const result = navigator.userAgent.match(/Chrome\/(\d+)/i);
       chromeVersion = result ? parseInt(result[1]) : 0;
     }
+    if (safariWebkitVersion === null) {
+      const result = navigator.userAgent.match(/Safari\/(\d+)/i);
+      safariWebkitVersion = result ? parseInt(result[1]) : 0;
+    }
+    requiresPositiveDts = (chromeVersion && chromeVersion < 75) || (safariWebkitVersion && safariWebkitVersion < 600);
   }
 
   destroy () {
@@ -46,7 +53,7 @@ class MP4Remuxer {
       const delta = sample.pts - minPTS;
       if (delta < -4294967296) { // 2^32, see PTSNormalize for reasoning, but we're hitting a rollover here, and we don't want that to impact the timeOffset calculation
         rolloverDetected = true;
-        return minPTS;
+        return PTSNormalize(minPTS, sample.pts);
       } else if (delta > 0) {
         return minPTS;
       } else {
@@ -76,7 +83,7 @@ class MP4Remuxer {
         // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
         // drift between audio and video streams
         const startPTS = this.getVideoStartPts(videoTrack.samples);
-        const tsDelta = audioTrack.samples[0].pts - startPTS;
+        const tsDelta = PTSNormalize(audioTrack.samples[0].pts, startPTS) - startPTS;
         const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
         audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
         videoTimeOffset += Math.max(0, -audiovideoTimestampDelta);
@@ -190,13 +197,13 @@ class MP4Remuxer {
       if (computePTSDTS) {
         const startPTS = this.getVideoStartPts(videoSamples);
         const startOffset = Math.round(inputTimeScale * timeOffset);
-        initDTS = Math.min(initDTS, videoSamples[0].dts - startOffset);
+        initDTS = Math.min(initDTS, PTSNormalize(videoSamples[0].dts, startPTS) - startOffset);
         initPTS = Math.min(initPTS, startPTS - startOffset);
-        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
+        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, timescale: inputTimeScale });
       }
     } else if (computePTSDTS && tracks.audio) {
       // initPTS found for audio-only stream with main and alt audio
-      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
+      this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS, timescale: audioTrack.inputTimeScale });
     }
 
     if (Object.keys(tracks).length) {
@@ -279,12 +286,16 @@ class MP4Remuxer {
     if (ptsDtsShift < 0) {
       if (ptsDtsShift < averageSampleDuration * -2) {
         // Fix for "CNN special report, with CC" in test-streams (including Safari browser)
-        logger.warn(`PTS < DTS detected in video samples, offsetting DTS to PTS ${toMsFromMpegTsClock(-averageSampleDuration, true)} ms`);
+        // With large PTS < DTS errors such as this, we want to correct CTS while maintaining increasing DTS values
+        logger.warn(`PTS < DTS detected in video samples, offsetting DTS from PTS by ${toMsFromMpegTsClock(-averageSampleDuration, true)} ms`);
+        let lastDts = ptsDtsShift;
         for (let i = 0; i < nbSamples; i++) {
-          inputSamples[i].dts = inputSamples[i].pts - averageSampleDuration;
+          inputSamples[i].dts = lastDts = Math.max(lastDts, inputSamples[i].pts - averageSampleDuration);
+          inputSamples[i].pts = Math.max(lastDts, inputSamples[i].pts);
         }
       } else {
         // Fix for "Custom IV with bad PTS DTS" in test-streams
+        // With smaller PTS < DTS errors we can simply move all DTS back. This increases CTS without causing buffer gaps or decode errors in Safari
         logger.warn(`PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(ptsDtsShift, true)} ms to overcome this issue`);
         for (let i = 0; i < nbSamples; i++) {
           inputSamples[i].dts = inputSamples[i].dts + ptsDtsShift;
@@ -314,7 +325,7 @@ class MP4Remuxer {
       }
     }
 
-    if (chromeVersion && chromeVersion < 75) {
+    if (requiresPositiveDts) {
       firstDTS = Math.max(0, firstDTS);
     }
     let nbNalu = 0;
@@ -427,7 +438,7 @@ class MP4Remuxer {
     const dropped = track.dropped;
     track.nbNalu = 0;
     track.dropped = 0;
-    if (outputSamples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+    if (outputSamples.length && chromeVersion && chromeVersion < 70) {
       const flags = outputSamples[0].flags;
       // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
       // https://code.google.com/p/chromium/issues/detail?id=229412
