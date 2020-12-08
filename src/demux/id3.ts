@@ -191,13 +191,11 @@ export const getID3Frames = (id3Data: Uint8Array): Frame[] => {
 export const decodeFrame = (frame: RawFrame): Frame | undefined => {
   if (frame.type === 'PRIV') {
     return decodePrivFrame(frame);
-  } else if (frame.type[0] === 'T') {
-    return decodeTextFrame(frame);
   } else if (frame.type[0] === 'W') {
     return decodeURLFrame(frame);
   }
 
-  return undefined;
+  return decodeTextFrame(frame);
 };
 
 const decodePrivFrame = (frame: RawFrame): DecodedFrame<ArrayBuffer> | undefined => {
@@ -232,15 +230,14 @@ const decodeTextFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
     const value = utf8ArrayToStr(frame.data.subarray(index));
 
     return { key: frame.type, info: description, data: value };
-  } else {
-    /*
-    Format:
-    [0]   = {Text Encoding}
-    [1-?] = {Value}
-    */
-    const text = utf8ArrayToStr(frame.data.subarray(1));
-    return { key: frame.type, data: text };
   }
+  /*
+  Format:
+  [0]   = {Text Encoding}
+  [1-?] = {Value}
+  */
+  const text = utf8ArrayToStr(frame.data.subarray(1));
+  return { key: frame.type, data: text };
 };
 
 const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
@@ -261,14 +258,13 @@ const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
     const value: string = utf8ArrayToStr(frame.data.subarray(index));
 
     return { key: frame.type, info: description, data: value };
-  } else {
-    /*
-    Format:
-    [0-?] = {URL}
-    */
-    const url: string = utf8ArrayToStr(frame.data);
-    return { key: frame.type, data: url };
   }
+  /*
+  Format:
+  [0-?] = {URL}
+  */
+  const url: string = utf8ArrayToStr(frame.data);
+  return { key: frame.type, data: url };
 };
 
 const readTimeStamp = (timeStampFrame: DecodedFrame<ArrayBuffer>): number | undefined => {
