@@ -186,9 +186,9 @@ class ID3 {
       return ID3._decodePrivFrame(frame);
     } else if (frame.type[0] === 'W') {
       return ID3._decodeURLFrame(frame);
-    } else {
-      return ID3._decodeTextFrame(frame);
     }
+
+    return ID3._decodeTextFrame(frame);
   }
 
   static _readTimeStamp (timeStampFrame) {
