@@ -56,7 +56,7 @@ class PassThroughRemuxer {
     const inputTimeScale = track.timescale;
     const initPTS = track.initPTS;
     // consume samples
-    if (length && initPTS) {
+    if (length && initPTS !== undefined) {
       for (let index = 0; index < length; index++) {
         sample = track.samples[index];
         // setting text pts, dts to relative time
