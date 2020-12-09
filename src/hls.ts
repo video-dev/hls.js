@@ -14,7 +14,7 @@ import LevelController from './controller/level-controller';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import { HlsConfig, hlsDefaultConfig, mergeConfig } from './config';
+import { enableStreamingMode, HlsConfig, hlsDefaultConfig, mergeConfig } from './config';
 
 import { Events } from './events';
 import { EventEmitter } from 'eventemitter3';
@@ -105,6 +105,10 @@ export default class Hls implements HlsEventEmitter {
     enableLogs(config.debug);
 
     this._autoLevelCapping = -1;
+
+    if (config.progressive) {
+      enableStreamingMode(config);
+    }
 
     // core controllers and network loaders
     const abrController = this.abrController = new config.abrController(this); // eslint-disable-line new-cap

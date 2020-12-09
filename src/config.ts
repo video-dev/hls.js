@@ -297,24 +297,19 @@ export function mergeConfig (defaultConfig: HlsConfig, userConfig: Partial<HlsCo
   return Object.assign({}, defaultConfig, userConfig);
 }
 
-const canStreamProgressively = fetchSupported();
-export function setStreamingMode (config, allowProgressive) {
+export function enableStreamingMode (config) {
   const currentLoader = config.loader;
   if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
     // If a developer has configured their own loader, respect that choice
     logger.log('[config]: Custom loader detected, cannot enable progressive streaming');
     config.progressive = false;
-    return;
-  }
-
-  if (allowProgressive && canStreamProgressively) {
-    config.loader = FetchLoader;
-    config.progressive = true;
-    config.enableSoftwareAES = true;
-    logger.log('[config]: Progressive streaming enabled, using FetchLoader');
   } else {
-    config.loader = XhrLoader;
-    config.progressive = false;
-    logger.log('[config]: Progressive streaming disabled, using XhrLoader');
+    const canStreamProgressively = fetchSupported();
+    if (canStreamProgressively) {
+      config.loader = FetchLoader;
+      config.progressive = true;
+      config.enableSoftwareAES = true;
+      logger.log('[config]: Progressive streaming enabled, using FetchLoader');
+    }
   }
 }
