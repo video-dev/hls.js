@@ -4,5 +4,8 @@ updates:
     directory: '/'
     schedule:
       interval: daily
+    commit-message:
+      # prevent netlify build
+      prefix: "[skip ci]"
     open-pull-requests-limit: 99
     versioning-strategy: increase-if-necessary

@@ -81,7 +81,7 @@ class XhrLoader {
   }
 
   readystatechange (event) {
-    let xhr = event.currentTarget,
+    let xhr = this.loader,
       readyState = xhr.readyState,
       stats = this.stats,
       context = this.context,

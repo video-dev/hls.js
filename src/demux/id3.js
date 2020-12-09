@@ -184,13 +184,11 @@ class ID3 {
   static _decodeFrame (frame) {
     if (frame.type === 'PRIV') {
       return ID3._decodePrivFrame(frame);
-    } else if (frame.type[0] === 'T') {
-      return ID3._decodeTextFrame(frame);
     } else if (frame.type[0] === 'W') {
       return ID3._decodeURLFrame(frame);
     }
 
-    return undefined;
+    return ID3._decodeTextFrame(frame);
   }
 
   static _readTimeStamp (timeStampFrame) {

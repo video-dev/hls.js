@@ -149,7 +149,7 @@ export class TimelineChart {
         borderColor = 'rgba(160, 0, 160, 1.0)';
       }
       datasets.push(datasetWithDefaults({
-        url: Array.isArray(level.url) ? level.url[0] : level.url,
+        url: Array.isArray(level.url) ? level.url[level.urlId || 0] : level.url,
         trackType: 'level',
         borderColor,
         level: level.level
@@ -167,7 +167,7 @@ export class TimelineChart {
     audioTracks.forEach((track, i) => {
       labels.push(getAudioTrackName(track, i));
       datasets.push(datasetWithDefaults({
-        url: Array.isArray(track.url) ? track.url[0] : track.url,
+        url: track.url,
         trackType: 'audioTrack',
         borderColor: audioTrack === i ? 'rgba(32, 32, 240, 1.0)' : null,
         audioTrack: i
@@ -185,7 +185,7 @@ export class TimelineChart {
     subtitles.forEach((track, i) => {
       labels.push(getSubtitlesName(track, i));
       datasets.push(datasetWithDefaults({
-        url: Array.isArray(track.url) ? track.url[0] : track.url,
+        url: track.url,
         trackType: 'subtitleTrack',
         borderColor: subtitleTrack === i ? 'rgba(32, 32, 240, 1.0)' : null,
         subtitleTrack: i
