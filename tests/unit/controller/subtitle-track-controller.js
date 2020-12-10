@@ -18,7 +18,7 @@ describe('SubtitleTrackController', function () {
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = [{
+    subtitleTrackController.tracks = subtitleTrackController.tracksInGroup = [{
       id: 0,
       groupId: 'default-text-group',
       lang: 'en',
@@ -47,6 +47,9 @@ describe('SubtitleTrackController', function () {
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
+    textTrack1.groupId = 'default-text-group';
+    textTrack2.groupId = 'default-text-group';
+    subtitleTrackController.groupId = 'default-text-group';
 
     textTrack1.mode = 'disabled';
     textTrack2.mode = 'disabled';
@@ -62,7 +65,7 @@ describe('SubtitleTrackController', function () {
       expect(subtitleTrackController.subtitleTrack).to.equal(-1);
 
       videoElement.textTracks[0].mode = 'disabled';
-      subtitleTrackController._onTextTracksChanged();
+      subtitleTrackController.onTextTracksChanged();
 
       expect(subtitleTrackController.subtitleTrack).to.equal(-1);
     });
@@ -71,7 +74,7 @@ describe('SubtitleTrackController', function () {
       expect(subtitleTrackController.subtitleTrack).to.equal(-1);
 
       videoElement.textTracks[0].mode = 'hidden';
-      subtitleTrackController._onTextTracksChanged();
+      subtitleTrackController.onTextTracksChanged();
 
       expect(subtitleTrackController.subtitleTrack).to.equal(0);
     });
@@ -80,7 +83,7 @@ describe('SubtitleTrackController', function () {
       expect(subtitleTrackController.subtitleTrack).to.equal(-1);
 
       videoElement.textTracks[0].mode = 'showing';
-      subtitleTrackController._onTextTracksChanged();
+      subtitleTrackController.onTextTracksChanged();
 
       expect(subtitleTrackController.subtitleTrack).to.equal(0);
     });
@@ -181,18 +184,18 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = null;
     });
 
-    describe('_toggleTrackModes', function () {
+    describe('toggleTrackModes', function () {
       // This can be the case when setting the subtitleTrack before Hls.js attaches to the mediaElement
       it('should not throw an exception if trackId is out of the mediaElement text track bounds', function () {
         subtitleTrackController.trackId = 3;
-        subtitleTrackController._toggleTrackModes(1);
+        subtitleTrackController.toggleTrackModes(1);
       });
 
       it('should disable all textTracks if called with -1', function () {
         [].slice.call(videoElement.textTracks).forEach(t => {
           t.mode = 'showing';
         });
-        subtitleTrackController._toggleTrackModes(-1);
+        subtitleTrackController.toggleTrackModes(-1);
         [].slice.call(videoElement.textTracks).forEach(t => {
           expect(t.mode).to.equal('disabled');
         });
@@ -200,7 +203,7 @@ describe('SubtitleTrackController', function () {
 
       it('should not throw an exception if the mediaElement does not exist', function () {
         subtitleTrackController.media = null;
-        subtitleTrackController._toggleTrackModes(1);
+        subtitleTrackController.toggleTrackModes(1);
       });
     });
 

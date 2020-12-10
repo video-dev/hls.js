@@ -12,7 +12,8 @@ import {
   FragDecryptedData,
   MediaAttachingData,
   ManifestLoadedData,
-  InitPTSFoundData
+  InitPTSFoundData,
+  SubtitleTracksUpdatedData
 } from '../types/events';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
@@ -105,6 +106,7 @@ export class TimelineController implements ComponentAPI {
     hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.on(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
@@ -118,6 +120,7 @@ export class TimelineController implements ComponentAPI {
     hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.off(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
@@ -259,13 +262,21 @@ export class TimelineController implements ComponentAPI {
   }
 
   onManifestLoading () {
-    this.lastSn = -1; // Detect discontiguity in fragment parsing
+    this.lastSn = -1; // Detect discontinuity in fragment parsing
     this.prevCC = -1;
     this.vttCCs = newVTTCCs(); // Detect discontinuity in subtitle manifests
     this._cleanTracks();
     this.tracks = [];
     this.captionsTracks = {};
     this.nonNativeCaptionsTracks = {};
+    this.textTracks = [];
+    this.unparsedVttFrags = this.unparsedVttFrags || [];
+    this.initPTS = [];
+    this.timescale = [];
+    if (this.cea608Parser1 && this.cea608Parser2) {
+      this.cea608Parser1.reset();
+      this.cea608Parser2.reset();
+    }
   }
 
   _cleanTracks () {
@@ -282,17 +293,9 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
-  onManifestLoaded (event: Events.MANIFEST_LOADED, data: ManifestLoadedData) {
+  onSubtitleTracksUpdated (event: Events.SUBTITLE_TRACKS_UPDATED, data: SubtitleTracksUpdatedData) {
     this.textTracks = [];
-    this.unparsedVttFrags = this.unparsedVttFrags || [];
-    this.initPTS = [];
-    this.timescale = [];
-    if (this.cea608Parser1 && this.cea608Parser2) {
-      this.cea608Parser1.reset();
-      this.cea608Parser2.reset();
-    }
-
-    const tracks: Array<MediaPlaylist> = data.subtitles || [];
+    const tracks: Array<MediaPlaylist> = data.subtitleTracks || [];
     const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
     if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
       const sameTracks = this.tracks && tracks && this.tracks.length === tracks.length;
@@ -320,13 +323,10 @@ export class TimelineController implements ComponentAPI {
           }
           if (!textTrack) {
             textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+            (textTrack as any).groupId = track.groupId;
           }
           if (textTrack) {
-            if (track.default) {
-              textTrack.mode = this.hls.subtitleDisplay ? 'showing' : 'hidden';
-            } else {
-              textTrack.mode = 'disabled';
-            }
+            textTrack.mode = 'disabled';
             this.textTracks.push(textTrack);
           }
         });
@@ -343,7 +343,9 @@ export class TimelineController implements ComponentAPI {
         this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
       }
     }
+  }
 
+  onManifestLoaded (event: Events.MANIFEST_LOADED, data: ManifestLoadedData) {
     if (this.config.enableCEA708Captions && data.captions) {
       data.captions.forEach(captionsTrack => {
         const instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(captionsTrack.instreamId as string);
