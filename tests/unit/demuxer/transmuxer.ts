@@ -93,15 +93,9 @@ describe('TransmuxerInterface tests', function () {
     let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn, 0);
     transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, currentFrag, part, duration, accurateTimeOffset, chunkMeta);
 
-    expect(stub).to.have.been.calledTwice;
+    expect(stub).to.have.been.calledOnce;
     const firstCall = stub.args[0][0];
-    const secondCall = stub.args[1][0];
-    expect(firstCall, 'Configure call ' + JSON.stringify(firstCall, null, 2)).to.deep.equal({
-      cmd: 'configure',
-      config: new TransmuxConfig('', '', initSegmentData, 0),
-      state: new TransmuxState(false, false, true, false, 0)
-    });
-    expect(secondCall, 'Demux call 1' + JSON.stringify(secondCall, null, 2)).to.deep.equal({
+    expect(firstCall, 'Demux call 1' + JSON.stringify(firstCall, null, 2)).to.deep.equal({
       cmd: 'demux',
       data,
       decryptdata: currentFrag.decryptdata,
@@ -117,9 +111,9 @@ describe('TransmuxerInterface tests', function () {
     chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
     transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, currentFrag, part, duration, accurateTimeOffset, chunkMeta);
 
-    expect(stub).to.have.been.calledThrice;
-    const thirdCall = stub.args[2][0];
-    expect(thirdCall, 'Demux call 2' + JSON.stringify(thirdCall, null, 2)).to.deep.equal({
+    expect(stub).to.have.been.calledTwice;
+    const secondCall = stub.args[1][0];
+    expect(secondCall, 'Demux call 2' + JSON.stringify(secondCall, null, 2)).to.deep.equal({
       cmd: 'demux',
       data,
       decryptdata: newFrag.decryptdata,
