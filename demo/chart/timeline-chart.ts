@@ -436,9 +436,10 @@ export class TimelineChart {
     }
     this.removeType('textTrack');
     [].forEach.call(textTracks, (textTrack, i) => {
-      if (textTrack.kind === 'subtitles' || textTrack.kind === 'captions') {
-        return;
-      }
+      // Uncomment to disable rending of subtitle/caption cues in the timeline
+      // if (textTrack.kind === 'subtitles' || textTrack.kind === 'captions') {
+      //   return;
+      // }
       const data = [];
       labels.push(`${textTrack.name || textTrack.label} ${textTrack.kind} (${textTrack.mode})`);
       datasets.push(datasetWithDefaults({

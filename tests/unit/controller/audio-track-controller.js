@@ -2,7 +2,12 @@ import AudioTrackController from '../../../src/controller/audio-track-controller
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
 
-const sinon = require('sinon');
+import * as sinon from 'sinon';
+import * as chai from 'chai';
+import * as sinonChai from 'sinon-chai';
+
+chai.use(sinonChai);
+const expect = chai.expect;
 
 describe('AudioTrackController', function () {
   const tracks = [{
@@ -30,7 +35,7 @@ describe('AudioTrackController', function () {
     default: false,
     name: 'B'
   }, {
-    groupId: '3',
+    groupId: '2',
     id: 2,
     name: 'C'
   }];
@@ -38,9 +43,19 @@ describe('AudioTrackController', function () {
   let hls;
   let audioTrackController;
 
+  const levels = [
+    {
+      urlId: 1,
+      audioGroupIds: ['1', '2']
+    }
+  ];
+
   beforeEach(function () {
     hls = new Hls();
     audioTrackController = new AudioTrackController(hls);
+    hls.levelController = {
+      levels
+    };
   });
 
   afterEach(function () {
@@ -55,16 +70,23 @@ describe('AudioTrackController', function () {
     });
   });
 
-  describe('onManifestParsed', function () {
+  describe('onLevelLoading', function () {
     it('should set the audioTracks contained in the event data and trigger AUDIO_TRACKS_UPDATED', function (done) {
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
-        expect(data.audioTracks).to.equal(tracks);
+        expect(data.audioTracks).to.eql([
+          { groupId: '2', id: 0, default: true, name: 'A' },
+          { groupId: '2', id: 1, default: false, name: 'B' },
+          { groupId: '2', id: 2, name: 'C' }
+        ]);
         expect(audioTrackController.tracks).to.equal(tracks);
         done();
       });
 
       audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
         audioTracks: tracks
+      });
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+        level: 0
       });
     });
 
@@ -78,6 +100,9 @@ describe('AudioTrackController', function () {
       audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
         audioTracks: null
       });
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+        level: 0
+      });
     });
   });
 
@@ -86,22 +111,14 @@ describe('AudioTrackController', function () {
       done();
     });
 
-    const levels = [
-      {
-        urlId: 1,
-        audioGroupIds: ['1', '2']
-      }
-    ];
-
-    hls.levelController = {
-      levels
-    };
-
     const newLevelInfo = levels[0];
     const newGroupId = newLevelInfo.audioGroupIds[newLevelInfo.urlId];
 
-    audioTrackController.audioGroupId = '1';
     audioTrackController.tracks = tracks;
+    // Update the level to set audioGroupId
+    audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+      level: 0
+    });
     audioTrackController.audioTrack = 2;
 
     // current track name
@@ -126,20 +143,9 @@ describe('AudioTrackController', function () {
 
     it('should need loading because the track has not been loaded yet', function () {
       audioTrackController.canLoad = true;
-      expect(audioTrackController.shouldLoadTrack({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), 1).to.be.true;
-      expect(audioTrackController.shouldLoadTrack({ details: null, url: 'http://example.com/manifest.m3u8' }), 2).to.be.true;
-    });
-  });
+      expect(audioTrackController.shouldLoadTrack({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), 'track 1').to.be.true;
 
-  describe('onAudioTrackSwitched', function () {
-    it('should update the current audioGroupId', function () {
-      audioTrackController.tracks = tracks;
-      audioTrackController.audioGroupId = '2';
-      audioTrackController.onAudioTrackSwitched(Events.AUDIO_TRACK_SWITCHED, {
-        id: 1
-      });
-
-      expect(audioTrackController.audioGroupId).to.equal('1');
+      expect(audioTrackController.shouldLoadTrack({ details: null, url: 'http://example.com/manifest.m3u8' }), 'track 2').to.be.true;
     });
   });
 
@@ -149,17 +155,6 @@ describe('AudioTrackController', function () {
         done();
       });
 
-      const levels = [
-        {
-          urlId: 1,
-          audioGroupIds: ['1', '2']
-        }
-      ];
-
-      hls.levelController = {
-        levels
-      };
-
       const levelLoadedEvent = {
         level: 0
       };
@@ -167,8 +162,11 @@ describe('AudioTrackController', function () {
       const newLevelInfo = levels[levelLoadedEvent.level];
       const newGroupId = newLevelInfo.audioGroupIds[newLevelInfo.urlId];
 
-      audioTrackController.audioGroupId = '1'; // previous group ID
+      // audioTrackController.audioGroupId = '1'; // previous group ID
       audioTrackController.tracks = tracks;
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+        level: 0
+      });
       audioTrackController.audioTrack = 2;
 
       // current track name
@@ -282,21 +280,23 @@ describe('AudioTrackController', function () {
       const currentTrackId = 0;
       audioTrackController.trackId = currentTrackId;
       audioTrackController.tracks = [{
-        groupId: '1',
+        groupId: '2',
         id: 0,
         default: true,
         name: 'Alt'
       }, {
-        groupId: '1',
+        groupId: '2',
         id: 1,
         default: false,
         name: 'Alt'
       }, {
-        groupId: '1',
+        groupId: '2',
         id: 2,
         name: 'Alt'
       }];
-
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+        level: 0
+      });
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true

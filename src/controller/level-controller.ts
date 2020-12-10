@@ -16,7 +16,7 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
-import { addGroupId } from './level-helper';
+import { addGroupId, assignTrackIdsByGroup } from './level-helper';
 import Fragment from '../loader/fragment';
 import type { MediaPlaylist } from '../types/media-playlist';
 import BasePlaylistController from './base-playlist-controller';
@@ -128,14 +128,13 @@ export default class LevelController extends BasePlaylistController {
 
     if (data.audioTracks) {
       audioTracks = data.audioTracks.filter(track => !track.audioCodec || isCodecSupportedInMp4(track.audioCodec, 'audio'));
-      // Reassign id's after filtering since they're used as array indices
-      audioTracks.forEach((track, index) => {
-        track.id = index;
-      });
+      // Assign ids after filtering as array indices by group-id
+      assignTrackIdsByGroup(audioTracks);
     }
 
     if (data.subtitles) {
-      subtitleTracks = data.subtitles.map((track, index) => Object.assign({ id: index }, track));
+      subtitleTracks = data.subtitles;
+      assignTrackIdsByGroup(subtitleTracks);
     }
 
     if (levels.length > 0) {
