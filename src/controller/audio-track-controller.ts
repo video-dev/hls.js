@@ -101,6 +101,11 @@ class AudioTrackController extends BasePlaylistController {
       const audioTracks = this.tracks.filter((track): boolean =>
         !audioGroupId || track.groupId === audioGroupId);
 
+      // Disable selectDefaultTrack if there are no default tracks
+      if (this.selectDefaultTrack && !audioTracks.some(track => track.default)) {
+        this.selectDefaultTrack = false;
+      }
+
       this.tracksInGroup = audioTracks;
       const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks };
       this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
