@@ -81,7 +81,7 @@ class SubtitleTrackController extends TaskLoop {
      * @private
      * @member
      */
-    this._pendingTrackId = null;
+    this._pendingTextTracksChangedEvent = false;
   }
 
   doTick () {
@@ -255,7 +255,7 @@ class SubtitleTrackController extends TaskLoop {
    */
   /** select a subtitle track, based on its index in subtitle track lists**/
   set subtitleTrack (subtitleTrackId) {
-    if (this.trackId !== subtitleTrackId && this._pendingTrackId !== subtitleTrackId) {
+    if (this.trackId !== subtitleTrackId) {
       this._setSubtitleTrack(subtitleTrackId);
       this._selectDefaultTrack = false;
     }
@@ -363,9 +363,15 @@ class SubtitleTrackController extends TaskLoop {
     // and make sure that group-id is considered in toggling track modes.
     // Then, the new trackId MUST be set only after,
     // to allow _toggleTrackModes to differentiate old from new track state.
-    this._pendingTrackId = newId;
     this._subtitleGroupId = newId !== -1 ? tracks[newId].groupId : null;
-    this._toggleTrackModes(newId);
+    // this flag is to avoid that the setting of subtitleTrack
+    // from the native event handler that gets triggered
+    // from changing the mode programmatically (like from a UI change)
+    // causes us to reenter into this call (see setting `subtitleTrack` in
+    // _onTextTracksChanged handler)
+    if (!this._pendingTextTracksChangedEvent) {
+      this._toggleTrackModes(newId);
+    }
     this.trackId = newId;
     // It is intentional to emit SUBTITLE_TRACK_SWITCH
     // before SUBTITLE_TRACK_LOADING
@@ -376,10 +382,6 @@ class SubtitleTrackController extends TaskLoop {
   _onTextTracksChanged () {
     // Media is undefined when switching streams via loadSource()
     if (!this.media || !this.hls.config.renderTextTracksNatively) {
-      return;
-    }
-
-    if (this._pendingTrackId === null) {
       return;
     }
 
@@ -399,7 +401,9 @@ class SubtitleTrackController extends TaskLoop {
     }
 
     // Setting current subtitleTrack will invoke code.
+    this._pendingTextTracksChangedEvent = true;
     this.subtitleTrack = trackId;
+    this._pendingTextTracksChangedEvent = false;
   }
 
   /**
