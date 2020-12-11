@@ -42,7 +42,7 @@ export default class LevelController extends EventHandler {
     }
   }
 
-  startLoad () {
+  startLoad (changedUrlId = false) {
     let levels = this._levels;
 
     // enable loadLevel guard
@@ -57,7 +57,7 @@ export default class LevelController extends EventHandler {
     }
 
     // now call for loadLevel immediately
-    this.loadLevel();
+    this.loadLevel(changedUrlId);
   }
 
   stopLoad () {
@@ -187,7 +187,7 @@ export default class LevelController extends EventHandler {
     }
   }
 
-  _setLevelInternal (newLevelIdx) {
+  _setLevelInternal (newLevelIdx, changedUrlId = false) {
     logger.debug('_setLevelInternal', newLevelIdx, this._levels.length);
     const levels = this._levels;
     const hls = this.hls;
@@ -207,7 +207,7 @@ export default class LevelController extends EventHandler {
       return;
     }
 
-    if (this.currentLevelIndex !== newLevelIdx) {
+    if (changedUrlId || this.currentLevelIndex !== newLevelIdx) {
       logger.log(`switching to level ${newLevelIdx}`);
       this.currentLevelIndex = newLevelIdx;
       const levelProperties = levels[newLevelIdx];
@@ -219,7 +219,7 @@ export default class LevelController extends EventHandler {
     const levelDetails = level.details;
 
     // check if we need to load playlist for this level
-    if (!levelDetails || levelDetails.live) {
+    if (changedUrlId || !levelDetails || levelDetails.live) {
       // level not retrieved yet, or live playlist we need to (re)load it
       let urlId = level.urlId;
       hls.trigger(Event.LEVEL_LOADING, {
@@ -435,8 +435,9 @@ export default class LevelController extends EventHandler {
         urlId = 0;
       }
       if (urlId !== currentLevel.urlId) {
+        logger.info('switching level redundancy-URL index from', currentLevel.urlId, 'to', urlId);
         currentLevel.urlId = urlId;
-        this.startLoad();
+        this.startLoad(true);
       }
     }
   }
@@ -465,15 +466,15 @@ export default class LevelController extends EventHandler {
       }
       if (urlId !== currentLevel.urlId) {
         currentLevel.urlId = urlId;
-        this.startLoad();
+        this.startLoad(true);
       }
     }
   }
 
-  loadLevel () {
+  loadLevel (changedUrlId = false) {
     logger.debug('LevelController.loadLevel called');
     if (this.currentLevelIndex !== null && this.canload) {
-      this._setLevelInternal(this.currentLevelIndex);
+      this._setLevelInternal(this.currentLevelIndex, changedUrlId);
     }
   }
 
