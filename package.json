@@ -75,7 +75,7 @@
     "chai": "^4.2.0",
     "chart.js": "^2.9.3",
     "chartjs-plugin-zoom": "^0.7.5",
-    "chromedriver": "^86.0.0",
+    "chromedriver": "^87.0.4",
     "eslint": "^7.11.0",
     "eslint-config-standard": "^15.0.0",
     "eslint-plugin-import": "^2.22.1",
