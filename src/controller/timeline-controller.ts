@@ -323,10 +323,12 @@ export class TimelineController implements ComponentAPI {
           }
           if (!textTrack) {
             textTrack = this.createTextTrack('subtitles', track.name, track.lang);
-            (textTrack as any).groupId = track.groupId;
+            if (textTrack) {
+              textTrack.mode = 'disabled';
+            }
           }
           if (textTrack) {
-            textTrack.mode = 'disabled';
+            (textTrack as any).groupId = track.groupId;
             this.textTracks.push(textTrack);
           }
         });
