@@ -146,24 +146,18 @@ class SubtitleTrackController extends BasePlaylistController {
 
     const textGroupId = levelInfo.textGroupIds[levelInfo.urlId];
     if (this.groupId !== textGroupId) {
-      this.groupId = textGroupId;
+      const lastTrack = this.tracksInGroup ? this.tracksInGroup[this.trackId] : undefined;
+      const initialTrackId = this.findTrackId(lastTrack?.name) || this.findTrackId();
       const subtitleTracks = this.tracks.filter((track): boolean =>
         !textGroupId || track.groupId === textGroupId);
-
+      this.groupId = textGroupId;
       this.tracksInGroup = subtitleTracks;
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = { subtitleTracks };
       this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
-      this.selectInitialTrack();
-    }
-  }
-
-  private selectInitialTrack (): void {
-    const subtitleTracks = this.tracksInGroup;
-    const currentTrackName = subtitleTracks[this.trackId]?.name;
-    const trackId = this.findTrackId(currentTrackName) || this.findTrackId();
-    if (trackId !== -1) {
-      this.setSubtitleTrack(trackId);
+      if (initialTrackId !== -1) {
+        this.setSubtitleTrack(initialTrackId, lastTrack);
+      }
     }
   }
 
@@ -193,7 +187,8 @@ class SubtitleTrackController extends BasePlaylistController {
   /** select a subtitle track, based on its index in subtitle track lists**/
   set subtitleTrack (newId: number) {
     this.selectDefaultTrack = false;
-    this.setSubtitleTrack(newId);
+    const lastTrack = this.tracksInGroup ? this.tracksInGroup[this.trackId] : undefined;
+    this.setSubtitleTrack(newId, lastTrack);
   }
 
   protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters): void {
@@ -251,7 +246,7 @@ class SubtitleTrackController extends BasePlaylistController {
      * This method is responsible for validating the subtitle index and periodically reloading if live.
      * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
      */
-  private setSubtitleTrack (newId: number): void {
+  private setSubtitleTrack (newId: number, lastTrack: MediaPlaylist | undefined): void {
     const tracks = this.tracksInGroup;
 
     // setting this.subtitleTrack will trigger internal logic
@@ -275,7 +270,6 @@ class SubtitleTrackController extends BasePlaylistController {
     // stopping live reloading timer if any
     this.clearTimer();
 
-    const lastTrack = tracks[this.trackId];
     const track = tracks[newId];
     logger.log(`[subtitle-track-controller]: Switching to subtitle track ${newId}`);
     this.trackId = newId;
