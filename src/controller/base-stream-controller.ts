@@ -27,7 +27,7 @@ import {
 } from '../types/events';
 import type { Level } from '../types/level';
 import type { RemuxedTrack } from '../types/remuxer';
-import Hls from '../hls';
+import type Hls from '../hls';
 import Decrypter from '../crypt/decrypter';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';

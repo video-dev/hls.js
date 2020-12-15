@@ -11,7 +11,7 @@ import {
   AudioTrackLoadedData
 } from '../types/events';
 import BasePlaylistController from './base-playlist-controller';
-import Hls from '../hls';
+import type Hls from '../hls';
 import type { HlsUrlParameters } from '../types/level';
 
 /**

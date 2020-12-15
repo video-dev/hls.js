@@ -4,7 +4,7 @@
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import Hls from '../hls';
+import type Hls from '../hls';
 import Fragment from './fragment';
 import {
   LoaderStats,

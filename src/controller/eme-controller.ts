@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
 import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 import type { MediaKeyFunc } from '../utils/mediakeys-helper';
 import { KeySystems } from '../utils/mediakeys-helper';
-import Hls from '../hls';
+import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type { MediaAttachedData, ManifestParsedData } from '../types/events';
 

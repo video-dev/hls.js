@@ -1,7 +1,7 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
-import Hls from '../hls';
+import type Hls from '../hls';
 import type { MediaAttachingData } from '../types/events';
 import StreamController from './stream-controller';
 
