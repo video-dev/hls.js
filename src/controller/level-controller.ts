@@ -482,13 +482,20 @@ export default class LevelController extends BasePlaylistController {
   }
 
   removeLevel (levelIndex, urlId) {
+    const filterLevelAndGroupByIdIndex = (url, id) => id !== urlId;
     const levels = this._levels.filter((level, index) => {
       if (index !== levelIndex) {
         return true;
       }
 
       if (level.url.length > 1 && urlId !== undefined) {
-        level.url = level.url.filter((url, id) => id !== urlId);
+        level.url = level.url.filter(filterLevelAndGroupByIdIndex);
+        if (level.audioGroupIds) {
+          level.audioGroupIds = level.audioGroupIds.filter(filterLevelAndGroupByIdIndex);
+        }
+        if (level.textGroupIds) {
+          level.textGroupIds = level.textGroupIds.filter(filterLevelAndGroupByIdIndex);
+        }
         level.urlId = 0;
         return true;
       }
