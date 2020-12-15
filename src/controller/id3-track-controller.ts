@@ -3,7 +3,7 @@ import { sendAddTrackEvent, clearCurrentCues, getCuesInRange } from '../utils/te
 import * as ID3 from '../demux/id3';
 import type { BufferFlushingData, FragParsingMetadataData, MediaAttachedData } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
-import Hls from '../hls';
+import type Hls from '../hls';
 
 declare global {
   interface Window {

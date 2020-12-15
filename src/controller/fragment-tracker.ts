@@ -4,7 +4,7 @@ import type { SourceBufferName } from '../types/buffer';
 import type { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../types/fragment-tracker';
 import type { PlaylistLevelType } from '../types/loader';
 import type { ComponentAPI } from '../types/component-api';
-import Hls from '../hls';
+import type Hls from '../hls';
 import type { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
 
 export enum FragmentState {

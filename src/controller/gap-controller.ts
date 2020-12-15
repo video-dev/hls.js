@@ -3,7 +3,7 @@ import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { logger } from '../utils/logger';
-import Hls from '../hls';
+import type Hls from '../hls';
 import type { HlsConfig } from '../config';
 import type { FragmentTracker } from './fragment-tracker';
 import Fragment from '../loader/fragment';

@@ -20,7 +20,7 @@ import { addGroupId } from './level-helper';
 import Fragment from '../loader/fragment';
 import type { MediaPlaylist } from '../types/media-playlist';
 import BasePlaylistController from './base-playlist-controller';
-import Hls from '../hls';
+import type Hls from '../hls';
 
 const chromeOrFirefox: boolean = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 

@@ -14,7 +14,7 @@ import {
 } from '../types/buffer';
 import type { LevelUpdatedData, BufferAppendingData, MediaAttachingData, ManifestParsedData, BufferCodecsData, LevelPTSUpdatedData, BufferEOSData, BufferFlushingData, FragParsedData } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
-import Hls from '../hls';
+import type Hls from '../hls';
 
 const MediaSource = getMediaSource();
 

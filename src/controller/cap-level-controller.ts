@@ -7,7 +7,7 @@ import type { Level } from '../types/level';
 import type { ManifestParsedData, BufferCodecsData, MediaAttachingData, FPSDropLevelCappingData, LevelsUpdatedData } from '../types/events';
 import StreamController from './stream-controller';
 import type { ComponentAPI } from '../types/component-api';
-import Hls from '../hls';
+import type Hls from '../hls';
 
 class CapLevelController implements ComponentAPI {
   public autoLevelCapping: number;
