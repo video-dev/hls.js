@@ -2,8 +2,8 @@ import Transmuxer, { isPromise } from '../demux/transmuxer';
 import { Events } from '../events';
 import { enableLogs } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
-import { RemuxedTrack, RemuxerResult } from '../types/remuxer';
-import { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
+import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
+import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 
 export default function TransmuxerWorker (self) {
   const observer = new EventEmitter();

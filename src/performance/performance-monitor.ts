@@ -10,7 +10,7 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import Hls from '../hls';
-import { FragBufferedData } from '../types/events';
+import type { FragBufferedData } from '../types/events';
 
 export default class PerformanceMonitor {
   private hls: Hls;

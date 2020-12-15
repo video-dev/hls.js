@@ -2,7 +2,7 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { clearCurrentCues } from '../utils/texttrack-utils';
 import BasePlaylistController from './base-playlist-controller';
-import { HlsUrlParameters } from '../types/level';
+import type { HlsUrlParameters } from '../types/level';
 import type Hls from '../hls';
 import type {
   TrackLoadedData,

@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { LoaderCallbacks, LoaderContext, LoaderStats, Loader, LoaderConfiguration } from '../types/loader';
+import type { LoaderCallbacks, LoaderContext, LoaderStats, Loader, LoaderConfiguration } from '../types/loader';
 import LoadStats from '../loader/load-stats';
 
 class XhrLoader implements Loader<LoaderContext> {

@@ -1,4 +1,5 @@
-import { Events, HlsEventEmitter } from '../events';
+import type { HlsEventEmitter } from '../events';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
@@ -7,14 +8,14 @@ import TSDemuxer from '../demux/tsdemuxer';
 import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import { Demuxer } from '../types/demuxer';
-import { Remuxer } from '../types/remuxer';
-import { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
+import type { Demuxer } from '../types/demuxer';
+import type { Remuxer } from '../types/remuxer';
+import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import ChunkCache from './chunk-cache';
 import { appendUint8Array } from '../utils/mp4-tools';
 
 import { logger } from '../utils/logger';
-import { HlsConfig } from '../config';
+import type { HlsConfig } from '../config';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop

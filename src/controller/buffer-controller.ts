@@ -4,7 +4,7 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { BufferHelper } from '../utils/buffer-helper';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { ElementaryStreamTypes } from '../loader/fragment';
-import { TrackSet } from '../types/track';
+import type { TrackSet } from '../types/track';
 import BufferOperationQueue from './buffer-operation-queue';
 import {
   BufferOperation,
@@ -12,8 +12,8 @@ import {
   SourceBufferName,
   SourceBufferListeners
 } from '../types/buffer';
-import { LevelUpdatedData, BufferAppendingData, MediaAttachingData, ManifestParsedData, BufferCodecsData, LevelPTSUpdatedData, BufferEOSData, BufferFlushingData, FragParsedData } from '../types/events';
-import { ComponentAPI } from '../types/component-api';
+import type { LevelUpdatedData, BufferAppendingData, MediaAttachingData, ManifestParsedData, BufferCodecsData, LevelPTSUpdatedData, BufferEOSData, BufferFlushingData, FragParsedData } from '../types/events';
+import type { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
 const MediaSource = getMediaSource();
