@@ -1,11 +1,11 @@
 import { Events } from '../events';
 import Fragment, { Part } from '../loader/fragment';
-import { SourceBufferName } from '../types/buffer';
-import { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../types/fragment-tracker';
-import { PlaylistLevelType } from '../types/loader';
-import { ComponentAPI } from '../types/component-api';
+import type { SourceBufferName } from '../types/buffer';
+import type { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../types/fragment-tracker';
+import type { PlaylistLevelType } from '../types/loader';
+import type { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
-import { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
+import type { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
 
 export enum FragmentState {
   NOT_LOADED = 'NOT_LOADED',

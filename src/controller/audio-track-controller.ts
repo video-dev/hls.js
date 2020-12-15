@@ -1,7 +1,7 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { MediaPlaylist } from '../types/media-playlist';
+import type { MediaPlaylist } from '../types/media-playlist';
 import {
   TrackSwitchedData,
   ManifestParsedData,
@@ -12,7 +12,7 @@ import {
 } from '../types/events';
 import BasePlaylistController from './base-playlist-controller';
 import Hls from '../hls';
-import { HlsUrlParameters } from '../types/level';
+import type { HlsUrlParameters } from '../types/level';
 
 /**
  * @class AudioTrackController

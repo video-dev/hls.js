@@ -14,8 +14,8 @@ import {
   LoaderCallbacks,
   Loader, FragmentLoaderContext
 } from '../types/loader';
-import { ComponentAPI } from '../types/component-api';
-import { KeyLoadingData } from '../types/events';
+import type { ComponentAPI } from '../types/component-api';
+import type { KeyLoadingData } from '../types/events';
 
 interface KeyLoaderContext extends LoaderContext {
   frag: Fragment

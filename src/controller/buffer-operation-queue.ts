@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { BufferOperation, BufferOperationQueues, SourceBuffers, SourceBufferName } from '../types/buffer';
+import type { BufferOperation, BufferOperationQueues, SourceBuffers, SourceBufferName } from '../types/buffer';
 
 export default class BufferOperationQueue {
   private buffers: SourceBuffers;

@@ -10,14 +10,15 @@ import {
   FragLoadedData,
   ErrorData
 } from '../types/events';
-import { HlsUrlParameters, Level, LevelParsed } from '../types/level';
+import type { HlsUrlParameters, LevelParsed } from '../types/level';
+import { Level } from '../types/level';
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId } from './level-helper';
 import Fragment from '../loader/fragment';
-import { MediaPlaylist } from '../types/media-playlist';
+import type { MediaPlaylist } from '../types/media-playlist';
 import BasePlaylistController from './base-playlist-controller';
 import Hls from '../hls';
 

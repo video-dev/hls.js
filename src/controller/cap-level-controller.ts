@@ -3,10 +3,10 @@
 */
 
 import { Events } from '../events';
-import { Level } from '../types/level';
-import { ManifestParsedData, BufferCodecsData, MediaAttachingData, FPSDropLevelCappingData, LevelsUpdatedData } from '../types/events';
+import type { Level } from '../types/level';
+import type { ManifestParsedData, BufferCodecsData, MediaAttachingData, FPSDropLevelCappingData, LevelsUpdatedData } from '../types/events';
 import StreamController from './stream-controller';
-import { ComponentAPI } from '../types/component-api';
+import type { ComponentAPI } from '../types/component-api';
 import Hls from '../hls';
 
 class CapLevelController implements ComponentAPI {
