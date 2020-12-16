@@ -1,7 +1,5 @@
 import { Events } from '../events';
-import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import type { MediaPlaylist } from '../types/media-playlist';
 import {
   ManifestParsedData,
   AudioTracksUpdatedData,
@@ -10,11 +8,12 @@ import {
   AudioTrackLoadedData
 } from '../types/events';
 import BasePlaylistController from './base-playlist-controller';
+import { PlaylistContextType } from '../types/loader';
 import type Hls from '../hls';
 import type { HlsUrlParameters } from '../types/level';
+import type { MediaPlaylist } from '../types/media-playlist';
 
 class AudioTrackController extends BasePlaylistController {
-  private readonly restrictedTracks: { [key: number]: boolean } = Object.create(null);
   private tracks: MediaPlaylist[] = [];
   private groupId: string | null = null;
   private tracksInGroup: MediaPlaylist[] = [];
@@ -22,7 +21,7 @@ class AudioTrackController extends BasePlaylistController {
   private selectDefaultTrack: boolean = true;
 
   constructor (hls: Hls) {
-    super(hls);
+    super(hls, '[audio-track-controller]');
     this.registerListeners();
   }
 
@@ -66,13 +65,13 @@ class AudioTrackController extends BasePlaylistController {
     const currentTrack = this.tracksInGroup[id];
 
     if (!currentTrack) {
-      logger.warn('[audio-track-controller]: Invalid audio track id:', id);
+      this.warn(`Invalid audio track id ${id}`);
       return;
     }
 
     const curDetails = currentTrack.details;
     currentTrack.details = data.details;
-    logger.log(`[audio-track-controller]: audioTrack ${id} loaded [${details.startSN}-${details.endSN}]`);
+    this.log(`audioTrack ${id} loaded [${details.startSN}-${details.endSN}]`);
 
     if (id === this.trackId) {
       this.retryCount = 0;
@@ -115,51 +114,15 @@ class AudioTrackController extends BasePlaylistController {
   }
 
   protected onError (event: Events.ERROR, data: ErrorData): void {
-    if (data.fatal) {
-      if (data.type === ErrorTypes.NETWORK_ERROR) {
-        this.clearTimer();
-      }
+    super.onError(event, data);
+    if (data.fatal || !data.context) {
       return;
     }
 
-    switch (data.details) {
-    case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
-    case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
-      logger.warn(`[audio-track-controller]: Network error "${data.details}" data.details on audio-track id: ${data.context?.id}`);
-      if (data.context?.id === this.trackId) {
-        this.recoverTrack(data, this.trackId);
-      }
-      break;
-    }
-  }
-
-  private recoverTrack (errorEvent: ErrorData, trackId: number) {
-    // First, let's black list current track id
-    this.restrictedTracks[trackId] = true;
-
-    // Let's try to fall back on a functional audio-track with the same group ID
-    const track = this.tracksInGroup[trackId];
-    const { name, groupId } = track;
-
-    logger.warn(`[audio-track-controller]: Loading failed on audio track id: ${trackId}, group-id: ${groupId}, name/language: "${name}" / "${track.lang}"`);
-
-    // Find a non-blacklisted track ID with the same NAME
-    // At least a track that is not blacklisted, thus on another group-ID.
-    let newId = trackId;
-    for (let i = 0; i < this.tracks.length; i++) {
-      if (!this.restrictedTracks[i] && this.tracks[i].name === name) {
-        newId = i;
-        break;
-      }
-    }
-
-    if (newId === trackId) {
-      this.restrictedTracks[trackId] = false;
-      // perform retries
-      this.retryLoadingOrFail(errorEvent);
-    } else {
-      logger.log('[audio-track-controller]: Attempting audio-track fallback id:', newId, 'group-id:', this.tracks[newId].groupId);
-      this.setAudioTrack(newId);
+    if (data.context.type === PlaylistContextType.AUDIO_TRACK &&
+      data.context.id === this.trackId &&
+      data.context.groupId === this.groupId) {
+      this.retryLoadingOrFail(data);
     }
   }
 
@@ -186,7 +149,7 @@ class AudioTrackController extends BasePlaylistController {
 
     // check if level idx is valid
     if (newId < 0 || newId >= tracks.length) {
-      logger.warn('[audio-track-controller]: Invalid id passed to audio-track controller');
+      this.warn('Invalid id passed to audio-track controller');
       return;
     }
 
@@ -195,7 +158,7 @@ class AudioTrackController extends BasePlaylistController {
 
     const lastTrack = tracks[this.trackId];
     const track = tracks[newId];
-    logger.log(`[audio-track-controller]: Now switching to audio-track index ${newId}`);
+    this.log(`Now switching to audio-track index ${newId}`);
     this.trackId = newId;
     const { url, type, id } = track;
     this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
@@ -212,7 +175,7 @@ class AudioTrackController extends BasePlaylistController {
     if (trackId !== -1) {
       this.setAudioTrack(trackId);
     } else {
-      logger.error(`[audio-track-controller]: No track found for running audio group-ID: ${this.groupId}`);
+      this.warn(`No track found for running audio group-ID: ${this.groupId}`);
 
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
@@ -239,20 +202,22 @@ class AudioTrackController extends BasePlaylistController {
     const audioTrack = this.tracksInGroup[this.trackId];
     if (this.shouldLoadTrack(audioTrack)) {
       const id = audioTrack.id;
+      const groupId = audioTrack.groupId as string;
       let url = audioTrack.url;
       if (hlsUrlParameters) {
         try {
           url = hlsUrlParameters.addDirectives(url);
         } catch (error) {
-          logger.warn(`[audio-track-controller] Could not construct new URL with HLS Delivery Directives: ${error}`);
+          this.warn(`Could not construct new URL with HLS Delivery Directives: ${error}`);
         }
       }
       // track not retrieved yet, or live playlist we need to (re)load it
-      logger.log(`[audio-track-controller]: loading audio-track playlist for id: ${id}`);
+      this.log(`loading audio-track playlist for id: ${id}`);
       this.clearTimer();
       this.hls.trigger(Events.AUDIO_TRACK_LOADING, {
         url,
         id,
+        groupId,
         deliveryDirectives: hlsUrlParameters || null
       });
     }

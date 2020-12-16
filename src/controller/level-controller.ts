@@ -8,19 +8,19 @@ import {
   LevelLoadedData,
   TrackSwitchedData,
   FragLoadedData,
-  ErrorData
+  ErrorData, LevelSwitchingData
 } from '../types/events';
-import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import { Level } from '../types/level';
 import { Events } from '../events';
-import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, assignTrackIdsByGroup } from './level-helper';
 import Fragment from '../loader/fragment';
-import type { MediaPlaylist } from '../types/media-playlist';
 import BasePlaylistController from './base-playlist-controller';
+import { PlaylistContextType } from '../types/loader';
 import type Hls from '../hls';
+import type { HlsUrlParameters, LevelParsed } from '../types/level';
+import type { MediaPlaylist } from '../types/media-playlist';
 
 const chromeOrFirefox: boolean = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
@@ -34,7 +34,7 @@ export default class LevelController extends BasePlaylistController {
   public onParsedComplete!: Function;
 
   constructor (hls: Hls) {
-    super(hls);
+    super(hls, '[level-controller]');
     this._registerListeners();
   }
 
@@ -147,7 +147,7 @@ export default class LevelController extends BasePlaylistController {
       for (let i = 0; i < levels.length; i++) {
         if (levels[i].bitrate === bitrateStart) {
           this._firstLevel = i;
-          logger.log(`[level-controller]: manifest loaded, ${levels.length} level(s) found, first bitrate: ${bitrateStart}`);
+          this.log(`manifest loaded, ${levels.length} level(s) found, first bitrate: ${bitrateStart}`);
           break;
         }
       }
@@ -213,11 +213,18 @@ export default class LevelController extends BasePlaylistController {
     const lastLevelIndex = this.currentLevelIndex;
     const lastLevel = levels[lastLevelIndex];
     const level = levels[newLevel];
-    logger.log(`[level-controller]: switching to level ${newLevel} from ${lastLevelIndex}`);
+    this.log(`switching to level ${newLevel} from ${lastLevelIndex}`);
     this.currentLevelIndex = newLevel;
-    this.hls.trigger(Events.LEVEL_SWITCHING, Object.assign({}, level, {
-      level: newLevel
-    }));
+
+    const levelSwitchingData: LevelSwitchingData = Object.assign({}, level, {
+      level: newLevel,
+      maxBitrate: level.maxBitrate,
+      uri: level.uri,
+      urlId: level.urlId
+    });
+    // @ts-ignore
+    delete levelSwitchingData._urlId;
+    this.hls.trigger(Events.LEVEL_SWITCHING, levelSwitchingData);
     // check if we need to load playlist for this level
     const levelDetails = level.details;
     if (!levelDetails || levelDetails.live) {
@@ -270,10 +277,18 @@ export default class LevelController extends BasePlaylistController {
   }
 
   protected onError (event: Events.ERROR, data: ErrorData) {
+    super.onError(event, data);
     if (data.fatal) {
-      if (data.type === ErrorTypes.NETWORK_ERROR) {
-        this.clearTimer();
-      }
+      return;
+    }
+
+    // Switch to redundant level when track fails to load
+    const context = data.context;
+    const level = this._levels[this.currentLevelIndex];
+    if (context &&
+      ((context.type === PlaylistContextType.AUDIO_TRACK && level.audioGroupIds && context.groupId === level.audioGroupIds[level.urlId]) ||
+        (context.type === PlaylistContextType.SUBTITLE_TRACK && level.textGroupIds && context.groupId === level.textGroupIds[level.urlId]))) {
+      this.redundantFailover(this.currentLevelIndex);
       return;
     }
 
@@ -298,11 +313,11 @@ export default class LevelController extends BasePlaylistController {
     case ErrorDetails.LEVEL_LOAD_TIMEOUT:
       // Do not perform level switch if an error occurred using delivery directives
       // Attempt to reload level without directives first
-      if (data.context) {
-        if (data.context.deliveryDirectives) {
+      if (context) {
+        if (context.deliveryDirectives) {
           levelSwitch = false;
         }
-        levelIndex = data.context.level;
+        levelIndex = context.level;
       }
       levelError = true;
       break;
@@ -324,7 +339,6 @@ export default class LevelController extends BasePlaylistController {
   private recoverLevel (errorEvent: ErrorData, levelIndex: number, levelError: boolean, fragmentError: boolean, levelSwitch: boolean): void {
     const { details: errorDetails } = errorEvent;
     const level = this._levels[levelIndex];
-    let redundantLevels, nextLevel;
 
     level.loadError++;
     level.fragmentError = fragmentError;
@@ -343,34 +357,42 @@ export default class LevelController extends BasePlaylistController {
     // Try any redundant streams if available for both errors: level and fragment
     // If level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
     if (levelSwitch && (levelError || fragmentError)) {
-      redundantLevels = level.url.length;
+      const redundantLevels = level.url.length;
 
       if (redundantLevels > 1 && level.loadError < redundantLevels) {
-        level.urlId = (level.urlId + 1) % redundantLevels;
-        level.details = undefined;
-
-        logger.warn(`[level-controller]: ${errorDetails} for level ${levelIndex}: switching to redundant URL-id ${level.urlId}`);
-
-        // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
-        // console.log('New video quality level audio group id:', level.attrs.AUDIO);
+        this.redundantFailover(levelIndex);
       } else {
         // Search for available level
         if (this.manualLevelIndex === -1) {
           // When lowest level has been reached, let's start hunt from the top
-          nextLevel = (levelIndex === 0) ? this._levels.length - 1 : levelIndex - 1;
+          const nextLevel = (levelIndex === 0) ? this._levels.length - 1 : levelIndex - 1;
           if (this.currentLevelIndex !== nextLevel) {
             fragmentError = false;
-            logger.warn(`[level-controller]: ${errorDetails}: switch to ${nextLevel}`);
+            this.warn(`${errorDetails}: switch to ${nextLevel}`);
             this.hls.nextAutoLevel = this.currentLevelIndex = nextLevel;
           }
         }
         if (fragmentError) {
           // Allow fragment retry as long as configuration allows.
           // reset this._level so that another call to set level() will trigger again a frag load
-          logger.warn(`[level-controller]: ${errorDetails}: reload a fragment`);
+          this.warn(`${errorDetails}: reload a fragment`);
           this.currentLevelIndex = -1;
         }
       }
+    }
+  }
+
+  private redundantFailover (levelIndex: number) {
+    const level = this._levels[levelIndex];
+    const redundantLevels = level.url.length;
+    if (redundantLevels > 1) {
+      // Update the url id of all levels so that we stay on the same set of variants when level switching
+      const newUrlId = (level.urlId + 1) % redundantLevels;
+      this.warn(`Switching to redundant URL-id ${newUrlId}`);
+      this._levels.forEach(level => {
+        level.urlId = newUrlId;
+      });
+      this.level = levelIndex;
     }
   }
 
@@ -390,13 +412,13 @@ export default class LevelController extends BasePlaylistController {
     const curLevel = this._levels[level];
 
     if (!curLevel) {
-      logger.warn('[level-controller]: Invalid level index:', level);
+      this.warn(`Invalid level index ${level}`);
       if (data.deliveryDirectives?.skip) {
         details.deltaUpdateFailed = true;
       }
       return;
     }
-    logger.log(`[level-controller]: level ${level} loaded [${details.startSN}-${details.endSN}]`);
+    this.log(`level ${level} loaded [${details.startSN}-${details.endSN}]`);
 
     // only process level loaded events matching with expected level
     if (level === this.currentLevelIndex) {
@@ -446,11 +468,11 @@ export default class LevelController extends BasePlaylistController {
         try {
           url = hlsUrlParameters.addDirectives(url);
         } catch (error) {
-          logger.warn(`[level-controller] Could not construct new URL with HLS Delivery Directives: ${error}`);
+          this.warn(`Could not construct new URL with HLS Delivery Directives: ${error}`);
         }
       }
 
-      logger.log(`[level-controller]: Attempt loading level index ${level}${
+      this.log(`Attempt loading level index ${level}${
         hlsUrlParameters ? ' at sn ' + hlsUrlParameters.msn + ' part ' + hlsUrlParameters.part : ''
       } with URL-id ${id} ${url}`);
 

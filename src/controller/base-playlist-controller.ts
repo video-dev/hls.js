@@ -8,19 +8,31 @@ import type { MediaPlaylist } from '../types/media-playlist';
 import type { AudioTrackLoadedData, LevelLoadedData, TrackLoadedData } from '../types/events';
 import { ErrorData } from '../types/events';
 import * as LevelHelper from './level-helper';
+import { Events } from '../events';
+import { ErrorTypes } from '../errors';
 
 export default class BasePlaylistController implements NetworkComponentAPI {
   protected hls: Hls;
   protected timer: number = -1;
   protected canLoad: boolean = false;
   protected retryCount: number = 0;
+  protected readonly log: (msg: any) => void;
+  protected readonly warn: (msg: any) => void;
 
-  constructor (hls: Hls) {
+  constructor (hls: Hls, logPrefix: string) {
+    this.log = logger.log.bind(logger, `${logPrefix}:`);
+    this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
   }
 
   public destroy (): void {
     this.clearTimer();
+  }
+
+  protected onError (event: Events.ERROR, data: ErrorData): void {
+    if (data.fatal && data.type === ErrorTypes.NETWORK_ERROR) {
+      this.clearTimer();
+    }
   }
 
   protected clearTimer (): void {
@@ -79,7 +91,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     if (details.live || previousDetails?.live) {
       details.reloaded(previousDetails);
       if (previousDetails) {
-        logger.log(`[${this.constructor.name}] live playlist ${index} ${details.advanced ? ('REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex) : 'MISSED'}`);
+        this.log(`live playlist ${index} ${details.advanced ? ('REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex) : 'MISSED'}`);
       }
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
@@ -115,7 +127,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           if (previousDetails && currentGoal > previousDetails.tuneInGoal) {
             // If we attempted to get the next or latest playlist update, but currentGoal increased,
             // then we either can't catchup, or the "age" header cannot be trusted.
-            logger.warn(`[${this.constructor.name}] CDN Tune-in goal increased from: ${previousDetails.tuneInGoal} to: ${currentGoal} with playlist age: ${details.age}`);
+            this.warn(`CDN Tune-in goal increased from: ${previousDetails.tuneInGoal} to: ${currentGoal} with playlist age: ${details.age}`);
             currentGoal = 0;
           } else {
             const segments = Math.floor(currentGoal / details.targetduration);
@@ -124,7 +136,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
               const parts = Math.round((currentGoal % details.targetduration) / details.partTarget);
               part += parts;
             }
-            logger.log(`[${this.constructor.name}] CDN Tune-in age: ${details.ageHeader}s last advanced ${lastAdvanced.toFixed(2)}s goal: ${currentGoal} skip sn ${segments} to part ${part}`);
+            this.log(`CDN Tune-in age: ${details.ageHeader}s last advanced ${lastAdvanced.toFixed(2)}s goal: ${currentGoal} skip sn ${segments} to part ${part}`);
           }
           details.tuneInGoal = currentGoal;
         }
@@ -140,7 +152,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         return;
       }
       const reloadInterval = computeReloadInterval(details, stats);
-      logger.log(`[${this.constructor.name}] reload live playlist ${index} in ${Math.round(reloadInterval)} ms`);
+      this.log(`reload live playlist ${index} in ${Math.round(reloadInterval)} ms`);
       this.timer = self.setTimeout(() => this.loadPlaylist(), reloadInterval);
     } else {
       this.clearTimer();
@@ -154,17 +166,17 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       this.retryCount++;
       if (errorEvent.details.indexOf('LoadTimeOut') > -1 && errorEvent.context?.deliveryDirectives) {
         // The LL-HLS request already timed out so retry immediately
-        logger.warn(`[${this.constructor.name}]: retry playlist loading #${this.retryCount} after "${errorEvent.details}"`);
+        this.warn(`retry playlist loading #${this.retryCount} after "${errorEvent.details}"`);
         this.loadPlaylist();
       } else {
         // exponential backoff capped to max retry timeout
         const delay = Math.min(Math.pow(2, this.retryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
         // Schedule level/track reload
         this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
-        logger.warn(`[${this.constructor.name}]: retry playlist loading #${this.retryCount} in ${delay} ms after "${errorEvent.details}"`);
+        this.warn(`retry playlist loading #${this.retryCount} in ${delay} ms after "${errorEvent.details}"`);
       }
     } else {
-      logger.error(`${this.constructor.name}]: cannot recover from error "${errorEvent.details}"`);
+      this.warn(`cannot recover from error "${errorEvent.details}"`);
       // stopping live reloading timer if any
       this.clearTimer();
       // switch error to fatal

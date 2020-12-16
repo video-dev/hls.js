@@ -1,5 +1,4 @@
 import { Events } from '../events';
-import { logger } from '../utils/logger';
 import { clearCurrentCues } from '../utils/texttrack-utils';
 import BasePlaylistController from './base-playlist-controller';
 import type { HlsUrlParameters } from '../types/level';
@@ -11,7 +10,8 @@ import type {
   ManifestParsedData
 } from '../types/events';
 import type { MediaPlaylist } from '../types/media-playlist';
-import { LevelLoadingData } from '../types/events';
+import { ErrorData, LevelLoadingData } from '../types/events';
+import { PlaylistContextType } from '../types/loader';
 
 class SubtitleTrackController extends BasePlaylistController {
   private media: HTMLMediaElement | null = null;
@@ -28,7 +28,7 @@ class SubtitleTrackController extends BasePlaylistController {
   public subtitleDisplay: boolean = true; // Enable/disable subtitle display rendering
 
   constructor (hls: Hls) {
-    super(hls);
+    super(hls, '[subtitle-track-controller]');
     this.registerListeners();
   }
 
@@ -45,6 +45,7 @@ class SubtitleTrackController extends BasePlaylistController {
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
+    hls.on(Events.ERROR, this.onError, this);
   }
 
   private unregisterListeners () {
@@ -55,6 +56,7 @@ class SubtitleTrackController extends BasePlaylistController {
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.off(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
+    hls.off(Events.ERROR, this.onError, this);
   }
 
   // Listen for subtitle track change, then extract the current track ID.
@@ -124,15 +126,16 @@ class SubtitleTrackController extends BasePlaylistController {
     const currentTrack = this.tracksInGroup[trackId];
 
     if (!currentTrack) {
-      logger.warn('[subtitle-track-controller]: Invalid subtitle track id:', id);
+      this.warn(`Invalid subtitle track id ${id}`);
       return;
     }
 
     const curDetails = currentTrack.details;
     currentTrack.details = data.details;
-    logger.log(`[subtitle-track-controller]: subtitle track ${id} loaded [${details.startSN}-${details.endSN}]`);
+    this.log(`subtitle track ${id} loaded [${details.startSN}-${details.endSN}]`);
 
     if (id === this.trackId) {
+      this.retryCount = 0;
       this.playlistLoaded(id, data, curDetails);
     }
   }
@@ -174,6 +177,19 @@ class SubtitleTrackController extends BasePlaylistController {
     return -1;
   }
 
+  protected onError (event: Events.ERROR, data: ErrorData): void {
+    super.onError(event, data);
+    if (data.fatal || !data.context) {
+      return;
+    }
+
+    if (data.context.type === PlaylistContextType.SUBTITLE_TRACK &&
+      data.context.id === this.trackId &&
+      data.context.groupId === this.groupId) {
+      this.retryLoadingOrFail(data);
+    }
+  }
+
   /** get alternate subtitle tracks list from playlist **/
   get subtitleTracks (): MediaPlaylist[] {
     return this.tracksInGroup;
@@ -195,18 +211,20 @@ class SubtitleTrackController extends BasePlaylistController {
     const currentTrack = this.tracksInGroup[this.trackId];
     if (this.shouldLoadTrack(currentTrack)) {
       const id = currentTrack.id;
+      const groupId = currentTrack.groupId as string;
       let url = currentTrack.url;
       if (hlsUrlParameters) {
         try {
           url = hlsUrlParameters.addDirectives(url);
         } catch (error) {
-          logger.warn(`[subtitle-track-controller] Could not construct new URL with HLS Delivery Directives: ${error}`);
+          this.warn(`Could not construct new URL with HLS Delivery Directives: ${error}`);
         }
       }
-      logger.log(`[subtitle-track-controller]: Loading subtitle playlist for id ${id}`);
+      this.log(`Loading subtitle playlist for id ${id}`);
       this.hls.trigger(Events.SUBTITLE_TRACK_LOADING, {
         url,
         id,
+        groupId,
         deliveryDirectives: hlsUrlParameters || null
       });
     }
@@ -271,7 +289,7 @@ class SubtitleTrackController extends BasePlaylistController {
     this.clearTimer();
 
     const track = tracks[newId];
-    logger.log(`[subtitle-track-controller]: Switching to subtitle track ${newId}`);
+    this.log(`Switching to subtitle track ${newId}`);
     this.trackId = newId;
     if (track) {
       const { url, type, id } = track;

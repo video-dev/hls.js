@@ -127,6 +127,7 @@ class PlaylistLoader {
     this.checkAgeHeader = true;
     this.load({
       id: null,
+      groupId: null,
       level: 0,
       responseType: 'text',
       type: PlaylistContextType.MANIFEST,
@@ -139,6 +140,7 @@ class PlaylistLoader {
     const { id, level, url, deliveryDirectives } = data;
     this.load({
       id,
+      groupId: null,
       level,
       responseType: 'text',
       type: PlaylistContextType.LEVEL,
@@ -148,9 +150,10 @@ class PlaylistLoader {
   }
 
   private onAudioTrackLoading (event: Events.AUDIO_TRACK_LOADING, data: TrackLoadingData) {
-    const { id, url, deliveryDirectives } = data;
+    const { id, groupId, url, deliveryDirectives } = data;
     this.load({
       id,
+      groupId,
       level: null,
       responseType: 'text',
       type: PlaylistContextType.AUDIO_TRACK,
@@ -160,9 +163,10 @@ class PlaylistLoader {
   }
 
   private onSubtitleTrackLoading (event: Events.SUBTITLE_TRACK_LOADING, data: TrackLoadingData) {
-    const { id, url, deliveryDirectives } = data;
+    const { id, groupId, url, deliveryDirectives } = data;
     this.load({
       id,
+      groupId,
       level: null,
       responseType: 'text',
       type: PlaylistContextType.SUBTITLE_TRACK,
@@ -204,6 +208,7 @@ class PlaylistLoader {
       break;
     case PlaylistContextType.LEVEL:
     case PlaylistContextType.AUDIO_TRACK:
+    case PlaylistContextType.SUBTITLE_TRACK:
       // Manage retries in Level/Track Controller
       maxRetry = 0;
       timeout = config.levelLoadingTimeOut;
@@ -259,8 +264,8 @@ class PlaylistLoader {
 
   private loadsuccess (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any = null): void {
     if (context.isSidxRequest) {
-      this._handleSidxRequest(response, context);
-      this._handlePlaylistLoaded(response, stats, context, networkDetails);
+      this.handleSidxRequest(response, context);
+      this.handlePlaylistLoaded(response, stats, context, networkDetails);
       return;
     }
 
@@ -270,28 +275,28 @@ class PlaylistLoader {
 
     // Validate if it is an M3U8 at all
     if (string.indexOf('#EXTM3U') !== 0) {
-      this._handleManifestParsingError(response, context, 'no EXTM3U delimiter', networkDetails);
+      this.handleManifestParsingError(response, context, 'no EXTM3U delimiter', networkDetails);
       return;
     }
 
     stats.parsing.start = performance.now();
     // Check if chunk-list or master. handle empty chunk list case (first EXTINF not signaled, but TARGETDURATION present)
     if (string.indexOf('#EXTINF:') > 0 || string.indexOf('#EXT-X-TARGETDURATION:') > 0) {
-      this._handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
+      this.handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
     } else {
-      this._handleMasterPlaylist(response, stats, context, networkDetails);
+      this.handleMasterPlaylist(response, stats, context, networkDetails);
     }
   }
 
   private loaderror (response: LoaderResponse, context: PlaylistLoaderContext, networkDetails: any = null): void {
-    this._handleNetworkError(context, networkDetails, false, response);
+    this.handleNetworkError(context, networkDetails, false, response);
   }
 
   private loadtimeout (stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any = null): void {
-    this._handleNetworkError(context, networkDetails, true);
+    this.handleNetworkError(context, networkDetails, true);
   }
 
-  private _handleMasterPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
+  private handleMasterPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
     const hls = this.hls;
     const string = response.data as string;
 
@@ -299,7 +304,7 @@ class PlaylistLoader {
 
     const { levels, sessionData } = M3U8Parser.parseMasterPlaylist(string, url);
     if (!levels.length) {
-      this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
+      this.handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
       return;
     }
 
@@ -354,7 +359,7 @@ class PlaylistLoader {
     });
   }
 
-  private _handleTrackOrLevelPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
+  private handleTrackOrLevelPlaylist (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
     const hls = this.hls;
     const { id, level, type } = context;
 
@@ -414,6 +419,7 @@ class PlaylistLoader {
         level,
         levelDetails,
         id,
+        groupId: null,
         rangeStart: 0,
         rangeEnd: 2048,
         responseType: 'arraybuffer',
@@ -425,10 +431,10 @@ class PlaylistLoader {
     // extend the context with the new levelDetails property
     context.levelDetails = levelDetails;
 
-    this._handlePlaylistLoaded(response, stats, context, networkDetails);
+    this.handlePlaylistLoaded(response, stats, context, networkDetails);
   }
 
-  private _handleSidxRequest (response: LoaderResponse, context: PlaylistLoaderContext): void {
+  private handleSidxRequest (response: LoaderResponse, context: PlaylistLoaderContext): void {
     const sidxInfo = parseSegmentIndex(new Uint8Array(response.data as ArrayBuffer));
     // if provided fragment does not contain sidx, early return
     if (!sidxInfo) {
@@ -447,7 +453,7 @@ class PlaylistLoader {
     (levelDetails.initSegment as Fragment).setByteRange(String(sidxInfo.moovEndOffset) + '@0');
   }
 
-  private _handleManifestParsingError (response: LoaderResponse, context: PlaylistLoaderContext, reason: string, networkDetails: any): void {
+  private handleManifestParsingError (response: LoaderResponse, context: PlaylistLoaderContext, reason: string, networkDetails: any): void {
     this.hls.trigger(Events.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
@@ -460,10 +466,12 @@ class PlaylistLoader {
     });
   }
 
-  private _handleNetworkError (context, networkDetails, timeout = false, response?: LoaderResponse): void {
-    logger.info(`[playlist-loader]: A network error occurred while loading a ${context.type}-type playlist`);
-    let details;
-    let fatal;
+  private handleNetworkError (context: PlaylistLoaderContext, networkDetails: any, timeout = false, response?: LoaderResponse): void {
+    logger.warn(`[playlist-loader]: A network ${
+      timeout ? 'timeout' : 'error'
+    } occurred while loading ${context.type} level: ${context.level} id: ${context.id} group-id: "${context.groupId}"`);
+    let details = ErrorDetails.UNKNOWN;
+    let fatal = false;
 
     const loader = this.getInternalLoader(context);
 
@@ -480,9 +488,10 @@ class PlaylistLoader {
       details = (timeout ? ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT : ErrorDetails.AUDIO_TRACK_LOAD_ERROR);
       fatal = false;
       break;
-    default:
-      // details = ...?
+    case PlaylistContextType.SUBTITLE_TRACK:
+      details = (timeout ? ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT : ErrorDetails.SUBTITLE_LOAD_ERROR);
       fatal = false;
+      break;
     }
 
     if (loader) {
@@ -506,11 +515,11 @@ class PlaylistLoader {
     this.hls.trigger(Events.ERROR, errorData);
   }
 
-  private _handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
-    const { type, level, id, loader, levelDetails, deliveryDirectives } = context;
+  private handlePlaylistLoaded (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any): void {
+    const { type, level, id, groupId, loader, levelDetails, deliveryDirectives } = context;
 
     if (!levelDetails?.targetduration) {
-      this._handleManifestParsingError(response, context, 'invalid target duration', networkDetails);
+      this.handleManifestParsingError(response, context, 'invalid target duration', networkDetails);
       return;
     }
     if (!loader) {
@@ -539,6 +548,7 @@ class PlaylistLoader {
       this.hls.trigger(Events.AUDIO_TRACK_LOADED, {
         details: levelDetails,
         id: id || 0,
+        groupId: groupId || '',
         stats,
         networkDetails,
         deliveryDirectives
@@ -548,6 +558,7 @@ class PlaylistLoader {
       this.hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         details: levelDetails,
         id: id || 0,
+        groupId: groupId || '',
         stats,
         networkDetails,
         deliveryDirectives

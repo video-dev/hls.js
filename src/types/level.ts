@@ -97,10 +97,10 @@ export class Level {
   public realBitrate: number = 0;
   public textGroupIds?: string[];
   public url: string[];
-  public urlId: number = 0;
   public videoCodec?: string;
   public width: number;
   public unknownCodecs: string[] | undefined;
+  private _urlId: number = 0;
 
   constructor (data: LevelParsed) {
     this.url = [data.url];
@@ -121,6 +121,18 @@ export class Level {
   }
 
   get uri (): string {
-    return this.url[this.urlId] || '';
+    return this.url[this._urlId] || '';
+  }
+
+  get urlId (): number {
+    return this._urlId;
+  }
+
+  set urlId (value: number) {
+    const newValue = value % this.url.length;
+    if (this._urlId !== newValue) {
+      this.details = undefined;
+      this._urlId = newValue;
+    }
   }
 }

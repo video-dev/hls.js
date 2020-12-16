@@ -136,6 +136,7 @@ describe('SubtitleTrackController', function () {
       expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', {
         url: 'bar',
         id: 1,
+        groupId: 'default-text-group',
         deliveryDirectives: null
       });
     });
@@ -167,6 +168,7 @@ describe('SubtitleTrackController', function () {
       expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', {
         url: 'foo',
         id: 2,
+        groupId: 'default-text-group',
         deliveryDirectives: null
       });
     });
