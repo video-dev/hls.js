@@ -5,6 +5,7 @@ import { Events } from '../../../src/events';
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
+import { PlaylistContextType } from '../../../src/types/loader';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -162,7 +163,6 @@ describe('AudioTrackController', function () {
       const newLevelInfo = levels[levelLoadedEvent.level];
       const newGroupId = newLevelInfo.audioGroupIds[newLevelInfo.urlId];
 
-      // audioTrackController.audioGroupId = '1'; // previous group ID
       audioTrackController.tracks = tracks;
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0
@@ -253,97 +253,47 @@ describe('AudioTrackController', function () {
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR
       });
-
       expect(audioTrackController.timer).to.equal(1000);
+
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
         fatal: true
       });
-
       expect(audioTrackController.timer).to.equal(1000);
+
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: false
       });
-
       expect(audioTrackController.timer).to.equal(1000);
+
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
-
-      // fatal network error clears interval
       expect(audioTrackController.timer).to.equal(-1);
     });
 
-    it('should disable current track on network error, if a backup track is found (fallback mechanism)', function () {
-      const currentTrackId = 0;
-      audioTrackController.trackId = currentTrackId;
-      audioTrackController.tracks = [{
-        groupId: '2',
-        id: 0,
-        default: true,
-        name: 'Alt'
-      }, {
-        groupId: '2',
-        id: 1,
-        default: false,
-        name: 'Alt'
-      }, {
-        groupId: '2',
-        id: 2,
-        name: 'Alt'
-      }];
-      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
-        level: 0
-      });
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.MEDIA_ERROR,
-        fatal: true
-      });
-      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'does not disable track after media error').to.be.false;
-
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.NETWORK_ERROR,
-        fatal: true
-      });
-      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'does not disable track misc network error').to.be.false;
-
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.NETWORK_ERROR,
-        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: false,
-        context: { id: 0 }
-      });
-
-      const newTrackId = 1;
-      expect(audioTrackController.audioTrack, 'track index/id switches from 0 to 1').to.equal(newTrackId);
-      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'disables track after audio track loading network error').to.be.true;
-
-      audioTrackController.restrictedTracks[newTrackId] = false;
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.NETWORK_ERROR,
-        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT,
-        fatal: false,
-        context: { id: 1 }
-      });
-      expect(audioTrackController.audioTrack, 'track index/id switches from 1 to 2').to.equal(2);
-      expect(!!audioTrackController.restrictedTracks[newTrackId], 'disables track after audio track loading timeout error').to.be.true;
-    });
-
-    it('should not disable current track on network error, if a backup track is not found', function () {
+    it('should retry track loading if track has not changed', function () {
+      const retryLoadingOrFail = sinon.spy(audioTrackController, 'retryLoadingOrFail');
       const currentTrackId = 4;
+      const currentGroupId = 'aac';
       audioTrackController.trackId = currentTrackId;
+      audioTrackController.groupId = currentGroupId;
       audioTrackController.tracks = tracks;
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
         details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: false,
-        context: { id: 0 }
+        context: {
+          type: PlaylistContextType.AUDIO_TRACK,
+          id: currentTrackId,
+          groupId: currentGroupId
+        }
       });
       expect(audioTrackController.audioTrack, 'track index/id is not changed as there is no redundant track to choose from').to.equal(4);
-      expect(!!audioTrackController.restrictedTracks[currentTrackId], 'disables track after audio track loading network error').to.be.false;
+      expect(retryLoadingOrFail).to.have.been.calledOnce;
     });
   });
 });

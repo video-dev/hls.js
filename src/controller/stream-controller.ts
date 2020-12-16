@@ -56,10 +56,8 @@ export default class StreamController extends BaseStreamController implements Ne
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
 
-  protected readonly logPrefix = '[stream-controller]';
-
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker);
+    super(hls, fragmentTracker, '[stream-controller]');
     this.fragmentLoader = new FragmentLoader(hls.config);
     this.state = State.STOPPED;
 
@@ -614,7 +612,10 @@ export default class StreamController extends BaseStreamController implements Ne
     }
     const currentLevel = levels[frag.level];
     const details = currentLevel.details as LevelDetails;
-    console.assert(details, 'Audio track details are defined on fragment load progress');
+    if (!details) {
+      this.warn(`Dropping fragment ${frag.sn} of level ${frag.level} after level details were reset`);
+      return;
+    }
     const videoCodec = currentLevel.videoCodec;
 
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)

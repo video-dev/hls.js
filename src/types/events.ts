@@ -92,7 +92,7 @@ export interface ManifestParsedData {
   altAudio: boolean
 }
 
-export interface LevelSwitchingData extends Level {
+export interface LevelSwitchingData extends Omit<Level, '_urlId'> {
   level: number;
 }
 
@@ -102,24 +102,34 @@ export interface LevelSwitchedData {
 
 export interface TrackLoadingData {
   id: number
+  groupId: string
   url: string
   deliveryDirectives: HlsUrlParameters | null
 }
 
-export interface LevelLoadingData extends TrackLoadingData {
+export interface LevelLoadingData {
+  id: number
   level: number
+  url: string
+  deliveryDirectives: HlsUrlParameters | null
 }
 
 export interface TrackLoadedData {
   details: LevelDetails
   id: number
+  groupId: string
   networkDetails: any
   stats: LoaderStats
   deliveryDirectives: HlsUrlParameters | null
 }
 
-export interface LevelLoadedData extends TrackLoadedData {
+export interface LevelLoadedData {
+  details: LevelDetails
+  id: number
   level: number
+  networkDetails: any
+  stats: LoaderStats
+  deliveryDirectives: HlsUrlParameters | null
 }
 
 export interface LevelUpdatedData {
