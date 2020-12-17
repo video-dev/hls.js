@@ -2,6 +2,8 @@ import VTTParser from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
 import { toMpegTsClockFromTimescale } from './timescale-conversion';
 
+const PTS_MAX = 8589934592; // 2^33
+
 // String.prototype.startsWith is not supported in IE11
 const startsWith = function (inputString, searchString, position) {
   return inputString.substr(position || 0, searchString.length) === searchString;
@@ -100,6 +102,12 @@ const WebVTTParser = {
         cueOffset = presentationTime - vttCCs.presentationOffset;
       }
 
+      // Calculate how many times the mpegts clock has rolled over
+      let numberOfRollovers = (cue.startTime * timescale / PTS_MAX) | 0;
+      // Adjust offset for any rollover(s)
+      let rolloverOffset = (numberOfRollovers * PTS_MAX) / timescale;
+      cueOffset -= rolloverOffset;
+
       if (timestampMap) {
         cue.startTime += cueOffset - localTime;
         cue.endTime += cueOffset - localTime;
@@ -147,7 +155,7 @@ const WebVTTParser = {
           try {
             // Calculate subtitle offset in milliseconds.
             if (syncPTS + ((vttCCs[cc].start * 90000) || 0) < 0) {
-              syncPTS += 8589934592;
+              syncPTS += PTS_MAX;
             }
             // Adjust MPEGTS by sync PTS.
             mpegTs -= syncPTS;
