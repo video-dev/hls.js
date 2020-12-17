@@ -21,7 +21,6 @@ const browserConfig = {
  * @type {webdriver.ThenableWebDriver}
  */
 let browser;
-let stream;
 const printDebugLogs = false;
 
 // Setup browser config data from env vars
@@ -311,9 +310,6 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   before(async function () {
     // high timeout because sometimes getSession() takes a while
     this.timeout(100000);
-    if (!stream) {
-      throw new Error('Stream not defined');
-    }
 
     const labelBranch = process.env.GITHUB_REF || 'unknown';
     const capabilities = {
@@ -435,8 +431,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     }
   });
 
-  for (const name in streams) {
-    stream = streams[name];
+  Object.entries(streams).filter(([name, stream]) => !stream.skipFunctionalTests).forEach(([name, stream]) => {
     const url = stream.url;
     const config = stream.config || {};
     if (
@@ -484,5 +479,5 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
       }
     }
-  }
+  });
 });

@@ -147,6 +147,8 @@ export interface PlaylistLoaderContext extends LoaderContext {
   level: number | null
   // level or track id from LevelLoadingData / TrackLoadingData
   id: number | null
+  // track group id
+  groupId: string | null
   // defines if the loader is handling a sidx request for the playlist
   isSidxRequest?: boolean
   // internal representation of a parsed m3u8 level playlist

@@ -54,10 +54,8 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
 
-  protected readonly logPrefix = '[audio-stream-controller]';
-
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker);
+    super(hls, fragmentTracker, '[audio-stream-controller]');
     this.fragmentLoader = new FragmentLoader(hls.config);
 
     this._registerListeners();
@@ -545,10 +543,10 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     case ErrorDetails.KEY_LOAD_ERROR:
     case ErrorDetails.KEY_LOAD_TIMEOUT:
       //  when in ERROR state, don't switch back to IDLE state in case a non-fatal error is received
-      if (this.state !== State.ERROR) {
+      if (this.state !== State.ERROR && this.state !== State.STOPPED) {
         // if fatal error, stop processing, otherwise move to IDLE to retry loading
         this.state = data.fatal ? State.ERROR : State.IDLE;
-        this.warn(`${data.details} while loading frag, now switching to ${this.state} state ...`);
+        this.warn(`${data.details} while loading frag, switching to ${this.state} state`);
       }
       break;
     case ErrorDetails.BUFFER_FULL_ERROR:
