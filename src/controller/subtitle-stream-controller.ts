@@ -34,7 +34,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
   private tracksBuffered: Array<TimeRange[]>;
 
   constructor (hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker);
+    super(hls, fragmentTracker, '[subtitle-stream-controller]');
     this.config = hls.config;
     this.fragCurrent = null;
     this.fragPrevious = null;

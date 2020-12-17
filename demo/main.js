@@ -1399,13 +1399,11 @@ function addChartEventListeners (hls) {
     chart.reset();
   }, chart);
   hls.on(Hls.Events.MANIFEST_LOADED, (eventName, data) => {
-    const { levels, audioTracks, subtitles = [] } = data;
+    const { levels } = data;
     chart.removeType('level');
     chart.removeType('audioTrack');
     chart.removeType('subtitleTrack');
     chart.updateLevels(levels);
-    chart.updateAudioTracks(audioTracks);
-    chart.updateSubtitleTracks(subtitles);
   }, chart);
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);

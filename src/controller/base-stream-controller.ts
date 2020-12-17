@@ -74,14 +74,15 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   protected onvseeking: EventListener | null = null;
   protected onvended: EventListener | null = null;
 
-  protected readonly logPrefix: string = '';
+  private readonly logPrefix: string = '';
   protected readonly log: (msg: any) => void;
   protected readonly warn: (msg: any) => void;
 
-  constructor (hls: Hls, fragmentTracker: FragmentTracker) {
+  constructor (hls: Hls, fragmentTracker: FragmentTracker, logPrefix: string) {
     super();
-    this.log = logger.log.bind(logger, `${this.logPrefix}:`);
-    this.warn = logger.warn.bind(logger, `${this.logPrefix}:`);
+    this.logPrefix = logPrefix;
+    this.log = logger.log.bind(logger, `${logPrefix}:`);
+    this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
