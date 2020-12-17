@@ -6,8 +6,8 @@
 import { logger } from '../utils/logger';
 import Fragment, { Part } from '../loader/fragment';
 import LevelDetails from '../loader/level-details';
-import { Level } from '../types/level';
-import { LoaderStats } from '../types/loader';
+import type { Level } from '../types/level';
+import type { LoaderStats } from '../types/loader';
 
 type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;

@@ -1,7 +1,7 @@
 import LevelDetails from '../loader/level-details';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
-import { ErrorData, LevelUpdatedData, MediaAttachingData } from '../types/events';
+import type { ErrorData, LevelUpdatedData, MediaAttachingData } from '../types/events';
 import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';

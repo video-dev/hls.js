@@ -4,7 +4,8 @@
  */
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { Events, HlsEventEmitter } from '../events';
+import type { HlsEventEmitter } from '../events';
+import { Events } from '../events';
 import type { DemuxedAudioTrack, AppendedAudioFrame } from '../types/demuxer';
 
 type AudioConfig = {

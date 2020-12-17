@@ -1,8 +1,8 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
-import { ComponentAPI } from '../types/component-api';
-import Hls from '../hls';
-import { MediaAttachingData } from '../types/events';
+import type { ComponentAPI } from '../types/component-api';
+import type Hls from '../hls';
+import type { MediaAttachingData } from '../types/events';
 import StreamController from './stream-controller';
 
 class FPSController implements ComponentAPI {

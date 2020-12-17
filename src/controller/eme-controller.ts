@@ -7,11 +7,12 @@ import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 import { logger } from '../utils/logger';
-import { DRMSystemOptions, EMEControllerConfig } from '../config';
-import { KeySystems, MediaKeyFunc } from '../utils/mediakeys-helper';
-import Hls from '../hls';
-import { ComponentAPI } from '../types/component-api';
-import { MediaAttachedData, ManifestParsedData } from '../types/events';
+import type { DRMSystemOptions, EMEControllerConfig } from '../config';
+import type { MediaKeyFunc } from '../utils/mediakeys-helper';
+import { KeySystems } from '../utils/mediakeys-helper';
+import type Hls from '../hls';
+import type { ComponentAPI } from '../types/component-api';
+import type { MediaAttachedData, ManifestParsedData } from '../types/events';
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 

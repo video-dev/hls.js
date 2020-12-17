@@ -1,9 +1,9 @@
 import { Events } from '../events';
 import { sendAddTrackEvent, clearCurrentCues, getCuesInRange } from '../utils/texttrack-utils';
 import * as ID3 from '../demux/id3';
-import { BufferFlushingData, FragParsingMetadataData, MediaAttachedData } from '../types/events';
-import { ComponentAPI } from '../types/component-api';
-import Hls from '../hls';
+import type { BufferFlushingData, FragParsingMetadataData, MediaAttachedData } from '../types/events';
+import type { ComponentAPI } from '../types/component-api';
+import type Hls from '../hls';
 
 declare global {
   interface Window {

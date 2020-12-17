@@ -1,4 +1,5 @@
-import { getDuration, getStartDTS, offsetStartDTS, parseInitSegment, InitData } from '../utils/mp4-tools';
+import type { InitData } from '../utils/mp4-tools';
+import { getDuration, getStartDTS, offsetStartDTS, parseInitSegment } from '../utils/mp4-tools';
 import { logger } from '../utils/logger';
 import type { TrackSet } from '../types/track';
 import type { InitSegmentData, RemuxedTrack, Remuxer, RemuxerResult } from '../types/remuxer';

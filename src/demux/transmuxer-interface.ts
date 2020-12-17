@@ -6,7 +6,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { EventEmitter } from 'eventemitter3';
 import Fragment, { Part } from '../loader/fragment';
-import { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
+import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type Hls from '../hls';
 import type { HlsEventEmitter } from '../events';
 import type { PlaylistLevelType } from '../types/loader';
