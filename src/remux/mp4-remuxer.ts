@@ -1,6 +1,7 @@
 import AAC from './aac-helper';
 import MP4 from './mp4-generator';
-import { Events, HlsEventEmitter } from '../events';
+import type { HlsEventEmitter } from '../events';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import {
@@ -11,11 +12,11 @@ import {
   RemuxedTrack,
   RemuxedUserdata
 } from '../types/remuxer';
-import { AvcSample, DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../types/demuxer';
-import { TrackSet } from '../types/track';
-import { SourceBufferName } from '../types/buffer';
+import type { AvcSample, DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack } from '../types/demuxer';
+import type { TrackSet } from '../types/track';
+import type { SourceBufferName } from '../types/buffer';
 import Fragment from '../loader/fragment';
-import { HlsConfig } from '../config';
+import type { HlsConfig } from '../config';
 import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds

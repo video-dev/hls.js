@@ -6,10 +6,11 @@ import LevelKey from './level-key';
 
 import AttrList from '../utils/attr-list';
 import { logger } from '../utils/logger';
-import { isCodecType, CodecType } from '../utils/codecs';
-import { MediaPlaylist, AudioGroup, MediaPlaylistType } from '../types/media-playlist';
-import { PlaylistLevelType } from '../types/loader';
-import { LevelAttributes, LevelParsed } from '../types/level';
+import type { CodecType } from '../utils/codecs';
+import { isCodecType } from '../utils/codecs';
+import type { MediaPlaylist, AudioGroup, MediaPlaylistType } from '../types/media-playlist';
+import type { PlaylistLevelType } from '../types/loader';
+import type { LevelAttributes, LevelParsed } from '../types/level';
 
 type M3U8ParserFragments = Array<Fragment | null>;
 

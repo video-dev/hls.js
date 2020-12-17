@@ -1,10 +1,11 @@
-import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
+import type { BufferInfo } from '../utils/buffer-helper';
+import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { logger } from '../utils/logger';
-import Hls from '../hls';
-import { HlsConfig } from '../config';
-import { FragmentTracker } from './fragment-tracker';
+import type Hls from '../hls';
+import type { HlsConfig } from '../config';
+import type { FragmentTracker } from './fragment-tracker';
 import Fragment from '../loader/fragment';
 
 export const STALL_MINIMUM_DURATION_MS = 250;

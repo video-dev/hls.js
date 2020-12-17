@@ -1,5 +1,5 @@
-import Hls from '../hls';
-import { NetworkComponentAPI } from '../types/component-api';
+import type Hls from '../hls';
+import type { NetworkComponentAPI } from '../types/component-api';
 import { getSkipValue, HlsSkip, HlsUrlParameters } from '../types/level';
 import { computeReloadInterval } from './level-helper';
 import { logger } from '../utils/logger';

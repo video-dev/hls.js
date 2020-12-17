@@ -1,5 +1,6 @@
 import TaskLoop from '../task-loop';
-import { FragmentState, FragmentTracker } from './fragment-tracker';
+import type { FragmentTracker } from './fragment-tracker';
+import { FragmentState } from './fragment-tracker';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
@@ -24,13 +25,13 @@ import {
   KeyLoadedData,
   MediaAttachingData
 } from '../types/events';
-import { Level } from '../types/level';
-import { RemuxedTrack } from '../types/remuxer';
-import Hls from '../hls';
+import type { Level } from '../types/level';
+import type { RemuxedTrack } from '../types/remuxer';
+import type Hls from '../hls';
 import Decrypter from '../crypt/decrypter';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
-import { NetworkComponentAPI } from '../types/component-api';
+import type { NetworkComponentAPI } from '../types/component-api';
 import TimeRanges from '../utils/time-ranges';
 
 export const State = {

@@ -5,8 +5,8 @@ import BaseAudioDemuxer from './base-audio-demuxer';
 import * as ADTS from './adts';
 import { logger } from '../utils/logger';
 import * as ID3 from '../demux/id3';
-import { HlsEventEmitter } from '../events';
-import { HlsConfig } from '../config';
+import type { HlsEventEmitter } from '../events';
+import type { HlsConfig } from '../config';
 
 class AACDemuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;

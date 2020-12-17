@@ -11,12 +11,14 @@ import { logger } from '../utils/logger';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 
 import type { Bufferable } from '../utils/buffer-helper';
+// eslint-disable-next-line import/no-duplicates
 import type Fragment from '../loader/fragment';
+// eslint-disable-next-line import/no-duplicates
+import type { Part } from '../loader/fragment';
 import type { LoaderStats } from '../types/loader';
 import type Hls from '../hls';
 import type { FragLoadingData, FragLoadedData, FragBufferedData, ErrorData, LevelLoadedData } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
-import { Part } from '../loader/fragment';
 
 class AbrController implements ComponentAPI {
   protected hls: Hls;

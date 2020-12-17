@@ -1,5 +1,5 @@
 import Fragment, { Part } from '../loader/fragment';
-import { SourceBufferName } from './buffer';
+import type { SourceBufferName } from './buffer';
 
 export interface FragmentEntity {
   body: Fragment,

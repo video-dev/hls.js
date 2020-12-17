@@ -4,7 +4,7 @@
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import Hls from '../hls';
+import type Hls from '../hls';
 import Fragment from './fragment';
 import {
   LoaderStats,
@@ -14,8 +14,8 @@ import {
   LoaderCallbacks,
   Loader, FragmentLoaderContext
 } from '../types/loader';
-import { ComponentAPI } from '../types/component-api';
-import { KeyLoadingData } from '../types/events';
+import type { ComponentAPI } from '../types/component-api';
+import type { KeyLoadingData } from '../types/events';
 
 interface KeyLoaderContext extends LoaderContext {
   frag: Fragment

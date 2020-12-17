@@ -11,7 +11,8 @@
 
 import * as ADTS from './adts';
 import * as MpegAudio from './mpegaudio';
-import { Events, HlsEventEmitter } from '../events';
+import type { HlsEventEmitter } from '../events';
+import { Events } from '../events';
 import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
 import { logger } from '../utils/logger';
@@ -26,7 +27,7 @@ import {
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
-import { HlsConfig } from '../config';
+import type { HlsConfig } from '../config';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.

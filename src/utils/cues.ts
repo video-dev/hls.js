@@ -1,5 +1,5 @@
 import { fixLineBreaks } from './vttparser';
-import { CaptionScreen, Row } from './cea-608-parser';
+import type { CaptionScreen, Row } from './cea-608-parser';
 
 const WHITESPACE_CHAR = /\s/;
 
