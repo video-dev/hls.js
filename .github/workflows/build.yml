@@ -308,11 +308,12 @@ jobs:
           name: build
 
       - name: start SauceConnect tunnel
-        uses: saucelabs/sauce-connect-action@a0930f1
+        uses: tjenkinson/sauce-connect-action@be563c4
         with:
           username: ${{ secrets.SAUCE_USERNAME }}
           accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
           tunnelIdentifier: ${{ github.run_id }}-${{ matrix.config }}
+          retryTimeout: 300
 
       - name: install
         run: |
@@ -402,11 +403,12 @@ jobs:
           name: build
 
       - name: start SauceConnect tunnel
-        uses: saucelabs/sauce-connect-action@a0930f1
+        uses: tjenkinson/sauce-connect-action@be563c4
         with:
           username: ${{ secrets.SAUCE_USERNAME }}
           accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
           tunnelIdentifier: ${{ github.run_id }}-${{ matrix.config }}
+          retryTimeout: 300
 
       - name: install
         run: |
