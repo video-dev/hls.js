@@ -4,9 +4,9 @@ on:
   - pull_request
 
 jobs:
+  if: secrets.CI_GITHUB_TOKEN
   run:
     runs-on: ubuntu-latest
-    if: secrets.CI_GITHUB_TOKEN
     steps:
       - uses: tjenkinson/gh-action-auto-merge-dependency-updates@1ff3f19
         with:
