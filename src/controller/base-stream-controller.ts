@@ -337,7 +337,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         }
         this.tick();
       }).catch(reason => {
-        logger.warn(reason);
+        this.warn(reason);
       });
   }
 
@@ -780,7 +780,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         if (parsedDuration <= 0) {
           // Destroy the transmuxer after it's next time offset failed to advance because duration was <= 0.
           // The new transmuxer will be configured with a time offset matching the next fragment start, preventing the timeline from shifting.
-          logger.warn(`Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration}) resetting transmuxer to fallback to playlist timing`);
+          this.warn(`Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration}) resetting transmuxer to fallback to playlist timing`);
           if (this.transmuxer) {
             this.transmuxer.destroy();
             this.transmuxer = null;
@@ -803,7 +803,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     const previousState = this._state;
     if (previousState !== nextState) {
       this._state = nextState;
-      this.log(`${previousState}->${nextState}`);
+      // this.log(`${previousState}->${nextState}`);
     }
   }
 
