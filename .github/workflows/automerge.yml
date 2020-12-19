@@ -9,5 +9,4 @@ jobs:
     steps:
       - uses: tjenkinson/gh-action-auto-merge-dependency-updates@1ff3f19
         with:
-          repo-token: ${{ secrets.CI_GITHUB_TOKEN }}
           allowed-actors: dependabot[bot]
