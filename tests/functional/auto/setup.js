@@ -156,7 +156,7 @@ async function testSeekOnLive (url, config) {
     const video = self.video;
     video.onloadeddata = function () {
       self.setTimeout(function () {
-        video.currentTime = video.duration - 5;
+        video.currentTime = video.seekable.end(0) - 5;
       }, 5000);
     };
     video.onseeked = function () {
@@ -171,9 +171,20 @@ async function testSeekOnVOD (url, config) {
     const callback = arguments[arguments.length - 1];
     self.startStream(url, config, callback);
     const video = self.video;
+    video.ondurationchange = function () {
+      console.log('[test] > video  "durationchange": ' + video.duration);
+    };
     video.onloadeddata = function () {
+      console.log('[test] > video  "loadeddata"');
       self.setTimeout(function () {
         const duration = video.duration;
+        if (!isFinite(duration)) {
+          callback({
+            code: 'non-finite-duration',
+            duration,
+            logs: self.logString
+          });
+        }
         // After seeking timeout if paused after 5 seconds
         video.onseeked = function () {
           self.setTimeout(function () {
@@ -183,7 +194,7 @@ async function testSeekOnVOD (url, config) {
             }
           }, 5000);
         };
-        video.currentTime = duration - 5;
+        video.currentTime = video.seekable.end(0) - 5;
         // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
         const allowedBufferedRanges = config.allowedBufferedRangesInSeekTest || 2;
         video.onprogress = function () {

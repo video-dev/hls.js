@@ -19,9 +19,9 @@ import type Hls from '../hls';
 const MediaSource = getMediaSource();
 
 export default class BufferController implements ComponentAPI {
-  // the value that we have set mediasource.duration to
-  // (the actual duration may be tweaked slighly by the browser)
-  private _msDuration: number | null = null;
+  // The value mediasource.duration should have
+  // (the browser may return a slightly different value for mediasource.duration after being set)
+  private duration: number | null = null;
   // the target duration of the current media playlist
   private _levelTargetDuration: number | null = null;
   // current stream state: true - for live broadcast, false - for VoD content
@@ -114,7 +114,7 @@ export default class BufferController implements ComponentAPI {
       codecEvents = 1;
     }
     this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
-
+    this.duration = null;
     logger.log(`${this.bufferCodecEventsExpected} bufferCodec event(s) expected`);
   }
 
@@ -480,28 +480,26 @@ export default class BufferController implements ComponentAPI {
    */
   private updateMediaElementDuration (levelDuration: number) {
     if (!this.media || !this.mediaSource || this.mediaSource.readyState !== 'open') {
+      this.duration = levelDuration;
       return;
     }
-    const { hls, _live, media, mediaSource, _msDuration } = this;
+    const { hls, _live, media, mediaSource, duration } = this;
     const mediaDuration = media.duration;
-
-    // initialise to the value that the media source is reporting
-    let msDuration = _msDuration;
-    if (msDuration === null) {
-      this._msDuration = msDuration = mediaSource.duration;
-    }
+    const msDuration = duration === null ? mediaSource.duration : duration;
 
     if (_live && hls.config.liveDurationInfinity) {
       // Override duration to Infinity
       logger.log('[buffer-controller]: Media Source duration is set to Infinity');
-      this._msDuration = mediaSource.duration = Infinity;
+      this.duration = mediaSource.duration = Infinity;
     } else if ((levelDuration > msDuration && levelDuration > mediaDuration) || !Number.isFinite(mediaDuration)) {
       // levelDuration was the last value we set.
       // not using mediaSource.duration as the browser may tweak this value
       // only update Media Source duration if its value increase, this is to avoid
       // flushing already buffered portion when switching between quality level
       logger.log(`[buffer-controller]: Updating Media Source duration to ${levelDuration.toFixed(3)}`);
-      this._msDuration = mediaSource.duration = levelDuration;
+      this.duration = mediaSource.duration = levelDuration;
+    } else {
+      this.duration = msDuration;
     }
   }
 
@@ -584,6 +582,9 @@ export default class BufferController implements ComponentAPI {
     const { hls, media, mediaSource } = this;
     logger.log('[buffer-controller]: Media source opened');
     if (media) {
+      if (this.duration !== null) {
+        this.updateMediaElementDuration(this.duration);
+      }
       hls.trigger(Events.MEDIA_ATTACHED, { media });
     }
 

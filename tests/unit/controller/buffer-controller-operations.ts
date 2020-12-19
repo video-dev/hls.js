@@ -20,10 +20,15 @@ const sandbox = sinon.createSandbox();
 
 class MockMediaSource {
   public readyState: string = 'open';
-  public duration: number = 0;
+  public duration: number = Infinity;
+
   addSourceBuffer () : MockSourceBuffer {
     return new MockSourceBuffer();
   }
+
+  addEventListener () {}
+
+  removeEventListener () {}
 }
 
 class MockSourceBuffer extends EventTarget {
@@ -57,7 +62,7 @@ class MockMediaElement {
 
 const queueNames: Array<SourceBufferName> = ['audio', 'video'];
 
-describe('BufferController SourceBuffer operation queueing', function () {
+describe('BufferController', function () {
   let hls;
   let bufferController;
   let operationQueue;
@@ -88,7 +93,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     sandbox.restore();
   });
 
-  it('cycles the queue on updateend', function () {
+  it('cycles the SourceBuffer operation queue on updateend', function () {
     const currentOnComplete = sandbox.spy();
     const currentOperation: BufferOperation = {
       execute: () => {},
@@ -114,7 +119,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
     });
   });
 
-  it('does not cycle the queue on error', function () {
+  it('does not cycle the SourceBuffer operation queue on error', function () {
     const onError = sandbox.spy();
     const operation: BufferOperation = {
       execute: () => {},
@@ -173,7 +178,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
       });
     });
 
-    it('should cycle the queue if the sourceBuffer does not exist while appending', function () {
+    it('should cycle the SourceBuffer operation queue if the sourceBuffer does not exist while appending', function () {
       const queueAppendSpy = sandbox.spy(operationQueue, 'append');
       queueNames.forEach((name, i) => {
         bufferController.sourceBuffer = {};
@@ -361,7 +366,7 @@ describe('BufferController SourceBuffer operation queueing', function () {
         totalduration: 5,
         fragments: [{ start: 5 }]
       });
-      mockMediaSource.duration = 0;
+      mockMediaSource.duration = Infinity;
       data = { details };
     });
 
@@ -397,12 +402,29 @@ describe('BufferController SourceBuffer operation queueing', function () {
       // Updating the duration is aync and has no event to signal completion, so we are unable to test for it directly
     });
 
-    it('synchronously updates the duration if no SourceBuffers exist', function () {
+    it('synchronously sets media duration if no SourceBuffers exist', function () {
       bufferController.sourceBuffer = {};
       bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(queueAppendBlockerSpy).to.have.not.been.called;
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(10);
-      expect(bufferController._msDuration, '_msDuration').to.equal(10);
+      expect(bufferController.duration, 'duration').to.equal(10);
+    });
+
+    it('sets media duration when attaching after level update', function () {
+      bufferController.sourceBuffer = {};
+      const media = bufferController.media;
+      // media is null prior to attaching
+      bufferController.media = null;
+      expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(Infinity);
+      expect(bufferController.duration, 'duration').to.equal(null);
+      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
+      expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(Infinity);
+      expect(bufferController.duration, 'duration').to.equal(10);
+      // simulate attach and open source buffers
+      bufferController.media = media;
+      bufferController._onMediaSourceOpen();
+      expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(10);
+      expect(bufferController.duration, 'duration').to.equal(10);
     });
   });
 
