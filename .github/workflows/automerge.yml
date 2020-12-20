@@ -23,7 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: tjenkinson/gh-action-auto-merge-dependency-updates@1ff3f19
-        if: ${{ secrets.CI_GITHUB_TOKEN }}
         with:
           repo-token: ${{ secrets.CI_GITHUB_TOKEN }}
           allowed-actors: dependabot[bot]
