@@ -59,7 +59,7 @@ export interface BufferEOSData {
 export interface BufferFlushingData {
   startOffset: number
   endOffset: number
-  type: SourceBufferName
+  type: SourceBufferName | null
 }
 
 export interface BufferFlushedData {

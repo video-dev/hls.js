@@ -189,7 +189,7 @@ export const hlsDefaultConfig: HlsConfig = {
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
-  maxBufferHole: 0.5, // used by stream-controller
+  maxBufferHole: 0.1, // used by stream-controller
   highBufferWatchdogPeriod: 2, // used by stream-controller
   nudgeOffset: 0.1, // used by stream-controller
   nudgeMaxRetry: 3, // used by stream-controller

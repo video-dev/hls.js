@@ -182,13 +182,6 @@ describe('StreamController', function () {
       assertLoadingState(frag);
     });
 
-    it('should load a frag which has backtracked', function () {
-      fragStateStub(FragmentState.OK);
-      frag.backtracked = true;
-      streamController['loadFragment'](frag, levelDetails, 0);
-      assertLoadingState(frag);
-    });
-
     it('should not load a fragment which has completely & successfully loaded', function () {
       fragStateStub(FragmentState.OK);
       streamController['loadFragment'](frag, levelDetails, 0);
