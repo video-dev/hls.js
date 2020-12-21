@@ -29,6 +29,8 @@ class MockMediaSource {
   addEventListener () {}
 
   removeEventListener () {}
+
+  endOfStream () {}
 }
 
 class MockSourceBuffer extends EventTarget {
@@ -58,6 +60,7 @@ class MockSourceBuffer extends EventTarget {
 class MockMediaElement {
   public currentTime: number = 0;
   public duration: number = Infinity;
+  public textTracks: any[] = [];
 }
 
 const queueNames: Array<SourceBufferName> = ['audio', 'video'];

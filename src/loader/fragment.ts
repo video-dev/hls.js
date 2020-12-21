@@ -16,6 +16,7 @@ interface ElementaryStreamInfo {
   endPTS: number
   startDTS: number
   endDTS: number
+  partial?: boolean
 }
 
 type ElementaryStreams = Record<ElementaryStreamTypes, ElementaryStreamInfo | null>;
@@ -115,8 +116,6 @@ export default class Fragment extends BaseSegment {
   public endDTS!: number;
   // The start time of the fragment, as listed in the manifest. Updated after transmux complete.
   public start: number = 0;
-  // Set when the fragment was loaded and transmuxed, but was stopped from buffering due to dropped frames.
-  public backtracked: boolean = false;
   // Set by `updateFragPTSDTS` in level-helper
   public deltaPTS?: number;
   // The maximum starting Presentation Time Stamp (audio/video PTS) of the fragment. Set after transmux complete.
@@ -129,8 +128,6 @@ export default class Fragment extends BaseSegment {
   public data?: Uint8Array;
   // A flag indicating whether the segment was downloaded in order to test bitrate, and was not buffered
   public bitrateTest: boolean = false;
-  // Total video frames dropped by the transmuxer
-  public dropped: number = 0;
   // #EXTINF  segment title
   public title: string | null = null;
 
@@ -232,7 +229,7 @@ export default class Fragment extends BaseSegment {
     return decryptdata;
   }
 
-  setElementaryStreamInfo (type: ElementaryStreamTypes, startPTS: number, endPTS: number, startDTS: number, endDTS: number) {
+  setElementaryStreamInfo (type: ElementaryStreamTypes, startPTS: number, endPTS: number, startDTS: number, endDTS: number, partial: boolean = false) {
     const { elementaryStreams } = this;
     const info = elementaryStreams[type];
     if (!info) {
@@ -240,7 +237,8 @@ export default class Fragment extends BaseSegment {
         startPTS,
         endPTS,
         startDTS,
-        endDTS
+        endDTS,
+        partial
       };
       return;
     }
