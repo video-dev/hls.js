@@ -197,8 +197,9 @@ export default class Transmuxer {
 
     const { audioTrack, avcTrack, id3Track, textTrack } = demuxer.flush(timeOffset);
     logger.log(`[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''} of level ${chunkMeta.level}`);
+    const remuxResult = remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset);
     transmuxResults.push({
-      remuxResult: remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
+      remuxResult,
       chunkMeta
     });
 
@@ -254,10 +255,11 @@ export default class Transmuxer {
     return result;
   }
 
-  private transmuxUnencrypted (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) {
+  private transmuxUnencrypted (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata): TransmuxerResult {
     const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(data, timeOffset, false);
+    const remuxResult = this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset);
     return {
-      remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
+      remuxResult,
       chunkMeta
     };
   }

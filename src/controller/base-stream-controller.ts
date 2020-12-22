@@ -1,5 +1,4 @@
 import TaskLoop from '../task-loop';
-import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
@@ -23,16 +22,19 @@ import {
   FragLoadedData,
   PartsLoadedData,
   KeyLoadedData,
-  MediaAttachingData
+  MediaAttachingData,
+  BufferFlushingData
 } from '../types/events';
+import Decrypter from '../crypt/decrypter';
+import TimeRanges from '../utils/time-ranges';
+import type { FragmentTracker } from './fragment-tracker';
 import type { Level } from '../types/level';
 import type { RemuxedTrack } from '../types/remuxer';
 import type Hls from '../hls';
-import Decrypter from '../crypt/decrypter';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { NetworkComponentAPI } from '../types/component-api';
-import TimeRanges from '../utils/time-ranges';
+import type { SourceBufferName } from '../types/buffer';
 
 export const State = {
   STOPPED: 'STOPPED',
@@ -43,6 +45,7 @@ export const State = {
   WAITING_TRACK: 'WAITING_TRACK',
   PARSING: 'PARSING',
   PARSED: 'PARSED',
+  BACKTRACKING: 'BACKTRACKING',
   ENDED: 'ENDED',
   ERROR: 'ERROR',
   WAITING_INIT_PTS: 'WAITING_INIT_PTS',
@@ -123,8 +126,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     // we just got done loading the final fragment and there is no other buffered range after ...
     // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
     // so we should not switch to ENDED in that case, to be able to buffer them
-    // dont switch to ENDED if we need to backtrack last fragment
-    if (!levelDetails.live && fragCurrent && !fragCurrent.backtracked && fragCurrent.sn === levelDetails.endSN && !bufferInfo.nextStart) {
+    if (!levelDetails.live && fragCurrent && fragCurrent.sn === levelDetails.endSN && !bufferInfo.nextStart) {
       const fragState = fragmentTracker.getState(fragCurrent);
       return fragState === FragmentState.PARTIAL || fragState === FragmentState.OK;
     }
@@ -257,7 +259,8 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
           return;
         }
         if (this.fragContextChanged(frag)) {
-          if (this.state === State.FRAG_LOADING) {
+          if (this.state === State.FRAG_LOADING || this.state === State.BACKTRACKING) {
+            this.fragmentTracker.removeFragment(frag);
             this.state = State.IDLE;
           }
           return;
@@ -266,11 +269,29 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         if ('payload' in data) {
           this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
           this.hls.trigger(Events.FRAG_LOADED, data);
+
+          // Tracker backtrack must be called after onFragLoaded to update the fragment entity state to BACKTRACKED
+          if (this.state === State.BACKTRACKING) {
+            this.flushMainBuffer(0, frag.start);
+            this.fragmentTracker.backtrack(data);
+            this.fragPrevious = null;
+            this.nextLoadPosition = frag.start;
+            return;
+          }
         }
 
         // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
         this._handleFragmentLoadComplete(data);
       });
+  }
+
+  protected flushMainBuffer (startOffset: number, endOffset: number, type: SourceBufferName | null = null) {
+    // When alternate audio is playing, the audio-stream-controller is responsible for the audio buffer. Otherwise,
+    // passing a null type flushes both buffers
+    const flushScope: BufferFlushingData = { startOffset, endOffset, type };
+    // Reset load errors on flush
+    this.fragLoadError = 0;
+    this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
   protected _loadInitSegment (frag: Fragment) {
@@ -502,7 +523,11 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       chunkMeta
     };
     this.hls.trigger(Events.BUFFER_APPENDING, segment);
-    this.tick();
+
+    if (data.dropped && data.independent && !part) {
+      // Clear buffer so that we reload previous segments sequentially if required
+      this.flushMainBuffer(0, frag.start);
+    }
   }
 
   protected getNextFragment (pos: number, levelDetails: LevelDetails): Fragment | null {
@@ -637,36 +662,32 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     if (frag) {
       const curSNIdx = frag.sn - levelDetails.startSN;
       const sameLevel = fragPrevious && frag.level === fragPrevious.level;
-      const prevFrag = fragments[curSNIdx - 1];
       const nextFrag = fragments[curSNIdx + 1];
-      // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
-      // non-uniform fragment durations
-      if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
-        if (sameLevel && !frag.backtracked) {
-          if (frag.sn < endSN) {
+      const fragState = this.fragmentTracker.getState(frag);
+      if (fragState === FragmentState.BACKTRACKED) {
+        frag = null;
+        let i = curSNIdx;
+        while (fragments[i] && this.fragmentTracker.getState(fragments[i]) === FragmentState.BACKTRACKED) {
+          // When fragPrevious is null, backtrack to first the first fragment is not BACKTRACKED for loading
+          // When fragPrevious is set, we want the first BACKTRACKED fragment for parsing and buffering
+          if (!fragPrevious) {
+            frag = fragments[--i];
+          } else {
+            frag = fragments[i--];
+          }
+        }
+        if (!frag) {
+          frag = nextFrag;
+        }
+      } else if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
+        // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
+        // non-uniform fragment durations
+        if (sameLevel) {
+          if (frag.sn < endSN && this.fragmentTracker.getState(nextFrag) !== FragmentState.OK) {
+            this.log(`SN ${frag.sn} just loaded, load next one: ${nextFrag.sn}`);
             frag = nextFrag;
-            if (this.fragmentTracker.getState(frag) !== FragmentState.OK) {
-              this.log(`SN just loaded, load next one: ${frag.sn}`);
-            }
           } else {
             frag = null;
-          }
-        } else if (frag.backtracked) {
-          // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
-          if (nextFrag?.backtracked) {
-            this.warn(`Already backtracked from fragment ${nextFrag.sn}, will not backtrack to fragment ${frag.sn}. Loading fragment ${nextFrag.sn}`);
-            frag = nextFrag;
-          } else {
-            // If a fragment has dropped frames and it's in a same level/sequence, load the previous fragment to try and find the keyframe
-            // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
-            frag.dropped = 0;
-            if (prevFrag) {
-              frag = prevFrag;
-              frag.backtracked = true;
-            } else if (curSNIdx) {
-              // can't backtrack on very first fragment
-              frag = null;
-            }
           }
         }
       }

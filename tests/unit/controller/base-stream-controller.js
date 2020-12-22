@@ -42,11 +42,6 @@ describe('BaseStreamController', function () {
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be.false;
     });
 
-    it('returns false if fragCurrent has backtracked set to true', function () {
-      baseStreamController.fragCurrent = { backtracked: true };
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be.false;
-    });
-
     it('returns false if fragCurrent is not the last fragment', function () {
       baseStreamController.fragCurrent = { sn: 9 };
       levelDetails.endSN = 10;

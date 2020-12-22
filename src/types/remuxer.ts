@@ -31,6 +31,7 @@ export interface RemuxedTrack {
   type: SourceBufferName
   hasAudio: boolean
   hasVideo: boolean
+  independent?: boolean
   nb: number
   transferredData1?: ArrayBuffer
   transferredData2?: ArrayBuffer
@@ -51,6 +52,7 @@ export interface RemuxerResult {
   text?: RemuxedUserdata
   id3?: RemuxedMetadata
   initSegment?: InitSegmentData
+  independent?: boolean
 }
 
 export interface InitSegmentData {

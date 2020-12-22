@@ -90,21 +90,6 @@ describe('AudioTrackController', function () {
         level: 0
       });
     });
-
-    it('should set the audioTracks contained in the event data (nullable) to an empty array and trigger AUDIO_TRACKS_UPDATED', function (done) {
-      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
-        expect(data.audioTracks).to.be.empty;
-        expect(audioTrackController.tracks).to.be.empty;
-        done();
-      });
-
-      audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
-        audioTracks: null
-      });
-      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
-        level: 0
-      });
-    });
   });
 
   it('should select audioGroupId and trigger AUDIO_TRACK_SWITCHING', function (done) {

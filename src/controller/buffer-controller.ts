@@ -507,7 +507,7 @@ export default class BufferController implements ComponentAPI {
     const mediaSource = this.mediaSource;
     const fragments = levelDetails.fragments;
     const len = fragments.length;
-    if (len && mediaSource?.setLiveSeekableRange) {
+    if (len && levelDetails.live && mediaSource?.setLiveSeekableRange) {
       const start = fragments[0].start;
       const end = start + levelDetails.totalduration;
       mediaSource.setLiveSeekableRange(start, end);
