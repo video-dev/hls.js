@@ -177,8 +177,6 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
       newFrag.minEndPTS = oldFrag.minEndPTS;
       newFrag.duration = (oldFrag.endPTS as number) - (oldFrag.startPTS as number);
 
-      newFrag.backtracked = oldFrag.backtracked;
-      newFrag.dropped = oldFrag.dropped;
       if (newFrag.duration) {
         PTSFrag = newFrag;
       }

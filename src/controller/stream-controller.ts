@@ -297,8 +297,16 @@ export default class StreamController extends BaseStreamController implements Ne
       this.nextLoadPosition = frag.start + frag.duration;
     }
 
-    // Allow backtracked fragments to load
-    if (frag.backtracked || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
+    // Use data from loaded backtracked fragment if available
+    if (fragState === FragmentState.BACKTRACKED) {
+      const data = this.fragmentTracker.getBacktrackData(frag);
+      if (data) {
+        this._handleFragmentLoadProgress(data);
+        this._handleFragmentLoadComplete(data);
+        return;
+      }
+    }
+    if (fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
       } else if (this.bitrateTest) {
@@ -443,13 +451,8 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  flushMainBuffer (startOffset, endOffset) {
-    // When alternate audio is playing, the audio-stream-controller is responsible for the audio buffer. Otherwise,
-    // passing a null type flushes both buffers
-    const flushScope: any = { startOffset: startOffset, endOffset: endOffset, type: this.altAudio ? 'video' : null };
-    // Reset load errors on flush
-    this.fragLoadError = 0;
-    this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
+  flushMainBuffer (startOffset: number, endOffset: number) {
+    super.flushMainBuffer(startOffset, endOffset, this.altAudio ? 'video' : null);
   }
 
   onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachedData) {
@@ -463,18 +466,7 @@ export default class StreamController extends BaseStreamController implements Ne
   }
 
   onMediaDetaching () {
-    const { levels, media } = this;
-    // reset fragment backtracked flag
-    if (levels) {
-      levels.forEach(level => {
-        if (level.details) {
-          level.details.fragments.forEach(fragment => {
-            fragment.backtracked = false;
-          });
-        }
-      });
-    }
-    // remove video listeners
+    const { media } = this;
     if (media) {
       media.removeEventListener('playing', this.onvplaying);
       media.removeEventListener('seeked', this.onvseeked);
@@ -1011,20 +1003,21 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     // Avoid buffering if backtracking this fragment
-    if (video) {
-      if (level.details && _hasDroppedFrames(frag, video.dropped, level.details.startSN)) {
-        // Clear demuxer to reset nextAvc which could have been set for dropped frames
-        this.resetTransmuxer();
-        this.backtrack(frag, video.startPTS);
-        return;
-      } else {
+    if (video && remuxResult.independent !== false) {
+      if (level.details) {
         const { startPTS, endPTS, startDTS, endDTS } = video;
         if (part) {
           part.elementaryStreams[video.type] = { startPTS, endPTS, startDTS, endDTS };
+        } else if (video.dropped && video.independent) {
+          // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
+          frag.setElementaryStreamInfo(video.type as ElementaryStreamTypes, frag.start, endPTS, frag.start, endDTS, true);
         }
         frag.setElementaryStreamInfo(video.type as ElementaryStreamTypes, startPTS, endPTS, startDTS, endDTS);
         this.bufferFragmentData(video, frag, part, chunkMeta);
       }
+    } else if (remuxResult.independent === false) {
+      this.backtrack();
+      return;
     }
 
     if (audio) {
@@ -1118,16 +1111,10 @@ export default class StreamController extends BaseStreamController implements Ne
     this.tick();
   }
 
-  private backtrack (frag: Fragment, nextLoadPosition: number) {
-    // Return back to the IDLE state without appending to buffer
-    // Causes findFragments to backtrack a segment and find the keyframe
-    // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
-    this.fragmentTracker.removeFragment(frag);
-    frag.backtracked = true;
-    this.nextLoadPosition = nextLoadPosition;
-    this.state = State.IDLE;
-    this.fragPrevious = frag;
-    this.tick();
+  private backtrack () {
+    // Causes findFragments to backtrack through fragments to find the keyframe
+    this.resetTransmuxer();
+    this.state = State.BACKTRACKING;
   }
 
   private checkFragmentChanged () {
@@ -1200,29 +1187,5 @@ export default class StreamController extends BaseStreamController implements Ne
 
   get forceStartLoad () {
     return this._forceStartLoad;
-  }
-}
-
-function _hasDroppedFrames (frag, dropped: number | undefined, startSN: number) {
-  // Detect gaps in a fragment  and try to fix it by finding a keyframe in the previous fragment (see _findFragments)
-  if (dropped) {
-    frag.dropped = dropped;
-    if (!frag.backtracked) {
-      if (frag.sn === startSN) {
-        logger.warn(`[stream-controller]: Fragment ${frag.sn} of level ${frag.level} is missing ${frag.dropped} video frame(s); this is the start fragment and will be appended with a gap`);
-        return false;
-      } else {
-        logger.warn(`[stream-controller]: Fragment ${frag.sn} of level ${frag.level} is missing ${frag.dropped} video frame(s); backtracking to find a keyframe`);
-        return true;
-      }
-    } else {
-      logger.warn(`[stream-controller]: Fragment ${frag.sn} of level ${frag.level} already backtracked and will be appended with a gap`);
-      frag.backtracked = false;
-      return false;
-    }
-  } else {
-    // Only reset the backtracked flag if we've loaded the frag without any dropped frames
-    frag.backtracked = false;
-    return false;
   }
 }

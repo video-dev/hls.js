@@ -4,11 +4,12 @@ import type { SourceBufferName } from '../types/buffer';
 import type { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../types/fragment-tracker';
 import type { PlaylistLevelType } from '../types/loader';
 import type { ComponentAPI } from '../types/component-api';
-import type Hls from '../hls';
 import type { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
+import type Hls from '../hls';
 
 export enum FragmentState {
   NOT_LOADED = 'NOT_LOADED',
+  BACKTRACKED = 'BACKTRACKED',
   APPENDING = 'APPENDING',
   PARTIAL = 'PARTIAL',
   OK = 'OK'
@@ -45,7 +46,7 @@ export class FragmentTracker implements ComponentAPI {
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
   }
 
-  public destroy (): void {
+  public destroy () {
     this.fragments = Object.create(null);
     this.timeRanges = Object.create(null);
     this._unregisterListeners();
@@ -130,18 +131,22 @@ export class FragmentTracker implements ComponentAPI {
       return;
     }
     fragmentEntity.buffered = true;
+    fragmentEntity.backtrack = fragmentEntity.loaded = null;
     Object.keys(timeRanges).forEach(elementaryStream => {
-      if (!frag.elementaryStreams[elementaryStream]) {
+      const streamInfo = frag.elementaryStreams[elementaryStream];
+      if (!streamInfo) {
         return;
       }
-      fragmentEntity.range[elementaryStream] = this.getBufferedTimes(frag, part, timeRanges[elementaryStream]);
+      const timeRange = timeRanges[elementaryStream];
+      const partial = part !== null || streamInfo.partial === true;
+      fragmentEntity.range[elementaryStream] = this.getBufferedTimes(frag, part, partial, timeRange);
     });
   }
 
-  private getBufferedTimes (fragment: Fragment, part: Part | null, timeRange: TimeRanges): FragmentBufferedRange {
+  private getBufferedTimes (fragment: Fragment, part: Part | null, partial: boolean, timeRange: TimeRanges): FragmentBufferedRange {
     const buffered: FragmentBufferedRange = {
       time: [],
-      partial: part !== null
+      partial
     };
     const startPTS = part ? part.start : fragment.start;
     const endPTS = part ? part.end : fragment.end;
@@ -205,15 +210,15 @@ export class FragmentTracker implements ComponentAPI {
     return bestFragment;
   }
 
-  /**
-   *  Return the fragment state when a fragment never loaded or if it partially loaded
-   */
   public getState (fragment: Fragment): FragmentState {
     const fragKey = getFragmentKey(fragment);
     const fragmentEntity = this.fragments[fragKey];
 
     if (fragmentEntity) {
       if (!fragmentEntity.buffered) {
+        if (fragmentEntity.backtrack) {
+          return FragmentState.BACKTRACKED;
+        }
         return FragmentState.APPENDING;
       } else if (isPartial(fragmentEntity)) {
         return FragmentState.PARTIAL;
@@ -223,6 +228,26 @@ export class FragmentTracker implements ComponentAPI {
     }
 
     return FragmentState.NOT_LOADED;
+  }
+
+  public backtrack (data: FragLoadedData) {
+    const { frag } = data;
+    const fragKey = getFragmentKey(frag);
+    const fragmentEntity = this.fragments[fragKey];
+    if (!fragmentEntity) {
+      return;
+    }
+    fragmentEntity.backtrack = fragmentEntity.loaded || data;
+    fragmentEntity.loaded = null;
+  }
+
+  public getBacktrackData (fragment: Fragment): FragLoadedData | null {
+    const fragKey = getFragmentKey(fragment);
+    const fragmentEntity = this.fragments[fragKey];
+    if (fragmentEntity) {
+      return fragmentEntity.backtrack;
+    }
+    return null;
   }
 
   private isTimeBuffered (startPTS: number, endPTS: number, timeRange: TimeRanges): boolean {
@@ -244,30 +269,26 @@ export class FragmentTracker implements ComponentAPI {
     return false;
   }
 
-  /**
-   * Fires when a fragment loading is completed
-   */
-  private onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData): void {
+  private onFragLoaded (event: Events.FRAG_LOADED, data: FragLoadedData) {
     const { frag, part } = data;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
-    // FIXME: don't track frag parts (yet)
     if (frag.sn === 'initSegment' || frag.bitrateTest || part) {
       return;
     }
 
-    this.fragments[getFragmentKey(frag)] = {
+    const fragKey = getFragmentKey(frag);
+    this.fragments[fragKey] = {
       body: frag,
       part,
-      range: Object.create(null),
-      buffered: false
+      loaded: data,
+      backtrack: null,
+      buffered: false,
+      range: Object.create(null)
     };
   }
 
-  /**
-   * Fires when the buffer is updated
-   */
-  private onBufferAppended (event: Events.BUFFER_APPENDED, data: BufferAppendedData): void {
+  private onBufferAppended (event: Events.BUFFER_APPENDED, data: BufferAppendedData) {
     const { frag, part, timeRanges } = data;
     this.activeFragment = frag;
     this.activePart = part;
@@ -284,35 +305,23 @@ export class FragmentTracker implements ComponentAPI {
     });
   }
 
-  /**
-   * Fires after a fragment has been loaded into the source buffer
-   */
-  private onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData): void {
+  private onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     this.detectPartialFragments(data);
   }
 
-  /**
-   * Return true if fragment tracker has the fragment.
-   */
   private hasFragment (fragment: Fragment): boolean {
     const fragKey = getFragmentKey(fragment);
     return !!this.fragments[fragKey];
   }
 
-  /**
-   * Remove a fragment from fragment tracker until it is loaded again
-   */
-  public removeFragment (fragment: Fragment): void {
+  public removeFragment (fragment: Fragment) {
     const fragKey = getFragmentKey(fragment);
     fragment.stats.loaded = 0;
     fragment.clearElementaryStreamInfo();
     delete this.fragments[fragKey];
   }
 
-  /**
-   * Remove all fragments from fragment tracker.
-   */
-  public removeAllFragments (): void {
+  public removeAllFragments () {
     this.fragments = Object.create(null);
   }
 }

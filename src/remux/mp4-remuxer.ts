@@ -101,16 +101,9 @@ export default class MP4Remuxer implements Remuxer {
     let initSegment;
     let text;
     let id3;
-
-    // Allow ID3 and text to remux, even if more audio/video samples are required
-    const isVideoContiguous = this.isVideoContiguous;
-    if (!isVideoContiguous && this.config.forceKeyFrameOnDiscontinuity) {
-      const length = videoTrack.samples.length;
-      const dropped = dropSamplesUntilKeyframe(videoTrack);
-      if (dropped) {
-        logger.warn(`[mp4-remuxer]: Dropped ${dropped} out of ${length} video samples due to a missing keyframe`);
-      }
-    }
+    let independent: boolean | undefined;
+    let audioTimeOffset = timeOffset;
+    let videoTimeOffset = timeOffset;
 
     // If we're remuxing audio and video, wait until we've received enough samples for each track before proceeding.
     // This is done to synchronize the audio and video streams. We know if the current segment will have samples if the "pid"
@@ -127,9 +120,24 @@ export default class MP4Remuxer implements Remuxer {
         initSegment = this.generateIS(audioTrack, videoTrack, timeOffset);
       }
 
+      const isVideoContiguous = this.isVideoContiguous;
+      if (enoughVideoSamples && !isVideoContiguous && this.config.forceKeyFrameOnDiscontinuity) {
+        const length = videoTrack.samples.length;
+        const firstKeyFrameIndex = findKeyframeIndex(videoTrack.samples);
+        independent = true;
+        if (firstKeyFrameIndex > 0) {
+          logger.warn(`[mp4-remuxer]: Dropped ${firstKeyFrameIndex} out of ${length} video samples due to a missing keyframe`);
+          const startPTS = this.getVideoStartPts(videoTrack.samples);
+          videoTrack.samples = videoTrack.samples.slice(firstKeyFrameIndex);
+          videoTrack.dropped += firstKeyFrameIndex;
+          videoTimeOffset += (videoTrack.samples[0].pts - startPTS) / (videoTrack.timescale || 90000);
+        } else if (firstKeyFrameIndex === -1) {
+          logger.warn(`[mp4-remuxer]: No keyframe found out of ${length} video samples`);
+          independent = false;
+        }
+      }
+
       if (this.ISGenerated) {
-        let audioTimeOffset = timeOffset;
-        let videoTimeOffset = timeOffset;
         if (enoughAudioSamples && enoughVideoSamples) {
           // timeOffset is expected to be the offset of the first timestamp of this fragment (first DTS)
           // if first audio DTS is not aligned with first video DTS then we need to take that into account
@@ -163,9 +171,13 @@ export default class MP4Remuxer implements Remuxer {
         } else if (enoughVideoSamples) {
           video = this.remuxVideo(videoTrack, videoTimeOffset, isVideoContiguous, 0);
         }
+        if (video && independent !== undefined) {
+          video.independent = independent;
+        }
       }
     }
 
+    // Allow ID3 and text to remux, even if more audio/video samples are required
     if (this.ISGenerated) {
       if (id3Track.samples.length) {
         id3 = this.remuxID3(id3Track, timeOffset);
@@ -180,6 +192,7 @@ export default class MP4Remuxer implements Remuxer {
       audio,
       video,
       initSegment,
+      independent,
       text,
       id3
     };
@@ -270,7 +283,7 @@ export default class MP4Remuxer implements Remuxer {
     }
   }
 
-  remuxVideo (track: DemuxedAvcTrack, timeOffset, contiguous, audioTrackLength) : RemuxedTrack | undefined {
+  remuxVideo (track: DemuxedAvcTrack, timeOffset: number, contiguous: boolean, audioTrackLength: number) : RemuxedTrack | undefined {
     const timeScale: number = track.inputTimeScale;
     const inputSamples: Array<AvcSample> = track.samples;
     const outputSamples: Array<Mp4Sample> = [];
@@ -858,21 +871,13 @@ function PTSNormalize (value: number, reference: number | null): number {
   return value;
 }
 
-function dropSamplesUntilKeyframe (track: DemuxedAvcTrack) : number {
-  const samples = track.samples;
-  let dropIndex = 0;
+function findKeyframeIndex (samples: Array<AvcSample>) : number {
   for (let i = 0; i < samples.length; i++) {
-    const sample = samples[i];
-    if (sample.key) {
-      break;
+    if (samples[i].key) {
+      return i;
     }
-    dropIndex++;
   }
-  if (dropIndex) {
-    track.samples = samples.slice(dropIndex);
-    track.dropped += dropIndex;
-  }
-  return dropIndex;
+  return -1;
 }
 
 class Mp4Sample {
