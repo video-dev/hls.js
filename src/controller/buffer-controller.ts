@@ -419,27 +419,36 @@ export default class BufferController implements ComponentAPI {
     if (!audioBuffer) {
       return;
     }
-    const delta = Math.abs(audioBuffer.timestampOffset - data.start);
+    const start = data.start;
+    const delta = Math.abs(audioBuffer.timestampOffset - start);
     if (delta < 0.1) {
       return;
     }
-
-    const operation = {
-      execute: this.abortExecutor.bind(this, type),
-      onStart () {
-        logger.debug(`[buffer-controller]: Starting abort on source buffer ${type}`);
-      },
-      onComplete () {
-        if (audioBuffer) {
-          logger.log(`[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${data.start}`);
-          audioBuffer.timestampOffset = data.start;
+    // SourceBuffers can be aborted while the updating flag is true, but only if it is because of an append operation -
+    // aborting during a remove will throw an InvalidStateError. It's safer to enqueue aborts and execute them only if
+    // updating is false
+    if (audioBuffer.updating) {
+      const operation = {
+        execute () {
+          logger.log(`[buffer-controller]: Aborting the ${type} SourceBuffer`);
+          audioBuffer.abort();
+        },
+        onStart () {
+          logger.debug(`[buffer-controller]: Starting abort on source buffer ${type}`);
+        },
+        onComplete () {
+          logger.log(`[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${start}`);
+          audioBuffer.timestampOffset = start;
+        },
+        onError (error) {
+          logger.warn('[buffer-controller]: Failed to abort the audio SourceBuffer', error);
         }
-      },
-      onError (error) {
-        logger.warn('[buffer-controller]: Failed to abort the audio SourceBuffer', error);
-      }
-    };
-    operationQueue.insertAbort(operation, type);
+      };
+      operationQueue.insertAbort(operation, type);
+    } else {
+      logger.log(`[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${start}`);
+      audioBuffer.timestampOffset = start;
+    }
 
     if (this.hls.config.liveDurationInfinity) {
       this.updateSeekableRange(data.details);
@@ -663,27 +672,6 @@ export default class BufferController implements ComponentAPI {
     sb.ended = false;
     console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
     sb.appendBuffer(data);
-  }
-
-  // SourceBuffers can be aborted while the updating flag is true, but only if it is because of an append operation -
-  // aborting during a remove will throw an InvalidStateError. It's safer to enqueue aborts and execute them only if
-  // updating is false
-  private abortExecutor (type: SourceBufferName) {
-    const { operationQueue, sourceBuffer } = this;
-    const sb = sourceBuffer[type];
-    if (!sb) {
-      logger.warn(`[buffer-controller]: Attempting to abort to the ${type} SourceBuffer, but it does not exist`);
-      operationQueue.shiftAndExecuteNext(type);
-      return;
-    }
-    logger.log(`[buffer-controller]: Aborting the ${type} SourceBuffer`);
-    // console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
-    const updating = sb.updating;
-    sb.abort();
-    // updateend is only triggered if aborting while updating is true
-    if (!updating) {
-      this._onSBUpdateEnd(type);
-    }
   }
 
   // Enqueues an operation to each SourceBuffer queue which, upon execution, resolves a promise. When all promises
