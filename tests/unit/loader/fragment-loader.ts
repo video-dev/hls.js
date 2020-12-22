@@ -68,7 +68,7 @@ describe('FragmentLoader tests', function () {
 
   it('handles successful fragment loading', function () {
     response = { data: new Uint8Array(4) };
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const onProgress = sinon.spy();
       const fragmentLoaderPrivates = fragmentLoader as any;
       fragmentLoader.load(frag, onProgress)
@@ -102,7 +102,7 @@ describe('FragmentLoader tests', function () {
   });
 
   it('should reject with a LoadError if the fragment does not have a url', function () {
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       frag.url = null;
       fragmentLoader.load(frag, levelDetails)
         .then(() => {
@@ -115,7 +115,7 @@ describe('FragmentLoader tests', function () {
   });
 
   it('handles fragment load errors', function () {
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const fragmentLoaderPrivates = fragmentLoader as any;
       fragmentLoader.load(frag, levelDetails)
         .then(() => {
@@ -142,7 +142,7 @@ describe('FragmentLoader tests', function () {
 
   it('handles fragment load timeouts', function () {
     // let abortSpy;
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const fragmentLoaderPrivates = fragmentLoader as any;
       fragmentLoader.load(frag, levelDetails)
         .then(() => {

@@ -209,7 +209,7 @@ describe('BufferController', function () {
       bufferController.onFragParsed(Events.FRAG_PARSED, { frag });
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;
       expect(flushLiveBackBufferSpy).to.have.been.calledOnce;
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         hls.on(Events.FRAG_BUFFERED, (event, data) => {
           try {
             expect(data.frag, 'The frag emitted in FRAG_BUFFERED should be the frag passed in onFragParsed').to.equal(frag);
