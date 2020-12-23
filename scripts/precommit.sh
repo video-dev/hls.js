@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
 
-npm run lint:fix
-npm run pretty-quick
+npm run lint:staged
 npm run type-check
