@@ -1,4 +1,4 @@
-export function sendAddTrackEvent (track: TextTrack, videoEl: HTMLMediaElement) {
+export function sendAddTrackEvent(track: TextTrack, videoEl: HTMLMediaElement) {
   let event: Event;
   try {
     event = new Event('addtrack');
@@ -11,7 +11,7 @@ export function sendAddTrackEvent (track: TextTrack, videoEl: HTMLMediaElement) 
   videoEl.dispatchEvent(event);
 }
 
-export function clearCurrentCues (track: TextTrack) {
+export function clearCurrentCues(track: TextTrack) {
   if (track?.cues) {
     // When track.mode is disabled, track.cues will be null.
     // To guarantee the removal of cues, we need to temporarily
@@ -27,7 +27,7 @@ export function clearCurrentCues (track: TextTrack) {
 
 // Find first cue starting after given time.
 // Modified version of binary search O(log(n)).
-function getFirstCueIndexAfterTime (cues: TextTrackCueList | TextTrackCue[], time: number): number {
+function getFirstCueIndexAfterTime(cues: TextTrackCueList | TextTrackCue[], time: number): number {
   // If first cue starts after time, start there
   if (time < cues[0].startTime) {
     return 0;
@@ -54,10 +54,10 @@ function getFirstCueIndexAfterTime (cues: TextTrackCueList | TextTrackCue[], tim
   }
   // At this point, left and right have swapped.
   // No direct match was found, left or right element must be the closest. Check which one has the smallest diff.
-  return (cues[left].startTime - time) < (time - cues[right].startTime) ? left : right;
+  return cues[left].startTime - time < time - cues[right].startTime ? left : right;
 }
 
-export function getCuesInRange (cues: TextTrackCueList | TextTrackCue[], start: number, end: number): TextTrackCue[] {
+export function getCuesInRange(cues: TextTrackCueList | TextTrackCue[], start: number, end: number): TextTrackCue[] {
   const cuesFound: TextTrackCue[] = [];
   const firstCueInRange = getFirstCueIndexAfterTime(cues, start);
   if (firstCueInRange > -1) {

@@ -8,7 +8,7 @@ import Fragment from '../loader/fragment';
  * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*|null} fragment - The best matching fragment
  */
-export function findFragmentByPDT (fragments: Array<Fragment>, PDTValue: number | null, maxFragLookUpTolerance: number): Fragment | null {
+export function findFragmentByPDT(fragments: Array<Fragment>, PDTValue: number | null, maxFragLookUpTolerance: number): Fragment | null {
   if (PDTValue === null || !Array.isArray(fragments) || !fragments.length || !Number.isFinite(PDTValue)) {
     return null;
   }
@@ -45,10 +45,10 @@ export function findFragmentByPDT (fragments: Array<Fragment>, PDTValue: number 
  * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  * @returns {*} foundFrag - The best matching fragment
  */
-export function findFragmentByPTS (fragPrevious: Fragment | null, fragments: Array<Fragment>, bufferEnd: number = 0, maxFragLookUpTolerance: number = 0): Fragment | null {
+export function findFragmentByPTS(fragPrevious: Fragment | null, fragments: Array<Fragment>, bufferEnd: number = 0, maxFragLookUpTolerance: number = 0): Fragment | null {
   let fragNext: Fragment | null = null;
   if (fragPrevious) {
-    fragNext = fragments[fragPrevious.sn as number - (fragments[0].sn as number) + 1];
+    fragNext = fragments[(fragPrevious.sn as number) - (fragments[0].sn as number) + 1];
   } else if (bufferEnd === 0 && fragments[0].start === 0) {
     fragNext = fragments[0];
   }
@@ -72,7 +72,7 @@ export function findFragmentByPTS (fragPrevious: Fragment | null, fragments: Arr
  * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
  * @returns {number} - 0 if it matches, 1 if too low, -1 if too high
  */
-export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpTolerance = 0, candidate: Fragment) {
+export function fragmentWithinToleranceTest(bufferEnd = 0, maxFragLookUpTolerance = 0, candidate: Fragment) {
   // offset should be within fragment boundary - config.maxFragLookUpTolerance
   // this is to cope with situations like
   // bufferEnd = 9.991
@@ -106,7 +106,7 @@ export function fragmentWithinToleranceTest (bufferEnd = 0, maxFragLookUpToleran
  * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
  * @returns {boolean} True if contiguous, false otherwise
  */
-export function pdtWithinToleranceTest (pdtBufferEnd: number, maxFragLookUpTolerance: number, candidate: Fragment): boolean {
+export function pdtWithinToleranceTest(pdtBufferEnd: number, maxFragLookUpTolerance: number, candidate: Fragment): boolean {
   const candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0)) * 1000;
 
   // endProgramDateTime can be null, default to zero
@@ -114,7 +114,7 @@ export function pdtWithinToleranceTest (pdtBufferEnd: number, maxFragLookUpToler
   return endProgramDateTime - candidateLookupTolerance > pdtBufferEnd;
 }
 
-export function findFragWithCC (fragments, CC): Fragment | null {
+export function findFragWithCC(fragments, CC): Fragment | null {
   return BinarySearch.search(fragments, (candidate) => {
     if (candidate.cc < CC) {
       return 1;

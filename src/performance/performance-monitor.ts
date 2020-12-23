@@ -15,21 +15,21 @@ import type { FragBufferedData } from '../types/events';
 export default class PerformanceMonitor {
   private hls: Hls;
 
-  constructor (hls: Hls) {
+  constructor(hls: Hls) {
     this.hls = hls;
     this.hls.on(Events.FRAG_BUFFERED, this.onFragBuffered);
   }
 
-  destroy () {
+  destroy() {
     this.hls.off(Events.FRAG_BUFFERED);
   }
 
-  onFragBuffered (event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+  onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     logFragStats(data);
   }
 }
 
-function logFragStats (data: FragBufferedData) {
+function logFragStats(data: FragBufferedData) {
   const { frag, part } = data;
   const stats = part ? part.stats : frag.stats;
   const tLoad = stats.loading.end - stats.loading.start;
@@ -37,8 +37,8 @@ function logFragStats (data: FragBufferedData) {
   const tParse = stats.parsing.end - stats.parsing.start;
   const tTotal = stats.buffering.end - stats.loading.start;
 
-  logger.log(`[performance-monitor]: Stats for fragment ${frag.sn} ${part ? (' part ' + part.index) : ''} of level ${frag.level}:
-        Size:                       ${((stats.total / 1024)).toFixed(3)} kB
+  logger.log(`[performance-monitor]: Stats for fragment ${frag.sn} ${part ? ' part ' + part.index : ''} of level ${frag.level}:
+        Size:                       ${(stats.total / 1024).toFixed(3)} kB
         Chunk Count:                ${stats.chunkCount}
 
         Request:                    ${stats.loading.start.toFixed(3)} ms
@@ -50,7 +50,7 @@ function logFragStats (data: FragBufferedData) {
         Buffering End:              ${stats.buffering.end.toFixed(3)} ms
 
         Load Duration:              ${tLoad.toFixed(3)} ms
-        Parse Duration:             ${(tParse).toFixed(3)} ms
-        Buffer Duration:            ${(tBuffer).toFixed(3)} ms
-        End-To-End Duration:        ${(tTotal).toFixed(3)} ms`);
+        Parse Duration:             ${tParse.toFixed(3)} ms
+        Buffer Duration:            ${tBuffer.toFixed(3)} ms
+        End-To-End Duration:        ${tTotal.toFixed(3)} ms`);
 }

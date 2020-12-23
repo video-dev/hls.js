@@ -14,7 +14,7 @@ const Hex = {
       str += h;
     }
     return str;
-  }
+  },
 };
 
 export default Hex;

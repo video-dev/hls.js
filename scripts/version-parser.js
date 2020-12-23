@@ -55,5 +55,5 @@ module.exports = {
       throw new Error('Invalid version.');
     }
     return match[1] || 'latest';
-  }
+  },
 };

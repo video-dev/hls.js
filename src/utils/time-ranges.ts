@@ -11,7 +11,7 @@ const TimeRanges = {
     }
 
     return log;
-  }
+  },
 };
 
 export default TimeRanges;

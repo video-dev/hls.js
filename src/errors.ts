@@ -8,7 +8,7 @@ export enum ErrorTypes {
   // Identifier for a mux Error (demuxing/remuxing)
   MUX_ERROR = 'muxError',
   // Identifier for all other errors
-  OTHER_ERROR = 'otherError'
+  OTHER_ERROR = 'otherError',
 }
 
 /**
@@ -79,5 +79,5 @@ export enum ErrorDetails {
   // Identifier for an internal call to abort a loader
   INTERNAL_ABORTED = 'aborted',
   // Uncategorized error
-  UNKNOWN = 'unknown'
+  UNKNOWN = 'unknown',
 }

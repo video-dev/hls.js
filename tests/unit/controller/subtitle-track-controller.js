@@ -12,38 +12,40 @@ describe('SubtitleTrackController', function () {
 
   beforeEach(function () {
     const hls = new Hls({
-      renderNatively: true
+      renderNatively: true,
     });
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = subtitleTrackController.tracksInGroup = [{
-      id: 0,
-      groupId: 'default-text-group',
-      lang: 'en',
-      name: 'English',
-      type: 'SUBTITLES',
-      url: 'baz',
-      details: { live: false }
-    },
-    {
-      id: 1,
-      groupId: 'default-text-group',
-      lang: 'en',
-      name: 'English',
-      type: 'SUBTITLES',
-      url: 'bar'
-    },
-    {
-      id: 2,
-      groupId: 'default-text-group',
-      lang: 'en',
-      name: 'English',
-      type: 'SUBTITLES',
-      url: 'foo',
-      details: { live: true }
-    }];
+    subtitleTrackController.tracks = subtitleTrackController.tracksInGroup = [
+      {
+        id: 0,
+        groupId: 'default-text-group',
+        lang: 'en',
+        name: 'English',
+        type: 'SUBTITLES',
+        url: 'baz',
+        details: { live: false },
+      },
+      {
+        id: 1,
+        groupId: 'default-text-group',
+        lang: 'en',
+        name: 'English',
+        type: 'SUBTITLES',
+        url: 'bar',
+      },
+      {
+        id: 2,
+        groupId: 'default-text-group',
+        lang: 'en',
+        name: 'English',
+        type: 'SUBTITLES',
+        url: 'foo',
+        details: { live: true },
+      },
+    ];
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
@@ -137,7 +139,7 @@ describe('SubtitleTrackController', function () {
         url: 'bar',
         id: 1,
         groupId: 'default-text-group',
-        deliveryDirectives: null
+        deliveryDirectives: null,
       });
     });
 
@@ -169,7 +171,7 @@ describe('SubtitleTrackController', function () {
         url: 'foo',
         id: 2,
         groupId: 'default-text-group',
-        deliveryDirectives: null
+        deliveryDirectives: null,
       });
     });
 
@@ -194,11 +196,11 @@ describe('SubtitleTrackController', function () {
       });
 
       it('should disable all textTracks if called with -1', function () {
-        [].slice.call(videoElement.textTracks).forEach(t => {
+        [].slice.call(videoElement.textTracks).forEach((t) => {
           t.mode = 'showing';
         });
         subtitleTrackController.toggleTrackModes(-1);
-        [].slice.call(videoElement.textTracks).forEach(t => {
+        [].slice.call(videoElement.textTracks).forEach((t) => {
           expect(t.mode).to.equal('disabled');
         });
       });

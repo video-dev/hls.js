@@ -12,20 +12,20 @@ describe('BaseStreamController', function () {
     baseStreamController = new BaseStreamController(new Hls({}));
     bufferInfo = {
       nextStart: 0,
-      end: 0
+      end: 0,
     };
     levelDetails = {
       endSN: 0,
-      live: false
+      live: false,
     };
     media = {
-      duration: 0
+      duration: 0,
     };
     fragmentTracker = {
       state: null,
-      getState () {
+      getState() {
         return this.state;
-      }
+      },
     };
     baseStreamController.media = media;
     baseStreamController.fragmentTracker = fragmentTracker;

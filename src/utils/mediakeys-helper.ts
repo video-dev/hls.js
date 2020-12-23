@@ -15,6 +15,4 @@ const requestMediaKeySystemAccess = (function (): MediaKeyFunc | null {
   }
 })();
 
-export {
-  requestMediaKeySystemAccess
-};
+export { requestMediaKeySystemAccess };

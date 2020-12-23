@@ -99,7 +99,7 @@ describe('TransmuxerInterface tests', function () {
       cmd: 'demux',
       data,
       decryptdata: currentFrag.decryptdata,
-      chunkMeta
+      chunkMeta,
     });
 
     const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
@@ -117,7 +117,7 @@ describe('TransmuxerInterface tests', function () {
       cmd: 'demux',
       data,
       decryptdata: newFrag.decryptdata,
-      chunkMeta
+      chunkMeta,
     });
   });
 
@@ -183,8 +183,8 @@ describe('TransmuxerInterface tests', function () {
     const evt = {
       data: {
         event: {},
-        data: {}
-      }
+        data: {},
+      },
     } as any;
 
     transmuxerInterfacePrivates.onWorkerMessage(evt);
@@ -200,8 +200,8 @@ describe('TransmuxerInterface tests', function () {
     const evt = {
       data: {
         event: 'init',
-        data: {}
-      }
+        data: {},
+      },
     };
 
     const spy = sinon.spy(self.URL, 'revokeObjectURL');

@@ -18,151 +18,149 @@ import type { MediaKeyFunc } from './utils/mediakeys-helper';
 import type { FragmentLoaderContext, Loader, LoaderContext, PlaylistLoaderContext } from './types/loader';
 
 type ABRControllerConfig = {
-  abrEwmaFastLive: number,
-  abrEwmaSlowLive: number,
-  abrEwmaFastVoD: number,
-  abrEwmaSlowVoD: number,
-  abrEwmaDefaultEstimate: number,
-  abrBandWidthFactor: number,
-  abrBandWidthUpFactor: number,
-  abrMaxWithRealBitrate: boolean,
-  maxStarvationDelay: number,
-  maxLoadingDelay: number,
+  abrEwmaFastLive: number;
+  abrEwmaSlowLive: number;
+  abrEwmaFastVoD: number;
+  abrEwmaSlowVoD: number;
+  abrEwmaDefaultEstimate: number;
+  abrBandWidthFactor: number;
+  abrBandWidthUpFactor: number;
+  abrMaxWithRealBitrate: boolean;
+  maxStarvationDelay: number;
+  maxLoadingDelay: number;
 };
 
 export type BufferControllerConfig = {
-  appendErrorMaxRetry: number,
-  liveDurationInfinity: boolean,
-  liveBackBufferLength: number,
+  appendErrorMaxRetry: number;
+  liveDurationInfinity: boolean;
+  liveBackBufferLength: number;
 };
 
 type CapLevelControllerConfig = {
-  capLevelToPlayerSize: boolean
+  capLevelToPlayerSize: boolean;
 };
 
 export type DRMSystemOptions = {
-  audioRobustness?: string,
-  videoRobustness?: string,
-}
+  audioRobustness?: string;
+  videoRobustness?: string;
+};
 
 export type EMEControllerConfig = {
-  licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
-  emeEnabled: boolean,
-  widevineLicenseUrl?: string,
-  drmSystemOptions: DRMSystemOptions,
-  requestMediaKeySystemAccessFunc: MediaKeyFunc | null,
+  licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+  emeEnabled: boolean;
+  widevineLicenseUrl?: string;
+  drmSystemOptions: DRMSystemOptions;
+  requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
 
 type FragmentLoaderConfig = {
-  fLoader?: { new(confg: HlsConfig): Loader<FragmentLoaderContext> },
+  fLoader?: { new (confg: HlsConfig): Loader<FragmentLoaderContext> };
 
-  fragLoadingTimeOut: number,
-  fragLoadingMaxRetry: number,
-  fragLoadingRetryDelay: number,
-  fragLoadingMaxRetryTimeout: number,
+  fragLoadingTimeOut: number;
+  fragLoadingMaxRetry: number;
+  fragLoadingRetryDelay: number;
+  fragLoadingMaxRetryTimeout: number;
 };
 
 type FPSControllerConfig = {
-  capLevelOnFPSDrop: boolean,
-  fpsDroppedMonitoringPeriod: number,
-  fpsDroppedMonitoringThreshold: number,
+  capLevelOnFPSDrop: boolean;
+  fpsDroppedMonitoringPeriod: number;
+  fpsDroppedMonitoringThreshold: number;
 };
 
 type LevelControllerConfig = {
-  startLevel?: number
+  startLevel?: number;
 };
 
 export type MP4RemuxerConfig = {
-  stretchShortVideoTrack: boolean,
-  maxAudioFramesDrift: number,
+  stretchShortVideoTrack: boolean;
+  maxAudioFramesDrift: number;
 };
 
 type PlaylistLoaderConfig = {
-  pLoader?: { new(confg: HlsConfig): Loader<PlaylistLoaderContext> },
+  pLoader?: { new (confg: HlsConfig): Loader<PlaylistLoaderContext> };
 
-  manifestLoadingTimeOut: number,
-  manifestLoadingMaxRetry: number,
-  manifestLoadingRetryDelay: number,
-  manifestLoadingMaxRetryTimeout: number,
+  manifestLoadingTimeOut: number;
+  manifestLoadingMaxRetry: number;
+  manifestLoadingRetryDelay: number;
+  manifestLoadingMaxRetryTimeout: number;
 
-  levelLoadingTimeOut: number,
-  levelLoadingMaxRetry: number,
-  levelLoadingRetryDelay: number,
-  levelLoadingMaxRetryTimeout: number
+  levelLoadingTimeOut: number;
+  levelLoadingMaxRetry: number;
+  levelLoadingRetryDelay: number;
+  levelLoadingMaxRetryTimeout: number;
 };
 
 type StreamControllerConfig = {
-  autoStartLoad: boolean,
-  startPosition: number,
-  defaultAudioCodec?: string,
-  initialLiveManifestSize: number,
-  maxBufferLength: number,
-  maxBufferSize: number,
-  maxBufferHole: number,
-  highBufferWatchdogPeriod: number,
-  nudgeOffset: number,
-  nudgeMaxRetry: number,
-  maxFragLookUpTolerance: number,
-  maxMaxBufferLength: number,
-  startFragPrefetch: boolean,
-  testBandwidth: boolean
+  autoStartLoad: boolean;
+  startPosition: number;
+  defaultAudioCodec?: string;
+  initialLiveManifestSize: number;
+  maxBufferLength: number;
+  maxBufferSize: number;
+  maxBufferHole: number;
+  highBufferWatchdogPeriod: number;
+  nudgeOffset: number;
+  nudgeMaxRetry: number;
+  maxFragLookUpTolerance: number;
+  maxMaxBufferLength: number;
+  startFragPrefetch: boolean;
+  testBandwidth: boolean;
 };
 
 type LatencyControllerConfig = {
-  liveSyncDurationCount: number,
-  liveMaxLatencyDurationCount: number,
-  liveSyncDuration?: number,
-  liveMaxLatencyDuration?: number,
-  maxLiveSyncPlaybackRate: number
-}
+  liveSyncDurationCount: number;
+  liveMaxLatencyDurationCount: number;
+  liveSyncDuration?: number;
+  liveMaxLatencyDuration?: number;
+  maxLiveSyncPlaybackRate: number;
+};
 
 type TimelineControllerConfig = {
-  cueHandler: Cues.CuesInterface,
-  enableCEA708Captions: boolean,
-  enableWebVTT: boolean,
-  enableIMSC1: boolean,
-  captionsTextTrack1Label: string,
-  captionsTextTrack1LanguageCode: string,
-  captionsTextTrack2Label: string,
-  captionsTextTrack2LanguageCode: string,
-  captionsTextTrack3Label: string,
-  captionsTextTrack3LanguageCode: string,
-  captionsTextTrack4Label: string,
-  captionsTextTrack4LanguageCode: string,
-  renderTextTracksNatively: boolean
+  cueHandler: Cues.CuesInterface;
+  enableCEA708Captions: boolean;
+  enableWebVTT: boolean;
+  enableIMSC1: boolean;
+  captionsTextTrack1Label: string;
+  captionsTextTrack1LanguageCode: string;
+  captionsTextTrack2Label: string;
+  captionsTextTrack2LanguageCode: string;
+  captionsTextTrack3Label: string;
+  captionsTextTrack3LanguageCode: string;
+  captionsTextTrack4Label: string;
+  captionsTextTrack4LanguageCode: string;
+  renderTextTracksNatively: boolean;
 };
 
 type TSDemuxerConfig = {
-  forceKeyFrameOnDiscontinuity: boolean,
+  forceKeyFrameOnDiscontinuity: boolean;
 };
 
-export type HlsConfig =
-  {
-    debug: boolean,
-    enableWorker: boolean,
-    enableSoftwareAES: boolean,
-    minAutoBitrate: number,
-    loader: { new(confg: HlsConfig): Loader<LoaderContext> },
-    xhrSetup?: (xhr: XMLHttpRequest, url: string) => void,
+export type HlsConfig = {
+  debug: boolean;
+  enableWorker: boolean;
+  enableSoftwareAES: boolean;
+  minAutoBitrate: number;
+  loader: { new (confg: HlsConfig): Loader<LoaderContext> };
+  xhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
 
-    // Alt Audio
-    audioStreamController?: typeof AudioStreamController,
-    audioTrackController?: typeof AudioTrackController,
-    // Subtitle
-    subtitleStreamController?: typeof SubtitleStreamController,
-    subtitleTrackController?: typeof SubtitleTrackController,
-    timelineController?: typeof TimelineController,
-    // EME
-    emeController?: typeof EMEController,
+  // Alt Audio
+  audioStreamController?: typeof AudioStreamController;
+  audioTrackController?: typeof AudioTrackController;
+  // Subtitle
+  subtitleStreamController?: typeof SubtitleStreamController;
+  subtitleTrackController?: typeof SubtitleTrackController;
+  timelineController?: typeof TimelineController;
+  // EME
+  emeController?: typeof EMEController;
 
-    abrController: typeof AbrController,
-    bufferController: typeof BufferController,
-    capLevelController: typeof CapLevelController,
-    fpsController: typeof FPSController,
-    progressive: boolean,
-    lowLatencyMode: boolean
-  } &
-  ABRControllerConfig &
+  abrController: typeof AbrController;
+  bufferController: typeof BufferController;
+  capLevelController: typeof CapLevelController;
+  fpsController: typeof FPSController;
+  progressive: boolean;
+  lowLatencyMode: boolean;
+} & ABRControllerConfig &
   BufferControllerConfig &
   CapLevelControllerConfig &
   EMEControllerConfig &
@@ -255,15 +253,15 @@ export const hlsDefaultConfig: HlsConfig = {
 
   // Dynamic Modules
   ...timelineConfig(),
-  subtitleStreamController: (__USE_SUBTITLES__) ? SubtitleStreamController : undefined,
-  subtitleTrackController: (__USE_SUBTITLES__) ? SubtitleTrackController : undefined,
-  timelineController: (__USE_SUBTITLES__) ? TimelineController : undefined,
-  audioStreamController: (__USE_ALT_AUDIO__) ? AudioStreamController : undefined,
-  audioTrackController: (__USE_ALT_AUDIO__) ? AudioTrackController : undefined,
-  emeController: (__USE_EME_DRM__) ? EMEController : undefined
+  subtitleStreamController: __USE_SUBTITLES__ ? SubtitleStreamController : undefined,
+  subtitleTrackController: __USE_SUBTITLES__ ? SubtitleTrackController : undefined,
+  timelineController: __USE_SUBTITLES__ ? TimelineController : undefined,
+  audioStreamController: __USE_ALT_AUDIO__ ? AudioStreamController : undefined,
+  audioTrackController: __USE_ALT_AUDIO__ ? AudioTrackController : undefined,
+  emeController: __USE_EME_DRM__ ? EMEController : undefined,
 };
 
-function timelineConfig (): TimelineControllerConfig {
+function timelineConfig(): TimelineControllerConfig {
   return {
     cueHandler: Cues, // used by timeline-controller
     enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
@@ -277,16 +275,19 @@ function timelineConfig (): TimelineControllerConfig {
     captionsTextTrack3LanguageCode: '', // used by timeline-controller
     captionsTextTrack4Label: 'Unknown CC', // used by timeline-controller
     captionsTextTrack4LanguageCode: '', // used by timeline-controller
-    renderTextTracksNatively: true
+    renderTextTracksNatively: true,
   };
 }
 
-export function mergeConfig (defaultConfig: HlsConfig, userConfig: Partial<HlsConfig>): HlsConfig {
+export function mergeConfig(defaultConfig: HlsConfig, userConfig: Partial<HlsConfig>): HlsConfig {
   if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
-    throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+    throw new Error("Illegal hls.js config: don't mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration");
   }
 
-  if (userConfig.liveMaxLatencyDurationCount !== undefined && (userConfig.liveSyncDurationCount === undefined || userConfig.liveMaxLatencyDurationCount <= userConfig.liveSyncDurationCount)) {
+  if (
+    userConfig.liveMaxLatencyDurationCount !== undefined &&
+    (userConfig.liveSyncDurationCount === undefined || userConfig.liveMaxLatencyDurationCount <= userConfig.liveSyncDurationCount)
+  ) {
     throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
   }
 
@@ -297,7 +298,7 @@ export function mergeConfig (defaultConfig: HlsConfig, userConfig: Partial<HlsCo
   return Object.assign({}, defaultConfig, userConfig);
 }
 
-export function enableStreamingMode (config) {
+export function enableStreamingMode(config) {
   const currentLoader = config.loader;
   if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
     // If a developer has configured their own loader, respect that choice

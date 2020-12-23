@@ -27,16 +27,16 @@ try {
 }
 
 type MuxConfig =
-  { demux: typeof TSDemuxer, remux: typeof MP4Remuxer } |
-  { demux: typeof MP4Demuxer, remux: typeof PassThroughRemuxer } |
-  { demux: typeof AACDemuxer, remux: typeof MP4Remuxer } |
-  { demux: typeof MP3Demuxer, remux: typeof MP4Remuxer };
+  | { demux: typeof TSDemuxer; remux: typeof MP4Remuxer }
+  | { demux: typeof MP4Demuxer; remux: typeof PassThroughRemuxer }
+  | { demux: typeof AACDemuxer; remux: typeof MP4Remuxer }
+  | { demux: typeof MP3Demuxer; remux: typeof MP4Remuxer };
 
 const muxConfig: MuxConfig[] = [
   { demux: TSDemuxer, remux: MP4Remuxer },
   { demux: MP4Demuxer, remux: PassThroughRemuxer },
   { demux: AACDemuxer, remux: MP4Remuxer },
-  { demux: MP3Demuxer, remux: MP4Remuxer }
+  { demux: MP3Demuxer, remux: MP4Remuxer },
 ];
 
 let minProbeByteLength = 1024;
@@ -58,14 +58,14 @@ export default class Transmuxer {
   private currentTransmuxState!: TransmuxState;
   private cache: ChunkCache = new ChunkCache();
 
-  constructor (observer: HlsEventEmitter, typeSupported, config: HlsConfig, vendor) {
+  constructor(observer: HlsEventEmitter, typeSupported, config: HlsConfig, vendor) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
     this.vendor = vendor;
   }
 
-  configure (transmuxConfig: TransmuxConfig, state: TransmuxState) {
+  configure(transmuxConfig: TransmuxConfig, state: TransmuxState) {
     this.transmuxConfig = transmuxConfig;
     this.currentTransmuxState = state;
     if (this.decrypter) {
@@ -73,10 +73,7 @@ export default class Transmuxer {
     }
   }
 
-  push (data: ArrayBuffer,
-    decryptdata: any | null,
-    chunkMeta: ChunkMetadata
-  ): TransmuxerResult | Promise<TransmuxerResult> {
+  push(data: ArrayBuffer, decryptdata: any | null, chunkMeta: ChunkMetadata): TransmuxerResult | Promise<TransmuxerResult> {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
@@ -97,14 +94,15 @@ export default class Transmuxer {
         }
         uintData = new Uint8Array(decryptedData);
       } else {
-        this.decryptionPromise = decrypter.webCryptoDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer)
-          .then((decryptedData) : TransmuxerResult => {
+        this.decryptionPromise = decrypter.webCryptoDecrypt(uintData, decryptdata.key.buffer, decryptdata.iv.buffer).then(
+          (decryptedData): TransmuxerResult => {
             // Calling push here is important; if flush() is called while this is still resolving, this ensures that
             // the decrypted data has been transmuxed
             const result = this.push(decryptedData, null, chunkMeta) as TransmuxerResult;
             this.decryptionPromise = null;
             return result;
-          });
+          }
+        );
         return this.decryptionPromise!;
       }
     }
@@ -151,7 +149,7 @@ export default class Transmuxer {
   }
 
   // Due to data caching, flush calls can produce more than one TransmuxerResult (hence the Array type)
-  flush (chunkMeta: ChunkMetadata) : TransmuxerResult[] | Promise<TransmuxerResult[]> {
+  flush(chunkMeta: ChunkMetadata): TransmuxerResult[] | Promise<TransmuxerResult[]> {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
@@ -188,7 +186,7 @@ export default class Transmuxer {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.FRAG_PARSING_ERROR,
           fatal: true,
-          reason: 'no demux matching with content found'
+          reason: 'no demux matching with content found',
         });
       }
       stats.executeEnd = now();
@@ -200,14 +198,14 @@ export default class Transmuxer {
     const remuxResult = remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset);
     transmuxResults.push({
       remuxResult,
-      chunkMeta
+      chunkMeta,
     });
 
     stats.executeEnd = now();
     return transmuxResults;
   }
 
-  resetInitialTimestamp (defaultInitPts: number | undefined) {
+  resetInitialTimestamp(defaultInitPts: number | undefined) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
@@ -216,7 +214,7 @@ export default class Transmuxer {
     remuxer.resetTimeStamp(defaultInitPts);
   }
 
-  resetContiguity () {
+  resetContiguity() {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
@@ -225,7 +223,7 @@ export default class Transmuxer {
     remuxer.resetNextTimestamp();
   }
 
-  resetInitSegment (initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, duration: number) {
+  resetInitSegment(initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, duration: number) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
@@ -234,7 +232,7 @@ export default class Transmuxer {
     remuxer.resetInitSegment(initSegmentData, audioCodec, videoCodec);
   }
 
-  destroy (): void {
+  destroy(): void {
     if (this.demuxer) {
       this.demuxer.destroy();
       this.demuxer = undefined;
@@ -245,7 +243,14 @@ export default class Transmuxer {
     }
   }
 
-  private transmux (data: Uint8Array, decryptData: Uint8Array, encryptionType: string | null, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata): TransmuxerResult | Promise<TransmuxerResult> {
+  private transmux(
+    data: Uint8Array,
+    decryptData: Uint8Array,
+    encryptionType: string | null,
+    timeOffset: number,
+    accurateTimeOffset: boolean,
+    chunkMeta: ChunkMetadata
+  ): TransmuxerResult | Promise<TransmuxerResult> {
     let result: TransmuxerResult | Promise<TransmuxerResult>;
     if (encryptionType === 'SAMPLE-AES') {
       result = this.transmuxSampleAes(data, decryptData, timeOffset, accurateTimeOffset, chunkMeta);
@@ -255,26 +260,24 @@ export default class Transmuxer {
     return result;
   }
 
-  private transmuxUnencrypted (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata): TransmuxerResult {
+  private transmuxUnencrypted(data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata): TransmuxerResult {
     const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(data, timeOffset, false);
     const remuxResult = this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset);
     return {
       remuxResult,
-      chunkMeta
+      chunkMeta,
     };
   }
 
   // TODO: Handle flush with Sample-AES
-  private transmuxSampleAes (data: Uint8Array, decryptData: any, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) : Promise<TransmuxerResult> {
-    return this.demuxer!.demuxSampleAes(data, decryptData, timeOffset)
-      .then(demuxResult => ({
-        remuxResult: this.remuxer!.remux(demuxResult.audioTrack, demuxResult.avcTrack, demuxResult.id3Track, demuxResult.textTrack, timeOffset, accurateTimeOffset),
-        chunkMeta
-      })
-      );
+  private transmuxSampleAes(data: Uint8Array, decryptData: any, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata): Promise<TransmuxerResult> {
+    return this.demuxer!.demuxSampleAes(data, decryptData, timeOffset).then((demuxResult) => ({
+      remuxResult: this.remuxer!.remux(demuxResult.audioTrack, demuxResult.avcTrack, demuxResult.id3Track, demuxResult.textTrack, timeOffset, accurateTimeOffset),
+      chunkMeta,
+    }));
   }
 
-  private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig): { remuxer: Remuxer | undefined, demuxer: Demuxer | undefined } {
+  private configureTransmuxer(data: Uint8Array, transmuxConfig: TransmuxConfig): { remuxer: Remuxer | undefined; demuxer: Demuxer | undefined } {
     const { config, observer, typeSupported, vendor } = this;
     const { audioCodec, defaultInitPts, duration, initSegmentData, videoCodec } = transmuxConfig;
     // probe for content type
@@ -307,13 +310,13 @@ export default class Transmuxer {
     return { demuxer, remuxer };
   }
 
-  private needsProbing (data: Uint8Array, discontinuity: boolean, trackSwitch: boolean) : boolean {
+  private needsProbing(data: Uint8Array, discontinuity: boolean, trackSwitch: boolean): boolean {
     // in case of continuity change, or track switch
     // we might switch from content type (AAC container to TS container, or TS to fmp4 for example)
-    return !this.demuxer || ((discontinuity || trackSwitch));
+    return !this.demuxer || discontinuity || trackSwitch;
   }
 
-  private getDecrypter () {
+  private getDecrypter() {
     let decrypter = this.decrypter;
     if (!decrypter) {
       decrypter = this.decrypter = new Decrypter(this.observer, this.config);
@@ -322,20 +325,20 @@ export default class Transmuxer {
   }
 }
 
-function getEncryptionType (data: Uint8Array, decryptData: any): string | null {
+function getEncryptionType(data: Uint8Array, decryptData: any): string | null {
   let encryptionType = null;
-  if ((data.byteLength > 0) && (decryptData != null) && (decryptData.key != null)) {
+  if (data.byteLength > 0 && decryptData != null && decryptData.key != null) {
     encryptionType = decryptData.method;
   }
   return encryptionType;
 }
 
-const emptyResult = (chunkMeta) : TransmuxerResult => ({
+const emptyResult = (chunkMeta): TransmuxerResult => ({
   remuxResult: {},
-  chunkMeta
+  chunkMeta,
 });
 
-export function isPromise<T> (p: Promise<T> | any): p is Promise<T> {
+export function isPromise<T>(p: Promise<T> | any): p is Promise<T> {
   return 'then' in p && p.then instanceof Function;
 }
 
@@ -346,7 +349,7 @@ export class TransmuxConfig {
   public duration: number;
   public defaultInitPts?: number;
 
-  constructor (audioCodec: string | undefined, videoCodec: string | undefined, initSegmentData: Uint8Array, duration: number, defaultInitPts?: number) {
+  constructor(audioCodec: string | undefined, videoCodec: string | undefined, initSegmentData: Uint8Array, duration: number, defaultInitPts?: number) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.initSegmentData = initSegmentData;
@@ -362,7 +365,7 @@ export class TransmuxState {
   public trackSwitch: boolean;
   public timeOffset: number;
 
-  constructor (discontinuity: boolean, contiguous: boolean, accurateTimeOffset: boolean, trackSwitch: boolean, timeOffset: number) {
+  constructor(discontinuity: boolean, contiguous: boolean, accurateTimeOffset: boolean, trackSwitch: boolean, timeOffset: number) {
     this.discontinuity = discontinuity;
     this.contiguous = contiguous;
     this.accurateTimeOffset = accurateTimeOffset;

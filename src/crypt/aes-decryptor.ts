@@ -1,9 +1,9 @@
 import { sliceUint8 } from '../utils/typed-array';
 
 // PKCS7
-export function removePadding (array: Uint8Array): Uint8Array {
+export function removePadding(array: Uint8Array): Uint8Array {
   const outputBytes = array.byteLength;
-  const paddingBytes = outputBytes && (new DataView(array.buffer)).getUint8(outputBytes - 1);
+  const paddingBytes = outputBytes && new DataView(array.buffer).getUint8(outputBytes - 1);
   if (paddingBytes) {
     return sliceUint8(array, 0, outputBytes - paddingBytes);
   }
@@ -14,7 +14,7 @@ export default class AESDecryptor {
   private rcon: Array<number> = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
   private subMix: Array<Uint32Array> = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
   private invSubMix: Array<Uint32Array> = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
-  private sBox: Uint32Array= new Uint32Array(256);
+  private sBox: Uint32Array = new Uint32Array(256);
   private invSBox: Uint32Array = new Uint32Array(256);
   private key: Uint32Array = new Uint32Array(0);
 
@@ -23,12 +23,12 @@ export default class AESDecryptor {
   private keySchedule!: Uint32Array;
   private invKeySchedule!: Uint32Array;
 
-  constructor () {
+  constructor() {
     this.initTable();
   }
 
   // Using view.getUint32() also swaps the byte order.
-  uint8ArrayToUint32Array_ (arrayBuffer) {
+  uint8ArrayToUint32Array_(arrayBuffer) {
     const view = new DataView(arrayBuffer);
     const newArray = new Uint32Array(4);
     for (let i = 0; i < 4; i++) {
@@ -38,7 +38,7 @@ export default class AESDecryptor {
     return newArray;
   }
 
-  initTable () {
+  initTable() {
     const sBox = this.sBox;
     const invSBox = this.invSBox;
     const subMix = this.subMix;
@@ -99,14 +99,14 @@ export default class AESDecryptor {
     }
   }
 
-  expandKey (keyBuffer: ArrayBuffer) {
+  expandKey(keyBuffer: ArrayBuffer) {
     // convert keyBuffer to Uint32Array
     const key = this.uint8ArrayToUint32Array_(keyBuffer);
     let sameKey = true;
     let offset = 0;
 
     while (offset < key.length && sameKey) {
-      sameKey = (key[offset] === this.key[offset]);
+      sameKey = key[offset] === this.key[offset];
       offset++;
     }
 
@@ -115,18 +115,18 @@ export default class AESDecryptor {
     }
 
     this.key = key;
-    const keySize = this.keySize = key.length;
+    const keySize = (this.keySize = key.length);
 
     if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
       throw new Error('Invalid aes key size=' + keySize);
     }
 
-    const ksRows = this.ksRows = (keySize + 6 + 1) * 4;
+    const ksRows = (this.ksRows = (keySize + 6 + 1) * 4);
     let ksRow;
     let invKsRow;
 
-    const keySchedule = this.keySchedule = new Uint32Array(ksRows);
-    const invKeySchedule = this.invKeySchedule = new Uint32Array(ksRows);
+    const keySchedule = (this.keySchedule = new Uint32Array(ksRows));
+    const invKeySchedule = (this.invKeySchedule = new Uint32Array(ksRows));
     const sbox = this.sBox;
     const rcon = this.rcon;
 
@@ -182,11 +182,11 @@ export default class AESDecryptor {
   }
 
   // Adding this as a method greatly improves performance.
-  networkToHostOrderSwap (word) {
+  networkToHostOrderSwap(word) {
     return (word << 24) | ((word & 0xff00) << 8) | ((word & 0xff0000) >> 8) | (word >>> 24);
   }
 
-  decrypt (inputArrayBuffer: ArrayBuffer, offset: number, aesIV: ArrayBuffer) {
+  decrypt(inputArrayBuffer: ArrayBuffer, offset: number, aesIV: ArrayBuffer) {
     const nRounds = this.keySize + 6;
     const invKeySchedule = this.invKeySchedule;
     const invSBOX = this.invSBox;
@@ -242,10 +242,10 @@ export default class AESDecryptor {
       }
 
       // Shift rows, sub bytes, add round key
-      t0 = ((invSBOX[s0 >>> 24] << 24) ^ (invSBOX[(s1 >> 16) & 0xff] << 16) ^ (invSBOX[(s2 >> 8) & 0xff] << 8) ^ invSBOX[s3 & 0xff]) ^ invKeySchedule[ksRow];
-      t1 = ((invSBOX[s1 >>> 24] << 24) ^ (invSBOX[(s2 >> 16) & 0xff] << 16) ^ (invSBOX[(s3 >> 8) & 0xff] << 8) ^ invSBOX[s0 & 0xff]) ^ invKeySchedule[ksRow + 1];
-      t2 = ((invSBOX[s2 >>> 24] << 24) ^ (invSBOX[(s3 >> 16) & 0xff] << 16) ^ (invSBOX[(s0 >> 8) & 0xff] << 8) ^ invSBOX[s1 & 0xff]) ^ invKeySchedule[ksRow + 2];
-      t3 = ((invSBOX[s3 >>> 24] << 24) ^ (invSBOX[(s0 >> 16) & 0xff] << 16) ^ (invSBOX[(s1 >> 8) & 0xff] << 8) ^ invSBOX[s2 & 0xff]) ^ invKeySchedule[ksRow + 3];
+      t0 = (invSBOX[s0 >>> 24] << 24) ^ (invSBOX[(s1 >> 16) & 0xff] << 16) ^ (invSBOX[(s2 >> 8) & 0xff] << 8) ^ invSBOX[s3 & 0xff] ^ invKeySchedule[ksRow];
+      t1 = (invSBOX[s1 >>> 24] << 24) ^ (invSBOX[(s2 >> 16) & 0xff] << 16) ^ (invSBOX[(s3 >> 8) & 0xff] << 8) ^ invSBOX[s0 & 0xff] ^ invKeySchedule[ksRow + 1];
+      t2 = (invSBOX[s2 >>> 24] << 24) ^ (invSBOX[(s3 >> 16) & 0xff] << 16) ^ (invSBOX[(s0 >> 8) & 0xff] << 8) ^ invSBOX[s1 & 0xff] ^ invKeySchedule[ksRow + 2];
+      t3 = (invSBOX[s3 >>> 24] << 24) ^ (invSBOX[(s0 >> 16) & 0xff] << 16) ^ (invSBOX[(s1 >> 8) & 0xff] << 8) ^ invSBOX[s2 & 0xff] ^ invKeySchedule[ksRow + 3];
       ksRow = ksRow + 3;
 
       // Write

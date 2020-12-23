@@ -2,15 +2,18 @@ import { sendAddTrackEvent, clearCurrentCues } from '../../../src/utils/texttrac
 import sinon from 'sinon';
 
 describe('text track utils', function () {
-  const cues = [{
-    begin: 0,
-    end: 5,
-    text: 'First 5'
-  }, {
-    begin: 5,
-    end: 10,
-    text: 'Last 5'
-  }];
+  const cues = [
+    {
+      begin: 0,
+      end: 5,
+      text: 'First 5',
+    },
+    {
+      begin: 5,
+      end: 10,
+      text: 'Last 5',
+    },
+  ];
 
   let track;
   let video;

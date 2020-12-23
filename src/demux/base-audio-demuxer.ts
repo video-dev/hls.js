@@ -11,7 +11,7 @@ class BaseAudioDemuxer implements Demuxer {
   protected cachedData: Uint8Array | null = null;
   protected initPTS: number | null = null;
 
-  resetInitSegment (audioCodec: string, videoCodec: string, duration: number) {
+  resetInitSegment(audioCodec: string, videoCodec: string, duration: number) {
     this._id3Track = {
       type: 'id3',
       id: 0,
@@ -19,24 +19,22 @@ class BaseAudioDemuxer implements Demuxer {
       inputTimeScale: 90000,
       sequenceNumber: 0,
       samples: [],
-      dropped: 0
+      dropped: 0,
     };
   }
 
-  resetTimeStamp () {
-  }
+  resetTimeStamp() {}
 
-  resetContiguity (): void {
-  }
+  resetContiguity(): void {}
 
-  canParse (data: Uint8Array, offset: number): boolean {
+  canParse(data: Uint8Array, offset: number): boolean {
     return false;
   }
 
-  appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number): AppendedAudioFrame | void {}
+  appendFrame(track: DemuxedAudioTrack, data: Uint8Array, offset: number): AppendedAudioFrame | void {}
 
   // feed incoming data to the front of the parsing pipeline
-  demux (data: Uint8Array, timeOffset: number): DemuxerResult {
+  demux(data: Uint8Array, timeOffset: number): DemuxerResult {
     if (this.cachedData) {
       data = appendUint8Array(this.cachedData, data);
       this.cachedData = null;
@@ -96,15 +94,15 @@ class BaseAudioDemuxer implements Demuxer {
       audioTrack: track,
       avcTrack: dummyTrack(),
       id3Track,
-      textTrack: dummyTrack()
+      textTrack: dummyTrack(),
     };
   }
 
-  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
+  demuxSampleAes(data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
     return Promise.reject(new Error(`[${this}] This demuxer does not support Sample-AES decryption`));
   }
 
-  flush (timeOffset: number): DemuxerResult {
+  flush(timeOffset: number): DemuxerResult {
     // Parse cache in case of remaining frames.
     if (this.cachedData) {
       this.demux(this.cachedData, 0);
@@ -118,11 +116,11 @@ class BaseAudioDemuxer implements Demuxer {
       audioTrack: this._audioTrack,
       avcTrack: dummyTrack(),
       id3Track: this._id3Track,
-      textTrack: dummyTrack()
+      textTrack: dummyTrack(),
     };
   }
 
-  destroy () {}
+  destroy() {}
 }
 
 /**

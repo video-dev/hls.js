@@ -16,25 +16,25 @@ class FPSController implements ComponentAPI {
   // stream controller must be provided as a dependency!
   private streamController!: StreamController;
 
-  constructor (hls: Hls) {
+  constructor(hls: Hls) {
     this.hls = hls;
 
     this.registerListeners();
   }
 
-  public setStreamController (streamController: StreamController) {
+  public setStreamController(streamController: StreamController) {
     this.streamController = streamController;
   }
 
-  protected registerListeners () {
+  protected registerListeners() {
     this.hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
   }
 
-  protected unregisterListeners () {
+  protected unregisterListeners() {
     this.hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching);
   }
 
-  destroy () {
+  destroy() {
     if (this.timer) {
       clearInterval(this.timer);
     }
@@ -44,7 +44,7 @@ class FPSController implements ComponentAPI {
     this.media = null;
   }
 
-  protected onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
+  protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     const config = this.hls.config;
     if (config.capLevelOnFPSDrop) {
       const media = data.media instanceof self.HTMLVideoElement ? data.media : null;
@@ -58,14 +58,14 @@ class FPSController implements ComponentAPI {
     }
   }
 
-  checkFPS (video: HTMLVideoElement, decodedFrames: number, droppedFrames: number) {
+  checkFPS(video: HTMLVideoElement, decodedFrames: number, droppedFrames: number) {
     const currentTime = performance.now();
     if (decodedFrames) {
       if (this.lastTime) {
         const currentPeriod = currentTime - this.lastTime;
         const currentDropped = droppedFrames - this.lastDroppedFrames;
         const currentDecoded = decodedFrames - this.lastDecodedFrames;
-        const droppedFPS = 1000 * currentDropped / currentPeriod;
+        const droppedFPS = (1000 * currentDropped) / currentPeriod;
         const hls = this.hls;
         hls.trigger(Events.FPS_DROP, { currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames });
         if (droppedFPS > 0) {
@@ -88,7 +88,7 @@ class FPSController implements ComponentAPI {
     }
   }
 
-  checkFPSInterval () {
+  checkFPSInterval() {
     const video = this.media;
     if (video) {
       if (this.isVideoPlaybackQualityAvailable) {

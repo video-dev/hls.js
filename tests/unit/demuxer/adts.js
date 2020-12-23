@@ -1,6 +1,14 @@
 import {
-  getAudioConfig, isHeaderPattern, getHeaderLength, getFullFrameLength, isHeader, probe,
-  initTrackConfig, getFrameDuration, parseFrameHeader, appendFrame
+  getAudioConfig,
+  isHeaderPattern,
+  getHeaderLength,
+  getFullFrameLength,
+  isHeader,
+  probe,
+  initTrackConfig,
+  getFrameDuration,
+  parseFrameHeader,
+  appendFrame,
 } from '../../../src/demux/adts';
 import { ErrorTypes } from '../../../src/errors';
 
@@ -9,7 +17,7 @@ const sinon = require('sinon');
 describe('getAudioConfig', function () {
   it('should trigger a MEDIA_ERROR event if sample index is invalid', function () {
     const observer = {
-      trigger: sinon.spy()
+      trigger: sinon.spy(),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -23,7 +31,7 @@ describe('getAudioConfig', function () {
 
   it('should return audio config for firefox if the specified sampling frequency > 24kHz', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'firefox')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'firefox'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -35,13 +43,13 @@ describe('getAudioConfig', function () {
       samplerate: 96000,
       channelCount: 0,
       codec: 'mp4a.40.2',
-      manifestCodec: 'mp4a.40.29'
+      manifestCodec: 'mp4a.40.29',
     });
   });
 
   it('should return audio config with a different extension sampling index for Firefox if sampling freq is low', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Firefox')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Firefox'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -53,13 +61,13 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
-      manifestCodec: 'mp4a.40.29'
+      manifestCodec: 'mp4a.40.29',
     });
   });
 
   it('should return audio config for Android', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Android')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Android'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -71,13 +79,13 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.2',
-      manifestCodec: 'mp4a.40.29'
+      manifestCodec: 'mp4a.40.29',
     });
   });
 
   it('should return audio config for Chrome', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -89,13 +97,13 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
-      manifestCodec: 'mp4a.40.29'
+      manifestCodec: 'mp4a.40.29',
     });
   });
 
   it('should return audio config for Chrome if there is no audio codec', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -107,13 +115,13 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
-      manifestCodec: undefined
+      manifestCodec: undefined,
     });
   });
 
   it('should return audio config for Chrome if there is no audio codec and freq is high enough', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -125,13 +133,13 @@ describe('getAudioConfig', function () {
       samplerate: 64000,
       channelCount: 0,
       codec: 'mp4a.40.5',
-      manifestCodec: undefined
+      manifestCodec: undefined,
     });
   });
 
   it('should return audio config for Chrome if audio codec is "mp4a.40.5"', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -143,13 +151,13 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
-      manifestCodec: 'mp4a.40.5'
+      manifestCodec: 'mp4a.40.5',
     });
   });
 
   it('should return audio config for Chrome if audio codec is "mp4a.40.2"', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Chrome'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -162,13 +170,13 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 1,
       codec: 'mp4a.40.2',
-      manifestCodec: 'mp4a.40.2'
+      manifestCodec: 'mp4a.40.2',
     });
   });
 
   it('should return audio config for Vivaldi', function () {
     const observer = {
-      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Vivaldi')
+      trigger: sinon.stub(navigator, 'userAgent').get(() => 'Vivaldi'),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -180,7 +188,7 @@ describe('getAudioConfig', function () {
       samplerate: 64000,
       channelCount: 0,
       codec: 'mp4a.40.2',
-      manifestCodec: 'mp4a.40.2'
+      manifestCodec: 'mp4a.40.2',
     });
   });
 });
@@ -229,7 +237,7 @@ describe('getFullFrameLength', function () {
     data[2] = 0x00;
     data[3] = 0x02; // the last 2 bits belong to frame_length
     data[4] = 0x00; // all 8 bits belong to frame_length
-    data[5] = 0xE0; // the first 3 bits belong to frame_length
+    data[5] = 0xe0; // the first 3 bits belong to frame_length
     expect(getFullFrameLength(data, 0)).to.equal(4103);
   });
 });
@@ -323,19 +331,19 @@ describe('probe', function () {
 describe('initTrackConfig', function () {
   it('should do nothing with track if track.samplerate is defined', function () {
     const track = {
-      samplerate: 64000
+      samplerate: 64000,
     };
     initTrackConfig(track);
 
     expect(track).to.deep.equal({
-      samplerate: 64000
+      samplerate: 64000,
     });
   });
 
   it('should call `getAudioConfig` and change track if track.samplerate is undefined', function () {
     const track = {};
     const observer = {
-      trigger: sinon.spy()
+      trigger: sinon.spy(),
     };
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -349,7 +357,7 @@ describe('initTrackConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
-      manifestCodec: 'mp4a.40.29'
+      manifestCodec: 'mp4a.40.29',
     });
   });
 });
@@ -369,7 +377,7 @@ describe('parseFrameHeader', function () {
     expect(parseFrameHeader(data, 0, 0, 0, 0)).to.deep.equal({
       headerLength: 9,
       frameLength: 7,
-      stamp: 0
+      stamp: 0,
     });
   });
 
@@ -396,7 +404,7 @@ describe('appendFrame', function () {
     const track = {
       samplerate: 64000,
       samples: [],
-      len: 0
+      len: 0,
     };
     const data = new Uint8Array(new ArrayBuffer(16));
     data[0] = 0xff;
@@ -407,9 +415,9 @@ describe('appendFrame', function () {
       sample: {
         unit: data.subarray(9, 16),
         pts: 0,
-        dts: 0
+        dts: 0,
       },
-      length: 16
+      length: 16,
     });
     expect(track.samples.length).to.equal(1);
   });
@@ -418,7 +426,7 @@ describe('appendFrame', function () {
     const track = {
       samplerate: 64000,
       samples: [],
-      len: 0
+      len: 0,
     };
     const data = new Uint8Array(new ArrayBuffer(12));
     data[0] = 0xff;

@@ -13,24 +13,24 @@ import type { MediaPlaylist } from '../types/media-playlist';
 type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
 
-export function addGroupId (level: Level, type: string, id: string): void {
+export function addGroupId(level: Level, type: string, id: string): void {
   switch (type) {
-  case 'audio':
-    if (!level.audioGroupIds) {
-      level.audioGroupIds = [];
-    }
-    level.audioGroupIds.push(id);
-    break;
-  case 'text':
-    if (!level.textGroupIds) {
-      level.textGroupIds = [];
-    }
-    level.textGroupIds.push(id);
-    break;
+    case 'audio':
+      if (!level.audioGroupIds) {
+        level.audioGroupIds = [];
+      }
+      level.audioGroupIds.push(id);
+      break;
+    case 'text':
+      if (!level.textGroupIds) {
+        level.textGroupIds = [];
+      }
+      level.textGroupIds.push(id);
+      break;
   }
 }
 
-export function assignTrackIdsByGroup (tracks: MediaPlaylist[]): void {
+export function assignTrackIdsByGroup(tracks: MediaPlaylist[]): void {
   const groups = {};
   tracks.forEach((track) => {
     const groupId = track.groupId || '';
@@ -39,13 +39,13 @@ export function assignTrackIdsByGroup (tracks: MediaPlaylist[]): void {
   });
 }
 
-export function updatePTS (fragments: Fragment[], fromIdx: number, toIdx: number): void {
+export function updatePTS(fragments: Fragment[], fromIdx: number, toIdx: number): void {
   const fragFrom = fragments[fromIdx];
   const fragTo = fragments[toIdx];
   updateFromToPTS(fragFrom, fragTo);
 }
 
-function updateFromToPTS (fragFrom: Fragment, fragTo: Fragment) {
+function updateFromToPTS(fragFrom: Fragment, fragTo: Fragment) {
   const fragToPTS = fragTo.startPTS as number;
   // if we know startPTS[toIdx]
   if (Number.isFinite(fragToPTS)) {
@@ -80,7 +80,7 @@ function updateFromToPTS (fragFrom: Fragment, fragTo: Fragment) {
   }
 }
 
-export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
+export function updateFragPTSDTS(details: LevelDetails | undefined, frag: Fragment, startPTS: number, endPTS: number, startDTS: number, endDTS: number): number {
   const parsedMediaDuration = endPTS - startPTS;
   if (parsedMediaDuration <= 0) {
     logger.warn('Fragment should have a positive duration', frag);
@@ -150,7 +150,7 @@ export function updateFragPTSDTS (details: LevelDetails | undefined, frag: Fragm
   return drift;
 }
 
-export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails): void {
+export function mergeDetails(oldDetails: LevelDetails, newDetails: LevelDetails): void {
   // potentially retrieve cached initsegment
   if (newDetails.initSegment && oldDetails.initSegment) {
     newDetails.initSegment = oldDetails.initSegment;
@@ -191,10 +191,10 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
   });
 
   if (newDetails.skippedSegments) {
-    newDetails.deltaUpdateFailed = newDetails.fragments.some(frag => !frag);
+    newDetails.deltaUpdateFailed = newDetails.fragments.some((frag) => !frag);
     if (newDetails.deltaUpdateFailed) {
       logger.warn('[level-helper] Previous playlist missing segments skipped in delta playlist');
-      for (let i = newDetails.skippedSegments; i--;) {
+      for (let i = newDetails.skippedSegments; i--; ) {
         newDetails.fragments.shift();
       }
       newDetails.startSN = newDetails.fragments[0].sn as number;
@@ -237,7 +237,7 @@ export function mergeDetails (oldDetails: LevelDetails, newDetails: LevelDetails
   }
 }
 
-export function mapPartIntersection (oldParts: Part[] | null, newParts: Part[] | null, intersectionFn: PartIntersection) {
+export function mapPartIntersection(oldParts: Part[] | null, newParts: Part[] | null, intersectionFn: PartIntersection) {
   if (oldParts && newParts) {
     let delta = 0;
     for (let i = 0, len = oldParts.length; i <= len; i++) {
@@ -252,11 +252,10 @@ export function mapPartIntersection (oldParts: Part[] | null, newParts: Part[] |
   }
 }
 
-export function mapFragmentIntersection (oldDetails: LevelDetails, newDetails: LevelDetails, intersectionFn: FragmentIntersection): void {
+export function mapFragmentIntersection(oldDetails: LevelDetails, newDetails: LevelDetails, intersectionFn: FragmentIntersection): void {
   const skippedSegments = newDetails.skippedSegments;
   const start = Math.max(oldDetails.startSN, newDetails.startSN) - newDetails.startSN;
-  const end = (oldDetails.fragmentHint ? 1 : 0) +
-    (skippedSegments ? newDetails.endSN : Math.min(oldDetails.endSN, newDetails.endSN)) - newDetails.startSN;
+  const end = (oldDetails.fragmentHint ? 1 : 0) + (skippedSegments ? newDetails.endSN : Math.min(oldDetails.endSN, newDetails.endSN)) - newDetails.startSN;
   const delta = newDetails.startSN - oldDetails.startSN;
   const newFrags = newDetails.fragmentHint ? newDetails.fragments.concat(newDetails.fragmentHint) : newDetails.fragments;
   const oldFrags = oldDetails.fragmentHint ? oldDetails.fragments.concat(oldDetails.fragmentHint) : oldDetails.fragments;
@@ -274,7 +273,7 @@ export function mapFragmentIntersection (oldDetails: LevelDetails, newDetails: L
   }
 }
 
-export function adjustSliding (oldDetails: LevelDetails, newDetails: LevelDetails): void {
+export function adjustSliding(oldDetails: LevelDetails, newDetails: LevelDetails): void {
   const delta = newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
   const oldFragments = oldDetails.fragments;
   const newFragments = newDetails.fragments;
@@ -292,7 +291,7 @@ export function adjustSliding (oldDetails: LevelDetails, newDetails: LevelDetail
   }
 }
 
-export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderStats): number {
+export function computeReloadInterval(newDetails: LevelDetails, stats: LoaderStats): number {
   const reloadInterval = 1000 * newDetails.levelTargetDuration;
   const reloadIntervalAfterMiss = reloadInterval / 2;
   const timeSinceLastModified = newDetails.age;
@@ -339,7 +338,7 @@ export function computeReloadInterval (newDetails: LevelDetails, stats: LoaderSt
   return Math.round(estimatedTimeUntilUpdate);
 }
 
-export function getFragmentWithSN (level: Level, sn: number): Fragment | null {
+export function getFragmentWithSN(level: Level, sn: number): Fragment | null {
   if (!level || !level.details) {
     return null;
   }
@@ -355,13 +354,13 @@ export function getFragmentWithSN (level: Level, sn: number): Fragment | null {
   return null;
 }
 
-export function getPartWith (level: Level, sn: number, partIndex: number): Part | null {
+export function getPartWith(level: Level, sn: number, partIndex: number): Part | null {
   if (!level || !level.details) {
     return null;
   }
   const partList = level.details.partList;
   if (partList) {
-    for (let i = partList.length; i--;) {
+    for (let i = partList.length; i--; ) {
       const part = partList[i];
       if (part.index === partIndex && part.fragment.sn === sn) {
         return part;

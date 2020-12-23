@@ -25,7 +25,7 @@ export default class TransmuxerInterface {
   private onTransmuxComplete: (transmuxResult: TransmuxerResult) => void;
   private onFlush: (chunkMeta: ChunkMetadata) => void;
 
-  constructor (hls: Hls, id: PlaylistLevelType, onTransmuxComplete: (transmuxResult: TransmuxerResult) => void, onFlush: (chunkMeta: ChunkMetadata) => void) {
+  constructor(hls: Hls, id: PlaylistLevelType, onTransmuxComplete: (transmuxResult: TransmuxerResult) => void, onFlush: (chunkMeta: ChunkMetadata) => void) {
     this.hls = hls;
     this.id = id;
     this.onTransmuxComplete = onTransmuxComplete;
@@ -48,12 +48,12 @@ export default class TransmuxerInterface {
     const typeSupported = {
       mp4: MediaSource.isTypeSupported('video/mp4'),
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
-      mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
+      mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"'),
     };
     // navigator.vendor is not always available in Web Worker
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
     const vendor = navigator.vendor;
-    if (config.enableWorker && (typeof (Worker) !== 'undefined')) {
+    if (config.enableWorker && typeof Worker !== 'undefined') {
       logger.log('demuxing in webworker');
       let worker;
       try {
@@ -61,7 +61,13 @@ export default class TransmuxerInterface {
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
-          hls.trigger(Events.ERROR, { type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
+          hls.trigger(Events.ERROR, {
+            type: ErrorTypes.OTHER_ERROR,
+            details: ErrorDetails.INTERNAL_EXCEPTION,
+            fatal: true,
+            event: 'demuxerWorker',
+            err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' },
+          });
         };
         worker.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
       } catch (err) {
@@ -79,7 +85,7 @@ export default class TransmuxerInterface {
     }
   }
 
-  destroy (): void {
+  destroy(): void {
     const w = this.worker;
     if (w) {
       w.removeEventListener('message', this.onwmsg);
@@ -100,17 +106,28 @@ export default class TransmuxerInterface {
     this.observer = null;
   }
 
-  push (data: ArrayBuffer, initSegmentData: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined, frag: Fragment, part: Part | null, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: number): void {
+  push(
+    data: ArrayBuffer,
+    initSegmentData: Uint8Array,
+    audioCodec: string | undefined,
+    videoCodec: string | undefined,
+    frag: Fragment,
+    part: Part | null,
+    duration: number,
+    accurateTimeOffset: boolean,
+    chunkMeta: ChunkMetadata,
+    defaultInitPTS?: number
+  ): void {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
     const timeOffset = part ? part.start : frag.start;
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
 
-    const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
-    const trackSwitch = !(lastFrag && (chunkMeta.level === lastFrag.level));
+    const discontinuity = !(lastFrag && frag.cc === lastFrag.cc);
+    const trackSwitch = !(lastFrag && chunkMeta.level === lastFrag.level);
     const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
-    const partDiff = this.part ? (chunkMeta.part - this.part.index) : 1;
+    const partDiff = this.part ? chunkMeta.part - this.part.index : 1;
     const contiguous = !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
     const now = self.performance.now();
 
@@ -138,16 +155,19 @@ export default class TransmuxerInterface {
     // Frags with sn of 'initSegment' are not transmuxed
     if (worker) {
       // post fragment payload as transferable objects for ArrayBuffer (no copy)
-      worker.postMessage({
-        cmd: 'demux',
-        data,
-        decryptdata,
-        chunkMeta
-      }, data instanceof ArrayBuffer ? [data] : []);
+      worker.postMessage(
+        {
+          cmd: 'demux',
+          data,
+          decryptdata,
+          chunkMeta,
+        },
+        data instanceof ArrayBuffer ? [data] : []
+      );
     } else if (transmuxer) {
       const transmuxResult = transmuxer.push(data, decryptdata, chunkMeta);
       if (isPromise(transmuxResult)) {
-        transmuxResult.then(data => {
+        transmuxResult.then((data) => {
           this.handleTransmuxComplete(data);
         });
       } else {
@@ -156,18 +176,18 @@ export default class TransmuxerInterface {
     }
   }
 
-  flush (chunkMeta: ChunkMetadata) {
+  flush(chunkMeta: ChunkMetadata) {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
     if (worker) {
       worker.postMessage({
         cmd: 'flush',
-        chunkMeta
+        chunkMeta,
       });
     } else if (transmuxer) {
       const transmuxResult = transmuxer.flush(chunkMeta);
       if (isPromise(transmuxResult)) {
-        transmuxResult.then(data => {
+        transmuxResult.then((data) => {
           this.handleFlushResult(data, chunkMeta);
         });
       } else {
@@ -176,58 +196,58 @@ export default class TransmuxerInterface {
     }
   }
 
-  private handleFlushResult (results: Array<TransmuxerResult>, chunkMeta: ChunkMetadata) {
-    results.forEach(result => {
+  private handleFlushResult(results: Array<TransmuxerResult>, chunkMeta: ChunkMetadata) {
+    results.forEach((result) => {
       this.handleTransmuxComplete(result);
     });
     this.onFlush(chunkMeta);
   }
 
-  private onWorkerMessage (ev: any): void {
+  private onWorkerMessage(ev: any): void {
     const data = ev.data;
     const hls = this.hls;
     switch (data.event) {
-    case 'init': {
-      // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
-      self.URL.revokeObjectURL(this.worker.objectURL);
-      break;
-    }
+      case 'init': {
+        // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
+        self.URL.revokeObjectURL(this.worker.objectURL);
+        break;
+      }
 
-    case 'transmuxComplete': {
-      this.handleTransmuxComplete(data.data);
-      break;
-    }
+      case 'transmuxComplete': {
+        this.handleTransmuxComplete(data.data);
+        break;
+      }
 
-    case 'flush': {
-      this.onFlush(data.data);
-      break;
-    }
+      case 'flush': {
+        this.onFlush(data.data);
+        break;
+      }
 
-    /* falls through */
-    default: {
-      data.data = data.data || {};
-      data.data.frag = this.frag;
-      data.data.id = this.id;
-      hls.trigger(data.event, data.data);
-      break;
-    }
+      /* falls through */
+      default: {
+        data.data = data.data || {};
+        data.data.frag = this.frag;
+        data.data.id = this.id;
+        hls.trigger(data.event, data.data);
+        break;
+      }
     }
   }
 
-  private configureTransmuxer (config: TransmuxConfig, state: TransmuxState) {
+  private configureTransmuxer(config: TransmuxConfig, state: TransmuxState) {
     const { worker, transmuxer } = this;
     if (worker) {
       worker.postMessage({
         cmd: 'configure',
         config,
-        state
+        state,
       });
     } else if (transmuxer) {
       transmuxer.configure(config, state);
     }
   }
 
-  private handleTransmuxComplete (result: TransmuxerResult) {
+  private handleTransmuxComplete(result: TransmuxerResult) {
     result.chunkMeta.transmuxing.end = self.performance.now();
     this.onTransmuxComplete(result);
   }

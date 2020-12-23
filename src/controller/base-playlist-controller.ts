@@ -19,39 +19,39 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   protected readonly log: (msg: any) => void;
   protected readonly warn: (msg: any) => void;
 
-  constructor (hls: Hls, logPrefix: string) {
+  constructor(hls: Hls, logPrefix: string) {
     this.log = logger.log.bind(logger, `${logPrefix}:`);
     this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
   }
 
-  public destroy (): void {
+  public destroy(): void {
     this.clearTimer();
   }
 
-  protected onError (event: Events.ERROR, data: ErrorData): void {
+  protected onError(event: Events.ERROR, data: ErrorData): void {
     if (data.fatal && data.type === ErrorTypes.NETWORK_ERROR) {
       this.clearTimer();
     }
   }
 
-  protected clearTimer (): void {
+  protected clearTimer(): void {
     clearTimeout(this.timer);
     this.timer = -1;
   }
 
-  public startLoad (): void {
+  public startLoad(): void {
     this.canLoad = true;
     this.retryCount = 0;
     this.loadPlaylist();
   }
 
-  public stopLoad (): void {
+  public stopLoad(): void {
     this.canLoad = false;
     this.clearTimer();
   }
 
-  protected switchParams (playlistUri: string, previous?: LevelDetails): HlsUrlParameters | undefined {
+  protected switchParams(playlistUri: string, previous?: LevelDetails): HlsUrlParameters | undefined {
     const renditionReports = previous?.renditionReports;
     if (renditionReports) {
       for (let i = 0; i < renditionReports.length; i++) {
@@ -74,13 +74,13 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     }
   }
 
-  protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters): void {}
+  protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {}
 
-  protected shouldLoadTrack (track: MediaPlaylist): boolean {
+  protected shouldLoadTrack(track: MediaPlaylist): boolean {
     return this.canLoad && track && !!track.url && (!track.details || track.details.live);
   }
 
-  protected playlistLoaded (index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails) {
+  protected playlistLoaded(index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails) {
     const { details, stats } = data;
 
     // Set last updated date-time
@@ -91,7 +91,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     if (details.live || previousDetails?.live) {
       details.reloaded(previousDetails);
       if (previousDetails) {
-        this.log(`live playlist ${index} ${details.advanced ? ('REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex) : 'MISSED'}`);
+        this.log(`live playlist ${index} ${details.advanced ? 'REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex : 'MISSED'}`);
       }
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
@@ -159,7 +159,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     }
   }
 
-  protected retryLoadingOrFail (errorEvent: ErrorData): boolean {
+  protected retryLoadingOrFail(errorEvent: ErrorData): boolean {
     const { config } = this.hls;
     const retry = this.retryCount < config.levelLoadingMaxRetry;
     if (retry) {

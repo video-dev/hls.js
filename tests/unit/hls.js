@@ -8,8 +8,8 @@ describe('Hls', function () {
       const hls = new Hls();
       hls.abrController = {
         bwEstimator: {
-          getEstimate: () => MOCKED_ESTIMATE
-        }
+          getEstimate: () => MOCKED_ESTIMATE,
+        },
       };
       expect(hls.bandwidthEstimate).to.equal(MOCKED_ESTIMATE);
     });

@@ -16,13 +16,13 @@ const createDefinePlugin = (type) => {
     __VERSION__: JSON.stringify(pkgJson.version),
     __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
-    __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
+    __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport),
   };
   return new webpack.DefinePlugin(buildConstants);
 };
 
 const basePlugins = [
-  new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }) // SSR/Node.js guard
+  new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
 ];
 const mainPlugins = [...basePlugins, createDefinePlugin('main')];
 const lightPlugins = [...basePlugins, createDefinePlugin('light')];
@@ -31,44 +31,41 @@ const baseConfig = {
   mode: 'development',
   entry: './src/hls',
   optimization: {
-    splitChunks: false
+    splitChunks: false,
   },
   resolve: {
     // Add `.ts` as a resolvable extension.
-    extensions: ['.ts', '.js']
+    extensions: ['.ts', '.js'],
   },
   module: {
     strictExportPresence: true,
     rules: [
       {
         test: /\.(ts|js)$/,
-        exclude: [
-          path.resolve(__dirname, 'node_modules')
-        ],
+        exclude: [path.resolve(__dirname, 'node_modules')],
         loader: 'babel-loader',
         options: {
           babelrc: false,
           presets: [
             '@babel/preset-typescript',
-            ['@babel/preset-env', {
-              loose: true,
-              modules: false,
-              targets: {
-                browsers: [
-                  'chrome >= 47',
-                  'firefox >= 51',
-                  'ie >= 11',
-                  'safari >= 8',
-                  'ios >= 8',
-                  'android >= 4'
-                ]
-              }
-            }]
+            [
+              '@babel/preset-env',
+              {
+                loose: true,
+                modules: false,
+                targets: {
+                  browsers: ['chrome >= 47', 'firefox >= 51', 'ie >= 11', 'safari >= 8', 'ios >= 8', 'android >= 4'],
+                },
+              },
+            ],
           ],
           plugins: [
-            ['@babel/plugin-proposal-class-properties', {
-              loose: true
-            }],
+            [
+              '@babel/plugin-proposal-class-properties',
+              {
+                loose: true,
+              },
+            ],
             '@babel/plugin-proposal-object-rest-spread',
             {
               visitor: {
@@ -78,15 +75,15 @@ const baseConfig = {
                   } else if (espath.get('callee').matchesPattern('Number.MAX_SAFE_INTEGER')) {
                     espath.node.callee = importHelper.addNamed(espath, 'MAX_SAFE_INTEGER', path.resolve('src/polyfills/number'));
                   }
-                }
-              }
+                },
+              },
             },
             ['@babel/plugin-transform-object-assign'],
-            ['@babel/plugin-proposal-optional-chaining']
-          ]
-        }
-      }
-    ]
+            ['@babel/plugin-proposal-optional-chaining'],
+          ],
+        },
+      },
+    ],
   },
   node: {
     global: false,
@@ -94,16 +91,16 @@ const baseConfig = {
     __filename: false,
     __dirname: false,
     Buffer: false,
-    setImmediate: false
-  }
+    setImmediate: false,
+  },
 };
 
-function getAliasesForLightDist () {
+function getAliasesForLightDist() {
   let aliases = {};
 
   if (!addEMESupport) {
     aliases = Object.assign({}, aliases, {
-      './controller/eme-controller': './empty.js'
+      './controller/eme-controller': './empty.js',
     });
   }
 
@@ -112,14 +109,14 @@ function getAliasesForLightDist () {
       './utils/cues': './empty.js',
       './controller/timeline-controller': './empty.js',
       './controller/subtitle-track-controller': './empty.js',
-      './controller/subtitle-stream-controller': './empty.js'
+      './controller/subtitle-stream-controller': './empty.js',
     });
   }
 
   if (!addAltAudioSupport) {
     aliases = Object.assign(aliases, {
       './controller/audio-track-controller': './empty.js',
-      './controller/audio-stream-controller': './empty.js'
+      './controller/audio-stream-controller': './empty.js',
     });
   }
 
@@ -139,10 +136,10 @@ const multiConfig = [
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default',
-      globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
+      globalObject: 'this', // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
     plugins: mainPlugins,
-    devtool: 'source-map'
+    devtool: 'source-map',
   },
   {
     name: 'dist',
@@ -155,10 +152,10 @@ const multiConfig = [
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default',
-      globalObject: 'this'
+      globalObject: 'this',
     },
     plugins: mainPlugins,
-    devtool: 'source-map'
+    devtool: 'source-map',
   },
   {
     name: 'light',
@@ -172,13 +169,13 @@ const multiConfig = [
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default',
-      globalObject: 'this'
+      globalObject: 'this',
     },
     resolve: {
-      alias: getAliasesForLightDist()
+      alias: getAliasesForLightDist(),
     },
     plugins: lightPlugins,
-    devtool: 'source-map'
+    devtool: 'source-map',
   },
   {
     name: 'light-dist',
@@ -191,13 +188,13 @@ const multiConfig = [
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default',
-      globalObject: 'this'
+      globalObject: 'this',
     },
     resolve: {
-      alias: getAliasesForLightDist()
+      alias: getAliasesForLightDist(),
     },
     plugins: lightPlugins,
-    devtool: 'source-map'
+    devtool: 'source-map',
   },
   {
     name: 'demo',
@@ -212,28 +209,37 @@ const multiConfig = [
       library: 'HlsDemo',
       libraryTarget: 'umd',
       libraryExport: 'default',
-      globalObject: 'this' // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
+      globalObject: 'this', // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
     },
     plugins: [
       ...mainPlugins,
       new webpack.DefinePlugin({
-      __NETLIFY__: JSON.stringify(process.env.NETLIFY === 'true' ? {
-          branch: process.env.BRANCH,
-          commitRef: process.env.COMMIT_REF,
-          reviewID: process.env.PULL_REQUEST === 'true' ? parseInt(process.env.REVIEW_ID) : null
-        } : {})
-      })
+        __NETLIFY__: JSON.stringify(
+          process.env.NETLIFY === 'true'
+            ? {
+                branch: process.env.BRANCH,
+                commitRef: process.env.COMMIT_REF,
+                reviewID: process.env.PULL_REQUEST === 'true' ? parseInt(process.env.REVIEW_ID) : null,
+              }
+            : {}
+        ),
+      }),
     ],
-    devtool: 'source-map'
-  }
-].map(config => {
+    devtool: 'source-map',
+  },
+].map((config) => {
   const baseClone = merge({}, baseConfig);
   // Strip console.assert statements from production webpack targets
   if (config.mode === 'production') {
     // eslint-disable-next-line no-restricted-properties
-    baseClone.module.rules.find(rule => rule.loader === 'babel-loader').options.plugins.push(['transform-remove-console', {
-      exclude: ['log', 'warn', 'error']
-    }]);
+    baseClone.module.rules
+      .find((rule) => rule.loader === 'babel-loader')
+      .options.plugins.push([
+        'transform-remove-console',
+        {
+          exclude: ['log', 'warn', 'error'],
+        },
+      ]);
   }
   return merge(baseClone, config);
 });
@@ -247,14 +253,16 @@ module.exports = (envArgs) => {
   } else {
     const enabledConfigNames = Object.keys(envArgs);
     // Filter out enabled configs
-    const enabledConfigs = multiConfig.filter(config => enabledConfigNames.includes(config.name));
+    const enabledConfigs = multiConfig.filter((config) => enabledConfigNames.includes(config.name));
     if (!enabledConfigs.length) {
-      throw new Error(`Couldn't find a valid config with the names ${JSON.stringify(enabledConfigNames)}. Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
+      throw new Error(
+        `Couldn't find a valid config with the names ${JSON.stringify(enabledConfigNames)}. Known configs are: ${multiConfig.map((config) => config.name).join(', ')}`
+      );
     }
 
     configs = enabledConfigs;
   }
 
-  console.log(`Building configs: ${configs.map(config => config.name).join(', ')}.\n`);
+  console.log(`Building configs: ${configs.map((config) => config.name).join(', ')}.\n`);
   return configs;
 };

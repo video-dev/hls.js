@@ -2,48 +2,48 @@ import LevelDetails from '../loader/level-details';
 import AttrList from '../utils/attr-list';
 
 export interface LevelParsed {
-  attrs: LevelAttributes
-  audioCodec?: string
-  bitrate: number
-  details?: LevelDetails
-  height?: number
-  id?: number
-  level?: number
-  name: string
-  textCodec?: string
-  unknownCodecs?: string[]
-  url: string
-  videoCodec?: string
-  width?: number
+  attrs: LevelAttributes;
+  audioCodec?: string;
+  bitrate: number;
+  details?: LevelDetails;
+  height?: number;
+  id?: number;
+  level?: number;
+  name: string;
+  textCodec?: string;
+  unknownCodecs?: string[];
+  url: string;
+  videoCodec?: string;
+  width?: number;
 }
 
 export interface LevelAttributes extends AttrList {
-  AUDIO?: string
-  AUTOSELECT?: string
-  'AVERAGE-BANDWIDTH'?: string
-  BANDWIDTH?: string
-  BYTERANGE?: string
-  'CLOSED-CAPTIONS'?: string
-  CODECS?: string
-  DEFAULT?: string
-  FORCED?: string
-  'FRAME-RATE'?: string
-  LANGUAGE?: string
-  NAME?: string
-  'PROGRAM-ID'?: string
-  RESOLUTION?: string
-  SUBTITLES?: string
-  TYPE?: string
-  URI?: string
+  AUDIO?: string;
+  AUTOSELECT?: string;
+  'AVERAGE-BANDWIDTH'?: string;
+  BANDWIDTH?: string;
+  BYTERANGE?: string;
+  'CLOSED-CAPTIONS'?: string;
+  CODECS?: string;
+  DEFAULT?: string;
+  FORCED?: string;
+  'FRAME-RATE'?: string;
+  LANGUAGE?: string;
+  NAME?: string;
+  'PROGRAM-ID'?: string;
+  RESOLUTION?: string;
+  SUBTITLES?: string;
+  TYPE?: string;
+  URI?: string;
 }
 
 export enum HlsSkip {
   No = '',
   Yes = 'YES',
-  v2 = 'v2'
+  v2 = 'v2',
 }
 
-export function getSkipValue (details: LevelDetails, msn: number): HlsSkip {
+export function getSkipValue(details: LevelDetails, msn: number): HlsSkip {
   const { canSkipUntil, canSkipDateRanges, endSN } = details;
   const snChangeGoal = msn - endSN;
   if (canSkipUntil && snChangeGoal < canSkipUntil) {
@@ -60,13 +60,13 @@ export class HlsUrlParameters {
   part?: number;
   skip?: HlsSkip;
 
-  constructor (msn: number, part?: number, skip?: HlsSkip) {
+  constructor(msn: number, part?: number, skip?: HlsSkip) {
     this.msn = msn;
     this.part = part;
     this.skip = skip;
   }
 
-  addDirectives (uri: string): string | never {
+  addDirectives(uri: string): string | never {
     const url: URL = new self.URL(uri);
     const searchParams: URLSearchParams = url.searchParams;
     searchParams.set('_HLS_msn', this.msn.toString());
@@ -92,7 +92,7 @@ export class Level {
   public height: number;
   public id: number;
   public loadError: number = 0;
-  public loaded?: { bytes: number, duration: number };
+  public loaded?: { bytes: number; duration: number };
   public name: string | undefined;
   public realBitrate: number = 0;
   public textGroupIds?: string[];
@@ -102,7 +102,7 @@ export class Level {
   public unknownCodecs: string[] | undefined;
   private _urlId: number = 0;
 
-  constructor (data: LevelParsed) {
+  constructor(data: LevelParsed) {
     this.url = [data.url];
     this.attrs = data.attrs;
     this.bitrate = data.bitrate;
@@ -116,19 +116,19 @@ export class Level {
     this.unknownCodecs = data.unknownCodecs;
   }
 
-  get maxBitrate (): number {
+  get maxBitrate(): number {
     return Math.max(this.realBitrate, this.bitrate);
   }
 
-  get uri (): string {
+  get uri(): string {
     return this.url[this._urlId] || '';
   }
 
-  get urlId (): number {
+  get urlId(): number {
     return this._urlId;
   }
 
-  set urlId (value: number) {
+  set urlId(value: number) {
     const newValue = value % this.url.length;
     if (this._urlId !== newValue) {
       this.details = undefined;

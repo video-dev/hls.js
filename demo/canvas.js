@@ -3,7 +3,7 @@
 var eventLeftMargin = 180;
 var eventRightMargin = 0;
 
-function canvasLoadEventUpdate (canvas, minTime, maxTime, events) {
+function canvasLoadEventUpdate(canvas, minTime, maxTime, events) {
   var event;
   var start;
   var ctx = canvas.getContext('2d');
@@ -11,7 +11,7 @@ function canvasLoadEventUpdate (canvas, minTime, maxTime, events) {
     event = events[i];
     start = event.time;
     // var end = event.time + event.duration + event.latency;
-    if ((start >= minTime && start <= maxTime)) {
+    if (start >= minTime && start <= maxTime) {
       y_offset += 20;
     }
   }
@@ -66,14 +66,14 @@ function canvasLoadEventUpdate (canvas, minTime, maxTime, events) {
     event = events[i];
     start = Math.round(event.time);
     // var end = Math.round(event.time + event.duration + event.latency);
-    if ((start >= minTime && start <= maxTime)) {
+    if (start >= minTime && start <= maxTime) {
       canvasDrawLoadEvent(ctx, y_offset, event, minTime, maxTime);
       y_offset += 20;
     }
   }
 }
 
-function canvasVideoEventUpdate (canvas, minTime, maxTime, events) {
+function canvasVideoEventUpdate(canvas, minTime, maxTime, events) {
   var event;
   var start;
   var ctx = canvas.getContext('2d');
@@ -81,7 +81,7 @@ function canvasVideoEventUpdate (canvas, minTime, maxTime, events) {
     event = events[i];
     start = event.time;
     // end = event.time;
-    if ((start >= minTime && start <= maxTime)) {
+    if (start >= minTime && start <= maxTime) {
       y_offset += 20;
     }
   }
@@ -114,16 +114,19 @@ function canvasVideoEventUpdate (canvas, minTime, maxTime, events) {
     event = events[i];
     start = Math.round(event.time);
     // end = Math.round(event.time);
-    if ((start >= minTime && start <= maxTime)) {
+    if (start >= minTime && start <= maxTime) {
       canvasDrawVideoEvent(ctx, y_offset, event, minTime, maxTime);
       y_offset += 20;
     }
   }
 }
 
-function canvasBufferWindowUpdate (canvas, minTime, maxTime, focusTime, events) {
+function canvasBufferWindowUpdate(canvas, minTime, maxTime, focusTime, events) {
   var ctx = canvas.getContext('2d');
-  var minTimeBuffer; var minTimePos; var focusTimeBuffer; var focusTimePos;
+  var minTimeBuffer;
+  var minTimePos;
+  var focusTimeBuffer;
+  var focusTimePos;
   var bufferChartStart = eventLeftMargin;
   var bufferChartWidth = ctx.canvas.width - eventLeftMargin - eventRightMargin;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -142,7 +145,10 @@ function canvasBufferWindowUpdate (canvas, minTime, maxTime, focusTime, events) 
   var y_offset = 0;
   ctx.font = '15px Arial';
 
-  var maxBuffer = 0; var firstEventIdx = -1; var focusEventIdx = -1; var event;
+  var maxBuffer = 0;
+  var firstEventIdx = -1;
+  var focusEventIdx = -1;
+  var event;
   for (var i = 0; i < events.length; i++) {
     event = events[i];
     maxBuffer = Math.max(maxBuffer, event.buffer + event.pos);
@@ -154,18 +160,28 @@ function canvasBufferWindowUpdate (canvas, minTime, maxTime, focusTime, events) 
     }
   }
   // compute position and buffer length at pos minTime using linear approximation
-  if ((firstEventIdx + 1) < events.length) {
-    minTimePos = events[firstEventIdx].pos + (minTime - events[firstEventIdx].time) * (events[firstEventIdx + 1].pos - events[firstEventIdx].pos) / (events[firstEventIdx + 1].time - events[firstEventIdx].time);
-    minTimeBuffer = minTimePos + events[firstEventIdx].buffer + (minTime - events[firstEventIdx].time) * (events[firstEventIdx + 1].buffer - events[firstEventIdx].buffer) / (events[firstEventIdx + 1].time - events[firstEventIdx].time);
+  if (firstEventIdx + 1 < events.length) {
+    minTimePos =
+      events[firstEventIdx].pos +
+      ((minTime - events[firstEventIdx].time) * (events[firstEventIdx + 1].pos - events[firstEventIdx].pos)) / (events[firstEventIdx + 1].time - events[firstEventIdx].time);
+    minTimeBuffer =
+      minTimePos +
+      events[firstEventIdx].buffer +
+      ((minTime - events[firstEventIdx].time) * (events[firstEventIdx + 1].buffer - events[firstEventIdx].buffer)) / (events[firstEventIdx + 1].time - events[firstEventIdx].time);
   } else {
     minTimeBuffer = 0;
     minTimePos = 0;
   }
 
   // compute position and buffer length at pos focusTime using linear approximation
-  if ((focusEventIdx + 1) < events.length) {
-    focusTimePos = events[focusEventIdx].pos + (focusTime - events[focusEventIdx].time) * (events[focusEventIdx + 1].pos - events[focusEventIdx].pos) / (events[focusEventIdx + 1].time - events[focusEventIdx].time);
-    focusTimeBuffer = events[focusEventIdx].buffer + (focusTime - events[focusEventIdx].time) * (events[focusEventIdx + 1].buffer - events[focusEventIdx].buffer) / (events[focusEventIdx + 1].time - events[focusEventIdx].time);
+  if (focusEventIdx + 1 < events.length) {
+    focusTimePos =
+      events[focusEventIdx].pos +
+      ((focusTime - events[focusEventIdx].time) * (events[focusEventIdx + 1].pos - events[focusEventIdx].pos)) / (events[focusEventIdx + 1].time - events[focusEventIdx].time);
+    focusTimeBuffer =
+      events[focusEventIdx].buffer +
+      ((focusTime - events[focusEventIdx].time) * (events[focusEventIdx + 1].buffer - events[focusEventIdx].buffer)) /
+        (events[focusEventIdx + 1].time - events[focusEventIdx].time);
   } else {
     focusTimePos = 0;
     focusTimeBuffer = 0;
@@ -214,7 +230,7 @@ function canvasBufferWindowUpdate (canvas, minTime, maxTime, focusTime, events) 
   for (var k = firstEventIdx + 1; k < events.length; k++) {
     event = events[k];
     x_offset = bufferChartStart + (bufferChartWidth * (event.time - minTime)) / (maxTime - minTime);
-    y_offset = ctx.canvas.height * (1 - (event.pos) / maxBuffer);
+    y_offset = ctx.canvas.height * (1 - event.pos / maxBuffer);
     ctx.lineTo(x_offset, y_offset);
   }
   ctx.lineTo(x_offset, canvas.height);
@@ -235,7 +251,7 @@ function canvasBufferWindowUpdate (canvas, minTime, maxTime, focusTime, events) 
   ctx.stroke();
 }
 
-function canvasBufferTimeRangeUpdate (canvas, minTime, maxTime, windowMinTime, windowMaxTime, events) {
+function canvasBufferTimeRangeUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, events) {
   var ctx = canvas.getContext('2d');
   var bufferChartStart = eventLeftMargin;
   var bufferChartWidth = ctx.canvas.width - eventLeftMargin - eventRightMargin;
@@ -311,21 +327,27 @@ function canvasBufferTimeRangeUpdate (canvas, minTime, maxTime, windowMinTime, w
   ctx.globalAlpha = 0.7;
   ctx.fillStyle = 'grey';
   var x_start = bufferChartStart;
-  var x_w = bufferChartWidth * (windowMinTime - minTime) / (maxTime - minTime);
+  var x_w = (bufferChartWidth * (windowMinTime - minTime)) / (maxTime - minTime);
   ctx.fillRect(x_start, 0, x_w, canvas.height);
-  x_start = bufferChartStart + bufferChartWidth * (windowMaxTime - minTime) / (maxTime - minTime);
+  x_start = bufferChartStart + (bufferChartWidth * (windowMaxTime - minTime)) / (maxTime - minTime);
   x_w = canvas.width - x_start - eventRightMargin;
   ctx.fillRect(x_start, 0, x_w, canvas.height);
   ctx.globalAlpha = 1;
 }
 
-function canvasBitrateEventUpdate (canvas, minTime, maxTime, windowMinTime, windowMaxTime, levelEvents, bitrateEvents) {
+function canvasBitrateEventUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, levelEvents, bitrateEvents) {
   var ctx = canvas.getContext('2d');
   var bufferChartStart = eventLeftMargin;
   var bufferChartWidth = ctx.canvas.width - eventLeftMargin - eventRightMargin;
   var x_offset = 0;
   var y_offset = 0;
-  var event; var maxLevel; var minLevel; var sumLevel; var maxBitrate; var minBitrate; var sumDuration;
+  var event;
+  var maxLevel;
+  var minLevel;
+  var sumLevel;
+  var maxBitrate;
+  var minBitrate;
+  var sumDuration;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (levelEvents.length === 0 || bitrateEvents.length === 0) {
@@ -414,16 +436,19 @@ function canvasBitrateEventUpdate (canvas, minTime, maxTime, windowMinTime, wind
   ctx.globalAlpha = 0.7;
   ctx.fillStyle = 'grey';
   var x_start = bufferChartStart;
-  var x_w = bufferChartWidth * (windowMinTime - minTime) / (maxTime - minTime);
+  var x_w = (bufferChartWidth * (windowMinTime - minTime)) / (maxTime - minTime);
   ctx.fillRect(x_start, 0, x_w, canvas.height);
-  x_start = bufferChartStart + bufferChartWidth * (windowMaxTime - minTime) / (maxTime - minTime);
+  x_start = bufferChartStart + (bufferChartWidth * (windowMaxTime - minTime)) / (maxTime - minTime);
   x_w = canvas.width - x_start - eventRightMargin;
   ctx.fillRect(x_start, 0, x_w, canvas.height);
   ctx.globalAlpha = 1;
 }
 
-function canvasDrawLoadEvent (ctx, yoffset, event, minTime, maxTime) {
-  var legend; var offset; var x_start; var x_w;
+function canvasDrawLoadEvent(ctx, yoffset, event, minTime, maxTime) {
+  var legend;
+  var offset;
+  var x_start;
+  var x_w;
   var networkChartStart = eventLeftMargin;
   var networkChartWidth = ctx.canvas.width - eventLeftMargin - eventRightMargin;
   var tend = Math.round(event.time + event.duration + event.latency);
@@ -433,32 +458,32 @@ function canvasDrawLoadEvent (ctx, yoffset, event, minTime, maxTime) {
   ctx.font = '12px Arial';
   legend = Math.round(event.time);
   offset = ctx.measureText(legend).width + 5;
-  x_start = networkChartStart - offset + networkChartWidth * (event.time - minTime) / (maxTime - minTime);
+  x_start = networkChartStart - offset + (networkChartWidth * (event.time - minTime)) / (maxTime - minTime);
   ctx.fillText(legend, x_start, yoffset + 12);
 
   // draw latency rectangle
   ctx.fillStyle = 'orange';
-  x_start = networkChartStart + networkChartWidth * (event.time - minTime) / (maxTime - minTime);
-  x_w = networkChartWidth * event.latency / (maxTime - minTime);
+  x_start = networkChartStart + (networkChartWidth * (event.time - minTime)) / (maxTime - minTime);
+  x_w = (networkChartWidth * event.latency) / (maxTime - minTime);
   ctx.fillRect(x_start, yoffset, x_w, 15);
   // draw download rectangle
   ctx.fillStyle = 'green';
-  x_start = networkChartStart + networkChartWidth * (event.time + event.latency - minTime) / (maxTime - minTime);
-  x_w = networkChartWidth * event.load / (maxTime - minTime);
+  x_start = networkChartStart + (networkChartWidth * (event.time + event.latency - minTime)) / (maxTime - minTime);
+  x_w = (networkChartWidth * event.load) / (maxTime - minTime);
   ctx.fillRect(x_start, yoffset, x_w, 15);
 
   if (event.parsing) {
     // draw parsing rectangle
     ctx.fillStyle = 'blue';
-    x_start = networkChartStart + networkChartWidth * (event.time + event.latency + event.load - minTime) / (maxTime - minTime);
-    x_w = networkChartWidth * event.parsing / (maxTime - minTime);
+    x_start = networkChartStart + (networkChartWidth * (event.time + event.latency + event.load - minTime)) / (maxTime - minTime);
+    x_w = (networkChartWidth * event.parsing) / (maxTime - minTime);
     ctx.fillRect(x_start, yoffset, x_w, 15);
 
     if (event.buffer) {
       // draw buffering rectangle
       ctx.fillStyle = 'red';
-      x_start = networkChartStart + networkChartWidth * (event.time + event.latency + event.load + event.parsing - minTime) / (maxTime - minTime);
-      x_w = networkChartWidth * event.buffer / (maxTime - minTime);
+      x_start = networkChartStart + (networkChartWidth * (event.time + event.latency + event.load + event.parsing - minTime)) / (maxTime - minTime);
+      x_w = (networkChartWidth * event.buffer) / (maxTime - minTime);
       ctx.fillRect(x_start, yoffset, x_w, 15);
     }
   }
@@ -545,8 +570,11 @@ function canvasDrawLoadEvent (ctx, yoffset, event, minTime, maxTime) {
   ctx.fillText(legend, 5, yoffset + 15);
 }
 
-function canvasDrawVideoEvent (ctx, yoffset, event, minTime, maxTime) {
-  var legend; var offset; var x_start; var x_w;
+function canvasDrawVideoEvent(ctx, yoffset, event, minTime, maxTime) {
+  var legend;
+  var offset;
+  var x_start;
+  var x_w;
   var networkChartStart = eventLeftMargin;
   var networkChartWidth = ctx.canvas.width - eventLeftMargin - eventRightMargin;
 
@@ -564,13 +592,13 @@ function canvasDrawVideoEvent (ctx, yoffset, event, minTime, maxTime) {
   ctx.font = '12px Arial';
   legend = Math.round(event.time);
   offset = ctx.measureText(legend).width + 5;
-  x_start = networkChartStart - offset + networkChartWidth * (event.time - minTime) / (maxTime - minTime);
+  x_start = networkChartStart - offset + (networkChartWidth * (event.time - minTime)) / (maxTime - minTime);
   ctx.fillText(legend, x_start, yoffset + 12);
 
   // draw event rectangle
-  x_start = networkChartStart + networkChartWidth * (event.time - minTime) / (maxTime - minTime);
+  x_start = networkChartStart + (networkChartWidth * (event.time - minTime)) / (maxTime - minTime);
   if (event.duration) {
-    x_w = networkChartWidth * event.duration / (maxTime - minTime);
+    x_w = (networkChartWidth * event.duration) / (maxTime - minTime);
   } else {
     x_w = 1;
   }

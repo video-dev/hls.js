@@ -1,12 +1,6 @@
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import {
-  ManifestParsedData,
-  AudioTracksUpdatedData,
-  ErrorData,
-  LevelLoadingData,
-  AudioTrackLoadedData
-} from '../types/events';
+import { ManifestParsedData, AudioTracksUpdatedData, ErrorData, LevelLoadingData, AudioTrackLoadedData } from '../types/events';
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType } from '../types/loader';
 import type Hls from '../hls';
@@ -20,12 +14,12 @@ class AudioTrackController extends BasePlaylistController {
   private trackId: number = -1;
   private selectDefaultTrack: boolean = true;
 
-  constructor (hls: Hls) {
+  constructor(hls: Hls) {
     super(hls, '[audio-track-controller]');
     this.registerListeners();
   }
 
-  private registerListeners () {
+  private registerListeners() {
     const { hls } = this;
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
@@ -34,7 +28,7 @@ class AudioTrackController extends BasePlaylistController {
     hls.on(Events.ERROR, this.onError, this);
   }
 
-  private unregisterListeners () {
+  private unregisterListeners() {
     const { hls } = this;
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
@@ -43,12 +37,12 @@ class AudioTrackController extends BasePlaylistController {
     hls.off(Events.ERROR, this.onError, this);
   }
 
-  public destroy () {
+  public destroy() {
     this.unregisterListeners();
     super.destroy();
   }
 
-  protected onManifestLoading (): void {
+  protected onManifestLoading(): void {
     this.tracks = [];
     this.groupId = null;
     this.tracksInGroup = [];
@@ -56,11 +50,11 @@ class AudioTrackController extends BasePlaylistController {
     this.selectDefaultTrack = true;
   }
 
-  protected onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData): void {
+  protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void {
     this.tracks = data.audioTracks || [];
   }
 
-  protected onAudioTrackLoaded (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void {
+  protected onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void {
     const { id, details } = data;
     const currentTrack = this.tracksInGroup[id];
 
@@ -86,7 +80,7 @@ class AudioTrackController extends BasePlaylistController {
    * If group-ID got update, we re-select the appropriate audio-track with this group-ID matching the currently
    * selected one (based on NAME property).
    */
-  protected onLevelLoading (event: Events.LEVEL_LOADING, data: LevelLoadingData): void {
+  protected onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData): void {
     const levelInfo = this.hls.levels[data.level];
 
     if (!levelInfo?.audioGroupIds) {
@@ -97,11 +91,10 @@ class AudioTrackController extends BasePlaylistController {
     if (this.groupId !== audioGroupId) {
       this.groupId = audioGroupId;
 
-      const audioTracks = this.tracks.filter((track): boolean =>
-        !audioGroupId || track.groupId === audioGroupId);
+      const audioTracks = this.tracks.filter((track): boolean => !audioGroupId || track.groupId === audioGroupId);
 
       // Disable selectDefaultTrack if there are no default tracks
-      if (this.selectDefaultTrack && !audioTracks.some(track => track.default)) {
+      if (this.selectDefaultTrack && !audioTracks.some((track) => track.default)) {
         this.selectDefaultTrack = false;
       }
 
@@ -113,34 +106,32 @@ class AudioTrackController extends BasePlaylistController {
     }
   }
 
-  protected onError (event: Events.ERROR, data: ErrorData): void {
+  protected onError(event: Events.ERROR, data: ErrorData): void {
     super.onError(event, data);
     if (data.fatal || !data.context) {
       return;
     }
 
-    if (data.context.type === PlaylistContextType.AUDIO_TRACK &&
-      data.context.id === this.trackId &&
-      data.context.groupId === this.groupId) {
+    if (data.context.type === PlaylistContextType.AUDIO_TRACK && data.context.id === this.trackId && data.context.groupId === this.groupId) {
       this.retryLoadingOrFail(data);
     }
   }
 
-  get audioTracks (): MediaPlaylist[] {
+  get audioTracks(): MediaPlaylist[] {
     return this.tracksInGroup;
   }
 
-  get audioTrack (): number {
+  get audioTrack(): number {
     return this.trackId;
   }
 
-  set audioTrack (newId: number) {
+  set audioTrack(newId: number) {
     // If audio track is selected from API then don't choose from the manifest default track
     this.selectDefaultTrack = false;
     this.setAudioTrack(newId);
   }
 
-  private setAudioTrack (newId: number): void {
+  private setAudioTrack(newId: number): void {
     const tracks = this.tracksInGroup;
     // noop on same audio track id as already set
     if (this.trackId === newId && tracks[newId]?.details) {
@@ -166,7 +157,7 @@ class AudioTrackController extends BasePlaylistController {
     this.loadPlaylist(hlsUrlParameters);
   }
 
-  private selectInitialTrack (): void {
+  private selectInitialTrack(): void {
     const audioTracks = this.tracksInGroup;
     console.assert(audioTracks.length, 'Initial audio track should be selected when tracks are known');
     const currentAudioTrackName = audioTracks[this.trackId]?.name;
@@ -180,12 +171,12 @@ class AudioTrackController extends BasePlaylistController {
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: true
+        fatal: true,
       });
     }
   }
 
-  private findTrackId (name?: string): number {
+  private findTrackId(name?: string): number {
     const audioTracks = this.tracksInGroup;
     for (let i = 0; i < audioTracks.length; i++) {
       const track = audioTracks[i];
@@ -198,7 +189,7 @@ class AudioTrackController extends BasePlaylistController {
     return -1;
   }
 
-  protected loadPlaylist (hlsUrlParameters?: HlsUrlParameters): void {
+  protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     const audioTrack = this.tracksInGroup[this.trackId];
     if (this.shouldLoadTrack(audioTrack)) {
       const id = audioTrack.id;
@@ -218,7 +209,7 @@ class AudioTrackController extends BasePlaylistController {
         url,
         id,
         groupId,
-        deliveryDirectives: hlsUrlParameters || null
+        deliveryDirectives: hlsUrlParameters || null,
       });
     }
   }

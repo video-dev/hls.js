@@ -2,44 +2,40 @@ import { sliceUint8 } from './typed-array';
 import { ElementaryStreamTypes } from '../loader/fragment';
 
 type Mp4BoxData = {
-  data: Uint8Array
-  start: number
-  end: number
+  data: Uint8Array;
+  start: number;
+  end: number;
 };
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 const push = [].push;
 
-export function bin2str (buffer: Uint8Array): string {
+export function bin2str(buffer: Uint8Array): string {
   return String.fromCharCode.apply(null, buffer);
 }
 
-export function readUint16 (buffer: Uint8Array | Mp4BoxData, offset: number): number {
+export function readUint16(buffer: Uint8Array | Mp4BoxData, offset: number): number {
   if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
   }
 
-  const val = buffer[offset] << 8 |
-    buffer[offset + 1];
+  const val = (buffer[offset] << 8) | buffer[offset + 1];
 
   return val < 0 ? 65536 + val : val;
 }
 
-export function readUint32 (buffer: Uint8Array | Mp4BoxData, offset: number): number {
+export function readUint32(buffer: Uint8Array | Mp4BoxData, offset: number): number {
   if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
   }
 
-  const val = buffer[offset] << 24 |
-    buffer[offset + 1] << 16 |
-    buffer[offset + 2] << 8 |
-    buffer[offset + 3];
+  const val = (buffer[offset] << 24) | (buffer[offset + 1] << 16) | (buffer[offset + 2] << 8) | buffer[offset + 3];
   return val < 0 ? 4294967296 + val : val;
 }
 
-export function writeUint32 (buffer: Uint8Array | Mp4BoxData, offset: number, value: number) {
+export function writeUint32(buffer: Uint8Array | Mp4BoxData, offset: number, value: number) {
   if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
@@ -51,7 +47,7 @@ export function writeUint32 (buffer: Uint8Array | Mp4BoxData, offset: number, va
 }
 
 // Find the data for a box specified by its path
-export function findBox (input: Uint8Array | Mp4BoxData, path: Array<string>): Array<Mp4BoxData> {
+export function findBox(input: Uint8Array | Mp4BoxData, path: Array<string>): Array<Mp4BoxData> {
   const results = [] as Array<Mp4BoxData>;
   if (!path.length) {
     // short-circuit the search for empty paths
@@ -71,7 +67,7 @@ export function findBox (input: Uint8Array | Mp4BoxData, path: Array<string>): A
     end = data.byteLength;
   }
 
-  for (let i = start; i < end;) {
+  for (let i = start; i < end; ) {
     const size = readUint32(data, i);
     const type = bin2str(data.subarray(i + 4, i + 8));
     const endbox = size > 1 ? i + size : end;
@@ -97,15 +93,15 @@ export function findBox (input: Uint8Array | Mp4BoxData, path: Array<string>): A
 }
 
 type SidxInfo = {
-  earliestPresentationTime: number,
-  timescale: number,
-  version: number,
-  referencesCount: number,
-  references: any[],
-  moovEndOffset: number | null
-}
+  earliestPresentationTime: number;
+  timescale: number;
+  version: number;
+  referencesCount: number;
+  references: any[];
+  moovEndOffset: number | null;
+};
 
-export function parseSegmentIndex (initSegment: Uint8Array): SidxInfo | null {
+export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
   const moovBox = findBox(initSegment, ['moov']);
   const moov = moovBox ? moovBox[0] : null;
   const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
@@ -152,7 +148,7 @@ export function parseSegmentIndex (initSegment: Uint8Array): SidxInfo | null {
     const referenceInfo = readUint32(sidx, referenceIndex);
     referenceIndex += 4;
 
-    const referenceSize = referenceInfo & 0x7FFFFFFF;
+    const referenceSize = referenceInfo & 0x7fffffff;
     const referenceType = (referenceInfo & 0x80000000) >>> 31;
 
     if (referenceType === 1) {
@@ -170,8 +166,8 @@ export function parseSegmentIndex (initSegment: Uint8Array): SidxInfo | null {
       info: {
         duration: subsegmentDuration / timescale,
         start: startByte,
-        end: startByte + referenceSize - 1
-      }
+        end: startByte + referenceSize - 1,
+      },
     });
 
     startByte += referenceSize;
@@ -190,7 +186,7 @@ export function parseSegmentIndex (initSegment: Uint8Array): SidxInfo | null {
     version,
     referencesCount,
     references,
-    moovEndOffset
+    moovEndOffset,
   };
 }
 
@@ -215,27 +211,29 @@ export function parseSegmentIndex (initSegment: Uint8Array): SidxInfo | null {
  */
 
 interface InitDataTrack {
-  timescale: number,
-  id: number,
-  codec: string
+  timescale: number;
+  id: number;
+  codec: string;
 }
 
 type HdlrType = ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO;
 
 export interface InitData extends Array<any> {
-  [index: number]: {
-    timescale: number
-    type: HdlrType
-    default?: {
-      duration: number;
-      flags: number;
-    }
-  } | undefined;
-  audio?: InitDataTrack
-  video?: InitDataTrack
+  [index: number]:
+    | {
+        timescale: number;
+        type: HdlrType;
+        default?: {
+          duration: number;
+          flags: number;
+        };
+      }
+    | undefined;
+  audio?: InitDataTrack;
+  video?: InitDataTrack;
 }
 
-export function parseInitSegment (initSegment: Uint8Array): InitData {
+export function parseInitSegment(initSegment: Uint8Array): InitData {
   const result: InitData = [];
   const traks = findBox(initSegment, ['moov', 'trak']);
   for (let i = 0; i < traks.length; i++) {
@@ -271,13 +269,13 @@ export function parseInitSegment (initSegment: Uint8Array): InitData {
   }
 
   const trex = findBox(initSegment, ['moov', 'mvex', 'trex']);
-  trex.forEach(trex => {
+  trex.forEach((trex) => {
     const trackId = readUint32(trex, 4);
     const track = result[trackId];
     if (track) {
       track.default = {
         duration: readUint32(trex, 12),
-        flags: readUint32(trex, 20)
+        flags: readUint32(trex, 20),
       };
     }
   });
@@ -302,36 +300,38 @@ export function parseInitSegment (initSegment: Uint8Array): InitData {
  * @return {number} the earliest base media decode start time for the
  * fragment, in seconds
  */
-export function getStartDTS (initData: InitData, fmp4: Uint8Array): number {
+export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
   // we need info from two children of each track fragment box
-  return findBox(fmp4, ['moof', 'traf']).reduce((result: number | null, traf) => {
-    const tfdt = findBox(traf, ['tfdt'])[0];
-    const version = tfdt.data[tfdt.start];
-    const start = findBox(traf, ['tfhd']).reduce((result: number | null, tfhd) => {
-      // get the track id from the tfhd
-      const id = readUint32(tfhd, 4);
-      const track = initData[id];
-      if (track) {
-        let baseTime = readUint32(tfdt, 4);
-        if (version === 1) {
-          baseTime *= Math.pow(2, 32);
-          baseTime += readUint32(tfdt, 8);
+  return (
+    findBox(fmp4, ['moof', 'traf']).reduce((result: number | null, traf) => {
+      const tfdt = findBox(traf, ['tfdt'])[0];
+      const version = tfdt.data[tfdt.start];
+      const start = findBox(traf, ['tfhd']).reduce((result: number | null, tfhd) => {
+        // get the track id from the tfhd
+        const id = readUint32(tfhd, 4);
+        const track = initData[id];
+        if (track) {
+          let baseTime = readUint32(tfdt, 4);
+          if (version === 1) {
+            baseTime *= Math.pow(2, 32);
+            baseTime += readUint32(tfdt, 8);
+          }
+          // assume a 90kHz clock if no timescale was specified
+          const scale = track.timescale || 90e3;
+          // convert base time to seconds
+          const startTime = baseTime / scale;
+          if (isFinite(startTime) && (result === null || startTime < result)) {
+            return startTime;
+          }
         }
-        // assume a 90kHz clock if no timescale was specified
-        const scale = track.timescale || 90e3;
-        // convert base time to seconds
-        const startTime = baseTime / scale;
-        if (isFinite(startTime) && (result === null || startTime < result)) {
-          return startTime;
-        }
+        return result;
+      }, null);
+      if (start !== null && isFinite(start) && (result === null || start < result)) {
+        return start;
       }
       return result;
-    }, null);
-    if (start !== null && isFinite(start) && (result === null || start < result)) {
-      return start;
-    }
-    return result;
-  }, null) || 0;
+    }, null) || 0
+  );
 }
 
 /*
@@ -347,7 +347,7 @@ export function getStartDTS (initData: InitData, fmp4: Uint8Array): number {
      unsigned int(32)  default_sample_flags
   }
  */
-export function getDuration (data: Uint8Array, initData: InitData) {
+export function getDuration(data: Uint8Array, initData: InitData) {
   let rawDuration = 0;
   let videoDuration = 0;
   let audioDuration = 0;
@@ -429,7 +429,7 @@ export function getDuration (data: Uint8Array, initData: InitData) {
      }[ sample_count ]
   }
  */
-export function computeRawDurationFromSamples (trun): number {
+export function computeRawDurationFromSamples(trun): number {
   const flags = readUint32(trun, 0);
   // Flags are at offset 0, non-optional sample_count is at offset 4. Therefore we start 8 bytes in.
   // Each field is an int32, which is 4 bytes
@@ -468,7 +468,7 @@ export function computeRawDurationFromSamples (trun): number {
   return duration;
 }
 
-export function offsetStartDTS (initData: InitData, fmp4: Uint8Array, timeOffset: number) {
+export function offsetStartDTS(initData: InitData, fmp4: Uint8Array, timeOffset: number) {
   findBox(fmp4, ['moof', 'traf']).forEach(function (traf) {
     findBox(traf, ['tfhd']).forEach(function (tfhd) {
       // get the track id from the tfhd
@@ -501,10 +501,10 @@ export function offsetStartDTS (initData: InitData, fmp4: Uint8Array, timeOffset
 }
 
 // TODO: Check if the last moof+mdat pair is part of the valid range
-export function segmentValidRange (data: Uint8Array): SegmentedRange {
+export function segmentValidRange(data: Uint8Array): SegmentedRange {
   const segmentedRange: SegmentedRange = {
     valid: null,
-    remainder: null
+    remainder: null,
   };
 
   const moofs = findBox(data, ['moof']);
@@ -522,11 +522,11 @@ export function segmentValidRange (data: Uint8Array): SegmentedRange {
 }
 
 export interface SegmentedRange {
-  valid: Uint8Array | null,
-  remainder: Uint8Array | null,
+  valid: Uint8Array | null;
+  remainder: Uint8Array | null;
 }
 
-export function appendUint8Array (data1: Uint8Array, data2: Uint8Array) : Uint8Array {
+export function appendUint8Array(data1: Uint8Array, data2: Uint8Array): Uint8Array {
   const temp = new Uint8Array(data1.length + data2.length);
   temp.set(data1);
   temp.set(data2, data1.length);

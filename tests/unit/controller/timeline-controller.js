@@ -19,7 +19,10 @@ describe('TimelineController', function () {
       hls.subtitleTrackController = { subtitleDisplay: false };
 
       timelineController.onSubtitleTracksUpdated(Events.SUBTITLE_TRACKS_UPDATED, {
-        subtitleTracks: [{ id: 0, name: 'en' }, { id: 1, name: 'ru' }]
+        subtitleTracks: [
+          { id: 0, name: 'en' },
+          { id: 1, name: 'ru' },
+        ],
       });
 
       // text tracks model contain only newly added manifest tracks, in same order as in manifest
@@ -32,7 +35,10 @@ describe('TimelineController', function () {
       expect(timelineController.media.textTracks.length).to.equal(2);
 
       timelineController.onSubtitleTracksUpdated(Events.SUBTITLE_TRACKS_UPDATED, {
-        subtitleTracks: [{ id: 0, name: 'en' }, { id: 1, name: 'ru' }]
+        subtitleTracks: [
+          { id: 0, name: 'en' },
+          { id: 1, name: 'ru' },
+        ],
       });
 
       // text tracks model contain only newly added manifest tracks, in same order
@@ -49,7 +55,10 @@ describe('TimelineController', function () {
       hls.subtitleTrackController = { subtitleDisplay: false };
 
       timelineController.onSubtitleTracksUpdated(Events.MANIFEST_LOADED, {
-        subtitleTracks: [{ id: 0, name: 'en' }, { id: 1, name: 'ru' }]
+        subtitleTracks: [
+          { id: 0, name: 'en' },
+          { id: 1, name: 'ru' },
+        ],
       });
 
       // text tracks model contain only newly added manifest tracks, in same order as in manifest
@@ -62,7 +71,10 @@ describe('TimelineController', function () {
       expect(timelineController.media.textTracks.length).to.equal(2);
 
       timelineController.onSubtitleTracksUpdated(Events.MANIFEST_LOADED, {
-        subtitleTracks: [{ id: 0, name: 'ru' }, { id: 1, name: 'en' }]
+        subtitleTracks: [
+          { id: 0, name: 'ru' },
+          { id: 1, name: 'en' },
+        ],
       });
 
       // text tracks model contain only newly added manifest tracks, in same order

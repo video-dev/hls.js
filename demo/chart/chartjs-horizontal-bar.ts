@@ -21,19 +21,19 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (da
     size: size,
     base: base,
     head: head,
-    center: head + size / 2
+    center: head + size / 2,
   };
 };
 
 Chart.controllers.horizontalBar.prototype.calculateBarIndexPixels = function (datasetIndex, index, ruler, options) {
   const rowHeight = options.barThickness;
   const size = rowHeight * options.categoryPercentage;
-  const center = ruler.start + (datasetIndex * rowHeight + (rowHeight / 2));
+  const center = ruler.start + (datasetIndex * rowHeight + rowHeight / 2);
   return {
     base: center - size / 2,
     head: center + size / 2,
     center,
-    size
+    size,
   };
 };
 
@@ -49,7 +49,7 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
   const scale = this._getValueScale();
   scale._parseValue = scaleParseValue;
   const ctx: CanvasRenderingContext2D = chart.ctx;
-  const chartArea: { left, top, right, bottom } = chart.chartArea;
+  const chartArea: { left; top; right; bottom } = chart.chartArea;
   Chart.helpers.canvas.clipArea(ctx, chartArea);
   if (!this.lineHeight) {
     this.lineHeight = Math.ceil(ctx.measureText('0').actualBoundingBoxAscent) + 2;
@@ -73,7 +73,7 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
       const isFragment = dataType === 'fragment' || isPart || isFragmentHint;
       const isCue = dataType === 'cue';
       if (isCue) {
-        view.y += (view.height * 0.5 * (i % 2)) - (view.height * 0.25);
+        view.y += view.height * 0.5 * (i % 2) - view.height * 0.25;
       } else if (isPart) {
         view.height -= 22;
       }
@@ -113,7 +113,7 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
         }
         if (stats.loaded && stats.total) {
           ctx.fillStyle = 'rgba(50, 20, 100, 0.3)';
-          ctx.fillRect(bounds.x, bounds.y, bounds.w * stats.loaded / stats.total, bounds.h);
+          ctx.fillRect(bounds.x, bounds.y, (bounds.w * stats.loaded) / stats.total, bounds.h);
         }
       } else if (isCue) {
         if (obj.active) {
@@ -155,14 +155,14 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
   Chart.helpers.canvas.unclipArea(chart.ctx);
 };
 
-export function applyChartInstanceOverrides (chart) {
+export function applyChartInstanceOverrides(chart) {
   Object.keys(chart.scales).forEach((axis) => {
     const scale = chart.scales![axis];
     scale._parseValue = scaleParseValue;
   });
 }
 
-function scaleParseValue (value: number[] | any) {
+function scaleParseValue(value: number[] | any) {
   if (value === undefined) {
     console.warn('Chart values undefined (update chart)');
     return {};
@@ -193,15 +193,15 @@ function scaleParseValue (value: number[] | any) {
     min,
     max,
     start,
-    end
+    end,
   };
 }
 
-function intersects (x1, x2, x3, x4) {
+function intersects(x1, x2, x3, x4) {
   return x2 > x3 && x1 < x4;
 }
 
-function boundingRects (vm) {
+function boundingRects(vm) {
   const half = vm.height / 2;
   const left = Math.min(vm.x, vm.base);
   const right = Math.max(vm.x, vm.base);
@@ -211,19 +211,18 @@ function boundingRects (vm) {
     x: left,
     y: top,
     w: right - left,
-    h: bottom - top
+    h: bottom - top,
   };
 }
 
-export function hhmmss (value, fixedDigits) {
+export function hhmmss(value, fixedDigits) {
   const h = (value / 3600) | 0;
   const m = ((value / 60) | 0) % 60;
   const s = value % 60;
-  return `${h}:${pad(m, 2)}:${pad(s.toFixed(fixedDigits), fixedDigits ? (fixedDigits + 3) : 2)}`
-    .replace(/^(?:0+:?)*(\d.*?)(?:\.0*)?$/, '$1');
+  return `${h}:${pad(m, 2)}:${pad(s.toFixed(fixedDigits), fixedDigits ? fixedDigits + 3 : 2)}`.replace(/^(?:0+:?)*(\d.*?)(?:\.0*)?$/, '$1');
 }
 
-function pad (str, length) {
+function pad(str, length) {
   str = '' + str;
   while (str.length < length) {
     str = '0' + str;
