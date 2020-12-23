@@ -85,7 +85,11 @@ module.exports = {
 
     'no-restricted-properties': [2,
       { 'property': 'findIndex' },  // Intended to block usage of Array.prototype.findIndex
-      { 'property': 'find' }        // Intended to block usage of Array.prototype.find
+      { 'property': 'find' },        // Intended to block usage of Array.prototype.find
+      { 
+        'property': 'addCue', // Intended to block usage of TextTrack.prototype.addCue
+        'message': 'Please use addCue from src/utils/texttrack-utils.ts'
+      }
     ],
 
     'standard/no-callback-literal': 1,
