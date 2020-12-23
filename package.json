@@ -40,7 +40,7 @@
     "prettier": "prettier --write .",
     "prettier:verify": "prettier --check .",
     "pretest": "npm run lint",
-    "sanity-check": "npm run lint && npm run type-check && npm run docs && npm run build:types && npm run build && npm run test:unit",
+    "sanity-check": "npm run lint && npm run prettier:verify && npm run type-check && npm run docs && npm run build:types && npm run build && npm run test:unit",
     "start": "npm run dev",
     "test": "npm run test:unit && npm run test:func",
     "test:unit": "karma start karma.conf.js",
