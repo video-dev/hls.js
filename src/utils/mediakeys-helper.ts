@@ -8,8 +8,8 @@ export enum KeySystems {
 
 export type MediaKeyFunc = (keySystem: KeySystems, supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>;
 const requestMediaKeySystemAccess = (function (): MediaKeyFunc | null {
-  if (typeof window !== 'undefined' && window.navigator && window.navigator.requestMediaKeySystemAccess) {
-    return window.navigator.requestMediaKeySystemAccess.bind(window.navigator);
+  if (typeof self !== 'undefined' && self.navigator && self.navigator.requestMediaKeySystemAccess) {
+    return self.navigator.requestMediaKeySystemAccess.bind(self.navigator);
   } else {
     return null;
   }

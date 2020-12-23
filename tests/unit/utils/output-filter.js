@@ -3,7 +3,7 @@ import OutputFilter from '../../../src/utils/output-filter';
 describe('OutputFilter', function () {
   const sandbox = sinon.createSandbox();
 
-  let createMockTimelineController = function () {
+  const createMockTimelineController = function () {
     return {
       addCues: sandbox.spy(),
       createCaptionsTrack: sandbox.spy()
@@ -24,7 +24,7 @@ describe('OutputFilter', function () {
   });
 
   it('handles single cue and dispatch', function () {
-    let lastScreen = {};
+    const lastScreen = {};
     outputFilter.newCue(0, 1, lastScreen);
     outputFilter.dispatchCue();
     expect(timelineController.addCues).to.have.been.calledOnce;
@@ -34,7 +34,7 @@ describe('OutputFilter', function () {
   it('handles multiple cues and dispatch', function () {
     outputFilter.newCue(0, 1, {});
     outputFilter.newCue(1, 2, {});
-    let lastScreen = {};
+    const lastScreen = {};
     outputFilter.newCue(3, 4, lastScreen);
     outputFilter.dispatchCue();
     expect(timelineController.addCues).to.have.been.calledOnce;

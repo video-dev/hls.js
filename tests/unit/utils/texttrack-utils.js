@@ -2,7 +2,7 @@ import { sendAddTrackEvent, clearCurrentCues } from '../../../src/utils/texttrac
 import sinon from 'sinon';
 
 describe('text track utils', function () {
-  let cues = [{
+  const cues = [{
     begin: 0,
     end: 5,
     text: 'First 5'
@@ -36,7 +36,7 @@ describe('text track utils', function () {
     });
 
     it('should fallback to document.createEvent if window.Event constructor throws', function (done) {
-      const stub = sinon.stub(window, 'Event');
+      const stub = sinon.stub(self, 'Event');
       stub.throws();
 
       const spy = sinon.spy(document, 'createEvent');
