@@ -5,6 +5,8 @@ import {
   DemuxedAudioTrack
 } from '../types/demuxer';
 
+let chromeVersion: number | null = null;
+
 const BitratesMap = [
   32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
   32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384,
@@ -75,21 +77,34 @@ export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset:
 }
 
 export function parseHeader (data: Uint8Array, offset: number) {
-  const headerB = (data[offset + 1] >> 3) & 3;
-  const headerC = (data[offset + 1] >> 1) & 3;
-  const headerE = (data[offset + 2] >> 4) & 15;
-  const headerF = (data[offset + 2] >> 2) & 3;
-  const headerG = (data[offset + 2] >> 1) & 1;
-  if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
-    const columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
-    const bitRate = BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
-    const columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-    const sampleRate = SamplingRateMap[columnInSampleRates * 3 + headerF];
-    const channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-    const sampleCoefficient = SamplesCoefficients[headerB][headerC];
-    const bytesInSlot = BytesInSlot[headerC];
+  const mpegVersion = (data[offset + 1] >> 3) & 3;
+  const mpegLayer = (data[offset + 1] >> 1) & 3;
+  const bitRateIndex = (data[offset + 2] >> 4) & 15;
+  const sampleRateIndex = (data[offset + 2] >> 2) & 3;
+  if (mpegVersion !== 1 && bitRateIndex !== 0 && bitRateIndex !== 15 && sampleRateIndex !== 3) {
+    const paddingBit = (data[offset + 2] >> 1) & 1;
+    const channelMode = data[offset + 3] >> 6;
+    const columnInBitrates = mpegVersion === 3 ? (3 - mpegLayer) : (mpegLayer === 3 ? 3 : 4);
+    const bitRate = BitratesMap[columnInBitrates * 14 + bitRateIndex - 1] * 1000;
+    const columnInSampleRates = mpegVersion === 3 ? 0 : mpegVersion === 2 ? 1 : 2;
+    const sampleRate = SamplingRateMap[columnInSampleRates * 3 + sampleRateIndex];
+    const channelCount = channelMode === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+    const sampleCoefficient = SamplesCoefficients[mpegVersion][mpegLayer];
+    const bytesInSlot = BytesInSlot[mpegLayer];
     const samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
-    const frameLength = Math.floor(sampleCoefficient * bitRate / sampleRate + headerG) * bytesInSlot;
+    const frameLength = Math.floor(sampleCoefficient * bitRate / sampleRate + paddingBit) * bytesInSlot;
+
+    if (chromeVersion === null) {
+      const userAgent = navigator.userAgent || '';
+      const result = userAgent.match(/Chrome\/(\d+)/i);
+      chromeVersion = result ? parseInt(result[1]) : 0;
+    }
+    const needChromeFix = !!chromeVersion && chromeVersion <= 87;
+
+    if (needChromeFix && mpegLayer === 2 && bitRate >= 224000 && channelMode === 0) {
+      // Work around bug in Chromium by setting channelMode to dual-channel (01) instead of stereo (00)
+      data[offset + 3] = data[offset + 3] | 0x80;
+    }
 
     return { sampleRate, channelCount, frameLength, samplesPerFrame };
   }
@@ -126,9 +141,7 @@ export function probe (data: Uint8Array, offset: number): boolean {
     }
 
     const newOffset = offset + frameLength;
-    if (newOffset === data.length || (newOffset + 1 < data.length && isHeaderPattern(data, newOffset))) {
-      return true;
-    }
+    return newOffset === data.length || isHeader(data, newOffset);
   }
   return false;
 }

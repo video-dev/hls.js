@@ -118,22 +118,9 @@ describe('SubtitleStreamController', function () {
     });
   });
 
-  describe('onLevelLoaded', function () {
-    it('records the start time of the last known A/V track', function () {
-      hls.trigger(Events.LEVEL_UPDATED, {
-        details: { fragments: [{ start: 5 }] }
-      });
-      expect(subtitleStreamController.lastAVStart).to.equal(5);
-
-      hls.trigger(Events.LEVEL_UPDATED, {
-        details: { fragments: [] }
-      });
-      expect(subtitleStreamController.lastAVStart).to.equal(0);
-    });
-  });
-
   describe('onMediaSeeking', function () {
-    it('nulls fragPrevious', function () {
+    it('nulls fragPrevious when seeking away from fragCurrent', function () {
+      subtitleStreamController.fragCurrent = { start: 1000, duration: 10 };
       subtitleStreamController.fragPrevious = {};
       subtitleStreamController.onMediaSeeking();
       expect(subtitleStreamController.fragPrevious).to.not.exist;

@@ -1,5 +1,7 @@
 import { fixLineBreaks } from './vttparser';
-import { CaptionScreen, Row } from './cea-608-parser';
+import type { CaptionScreen, Row } from './cea-608-parser';
+
+const WHITESPACE_CHAR = /\s/;
 
 export interface CuesInterface {
   newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[]
@@ -23,7 +25,7 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
 
     if (!row.isEmpty()) {
       for (let c = 0; c < row.chars.length; c++) {
-        if (row.chars[c].uchar.match(/\s/) && indenting) {
+        if (WHITESPACE_CHAR.test(row.chars[c].uchar) && indenting) {
           indent++;
         } else {
           text += row.chars[c].uchar;
@@ -46,21 +48,28 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
         indent++;
       }
 
-      // VTTCue.line get's flakey when using controls, so let's now include line 13&14
-      // also, drop line 1 since it's to close to the top
-      if (navigator.userAgent.match(/Firefox\//)) {
-        cue.line = r + 1;
-      } else {
-        cue.line = (r > 7 ? r - 2 : r + 1);
-      }
-
+      cue.line = r + 1;
       cue.align = 'left';
-      // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
-      cue.position = Math.max(0, Math.min(100, 100 * (indent / 32)));
+      // Clamp the position between 10 and 80 percent (CEA-608 PAC indent code)
+      // https://dvcs.w3.org/hg/text-tracks/raw-file/default/608toVTT/608toVTT.html#positioning-in-cea-608
+      // Firefox throws an exception and captions break with out of bounds 0-100 values
+      cue.position = 10 + Math.min(80, Math.floor(indent * 8 / 32) * 10);
       result.push(cue);
-      if (track) {
-        track.addCue(cue);
+    }
+  }
+  if (track && result.length) {
+    // Sort bottom cues in reverse order so that they render in line order when overlapping in Chrome
+    const sortedCues = result.sort((cueA, cueB) => {
+      if (cueA.line === 'auto' || cueB.line === 'auto') {
+        return 0;
       }
+      if (cueA.line > 8 && cueB.line > 8) {
+        return cueB.line - cueA.line;
+      }
+      return cueA.line - cueB.line;
+    });
+    for (let i = 0; i < sortedCues.length; i++) {
+      track.addCue(sortedCues[i]);
     }
   }
   return result;

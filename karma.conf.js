@@ -1,4 +1,4 @@
-const merge = require('webpack-merge');
+const { merge } = require('webpack-merge');
 const webpackConfig = require('./webpack.config')({ debug: true })[0];
 delete webpackConfig.entry;
 delete webpackConfig.output;

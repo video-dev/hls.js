@@ -1,10 +1,17 @@
-import Fragment from '../loader/fragment';
-import { SourceBufferName } from './buffer';
+// eslint-disable-next-line import/no-duplicates
+import type Fragment from '../loader/fragment';
+// eslint-disable-next-line import/no-duplicates
+import type { Part } from '../loader/fragment';
+import type { SourceBufferName } from './buffer';
+import type { FragLoadedData } from './events';
 
 export interface FragmentEntity {
-  body: Fragment
+  body: Fragment,
+  part: Part | null
+  loaded: FragLoadedData | null,
+  backtrack: FragLoadedData | null,
+  buffered: boolean,
   range: { [key in SourceBufferName]: FragmentBufferedRange }
-  buffered: boolean
 }
 
 export interface FragmentTimeRange {

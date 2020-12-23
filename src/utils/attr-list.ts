@@ -1,4 +1,4 @@
-import { StringMap } from '../types/general';
+import type { StringMap } from '../types/general';
 
 const DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/; // eslint-disable-line no-useless-escape
 const ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g; // eslint-disable-line no-useless-escape
@@ -57,8 +57,17 @@ class AttrList {
     return parseFloat(this[attrName]);
   }
 
+  optionalFloat (attrName: string, defaultValue: number): number {
+    const value = this[attrName];
+    return value ? parseFloat(value) : defaultValue;
+  }
+
   enumeratedString (attrName: string): string | undefined {
     return this[attrName];
+  }
+
+  bool (attrName: string): boolean {
+    return this[attrName] === 'YES';
   }
 
   decimalResolution (attrName: string): {

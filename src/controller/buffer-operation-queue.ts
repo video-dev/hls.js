@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { BufferOperation, BufferOperationQueues, SourceBuffers, SourceBufferName } from '../types/buffer';
+import type { BufferOperation, BufferOperationQueues, SourceBuffers, SourceBufferName } from '../types/buffer';
 
 export default class BufferOperationQueue {
   private buffers: SourceBuffers;
@@ -13,14 +13,18 @@ export default class BufferOperationQueue {
     this.buffers = sourceBufferReference;
   }
 
-  // TODO: Handle media errors, (!this.media || this.media.error)
   public append (operation: BufferOperation, type: SourceBufferName) {
-    const { buffers, queues } = this;
-    const queue = queues[type];
+    const queue = this.queues[type];
     queue.push(operation);
-    if (queue.length === 1 && buffers[type]) {
+    if (queue.length === 1 && this.buffers[type]) {
       this.executeNext(type);
     }
+  }
+
+  public insertAbort (operation: BufferOperation, type: SourceBufferName) {
+    const queue = this.queues[type];
+    queue.unshift(operation);
+    this.executeNext(type, true);
   }
 
   public appendBlocker (type: SourceBufferName) : Promise<{}> {
@@ -30,6 +34,7 @@ export default class BufferOperationQueue {
     });
     const operation: BufferOperation = {
       execute,
+      onStart: () => {},
       onComplete: () => {},
       onError: () => {}
     };
@@ -38,10 +43,10 @@ export default class BufferOperationQueue {
     return promise;
   }
 
-  public executeNext (type: SourceBufferName) {
+  public executeNext (type: SourceBufferName, ignoreUpdating?: boolean) {
     const { buffers, queues } = this;
     const sb = buffers[type];
-    console.assert(!sb || !sb.updating, `${type} sourceBuffer must exist, and must not be updating`);
+    console.assert(!sb || ignoreUpdating || !sb.updating, `${type} sourceBuffer must exist, and must not be updating`);
 
     const queue = queues[type];
     if (queue.length) {

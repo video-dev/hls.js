@@ -1,10 +1,15 @@
-import { TrackSet } from './track';
-import { DemuxedAudioTrack, DemuxedAvcTrack, DemuxedTrack, MetadataSample, UserdataSample } from './demuxer';
-import { SourceBufferName } from './buffer';
+import type { TrackSet } from './track';
+import {
+  DemuxedAudioTrack,
+  DemuxedTrack, DemuxedVideoTrack,
+  MetadataSample,
+  UserdataSample
+} from './demuxer';
+import type { SourceBufferName } from './buffer';
 
 export interface Remuxer {
   remux(audioTrack: DemuxedAudioTrack,
-        videoTrack: DemuxedAvcTrack,
+        videoTrack: DemuxedVideoTrack,
         id3Track: DemuxedTrack,
         textTrack: DemuxedTrack,
         timeOffset: number,
@@ -17,23 +22,24 @@ export interface Remuxer {
 }
 
 export interface RemuxedTrack {
-    data1: Uint8Array
-    data2?: Uint8Array
-    startPTS: number
-    endPTS: number
-    startDTS: number
-    endDTS: number
-    type: SourceBufferName
-    hasAudio: boolean
-    hasVideo: boolean
-    nb: number
-    transferredData1?: ArrayBuffer
-    transferredData2?: ArrayBuffer
-    dropped?: number
+  data1: Uint8Array
+  data2?: Uint8Array
+  startPTS: number
+  endPTS: number
+  startDTS: number
+  endDTS: number
+  type: SourceBufferName
+  hasAudio: boolean
+  hasVideo: boolean
+  independent?: boolean
+  nb: number
+  transferredData1?: ArrayBuffer
+  transferredData2?: ArrayBuffer
+  dropped?: number
 }
 
 export interface RemuxedMetadata {
-    samples: MetadataSample[]
+  samples: MetadataSample[]
 }
 
 export interface RemuxedUserdata {
@@ -41,14 +47,16 @@ export interface RemuxedUserdata {
 }
 
 export interface RemuxerResult {
-    audio?: RemuxedTrack
-    video?: RemuxedTrack
-    text?: RemuxedUserdata
-    id3?: RemuxedMetadata
-    initSegment?: InitSegmentData
+  audio?: RemuxedTrack
+  video?: RemuxedTrack
+  text?: RemuxedUserdata
+  id3?: RemuxedMetadata
+  initSegment?: InitSegmentData
+  independent?: boolean
 }
 
 export interface InitSegmentData {
-    tracks?: TrackSet
-    initPTS?: number
+  tracks?: TrackSet
+  initPTS: number | undefined
+  timescale: number | undefined
 }

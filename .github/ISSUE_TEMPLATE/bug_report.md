@@ -17,7 +17,7 @@ about: Create a report to help us improve
 - [ ] The issue observed is not already reported by searching on Github under https://github.com/video-dev/hls.js/issues
 - [ ] The issue occurs in the stable client on https://hls-js.netlify.com/demo and not just on my page
 <!-- The stable client is built from the latest release -->
-- [ ] The issue occurs in the latest client on https://hls-js-latest.netlify.com/demo and not just on my page
+- [ ] The issue occurs in the latest client on https://hls-js-dev.netlify.com/demo and not just on my page
 <!-- The latest client is built from the head of the master branch -->
 - [ ] The stream has correct Access-Control-Allow-Origin headers (CORS)
 - [ ] There are no network errors such as 404s in the browser console when trying to play the stream

@@ -88,7 +88,7 @@ describe('GapController', function () {
     });
 
     it('should not nudge when too far from the buffer end', function () {
-      const mockBufferInfo = { len: 0.25 };
+      const mockBufferInfo = { len: 0.09 };
       const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
       gapController._tryFixBufferStall(mockBufferInfo, mockStallDuration);

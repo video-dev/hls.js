@@ -1,6 +1,6 @@
 export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 
-export type ExtendedSourceBuffer = SourceBuffer & {
+export type ExtendedSourceBuffer = SourceBuffer & { // eslint-disable-line no-restricted-globals
   ended?: boolean
 };
 
@@ -14,8 +14,9 @@ export interface BufferOperationQueues {
 
 export interface BufferOperation {
   execute: Function
+  onStart: Function
   onComplete: Function
-  onError: Function,
+  onError: Function
   start?: number
   end?: number
 }

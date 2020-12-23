@@ -1,4 +1,5 @@
-import { Events, HlsEventEmitter } from '../events';
+import type { HlsEventEmitter } from '../events';
+import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
@@ -7,14 +8,14 @@ import TSDemuxer from '../demux/tsdemuxer';
 import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import { Demuxer } from '../types/demuxer';
-import { Remuxer } from '../types/remuxer';
-import { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
+import type { Demuxer } from '../types/demuxer';
+import type { Remuxer } from '../types/remuxer';
+import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import ChunkCache from './chunk-cache';
 import { appendUint8Array } from '../utils/mp4-tools';
 
 import { logger } from '../utils/logger';
-import { HlsConfig } from '../config';
+import type { HlsConfig } from '../config';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -25,7 +26,13 @@ try {
   now = self.Date.now;
 }
 
-const muxConfig = [
+type MuxConfig =
+  { demux: typeof TSDemuxer, remux: typeof MP4Remuxer } |
+  { demux: typeof MP4Demuxer, remux: typeof PassThroughRemuxer } |
+  { demux: typeof AACDemuxer, remux: typeof MP4Remuxer } |
+  { demux: typeof MP3Demuxer, remux: typeof MP4Remuxer };
+
+const muxConfig: MuxConfig[] = [
   { demux: TSDemuxer, remux: MP4Remuxer },
   { demux: MP4Demuxer, remux: PassThroughRemuxer },
   { demux: AACDemuxer, remux: MP4Remuxer },
@@ -189,9 +196,10 @@ export default class Transmuxer {
     }
 
     const { audioTrack, avcTrack, id3Track, textTrack } = demuxer.flush(timeOffset);
-    logger.log(`[transmuxer.ts]: Flushed fragment ${chunkMeta.sn} of level ${chunkMeta.level}`);
+    logger.log(`[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''} of level ${chunkMeta.level}`);
+    const remuxResult = remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset);
     transmuxResults.push({
-      remuxResult: remuxer.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
+      remuxResult,
       chunkMeta
     });
 
@@ -247,10 +255,11 @@ export default class Transmuxer {
     return result;
   }
 
-  private transmuxUnencrypted (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata) {
+  private transmuxUnencrypted (data: Uint8Array, timeOffset: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata): TransmuxerResult {
     const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(data, timeOffset, false);
+    const remuxResult = this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset);
     return {
-      remuxResult: this.remuxer!.remux(audioTrack, avcTrack, id3Track, textTrack, timeOffset, accurateTimeOffset),
+      remuxResult,
       chunkMeta
     };
   }
@@ -265,35 +274,43 @@ export default class Transmuxer {
       );
   }
 
-  private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig) {
+  private configureTransmuxer (data: Uint8Array, transmuxConfig: TransmuxConfig): { remuxer: Remuxer | undefined, demuxer: Demuxer | undefined } {
     const { config, observer, typeSupported, vendor } = this;
     const { audioCodec, defaultInitPts, duration, initSegmentData, videoCodec } = transmuxConfig;
-    let demuxer, remuxer;
     // probe for content type
+    let mux;
     for (let i = 0, len = muxConfig.length; i < len; i++) {
-      const mux = muxConfig[i];
-      const probe = mux.demux.probe;
-      if (probe(data)) {
-        remuxer = this.remuxer = new mux.remux(observer, config, typeSupported, vendor);
-        demuxer = this.demuxer = new mux.demux(observer, config, typeSupported);
-
-        // Ensure that muxers are always initialized with an initSegment
-        this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
-        this.resetInitialTimestamp(defaultInitPts);
-        logger.log(`[transmuxer.ts]: Probe succeeded with a data length of ${data.length}.`);
-        this.probe = probe;
+      mux = muxConfig[i];
+      if (mux.demux.probe(data)) {
         break;
       }
     }
-
+    if (!mux) {
+      return { remuxer: undefined, demuxer: undefined };
+    }
+    // so let's check that current remuxer and demuxer are still valid
+    let demuxer = this.demuxer;
+    let remuxer = this.remuxer;
+    const Remuxer = mux.remux;
+    const Demuxer = mux.demux;
+    if (!remuxer || !(remuxer instanceof Remuxer)) {
+      remuxer = this.remuxer = new Remuxer(observer, config, typeSupported, vendor);
+    }
+    if (!demuxer || !(demuxer instanceof Demuxer)) {
+      demuxer = this.demuxer = new Demuxer(observer, config, typeSupported);
+      this.probe = Demuxer.probe;
+    }
+    // Ensure that muxers are always initialized with an initSegment
+    this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
+    this.resetInitialTimestamp(defaultInitPts);
+    logger.log(`[transmuxer]: Probe succeeded with a data length of ${data.length}.`);
     return { demuxer, remuxer };
   }
 
   private needsProbing (data: Uint8Array, discontinuity: boolean, trackSwitch: boolean) : boolean {
     // in case of continuity change, or track switch
     // we might switch from content type (AAC container to TS container, or TS to fmp4 for example)
-    // so let's check that current demuxer is still valid
-    return !this.demuxer || ((discontinuity || trackSwitch) && !this.probe(data));
+    return !this.demuxer || ((discontinuity || trackSwitch));
   }
 
   private getDecrypter () {
