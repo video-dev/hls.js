@@ -335,7 +335,7 @@ npm run lint
 
 - Use [EditorConfig](https://editorconfig.org) or at least stay consistent to the file formats defined in the `.editorconfig` file.
 - Develop in a topic branch, not master
-- Don't commit the updated `dist/hls.js` file in your PR. We'll take care of generating an updated build right before releasing a new tagged version.
+- Prettier should run automatically in the pre-commit hook, but if it doesn't, run `npm run prettier`.
 
 ## Setup
 
