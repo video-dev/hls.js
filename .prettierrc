@@ -1,6 +1,4 @@
 {
   "singleQuote": true,
-  "semi": true,
-  "printWidth": 180,
-  "arrowParens": "always"
+  "printWidth": 180
 }
