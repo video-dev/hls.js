@@ -11,20 +11,9 @@ import { alignStream } from '../utils/discontinuities';
 import { findFragmentByPDT, findFragmentByPTS, findFragWithCC } from './fragment-finders';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import Fragment, { Part } from '../loader/fragment';
-import FragmentLoader, {
-  FragmentLoadProgressCallback,
-  LoadError
-} from '../loader/fragment-loader';
+import FragmentLoader, { FragmentLoadProgressCallback, LoadError } from '../loader/fragment-loader';
 import LevelDetails from '../loader/level-details';
-import {
-  BufferAppendingData,
-  ErrorData,
-  FragLoadedData,
-  PartsLoadedData,
-  KeyLoadedData,
-  MediaAttachingData,
-  BufferFlushingData
-} from '../types/events';
+import { BufferAppendingData, ErrorData, FragLoadedData, PartsLoadedData, KeyLoadedData, MediaAttachingData, BufferFlushingData } from '../types/events';
 import Decrypter from '../crypt/decrypter';
 import TimeRanges from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';
@@ -49,7 +38,7 @@ export const State = {
   ENDED: 'ENDED',
   ERROR: 'ERROR',
   WAITING_INIT_PTS: 'WAITING_INIT_PTS',
-  WAITING_LEVEL: 'WAITING_LEVEL'
+  WAITING_LEVEL: 'WAITING_LEVEL',
 };
 
 export default class BaseStreamController extends TaskLoop implements NetworkComponentAPI {
@@ -81,7 +70,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   protected readonly log: (msg: any) => void;
   protected readonly warn: (msg: any) => void;
 
-  constructor (hls: Hls, fragmentTracker: FragmentTracker, logPrefix: string) {
+  constructor(hls: Hls, fragmentTracker: FragmentTracker, logPrefix: string) {
     super();
     this.logPrefix = logPrefix;
     this.log = logger.log.bind(logger, `${logPrefix}:`);
@@ -93,16 +82,16 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
   }
 
-  protected doTick () {
+  protected doTick() {
     this.onTickEnd();
   }
 
-  protected onTickEnd () {}
+  protected onTickEnd() {}
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public startLoad (startPosition: number) : void {}
+  public startLoad(startPosition: number): void {}
 
-  public stopLoad () {
+  public stopLoad() {
     const frag = this.fragCurrent;
     if (frag) {
       if (frag.loader) {
@@ -121,7 +110,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.state = State.STOPPED;
   }
 
-  protected _streamEnded (bufferInfo, levelDetails) {
+  protected _streamEnded(bufferInfo, levelDetails) {
     const { fragCurrent, fragmentTracker } = this;
     // we just got done loading the final fragment and there is no other buffered range after ...
     // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
@@ -133,8 +122,8 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return false;
   }
 
-  protected onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachingData) {
-    const media = this.media = this.mediaBuffer = data.media;
+  protected onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachingData) {
+    const media = (this.media = this.mediaBuffer = data.media);
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
     media.addEventListener('seeking', this.onvseeking as EventListener);
@@ -145,7 +134,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     }
   }
 
-  protected onMediaDetaching () {
+  protected onMediaDetaching() {
     const media = this.media;
     if (media?.ended) {
       this.log('MSE detaching and video ended, reset startPosition');
@@ -164,7 +153,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.stopLoad();
   }
 
-  protected onMediaSeeking () {
+  protected onMediaSeeking() {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
     const currentTime = media ? media.currentTime : null;
     const bufferInfo = BufferHelper.bufferInfo(mediaBuffer || media, currentTime, config.maxBufferHole);
@@ -210,12 +199,12 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.tick();
   }
 
-  protected onMediaEnded () {
+  protected onMediaEnded() {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
   }
 
-  onKeyLoaded (event: Events.KEY_LOADED, data: KeyLoadedData) {
+  onKeyLoaded(event: Events.KEY_LOADED, data: KeyLoadedData) {
     if (this.state === State.KEY_LOADING && this.levels) {
       this.state = State.IDLE;
       const levelDetails = this.levels[data.frag.level].details;
@@ -225,22 +214,22 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     }
   }
 
-  protected onHandlerDestroying () {
+  protected onHandlerDestroying() {
     this.stopLoad();
     super.onHandlerDestroying();
   }
 
-  protected onHandlerDestroyed () {
+  protected onHandlerDestroyed() {
     this.state = State.STOPPED;
     this.hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
     super.onHandlerDestroyed();
   }
 
-  protected loadFragment (frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
+  protected loadFragment(frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
     this._loadFragForPlayback(frag, levelDetails, targetBufferTime);
   }
 
-  private _loadFragForPlayback (frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
+  private _loadFragForPlayback(frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
     const progressCallback: FragmentLoadProgressCallback = (data: FragLoadedData) => {
       if (this.fragContextChanged(frag)) {
         this.warn(`Fragment ${frag.sn}${data.part ? ' p: ' + data.part.index : ''} of level ${frag.level} was dropped during download.`);
@@ -251,41 +240,40 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       this._handleFragmentLoadProgress(data);
     };
 
-    this._doFragLoad(frag, levelDetails, targetBufferTime, progressCallback)
-      .then((data) => {
-        this.fragLoadError = 0;
-        if (!data) {
-          // if we're here we probably needed to backtrack or are waiting for more parts
+    this._doFragLoad(frag, levelDetails, targetBufferTime, progressCallback).then((data) => {
+      this.fragLoadError = 0;
+      if (!data) {
+        // if we're here we probably needed to backtrack or are waiting for more parts
+        return;
+      }
+      if (this.fragContextChanged(frag)) {
+        if (this.state === State.FRAG_LOADING || this.state === State.BACKTRACKING) {
+          this.fragmentTracker.removeFragment(frag);
+          this.state = State.IDLE;
+        }
+        return;
+      }
+
+      if ('payload' in data) {
+        this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
+        this.hls.trigger(Events.FRAG_LOADED, data);
+
+        // Tracker backtrack must be called after onFragLoaded to update the fragment entity state to BACKTRACKED
+        if (this.state === State.BACKTRACKING) {
+          this.flushMainBuffer(0, frag.start);
+          this.fragmentTracker.backtrack(data);
+          this.fragPrevious = null;
+          this.nextLoadPosition = frag.start;
           return;
         }
-        if (this.fragContextChanged(frag)) {
-          if (this.state === State.FRAG_LOADING || this.state === State.BACKTRACKING) {
-            this.fragmentTracker.removeFragment(frag);
-            this.state = State.IDLE;
-          }
-          return;
-        }
+      }
 
-        if ('payload' in data) {
-          this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
-          this.hls.trigger(Events.FRAG_LOADED, data);
-
-          // Tracker backtrack must be called after onFragLoaded to update the fragment entity state to BACKTRACKED
-          if (this.state === State.BACKTRACKING) {
-            this.flushMainBuffer(0, frag.start);
-            this.fragmentTracker.backtrack(data);
-            this.fragPrevious = null;
-            this.nextLoadPosition = frag.start;
-            return;
-          }
-        }
-
-        // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
-        this._handleFragmentLoadComplete(data);
-      });
+      // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
+      this._handleFragmentLoadComplete(data);
+    });
   }
 
-  protected flushMainBuffer (startOffset: number, endOffset: number, type: SourceBufferName | null = null) {
+  protected flushMainBuffer(startOffset: number, endOffset: number, type: SourceBufferName | null = null) {
     // When alternate audio is playing, the audio-stream-controller is responsible for the audio buffer. Otherwise,
     // passing a null type flushes both buffers
     const flushScope: BufferFlushingData = { startOffset, endOffset, type };
@@ -294,7 +282,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  protected _loadInitSegment (frag: Fragment) {
+  protected _loadInitSegment(frag: Fragment) {
     this._doFragLoad(frag)
       .then((data) => {
         if (!data || this.fragContextChanged(frag) || !this.levels) {
@@ -319,8 +307,8 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
               payload: decryptedData,
               stats: {
                 tstart: startTime,
-                tdecrypt: endTime
-              }
+                tdecrypt: endTime,
+              },
             });
             data.payload = decryptedData;
 
@@ -329,7 +317,8 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         }
 
         return data;
-      }).then((data: FragLoadedData) => {
+      })
+      .then((data: FragLoadedData) => {
         const { fragCurrent, hls, levels } = this;
         if (!levels) {
           throw new Error('init load aborted, missing levels');
@@ -353,46 +342,54 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
             stats,
             frag: fragCurrent,
             part: null,
-            id: frag.type
+            id: frag.type,
           });
         }
         this.tick();
-      }).catch(reason => {
+      })
+      .catch((reason) => {
         this.warn(reason);
       });
   }
 
-  protected fragContextChanged (frag: Fragment | null) {
+  protected fragContextChanged(frag: Fragment | null) {
     const { fragCurrent } = this;
     return !frag || !fragCurrent || frag.level !== fragCurrent.level || frag.sn !== fragCurrent.sn || frag.urlId !== fragCurrent.urlId;
   }
 
-  protected fragBufferedComplete (frag: Fragment, part: Part | null) {
+  protected fragBufferedComplete(frag: Fragment, part: Part | null) {
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
     const timestampInfo = frag.startPTS ? `PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}]` : `start-end:[${frag.start}-${frag.end}]`;
-    this.log(`Buffered ${frag.type} sn: ${frag.sn}${part ? ' part: ' + part.index : ''} of ${
-      this.logPrefix === '[stream-controller]' ? 'level' : 'track'
-    } ${frag.level}. ${timestampInfo}, Buffered: ${TimeRanges.toString(BufferHelper.getBuffered(media))}`);
+    this.log(
+      `Buffered ${frag.type} sn: ${frag.sn}${part ? ' part: ' + part.index : ''} of ${this.logPrefix === '[stream-controller]' ? 'level' : 'track'} ${
+        frag.level
+      }. ${timestampInfo}, Buffered: ${TimeRanges.toString(BufferHelper.getBuffered(media))}`
+    );
     this.state = State.IDLE;
     this.tick();
   }
 
-  protected _handleFragmentLoadComplete (fragLoadedEndData: PartsLoadedData) {
+  protected _handleFragmentLoadComplete(fragLoadedEndData: PartsLoadedData) {
     const { transmuxer } = this;
     if (!transmuxer) {
       return;
     }
     const { frag, part, partsLoaded } = fragLoadedEndData;
     // If we did not load parts, or loaded all parts, we have complete (not partial) fragment data
-    const complete = !partsLoaded || (partsLoaded && (partsLoaded.length === 0 || partsLoaded.some(fragLoaded => !fragLoaded)));
+    const complete = !partsLoaded || (partsLoaded && (partsLoaded.length === 0 || partsLoaded.some((fragLoaded) => !fragLoaded)));
     const chunkMeta = new ChunkMetadata(frag.level, frag.sn as number, frag.stats.chunkCount + 1, 0, part ? part.index : -1, !complete);
     transmuxer.flush(chunkMeta);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected _handleFragmentLoadProgress (frag: FragLoadedData) {}
+  protected _handleFragmentLoadProgress(frag: FragLoadedData) {}
 
-  protected _doFragLoad (frag: Fragment, details?: LevelDetails, targetBufferTime: number | null = null, progressCallback?: FragmentLoadProgressCallback): Promise<PartsLoadedData | FragLoadedData | null> {
+  protected _doFragLoad(
+    frag: Fragment,
+    details?: LevelDetails,
+    targetBufferTime: number | null = null,
+    progressCallback?: FragmentLoadProgressCallback
+  ): Promise<PartsLoadedData | FragLoadedData | null> {
     if (!this.levels) {
       throw new Error('frag load aborted, missing levels');
     }
@@ -403,13 +400,14 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
         const partIndex = this.getNextPart(partList, frag, targetBufferTime);
         if (partIndex > -1) {
           const part = partList[partIndex];
-          this.log(`Loading part sn: ${frag.sn} p: ${part.index} cc: ${frag.cc} of playlist [${details.startSN}-${details.endSN}] parts [0-${partIndex}-${partList.length - 1}] ${
-            this.logPrefix === '[stream-controller]' ? 'level' : 'track'
-          }: ${frag.level}, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`);
+          this.log(
+            `Loading part sn: ${frag.sn} p: ${part.index} cc: ${frag.cc} of playlist [${details.startSN}-${details.endSN}] parts [0-${partIndex}-${partList.length - 1}] ${
+              this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+            }: ${frag.level}, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`
+          );
           this.state = State.FRAG_LOADING;
           this.hls.trigger(Events.FRAG_LOADING, { frag, part: partList[partIndex], targetBufferTime });
-          return this.doFragPartsLoad(frag, partList, partIndex, progressCallback)
-            .catch((error: LoadError) => this.handleFragError(error));
+          return this.doFragPartsLoad(frag, partList, partIndex, progressCallback).catch((error: LoadError) => this.handleFragError(error));
         } else if (!frag.url || this.loadedEndOfParts(partList, targetBufferTime)) {
           // Fragment hint has no parts
           return Promise.resolve(null);
@@ -417,43 +415,47 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       }
     }
 
-    this.log(`Loading fragment ${frag.sn} cc: ${frag.cc} ${
-      details ? 'of [' + details.startSN + '-' + details.endSN + '] ' : ''
-    }${this.logPrefix === '[stream-controller]' ? 'level' : 'track'}: ${frag.level}, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`);
+    this.log(
+      `Loading fragment ${frag.sn} cc: ${frag.cc} ${details ? 'of [' + details.startSN + '-' + details.endSN + '] ' : ''}${
+        this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+      }: ${frag.level}, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`
+    );
 
     this.state = State.FRAG_LOADING;
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
 
-    return this.fragmentLoader.load(frag, progressCallback)
-      .catch((error: LoadError) => this.handleFragError(error));
+    return this.fragmentLoader.load(frag, progressCallback).catch((error: LoadError) => this.handleFragError(error));
   }
 
-  private doFragPartsLoad (frag: Fragment, partList: Part[], partIndex: number, progressCallback: FragmentLoadProgressCallback): Promise<PartsLoadedData | null> {
+  private doFragPartsLoad(frag: Fragment, partList: Part[], partIndex: number, progressCallback: FragmentLoadProgressCallback): Promise<PartsLoadedData | null> {
     return new Promise((resolve: (FragLoadedEndData) => void, reject: (LoadError) => void) => {
       const partsLoaded: FragLoadedData[] = [];
       const loadPartIndex = (index: number) => {
         const part = partList[index];
-        this.fragmentLoader.loadPart(frag, part, progressCallback).then((partLoadedData: FragLoadedData) => {
-          partsLoaded[part.index] = partLoadedData;
-          const loadedPart = partLoadedData.part as Part;
-          this.hls.trigger(Events.FRAG_LOADED, partLoadedData);
-          const nextPart = partList[index + 1];
-          if (nextPart && nextPart.fragment === frag) {
-            loadPartIndex(index + 1);
-          } else {
-            return resolve({
-              frag,
-              part: loadedPart,
-              partsLoaded
-            });
-          }
-        }).catch(reject);
+        this.fragmentLoader
+          .loadPart(frag, part, progressCallback)
+          .then((partLoadedData: FragLoadedData) => {
+            partsLoaded[part.index] = partLoadedData;
+            const loadedPart = partLoadedData.part as Part;
+            this.hls.trigger(Events.FRAG_LOADED, partLoadedData);
+            const nextPart = partList[index + 1];
+            if (nextPart && nextPart.fragment === frag) {
+              loadPartIndex(index + 1);
+            } else {
+              return resolve({
+                frag,
+                part: loadedPart,
+                partsLoaded,
+              });
+            }
+          })
+          .catch(reject);
       };
       loadPartIndex(partIndex);
     });
   }
 
-  private handleFragError ({ data }: LoadError) {
+  private handleFragError({ data }: LoadError) {
     if (data && data.details === ErrorDetails.INTERNAL_ABORTED) {
       this.handleFragLoadAborted(data.frag, data.part);
     } else {
@@ -462,7 +464,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return null;
   }
 
-  protected _handleTransmuxerFlush (chunkMeta: ChunkMetadata) {
+  protected _handleTransmuxerFlush(chunkMeta: ChunkMetadata) {
     if (this.state !== State.PARSING) {
       this.warn(`State is expected to be PARSING on transmuxer flush, but is ${this.state}.`);
       return;
@@ -483,7 +485,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.hls.trigger(Events.FRAG_PARSED, { frag, part });
   }
 
-  protected getCurrentContext (chunkMeta: ChunkMetadata) : { frag: Fragment, part: Part | null, level: Level } | null {
+  protected getCurrentContext(chunkMeta: ChunkMetadata): { frag: Fragment; part: Part | null; level: Level } | null {
     const { levels } = this;
     const { level: levelIndex, sn, part: partIndex } = chunkMeta;
     if (!levels || !levels[levelIndex]) {
@@ -491,7 +493,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       return null;
     }
     const level = levels[levelIndex];
-    const part = (partIndex > -1) ? LevelHelper.getPartWith(level, sn, partIndex) : null;
+    const part = partIndex > -1 ? LevelHelper.getPartWith(level, sn, partIndex) : null;
     const frag = part ? part.fragment : LevelHelper.getFragmentWithSN(level, sn);
     if (!frag) {
       return null;
@@ -499,7 +501,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return { frag, part, level };
   }
 
-  protected bufferFragmentData (data: RemuxedTrack, frag: Fragment, part: Part | null, chunkMeta: ChunkMetadata) {
+  protected bufferFragmentData(data: RemuxedTrack, frag: Fragment, part: Part | null, chunkMeta: ChunkMetadata) {
     if (!data || this.state !== State.PARSING) {
       return;
     }
@@ -520,7 +522,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
       data: buffer,
       frag,
       part,
-      chunkMeta
+      chunkMeta,
     };
     this.hls.trigger(Events.BUFFER_APPENDING, segment);
 
@@ -530,7 +532,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     }
   }
 
-  protected getNextFragment (pos: number, levelDetails: LevelDetails): Fragment | null {
+  protected getNextFragment(pos: number, levelDetails: LevelDetails): Fragment | null {
     const { config, startFragRequested } = this;
     const fragments = levelDetails.fragments;
     const fragLen = fragments.length;
@@ -573,7 +575,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return frag;
   }
 
-  getNextPart (partList: Part[], frag: Fragment, targetBufferTime: number): number {
+  getNextPart(partList: Part[], frag: Fragment, targetBufferTime: number): number {
     let nextPart = -1;
     let contiguous = false;
     for (let i = 0, len = partList.length; i < len; i++) {
@@ -590,7 +592,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return nextPart;
   }
 
-  private loadedEndOfParts (partList: Part[], targetBufferTime: number): boolean {
+  private loadedEndOfParts(partList: Part[], targetBufferTime: number): boolean {
     const lastPart = partList[partList.length - 1];
     return lastPart && targetBufferTime > lastPart.start && lastPart.loaded;
   }
@@ -600,7 +602,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
    "sliding" of the playlist, which is its offset from the start of playback. After sliding we can compute the real
    start and end times for each fragment in the playlist (after which this method will not need to be called).
   */
-  protected getInitialLiveFragment (levelDetails: LevelDetails, fragments: Array<Fragment>): Fragment | null {
+  protected getInitialLiveFragment(levelDetails: LevelDetails, fragments: Array<Fragment>): Fragment | null {
     const { config, fragPrevious } = this;
     let frag: Fragment | null = null;
     if (fragPrevious) {
@@ -636,9 +638,10 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
   /*
   This method finds the best matching fragment given the provided position.
    */
-  protected getFragmentAtPosition (bufferEnd: number, end: number, levelDetails: LevelDetails): Fragment | null {
+  protected getFragmentAtPosition(bufferEnd: number, end: number, levelDetails: LevelDetails): Fragment | null {
     const { config, fragPrevious } = this;
-    let { fragments, endSN, fragmentHint } = levelDetails;
+    let { fragments, endSN } = levelDetails;
+    const { fragmentHint } = levelDetails;
     const tolerance = config.maxFragLookUpTolerance;
 
     const loadingParts = !!(config.lowLatencyMode && levelDetails.partList && fragmentHint);
@@ -650,7 +653,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
 
     let frag;
     if (bufferEnd < end) {
-      const lookupTolerance = (bufferEnd > end - tolerance) ? 0 : tolerance;
+      const lookupTolerance = bufferEnd > end - tolerance ? 0 : tolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
       frag = findFragmentByPTS(fragPrevious, fragments, bufferEnd, lookupTolerance);
@@ -695,14 +698,12 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return frag;
   }
 
-  protected synchronizeToLiveEdge (levelDetails: LevelDetails): number | null {
+  protected synchronizeToLiveEdge(levelDetails: LevelDetails): number | null {
     const { config, media } = this;
     const liveSyncPosition = this.hls.liveSyncPosition;
     const currentTime = media.currentTime;
     if (liveSyncPosition !== null && media?.readyState && media.duration > liveSyncPosition && liveSyncPosition > currentTime) {
-      const maxLatency = config.liveMaxLatencyDuration !== undefined
-        ? config.liveMaxLatencyDuration
-        : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
+      const maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
       const start = levelDetails.fragments[0].start;
       const end = levelDetails.edge;
       if (currentTime < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
@@ -717,9 +718,9 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return null;
   }
 
-  protected alignPlaylists (details: LevelDetails, previousDetails?: LevelDetails): number {
+  protected alignPlaylists(details: LevelDetails, previousDetails?: LevelDetails): number {
     const { levels, levelLastLoaded } = this;
-    const lastLevel: Level | null = (levelLastLoaded !== null) ? levels![levelLastLoaded] : null;
+    const lastLevel: Level | null = levelLastLoaded !== null ? levels![levelLastLoaded] : null;
 
     // FIXME: If not for `shouldAlignOnDiscontinuities` requiring fragPrevious.cc,
     //  this could all go in LevelHelper.mergeDetails
@@ -740,13 +741,13 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return sliding;
   }
 
-  protected waitForCdnTuneIn (details: LevelDetails) {
+  protected waitForCdnTuneIn(details: LevelDetails) {
     // Wait for Low-Latency CDN Tune-in to get an updated playlist
     const advancePartLimit = 3;
     return details.live && details.canBlockReload && details.tuneInGoal > Math.max(details.partHoldBack, details.partTarget * advancePartLimit);
   }
 
-  protected setStartPosition (details: LevelDetails, sliding: number) {
+  protected setStartPosition(details: LevelDetails, sliding: number) {
     // compute start position if set to -1. use it straight away if value is defined
     if (this.startPosition === -1 || this.lastCurrentTime === -1) {
       // first, check if start time offset has been set in playlist, if yes, use this value
@@ -771,7 +772,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     this.nextLoadPosition = this.startPosition;
   }
 
-  protected getLoadPosition (): number {
+  protected getLoadPosition(): number {
     const { media } = this;
     // if we have not yet loaded any fragment, start loading from start position
     let pos = 0;
@@ -784,17 +785,17 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     return pos;
   }
 
-  private handleFragLoadAborted (frag: Fragment, part: Part | undefined) {
+  private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
     if (this.transmuxer && frag.sn !== 'initSegment') {
       this.log(`Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer`);
       this.transmuxer.flush(new ChunkMetadata(frag.level, frag.sn, frag.stats.chunkCount + 1, 0, part ? part.index : -1, true));
     }
   }
 
-  private updateLevelTiming (frag: Fragment, level: Level, partial: boolean) {
+  private updateLevelTiming(frag: Fragment, level: Level, partial: boolean) {
     const details = level.details as LevelDetails;
     console.assert(!!details, 'level.details must be defined');
-    Object.keys(frag.elementaryStreams).forEach(type => {
+    Object.keys(frag.elementaryStreams).forEach((type) => {
       const info = frag.elementaryStreams[type];
       if (info) {
         const parsedDuration = info.endPTS - info.startPTS;
@@ -814,13 +815,13 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
           drift,
           type,
           start: info.startPTS,
-          end: info.endPTS
+          end: info.endPTS,
         });
       }
     });
   }
 
-  set state (nextState) {
+  set state(nextState) {
     const previousState = this._state;
     if (previousState !== nextState) {
       this._state = nextState;
@@ -828,7 +829,7 @@ export default class BaseStreamController extends TaskLoop implements NetworkCom
     }
   }
 
-  get state () {
+  get state() {
     return this._state;
   }
 }
