@@ -31,7 +31,7 @@ jobs:
           script: |
             const prefix = 'refs/tags/';
             const ref = context.ref;
-            return ref.startsWith(prefix) ? ref.substring(prefix.length) : '';   
+            return ref.startsWith(prefix) ? ref.substring(prefix.length) : '';
           result-encoding: string
 
   build:
@@ -58,14 +58,14 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "12"
+          node-version: '12'
 
       - name: install
         run: |
           npm ci
         env:
           CI: true
-      
+
       - name: set version
         run: |
           node ./scripts/set-package-version.js
@@ -76,6 +76,7 @@ jobs:
       - name: build
         run: |
           npm run lint
+          npm run prettier:verify
           npm run type-check
           npm run build
           npm run docs
@@ -115,7 +116,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "12"
+          node-version: '12'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -156,7 +157,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "12"
+          node-version: '12'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -193,7 +194,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "12"
+          node-version: '12'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -228,7 +229,7 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
-    steps:  
+    steps:
       - uses: actions/checkout@v2
 
       - name: cache node_modules
@@ -246,7 +247,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "12"
+          node-version: '12'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -300,7 +301,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "12"
+          node-version: '12'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -359,18 +360,18 @@ jobs:
           - config: chrome-osx_10.11-79.0
             ua: chrome
             os: OS X 10.11
-            uaVersion: "79.0"
+            uaVersion: '79.0'
           - config: internet_explorer-win_10
             ua: internet explorer
             os: Windows 10
           - config: internet_explorer-win_8.1-11.0
             ua: internet explorer
             os: Windows 8.1
-            uaVersion: "11.0"
+            uaVersion: '11.0'
           - config: chrome-win_7-69.0
             ua: chrome
             os: Windows 7
-            uaVersion: "69.0"
+            uaVersion: '69.0'
 
     steps:
       - uses: actions/checkout@v2
@@ -390,7 +391,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: "12"
+          node-version: '12'
 
       - name: download build
         uses: actions/download-artifact@v2
