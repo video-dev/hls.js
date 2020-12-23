@@ -19,18 +19,18 @@ function setupConsoleLogRedirection () {
     inner.appendChild(line);
 
     // The empty log line at the beginning comes from a test in `enableLogs`.
-    logString += a + '\n';
+    self.logString = logString += a + '\n';
   }
 
   // overload global window console methods
   var methods = ['log', 'debug', 'info', 'warn', 'error'];
   methods.forEach(function (methodName) {
-    var original = window.console[methodName];
+    var original = self.console[methodName];
     if (!original) {
       return;
     }
 
-    window.console[methodName] = function () {
+    self.console[methodName] = function () {
       append(methodName, Array.prototype.slice.call(arguments).map(function (arg) {
         try {
           return JSON.stringify(arg);
@@ -70,7 +70,7 @@ function objectAssign (target, firstSource) {
 }
 
 function startStream (streamUrl, config, callback, autoplay) {
-  var Hls = window.Hls;
+  var Hls = self.Hls;
   if (!Hls) {
     throw new Error('Hls not installed');
   }
@@ -82,9 +82,18 @@ function startStream (streamUrl, config, callback, autoplay) {
     callback({ code: 'hlsjsAlreadyInitialised', logs: logString });
     return;
   }
-  window.video = video = document.getElementById('video');
+  self.video = video = document.getElementById('video');
   try {
-    window.hls = hls = new Hls(objectAssign({}, config, { debug: true }));
+    self.hls = hls = new Hls(objectAssign({}, config, {
+      // debug: true
+      debug: {
+        debug: function () {},
+        log: console.log.bind(console),
+        info: console.info.bind(console, '[info]'),
+        warn: console.warn.bind(console, '[warn]'),
+        error: console.error.bind(console, '[error]')
+      }
+    }));
     console.log('[test] > userAgent:', navigator.userAgent);
     if (autoplay !== false) {
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
@@ -156,7 +165,7 @@ function switchToHighestLevel (mode) {
   }
 }
 
-window.setupConsoleLogRedirection = setupConsoleLogRedirection;
-window.startStream = startStream;
-window.switchToHighestLevel = switchToHighestLevel;
-window.switchToLowestLevel = switchToLowestLevel;
+self.setupConsoleLogRedirection = setupConsoleLogRedirection;
+self.startStream = startStream;
+self.switchToHighestLevel = switchToHighestLevel;
+self.switchToLowestLevel = switchToLowestLevel;

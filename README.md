@@ -253,9 +253,9 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Adaptive streaming
     - Manual & Auto Quality Switching
       - 3 Quality Switching modes are available (controllable through API means)
-      	- Instant switching (immediate quality switch at current video position)
-      	- Smooth switching (quality switch for next loaded fragment)
-      	- Bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
+        - Instant switching (immediate quality switch at current video position)
+        - Smooth switching (quality switch for next loaded fragment)
+        - Bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
       - In Auto-Quality mode, emergency switch down in case bandwidth is suddenly dropping to minimize buffering.
   - Accurate Seeking on VoD & Live (not limited to fragment or keyframe boundary)
   - Ability to seek in buffer and back buffer without redownloading segments
@@ -272,19 +272,38 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 
 ### Supported M3U8 tags
 
+For details on the HLS format and these tags meanings see https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-07
+
+Manifest tags
+  - `#EXT-X-STREAM-INF:<attribute-list>`
+    `<URI>`
+  - `#EXT-X-MEDIA:<attribute-list>`
+  - `#EXT-X-SESSION-DATA:<attribute-list>`
+  
+Playlist tags
   - `#EXTM3U`
-  - `#EXTINF`
-  - `#EXT-X-STREAM-INF` (adaptive streaming)
-  - `#EXT-X-ENDLIST` (Live playlist)
-  - `#EXT-X-MEDIA-SEQUENCE`
-  - `#EXT-X-TARGETDURATION`
+  - `#EXT-X-VERSION=<n>`
+  - `#EXTINF:<duration>,[<title>]`
+  - `#EXT-X-ENDLIST`
+  - `#EXT-X-MEDIA-SEQUENCE=<n>`
+  - `#EXT-X-TARGETDURATION=<n>`
   - `#EXT-X-DISCONTINUITY`
-  - `#EXT-X-DISCONTINUITY-SEQUENCE`
-  - `#EXT-X-BYTERANGE`
-  - `#EXT-X-MAP`
-  - `#EXT-X-KEY` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4)
-  - `#EXT-X-PROGRAM-DATE-TIME` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.2.6)
-  - `EXT-X-START:TIME-OFFSET=x` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.5.2)
+  - `#EXT-X-DISCONTINUITY-SEQUENCE=<n>`
+  - `#EXT-X-BYTERANGE=<n>[@<o>]`
+  - `#EXT-X-MAP:<attribute-list>`
+  - `#EXT-X-KEY:<attribute-list>`
+  - `#EXT-X-PROGRAM-DATE-TIME:<attribute-list>`
+  - `#EXT-X-START:TIME-OFFSET=<n>`
+  - `#EXT-X-SERVER-CONTROL:<attribute-list>`
+  - `#EXT-X-PART-INF:PART-TARGET=<n>`
+  - `#EXT-X-PART:<attribute-list>`
+  - `#EXT-X-PRELOAD-HINT:<attribute-list>`
+  - `#EXT-X-SKIP:<attribute-list>`
+  - `#EXT-X-RENDITION-REPORT:<attribute-list>`
+  - The following tags are added to their respective fragment's attribute list
+      - `#EXT-X-DATERANGE:<attribute-list>`
+      - `#EXT-X-BITRATE`
+      - `#EXT-X-GAP`
 
 ## License
 

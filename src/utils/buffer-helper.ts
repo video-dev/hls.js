@@ -15,8 +15,15 @@ type BufferTimeRange = {
   end: number
 };
 
-type Bufferable = {
+export type Bufferable = {
   buffered: TimeRanges
+};
+
+export type BufferInfo = {
+  len: number,
+  start: number,
+  end: number,
+  nextStart?: number,
 };
 
 const noopBuffered: TimeRanges = {
@@ -35,7 +42,7 @@ export class BufferHelper {
   static isBuffered (media: Bufferable, position: number): boolean {
     try {
       if (media) {
-        let buffered = BufferHelper.getBuffered(media);
+        const buffered = BufferHelper.getBuffered(media);
         for (let i = 0; i < buffered.length; i++) {
           if (position >= buffered.start(i) && position <= buffered.end(i)) {
             return true;
@@ -51,19 +58,14 @@ export class BufferHelper {
   }
 
   static bufferInfo (
-    media: Bufferable,
+    media: Bufferable | null,
     pos: number,
     maxHoleDuration: number
-  ): {
-    len: number,
-    start: number,
-    end: number,
-    nextStart?: number,
-  } {
+  ): BufferInfo {
     try {
       if (media) {
-        let vbuffered = BufferHelper.getBuffered(media);
-        let buffered: BufferTimeRange[] = [];
+        const vbuffered = BufferHelper.getBuffered(media);
+        const buffered: BufferTimeRange[] = [];
         let i: number;
         for (i = 0; i < vbuffered.length; i++) {
           buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
@@ -91,7 +93,7 @@ export class BufferHelper {
   } {
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
     buffered.sort(function (a, b) {
-      let diff = a.start - b.start;
+      const diff = a.start - b.start;
       if (diff) {
         return diff;
       } else {
@@ -105,9 +107,9 @@ export class BufferHelper {
       // consider that holes smaller than maxHoleDuration are irrelevant and build another
       // buffer time range representations that discards those holes
       for (let i = 0; i < buffered.length; i++) {
-        let buf2len = buffered2.length;
+        const buf2len = buffered2.length;
         if (buf2len) {
-          let buf2end = buffered2[buf2len - 1].end;
+          const buf2end = buffered2[buf2len - 1].end;
           // if small hole (value between 0 or maxHoleDuration ) or overlapping (negative)
           if ((buffered[i].start - buf2end) < maxHoleDuration) {
             // merge overlapping time ranges
@@ -139,8 +141,8 @@ export class BufferHelper {
     let bufferStart: number = pos;
     let bufferEnd: number = pos;
     for (let i = 0; i < buffered2.length; i++) {
-      let start = buffered2[i].start,
-        end = buffered2[i].end;
+      const start = buffered2[i].start;
+      const end = buffered2[i].end;
       // logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
       if ((pos + maxHoleDuration) >= start && pos < end) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
@@ -152,7 +154,7 @@ export class BufferHelper {
         break;
       }
     }
-    return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
+    return { len: bufferLen, start: bufferStart || 0, end: bufferEnd || 0, nextStart: bufferStartNext };
   }
 
   /**

@@ -6,7 +6,7 @@ export function toTimescaleFromBase (value, destScale: number, srcBase: number =
 }
 
 export function toTimescaleFromScale (value, destScale: number, srcScale: number = 1, round: boolean = false): number {
-  return toTimescaleFromBase(value, destScale, 1 / srcScale);
+  return toTimescaleFromBase(value, destScale, 1 / srcScale, round);
 }
 
 export function toMsFromMpegTsClock (value: number, round: boolean = false): number {

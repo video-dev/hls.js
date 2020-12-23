@@ -22,8 +22,6 @@ const createDefinePlugin = (type) => {
 };
 
 const basePlugins = [
-  new webpack.optimize.ModuleConcatenationPlugin(),
-  new webpack.optimize.OccurrenceOrderPlugin(),
   new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }) // SSR/Node.js guard
 ];
 const mainPlugins = [...basePlugins, createDefinePlugin('main')];
@@ -228,7 +226,17 @@ const multiConfig = [
     ],
     devtool: 'source-map'
   }
-].map(config => merge(baseConfig, config));
+].map(config => {
+  const baseClone = merge({}, baseConfig);
+  // Strip console.assert statements from production webpack targets
+  if (config.mode === 'production') {
+    // eslint-disable-next-line no-restricted-properties
+    baseClone.module.rules.find(rule => rule.loader === 'babel-loader').options.plugins.push(['transform-remove-console', {
+      exclude: ['log', 'warn', 'error']
+    }]);
+  }
+  return merge(baseClone, config);
+});
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
