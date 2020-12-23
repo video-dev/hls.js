@@ -66,6 +66,11 @@ jobs:
         env:
           CI: true
 
+      - name: lint
+        run: |
+          npm run lint
+          npm run prettier:verify
+
       - name: set version
         run: |
           node ./scripts/set-package-version.js
@@ -75,8 +80,6 @@ jobs:
 
       - name: build
         run: |
-          npm run lint
-          npm run prettier:verify
           npm run type-check
           npm run build
           npm run docs
