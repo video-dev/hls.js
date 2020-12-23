@@ -2,7 +2,7 @@ module.exports = {
   env: {
     browser: true,
     commonjs: true,
-    es6: true
+    es6: true,
   },
   globals: {
     // Allowed globals
@@ -12,39 +12,23 @@ module.exports = {
     __VERSION__: true,
     __USE_SUBTITLES__: true,
     __USE_ALT_AUDIO__: true,
-    __USE_EME_DRM__: true
+    __USE_EME_DRM__: true,
   },
   // see https://standardjs.com/
   // see https://github.com/standard/eslint-config-standard
-  extends: [
-    'eslint:recommended',
-    'standard'
-  ],
+  // 'prettier' (https://github.com/prettier/eslint-config-prettier) must be last
+  extends: ['eslint:recommended', 'standard', 'prettier'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    sourceType: 'module'
+    sourceType: 'module',
   },
-  plugins: [
-    '@typescript-eslint'
-  ],
+  plugins: ['@typescript-eslint'],
   rules: {
     // our basic style rules
-    semi: [
-      'error',
-      'always'
-    ],
-    indent: [
-      'error',
-      2
-    ],
-    quotes: [
-      'error',
-      'single'
-    ],
-    'linebreak-style': [
-      'error',
-      'unix'
-    ],
+    semi: ['error', 'always'],
+    indent: ['error', 2],
+    quotes: ['error', 'single'],
+    'linebreak-style': ['error', 'unix'],
     // spacing
     'space-infix-ops': 2,
     'space-unary-ops': [2, { words: true, nonwords: false }],
@@ -77,25 +61,26 @@ module.exports = {
       2,
       {
         name: 'window',
-        message: 'Use `self` instead of `window` to access the global context everywhere (including workers).'
+        message: 'Use `self` instead of `window` to access the global context everywhere (including workers).',
       },
       {
         name: 'SourceBuffer',
-        message: 'Use `self.SourceBuffer`'
+        message: 'Use `self.SourceBuffer`',
       },
       {
         name: 'setTimeout',
-        message: 'Use `self.setTimeout`'
+        message: 'Use `self.setTimeout`',
       },
       {
         name: 'setInterval',
-        message: 'Use `self.setInterval`'
-      }
+        message: 'Use `self.setInterval`',
+      },
     ],
 
-    'no-restricted-properties': [2,
+    'no-restricted-properties': [
+      2,
       { property: 'findIndex' }, // Intended to block usage of Array.prototype.findIndex
-      { property: 'find' } // Intended to block usage of Array.prototype.find
+      { property: 'find' }, // Intended to block usage of Array.prototype.find
     ],
 
     'standard/no-callback-literal': 0,
@@ -107,8 +92,8 @@ module.exports = {
     'no-console': [
       1,
       {
-        allow: ['assert']
-      }
+        allow: ['assert'],
+      },
     ],
     'no-fallthrough': 1,
     'no-case-declarations': 2,
@@ -135,13 +120,14 @@ module.exports = {
         // '@typescript-eslint/no-use-before-define': ['error'],
         '@typescript-eslint/no-unused-vars': ['error', { args: 'none' }],
         '@typescript-eslint/prefer-optional-chain': 2,
-        '@typescript-eslint/consistent-type-assertions': [2,
+        '@typescript-eslint/consistent-type-assertions': [
+          2,
           {
             assertionStyle: 'as',
-            objectLiteralTypeAssertions: 'never'
-          }
-        ]
-      }
-    }
-  ]
+            objectLiteralTypeAssertions: 'never',
+          },
+        ],
+      },
+    },
+  ],
 };
