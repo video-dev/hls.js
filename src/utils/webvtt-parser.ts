@@ -1,5 +1,6 @@
 import VTTParser from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
+import { toMpegTsClockFromTimescale } from './timescale-conversion';
 import type { VTTCCs } from '../types/vtt';
 
 // String.prototype.startsWith is not supported in IE11
@@ -61,7 +62,7 @@ const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
 
 // TODO(typescript-vttparser): When VTT parser is typed, errorCallback needs to get the proper typing here.
 export function parseWebVTT (
-  vttByteArray: ArrayBuffer, syncPTS: number, vttCCs: VTTCCs,
+  vttByteArray: ArrayBuffer, initPTS: number, timescale: number, vttCCs: VTTCCs,
   cc: number, callBack: (cues: VTTCue[]) => void, errorCallBack: (arg0: any) => void
 ) {
   // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
@@ -69,6 +70,7 @@ export function parseWebVTT (
   // Uint8Array.prototype.reduce is not implemented in IE11
   const vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
 
+  let syncPTS = toMpegTsClockFromTimescale(initPTS, timescale);
   let cueTime = '00:00.000';
   let mpegTs = 0;
   let localTime = 0;
@@ -89,7 +91,7 @@ export function parseWebVTT (
 
     // Update offsets for new discontinuities
     if (currCC?.new) {
-      if (localTime !== void 0) {
+      if (localTime !== undefined) {
         // When local time is provided, offset = discontinuity start time - local time
         cueOffset = vttCCs.ccOffset = currCC.start;
       } else {
@@ -107,11 +109,14 @@ export function parseWebVTT (
       cue.endTime += cueOffset - localTime;
     }
 
-    // Create a unique hash id for a cue based on start/end times and text.
+    // If the cue was not assigned an id from the VTT file (line above the content),
+    // then create a unique hash id for a cue based on start/end times.
     // This helps timeline-controller to avoid showing repeated captions.
-    cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);
+    if (!cue.id) {
+      cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);
+    }
 
-    // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
+    // Fix encoding of special characters
     cue.text = decodeURIComponent(encodeURIComponent(cue.text));
     if (cue.endTime > 0) {
       cues.push(cue);
@@ -148,7 +153,7 @@ export function parseWebVTT (
         });
         try {
           // Calculate subtitle offset in milliseconds.
-          if (syncPTS + ((vttCCs[cc].start * 90000) || 0) < 0) {
+          if (Math.abs(syncPTS - ((vttCCs[cc].start * 90000) || 0)) > 4294967296) {
             syncPTS += 8589934592;
           }
           // Adjust MPEGTS by sync PTS.

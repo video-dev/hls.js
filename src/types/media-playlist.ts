@@ -5,7 +5,13 @@ export interface AudioGroup {
   codec?: string;
 }
 
-export type MediaPlaylistType = 'AUDIO' | 'VIDEO' | 'SUBTITLES' | 'CLOSED-CAPTIONS';
+export type AudioPlaylistType = 'AUDIO';
+
+export type MainPlaylistType = AudioPlaylistType | 'VIDEO';
+
+export type SubtitlePlaylistType = 'SUBTITLES' | 'CLOSED-CAPTIONS';
+
+export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 
 // audioTracks, captions and subtitles returned by `M3U8Parser.parseMasterPlaylistMedia`
 export interface MediaPlaylist extends LevelParsed {

@@ -4,9 +4,9 @@
 import BaseAudioDemuxer from './base-audio-demuxer';
 import * as ADTS from './adts';
 import { logger } from '../utils/logger';
-import ID3 from '../demux/id3';
-import { HlsEventEmitter } from '../events';
-import { HlsConfig } from '../config';
+import * as ID3 from '../demux/id3';
+import type { HlsEventEmitter } from '../events';
+import type { HlsConfig } from '../config';
 
 class AACDemuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;
@@ -64,7 +64,7 @@ class AACDemuxer extends BaseAudioDemuxer {
 
   appendFrame (track, data, offset) {
     ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec);
-    return ADTS.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
+    return ADTS.appendFrame(track, data, offset, this.initPTS as number, this.frameIndex);
   }
 }
 

@@ -41,6 +41,10 @@ export enum ErrorDetails {
   AUDIO_TRACK_LOAD_ERROR = 'audioTrackLoadError',
   // Identifier for an audio track load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   AUDIO_TRACK_LOAD_TIMEOUT = 'audioTrackLoadTimeOut',
+  // Identifier for a subtitle track load error - data: { url : faulty URL, response : { code: error code, text: error text }}
+  SUBTITLE_LOAD_ERROR = 'subtitleTrackLoadError',
+  // Identifier for a subtitle track load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
+  SUBTITLE_TRACK_LOAD_TIMEOUT = 'subtitleTrackLoadTimeOut',
   // Identifier for fragment load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   FRAG_LOAD_ERROR = 'fragLoadError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
@@ -73,5 +77,7 @@ export enum ErrorDetails {
   // Identifier for an internal exception happening inside hls.js while handling an event
   INTERNAL_EXCEPTION = 'internalException',
   // Identifier for an internal call to abort a loader
-  INTERNAL_ABORTED = 'aborted'
+  INTERNAL_ABORTED = 'aborted',
+  // Uncategorized error
+  UNKNOWN = 'unknown'
 }

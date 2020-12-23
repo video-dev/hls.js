@@ -40,6 +40,7 @@
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
+  - [`maxLiveSyncPlaybackRate`](#maxLiveSyncPlaybackRate)
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`liveBackBufferLength`](#livebackbufferlength)
   - [`enableWorker`](#enableworker)
@@ -51,6 +52,8 @@
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
   - [`startFragPrefetch`](#startfragprefetch)
   - [`testBandwidth`](#testBandwidth) 
+  - [`fpsDroppedMonitoringPeriod`](#fpsDroppedMonitoringPeriod) 
+  - [`fpsDroppedMonitoringThreshold`](#fpsDroppedMonitoringThreshold) 
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
@@ -58,6 +61,9 @@
   - [`xhrSetup`](#xhrsetup)
   - [`fetchSetup`](#fetchsetup)
   - [`abrController`](#abrcontroller)
+  - [`bufferController`](#bufferController)
+  - [`capLevelController`](#capLevelController)
+  - [`fpsController`](#fpsController)
   - [`timelineController`](#timelinecontroller)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableCEA708Captions`](#enablecea708captions)
@@ -82,6 +88,11 @@
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
+  - [`emeEnabled`](#emeEnabled)
+  - [`widevineLicenseUrl`](#widevineLicenseUrl)
+  - [`drmSystemOptions`](#drmSystemOptions)
+  - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
+        
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -113,6 +124,9 @@
   - [`hls.subtitleDisplay`](#hlssubtitledisplay)
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
+  - [`hls.latency`](#hlslatency)
+  - [`hls.maxLatency`](#hlsmaxlatency)
+  - [`hls.targetLatency`](#hlstargetlatency)
 - [Runtime Events](#runtime-events)
 - [Loader Composition](#loader-composition)
 - [Errors](#errors)
@@ -313,13 +327,14 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxMaxBufferLength: 600,
       maxBufferSize: 60*1000*1000,
       maxBufferHole: 0.5,
-      lowBufferWatchdogPeriod: 0.5,
-      highBufferWatchdogPeriod: 3,
+      highBufferWatchdogPeriod: 2,
       nudgeOffset: 0.1,
       nudgeMaxRetry: 3,
       maxFragLookUpTolerance: 0.25,
       liveSyncDurationCount: 3,
       liveMaxLatencyDurationCount: Infinity,
+      liveDurationInfinity: false,
+      liveBackBufferLength: Infinity,
       enableWorker: true,
       enableSoftwareAES: true,
       manifestLoadingTimeOut: 10000,
@@ -337,6 +352,8 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fragLoadingMaxRetryTimeout: 64000,
       startFragPrefetch: false,
       testBandwidth: true,
+      progressive: false,
+      lowLatencyMode: true,
       fpsDroppedMonitoringPeriod: 5000,
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 3,
@@ -369,6 +386,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       minAutoBitrate: 0,
       emeEnabled: false,
       widevineLicenseUrl: undefined,
+      drmSystemOptions: {},
       requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess
   };
 
@@ -377,21 +395,23 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
 
 ### `Hls.DefaultConfig get/set`
 
-This getter/setter allows to retrieve and override Hls default configuration.
+This getter/setter allows retrieval and override of the Hls default configuration.
 This configuration will be applied by default to all instances.
 
 ### `capLevelToPlayerSize`
 
 (default: `false`)
 
-  - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height). If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
+  - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height).
+If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
   - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
 ### `capLevelOnFPSDrop`
 
 (default: `false`)
 
-  - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`, then the quality level is dropped and capped at this lower level.
+  - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`, 
+then the quality level is dropped and capped at this lower level.
   - when set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
 ### `debug`
@@ -420,7 +440,8 @@ A logger object could also be provided for custom logging: `config.debug = custo
 
 (default: `undefined`)
 
- If audio codec is not signaled in variant manifest, or if only a stream manifest is provided, hls.js tries to guess audio codec by parsing audio sampling rate in ADTS header. If sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AAC, otherwise it assumes it is AAC-LC. This could result in bad guess, leading to audio decode error, ending up in media error.
+ If audio codec is not signaled in variant manifest, or if only a stream manifest is provided, hls.js tries to guess audio codec by parsing audio sampling rate in ADTS header.
+If sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AAC, otherwise it assumes it is AAC-LC. This could result in bad guess, leading to audio decode error, ending up in media error.
  It is possible to hint default audiocodec to hls.js by configuring this value as below:
   - `mp4a.40.2` (AAC-LC) or
   - `mp4a.40.5` (HE-AAC) or
@@ -430,7 +451,7 @@ A logger object could also be provided for custom logging: `config.debug = custo
 
 (default 1)
 
-number of segments needed to start a playback of Live stream.
+number of segments needed to start a playback of Live stream. Buffering will begin after N chunks are available in the current playlist. If you want playback to begin `liveSyncDurationCount` chunks from the live edge at the beginning of a stream, set `initialLiveManifestSize` to `liveSyncDurationCount` or higher.
 
 ### `maxBufferLength`
 
@@ -458,25 +479,26 @@ This could result in small overlapping or hole in media buffer. This tolerance f
 (default 4s)
 
 ABR algorithm will always try to choose a quality level that should avoid rebuffering.
-In case no quality level with this criteria can be found (lets say for example that buffer length is 1s, but fetching a fragment at lowest quality is predicted to take around 2s ... ie we can forecast around 1s of rebuffering ...) then ABR algorithm will try to find a level that should guarantee less than ```maxStarvationDelay``` of buffering.
+In case no quality level with this criteria can be found (lets say for example that buffer length is 1s,
+but fetching a fragment at lowest quality is predicted to take around 2s ... ie we can forecast around 1s of rebuffering ...)
+then ABR algorithm will try to find a level that should guarantee less than ```maxStarvationDelay``` of buffering.
 
 ### `maxLoadingDelay`
 
 (default 4s)
 
-max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
+max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time
+(ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
 
 ### `lowBufferWatchdogPeriod` (deprecated)
 
-(default 0.5s)
-
-if media element is expected to play and if currentTime has not moved for more than ```lowBufferWatchdogPeriod``` and if there are less than `maxBufferHole` seconds buffered upfront, hls.js will try to nudge playhead to recover playback
+```lowBufferWatchdogPeriod``` has been deprecated. Use `highBufferWatchdogPeriod` instead.
 
 ### `highBufferWatchdogPeriod`
 
 (default 3s)
 
-if media element is expected to play and if currentTime has not moved for more than ```highBufferWatchdogPeriod``` and if there are more than `maxBufferHole` seconds buffered upfront, hls.js will try to nudge playhead to recover playback
+if media element is expected to play and if currentTime has not moved for more than ```highBufferWatchdogPeriod``` and if there are more than `maxBufferHole` seconds buffered upfront, hls.js will jump buffer gaps, or try to nudge playhead to recover playback
 
 ### `nudgeOffset`
 
@@ -564,6 +586,13 @@ If set, this value must be stricly superior to `liveSyncDuration` which must be 
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
 
+### `maxLiveSyncPlaybackRate`
+
+(default: `1.5` min: `1` max: `2`)
+
+Increase `video.playbackRate` up to this value to catch up to target latency (`liveSyncDuration(Count)` or manifest (PART-)HOLD-BACK) in a live stream.
+Set `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
+
 ### `liveDurationInfinity`
 
 (default: `false`)
@@ -640,6 +669,30 @@ Start prefetching start fragment although media not attached yet.
 Load the first fragment of the lowest level to establish a bandwidth estimate before selecting the first auto-level.
 Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
 
+### `progressive`
+                  
+(default: `false`)
+
+Enable streaming segment data with fetch loader (experimental).
+
+### `lowLatencyMode`
+                  
+(default: `true`)
+
+Enable Low-Latency HLS part playlist and segment loading, and start live streams at playlist PART-HOLD-BACK rather than HOLD-BACK.
+
+### `fpsDroppedMonitoringPeriod`
+
+(default: 5000) 
+
+The period used by the default `fpsController` to observe `fpsDroppedMonitoringThreshold`.
+
+### `fpsDroppedMonitoringThreshold`
+
+(default: 0.2) 
+
+The ratio of frames dropped to frames elapsed within `fpsDroppedMonitoringPeriod` needed for the default `fpsController` to emit an `FPS_DROP` event.
+
 ### `appendErrorMaxRetry`
 
 (default: `3`)
@@ -684,23 +737,21 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param response {object} - response data
       @param response.url {string} - response URL (which might have been redirected)
       @param response.data {string/arraybuffer/sharedarraybuffer} - response data (reponse type should be as per context.responseType)
-      @param stats {object} - loading stats
-      @param stats.trequest {number} - performance.now() just after load() has been called
-      @param stats.tfirst {number} - performance.now() of first received byte
-      @param stats.tload {number} - performance.now() on load complete
+      @param stats {LoadStats} - loading stats
+      @param stats.aborted {boolean} - must be set to true once the request has been aborted
       @param stats.loaded {number} - nb of loaded bytes
-      @param [stats.bw] {number} - download bandwidth in bits/s
       @param stats.total {number} - total nb of bytes
+      @param stats.retry {number} - number of retries performed
+      @param stats.chunkCount {number} - number of chunk progress events
+      @param stats.bwEstimate {number} - download bandwidth in bits/s
+      @param stats.loading { start: 0, first: 0, end: 0 }
+      @param stats.parsing { start: 0, end: 0 }
+      @param stats.buffering { start: 0, first: 0, end: 0 }
       @param context {object} - loader context
       @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onProgressCallback
-      @param stats {object} - loading stats
-      @param stats.trequest {number} - performance.now() just after load() has been called
-      @param stats.tfirst {number} - performance.now() of first received byte
-      @param stats.loaded {number} - nb of loaded bytes
-      @param [stats.total] {number} - total nb of bytes
-      @param [stats.bw] {number} - current download bandwidth in bits/s (monitored by ABR controller to control emergency switch down)
+      @param stats {LoadStats} - loading stats
       @param context {object} - loader context
       @param data {string/arraybuffer/sharedarraybuffer} - onProgress data (should be defined only if context.progressData === true)
       @param networkDetails {object} - loader network details (the xhr for default loaders)
@@ -713,7 +764,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onTimeoutCallback
-      @param stats {object} - loading stats
+      @param stats {LoadStats} - loading stats
       @param context {object} - loader context
 
    */
@@ -836,6 +887,32 @@ Parameter should be a class providing 2 getters, 2 setters and a `destroy()` met
  - get/set `nextAutoLevel`: return next auto-quality level/force next auto-quality level that should be returned (currently used for emergency switch down)
  - get/set `autoLevelCapping`: capping/max level value that could be used by ABR Controller
  - `destroy()`: should clean-up all used resources
+
+### `bufferController`
+
+(default: internal buffer controller)
+
+Customized buffer controller.
+
+A class in charge of managing SourceBuffers.
+
+### `capLevelController`
+
+(default: internal cap level controller)
+
+Customized level capping controller.
+
+A class in charge of setting `hls.autoLevelCapping` to limit ABR level selection based on player size.
+Enable the default cap level controller by setting `capLevelToPlayerSize` to `true`.
+
+### `fpsController`
+
+(default: internal fps controller)
+
+Customized fps controller.
+
+A class in charge of monitoring frame rate, that emits `FPS_DROP` events when frames dropped exceeds configured threshold.
+Enable the default fps controller by setting `capLevelOnFPSDrop` to `true`.
 
 ### `timelineController`
 
@@ -1050,6 +1127,38 @@ then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality le
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
 Useful when browser or tab of the browser is not in the focus and bandwidth drops
 
+### `emeEnabled`
+
+(default: `false`)
+
+Set to `true` to enable DRM key system access and license retrieval.
+
+### `widevineLicenseUrl`
+
+(default: `undefined`)
+
+The Widevine license server URL. 
+
+### `drmSystemOptions`
+
+(default: `{}`)
+
+Allows for the customization of `audioRobustness` and `videoRobustness` in EMEController. Ex:
+
+```js
+{
+  audioRobustness: 'SW_SECURE_CRYPTO',
+  videoRobustness: 'SW_SECURE_CRYPTO'
+}
+```
+
+With the default argument, `''` will be specified for each option (_i.e. no specific robustness required_).
+
+### `requestMediaKeySystemAccessFunc`
+
+(default: A function that returns the result of `window.navigator.requestMediaKeySystemAccess.bind(window.navigator)` or `null`)
+
+Allows for the customization of `window.navigator.requestMediaKeySystemAccess`. 
 
 ## Video Binding/Unbinding API
 
@@ -1207,6 +1316,21 @@ get/set : if set to true the active subtitle track mode will be set to `showing`
 
 get : position of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
 
+### `hls.latency`
+
+get : estimated position (in seconds) of live edge (ie edge of live playlist plus time sync playlist advanced)
+returns 0 before first playlist is loaded
+
+### `hls.maxLatency`
+
+get : maximum distance from the edge before the player seeks forward to ```hls.liveSyncPosition```
+configured using ```liveMaxLatencyDurationCount``` (multiple of target duration) or ```liveMaxLatencyDuration```
+returns 0 before first playlist is loaded
+
+### `hls.targetLatency`
+
+get : target distance from the edge as calculated by the latency controller
+
 ## Runtime Events
 
 hls.js fires a bunch of events, that could be registered and unregistered as below:
@@ -1227,7 +1351,7 @@ Full list of Events is available below:
   - `Hls.Events.MEDIA_ATTACHING`  - fired before MediaSource is attaching to media element
     -  data: { media }
   - `Hls.Events.MEDIA_ATTACHED`  - fired when MediaSource has been succesfully attached to media element
-    -  data: { }
+    -  data: { media }
   - `Hls.Events.MEDIA_DETACHING`  - fired before detaching MediaSource from media element
     -  data: { }
   - `Hls.Events.MEDIA_DETACHED`  - fired when MediaSource has been detached from media element
@@ -1235,69 +1359,69 @@ Full list of Events is available below:
   - `Hls.Events.BUFFER_RESET`  - fired when we buffer is going to be reset
     -  data: { }
   - `Hls.Events.BUFFER_CODECS`  - fired when we know about the codecs that we need buffers for to push into
-    -  data: { tracks : { container, codec, levelCodec, initSegment, metadata } }
+    -  data: { audio? : `[Track]`, video? : `[Track]` }
   - `Hls.Events.BUFFER_CREATED`  - fired when sourcebuffers have been created
-    -  data: { tracks : tracks }
+    -  data: { tracks : { audio? : `[Track]`, video? : `[Track]`, audiovideo?: `[Track]` } }
+    interface Track { id: 'audio' | 'main', buffer?: SourceBuffer, container: string, codec?: string, initSegment?: Uint8Array, levelCodec?: string, metadata?: any }
    - `Hls.Events.BUFFER_APPENDING`  - fired when we append a segment to the buffer
-    -  data: { segment : segment object }
+    -  data: { type, data, frag, chunkMeta }
   - `Hls.Events.BUFFER_APPENDED`  - fired when we are done with appending a media segment to the buffer
-    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent, timeRanges : { video: TimeRange, audio: TimeRange }
+    -  data: { frag, parent : playlist type triggered `BUFFER_APPENDING`, timeRanges : { video?: TimeRange, audio?: TimeRange, audiovideo?: TimeRange }, chunkMeta }
   - `Hls.Events.BUFFER_EOS`  - fired when the stream is finished and we want to notify the media buffer that there will be no more data
-    -  data: { }
+    -  data: { type: SourceBufferName }
   - `Hls.Events.BUFFER_FLUSHING`  - fired when the media buffer should be flushed
-    -  data: { startOffset, endOffset }
+    -  data: { startOffset, endOffset, type: SourceBufferName }
   - `Hls.Events.BUFFER_FLUSHED`  - fired when the media buffer has been flushed
-    -  data: { startOffset, endOffset }
+    -  data: { type: SourceBufferName }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL }
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
-    -  data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}, sessionData: [parsed #EXT-X-SESSION-DATA]}
+    -  data: { levels : [available quality levels], audioTracks : [available audio tracks], captions? [available closed-captions media], subtitles?: [available subtitle tracks], url : manifestURL, stats : [LoaderStats], sessionData: [parsed #EXT-X-SESSION-DATA], networkDetails: [Loader specific object for debugging (XHR or fetch Response)]}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
-    -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest }
+    -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest, audioTracks, subtitleTracks, stats, audio: boolean, video: boolean, altAudio: boolean }
   - `Hls.Events.LEVEL_SWITCHING`  - fired when a level switch is requested
-    -  data: { `level` object (please see [below](#level) for more information) }
+    -  data: { `level` and Level object properties (please see [below](#level) for more information) }
   - `Hls.Events.LEVEL_SWITCHED`  - fired when a level switch is effective
     -  data: { level : id of new level }
   - `Hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
-    -  data: { url : level URL, level : id of level being loaded }
+    -  data: { url : level URL, level : id of level being loaded, deliveryDirectives: LL-HLS delivery directives or `null` when blocking reload is not supported }
   - `Hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes
-    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of loaded level, stats : { trequest, tfirst, tload, mtime } }
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of loaded level, stats : [LoadStats] }
   - `Hls.Events.LEVEL_UPDATED`  - fired when a level's details have been updated based on previous details, after it has been loaded
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level }
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
-    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment }
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment, type, start, end }
   - `Hls.Events.LEVELS_UPDATED`  - fired when a level is removed after calling `removeLevel()`
     -  data: { levels : [ available quality levels ] }
   - `Hls.Events.AUDIO_TRACKS_UPDATED`  - fired to notify that audio track lists has been updated
     -  data: { audioTracks : audioTracks }
   - `Hls.Events.AUDIO_TRACK_SWITCHING`  - fired when an audio track switching is requested
-    -  data: { id : audio track id }
+    -  data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL }
   - `Hls.Events.AUDIO_TRACK_SWITCHED`  - fired when an audio track switch actually occurs
     -  data: { id : audio track id }
   - `Hls.Events.AUDIO_TRACK_LOADING`  - fired when an audio track loading starts
     -  data: { url : audio track URL, id : audio track id }
   - `Hls.Events.AUDIO_TRACK_LOADED`  - fired when an audio track loading finishes
-    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), id : audio track id, stats : { trequest, tfirst, tload, mtime} }
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), id : audio track id, stats : [LoadStats] }
   - `Hls.Events.SUBTITLE_TRACKS_UPDATED`  - fired to notify that subtitle track lists has been updated
     -  data: { subtitleTracks : subtitleTracks }
   - `Hls.Events.SUBTITLE_TRACK_SWITCH`  - fired when a subtitle track switch occurs
-    -  data: { id : subtitle track id }
+    -  data: { id : subtitle track id, type? : playlist type ('SUBTITLES' | 'CLOSED-CAPTIONS'), url? : subtitle track URL  }
   - `Hls.Events.SUBTITLE_TRACK_LOADING`  - fired when a subtitle track loading starts
     -  data: { url : audio track URL, id : audio track id }
   - `Hls.Events.SUBTITLE_TRACK_LOADED`  - fired when a subtitle track loading finishes
-    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), id : subtitle track id, stats : { trequest, tfirst, tload, mtime} }
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), id : subtitle track id, stats : [LoadStats] }
   - `Hls.Events.SUBTITLE_FRAG_PROCESSED`  - fired when a subtitle fragment has been processed
-    -  data: { success : boolean, frag : the processed frag }
+    -  data: { success : boolean, frag : [the processed fragment object], error?: [error parsing subtitles if any] }
   - `Hls.Events.INIT_PTS_FOUND`  - fired when the first timestamp is found
-    -  data: { d : demuxer id, initPTS: initPTS , frag : fragment object }
+    -  data: { d : demuxer id, initPTS: initPTS, timescale: timescale, frag : fragment object }
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
-    -  data: { frag : fragment object }
-  - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
-    - data: { frag : fragment object with frag.loaded=stats.loaded, stats : { trequest, tfirst, loaded, total } }
+    -  data: { frag : fragment object, targetBufferTime: number | null [The unbuffered time that we expect to buffer with this fragment]  }
+  - `Hls.Events.FRAG_LOAD_PROGRESS`  - [deprecated]
   - `Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED`  - Identifier for fragment load aborting for emergency switch down
     - data: { frag : fragment object }
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
-    -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
+    -  data: { frag : fragment object, payload : fragment payload, stats : [LoadStats]}
   - `Hls.Events.FRAG_DECRYPTED`  - fired when a fragment decryption is completed
     -  data: { id : demuxer id, frag : fragment object, payload : fragment payload, stats : { tstart, tdecrypt}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
@@ -1306,12 +1430,11 @@ Full list of Events is available below:
     -  data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ] }
   - `Hls.Events.FRAG_PARSING_METADATA`  - fired when parsing id3 is completed
       -  data: { id: demuxer id, frag : fragment object, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds] }
-  - `Hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
-    -  data: { id: demuxer id, frag : fragment object, moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples }
+  - `Hls.Events.FRAG_PARSING_DATA`  - [deprecated]
   - `Hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
-    -  data: { id: demuxer id,frag : fragment object }
+    -  data: { frag : fragment object, partIndex }
   - `Hls.Events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
-    -  data: { id: demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length, bwEstimate } }
+    -  data: { id: demuxer id, frag : fragment object, stats : [LoadStats] }
   - `Hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { id : demuxer id, frag : fragment object }
   - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold

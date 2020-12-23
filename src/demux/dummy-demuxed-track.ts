@@ -1,4 +1,4 @@
-import { DemuxedTrack } from '../types/demuxer';
+import type { DemuxedTrack } from '../types/demuxer';
 
 export function dummyTrack (): DemuxedTrack {
   return {

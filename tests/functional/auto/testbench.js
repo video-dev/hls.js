@@ -84,7 +84,16 @@ function startStream (streamUrl, config, callback, autoplay) {
   }
   self.video = video = document.getElementById('video');
   try {
-    self.hls = hls = new Hls(objectAssign({}, config, { debug: true }));
+    self.hls = hls = new Hls(objectAssign({}, config, {
+      // debug: true
+      debug: {
+        debug: function () {},
+        log: console.log.bind(console),
+        info: console.info.bind(console, '[info]'),
+        warn: console.warn.bind(console, '[warn]'),
+        error: console.error.bind(console, '[error]')
+      }
+    }));
     console.log('[test] > userAgent:', navigator.userAgent);
     if (autoplay !== false) {
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
@@ -92,7 +101,7 @@ function startStream (streamUrl, config, callback, autoplay) {
         var playPromise = video.play();
         if (playPromise) {
           playPromise.catch(function (error) {
-            console.log('[test] > video.play() failed with error:', error);
+            console.log('[test] > video.play() failed with error: ' + error.name + ' ' + error.message);
             if (error.name === 'NotAllowedError') {
               console.log('[test] > Attempting to play with video muted');
               video.muted = true;
