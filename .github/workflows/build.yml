@@ -348,7 +348,6 @@ jobs:
           - internet_explorer-win_10
           - internet_explorer-win_8.1-11.0
           - chrome-win_7-69.0
-          - safari-osx_10.12-10.1
 
         include:
           - config: safari-osx_10.15
@@ -372,10 +371,6 @@ jobs:
             ua: chrome
             os: Windows 7
             uaVersion: "69.0"
-          - config: safari-osx_10.12-10.1
-            ua: safari
-            os: OS X 10.12
-            uaVersion: "10.1"
 
     steps:
       - uses: actions/checkout@v2

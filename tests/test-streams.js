@@ -202,8 +202,7 @@ module.exports = {
   },
   AppleAdvancedHevcAvcHls: {
     url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8',
-    description: 'Advanced stream (HEVC/H.264, AC-3/AAC,  WebVTT, fMP4 segments)',
-    live: true
+    description: 'Advanced stream (HEVC/H.264, AC-3/AAC,  WebVTT, fMP4 segments)'
   },
   AppleLowLatencyHls: {
     url: 'https://ll-hls-test.apple.com/master.m3u8',
