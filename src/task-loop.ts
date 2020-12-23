@@ -32,34 +32,34 @@ export default class TaskLoop {
   private _tickInterval: number | null = null;
   private _tickCallCount = 0;
 
-  constructor () {
+  constructor() {
     this._boundTick = this.tick.bind(this);
   }
 
-  public destroy () {
+  public destroy() {
     this.onHandlerDestroying();
     this.onHandlerDestroyed();
   }
 
-  protected onHandlerDestroying () {
+  protected onHandlerDestroying() {
     // clear all timers before unregistering from event bus
     this.clearNextTick();
     this.clearInterval();
   }
 
-  protected onHandlerDestroyed () {}
+  protected onHandlerDestroyed() {}
 
   /**
    * @returns {boolean}
    */
-  public hasInterval (): boolean {
+  public hasInterval(): boolean {
     return !!this._tickInterval;
   }
 
   /**
    * @returns {boolean}
    */
-  public hasNextTick (): boolean {
+  public hasNextTick(): boolean {
     return !!this._tickTimer;
   }
 
@@ -67,7 +67,7 @@ export default class TaskLoop {
    * @param {number} millis Interval time (ms)
    * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
    */
-  public setInterval (millis: number): boolean {
+  public setInterval(millis: number): boolean {
     if (!this._tickInterval) {
       this._tickInterval = self.setInterval(this._boundTick, millis);
       return true;
@@ -78,7 +78,7 @@ export default class TaskLoop {
   /**
    * @returns {boolean} True when interval was cleared, false when none was set (no effect)
    */
-  public clearInterval (): boolean {
+  public clearInterval(): boolean {
     if (this._tickInterval) {
       self.clearInterval(this._tickInterval);
       this._tickInterval = null;
@@ -90,7 +90,7 @@ export default class TaskLoop {
   /**
    * @returns {boolean} True when timeout was cleared, false when none was set (no effect)
    */
-  public clearNextTick (): boolean {
+  public clearNextTick(): boolean {
     if (this._tickTimer) {
       self.clearTimeout(this._tickTimer);
       this._tickTimer = null;
@@ -104,7 +104,7 @@ export default class TaskLoop {
    * or in the next one (via setTimeout(,0)) in case it has already been called
    * in this tick (in case this is a re-entrant call).
    */
-  public tick (): void {
+  public tick(): void {
     this._tickCallCount++;
     if (this._tickCallCount === 1) {
       this.doTick();
@@ -123,5 +123,5 @@ export default class TaskLoop {
    * For subclass to implement task logic
    * @abstract
    */
-  protected doTick (): void {}
+  protected doTick(): void {}
 }

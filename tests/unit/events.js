@@ -1,6 +1,6 @@
 import { Events } from '../../src/events';
 
-function getAllCapsSnakeCaseToCamelCase (eventType) {
+function getAllCapsSnakeCaseToCamelCase(eventType) {
   let eventValue = '';
   let previousWasUscore, nextChar;
 

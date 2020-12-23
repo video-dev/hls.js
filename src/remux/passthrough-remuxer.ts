@@ -14,33 +14,32 @@ class PassThroughRemuxer implements Remuxer {
   private initTracks?: TrackSet;
   private lastEndDTS: number | null = null;
 
-  destroy () {
-  }
+  destroy() {}
 
-  resetTimeStamp (defaultInitPTS) {
+  resetTimeStamp(defaultInitPTS) {
     this.initPTS = defaultInitPTS;
     this.lastEndDTS = null;
   }
 
-  resetNextTimestamp () {
+  resetNextTimestamp() {
     this.lastEndDTS = null;
   }
 
-  resetInitSegment (initSegment: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined) {
+  resetInitSegment(initSegment: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.generateInitSegment(initSegment);
     this.emitInitSegment = true;
   }
 
-  generateInitSegment (initSegment: Uint8Array): void {
+  generateInitSegment(initSegment: Uint8Array): void {
     let { audioCodec, videoCodec } = this;
     if (!initSegment || !initSegment.byteLength) {
       this.initTracks = undefined;
       this.initData = undefined;
       return;
     }
-    const initData = this.initData = parseInitSegment(initSegment);
+    const initData = (this.initData = parseInitSegment(initSegment));
 
     // default audio codec if nothing specified
     // TODO : extract that from initsegment
@@ -58,7 +57,7 @@ class PassThroughRemuxer implements Remuxer {
         container: 'video/mp4',
         codec: audioCodec + ',' + videoCodec,
         initSegment,
-        id: 'main'
+        id: 'main',
       };
     } else if (initData.audio) {
       tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment, id: 'audio' };
@@ -70,14 +69,14 @@ class PassThroughRemuxer implements Remuxer {
     this.initTracks = tracks;
   }
 
-  remux (audioTrack: DemuxedAudioTrack, videoTrack: PassthroughVideoTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset: number): RemuxerResult {
+  remux(audioTrack: DemuxedAudioTrack, videoTrack: PassthroughVideoTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset: number): RemuxerResult {
     let { initPTS, lastEndDTS } = this;
     const result: RemuxerResult = {
       audio: undefined,
       video: undefined,
       text: textTrack,
       id3: id3Track,
-      initSegment: undefined
+      initSegment: undefined,
     };
 
     // If we haven't yet set a lastEndDTS, or it was reset, set it to the provided timeOffset. We want to use the
@@ -96,7 +95,7 @@ class PassThroughRemuxer implements Remuxer {
 
     const initSegment: InitSegmentData = {
       initPTS: undefined,
-      timescale: 1
+      timescale: 1,
     };
     let initData = this.initData;
     if (!initData || !initData.length) {
@@ -151,7 +150,7 @@ class PassThroughRemuxer implements Remuxer {
       hasAudio,
       hasVideo,
       nb: 1,
-      dropped: 0
+      dropped: 0,
     };
 
     result.audio = track.type === 'audio' ? track : undefined;

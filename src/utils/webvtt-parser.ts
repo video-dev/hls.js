@@ -61,9 +61,14 @@ const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
 };
 
 // TODO(typescript-vttparser): When VTT parser is typed, errorCallback needs to get the proper typing here.
-export function parseWebVTT (
-  vttByteArray: ArrayBuffer, initPTS: number, timescale: number, vttCCs: VTTCCs,
-  cc: number, callBack: (cues: VTTCue[]) => void, errorCallBack: (arg0: any) => void
+export function parseWebVTT(
+  vttByteArray: ArrayBuffer,
+  initPTS: number,
+  timescale: number,
+  vttCCs: VTTCCs,
+  cc: number,
+  callBack: (cues: VTTCue[]) => void,
+  errorCallBack: (arg0: any) => void
 ) {
   // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
   const re = /\r\n|\n\r|\n|\r/g;
@@ -136,7 +141,7 @@ export function parseWebVTT (
   };
 
   // Go through contents line by line.
-  vttLines.forEach(line => {
+  vttLines.forEach((line) => {
     if (inHeader) {
       // Look for X-TIMESTAMP-MAP in header.
       if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
@@ -144,16 +149,19 @@ export function parseWebVTT (
         inHeader = false;
         timestampMap = true;
         // Extract LOCAL and MPEGTS.
-        line.substr(16).split(',').forEach(timestamp => {
-          if (startsWith(timestamp, 'LOCAL:')) {
-            cueTime = timestamp.substr(6);
-          } else if (startsWith(timestamp, 'MPEGTS:')) {
-            mpegTs = parseInt(timestamp.substr(7));
-          }
-        });
+        line
+          .substr(16)
+          .split(',')
+          .forEach((timestamp) => {
+            if (startsWith(timestamp, 'LOCAL:')) {
+              cueTime = timestamp.substr(6);
+            } else if (startsWith(timestamp, 'MPEGTS:')) {
+              mpegTs = parseInt(timestamp.substr(7));
+            }
+          });
         try {
           // Calculate subtitle offset in milliseconds.
-          if (Math.abs(syncPTS - ((vttCCs[cc].start * 90000) || 0)) > 4294967296) {
+          if (Math.abs(syncPTS - (vttCCs[cc].start * 90000 || 0)) > 4294967296) {
             syncPTS += 8589934592;
           }
           // Adjust MPEGTS by sync PTS.

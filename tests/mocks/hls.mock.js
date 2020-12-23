@@ -5,23 +5,12 @@ const sinon = require('sinon');
 /**
  * All public methods of Hls instance
  */
-const publicMethods = [
-  'trigger',
-  'on',
-  'off',
-  'destroy',
-  'attachMedia',
-  'loadSource',
-  'startLoad',
-  'stopLoad',
-  'swapAudioCodec',
-  'recoverMediaError'
-];
+const publicMethods = ['trigger', 'on', 'off', 'destroy', 'attachMedia', 'loadSource', 'startLoad', 'stopLoad', 'swapAudioCodec', 'recoverMediaError'];
 
 export default class HlsMock {
   // TODO: static properties
 
-  constructor (config) {
+  constructor(config) {
     // Mock arguments can at will override the default config
     // and have to specify things that are not in the default config
     this.config = Object.assign({}, Hls.DefaultConfig, config);
@@ -32,7 +21,7 @@ export default class HlsMock {
     });
   }
 
-  getEventData (n) {
+  getEventData(n) {
     const event = this.trigger.getCall(n).args;
     return { name: event[0], payload: event[1] };
   }
@@ -40,7 +29,7 @@ export default class HlsMock {
   /**
    * Reset all spies
    */
-  __reset__ () {
+  __reset__() {
     publicMethods.forEach((methodName) => {
       this[methodName].reset();
     });

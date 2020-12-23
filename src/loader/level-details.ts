@@ -43,12 +43,12 @@ export default class LevelDetails {
   public tuneInGoal: number = 0;
   public deltaUpdateFailed?: boolean;
 
-  constructor (baseUrl) {
+  constructor(baseUrl) {
     this.fragments = [];
     this.url = baseUrl;
   }
 
-  reloaded (previous: LevelDetails | undefined) {
+  reloaded(previous: LevelDetails | undefined) {
     if (!previous) {
       this.advanced = true;
       this.updated = true;
@@ -66,50 +66,50 @@ export default class LevelDetails {
     this.availabilityDelay = previous.availabilityDelay;
   }
 
-  get hasProgramDateTime (): boolean {
+  get hasProgramDateTime(): boolean {
     if (this.fragments.length) {
       return Number.isFinite(this.fragments[this.fragments.length - 1].programDateTime as number);
     }
     return false;
   }
 
-  get levelTargetDuration (): number {
+  get levelTargetDuration(): number {
     return this.averagetargetduration || this.targetduration || DEFAULT_TARGET_DURATION;
   }
 
-  get edge (): number {
+  get edge(): number {
     return this.partEnd || this.fragmentEnd;
   }
 
-  get partEnd (): number {
+  get partEnd(): number {
     if (this.partList?.length) {
       return this.partList[this.partList.length - 1].end;
     }
     return this.fragmentEnd;
   }
 
-  get fragmentEnd (): number {
+  get fragmentEnd(): number {
     if (this.fragments?.length) {
       return this.fragments[this.fragments.length - 1].end;
     }
     return 0;
   }
 
-  get age (): number {
+  get age(): number {
     if (this.advancedDateTime) {
       return Math.max(Date.now() - this.advancedDateTime, 0) / 1000;
     }
     return 0;
   }
 
-  get lastPartIndex (): number {
+  get lastPartIndex(): number {
     if (this.partList?.length) {
       return this.partList[this.partList.length - 1].index;
     }
     return -1;
   }
 
-  get lastPartSn (): number {
+  get lastPartSn(): number {
     if (this.partList?.length) {
       return this.partList[this.partList.length - 1].fragment.sn as number;
     }

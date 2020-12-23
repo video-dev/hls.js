@@ -14,20 +14,20 @@ class XhrLoader implements Loader<LoaderContext> {
   public loader: XMLHttpRequest | null = null;
   public stats: LoaderStats;
 
-  constructor (config /* HlsConfig */) {
+  constructor(config /* HlsConfig */) {
     this.xhrSetup = config ? config.xhrSetup : null;
     this.stats = new LoadStats();
     this.retryDelay = 0;
   }
 
-  destroy (): void {
+  destroy(): void {
     this.callbacks = null;
     this.abortInternal();
     this.loader = null;
     this.config = null;
   }
 
-  abortInternal (): void {
+  abortInternal(): void {
     const loader = this.loader;
     if (loader && loader.readyState !== 4) {
       this.stats.aborted = true;
@@ -37,14 +37,14 @@ class XhrLoader implements Loader<LoaderContext> {
     self.clearTimeout(this.retryTimeout);
   }
 
-  abort (): void {
+  abort(): void {
     this.abortInternal();
     if (this.callbacks?.onAbort) {
       this.callbacks.onAbort(this.stats, this.context, this.loader);
     }
   }
 
-  load (context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void {
+  load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void {
     if (this.stats.loading.start) {
       throw new Error('Loader can only be used once.');
     }
@@ -56,12 +56,12 @@ class XhrLoader implements Loader<LoaderContext> {
     this.loadInternal();
   }
 
-  loadInternal (): void {
+  loadInternal(): void {
     const { config, context } = this;
     if (!config) {
       return;
     }
-    const xhr = this.loader = new self.XMLHttpRequest();
+    const xhr = (this.loader = new self.XMLHttpRequest());
 
     const stats = this.stats;
     stats.loading.first = 0;
@@ -101,7 +101,7 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.send();
   }
 
-  readystatechange (): void {
+  readystatechange(): void {
     const { context, loader: xhr, stats } = this;
     if (!context || !xhr) {
       return;
@@ -128,7 +128,7 @@ class XhrLoader implements Loader<LoaderContext> {
         if (status >= 200 && status < 300) {
           stats.loading.end = Math.max(self.performance.now(), stats.loading.first);
           let data;
-          let len : number;
+          let len: number;
           if (context.responseType === 'arraybuffer') {
             data = xhr.response;
             len = data.byteLength;
@@ -145,7 +145,7 @@ class XhrLoader implements Loader<LoaderContext> {
 
           const response = {
             url: xhr.responseURL,
-            data: data
+            data: data,
           };
 
           this.callbacks!.onSuccess(response, stats, context, xhr);
@@ -176,7 +176,7 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  loadtimeout (): void {
+  loadtimeout(): void {
     logger.warn(`timeout while loading ${this.context.url}`);
     const callbacks = this.callbacks;
     if (callbacks) {
@@ -185,7 +185,7 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  loadprogress (event: ProgressEvent): void {
+  loadprogress(event: ProgressEvent): void {
     const stats = this.stats;
 
     stats.loaded = event.loaded;
@@ -194,11 +194,13 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  getResponseHeader (name: string): string | null {
+  getResponseHeader(name: string): string | null {
     if (this.loader) {
       try {
         return this.loader.getResponseHeader(name);
-      } catch (error) { /* Could not get headers */ }
+      } catch (error) {
+        /* Could not get headers */
+      }
     }
     return null;
   }

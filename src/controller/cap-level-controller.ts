@@ -1,6 +1,6 @@
 /*
  * cap stream level to media size dimension controller
-*/
+ */
 
 import { Events } from '../events';
 import type { Level } from '../types/level';
@@ -19,9 +19,9 @@ class CapLevelController implements ComponentAPI {
 
   private hls: Hls;
   private streamController?: StreamController;
-  public clientRect: { width: number, height: number } | null;
+  public clientRect: { width: number; height: number } | null;
 
-  constructor (hls: Hls) {
+  constructor(hls: Hls) {
     this.hls = hls;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     this.levels = [];
@@ -34,11 +34,11 @@ class CapLevelController implements ComponentAPI {
     this.registerListeners();
   }
 
-  public setStreamController (streamController: StreamController) {
+  public setStreamController(streamController: StreamController) {
     this.streamController = streamController;
   }
 
-  public destroy () {
+  public destroy() {
     this.unregisterListener();
     if (this.hls.config.capLevelToPlayerSize) {
       this.media = null;
@@ -47,7 +47,7 @@ class CapLevelController implements ComponentAPI {
     }
   }
 
-  protected registerListeners () {
+  protected registerListeners() {
     const { hls } = this;
     hls.on(Events.FPS_DROP_LEVEL_CAPPING, this.onFpsDropLevelCapping, this);
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
@@ -57,7 +57,7 @@ class CapLevelController implements ComponentAPI {
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
   }
 
-  protected unregisterListener () {
+  protected unregisterListener() {
     const { hls } = this;
     hls.off(Events.FPS_DROP_LEVEL_CAPPING, this.onFpsDropLevelCapping, this);
     hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
@@ -67,18 +67,18 @@ class CapLevelController implements ComponentAPI {
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
   }
 
-  protected onFpsDropLevelCapping (event: Events.FPS_DROP_LEVEL_CAPPING, data: FPSDropLevelCappingData) {
+  protected onFpsDropLevelCapping(event: Events.FPS_DROP_LEVEL_CAPPING, data: FPSDropLevelCappingData) {
     // Don't add a restricted level more than once
     if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels)) {
       this.restrictedLevels.push(data.droppedLevel);
     }
   }
 
-  protected onMediaAttaching (event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
+  protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachingData) {
     this.media = data.media instanceof HTMLVideoElement ? data.media : null;
   }
 
-  protected onManifestParsed (event: Events.MANIFEST_PARSED, data: ManifestParsedData) {
+  protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData) {
     const hls = this.hls;
     this.restrictedLevels = [];
     this.levels = data.levels;
@@ -91,7 +91,7 @@ class CapLevelController implements ComponentAPI {
 
   // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
   // to the first level
-  protected onBufferCodecs (event: Events.BUFFER_CODECS, data: BufferCodecsData) {
+  protected onBufferCodecs(event: Events.BUFFER_CODECS, data: BufferCodecsData) {
     const hls = this.hls;
     if (hls.config.capLevelToPlayerSize && data.video) {
       // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
@@ -99,15 +99,15 @@ class CapLevelController implements ComponentAPI {
     }
   }
 
-  protected onLevelsUpdated (event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {
+  protected onLevelsUpdated(event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {
     this.levels = data.levels;
   }
 
-  protected onMediaDetaching () {
+  protected onMediaDetaching() {
     this.stopCapping();
   }
 
-  detectPlayerSize () {
+  detectPlayerSize() {
     if (this.media && this.mediaHeight > 0 && this.mediaWidth > 0) {
       const levelsLength = this.levels ? this.levels.length : 0;
       if (levelsLength) {
@@ -124,22 +124,20 @@ class CapLevelController implements ComponentAPI {
   }
 
   /*
-  * returns level should be the one with the dimensions equal or greater than the media (player) dimensions (so the video will be downscaled)
-  */
-  getMaxLevel (capLevelIndex: number): number {
+   * returns level should be the one with the dimensions equal or greater than the media (player) dimensions (so the video will be downscaled)
+   */
+  getMaxLevel(capLevelIndex: number): number {
     if (!this.levels) {
       return -1;
     }
 
-    const validLevels = this.levels.filter((level, index) =>
-      CapLevelController.isLevelAllowed(index, this.restrictedLevels) && index <= capLevelIndex
-    );
+    const validLevels = this.levels.filter((level, index) => CapLevelController.isLevelAllowed(index, this.restrictedLevels) && index <= capLevelIndex);
 
     this.clientRect = null;
     return CapLevelController.getMaxLevelByMediaSize(validLevels, this.mediaWidth, this.mediaHeight);
   }
 
-  startCapping () {
+  startCapping() {
     if (this.timer) {
       // Don't reset capping if started twice; this can happen if the manifest signals a video codec
       return;
@@ -151,7 +149,7 @@ class CapLevelController implements ComponentAPI {
     this.detectPlayerSize();
   }
 
-  stopCapping () {
+  stopCapping() {
     this.restrictedLevels = [];
     this.firstLevel = -1;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
@@ -161,14 +159,14 @@ class CapLevelController implements ComponentAPI {
     }
   }
 
-  getDimensions (): { width: number, height: number } {
+  getDimensions(): { width: number; height: number } {
     if (this.clientRect) {
       return this.clientRect;
     }
     const media = this.media;
     const boundsRect = {
       width: 0,
-      height: 0
+      height: 0,
     };
 
     if (media) {
@@ -186,27 +184,29 @@ class CapLevelController implements ComponentAPI {
     return boundsRect;
   }
 
-  get mediaWidth (): number {
+  get mediaWidth(): number {
     return this.getDimensions().width * CapLevelController.contentScaleFactor;
   }
 
-  get mediaHeight (): number {
+  get mediaHeight(): number {
     return this.getDimensions().height * CapLevelController.contentScaleFactor;
   }
 
-  static get contentScaleFactor (): number {
+  static get contentScaleFactor(): number {
     let pixelRatio = 1;
     try {
       pixelRatio = self.devicePixelRatio;
-    } catch (e) { /* no-op */ }
+    } catch (e) {
+      /* no-op */
+    }
     return pixelRatio;
   }
 
-  static isLevelAllowed (level: number, restrictedLevels: Array<number> = []): boolean {
+  static isLevelAllowed(level: number, restrictedLevels: Array<number> = []): boolean {
     return restrictedLevels.indexOf(level) === -1;
   }
 
-  static getMaxLevelByMediaSize (levels: Array<Level>, width: number, height: number): number {
+  static getMaxLevelByMediaSize(levels: Array<Level>, width: number, height: number): number {
     if (!levels || (levels && !levels.length)) {
       return -1;
     }

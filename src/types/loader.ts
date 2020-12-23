@@ -5,40 +5,40 @@ import type { HlsUrlParameters } from './level';
 
 export interface LoaderContext {
   // target URL
-  url: string
+  url: string;
   // loader response type (arraybuffer or default response type for playlist)
-  responseType: string
+  responseType: string;
   // start byte range offset
-  rangeStart?: number
+  rangeStart?: number;
   // end byte range offset
-  rangeEnd?: number
+  rangeEnd?: number;
   // true if onProgress should report partial chunk of loaded content
-  progressData?: boolean
+  progressData?: boolean;
 }
 
 export interface FragmentLoaderContext extends LoaderContext {
-  frag: Fragment,
-  part: Part | null
+  frag: Fragment;
+  part: Part | null;
 }
 
 export interface LoaderConfiguration {
   // Max number of load retries
-  maxRetry: number
+  maxRetry: number;
   // Timeout after which `onTimeOut` callback will be triggered
   // (if loading is still not finished after that delay)
-  timeout: number
+  timeout: number;
   // Delay between an I/O error and following connection retry (ms).
   // This to avoid spamming the server
-  retryDelay: number
+  retryDelay: number;
   // max connection retry delay (ms)
-  maxRetryDelay: number
+  maxRetryDelay: number;
   // When streaming progressively, this is the minimum chunk size required to emit a PROGRESS event
-  highWaterMark: number
+  highWaterMark: number;
 }
 
 export interface LoaderResponse {
-  url: string,
-  data: string | ArrayBuffer
+  url: string;
+  data: string | ArrayBuffer;
 }
 
 export interface LoaderStats {
@@ -67,92 +67,70 @@ export interface HlsProgressivePerformanceTiming extends HlsPerformanceTiming {
   first: number;
 }
 
-type LoaderOnSuccess < T extends LoaderContext > = (
-  response: LoaderResponse,
-  stats: LoaderStats,
+type LoaderOnSuccess<T extends LoaderContext> = (response: LoaderResponse, stats: LoaderStats, context: T, networkDetails: any) => void;
+
+export type LoaderOnProgress<T extends LoaderContext> = (stats: LoaderStats, context: T, data: string | ArrayBuffer, networkDetails: any) => void;
+
+type LoaderOnError<T extends LoaderContext> = (
+  error: {
+    // error status code
+    code: number;
+    // error description
+    text: string;
+  },
   context: T,
   networkDetails: any
 ) => void;
 
-export type LoaderOnProgress < T extends LoaderContext > = (
-  stats: LoaderStats,
-  context: T,
-  data: string | ArrayBuffer,
-  networkDetails: any,
-) => void;
+type LoaderOnTimeout<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: any) => void;
 
-type LoaderOnError < T extends LoaderContext > = (
-  error: {
-    // error status code
-    code: number,
-    // error description
-    text: string,
-  },
-  context: T,
-  networkDetails: any,
-) => void;
+type LoaderOnAbort<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: any) => void;
 
-type LoaderOnTimeout < T extends LoaderContext > = (
-  stats: LoaderStats,
-  context: T,
-  networkDetails: any,
-) => void;
-
-type LoaderOnAbort < T extends LoaderContext > = (
-    stats: LoaderStats,
-    context: T,
-    networkDetails: any,
-) => void;
-
-export interface LoaderCallbacks<T extends LoaderContext>{
-  onSuccess: LoaderOnSuccess<T>,
-  onError: LoaderOnError<T>,
-  onTimeout: LoaderOnTimeout<T>,
-  onAbort?: LoaderOnAbort<T>,
-  onProgress?: LoaderOnProgress<T>,
+export interface LoaderCallbacks<T extends LoaderContext> {
+  onSuccess: LoaderOnSuccess<T>;
+  onError: LoaderOnError<T>;
+  onTimeout: LoaderOnTimeout<T>;
+  onAbort?: LoaderOnAbort<T>;
+  onProgress?: LoaderOnProgress<T>;
 }
 
 export interface Loader<T extends LoaderContext> {
-  destroy(): void
-  abort(): void
-  load(
-    context: LoaderContext,
-    config: LoaderConfiguration,
-    callbacks: LoaderCallbacks<T>,
-  ): void
-  getResponseHeader(name:string): string | null
-  context: T
-  loader: any
-  stats: LoaderStats
+  destroy(): void;
+  abort(): void;
+  load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
+  getResponseHeader(name: string): string | null;
+  context: T;
+  loader: any;
+  stats: LoaderStats;
 }
 
 export enum PlaylistContextType {
   MANIFEST = 'manifest',
   LEVEL = 'level',
   AUDIO_TRACK = 'audioTrack',
-  SUBTITLE_TRACK= 'subtitleTrack'
+  SUBTITLE_TRACK = 'subtitleTrack',
 }
 
 export enum PlaylistLevelType {
   MAIN = 'main',
   AUDIO = 'audio',
-  SUBTITLE = 'subtitle'
+  SUBTITLE = 'subtitle',
 }
 
 export interface PlaylistLoaderContext extends LoaderContext {
-  loader?: Loader<PlaylistLoaderContext>
+  loader?: Loader<PlaylistLoaderContext>;
 
-  type: PlaylistContextType
+  type: PlaylistContextType;
   // the level index to load
-  level: number | null
+  level: number | null;
   // level or track id from LevelLoadingData / TrackLoadingData
-  id: number | null
+  id: number | null;
   // track group id
-  groupId: string | null
+  groupId: string | null;
   // defines if the loader is handling a sidx request for the playlist
-  isSidxRequest?: boolean
+  isSidxRequest?: boolean;
   // internal representation of a parsed m3u8 level playlist
-  levelDetails?: LevelDetails,
+  levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url
-  deliveryDirectives: HlsUrlParameters | null
+  deliveryDirectives: HlsUrlParameters | null;
 }

@@ -16,11 +16,11 @@ const MediaMock = function () {
 
 const fakeLevels = [
   {
-    audioCodec: 'audio/foo'
+    audioCodec: 'audio/foo',
   },
   {
-    videoCodec: 'video/foo'
-  }
+    videoCodec: 'video/foo',
+  },
 ];
 
 let emeController;
@@ -41,7 +41,7 @@ describe('EMEController', function () {
     const reqMediaKsAccessSpy = sinon.spy();
 
     setupEach({
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
@@ -60,7 +60,7 @@ describe('EMEController', function () {
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
@@ -88,9 +88,9 @@ describe('EMEController', function () {
       emeEnabled: true,
       drmSystemOptions: {
         audioRobustness: 'HW_SECURE_ALL',
-        videoRobustness: 'HW_SECURE_ALL'
+        videoRobustness: 'HW_SECURE_ALL',
       },
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
@@ -118,12 +118,12 @@ describe('EMEController', function () {
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
     const badData = {
       initDataType: 'cenc',
-      initData: 'bad data'
+      initData: 'bad data',
     };
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
@@ -149,15 +149,17 @@ describe('EMEController', function () {
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
-    emeController._mediaKeysList = [{
-      mediaKeysSession: {
-        close: keySessionCloseSpy
-      }
-    }];
+    emeController._mediaKeysList = [
+      {
+        mediaKeysSession: {
+          close: keySessionCloseSpy,
+        },
+      },
+    ];
     emeController.onMediaDetached(Events.MEDIA_DETACHED);
 
     self.setTimeout(function () {

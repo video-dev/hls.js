@@ -37,7 +37,7 @@ describe('StreamController', function () {
    */
   const assertStreamControllerStarted = (streamController) => {
     expect(streamController.hasInterval()).to.be.true;
-    expect(streamController.state).to.equal(State.IDLE, 'StreamController\'s state should not be STOPPED');
+    expect(streamController.state).to.equal(State.IDLE, "StreamController's state should not be STOPPED");
   };
 
   /**
@@ -46,7 +46,7 @@ describe('StreamController', function () {
    */
   const assertStreamControllerStopped = (streamController) => {
     expect(streamController.hasInterval()).to.be.false;
-    expect(streamController.state).to.equal(State.STOPPED, 'StreamController\'s state should be STOPPED');
+    expect(streamController.state).to.equal(State.STOPPED, "StreamController's state should be STOPPED");
   };
 
   describe('StreamController', function () {
@@ -65,7 +65,7 @@ describe('StreamController', function () {
   http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
       const { levels: levelsParsed } = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
       // load levels data
-      const levels = levelsParsed.map(levelParsed => new Level(levelParsed));
+      const levels = levelsParsed.map((levelParsed) => new Level(levelParsed));
       streamController.onManifestParsed(Events.MANIFEST_PARSED, {
         altAudio: false,
         audio: false,
@@ -75,7 +75,7 @@ describe('StreamController', function () {
         stats: undefined,
         subtitleTracks: [],
         video: false,
-        levels
+        levels,
       });
       streamController.startLoad(1);
       assertStreamControllerStarted(streamController);
@@ -87,9 +87,9 @@ describe('StreamController', function () {
   describe('SN Searching', function () {
     const fragPrevious = new Fragment(PlaylistLevelType.MAIN, '');
     fragPrevious.programDateTime = 1505502671523;
-    fragPrevious.duration = 5.000;
+    fragPrevious.duration = 5.0;
     fragPrevious.level = 1;
-    fragPrevious.start = 10.000;
+    fragPrevious.start = 10.0;
     fragPrevious.sn = 2; // Fragment with PDT 1505502671523 in level 1 does not have the same sn as in level 2 where cc is 1
     fragPrevious.cc = 0;
 
@@ -137,7 +137,7 @@ describe('StreamController', function () {
   });
 
   describe('fragment loading', function () {
-    function fragStateStub (state) {
+    function fragStateStub(state) {
       return sinon.stub(fragmentTracker, 'getState').callsFake(() => state);
     }
 
@@ -146,12 +146,14 @@ describe('StreamController', function () {
     let levelDetails;
     beforeEach(function () {
       const attrs: LevelAttributes = new AttrList({});
-      streamController['levels'] = [new Level({
-        name: '',
-        url: '',
-        attrs,
-        bitrate: 500000
-      })];
+      streamController['levels'] = [
+        new Level({
+          name: '',
+          url: '',
+          attrs,
+          bitrate: 500000,
+        }),
+      ];
       triggerSpy = sinon.spy(hls, 'trigger');
       frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.level = 0;
@@ -160,12 +162,12 @@ describe('StreamController', function () {
       levelDetails.fragments.push(frag);
     });
 
-    function assertLoadingState (frag) {
+    function assertLoadingState(frag) {
       expect(triggerSpy).to.have.been.calledWith(Events.FRAG_LOADING, { frag, targetBufferTime: 0 });
       expect(streamController.state).to.equal(State.FRAG_LOADING);
     }
 
-    function assertNotLoadingState () {
+    function assertNotLoadingState() {
       expect(triggerSpy).to.not.have.been.called;
       expect(streamController.state).to.not.equal(State.FRAG_LOADING);
     }
@@ -202,16 +204,16 @@ describe('StreamController', function () {
     beforeEach(function () {
       // @ts-ignore
       streamController.gapController = {
-        poll: function () {}
+        poll: function () {},
       };
       streamController['media'] = {
         buffered: {
-          start () {
+          start() {
             return bufStart;
           },
-          length: 1
+          length: 1,
         },
-        readyState: 4
+        readyState: 4,
       };
       streamController['mediaBuffer'] = null;
     });

@@ -9,45 +9,45 @@ import { Events } from '../events';
 import type { DemuxedAudioTrack, AppendedAudioFrame } from '../types/demuxer';
 
 type AudioConfig = {
-  config: number[],
-  samplerate: number,
-  channelCount: number,
-  codec: string,
-  manifestCodec: string
+  config: number[];
+  samplerate: number;
+  channelCount: number;
+  codec: string;
+  manifestCodec: string;
 };
 
 type FrameHeader = {
-  headerLength: number,
-  frameLength: number,
-  stamp: number
+  headerLength: number;
+  frameLength: number;
+  stamp: number;
 };
 
-export function getAudioConfig (observer, data: Uint8Array, offset: number, audioCodec: string): AudioConfig | void {
+export function getAudioConfig(observer, data: Uint8Array, offset: number, audioCodec: string): AudioConfig | void {
   let adtsObjectType: number;
   let adtsExtensionSampleingIndex: number;
   let adtsChanelConfig: number;
   let config: number[];
   const userAgent = navigator.userAgent.toLowerCase();
   const manifestCodec = audioCodec;
-  const adtsSampleingRates = [
-    96000, 88200,
-    64000, 48000,
-    44100, 32000,
-    24000, 22050,
-    16000, 12000,
-    11025, 8000,
-    7350];
+  const adtsSampleingRates = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
   // byte 2
-  adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
-  const adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
+  adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
+  const adtsSampleingIndex = (data[offset + 2] & 0x3c) >>> 2;
   if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
-    observer.trigger(Events.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
+    observer.trigger(Events.ERROR, {
+      type: ErrorTypes.MEDIA_ERROR,
+      details: ErrorDetails.FRAG_PARSING_ERROR,
+      fatal: true,
+      reason: `invalid ADTS sampling index:${adtsSampleingIndex}`,
+    });
     return;
   }
-  adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);
+  adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
   // byte 3
-  adtsChanelConfig |= ((data[offset + 3] & 0xC0) >>> 6);
-  logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}Hz],channelConfig:${adtsChanelConfig}`);
+  adtsChanelConfig |= (data[offset + 3] & 0xc0) >>> 6;
+  logger.log(
+    `manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}Hz],channelConfig:${adtsChanelConfig}`
+  );
   // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
   if (/firefox/i.test(userAgent)) {
     if (adtsSampleingIndex >= 6) {
@@ -74,9 +74,7 @@ export function getAudioConfig (observer, data: Uint8Array, offset: number, audi
     adtsObjectType = 5;
     config = new Array(4);
     // if (manifest codec is HE-AAC or HE-AACv2) OR (manifest codec not specified AND frequency less than 24kHz)
-    if ((audioCodec && ((audioCodec.indexOf('mp4a.40.29') !== -1) ||
-      (audioCodec.indexOf('mp4a.40.5') !== -1))) ||
-      (!audioCodec && adtsSampleingIndex >= 6)) {
+    if ((audioCodec && (audioCodec.indexOf('mp4a.40.29') !== -1 || audioCodec.indexOf('mp4a.40.5') !== -1)) || (!audioCodec && adtsSampleingIndex >= 6)) {
       // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
       // there is a factor 2 between frame sample rate and output sample rate
       // multiply frequency by 2 (see table below, equivalent to substract 3)
@@ -84,9 +82,10 @@ export function getAudioConfig (observer, data: Uint8Array, offset: number, audi
     } else {
       // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
       // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
-      if ((audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 &&
-          ((adtsSampleingIndex >= 6 && adtsChanelConfig === 1) || /vivaldi/i.test(userAgent))) ||
-          (!audioCodec && adtsChanelConfig === 1)) {
+      if (
+        (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && ((adtsSampleingIndex >= 6 && adtsChanelConfig === 1) || /vivaldi/i.test(userAgent))) ||
+        (!audioCodec && adtsChanelConfig === 1)
+      ) {
         adtsObjectType = 2;
         config = new Array(2);
       }
@@ -129,13 +128,13 @@ export function getAudioConfig (observer, data: Uint8Array, offset: number, audi
   // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
   config[0] = adtsObjectType << 3;
   // samplingFrequencyIndex
-  config[0] |= (adtsSampleingIndex & 0x0E) >> 1;
+  config[0] |= (adtsSampleingIndex & 0x0e) >> 1;
   config[1] |= (adtsSampleingIndex & 0x01) << 7;
   // channelConfiguration
   config[1] |= adtsChanelConfig << 3;
   if (adtsObjectType === 5) {
     // adtsExtensionSampleingIndex
-    config[1] |= (adtsExtensionSampleingIndex & 0x0E) >> 1;
+    config[1] |= (adtsExtensionSampleingIndex & 0x0e) >> 1;
     config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
     // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
     //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
@@ -146,45 +145,39 @@ export function getAudioConfig (observer, data: Uint8Array, offset: number, audi
     config,
     samplerate: adtsSampleingRates[adtsSampleingIndex],
     channelCount: adtsChanelConfig,
-    codec: ('mp4a.40.' + adtsObjectType),
-    manifestCodec
+    codec: 'mp4a.40.' + adtsObjectType,
+    manifestCodec,
   };
 }
 
-export function isHeaderPattern (data: Uint8Array, offset: number): boolean {
+export function isHeaderPattern(data: Uint8Array, offset: number): boolean {
   return data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0;
 }
 
-export function getHeaderLength (data: Uint8Array, offset: number): number {
-  return (data[offset + 1] & 0x01 ? 7 : 9);
+export function getHeaderLength(data: Uint8Array, offset: number): number {
+  return data[offset + 1] & 0x01 ? 7 : 9;
 }
 
-export function getFullFrameLength (data: Uint8Array, offset: number): number {
-  return ((data[offset + 3] & 0x03) << 11) |
-    (data[offset + 4] << 3) |
-    ((data[offset + 5] & 0xE0) >>> 5);
+export function getFullFrameLength(data: Uint8Array, offset: number): number {
+  return ((data[offset + 3] & 0x03) << 11) | (data[offset + 4] << 3) | ((data[offset + 5] & 0xe0) >>> 5);
 }
 
-export function canGetFrameLength (data: Uint8Array, offset: number): boolean {
+export function canGetFrameLength(data: Uint8Array, offset: number): boolean {
   return offset + 5 < data.length;
 }
 
-export function isHeader (data: Uint8Array, offset: number): boolean {
+export function isHeader(data: Uint8Array, offset: number): boolean {
   // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
   // Layer bits (position 14 and 15) in header should be always 0 for ADTS
   // More info https://wiki.multimedia.cx/index.php?title=ADTS
   return offset + 1 < data.length && isHeaderPattern(data, offset);
 }
 
-export function canParse (data: Uint8Array, offset: number): boolean {
-  return (
-    canGetFrameLength(data, offset) &&
-    isHeaderPattern(data, offset) &&
-    getFullFrameLength(data, offset) < data.length - offset
-  );
+export function canParse(data: Uint8Array, offset: number): boolean {
+  return canGetFrameLength(data, offset) && isHeaderPattern(data, offset) && getFullFrameLength(data, offset) < data.length - offset;
 }
 
-export function probe (data: Uint8Array, offset: number): boolean {
+export function probe(data: Uint8Array, offset: number): boolean {
   // same as isHeader but we also check that ADTS frame follows last ADTS frame
   // or end of data is reached
   if (isHeader(data, offset)) {
@@ -205,7 +198,7 @@ export function probe (data: Uint8Array, offset: number): boolean {
   return false;
 }
 
-export function initTrackConfig (track: DemuxedAudioTrack, observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string) {
+export function initTrackConfig(track: DemuxedAudioTrack, observer: HlsEventEmitter, data: Uint8Array, offset: number, audioCodec: string) {
   if (!track.samplerate) {
     const config = getAudioConfig(observer, data, offset, audioCodec);
     if (!config) {
@@ -220,11 +213,11 @@ export function initTrackConfig (track: DemuxedAudioTrack, observer: HlsEventEmi
   }
 }
 
-export function getFrameDuration (samplerate: number): number {
-  return 1024 * 90000 / samplerate;
+export function getFrameDuration(samplerate: number): number {
+  return (1024 * 90000) / samplerate;
 }
 
-export function parseFrameHeader (data: Uint8Array, offset: number, pts: number, frameIndex: number, frameDuration: number): FrameHeader | void {
+export function parseFrameHeader(data: Uint8Array, offset: number, pts: number, frameIndex: number, frameDuration: number): FrameHeader | void {
   const length = data.length;
 
   // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
@@ -233,14 +226,14 @@ export function parseFrameHeader (data: Uint8Array, offset: number, pts: number,
   let frameLength = getFullFrameLength(data, offset);
   frameLength -= headerLength;
 
-  if ((frameLength > 0) && ((offset + headerLength + frameLength) <= length)) {
+  if (frameLength > 0 && offset + headerLength + frameLength <= length) {
     const stamp = pts + frameIndex * frameDuration;
     // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
     return { headerLength, frameLength, stamp };
   }
 }
 
-export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number): AppendedAudioFrame | void {
+export function appendFrame(track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number): AppendedAudioFrame | void {
   const frameDuration = getFrameDuration(track.samplerate as number);
   const header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
   if (header) {
@@ -252,7 +245,7 @@ export function appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset:
     const aacSample = {
       unit: data.subarray(offset + headerLength, offset + headerLength + frameLength),
       pts: stamp,
-      dts: stamp
+      dts: stamp,
     };
 
     track.samples.push(aacSample);

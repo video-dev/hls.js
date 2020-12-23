@@ -16,7 +16,7 @@ import type AttrList from '../utils/attr-list';
 import type { HlsListeners } from '../events';
 
 export interface MediaAttachingData {
-  media: HTMLMediaElement
+  media: HTMLMediaElement;
 }
 
 export interface MediaAttachedData {
@@ -24,72 +24,72 @@ export interface MediaAttachedData {
 }
 
 export interface BufferCodecsData {
-  video?: Track
-  audio?: Track
+  video?: Track;
+  audio?: Track;
 }
 
 export interface BufferCreatedData {
-  tracks: TrackSet
+  tracks: TrackSet;
 }
 
 export interface BufferAppendingData {
-  type: SourceBufferName
-  data: Uint8Array
-  frag: Fragment
-  part: Part | null
-  chunkMeta: ChunkMetadata
+  type: SourceBufferName;
+  data: Uint8Array;
+  frag: Fragment;
+  part: Part | null;
+  chunkMeta: ChunkMetadata;
 }
 
 export interface BufferAppendedData {
-  chunkMeta: ChunkMetadata
-  frag: Fragment
-  part: Part | null
-  parent: PlaylistLevelType
+  chunkMeta: ChunkMetadata;
+  frag: Fragment;
+  part: Part | null;
+  parent: PlaylistLevelType;
   timeRanges: {
-    audio?: TimeRanges
-    video?: TimeRanges
-    audiovideo?: TimeRanges
-  }
+    audio?: TimeRanges;
+    video?: TimeRanges;
+    audiovideo?: TimeRanges;
+  };
 }
 
 export interface BufferEOSData {
-  type: SourceBufferName
+  type: SourceBufferName;
 }
 
 export interface BufferFlushingData {
-  startOffset: number
-  endOffset: number
-  type: SourceBufferName | null
+  startOffset: number;
+  endOffset: number;
+  type: SourceBufferName | null;
 }
 
 export interface BufferFlushedData {
-  type: SourceBufferName
+  type: SourceBufferName;
 }
 
 export interface ManifestLoadingData {
-  url: string
+  url: string;
 }
 
 export interface ManifestLoadedData {
-  audioTracks: MediaPlaylist[]
-  captions?: MediaPlaylist[]
-  levels: LevelParsed[]
-  networkDetails: any
-  sessionData: Record<string, AttrList> | null
-  stats: LoaderStats
-  subtitles?: MediaPlaylist[]
-  url: string
+  audioTracks: MediaPlaylist[];
+  captions?: MediaPlaylist[];
+  levels: LevelParsed[];
+  networkDetails: any;
+  sessionData: Record<string, AttrList> | null;
+  stats: LoaderStats;
+  subtitles?: MediaPlaylist[];
+  url: string;
 }
 
 export interface ManifestParsedData {
-  levels: Level[]
-  audioTracks: MediaPlaylist[]
-  subtitleTracks: MediaPlaylist[]
-  firstLevel: number
-  stats: LoaderStats
-  audio: boolean
-  video: boolean
-  altAudio: boolean
+  levels: Level[];
+  audioTracks: MediaPlaylist[];
+  subtitleTracks: MediaPlaylist[];
+  firstLevel: number;
+  stats: LoaderStats;
+  audio: boolean;
+  video: boolean;
+  altAudio: boolean;
 }
 
 export interface LevelSwitchingData extends Omit<Level, '_urlId'> {
@@ -97,90 +97,90 @@ export interface LevelSwitchingData extends Omit<Level, '_urlId'> {
 }
 
 export interface LevelSwitchedData {
-  level: number
+  level: number;
 }
 
 export interface TrackLoadingData {
-  id: number
-  groupId: string
-  url: string
-  deliveryDirectives: HlsUrlParameters | null
+  id: number;
+  groupId: string;
+  url: string;
+  deliveryDirectives: HlsUrlParameters | null;
 }
 
 export interface LevelLoadingData {
-  id: number
-  level: number
-  url: string
-  deliveryDirectives: HlsUrlParameters | null
+  id: number;
+  level: number;
+  url: string;
+  deliveryDirectives: HlsUrlParameters | null;
 }
 
 export interface TrackLoadedData {
-  details: LevelDetails
-  id: number
-  groupId: string
-  networkDetails: any
-  stats: LoaderStats
-  deliveryDirectives: HlsUrlParameters | null
+  details: LevelDetails;
+  id: number;
+  groupId: string;
+  networkDetails: any;
+  stats: LoaderStats;
+  deliveryDirectives: HlsUrlParameters | null;
 }
 
 export interface LevelLoadedData {
-  details: LevelDetails
-  id: number
-  level: number
-  networkDetails: any
-  stats: LoaderStats
-  deliveryDirectives: HlsUrlParameters | null
+  details: LevelDetails;
+  id: number;
+  level: number;
+  networkDetails: any;
+  stats: LoaderStats;
+  deliveryDirectives: HlsUrlParameters | null;
 }
 
 export interface LevelUpdatedData {
-  details: LevelDetails
-  level: number
+  details: LevelDetails;
+  level: number;
 }
 
 export interface LevelPTSUpdatedData {
-  details: LevelDetails,
-  level: Level,
-  drift: number,
-  type: string,
-  start: number,
-  end: number
+  details: LevelDetails;
+  level: Level;
+  drift: number;
+  type: string;
+  start: number;
+  end: number;
 }
 
 export interface AudioTrackSwitchingData {
-  url: string
-  type: MediaPlaylistType | 'main'
-  id: number
+  url: string;
+  type: MediaPlaylistType | 'main';
+  id: number;
 }
 
 export interface AudioTrackSwitchedData {
-  id: number
+  id: number;
 }
 
 export interface AudioTrackLoadedData extends TrackLoadedData {}
 
 export interface AudioTracksUpdatedData {
-  audioTracks: MediaPlaylist[]
+  audioTracks: MediaPlaylist[];
 }
 
 export interface SubtitleTracksUpdatedData {
-  subtitleTracks: MediaPlaylist[]
+  subtitleTracks: MediaPlaylist[];
 }
 
 export interface SubtitleTrackSwitchData {
-  url?: string
-  type?: MediaPlaylistType | 'main'
-  id: number
+  url?: string;
+  type?: MediaPlaylistType | 'main';
+  id: number;
 }
 
 export interface SubtitleTrackLoadedData extends TrackLoadedData {}
 
 export interface TrackSwitchedData {
-  id: number
+  id: number;
 }
 
 export interface SubtitleFragProcessed {
-  success: boolean,
-  frag: Fragment
+  success: boolean;
+  frag: Fragment;
 }
 
 export interface FragChangedData {
@@ -188,146 +188,145 @@ export interface FragChangedData {
 }
 
 export interface FPSDropData {
-  currentDropped: number
-  currentDecoded: number
-  totalDroppedFrames: number
+  currentDropped: number;
+  currentDecoded: number;
+  totalDroppedFrames: number;
 }
 
 export interface FPSDropLevelCappingData {
-  droppedLevel: number
-  level: number
+  droppedLevel: number;
+  level: number;
 }
 
 export interface ErrorData {
-  type: ErrorTypes
-  details: ErrorDetails
-  fatal: boolean
-  buffer?: number
-  bytes?: number
-  context?: PlaylistLoaderContext
-  error?: Error
-  event?: keyof HlsListeners | 'demuxerWorker'
-  frag?: Fragment
-  level?: number | undefined
-  levelRetry?: boolean
-  loader?: Loader<LoaderContext>
-  networkDetails?: any
-  mimeType?: string
-  reason?: string
-  response?: LoaderResponse
-  url?: string
-  parent?: PlaylistLevelType
-  err?: { // comes from transmuxer interface
+  type: ErrorTypes;
+  details: ErrorDetails;
+  fatal: boolean;
+  buffer?: number;
+  bytes?: number;
+  context?: PlaylistLoaderContext;
+  error?: Error;
+  event?: keyof HlsListeners | 'demuxerWorker';
+  frag?: Fragment;
+  level?: number | undefined;
+  levelRetry?: boolean;
+  loader?: Loader<LoaderContext>;
+  networkDetails?: any;
+  mimeType?: string;
+  reason?: string;
+  response?: LoaderResponse;
+  url?: string;
+  parent?: PlaylistLevelType;
+  err?: {
+    // comes from transmuxer interface
     message: string;
-  }
+  };
 }
 
 export interface SubtitleFragProcessedData {
-  success: boolean
-  frag: Fragment
-  error?: Error
+  success: boolean;
+  frag: Fragment;
+  error?: Error;
 }
 
 export interface CuesParsedData {
-  type: 'captions' | 'subtitles',
-  cues: any,
-  track: string
+  type: 'captions' | 'subtitles';
+  cues: any;
+  track: string;
 }
 
 interface NonNativeTextTrack {
-  _id?: string
-  label: any
-  kind: string
-  default: boolean
-  closedCaptions?: MediaPlaylist
-  subtitleTrack?: MediaPlaylist
+  _id?: string;
+  label: any;
+  kind: string;
+  default: boolean;
+  closedCaptions?: MediaPlaylist;
+  subtitleTrack?: MediaPlaylist;
 }
 
 export interface NonNativeTextTracksData {
-  tracks: Array<NonNativeTextTrack>
+  tracks: Array<NonNativeTextTrack>;
 }
 
 export interface InitPTSFoundData {
-  id: string
-  frag: Fragment
-  initPTS: number
-  timescale: number
+  id: string;
+  frag: Fragment;
+  initPTS: number;
+  timescale: number;
 }
 
 export interface FragLoadingData {
-  frag: Fragment
-  part?: Part
-  targetBufferTime: number | null
+  frag: Fragment;
+  part?: Part;
+  targetBufferTime: number | null;
 }
 
 export interface FragLoadEmergencyAbortedData {
-  frag: Fragment
-  part: Part | null
-  stats: LoaderStats
+  frag: Fragment;
+  part: Part | null;
+  stats: LoaderStats;
 }
 
 export interface FragLoadedData {
-  frag: Fragment
-  part: Part | null
-  payload: ArrayBuffer
-  networkDetails: unknown
+  frag: Fragment;
+  part: Part | null;
+  payload: ArrayBuffer;
+  networkDetails: unknown;
 }
 
 export interface PartsLoadedData {
-  frag: Fragment
-  part: Part | null
-  partsLoaded?: FragLoadedData[]
+  frag: Fragment;
+  part: Part | null;
+  partsLoaded?: FragLoadedData[];
 }
 
 export interface FragDecryptedData {
-  frag: Fragment
-  payload: ArrayBuffer
+  frag: Fragment;
+  payload: ArrayBuffer;
   stats: {
-    tstart: number
-    tdecrypt: number
-  }
+    tstart: number;
+    tdecrypt: number;
+  };
 }
 
-export interface FragParsingInitSegmentData {
-
-}
+export interface FragParsingInitSegmentData {}
 
 export interface FragParsingUserdataData {
-  id: string,
-  frag: Fragment,
-  samples: UserdataSample[]
+  id: string;
+  frag: Fragment;
+  samples: UserdataSample[];
 }
 
 export interface FragParsingMetadataData {
-  id: string,
-  frag: Fragment,
-  samples: MetadataSample[]
+  id: string;
+  frag: Fragment;
+  samples: MetadataSample[];
 }
 
 export interface FragParsedData {
-  frag: Fragment,
-  part: Part | null
+  frag: Fragment;
+  part: Part | null;
 }
 
 export interface FragBufferedData {
-  stats: LoadStats
-  frag: Fragment,
-  part: Part | null
-  id: string
+  stats: LoadStats;
+  frag: Fragment;
+  part: Part | null;
+  id: string;
 }
 
 export interface LevelsUpdatedData {
-  levels: Array<Level>
+  levels: Array<Level>;
 }
 
 export interface KeyLoadingData {
-  frag: Fragment
+  frag: Fragment;
 }
 
 export interface KeyLoadedData {
-  frag: Fragment
+  frag: Fragment;
 }
 
 export interface LiveBackBufferData {
-  bufferEnd: number
+  bufferEnd: number;
 }

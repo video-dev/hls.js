@@ -14,7 +14,7 @@ describe('GapController', function () {
   beforeEach(function () {
     const hls = new Hls({});
     media = {
-      currentTime: 0
+      currentTime: 0,
     };
     config = hls.config;
     gapController = new GapController(config, media, new FragmentTracker(hls), hls);
@@ -28,7 +28,7 @@ describe('GapController', function () {
   describe('_tryNudgeBuffer', function () {
     it('should increment the currentTime by a multiple of nudgeRetry and the configured nudge amount', function () {
       for (let i = 1; i < config.nudgeMaxRetry; i++) {
-        const expected = media.currentTime + (i * config.nudgeOffset);
+        const expected = media.currentTime + i * config.nudgeOffset;
         gapController._tryNudgeBuffer();
         expect(media.currentTime).to.equal(expected);
       }
@@ -36,7 +36,7 @@ describe('GapController', function () {
       expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
-        fatal: false
+        fatal: false,
       });
     });
 
@@ -47,7 +47,7 @@ describe('GapController', function () {
       expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
-        fatal: true
+        fatal: true,
       });
     });
   });
@@ -59,7 +59,7 @@ describe('GapController', function () {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: false,
-        buffer: 42
+        buffer: 42,
       });
     });
 
@@ -125,17 +125,20 @@ describe('GapController', function () {
     beforeEach(function () {
       wallClock = sandbox.useFakeTimers(0);
       isStalling = false;
-      mockTimeRangesData = [[0.1, 0.2], [0.4, 0.5]];
+      mockTimeRangesData = [
+        [0.1, 0.2],
+        [0.4, 0.5],
+      ];
       mockTimeRanges = {
-        get length () {
+        get length() {
           return mockTimeRangesData.length;
         },
-        start (index) {
+        start(index) {
           return mockTimeRangesData[index][0];
         },
-        end (index) {
+        end(index) {
           return mockTimeRangesData[index][1];
-        }
+        },
       };
 
       // by default the media
@@ -147,7 +150,7 @@ describe('GapController', function () {
         paused: false,
         seeking: false,
         buffered: mockTimeRanges,
-        addEventListener () {}
+        addEventListener() {},
       };
 
       gapController.media = mockMedia;
@@ -160,7 +163,7 @@ describe('GapController', function () {
     // is altered (or not)
     // when isStalling is false the media clock
     // will not progress while the poll call is done
-    function tickMediaClock (incrementSec = 0.1) {
+    function tickMediaClock(incrementSec = 0.1) {
       lastCurrentTime = mockMedia.currentTime;
       if (!isStalling) {
         mockMedia.currentTime += incrementSec;
@@ -168,7 +171,7 @@ describe('GapController', function () {
       gapController.poll(lastCurrentTime);
     }
 
-    function setStalling () {
+    function setStalling() {
       gapController.moved = true;
       mockMedia.paused = false;
       mockMedia.currentTime = 4;
@@ -177,7 +180,7 @@ describe('GapController', function () {
       lastCurrentTime = 4;
     }
 
-    function setNotStalling () {
+    function setNotStalling() {
       gapController.moved = true;
       mockMedia.paused = false;
       mockMedia.currentTime = 5;
@@ -233,7 +236,10 @@ describe('GapController', function () {
       expect(gapController.stalled).to.equal(null, 'empty buffer');
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
 
-      mockTimeRangesData = [[0.1, 0.2], [0.4, 0.5]];
+      mockTimeRangesData = [
+        [0.1, 0.2],
+        [0.4, 0.5],
+      ];
       mockMedia.seeking = true;
 
       // tickMediaClock(100)

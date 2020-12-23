@@ -12,14 +12,14 @@ const queueNames = ['audio', 'video'];
 describe('BufferOperationQueue tests', function () {
   const sandbox = sinon.createSandbox();
   let operationQueue;
-  const sbMock = {
+  const sbMock = ({
     audio: {
-      updating: false
+      updating: false,
     },
     video: {
-      updating: false
-    }
-  } as any as SourceBuffers;
+      updating: false,
+    },
+  } as any) as SourceBuffers;
 
   beforeEach(function () {
     operationQueue = new BufferOperationQueue(sbMock);
@@ -41,7 +41,7 @@ describe('BufferOperationQueue tests', function () {
         execute,
         onStart: () => {},
         onComplete: () => {},
-        onError: () => {}
+        onError: () => {},
       };
 
       queueNames.forEach((name, i) => {
@@ -62,7 +62,7 @@ describe('BufferOperationQueue tests', function () {
       execute,
       onStart: () => {},
       onComplete: () => {},
-      onError: () => {}
+      onError: () => {},
     };
 
     queueNames.forEach((name) => {
@@ -75,11 +75,11 @@ describe('BufferOperationQueue tests', function () {
   describe('appendBlocker', function () {
     it('appends a blocking promise, which resolves upon execution', function () {
       const promises: Promise<{}>[] = [];
-      queueNames.forEach(name => {
+      queueNames.forEach((name) => {
         promises.push(operationQueue.appendBlocker(name));
       });
       return Promise.all(promises).then(() => {
-        queueNames.forEach(name => {
+        queueNames.forEach((name) => {
           expect(operationQueue.queues[name], `The ${name} queue should have a length of 1`).to.have.length(1);
         });
       });
@@ -88,7 +88,7 @@ describe('BufferOperationQueue tests', function () {
 
   describe('executeNext', function () {
     it('does nothing if executing against an empty queue', function () {
-      queueNames.forEach(name => {
+      queueNames.forEach((name) => {
         expect(operationQueue.executeNext(name)).to.not.throw;
       });
     });
@@ -102,7 +102,7 @@ describe('BufferOperationQueue tests', function () {
         },
         onStart: () => {},
         onComplete: () => {},
-        onError
+        onError,
       };
       queueNames.forEach((name, i) => {
         operationQueue.append(operation, name);
@@ -119,7 +119,7 @@ describe('BufferOperationQueue tests', function () {
       execute,
       onStart: () => {},
       onComplete: () => {},
-      onError: () => {}
+      onError: () => {},
     };
     it('should dequeue the current operation and execute the next', function () {
       queueNames.forEach((name) => {

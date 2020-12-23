@@ -2,13 +2,7 @@ import FragmentLoader, { LoadError } from '../../../src/loader/fragment-loader';
 import Fragment from '../../../src/loader/fragment';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import LoadStats from '../../../src/loader/load-stats';
-import {
-  FragmentLoaderContext,
-  Loader,
-  LoaderCallbacks,
-  LoaderContext,
-  PlaylistLevelType
-} from '../../../src/types/loader';
+import { FragmentLoaderContext, Loader, LoaderCallbacks, LoaderContext, PlaylistLevelType } from '../../../src/types/loader';
 import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
 import type { HlsConfig } from '../../../src/config';
 
@@ -26,17 +20,17 @@ class MockXhr implements Loader<LoaderContext> {
   stats: LoadStats;
   callbacks?: LoaderCallbacks<FragmentLoaderContext>;
 
-  constructor (confg: HlsConfig) {
+  constructor(confg: HlsConfig) {
     this.stats = new LoadStats();
   }
 
-  load (context, config, callbacks) {
+  load(context, config, callbacks) {
     this.callbacks = callbacks;
   }
 
-  abort () {}
-  destroy (): void {}
-  getResponseHeader (name: string): string | null {
+  abort() {}
+  destroy(): void {}
+  getResponseHeader(name: string): string | null {
     return null;
   }
 }
@@ -71,13 +65,14 @@ describe('FragmentLoader tests', function () {
     return new Promise<void>((resolve, reject) => {
       const onProgress = sinon.spy();
       const fragmentLoaderPrivates = fragmentLoader as any;
-      fragmentLoader.load(frag, onProgress)
-        .then(data => {
+      fragmentLoader
+        .load(frag, onProgress)
+        .then((data) => {
           expect(data).to.deep.equal({
             frag,
             part: null,
             payload: response.data,
-            networkDetails
+            networkDetails,
           });
           expect(frag.stats).to.exist;
           expect(fragmentLoaderPrivates.loader).to.not.exist;
@@ -87,7 +82,7 @@ describe('FragmentLoader tests', function () {
             frag,
             part: null,
             payload: response.data,
-            networkDetails
+            networkDetails,
           });
           resolve();
         })
@@ -104,7 +99,8 @@ describe('FragmentLoader tests', function () {
   it('should reject with a LoadError if the fragment does not have a url', function () {
     return new Promise<void>((resolve, reject) => {
       frag.url = null;
-      fragmentLoader.load(frag, levelDetails)
+      fragmentLoader
+        .load(frag, levelDetails)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
         })
@@ -117,7 +113,8 @@ describe('FragmentLoader tests', function () {
   it('handles fragment load errors', function () {
     return new Promise<void>((resolve, reject) => {
       const fragmentLoaderPrivates = fragmentLoader as any;
-      fragmentLoader.load(frag, levelDetails)
+      fragmentLoader
+        .load(frag, levelDetails)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
         })
@@ -129,7 +126,7 @@ describe('FragmentLoader tests', function () {
             fatal: false,
             frag,
             response,
-            networkDetails
+            networkDetails,
           });
           expect(fragmentLoaderPrivates.loader).to.not.exist;
           expect(frag.loader).to.not.exist;
@@ -144,7 +141,8 @@ describe('FragmentLoader tests', function () {
     // let abortSpy;
     return new Promise<void>((resolve, reject) => {
       const fragmentLoaderPrivates = fragmentLoader as any;
-      fragmentLoader.load(frag, levelDetails)
+      fragmentLoader
+        .load(frag, levelDetails)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
         })
@@ -155,7 +153,7 @@ describe('FragmentLoader tests', function () {
             details: ErrorDetails.FRAG_LOAD_TIMEOUT,
             fatal: false,
             frag,
-            networkDetails
+            networkDetails,
           });
           expect(fragmentLoaderPrivates.loader).to.not.exist;
           expect(frag.loader).to.not.exist;

@@ -11,20 +11,13 @@ import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type LevelDetails from '../loader/level-details';
 import type Fragment from '../loader/fragment';
-import type {
-  ErrorData, FragLoadedData,
-  MediaAttachedData,
-  SubtitleFragProcessed,
-  SubtitleTracksUpdatedData,
-  TrackLoadedData,
-  TrackSwitchedData
-} from '../types/events';
+import type { ErrorData, FragLoadedData, MediaAttachedData, SubtitleFragProcessed, SubtitleTracksUpdatedData, TrackLoadedData, TrackSwitchedData } from '../types/events';
 
 const TICK_INTERVAL = 500; // how often to tick in ms
 
 interface TimeRange {
-  start: number,
-  end: number
+  start: number;
+  end: number;
 }
 
 export class SubtitleStreamController extends BaseStreamController implements NetworkComponentAPI {
@@ -33,7 +26,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
   private currentTrackId: number = -1;
   private tracksBuffered: Array<TimeRange[]>;
 
-  constructor (hls: Hls, fragmentTracker: FragmentTracker) {
+  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[subtitle-stream-controller]');
     this.config = hls.config;
     this.fragCurrent = null;
@@ -47,7 +40,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     this._registerListeners();
   }
 
-  private _registerListeners () {
+  private _registerListeners() {
     const { hls } = this;
     hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
@@ -58,7 +51,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     hls.on(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
   }
 
-  private _unregisterListeners () {
+  private _unregisterListeners() {
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
@@ -69,7 +62,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     hls.off(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
   }
 
-  startLoad () {
+  startLoad() {
     this.stopLoad();
     this.state = State.IDLE;
 
@@ -81,13 +74,13 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     }
   }
 
-  onHandlerDestroyed () {
+  onHandlerDestroyed() {
     this.state = State.STOPPED;
     this._unregisterListeners();
     super.onHandlerDestroyed();
   }
 
-  onSubtitleFragProcessed (event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessed) {
+  onSubtitleFragProcessed(event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessed) {
     const { frag, success } = data;
     this.fragPrevious = frag;
     this.state = State.IDLE;
@@ -117,18 +110,18 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     } else {
       timeRange = {
         start: fragStart,
-        end: fragEnd
+        end: fragEnd,
       };
       buffered.push(timeRange);
     }
   }
 
-  onMediaAttached (event: Events.MEDIA_ATTACHED, { media }: MediaAttachedData) {
+  onMediaAttached(event: Events.MEDIA_ATTACHED, { media }: MediaAttachedData) {
     this.media = media;
     this.state = State.IDLE;
   }
 
-  onMediaDetaching () {
+  onMediaDetaching() {
     if (!this.media) {
       return;
     }
@@ -143,7 +136,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
   }
 
   // If something goes wrong, proceed to next frag, if we were processing one.
-  onError (event: Events.ERROR, data: ErrorData) {
+  onError(event: Events.ERROR, data: ErrorData) {
     const frag = data.frag;
     // don't handle error not related to subtitle fragment
     if (!frag || frag.type !== 'subtitle') {
@@ -158,17 +151,17 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
   }
 
   // Got all new subtitle levels.
-  onSubtitleTracksUpdated (event: Events.SUBTITLE_TRACKS_UPDATED, { subtitleTracks }: SubtitleTracksUpdatedData) {
+  onSubtitleTracksUpdated(event: Events.SUBTITLE_TRACKS_UPDATED, { subtitleTracks }: SubtitleTracksUpdatedData) {
     logger.log('subtitle levels updated');
     this.tracksBuffered = [];
-    this.levels = subtitleTracks.map(mediaPlaylist => new Level(mediaPlaylist));
+    this.levels = subtitleTracks.map((mediaPlaylist) => new Level(mediaPlaylist));
     this.levels.forEach((level: Level) => {
       this.tracksBuffered[level.id] = [];
     });
     this.mediaBuffer = null;
   }
 
-  onSubtitleTrackSwitch (event: Events.SUBTITLE_TRACK_SWITCH, data: TrackSwitchedData) {
+  onSubtitleTrackSwitch(event: Events.SUBTITLE_TRACK_SWITCH, data: TrackSwitchedData) {
     this.currentTrackId = data.id;
 
     if (!this.levels.length || this.currentTrackId === -1) {
@@ -187,7 +180,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded (event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData) {
+  onSubtitleTrackLoaded(event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData) {
     const { id, details } = data;
     const { currentTrackId, levels } = this;
     if (!levels.length || !details) {
@@ -211,7 +204,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     this.setInterval(TICK_INTERVAL);
   }
 
-  _handleFragmentLoadComplete (fragLoadedData: FragLoadedData) {
+  _handleFragmentLoadComplete(fragLoadedData: FragLoadedData) {
     const { frag, payload } = fragLoadedData;
     const decryptData = frag.decryptdata;
     const hls = this.hls;
@@ -230,14 +223,14 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
           payload: decryptedData,
           stats: {
             tstart: startTime,
-            tdecrypt: endTime
-          }
+            tdecrypt: endTime,
+          },
         });
       });
     }
   }
 
-  doTick () {
+  doTick() {
     if (!this.media) {
       this.state = State.IDLE;
       return;
@@ -288,17 +281,17 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     }
   }
 
-  protected loadFragment (frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
+  protected loadFragment(frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
     this.fragCurrent = frag;
     super.loadFragment(frag, levelDetails, targetBufferTime);
   }
 
-  stopLoad () {
+  stopLoad() {
     this.fragPrevious = null;
     super.stopLoad();
   }
 
-  get mediaBufferTimeRanges () {
+  get mediaBufferTimeRanges() {
     return this.tracksBuffered[this.currentTrackId] || [];
   }
 }

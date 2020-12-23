@@ -17,17 +17,17 @@ export default class LatencyController implements ComponentAPI {
   private _latency: number | null = null;
   private timeupdateHandler = () => this.timeupdate();
 
-  constructor (hls: Hls) {
+  constructor(hls: Hls) {
     this.hls = hls;
     this.config = hls.config;
     this.registerListeners();
   }
 
-  get latency (): number {
+  get latency(): number {
     return this._latency || 0;
   }
 
-  get maxLatency (): number {
+  get maxLatency(): number {
     const { config, levelDetails } = this;
     if (config.liveMaxLatencyDuration !== undefined) {
       return config.liveMaxLatencyDuration;
@@ -35,7 +35,7 @@ export default class LatencyController implements ComponentAPI {
     return levelDetails ? config.liveMaxLatencyDurationCount * levelDetails.targetduration : 0;
   }
 
-  get targetLatency (): number | null {
+  get targetLatency(): number | null {
     const { levelDetails } = this;
     if (levelDetails === null) {
       return null;
@@ -52,7 +52,7 @@ export default class LatencyController implements ComponentAPI {
     return targetLatency + Math.min(this.stallCount * liveSyncOnStallIncrease, maxLiveSyncOnStallIncrease);
   }
 
-  get liveSyncPosition (): number | null {
+  get liveSyncPosition(): number | null {
     const liveEdge = this.estimateLiveEdge();
     const targetLatency = this.targetLatency;
     if (liveEdge === null || targetLatency === null || this.levelDetails === null) {
@@ -61,7 +61,7 @@ export default class LatencyController implements ComponentAPI {
     return Math.min(this.levelDetails.edge, liveEdge - targetLatency - this.edgeStalled);
   }
 
-  get edgeStalled (): number {
+  get edgeStalled(): number {
     const { levelDetails } = this;
     if (levelDetails === null) {
       return 0;
@@ -70,7 +70,7 @@ export default class LatencyController implements ComponentAPI {
     return Math.max(levelDetails.age - maxLevelUpdateAge, 0);
   }
 
-  private get forwardBufferLength (): number {
+  private get forwardBufferLength(): number {
     const { media, levelDetails } = this;
     if (!media || !levelDetails) {
       return 0;
@@ -79,12 +79,12 @@ export default class LatencyController implements ComponentAPI {
     return bufferedRanges ? media.buffered.end(bufferedRanges - 1) : levelDetails.edge - this.currentTime;
   }
 
-  public destroy (): void {
+  public destroy(): void {
     this.unregisterListeners();
     this.onMediaDetaching();
   }
 
-  private registerListeners () {
+  private registerListeners() {
     this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     this.hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
@@ -92,7 +92,7 @@ export default class LatencyController implements ComponentAPI {
     this.hls.on(Events.ERROR, this.onError, this);
   }
 
-  private unregisterListeners () {
+  private unregisterListeners() {
     this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached);
     this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching);
     this.hls.off(Events.MANIFEST_LOADING, this.onManifestLoading);
@@ -100,25 +100,25 @@ export default class LatencyController implements ComponentAPI {
     this.hls.off(Events.ERROR, this.onError);
   }
 
-  private onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachingData) {
+  private onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachingData) {
     this.media = data.media;
     this.media.addEventListener('timeupdate', this.timeupdateHandler);
   }
 
-  private onMediaDetaching () {
+  private onMediaDetaching() {
     if (this.media) {
       this.media.removeEventListener('timeupdate', this.timeupdateHandler);
       this.media = null;
     }
   }
 
-  private onManifestLoading () {
+  private onManifestLoading() {
     this.levelDetails = null;
     this._latency = null;
     this.stallCount = 0;
   }
 
-  private onLevelUpdated (event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData) {
+  private onLevelUpdated(event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData) {
     this.levelDetails = details;
     if (details.advanced) {
       this.timeupdate();
@@ -128,7 +128,7 @@ export default class LatencyController implements ComponentAPI {
     }
   }
 
-  private onError (event: Events.ERROR, data: ErrorData) {
+  private onError(event: Events.ERROR, data: ErrorData) {
     if (data.details !== ErrorDetails.BUFFER_STALLED_ERROR) {
       return;
     }
@@ -136,7 +136,7 @@ export default class LatencyController implements ComponentAPI {
     logger.warn('[playback-rate-controller]: Stall detected, adjusting target latency');
   }
 
-  private timeupdate () {
+  private timeupdate() {
     const { media, levelDetails } = this;
     if (!media || !levelDetails) {
       return;
@@ -173,7 +173,7 @@ export default class LatencyController implements ComponentAPI {
     }
   }
 
-  private estimateLiveEdge (): number | null {
+  private estimateLiveEdge(): number | null {
     const { levelDetails } = this;
     if (levelDetails === null) {
       return null;
@@ -181,7 +181,7 @@ export default class LatencyController implements ComponentAPI {
     return levelDetails.edge + levelDetails.age;
   }
 
-  private computeLatency (): number | null {
+  private computeLatency(): number | null {
     const liveEdge = this.estimateLiveEdge();
     if (liveEdge === null) {
       return null;
