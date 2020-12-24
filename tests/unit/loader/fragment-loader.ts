@@ -2,7 +2,13 @@ import FragmentLoader, { LoadError } from '../../../src/loader/fragment-loader';
 import Fragment from '../../../src/loader/fragment';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import LoadStats from '../../../src/loader/load-stats';
-import { FragmentLoaderContext, Loader, LoaderCallbacks, LoaderContext, PlaylistLevelType } from '../../../src/types/loader';
+import {
+  FragmentLoaderContext,
+  Loader,
+  LoaderCallbacks,
+  LoaderContext,
+  PlaylistLevelType,
+} from '../../../src/types/loader';
 import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
 import type { HlsConfig } from '../../../src/config';
 
@@ -45,7 +51,9 @@ describe('FragmentLoader tests', function () {
   let stats;
   let networkDetails;
   beforeEach(function () {
-    fragmentLoader = new FragmentLoader(mergeConfig(hlsDefaultConfig, { loader: MockXhr }));
+    fragmentLoader = new FragmentLoader(
+      mergeConfig(hlsDefaultConfig, { loader: MockXhr })
+    );
     frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.url = 'foo';
     levelDetails = new LevelDetails('');
@@ -91,8 +99,18 @@ describe('FragmentLoader tests', function () {
         });
       expect(fragmentLoaderPrivates.loader).to.exist;
       expect(fragmentLoaderPrivates.loader).to.be.instanceOf(MockXhr);
-      fragmentLoaderPrivates.loader.callbacks.onProgress(stats, context, response.data, networkDetails);
-      fragmentLoaderPrivates.loader.callbacks.onSuccess(response, stats, context, networkDetails);
+      fragmentLoaderPrivates.loader.callbacks.onProgress(
+        stats,
+        context,
+        response.data,
+        networkDetails
+      );
+      fragmentLoaderPrivates.loader.callbacks.onSuccess(
+        response,
+        stats,
+        context,
+        networkDetails
+      );
     });
   });
 
@@ -133,7 +151,11 @@ describe('FragmentLoader tests', function () {
           resolve();
         });
       expect(fragmentLoaderPrivates.loader).to.be.instanceOf(MockXhr);
-      fragmentLoaderPrivates.loader.callbacks.onError(response, context, networkDetails);
+      fragmentLoaderPrivates.loader.callbacks.onError(
+        response,
+        context,
+        networkDetails
+      );
     });
   });
 

@@ -78,8 +78,14 @@ describe('ID3 tests', function () {
     198,
     135,
   ]);
-  const mockID3HeaderMissingLeadingByte = mockID3Header.slice(8, mockID3Header.length);
-  const mockID3HeaderMissingTrailingByte = mockID3Header.slice(0, mockID3Header.length - 8);
+  const mockID3HeaderMissingLeadingByte = mockID3Header.slice(
+    8,
+    mockID3Header.length
+  );
+  const mockID3HeaderMissingTrailingByte = mockID3Header.slice(
+    0,
+    mockID3Header.length - 8
+  );
 
   it('utf8ArrayToStr', function (done) {
     const aB = new Uint8Array([97, 98]);

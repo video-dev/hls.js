@@ -43,13 +43,19 @@ describe('LatencyController', function () {
     edgeStub.get(() => 0);
     edgeStub.set((value: number) => {
       edgeStub.get(() => value);
-      latencyController['onLevelUpdated'](Events.LEVEL_UPDATED, levelUpdatedData);
+      latencyController['onLevelUpdated'](
+        Events.LEVEL_UPDATED,
+        levelUpdatedData
+      );
     });
     const ageStub = sinon.stub(levelDetails, 'age');
     ageStub.get(() => 0);
     ageStub.set((value: number) => {
       ageStub.get(() => value);
-      latencyController['onLevelUpdated'](Events.LEVEL_UPDATED, levelUpdatedData);
+      latencyController['onLevelUpdated'](
+        Events.LEVEL_UPDATED,
+        levelUpdatedData
+      );
     });
     let currentTime = 0;
     // @ts-ignore

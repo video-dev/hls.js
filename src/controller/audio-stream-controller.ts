@@ -44,7 +44,9 @@ type WaitingForPTSData = {
   complete: boolean;
 };
 
-class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
+class AudioStreamController
+  extends BaseStreamController
+  implements NetworkComponentAPI {
   private retryDate: number = 0;
   private videoBuffer: any | null = null;
   private videoTrackCC: number = -1;
@@ -100,7 +102,10 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
   }
 
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
-  onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS }: InitPTSFoundData) {
+  onInitPtsFound(
+    event: Events.INIT_PTS_FOUND,
+    { frag, id, initPTS }: InitPTSFoundData
+  ) {
     // Always update the new INIT PTS
     // Can change due level switch
     if (id === 'main') {
@@ -126,10 +131,16 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     this.setInterval(TICK_INTERVAL);
     this.fragLoadError = 0;
     if (lastCurrentTime > 0 && startPosition === -1) {
-      this.log(`Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
+      this.log(
+        `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
+          3
+        )}`
+      );
       this.state = State.IDLE;
     } else {
-      this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
+      this.lastCurrentTime = this.startPosition
+        ? this.startPosition
+        : startPosition;
       this.loadedmetadata = false;
       this.state = State.WAITING_TRACK;
     }
@@ -184,14 +195,26 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
             }
           } else if (this.videoTrackCC !== this.waitingVideoCC) {
             // Drop waiting fragment if videoTrackCC has changed since waitingFragment was set and initPTS was not found
-            logger.log(`Waiting fragment cc (${frag.cc}) cancelled because video is at cc ${this.videoTrackCC}`);
+            logger.log(
+              `Waiting fragment cc (${frag.cc}) cancelled because video is at cc ${this.videoTrackCC}`
+            );
             this.clearWaitingFragment();
           } else {
             // Drop waiting fragment if an earlier fragment is needed
-            const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer, this.media.currentTime, this.config.maxBufferHole);
-            const waitingFragmentAtPosition = fragmentWithinToleranceTest(bufferInfo.end, this.config.maxFragLookUpTolerance, frag);
+            const bufferInfo = BufferHelper.bufferInfo(
+              this.mediaBuffer,
+              this.media.currentTime,
+              this.config.maxBufferHole
+            );
+            const waitingFragmentAtPosition = fragmentWithinToleranceTest(
+              bufferInfo.end,
+              this.config.maxFragLookUpTolerance,
+              frag
+            );
             if (waitingFragmentAtPosition < 0) {
-              logger.log(`Waiting fragment cc (${frag.cc}) @ ${frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`);
+              logger.log(
+                `Waiting fragment cc (${frag.cc}) @ ${frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`
+              );
               this.clearWaitingFragment();
             }
           }
@@ -257,7 +280,11 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     const levelInfo = levels[trackId];
 
     const trackDetails = levelInfo.details;
-    if (!trackDetails || (trackDetails.live && this.levelLastLoaded !== trackId) || this.waitForCdnTuneIn(trackDetails)) {
+    if (
+      !trackDetails ||
+      (trackDetails.live && this.levelLastLoaded !== trackId) ||
+      this.waitForCdnTuneIn(trackDetails)
+    ) {
       this.state = State.WAITING_TRACK;
       return;
     }
@@ -267,11 +294,25 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     if (!frag || frag.data) {
       const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
       const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
-      const maxBufferHole = pos < config.maxBufferHole ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole) : config.maxBufferHole;
-      const bufferInfo = BufferHelper.bufferInfo(mediaBuffer, pos, maxBufferHole);
-      const mainBufferInfo = BufferHelper.bufferInfo(videoBuffer, pos, maxBufferHole);
+      const maxBufferHole =
+        pos < config.maxBufferHole
+          ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
+          : config.maxBufferHole;
+      const bufferInfo = BufferHelper.bufferInfo(
+        mediaBuffer,
+        pos,
+        maxBufferHole
+      );
+      const mainBufferInfo = BufferHelper.bufferInfo(
+        videoBuffer,
+        pos,
+        maxBufferHole
+      );
       const bufferLen = bufferInfo.len;
-      const maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength);
+      const maxConfigBuffer = Math.min(
+        config.maxBufferLength,
+        config.maxMaxBufferLength
+      );
       const maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len);
       const audioSwitch = this.audioSwitch;
 
@@ -296,7 +337,9 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
         if (trackDetails.PTSKnown && pos < start) {
           // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
           if (bufferInfo.end > start || bufferInfo.nextStart) {
-            this.log('Alt audio track ahead of main track, seek to start of alt audio track');
+            this.log(
+              'Alt audio track ahead of main track, seek to start of alt audio track'
+            );
             media.currentTime = start + 0.05;
           }
         }
@@ -309,7 +352,9 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     }
 
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
+      this.log(
+        `Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`
+      );
       this.state = State.KEY_LOADING;
       hls.trigger(Events.KEY_LOADING, { frag });
     } else {
@@ -322,12 +367,18 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     super.onMediaDetaching();
   }
 
-  onAudioTracksUpdated(event: Events.AUDIO_TRACKS_UPDATED, { audioTracks }: AudioTracksUpdatedData) {
+  onAudioTracksUpdated(
+    event: Events.AUDIO_TRACKS_UPDATED,
+    { audioTracks }: AudioTracksUpdatedData
+  ) {
     this.log('Audio tracks updated');
     this.levels = audioTracks.map((mediaPlaylist) => new Level(mediaPlaylist));
   }
 
-  onAudioTrackSwitching(event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) {
+  onAudioTrackSwitching(
+    event: Events.AUDIO_TRACK_SWITCHING,
+    data: AudioTrackSwitchingData
+  ) {
     // if any URL found on new audio track, it is an alternate audio track
     const altAudio = !!data.url;
     this.trackId = data.id;
@@ -379,7 +430,9 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       this.warn(`Audio tracks were reset while loading level ${trackId}`);
       return;
     }
-    this.log(`Track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${newDetails.totalduration}`);
+    this.log(
+      `Track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${newDetails.totalduration}`
+    );
 
     const track = levels[trackId];
     let sliding = 0;
@@ -390,7 +443,11 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       if (newDetails.deltaUpdateFailed) {
         return;
       }
-      if (!track.details && this.mainDetails?.hasProgramDateTime && newDetails.hasProgramDateTime) {
+      if (
+        !track.details &&
+        this.mainDetails?.hasProgramDateTime &&
+        newDetails.hasProgramDateTime
+      ) {
         alignPDT(newDetails, this.mainDetails);
         sliding = newDetails.fragments[0].start;
       } else {
@@ -405,7 +462,10 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       this.setStartPosition(track.details, sliding);
     }
     // only switch back to IDLE state if we were waiting for track to start downloading a new fragment
-    if (this.state === State.WAITING_TRACK && !this.waitForCdnTuneIn(newDetails)) {
+    if (
+      this.state === State.WAITING_TRACK &&
+      !this.waitForCdnTuneIn(newDetails)
+    ) {
       this.state = State.IDLE;
     }
 
@@ -417,19 +477,30 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     const { frag, part, payload } = data;
     const { config, trackId, levels } = this;
     if (!levels) {
-      this.warn(`Audio tracks were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
+      this.warn(
+        `Audio tracks were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`
+      );
       return;
     }
 
     const track = levels[trackId] as Level;
     console.assert(track, 'Audio track is defined on fragment load progress');
     const details = track.details as LevelDetails;
-    console.assert(details, 'Audio track details are defined on fragment load progress');
-    const audioCodec = config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2';
+    console.assert(
+      details,
+      'Audio track details are defined on fragment load progress'
+    );
+    const audioCodec =
+      config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2';
 
     let transmuxer = this.transmuxer;
     if (!transmuxer) {
-      transmuxer = this.transmuxer = new TransmuxerInterface(this.hls, PlaylistLevelType.AUDIO, this._handleTransmuxComplete.bind(this), this._handleTransmuxerFlush.bind(this));
+      transmuxer = this.transmuxer = new TransmuxerInterface(
+        this.hls,
+        PlaylistLevelType.AUDIO,
+        this._handleTransmuxComplete.bind(this),
+        this._handleTransmuxerFlush.bind(this)
+      );
     }
 
     // Check if we have video initPTS
@@ -442,11 +513,36 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       const accurateTimeOffset = false; // details.PTSKnown || !details.live;
       const partIndex = part ? part.index : -1;
       const partial = partIndex !== -1;
-      const chunkMeta = new ChunkMetadata(frag.level, frag.sn as number, frag.stats.chunkCount, payload.byteLength, partIndex, partial);
-      transmuxer.push(payload, initSegmentData, audioCodec, '', frag, part, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
+      const chunkMeta = new ChunkMetadata(
+        frag.level,
+        frag.sn as number,
+        frag.stats.chunkCount,
+        payload.byteLength,
+        partIndex,
+        partial
+      );
+      transmuxer.push(
+        payload,
+        initSegmentData,
+        audioCodec,
+        '',
+        frag,
+        part,
+        details.totalduration,
+        accurateTimeOffset,
+        chunkMeta,
+        initPTS
+      );
     } else {
-      logger.log(`Unknown video PTS for cc ${frag.cc}, waiting for video PTS before demuxing audio frag ${frag.sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
-      const { cache } = (this.waitingData = this.waitingData || { frag, part, cache: new ChunkCache(), complete: false });
+      logger.log(
+        `Unknown video PTS for cc ${frag.cc}, waiting for video PTS before demuxing audio frag ${frag.sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`
+      );
+      const { cache } = (this.waitingData = this.waitingData || {
+        frag,
+        part,
+        cache: new ChunkCache(),
+        complete: false,
+      });
       cache.push(new Uint8Array(payload));
       this.waitingVideoCC = this.videoTrackCC;
       this.state = State.WAITING_INIT_PTS;
@@ -485,7 +581,11 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
       // If a level switch was requested while a fragment was buffering, it will emit the FRAG_BUFFERED event upon completion
       // Avoid setting state back to IDLE or concluding the audio switch; otherwise, the switched-to track will not buffer
       this.warn(
-        `Fragment ${frag.sn}${part ? ' p: ' + part.index : ''} of level ${frag.level} finished buffering, but was aborted. state: ${this.state}, audioSwitch: ${this.audioSwitch}`
+        `Fragment ${frag.sn}${part ? ' p: ' + part.index : ''} of level ${
+          frag.level
+        } finished buffering, but was aborted. state: ${
+          this.state
+        }, audioSwitch: ${this.audioSwitch}`
       );
       return;
     }
@@ -525,13 +625,18 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
           if (loadError <= config.fragLoadingMaxRetry) {
             this.fragLoadError = loadError;
             // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            const delay = Math.min(Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay, config.fragLoadingMaxRetryTimeout);
+            const delay = Math.min(
+              Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay,
+              config.fragLoadingMaxRetryTimeout
+            );
             this.warn(`Frag loading failed, retry in ${delay} ms`);
             this.retryDate = performance.now() + delay;
             // retry loading state
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
-            logger.error(`${data.details} reaches max retry, redispatch as fatal ...`);
+            logger.error(
+              `${data.details} reaches max retry, redispatch as fatal ...`
+            );
             // switch error to fatal
             data.fatal = true;
             this.state = State.ERROR;
@@ -547,32 +652,48 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
         if (this.state !== State.ERROR && this.state !== State.STOPPED) {
           // if fatal error, stop processing, otherwise move to IDLE to retry loading
           this.state = data.fatal ? State.ERROR : State.IDLE;
-          this.warn(`${data.details} while loading frag, switching to ${this.state} state`);
+          this.warn(
+            `${data.details} while loading frag, switching to ${this.state} state`
+          );
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
         // if in appending state
-        if (data.parent === 'audio' && (this.state === State.PARSING || this.state === State.PARSED)) {
+        if (
+          data.parent === 'audio' &&
+          (this.state === State.PARSING || this.state === State.PARSED)
+        ) {
           const media = this.mediaBuffer;
           const currentTime = this.media.currentTime;
-          const mediaBuffered = media && BufferHelper.isBuffered(media, currentTime) && BufferHelper.isBuffered(media, currentTime + 0.5);
+          const mediaBuffered =
+            media &&
+            BufferHelper.isBuffered(media, currentTime) &&
+            BufferHelper.isBuffered(media, currentTime + 0.5);
           // reduce max buf len if current position is buffered
           if (mediaBuffered) {
             const config = this.config;
             if (config.maxMaxBufferLength >= config.maxBufferLength) {
               // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
               config.maxMaxBufferLength /= 2;
-              this.warn(`Reduce max buffer length to ${config.maxMaxBufferLength}s`);
+              this.warn(
+                `Reduce max buffer length to ${config.maxMaxBufferLength}s`
+              );
             }
             this.state = State.IDLE;
           } else {
             // current position is not buffered, but browser is still complaining about buffer full error
             // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole audio buffer to recover
-            this.warn('Buffer full error also media.currentTime is not buffered, flush audio buffer');
+            this.warn(
+              'Buffer full error also media.currentTime is not buffered, flush audio buffer'
+            );
             this.fragCurrent = null;
             // flush everything
-            this.hls.trigger(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
+            this.hls.trigger(Events.BUFFER_FLUSHING, {
+              startOffset: 0,
+              endOffset: Number.POSITIVE_INFINITY,
+              type: 'audio',
+            });
           }
         }
         break;
@@ -588,7 +709,10 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
     if (media && type === ElementaryStreamTypes.AUDIO) {
       // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      this.fragmentTracker.detectEvictedFragments(ElementaryStreamTypes.AUDIO, BufferHelper.getBuffered(media));
+      this.fragmentTracker.detectEvictedFragments(
+        ElementaryStreamTypes.AUDIO,
+        BufferHelper.getBuffered(media)
+      );
     }
     // reset reference to frag
     this.fragPrevious = null;
@@ -603,7 +727,9 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
 
     const context = this.getCurrentContext(chunkMeta);
     if (!context) {
-      this.warn(`The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`);
+      this.warn(
+        `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
+      );
       return;
     }
     const { frag, part } = context;
@@ -622,15 +748,30 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
 
     if (initSegment?.tracks) {
       this._bufferInitSegment(initSegment.tracks, frag, chunkMeta);
-      hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
+      hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, {
+        frag,
+        id,
+        tracks: initSegment.tracks,
+      });
       // Only flush audio from old audio tracks when PTS is known on new audio track
     }
     if (audio) {
       const { startPTS, endPTS, startDTS, endDTS } = audio;
       if (part) {
-        part.elementaryStreams[ElementaryStreamTypes.AUDIO] = { startPTS, endPTS, startDTS, endDTS };
+        part.elementaryStreams[ElementaryStreamTypes.AUDIO] = {
+          startPTS,
+          endPTS,
+          startDTS,
+          endDTS,
+        };
       }
-      frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, startPTS, endPTS, startDTS, endDTS);
+      frag.setElementaryStreamInfo(
+        ElementaryStreamTypes.AUDIO,
+        startPTS,
+        endPTS,
+        startDTS,
+        endDTS
+      );
       this.bufferFragmentData(audio, frag, part, chunkMeta);
     }
 
@@ -656,7 +797,11 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     }
   }
 
-  private _bufferInitSegment(tracks: TrackSet, frag: Fragment, chunkMeta: ChunkMetadata) {
+  private _bufferInitSegment(
+    tracks: TrackSet,
+    frag: Fragment,
+    chunkMeta: ChunkMetadata
+  ) {
     if (this.state !== State.PARSING) {
       return;
     }
@@ -674,7 +819,9 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     track.levelCodec = track.codec;
     track.id = 'audio';
     this.hls.trigger(Events.BUFFER_CODECS, tracks);
-    this.log(`Audio, container:${track.container}, codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
+    this.log(
+      `Audio, container:${track.container}, codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
+    );
     const initSegment = track.initSegment;
     if (initSegment) {
       const segment: BufferAppendingData = {
@@ -690,13 +837,21 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
     this.tick();
   }
 
-  protected loadFragment(frag: Fragment, trackDetails: LevelDetails, targetBufferTime: number) {
+  protected loadFragment(
+    frag: Fragment,
+    trackDetails: LevelDetails,
+    targetBufferTime: number
+  ) {
     // only load if fragment is not loaded or if in audio switch
     const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
 
     // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
-    if (this.audioSwitch || fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
+    if (
+      this.audioSwitch ||
+      fragState === FragmentState.NOT_LOADED ||
+      fragState === FragmentState.PARTIAL
+    ) {
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
       } else if (Number.isFinite(this.initPTS[frag.cc])) {
@@ -704,7 +859,9 @@ class AudioStreamController extends BaseStreamController implements NetworkCompo
         this.nextLoadPosition = frag.start + frag.duration;
         super.loadFragment(frag, trackDetails, targetBufferTime);
       } else {
-        this.log(`Unknown video PTS for continuity counter ${frag.cc}, waiting for video PTS before loading audio fragment ${frag.sn} of level ${this.trackId}`);
+        this.log(
+          `Unknown video PTS for continuity counter ${frag.cc}, waiting for video PTS before loading audio fragment ${frag.sn} of level ${this.trackId}`
+        );
         this.state = State.WAITING_INIT_PTS;
       }
     }

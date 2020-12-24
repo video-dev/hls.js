@@ -19,7 +19,9 @@ export default class LevelKey {
 
   private constructor(absoluteOrBaseURI: string, relativeURL?: string) {
     if (relativeURL) {
-      this._uri = buildAbsoluteURL(absoluteOrBaseURI, relativeURL, { alwaysNormalize: true });
+      this._uri = buildAbsoluteURL(absoluteOrBaseURI, relativeURL, {
+        alwaysNormalize: true,
+      });
     } else {
       this._uri = absoluteOrBaseURI;
     }

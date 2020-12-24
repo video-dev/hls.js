@@ -1,4 +1,9 @@
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustSlidingStart, alignPDT } from '../../../src/utils/discontinuities';
+import {
+  shouldAlignOnDiscontinuities,
+  findDiscontinuousReferenceFrag,
+  adjustSlidingStart,
+  alignPDT,
+} from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,
@@ -182,19 +187,28 @@ describe('level-helper', function () {
 
   it('returns undefined if there are no frags in the previous level', function () {
     const expected = undefined;
-    const actual = findDiscontinuousReferenceFrag({ fragments: [] }, { fragments: mockFrags });
+    const actual = findDiscontinuousReferenceFrag(
+      { fragments: [] },
+      { fragments: mockFrags }
+    );
     expect(actual).to.equal(expected);
   });
 
   it('returns undefined if there are no matching frags in the previous level', function () {
     const expected = undefined;
-    const actual = findDiscontinuousReferenceFrag({ fragments: [{ cc: 10 }] }, { fragments: mockFrags });
+    const actual = findDiscontinuousReferenceFrag(
+      { fragments: [{ cc: 10 }] },
+      { fragments: mockFrags }
+    );
     expect(actual).to.equal(expected);
   });
 
   it('returns undefined if there are no frags in the current level', function () {
     const expected = undefined;
-    const actual = findDiscontinuousReferenceFrag({ fragments: [{ cc: 0 }] }, { fragments: [] });
+    const actual = findDiscontinuousReferenceFrag(
+      { fragments: [{ cc: 0 }] },
+      { fragments: [] }
+    );
     expect(actual).to.equal(expected);
   });
 
@@ -223,7 +237,11 @@ describe('level-helper', function () {
       endCC: 1,
     };
 
-    const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
+    const actual = shouldAlignOnDiscontinuities(
+      lastFrag,
+      lastLevel,
+      curDetails
+    );
     expect(actual).to.be.true;
   });
 
@@ -239,7 +257,11 @@ describe('level-helper', function () {
       cc: 1,
     };
 
-    const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
+    const actual = shouldAlignOnDiscontinuities(
+      lastFrag,
+      lastLevel,
+      curDetails
+    );
     expect(actual).to.be.false;
   });
 
@@ -253,7 +275,11 @@ describe('level-helper', function () {
       cc: 1,
     };
 
-    const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
+    const actual = shouldAlignOnDiscontinuities(
+      lastFrag,
+      lastLevel,
+      curDetails
+    );
     expect(actual).to.be.false;
   });
 });

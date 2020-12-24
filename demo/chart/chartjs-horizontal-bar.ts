@@ -1,7 +1,11 @@
 import Chart from 'chart.js';
 
 // Modify horizontalBar so that each dataset (fragments, timeRanges) draws on the same row (level, track or buffer)
-Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (datasetIndex, index, options) {
+Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (
+  datasetIndex,
+  index,
+  options
+) {
   const chart = this.chart;
   const scale = this._getValueScale();
   const datasets = chart.data.datasets;
@@ -11,8 +15,18 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (da
   scale._parseValue = scaleParseValue;
   const obj = datasets[datasetIndex].data[index];
   const value = scale._parseValue(obj);
-  const start = value.start === undefined ? 0 : value.max >= 0 && value.min >= 0 ? value.min : value.max;
-  const length = value.start === undefined ? value.end : value.max >= 0 && value.min >= 0 ? value.max - value.min : value.min - value.max;
+  const start =
+    value.start === undefined
+      ? 0
+      : value.max >= 0 && value.min >= 0
+      ? value.min
+      : value.max;
+  const length =
+    value.start === undefined
+      ? value.end
+      : value.max >= 0 && value.min >= 0
+      ? value.max - value.min
+      : value.min - value.max;
   const base = scale.getPixelForValue(start);
   const head = scale.getPixelForValue(start + length);
   const size = head - base;
@@ -25,7 +39,12 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (da
   };
 };
 
-Chart.controllers.horizontalBar.prototype.calculateBarIndexPixels = function (datasetIndex, index, ruler, options) {
+Chart.controllers.horizontalBar.prototype.calculateBarIndexPixels = function (
+  datasetIndex,
+  index,
+  ruler,
+  options
+) {
   const rowHeight = options.barThickness;
   const size = rowHeight * options.categoryPercentage;
   const center = ruler.start + (datasetIndex * rowHeight + rowHeight / 2);
@@ -52,7 +71,8 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
   const chartArea: { left; top; right; bottom } = chart.chartArea;
   Chart.helpers.canvas.clipArea(ctx, chartArea);
   if (!this.lineHeight) {
-    this.lineHeight = Math.ceil(ctx.measureText('0').actualBoundingBoxAscent) + 2;
+    this.lineHeight =
+      Math.ceil(ctx.measureText('0').actualBoundingBoxAscent) + 2;
   }
   const lineHeight = this.lineHeight;
   let range = 0;
@@ -86,7 +106,10 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
             view.borderSkipped = false;
           }
         } else {
-          range = range || scale.getValueForPixel(chartArea.right) - scale.getValueForPixel(chartArea.left);
+          range =
+            range ||
+            scale.getValueForPixel(chartArea.right) -
+              scale.getValueForPixel(chartArea.left);
           if (range > 300 || isCue) {
             view.borderWidth = 0;
           }
@@ -113,7 +136,12 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
         }
         if (stats.loaded && stats.total) {
           ctx.fillStyle = 'rgba(50, 20, 100, 0.3)';
-          ctx.fillRect(bounds.x, bounds.y, (bounds.w * stats.loaded) / stats.total, bounds.h);
+          ctx.fillRect(
+            bounds.x,
+            bounds.y,
+            (bounds.w * stats.loaded) / stats.total,
+            bounds.h
+          );
         }
       } else if (isCue) {
         if (obj.active) {
@@ -128,25 +156,56 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
           const snBounds = Object.assign({}, bounds);
           if (obj.cc) {
             const ccLabel = `cc:${obj.cc}`;
-            const ccWidth = Math.min(ctx.measureText(ccLabel).width + 2, snBounds.w / 2 - 2);
+            const ccWidth = Math.min(
+              ctx.measureText(ccLabel).width + 2,
+              snBounds.w / 2 - 2
+            );
             if (ccWidth) {
-              ctx.fillText(ccLabel, snBounds.x + 2, snBounds.y + lineHeight, snBounds.w / 2 - 4);
+              ctx.fillText(
+                ccLabel,
+                snBounds.x + 2,
+                snBounds.y + lineHeight,
+                snBounds.w / 2 - 4
+              );
               snBounds.x += ccWidth;
               snBounds.w -= ccWidth;
             }
           }
           const snLabel = isPart ? `part: ${obj.index}` : `sn: ${obj.sn}`;
-          const textWidth = Math.min(ctx.measureText(snLabel).width + 2, snBounds.w - 2);
-          ctx.fillText(snLabel, snBounds.x + snBounds.w - textWidth, snBounds.y + lineHeight, snBounds.w - 4);
+          const textWidth = Math.min(
+            ctx.measureText(snLabel).width + 2,
+            snBounds.w - 2
+          );
+          ctx.fillText(
+            snLabel,
+            snBounds.x + snBounds.w - textWidth,
+            snBounds.y + lineHeight,
+            snBounds.w - 4
+          );
         }
         if (isCue) {
-          const strLength = Math.min(30, Math.ceil(bounds.w / (lineHeight / 3)));
-          ctx.fillText(('' + obj.content).substr(0, strLength), bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
+          const strLength = Math.min(
+            30,
+            Math.ceil(bounds.w / (lineHeight / 3))
+          );
+          ctx.fillText(
+            ('' + obj.content).substr(0, strLength),
+            bounds.x + 2,
+            bounds.y + bounds.h - 3,
+            bounds.w - 5
+          );
         } else if (!isPart) {
           const float = start !== (start | 0);
-          const fixedDigits = float ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1))) : 0;
+          const fixedDigits = float
+            ? Math.min(5, Math.max(1, Math.floor(bounds.w / 10 - 1)))
+            : 0;
           const startString = hhmmss(start, fixedDigits);
-          ctx.fillText(startString, bounds.x + 2, bounds.y + bounds.h - 3, bounds.w - 5);
+          ctx.fillText(
+            startString,
+            bounds.x + 2,
+            bounds.y + bounds.h - 3,
+            bounds.w - 5
+          );
         }
       }
     }
@@ -219,7 +278,10 @@ export function hhmmss(value, fixedDigits) {
   const h = (value / 3600) | 0;
   const m = ((value / 60) | 0) % 60;
   const s = value % 60;
-  return `${h}:${pad(m, 2)}:${pad(s.toFixed(fixedDigits), fixedDigits ? fixedDigits + 3 : 2)}`.replace(/^(?:0+:?)*(\d.*?)(?:\.0*)?$/, '$1');
+  return `${h}:${pad(m, 2)}:${pad(
+    s.toFixed(fixedDigits),
+    fixedDigits ? fixedDigits + 3 : 2
+  )}`.replace(/^(?:0+:?)*(\d.*?)(?:\.0*)?$/, '$1');
 }
 
 function pad(str, length) {

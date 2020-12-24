@@ -1,5 +1,10 @@
 import { logger } from '../utils/logger';
-import type { BufferOperation, BufferOperationQueues, SourceBuffers, SourceBufferName } from '../types/buffer';
+import type {
+  BufferOperation,
+  BufferOperationQueues,
+  SourceBuffers,
+  SourceBufferName,
+} from '../types/buffer';
 
 export default class BufferOperationQueue {
   private buffers: SourceBuffers;
@@ -46,7 +51,10 @@ export default class BufferOperationQueue {
   public executeNext(type: SourceBufferName, ignoreUpdating?: boolean) {
     const { buffers, queues } = this;
     const sb = buffers[type];
-    console.assert(!sb || ignoreUpdating || !sb.updating, `${type} sourceBuffer must exist, and must not be updating`);
+    console.assert(
+      !sb || ignoreUpdating || !sb.updating,
+      `${type} sourceBuffer must exist, and must not be updating`
+    );
 
     const queue = queues[type];
     if (queue.length) {
@@ -56,7 +64,9 @@ export default class BufferOperationQueue {
         // which do not end with this event must call _onSBUpdateEnd manually
         operation.execute();
       } catch (e) {
-        logger.warn('[buffer-operation-queue]: Unhandled exception executing the current operation');
+        logger.warn(
+          '[buffer-operation-queue]: Unhandled exception executing the current operation'
+        );
         operation.onError(e);
 
         // Only shift the current operation off, otherwise the updateend handler will do this for us

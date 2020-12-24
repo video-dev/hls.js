@@ -27,7 +27,10 @@ export default class ChunkCache {
   }
 }
 
-function concatUint8Arrays(chunks: Array<Uint8Array>, dataLength: number): Uint8Array {
+function concatUint8Arrays(
+  chunks: Array<Uint8Array>,
+  dataLength: number
+): Uint8Array {
   const result = new Uint8Array(dataLength);
   let offset = 0;
   for (let i = 0; i < chunks.length; i++) {

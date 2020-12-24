@@ -1,4 +1,9 @@
-import { findFragmentByPDT, findFragmentByPTS, fragmentWithinToleranceTest, pdtWithinToleranceTest } from '../../../src/controller/fragment-finders';
+import {
+  findFragmentByPDT,
+  findFragmentByPTS,
+  fragmentWithinToleranceTest,
+  pdtWithinToleranceTest,
+} from '../../../src/controller/fragment-finders';
 import { mockFragments } from '../../mocks/data';
 import BinarySearch from '../../../src/utils/binary-search';
 
@@ -27,15 +32,33 @@ describe('Fragment finders', function () {
     });
 
     it('finds a fragment with SN sequential to the previous fragment', function () {
-      const actual = findFragmentByPTS(fragPrevious, mockFragments, bufferEnd, tolerance);
+      const actual = findFragmentByPTS(
+        fragPrevious,
+        mockFragments,
+        bufferEnd,
+        tolerance
+      );
       const resultSN = actual ? actual.sn : -1;
-      expect(actual).to.equal(mockFragments[3], 'Expected sn 3, found sn segment ' + resultSN);
+      expect(actual).to.equal(
+        mockFragments[3],
+        'Expected sn 3, found sn segment ' + resultSN
+      );
       expect(binarySearchSpy).to.have.not.been.called;
     });
 
     it('chooses the fragment with the next SN if its contiguous with the end of the buffer', function () {
-      const actual = findFragmentByPTS(mockFragments[0], mockFragments, mockFragments[0].duration, tolerance);
-      expect(actual).to.equal(mockFragments[1], `expected sn ${mockFragments[1].sn}, but got sn ${actual ? actual.sn : null}`);
+      const actual = findFragmentByPTS(
+        mockFragments[0],
+        mockFragments,
+        mockFragments[0].duration,
+        tolerance
+      );
+      expect(actual).to.equal(
+        mockFragments[1],
+        `expected sn ${mockFragments[1].sn}, but got sn ${
+          actual ? actual.sn : null
+        }`
+      );
       expect(binarySearchSpy).to.have.not.been.called;
     });
 
@@ -61,12 +84,25 @@ describe('Fragment finders', function () {
         },
       ];
       const fragPrevious = fragments[0];
-      const actual = findFragmentByPTS(fragPrevious, fragments, bufferEnd, tolerance);
-      expect(actual).to.equal(fragments[1], `expected sn ${fragments[1].sn}, but got sn ${actual ? actual.sn : null}`);
+      const actual = findFragmentByPTS(
+        fragPrevious,
+        fragments,
+        bufferEnd,
+        tolerance
+      );
+      expect(actual).to.equal(
+        fragments[1],
+        `expected sn ${fragments[1].sn}, but got sn ${
+          actual ? actual.sn : null
+        }`
+      );
     });
 
     it('uses BinarySearch to find a fragment if the subsequent one is not within tolerance', function () {
-      const fragments = [mockFragments[0], mockFragments[mockFragments.length - 1]];
+      const fragments = [
+        mockFragments[0],
+        mockFragments[mockFragments.length - 1],
+      ];
       findFragmentByPTS(fragments[0], fragments, bufferEnd, tolerance);
       expect(binarySearchSpy).to.have.been.calledOnce;
     });
@@ -123,28 +159,49 @@ describe('Fragment finders', function () {
 
   describe('findFragmentByPDT', function () {
     it('finds a fragment with endProgramDateTime greater than the reference PDT', function () {
-      const foundFragment = findFragmentByPDT(mockFragments, fragPrevious.endProgramDateTime + 1);
+      const foundFragment = findFragmentByPDT(
+        mockFragments,
+        fragPrevious.endProgramDateTime + 1
+      );
       expect(foundFragment).to.equal(mockFragments[2]);
     });
 
     it('returns null when the reference pdt is outside of the pdt range of the fragment array', function () {
-      let foundFragment = findFragmentByPDT(mockFragments, mockFragments[0].programDateTime - 1);
+      let foundFragment = findFragmentByPDT(
+        mockFragments,
+        mockFragments[0].programDateTime - 1
+      );
       expect(foundFragment).to.not.exist;
 
-      foundFragment = findFragmentByPDT(mockFragments, mockFragments[mockFragments.length - 1].endProgramDateTime + 1);
+      foundFragment = findFragmentByPDT(
+        mockFragments,
+        mockFragments[mockFragments.length - 1].endProgramDateTime + 1
+      );
       expect(foundFragment).to.not.exist;
     });
 
     it('is able to find the first fragment', function () {
-      const foundFragment = findFragmentByPDT(mockFragments, mockFragments[0].programDateTime);
+      const foundFragment = findFragmentByPDT(
+        mockFragments,
+        mockFragments[0].programDateTime
+      );
       const resultSN = foundFragment ? foundFragment.sn : -1;
-      expect(foundFragment).to.equal(mockFragments[0], 'Expected sn 0, found sn segment ' + resultSN);
+      expect(foundFragment).to.equal(
+        mockFragments[0],
+        'Expected sn 0, found sn segment ' + resultSN
+      );
     });
 
     it('is able to find the last fragment', function () {
-      const foundFragment = findFragmentByPDT(mockFragments, mockFragments[mockFragments.length - 1].programDateTime);
+      const foundFragment = findFragmentByPDT(
+        mockFragments,
+        mockFragments[mockFragments.length - 1].programDateTime
+      );
       const resultSN = foundFragment ? foundFragment.sn : -1;
-      expect(foundFragment).to.equal(mockFragments[4], 'Expected sn 4, found sn segment ' + resultSN);
+      expect(foundFragment).to.equal(
+        mockFragments[4],
+        'Expected sn 4, found sn segment ' + resultSN
+      );
     });
 
     it('is able to find a fragment if the PDT value is 0', function () {

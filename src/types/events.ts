@@ -5,7 +5,14 @@ import type { Part } from '../loader/fragment';
 import type LevelDetails from '../loader/level-details';
 import type { HlsUrlParameters, Level, LevelParsed } from './level';
 import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
-import type { Loader, LoaderContext, LoaderResponse, LoaderStats, PlaylistLevelType, PlaylistLoaderContext } from './loader';
+import type {
+  Loader,
+  LoaderContext,
+  LoaderResponse,
+  LoaderStats,
+  PlaylistLevelType,
+  PlaylistLoaderContext,
+} from './loader';
 import type { Track, TrackSet } from './track';
 import type { SourceBufferName } from './buffer';
 import type { ChunkMetadata } from './transmuxer';

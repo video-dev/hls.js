@@ -1,6 +1,12 @@
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { ManifestParsedData, AudioTracksUpdatedData, ErrorData, LevelLoadingData, AudioTrackLoadedData } from '../types/events';
+import {
+  ManifestParsedData,
+  AudioTracksUpdatedData,
+  ErrorData,
+  LevelLoadingData,
+  AudioTrackLoadedData,
+} from '../types/events';
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType } from '../types/loader';
 import type Hls from '../hls';
@@ -50,11 +56,17 @@ class AudioTrackController extends BasePlaylistController {
     this.selectDefaultTrack = true;
   }
 
-  protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void {
+  protected onManifestParsed(
+    event: Events.MANIFEST_PARSED,
+    data: ManifestParsedData
+  ): void {
     this.tracks = data.audioTracks || [];
   }
 
-  protected onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void {
+  protected onAudioTrackLoaded(
+    event: Events.AUDIO_TRACK_LOADED,
+    data: AudioTrackLoadedData
+  ): void {
     const { id, details } = data;
     const currentTrack = this.tracksInGroup[id];
 
@@ -80,7 +92,10 @@ class AudioTrackController extends BasePlaylistController {
    * If group-ID got update, we re-select the appropriate audio-track with this group-ID matching the currently
    * selected one (based on NAME property).
    */
-  protected onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData): void {
+  protected onLevelLoading(
+    event: Events.LEVEL_LOADING,
+    data: LevelLoadingData
+  ): void {
     const levelInfo = this.hls.levels[data.level];
 
     if (!levelInfo?.audioGroupIds) {
@@ -91,10 +106,15 @@ class AudioTrackController extends BasePlaylistController {
     if (this.groupId !== audioGroupId) {
       this.groupId = audioGroupId;
 
-      const audioTracks = this.tracks.filter((track): boolean => !audioGroupId || track.groupId === audioGroupId);
+      const audioTracks = this.tracks.filter(
+        (track): boolean => !audioGroupId || track.groupId === audioGroupId
+      );
 
       // Disable selectDefaultTrack if there are no default tracks
-      if (this.selectDefaultTrack && !audioTracks.some((track) => track.default)) {
+      if (
+        this.selectDefaultTrack &&
+        !audioTracks.some((track) => track.default)
+      ) {
         this.selectDefaultTrack = false;
       }
 
@@ -112,7 +132,11 @@ class AudioTrackController extends BasePlaylistController {
       return;
     }
 
-    if (data.context.type === PlaylistContextType.AUDIO_TRACK && data.context.id === this.trackId && data.context.groupId === this.groupId) {
+    if (
+      data.context.type === PlaylistContextType.AUDIO_TRACK &&
+      data.context.id === this.trackId &&
+      data.context.groupId === this.groupId
+    ) {
       this.retryLoadingOrFail(data);
     }
   }
@@ -159,9 +183,13 @@ class AudioTrackController extends BasePlaylistController {
 
   private selectInitialTrack(): void {
     const audioTracks = this.tracksInGroup;
-    console.assert(audioTracks.length, 'Initial audio track should be selected when tracks are known');
+    console.assert(
+      audioTracks.length,
+      'Initial audio track should be selected when tracks are known'
+    );
     const currentAudioTrackName = audioTracks[this.trackId]?.name;
-    const trackId = this.findTrackId(currentAudioTrackName) || this.findTrackId();
+    const trackId =
+      this.findTrackId(currentAudioTrackName) || this.findTrackId();
 
     if (trackId !== -1) {
       this.setAudioTrack(trackId);
@@ -199,7 +227,9 @@ class AudioTrackController extends BasePlaylistController {
         try {
           url = hlsUrlParameters.addDirectives(url);
         } catch (error) {
-          this.warn(`Could not construct new URL with HLS Delivery Directives: ${error}`);
+          this.warn(
+            `Could not construct new URL with HLS Delivery Directives: ${error}`
+          );
         }
       }
       // track not retrieved yet, or live playlist we need to (re)load it

@@ -1,9 +1,23 @@
 import type { InitData } from '../utils/mp4-tools';
-import { getDuration, getStartDTS, offsetStartDTS, parseInitSegment } from '../utils/mp4-tools';
+import {
+  getDuration,
+  getStartDTS,
+  offsetStartDTS,
+  parseInitSegment,
+} from '../utils/mp4-tools';
 import { logger } from '../utils/logger';
 import type { TrackSet } from '../types/track';
-import type { InitSegmentData, RemuxedTrack, Remuxer, RemuxerResult } from '../types/remuxer';
-import type { DemuxedAudioTrack, DemuxedTrack, PassthroughVideoTrack } from '../types/demuxer';
+import type {
+  InitSegmentData,
+  RemuxedTrack,
+  Remuxer,
+  RemuxerResult,
+} from '../types/remuxer';
+import type {
+  DemuxedAudioTrack,
+  DemuxedTrack,
+  PassthroughVideoTrack,
+} from '../types/demuxer';
 
 class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
@@ -25,7 +39,11 @@ class PassThroughRemuxer implements Remuxer {
     this.lastEndDTS = null;
   }
 
-  resetInitSegment(initSegment: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined) {
+  resetInitSegment(
+    initSegment: Uint8Array,
+    audioCodec: string | undefined,
+    videoCodec: string | undefined
+  ) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.generateInitSegment(initSegment);
@@ -60,16 +78,34 @@ class PassThroughRemuxer implements Remuxer {
         id: 'main',
       };
     } else if (initData.audio) {
-      tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment, id: 'audio' };
+      tracks.audio = {
+        container: 'audio/mp4',
+        codec: audioCodec,
+        initSegment,
+        id: 'audio',
+      };
     } else if (initData.video) {
-      tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment, id: 'main' };
+      tracks.video = {
+        container: 'video/mp4',
+        codec: videoCodec,
+        initSegment,
+        id: 'main',
+      };
     } else {
-      logger.warn('[passthrough-remuxer.ts]: initSegment does not contain moov or trak boxes.');
+      logger.warn(
+        '[passthrough-remuxer.ts]: initSegment does not contain moov or trak boxes.'
+      );
     }
     this.initTracks = tracks;
   }
 
-  remux(audioTrack: DemuxedAudioTrack, videoTrack: PassthroughVideoTrack, id3Track: DemuxedTrack, textTrack: DemuxedTrack, timeOffset: number): RemuxerResult {
+  remux(
+    audioTrack: DemuxedAudioTrack,
+    videoTrack: PassthroughVideoTrack,
+    id3Track: DemuxedTrack,
+    textTrack: DemuxedTrack,
+    timeOffset: number
+  ): RemuxerResult {
     let { initPTS, lastEndDTS } = this;
     const result: RemuxerResult = {
       audio: undefined,
@@ -113,7 +149,11 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     if (!Number.isFinite(initPTS!)) {
-      this.initPTS = initSegment.initPTS = initPTS = computeInitPTS(initData, data, lastEndDTS);
+      this.initPTS = initSegment.initPTS = initPTS = computeInitPTS(
+        initData,
+        data,
+        lastEndDTS
+      );
     }
 
     const duration = getDuration(data, initData);
@@ -163,6 +203,7 @@ class PassThroughRemuxer implements Remuxer {
   }
 }
 
-const computeInitPTS = (initData, data, timeOffset) => getStartDTS(initData, data) - timeOffset;
+const computeInitPTS = (initData, data, timeOffset) =>
+  getStartDTS(initData, data) - timeOffset;
 
 export default PassThroughRemuxer;

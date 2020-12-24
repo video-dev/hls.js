@@ -75,7 +75,9 @@ function isCodecType(codec: string, type: CodecType): boolean {
 }
 
 function isCodecSupportedInMp4(codec: string, type: CodecType): boolean {
-  return MediaSource.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`);
+  return MediaSource.isTypeSupported(
+    `${type || 'video'}/mp4;codecs="${codec}"`
+  );
 }
 
 export { isCodecType, isCodecSupportedInMp4 };

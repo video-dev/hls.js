@@ -67,9 +67,19 @@ export interface HlsProgressivePerformanceTiming extends HlsPerformanceTiming {
   first: number;
 }
 
-type LoaderOnSuccess<T extends LoaderContext> = (response: LoaderResponse, stats: LoaderStats, context: T, networkDetails: any) => void;
+type LoaderOnSuccess<T extends LoaderContext> = (
+  response: LoaderResponse,
+  stats: LoaderStats,
+  context: T,
+  networkDetails: any
+) => void;
 
-export type LoaderOnProgress<T extends LoaderContext> = (stats: LoaderStats, context: T, data: string | ArrayBuffer, networkDetails: any) => void;
+export type LoaderOnProgress<T extends LoaderContext> = (
+  stats: LoaderStats,
+  context: T,
+  data: string | ArrayBuffer,
+  networkDetails: any
+) => void;
 
 type LoaderOnError<T extends LoaderContext> = (
   error: {
@@ -82,9 +92,17 @@ type LoaderOnError<T extends LoaderContext> = (
   networkDetails: any
 ) => void;
 
-type LoaderOnTimeout<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: any) => void;
+type LoaderOnTimeout<T extends LoaderContext> = (
+  stats: LoaderStats,
+  context: T,
+  networkDetails: any
+) => void;
 
-type LoaderOnAbort<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: any) => void;
+type LoaderOnAbort<T extends LoaderContext> = (
+  stats: LoaderStats,
+  context: T,
+  networkDetails: any
+) => void;
 
 export interface LoaderCallbacks<T extends LoaderContext> {
   onSuccess: LoaderOnSuccess<T>;
@@ -97,7 +115,11 @@ export interface LoaderCallbacks<T extends LoaderContext> {
 export interface Loader<T extends LoaderContext> {
   destroy(): void;
   abort(): void;
-  load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
+  load(
+    context: LoaderContext,
+    config: LoaderConfiguration,
+    callbacks: LoaderCallbacks<T>
+  ): void;
   getResponseHeader(name: string): string | null;
   context: T;
   loader: any;

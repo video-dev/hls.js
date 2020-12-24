@@ -65,7 +65,12 @@ class MP4 {
     let i: string;
     for (i in MP4.types) {
       if (MP4.types.hasOwnProperty(i)) {
-        MP4.types[i] = [i.charCodeAt(0), i.charCodeAt(1), i.charCodeAt(2), i.charCodeAt(3)];
+        MP4.types[i] = [
+          i.charCodeAt(0),
+          i.charCodeAt(1),
+          i.charCodeAt(2),
+          i.charCodeAt(3),
+        ];
       }
     }
 
@@ -244,7 +249,13 @@ class MP4 {
     const avc1Brand = new Uint8Array([97, 118, 99, 49]); // avc1
     const minorVersion = new Uint8Array([0, 0, 0, 1]);
 
-    MP4.FTYP = MP4.box(MP4.types.ftyp, majorBrand, minorVersion, majorBrand, avc1Brand);
+    MP4.FTYP = MP4.box(
+      MP4.types.ftyp,
+      majorBrand,
+      minorVersion,
+      majorBrand,
+      avc1Brand
+    );
     MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, dref));
   }
 
@@ -328,7 +339,12 @@ class MP4 {
   }
 
   static mdia(track) {
-    return MP4.box(MP4.types.mdia, MP4.mdhd(track.timescale, track.duration), MP4.hdlr(track.type), MP4.minf(track));
+    return MP4.box(
+      MP4.types.mdia,
+      MP4.mdhd(track.timescale, track.duration),
+      MP4.hdlr(track.type),
+      MP4.minf(track)
+    );
   }
 
   static mfhd(sequenceNumber) {
@@ -349,14 +365,28 @@ class MP4 {
 
   static minf(track) {
     if (track.type === 'audio') {
-      return MP4.box(MP4.types.minf, MP4.box(MP4.types.smhd, MP4.SMHD), MP4.DINF, MP4.stbl(track));
+      return MP4.box(
+        MP4.types.minf,
+        MP4.box(MP4.types.smhd, MP4.SMHD),
+        MP4.DINF,
+        MP4.stbl(track)
+      );
     } else {
-      return MP4.box(MP4.types.minf, MP4.box(MP4.types.vmhd, MP4.VMHD), MP4.DINF, MP4.stbl(track));
+      return MP4.box(
+        MP4.types.minf,
+        MP4.box(MP4.types.vmhd, MP4.VMHD),
+        MP4.DINF,
+        MP4.stbl(track)
+      );
     }
   }
 
   static moof(sn, baseMediaDecodeTime, track) {
-    return MP4.box(MP4.types.moof, MP4.mfhd(sn), MP4.traf(track, baseMediaDecodeTime));
+    return MP4.box(
+      MP4.types.moof,
+      MP4.mfhd(sn),
+      MP4.traf(track, baseMediaDecodeTime)
+    );
   }
 
   /**
@@ -370,7 +400,12 @@ class MP4 {
       boxes[i] = MP4.trak(tracks[i]);
     }
 
-    return MP4.box.apply(null, [MP4.types.moov, MP4.mvhd(tracks[0].timescale, tracks[0].duration)].concat(boxes).concat(MP4.mvex(tracks)));
+    return MP4.box.apply(
+      null,
+      [MP4.types.moov, MP4.mvhd(tracks[0].timescale, tracks[0].duration)]
+        .concat(boxes)
+        .concat(MP4.mvex(tracks))
+    );
   }
 
   static mvex(tracks) {
@@ -514,7 +549,10 @@ class MP4 {
     // write the sample table
     for (i = 0; i < samples.length; i++) {
       flags = samples[i].flags;
-      bytes[i + 4] = (flags.dependsOn << 4) | (flags.isDependedOn << 2) | flags.hasRedundancy;
+      bytes[i + 4] =
+        (flags.dependsOn << 4) |
+        (flags.isDependedOn << 2) |
+        flags.hasRedundancy;
     }
 
     return MP4.box(MP4.types.sdtp, bytes);
@@ -937,8 +975,12 @@ class MP4 {
   static traf(track, baseMediaDecodeTime) {
     const sampleDependencyTable = MP4.sdtp(track);
     const id = track.id;
-    const upperWordBaseMediaDecodeTime = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
-    const lowerWordBaseMediaDecodeTime = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
+    const upperWordBaseMediaDecodeTime = Math.floor(
+      baseMediaDecodeTime / (UINT32_MAX + 1)
+    );
+    const lowerWordBaseMediaDecodeTime = Math.floor(
+      baseMediaDecodeTime % (UINT32_MAX + 1)
+    );
     return MP4.box(
       MP4.types.traf,
       MP4.box(
@@ -1074,7 +1116,10 @@ class MP4 {
           (size >>> 8) & 0xff,
           size & 0xff, // sample_size
           (flags.isLeading << 2) | flags.dependsOn,
-          (flags.isDependedOn << 6) | (flags.hasRedundancy << 4) | (flags.paddingValue << 1) | flags.isNonSync,
+          (flags.isDependedOn << 6) |
+            (flags.hasRedundancy << 4) |
+            (flags.paddingValue << 1) |
+            flags.isNonSync,
           flags.degradPrio & (0xf0 << 8),
           flags.degradPrio & 0x0f, // sample_flags
           (cts >>> 24) & 0xff,

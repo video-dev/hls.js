@@ -1,6 +1,10 @@
 import * as work from 'webworkify-webpack';
 import { Events } from '../events';
-import Transmuxer, { TransmuxConfig, TransmuxState, isPromise } from '../demux/transmuxer';
+import Transmuxer, {
+  TransmuxConfig,
+  TransmuxState,
+  isPromise,
+} from '../demux/transmuxer';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { getMediaSource } from '../utils/mediasource-helper';
@@ -25,7 +29,12 @@ export default class TransmuxerInterface {
   private onTransmuxComplete: (transmuxResult: TransmuxerResult) => void;
   private onFlush: (chunkMeta: ChunkMetadata) => void;
 
-  constructor(hls: Hls, id: PlaylistLevelType, onTransmuxComplete: (transmuxResult: TransmuxerResult) => void, onFlush: (chunkMeta: ChunkMetadata) => void) {
+  constructor(
+    hls: Hls,
+    id: PlaylistLevelType,
+    onTransmuxComplete: (transmuxResult: TransmuxerResult) => void,
+    onFlush: (chunkMeta: ChunkMetadata) => void
+  ) {
     this.hls = hls;
     this.id = id;
     this.onTransmuxComplete = onTransmuxComplete;
@@ -57,7 +66,9 @@ export default class TransmuxerInterface {
       logger.log('demuxing in webworker');
       let worker;
       try {
-        worker = this.worker = work(require.resolve('../demux/transmuxer-worker.ts'));
+        worker = this.worker = work(
+          require.resolve('../demux/transmuxer-worker.ts')
+        );
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
@@ -66,22 +77,48 @@ export default class TransmuxerInterface {
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: true,
             event: 'demuxerWorker',
-            err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' },
+            err: {
+              message:
+                event.message +
+                ' (' +
+                event.filename +
+                ':' +
+                event.lineno +
+                ')',
+            },
           });
         };
-        worker.postMessage({ cmd: 'init', typeSupported: typeSupported, vendor: vendor, id: id, config: JSON.stringify(config) });
+        worker.postMessage({
+          cmd: 'init',
+          typeSupported: typeSupported,
+          vendor: vendor,
+          id: id,
+          config: JSON.stringify(config),
+        });
       } catch (err) {
         logger.warn('Error in worker:', err);
-        logger.error('Error while initializing DemuxerWorker, fallback to inline');
+        logger.error(
+          'Error while initializing DemuxerWorker, fallback to inline'
+        );
         if (worker) {
           // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
           self.URL.revokeObjectURL(worker.objectURL);
         }
-        this.transmuxer = new Transmuxer(this.observer, typeSupported, config, vendor);
+        this.transmuxer = new Transmuxer(
+          this.observer,
+          typeSupported,
+          config,
+          vendor
+        );
         this.worker = null;
       }
     } else {
-      this.transmuxer = new Transmuxer(this.observer, typeSupported, config, vendor);
+      this.transmuxer = new Transmuxer(
+        this.observer,
+        typeSupported,
+        config,
+        vendor
+      );
     }
   }
 
@@ -128,7 +165,8 @@ export default class TransmuxerInterface {
     const trackSwitch = !(lastFrag && chunkMeta.level === lastFrag.level);
     const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
     const partDiff = this.part ? chunkMeta.part - this.part.index : 1;
-    const contiguous = !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
+    const contiguous =
+      !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
     const now = self.performance.now();
 
     if (trackSwitch || snDiff || frag.stats.parsing.start === 0) {
@@ -144,8 +182,20 @@ export default class TransmuxerInterface {
         contiguous: ${contiguous}
         accurateTimeOffset: ${accurateTimeOffset}
         timeOffset: ${timeOffset}`);
-      const config = new TransmuxConfig(audioCodec, videoCodec, new Uint8Array(initSegmentData), duration, defaultInitPTS);
-      const state = new TransmuxState(discontinuity, contiguous, accurateTimeOffset, trackSwitch, timeOffset);
+      const config = new TransmuxConfig(
+        audioCodec,
+        videoCodec,
+        new Uint8Array(initSegmentData),
+        duration,
+        defaultInitPTS
+      );
+      const state = new TransmuxState(
+        discontinuity,
+        contiguous,
+        accurateTimeOffset,
+        trackSwitch,
+        timeOffset
+      );
       this.configureTransmuxer(config, state);
     }
 
@@ -191,12 +241,18 @@ export default class TransmuxerInterface {
           this.handleFlushResult(data, chunkMeta);
         });
       } else {
-        this.handleFlushResult(transmuxResult as Array<TransmuxerResult>, chunkMeta);
+        this.handleFlushResult(
+          transmuxResult as Array<TransmuxerResult>,
+          chunkMeta
+        );
       }
     }
   }
 
-  private handleFlushResult(results: Array<TransmuxerResult>, chunkMeta: ChunkMetadata) {
+  private handleFlushResult(
+    results: Array<TransmuxerResult>,
+    chunkMeta: ChunkMetadata
+  ) {
     results.forEach((result) => {
       this.handleTransmuxComplete(result);
     });

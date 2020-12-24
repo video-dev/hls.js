@@ -4,10 +4,20 @@ import type { CaptionScreen, Row } from './cea-608-parser';
 const WHITESPACE_CHAR = /\s/;
 
 export interface CuesInterface {
-  newCue(track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[];
+  newCue(
+    track: TextTrack | null,
+    startTime: number,
+    endTime: number,
+    captionScreen: CaptionScreen
+  ): VTTCue[];
 }
 
-export function newCue(track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[] {
+export function newCue(
+  track: TextTrack | null,
+  startTime: number,
+  endTime: number,
+  captionScreen: CaptionScreen
+): VTTCue[] {
   const result: VTTCue[] = [];
   let row: Row;
   // the type data states this is VTTCue, but it can potentially be a TextTrackCue on old browsers

@@ -19,7 +19,13 @@ export default class OutputFilter {
       return;
     }
 
-    this.timelineController.addCues(this.trackName, this.startTime, this.endTime as number, this.screen as CaptionScreen, this.cueRanges);
+    this.timelineController.addCues(
+      this.trackName,
+      this.startTime,
+      this.endTime as number,
+      this.screen as CaptionScreen,
+      this.cueRanges
+    );
     this.startTime = null;
   }
 

@@ -5,7 +5,18 @@ const sinon = require('sinon');
 /**
  * All public methods of Hls instance
  */
-const publicMethods = ['trigger', 'on', 'off', 'destroy', 'attachMedia', 'loadSource', 'startLoad', 'stopLoad', 'swapAudioCodec', 'recoverMediaError'];
+const publicMethods = [
+  'trigger',
+  'on',
+  'off',
+  'destroy',
+  'attachMedia',
+  'loadSource',
+  'startLoad',
+  'stopLoad',
+  'swapAudioCodec',
+  'recoverMediaError',
+];
 
 export default class HlsMock {
   // TODO: static properties

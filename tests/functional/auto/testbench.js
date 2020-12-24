@@ -11,7 +11,8 @@ function setupConsoleLogRedirection() {
 
   // append log message
   function append(methodName, msg) {
-    var a = new Date().toISOString().replace('T', ' ').replace('Z', '') + ': ' + msg;
+    var a =
+      new Date().toISOString().replace('T', ' ').replace('Z', '') + ': ' + msg;
     var text = document.createTextNode(a);
     var line = document.createElement('pre');
     line.className = 'line line-' + methodName;
@@ -64,7 +65,11 @@ function objectAssign(target, firstSource) {
     }
 
     var keysArray = Object.keys(Object(nextSource));
-    for (var nextIndex = 0, len = keysArray.length; nextIndex < len; nextIndex++) {
+    for (
+      var nextIndex = 0, len = keysArray.length;
+      nextIndex < len;
+      nextIndex++
+    ) {
       var nextKey = keysArray[nextIndex];
       var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
       if (desc !== undefined && desc.enumerable) {
@@ -109,7 +114,12 @@ function startStream(streamUrl, config, callback, autoplay) {
         var playPromise = video.play();
         if (playPromise) {
           playPromise.catch(function (error) {
-            console.log('[test] > video.play() failed with error: ' + error.name + ' ' + error.message);
+            console.log(
+              '[test] > video.play() failed with error: ' +
+                error.name +
+                ' ' +
+                error.message
+            );
             if (error.name === 'NotAllowedError') {
               console.log('[test] > Attempting to play with video muted');
               video.muted = true;
@@ -124,7 +134,9 @@ function startStream(streamUrl, config, callback, autoplay) {
         console.log('[test] > hlsjs fatal error :' + data.details);
         if (data.details === Hls.ErrorDetails.INTERNAL_EXCEPTION) {
           console.log('[test] > exception in :' + data.event);
-          console.log(data.err.stack ? JSON.stringify(data.err.stack) : data.err.message);
+          console.log(
+            data.err.stack ? JSON.stringify(data.err.stack) : data.err.message
+          );
         }
         callback({ code: data.details, logs: logString });
       }

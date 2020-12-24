@@ -124,21 +124,37 @@ describe('AudioTrackController', function () {
     // group has switched
     expect(audioTrackController.audioGroupId).to.equal(newGroupId);
     // name is still the same
-    expect(tracks[audioTrackController.audioTrack].name).to.equal(audioTrackName);
+    expect(tracks[audioTrackController.audioTrack].name).to.equal(
+      audioTrackName
+    );
   });
 
   describe('shouldLoadTrack', function () {
     it('should not need loading because the audioTrack is embedded in the main playlist', function () {
       audioTrackController.canLoad = true;
-      expect(audioTrackController.shouldLoadTrack({ details: { live: true } })).to.be.false;
-      expect(audioTrackController.shouldLoadTrack({ details: null })).to.be.false;
+      expect(audioTrackController.shouldLoadTrack({ details: { live: true } }))
+        .to.be.false;
+      expect(audioTrackController.shouldLoadTrack({ details: null })).to.be
+        .false;
     });
 
     it('should need loading because the track has not been loaded yet', function () {
       audioTrackController.canLoad = true;
-      expect(audioTrackController.shouldLoadTrack({ details: { live: true }, url: 'http://example.com/manifest.m3u8' }), 'track 1').to.be.true;
+      expect(
+        audioTrackController.shouldLoadTrack({
+          details: { live: true },
+          url: 'http://example.com/manifest.m3u8',
+        }),
+        'track 1'
+      ).to.be.true;
 
-      expect(audioTrackController.shouldLoadTrack({ details: null, url: 'http://example.com/manifest.m3u8' }), 'track 2').to.be.true;
+      expect(
+        audioTrackController.shouldLoadTrack({
+          details: null,
+          url: 'http://example.com/manifest.m3u8',
+        }),
+        'track 2'
+      ).to.be.true;
     });
   });
 
@@ -164,16 +180,24 @@ describe('AudioTrackController', function () {
       // current track name
       const audioTrackName = tracks[audioTrackController.audioTrack].name;
 
-      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, levelLoadedEvent);
+      audioTrackController.onLevelLoading(
+        Events.LEVEL_LOADING,
+        levelLoadedEvent
+      );
 
       // group has switched
       expect(audioTrackController.audioGroupId).to.equal(newGroupId);
       // name is still the same
-      expect(tracks[audioTrackController.audioTrack].name).to.equal(audioTrackName);
+      expect(tracks[audioTrackController.audioTrack].name).to.equal(
+        audioTrackName
+      );
     });
 
     it('should load audio tracks with a url', function () {
-      const shouldLoadTrack = sinon.spy(audioTrackController, 'shouldLoadTrack');
+      const shouldLoadTrack = sinon.spy(
+        audioTrackController,
+        'shouldLoadTrack'
+      );
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithUrl = {
         groupId: '1',
@@ -203,14 +227,25 @@ describe('AudioTrackController', function () {
 
       expect(shouldLoadTrack).to.have.been.calledTwice;
       expect(shouldLoadTrack).to.have.been.calledWith(trackWithUrl);
-      expect(shouldLoadTrack.firstCall.returnValue, false, 'expected shouldLoadTrack to return false before startLoad() is called');
-      expect(shouldLoadTrack.secondCall.returnValue, true, 'expected shouldLoadTrack to return true after startLoad() is called');
+      expect(
+        shouldLoadTrack.firstCall.returnValue,
+        false,
+        'expected shouldLoadTrack to return false before startLoad() is called'
+      );
+      expect(
+        shouldLoadTrack.secondCall.returnValue,
+        true,
+        'expected shouldLoadTrack to return true after startLoad() is called'
+      );
 
       expect(audioTrackLoadingCallback).to.have.been.calledOnce;
     });
 
     it('should not attempt to load audio tracks without a url', function () {
-      const shouldLoadTrack = sinon.spy(audioTrackController, 'shouldLoadTrack');
+      const shouldLoadTrack = sinon.spy(
+        audioTrackController,
+        'shouldLoadTrack'
+      );
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithOutUrl = tracks[0];
 
@@ -269,7 +304,10 @@ describe('AudioTrackController', function () {
     });
 
     it('should retry track loading if track has not changed', function () {
-      const retryLoadingOrFail = sinon.spy(audioTrackController, 'retryLoadingOrFail');
+      const retryLoadingOrFail = sinon.spy(
+        audioTrackController,
+        'retryLoadingOrFail'
+      );
       const currentTrackId = 4;
       const currentGroupId = 'aac';
       audioTrackController.trackId = currentTrackId;
@@ -286,7 +324,10 @@ describe('AudioTrackController', function () {
           groupId: currentGroupId,
         },
       });
-      expect(audioTrackController.audioTrack, 'track index/id is not changed as there is no redundant track to choose from').to.equal(4);
+      expect(
+        audioTrackController.audioTrack,
+        'track index/id is not changed as there is no redundant track to choose from'
+      ).to.equal(4);
       expect(retryLoadingOrFail).to.have.been.calledOnce;
     });
   });

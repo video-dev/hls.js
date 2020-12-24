@@ -22,7 +22,9 @@ try {
       // 1.2.3-0.canary.501
       // 1.2.3-0.caaanary.custom => bad
       // 1.2.3-0.caaanary.custom.0.canary.503 => now lower than 1.2.3-0.canary.501
-      throw new Error(`It's possible that "${newVersion}" has a lower precedense than an existing canary version which is not allowed.`);
+      throw new Error(
+        `It's possible that "${newVersion}" has a lower precedense than an existing canary version which is not allowed.`
+      );
     }
   } else {
     // bump patch in version from latest git tag
@@ -41,16 +43,23 @@ try {
 
     const suffix =
       process.env.NETLIFY && process.env.CONTEXT === 'deploy-preview'
-        ? `pr.${process.env.REVIEW_ID /* set by netlify */}.${getCommitHash().substr(0, 8)}`
+        ? `pr.${
+            process.env.REVIEW_ID /* set by netlify */
+          }.${getCommitHash().substr(0, 8)}`
         : process.env.NETLIFY && process.env.CONTEXT === 'branch-deploy'
-        ? `branch.${process.env.BRANCH /* set by netlify */.replace(/[^a-zA-Z0-9]/g, '-')}.${getCommitHash().substr(0, 8)}`
+        ? `branch.${process.env.BRANCH /* set by netlify */.replace(
+            /[^a-zA-Z0-9]/g,
+            '-'
+          )}.${getCommitHash().substr(0, 8)}`
         : `0.canary.${getCommitNum()}`;
 
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
   }
 
   if (!versionParser.isGreaterOrEqual(newVersion, latestVersion)) {
-    throw new Error(`New version "${newVersion}" is not >= latest version "${latestVersion}" on this branch.`);
+    throw new Error(
+      `New version "${newVersion}" is not >= latest version "${latestVersion}" on this branch.`
+    );
   }
   packageJson.version = newVersion;
   fs.writeFileSync('./package.json', JSON.stringify(packageJson));

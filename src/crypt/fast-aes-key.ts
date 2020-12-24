@@ -8,6 +8,9 @@ export default class FastAESKey {
   }
 
   expandKey() {
-    return this.subtle.importKey('raw', this.key, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
+    return this.subtle.importKey('raw', this.key, { name: 'AES-CBC' }, false, [
+      'encrypt',
+      'decrypt',
+    ]);
   }
 }

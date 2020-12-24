@@ -24,7 +24,11 @@ const MAX_LICENSE_REQUEST_FAILURES = 3;
  * @returns {Array<MediaSystemConfiguration>} An array of supported configurations
  */
 
-const createWidevineMediaKeySystemConfigurations = function (audioCodecs: string[], videoCodecs: string[], drmSystemOptions: DRMSystemOptions): MediaKeySystemConfiguration[] {
+const createWidevineMediaKeySystemConfigurations = function (
+  audioCodecs: string[],
+  videoCodecs: string[],
+  drmSystemOptions: DRMSystemOptions
+): MediaKeySystemConfiguration[] {
   /* jshint ignore:line */
   const baseConfig: MediaKeySystemConfiguration = {
     // initDataTypes: ['keyids', 'mp4'],
@@ -72,7 +76,11 @@ const getSupportedMediaKeySystemConfigurations = function (
 ): MediaKeySystemConfiguration[] {
   switch (keySystem) {
     case KeySystems.WIDEVINE:
-      return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs, drmSystemOptions);
+      return createWidevineMediaKeySystemConfigurations(
+        audioCodecs,
+        videoCodecs,
+        drmSystemOptions
+      );
     default:
       throw new Error(`Unknown key-system: ${keySystem}`);
   }
@@ -156,7 +164,9 @@ class EMEController implements ComponentAPI {
         return this._widevineLicenseUrl;
     }
 
-    throw new Error(`no license server URL configured for key-system "${keySystem}"`);
+    throw new Error(
+      `no license server URL configured for key-system "${keySystem}"`
+    );
   }
 
   /**
@@ -167,16 +177,31 @@ class EMEController implements ComponentAPI {
    * @param {Array<string>} videoCodecs List of required video codecs to support
    * @throws When a unsupported KeySystem is passed
    */
-  private _attemptKeySystemAccess(keySystem: KeySystems, audioCodecs: string[], videoCodecs: string[]) {
+  private _attemptKeySystemAccess(
+    keySystem: KeySystems,
+    audioCodecs: string[],
+    videoCodecs: string[]
+  ) {
     // This can throw, but is caught in event handler callpath
-    const mediaKeySystemConfigs = getSupportedMediaKeySystemConfigurations(keySystem, audioCodecs, videoCodecs, this._drmSystemOptions);
+    const mediaKeySystemConfigs = getSupportedMediaKeySystemConfigurations(
+      keySystem,
+      audioCodecs,
+      videoCodecs,
+      this._drmSystemOptions
+    );
 
     logger.log('Requesting encrypted media key-system access');
 
     // expecting interface like window.navigator.requestMediaKeySystemAccess
-    const keySystemAccessPromise = this.requestMediaKeySystemAccess(keySystem, mediaKeySystemConfigs);
+    const keySystemAccessPromise = this.requestMediaKeySystemAccess(
+      keySystem,
+      mediaKeySystemConfigs
+    );
 
-    this.mediaKeysPromise = keySystemAccessPromise.then((mediaKeySystemAccess) => this._onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess));
+    this.mediaKeysPromise = keySystemAccessPromise.then(
+      (mediaKeySystemAccess) =>
+        this._onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess)
+    );
 
     keySystemAccessPromise.catch((err) => {
       logger.error(`Failed to obtain key-system "${keySystem}" access:`, err);
@@ -197,7 +222,10 @@ class EMEController implements ComponentAPI {
    * @param {string} keySystem
    * @param {MediaKeySystemAccess} mediaKeySystemAccess https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess
    */
-  private _onMediaKeySystemAccessObtained(keySystem: KeySystems, mediaKeySystemAccess: MediaKeySystemAccess): Promise<MediaKeys> {
+  private _onMediaKeySystemAccessObtained(
+    keySystem: KeySystems,
+    mediaKeySystemAccess: MediaKeySystemAccess
+  ): Promise<MediaKeys> {
     logger.log(`Access for key-system "${keySystem}" obtained`);
 
     const mediaKeysListItem: MediaKeysListItem = {
@@ -265,11 +293,18 @@ class EMEController implements ComponentAPI {
    * @param {MediaKeySession} keySession
    * @param {ArrayBuffer} message
    */
-  private _onKeySessionMessage(keySession: MediaKeySession, message: ArrayBuffer) {
+  private _onKeySessionMessage(
+    keySession: MediaKeySession,
+    message: ArrayBuffer
+  ) {
     logger.log('Got EME message event, creating license request');
 
     this._requestLicense(message, (data: ArrayBuffer) => {
-      logger.log(`Received license data (length: ${data ? data.byteLength : data}), updating key-session`);
+      logger.log(
+        `Received license data (length: ${
+          data ? data.byteLength : data
+        }), updating key-session`
+      );
       keySession.update(data);
     });
   }
@@ -282,7 +317,9 @@ class EMEController implements ComponentAPI {
     logger.log(`Media is encrypted using "${e.initDataType}" init data type`);
 
     if (!this.mediaKeysPromise) {
-      logger.error('Fatal: Media is encrypted but no CDM access or no keys have been requested');
+      logger.error(
+        'Fatal: Media is encrypted but no CDM access or no keys have been requested'
+      );
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
@@ -300,7 +337,9 @@ class EMEController implements ComponentAPI {
     };
 
     // Could use `Promise.finally` but some Promise polyfills are missing it
-    this.mediaKeysPromise.then(finallySetKeyAndStartSession).catch(finallySetKeyAndStartSession);
+    this.mediaKeysPromise
+      .then(finallySetKeyAndStartSession)
+      .catch(finallySetKeyAndStartSession);
   };
 
   /**
@@ -308,14 +347,18 @@ class EMEController implements ComponentAPI {
    */
   private _attemptSetMediaKeys(mediaKeys?: MediaKeys) {
     if (!this._media) {
-      throw new Error('Attempted to set mediaKeys without first attaching a media element');
+      throw new Error(
+        'Attempted to set mediaKeys without first attaching a media element'
+      );
     }
 
     if (!this._hasSetMediaKeys) {
       // FIXME: see if we can/want/need-to really to deal with several potential key-sessions?
       const keysListItem = this._mediaKeysList[0];
       if (!keysListItem || !keysListItem.mediaKeys) {
-        logger.error('Fatal: Media is encrypted but no CDM access or no keys have been obtained yet');
+        logger.error(
+          'Fatal: Media is encrypted but no CDM access or no keys have been obtained yet'
+        );
         this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.KEY_SYSTEM_ERROR,
           details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
@@ -334,11 +377,16 @@ class EMEController implements ComponentAPI {
   /**
    * @private
    */
-  private _generateRequestWithPreferredKeySession(initDataType: string, initData: ArrayBuffer | null) {
+  private _generateRequestWithPreferredKeySession(
+    initDataType: string,
+    initData: ArrayBuffer | null
+  ) {
     // FIXME: see if we can/want/need-to really to deal with several potential key-sessions?
     const keysListItem = this._mediaKeysList[0];
     if (!keysListItem) {
-      logger.error('Fatal: Media is encrypted but not any key-system access has been obtained yet');
+      logger.error(
+        'Fatal: Media is encrypted but not any key-system access has been obtained yet'
+      );
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
@@ -365,7 +413,9 @@ class EMEController implements ComponentAPI {
 
     // initData is null if the media is not CORS-same-origin
     if (!initData) {
-      logger.warn('Fatal: initData required for generating a key session is null');
+      logger.warn(
+        'Fatal: initData required for generating a key session is null'
+      );
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_INIT_DATA,
@@ -374,7 +424,9 @@ class EMEController implements ComponentAPI {
       return;
     }
 
-    logger.log(`Generating key-session request for "${initDataType}" init data type`);
+    logger.log(
+      `Generating key-session request for "${initDataType}" init data type`
+    );
     keysListItem.mediaKeysSessionInitialized = true;
 
     keySession
@@ -400,7 +452,11 @@ class EMEController implements ComponentAPI {
    * @returns {XMLHttpRequest} Unsent (but opened state) XHR object
    * @throws if XMLHttpRequest construction failed
    */
-  private _createLicenseXhr(url: string, keyMessage: ArrayBuffer, callback: (data: ArrayBuffer) => void): XMLHttpRequest {
+  private _createLicenseXhr(
+    url: string,
+    keyMessage: ArrayBuffer,
+    callback: (data: ArrayBuffer) => void
+  ): XMLHttpRequest {
     const xhr = new XMLHttpRequest();
     const licenseXhrSetup = this._licenseXhrSetup;
 
@@ -425,7 +481,13 @@ class EMEController implements ComponentAPI {
 
     // Because we set responseType to ArrayBuffer here, callback is typed as handling only array buffers
     xhr.responseType = 'arraybuffer';
-    xhr.onreadystatechange = this._onLicenseRequestReadyStageChange.bind(this, xhr, url, keyMessage, callback);
+    xhr.onreadystatechange = this._onLicenseRequestReadyStageChange.bind(
+      this,
+      xhr,
+      url,
+      keyMessage,
+      callback
+    );
     return xhr;
   }
 
@@ -436,7 +498,12 @@ class EMEController implements ComponentAPI {
    * @param {ArrayBuffer} keyMessage Message data issued by key-system
    * @param {function} callback Called when XHR has succeeded
    */
-  private _onLicenseRequestReadyStageChange(xhr: XMLHttpRequest, url: string, keyMessage: ArrayBuffer, callback: (data: ArrayBuffer) => void) {
+  private _onLicenseRequestReadyStageChange(
+    xhr: XMLHttpRequest,
+    url: string,
+    keyMessage: ArrayBuffer,
+    callback: (data: ArrayBuffer) => void
+  ) {
     switch (xhr.readyState) {
       case 4:
         if (xhr.status === 200) {
@@ -444,11 +511,15 @@ class EMEController implements ComponentAPI {
           logger.log('License request succeeded');
 
           if (xhr.responseType !== 'arraybuffer') {
-            logger.warn('xhr response type was not set to the expected arraybuffer for license request');
+            logger.warn(
+              'xhr response type was not set to the expected arraybuffer for license request'
+            );
           }
           callback(xhr.response);
         } else {
-          logger.error(`License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`);
+          logger.error(
+            `License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`
+          );
           this._requestLicenseFailureCount++;
           if (this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES) {
             this.hls.trigger(Events.ERROR, {
@@ -459,8 +530,11 @@ class EMEController implements ComponentAPI {
             return;
           }
 
-          const attemptsLeft = MAX_LICENSE_REQUEST_FAILURES - this._requestLicenseFailureCount + 1;
-          logger.warn(`Retrying license request, ${attemptsLeft} attempts left`);
+          const attemptsLeft =
+            MAX_LICENSE_REQUEST_FAILURES - this._requestLicenseFailureCount + 1;
+          logger.warn(
+            `Retrying license request, ${attemptsLeft} attempts left`
+          );
           this._requestLicense(keyMessage, callback);
         }
         break;
@@ -474,7 +548,10 @@ class EMEController implements ComponentAPI {
    * @returns {ArrayBuffer} Challenge data posted to license server
    * @throws if KeySystem is unsupported
    */
-  private _generateLicenseRequestChallenge(keysListItem: MediaKeysListItem, keyMessage: ArrayBuffer): ArrayBuffer {
+  private _generateLicenseRequestChallenge(
+    keysListItem: MediaKeysListItem,
+    keyMessage: ArrayBuffer
+  ): ArrayBuffer {
     switch (keysListItem.mediaKeySystemDomain) {
       // case KeySystems.PLAYREADY:
       // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
@@ -503,7 +580,9 @@ class EMEController implements ComponentAPI {
         return keyMessage;
     }
 
-    throw new Error(`unsupported key-system: ${keysListItem.mediaKeySystemDomain}`);
+    throw new Error(
+      `unsupported key-system: ${keysListItem.mediaKeySystemDomain}`
+    );
   }
 
   /**
@@ -511,12 +590,17 @@ class EMEController implements ComponentAPI {
    * @param keyMessage
    * @param callback
    */
-  private _requestLicense(keyMessage: ArrayBuffer, callback: (data: ArrayBuffer) => void) {
+  private _requestLicense(
+    keyMessage: ArrayBuffer,
+    callback: (data: ArrayBuffer) => void
+  ) {
     logger.log('Requesting content license for key-system');
 
     const keysListItem = this._mediaKeysList[0];
     if (!keysListItem) {
-      logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
+      logger.error(
+        'Fatal error: Media is encrypted but no key-system access has been obtained yet'
+      );
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
@@ -529,7 +613,10 @@ class EMEController implements ComponentAPI {
       const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
       const xhr = this._createLicenseXhr(url, keyMessage, callback);
       logger.log(`Sending license request to URL: ${url}`);
-      const challenge = this._generateLicenseRequestChallenge(keysListItem, keyMessage);
+      const challenge = this._generateLicenseRequestChallenge(
+        keysListItem,
+        keyMessage
+      );
       xhr.send(challenge);
     } catch (e) {
       logger.error(`Failure requesting DRM license: ${e}`);
@@ -587,8 +674,16 @@ class EMEController implements ComponentAPI {
       return;
     }
 
-    const audioCodecs = data.levels.map((level) => level.audioCodec).filter((audioCodec: string | undefined): audioCodec is string => !!audioCodec);
-    const videoCodecs = data.levels.map((level) => level.videoCodec).filter((videoCodec: string | undefined): videoCodec is string => !!videoCodec);
+    const audioCodecs = data.levels
+      .map((level) => level.audioCodec)
+      .filter(
+        (audioCodec: string | undefined): audioCodec is string => !!audioCodec
+      );
+    const videoCodecs = data.levels
+      .map((level) => level.videoCodec)
+      .filter(
+        (videoCodec: string | undefined): videoCodec is string => !!videoCodec
+      );
 
     this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
   }

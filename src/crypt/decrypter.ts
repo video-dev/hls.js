@@ -22,7 +22,11 @@ export default class Decrypter {
   private currentIV: ArrayBuffer | null = null;
   private currentResult: ArrayBuffer | null = null;
 
-  constructor(observer: HlsEventEmitter, config: HlsConfig, { removePKCS7Padding = true } = {}) {
+  constructor(
+    observer: HlsEventEmitter,
+    config: HlsConfig,
+    { removePKCS7Padding = true } = {}
+  ) {
     this.observer = observer;
     this.config = config;
     this.removePKCS7Padding = removePKCS7Padding;
@@ -31,7 +35,9 @@ export default class Decrypter {
       try {
         const browserCrypto = self.crypto;
         if (browserCrypto) {
-          this.subtle = browserCrypto.subtle || ((browserCrypto as any).webkitSubtle as SubtleCrypto);
+          this.subtle =
+            browserCrypto.subtle ||
+            ((browserCrypto as any).webkitSubtle as SubtleCrypto);
         } else {
           this.config.enableSoftwareAES = true;
         }
@@ -68,7 +74,11 @@ export default class Decrypter {
     }
   }
 
-  public softwareDecrypt(data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): ArrayBuffer | null {
+  public softwareDecrypt(
+    data: Uint8Array,
+    key: ArrayBuffer,
+    iv: ArrayBuffer
+  ): ArrayBuffer | null {
     const { currentIV, currentResult, remainderData } = this;
     this.logOnce('JS AES decrypt');
     // The output is staggered during progressive parsing - the current result is cached, and emitted on the next call
@@ -108,7 +118,11 @@ export default class Decrypter {
     return result;
   }
 
-  public webCryptoDecrypt(data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): Promise<ArrayBuffer> {
+  public webCryptoDecrypt(
+    data: Uint8Array,
+    key: ArrayBuffer,
+    iv: ArrayBuffer
+  ): Promise<ArrayBuffer> {
     const subtle = this.subtle;
     if (this.key !== key || !this.fastAesKey) {
       this.key = key;

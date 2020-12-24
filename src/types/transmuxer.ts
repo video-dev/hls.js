@@ -15,13 +15,22 @@ export class ChunkMetadata {
   public readonly size: number;
   public readonly partial: boolean;
   public readonly transmuxing: HlsChunkPerformanceTiming = getNewPerformanceTiming();
-  public readonly buffering: { [key in SourceBufferName]: HlsChunkPerformanceTiming } = {
+  public readonly buffering: {
+    [key in SourceBufferName]: HlsChunkPerformanceTiming;
+  } = {
     audio: getNewPerformanceTiming(),
     video: getNewPerformanceTiming(),
     audiovideo: getNewPerformanceTiming(),
   };
 
-  constructor(level: number, sn: number, id: number, size = 0, part = -1, partial = false) {
+  constructor(
+    level: number,
+    sn: number,
+    id: number,
+    size = 0,
+    part = -1,
+    partial = false
+  ) {
     this.level = level;
     this.sn = sn;
     this.id = id;

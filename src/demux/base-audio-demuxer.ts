@@ -1,5 +1,11 @@
 import * as ID3 from '../demux/id3';
-import type { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack, AppendedAudioFrame } from '../types/demuxer';
+import type {
+  DemuxerResult,
+  Demuxer,
+  DemuxedTrack,
+  DemuxedAudioTrack,
+  AppendedAudioFrame,
+} from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
@@ -31,7 +37,11 @@ class BaseAudioDemuxer implements Demuxer {
     return false;
   }
 
-  appendFrame(track: DemuxedAudioTrack, data: Uint8Array, offset: number): AppendedAudioFrame | void {}
+  appendFrame(
+    track: DemuxedAudioTrack,
+    data: Uint8Array,
+    offset: number
+  ): AppendedAudioFrame | void {}
 
   // feed incoming data to the front of the parsing pipeline
   demux(data: Uint8Array, timeOffset: number): DemuxerResult {
@@ -55,7 +65,11 @@ class BaseAudioDemuxer implements Demuxer {
 
     // more expressive than alternative: id3Data?.length
     if (id3Data && id3Data.length > 0) {
-      id3Track.samples.push({ pts: this.initPTS, dts: this.initPTS, data: id3Data });
+      id3Track.samples.push({
+        pts: this.initPTS,
+        dts: this.initPTS,
+        data: id3Data,
+      });
     }
 
     pts = this.initPTS;
@@ -98,8 +112,14 @@ class BaseAudioDemuxer implements Demuxer {
     };
   }
 
-  demuxSampleAes(data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
-    return Promise.reject(new Error(`[${this}] This demuxer does not support Sample-AES decryption`));
+  demuxSampleAes(
+    data: Uint8Array,
+    decryptData: Uint8Array,
+    timeOffset: number
+  ): Promise<DemuxerResult> {
+    return Promise.reject(
+      new Error(`[${this}] This demuxer does not support Sample-AES decryption`)
+    );
   }
 
   flush(timeOffset: number): DemuxerResult {
@@ -129,7 +149,12 @@ class BaseAudioDemuxer implements Demuxer {
  *    use timestamp unless it is undefined, NaN or Infinity
  * </p>
  */
-export const initPTSFn = (timestamp: number | undefined, timeOffset: number): number => {
-  return Number.isFinite(timestamp as number) ? timestamp! * 90 : timeOffset * 90000;
+export const initPTSFn = (
+  timestamp: number | undefined,
+  timeOffset: number
+): number => {
+  return Number.isFinite(timestamp as number)
+    ? timestamp! * 90
+    : timeOffset * 90000;
 };
 export default BaseAudioDemuxer;

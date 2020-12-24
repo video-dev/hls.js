@@ -16,7 +16,9 @@ describe('Hls', function () {
 
     it('should return a default bandwidth estimate', function () {
       const hls = new Hls();
-      expect(hls.bandwidthEstimate).to.equal(hlsDefaultConfig.abrEwmaDefaultEstimate);
+      expect(hls.bandwidthEstimate).to.equal(
+        hlsDefaultConfig.abrEwmaDefaultEstimate
+      );
     });
   });
 });

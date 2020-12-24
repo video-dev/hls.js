@@ -1,5 +1,7 @@
 import Hls from '../../../src/hls';
-import GapController, { SKIP_BUFFER_RANGE_START } from '../../../src/controller/gap-controller';
+import GapController, {
+  SKIP_BUFFER_RANGE_START,
+} from '../../../src/controller/gap-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { Events } from '../../../src/events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
@@ -17,7 +19,12 @@ describe('GapController', function () {
       currentTime: 0,
     };
     config = hls.config;
-    gapController = new GapController(config, media, new FragmentTracker(hls), hls);
+    gapController = new GapController(
+      config,
+      media,
+      new FragmentTracker(hls),
+      hls
+    );
     triggerSpy = sinon.spy(hls, 'trigger');
   });
 
@@ -96,14 +103,18 @@ describe('GapController', function () {
     });
 
     it('should try to jump partial fragments when detected', function () {
-      sandbox.stub(gapController.fragmentTracker, 'getPartialFragment').returns({});
+      sandbox
+        .stub(gapController.fragmentTracker, 'getPartialFragment')
+        .returns({});
       const skipHoleStub = sandbox.stub(gapController, '_trySkipBufferHole');
       gapController._tryFixBufferStall({ len: 0 });
       expect(skipHoleStub).to.have.been.calledOnce;
     });
 
     it('should not try to jump partial fragments when none are detected', function () {
-      sandbox.stub(gapController.fragmentTracker, 'getPartialFragment').returns(null);
+      sandbox
+        .stub(gapController.fragmentTracker, 'getPartialFragment')
+        .returns(null);
       const skipHoleStub = sandbox.stub(gapController, '_trySkipBufferHole');
       gapController._tryFixBufferStall({ len: 0 });
       expect(skipHoleStub).to.have.not.been.called;

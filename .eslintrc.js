@@ -27,7 +27,8 @@ module.exports = {
       2,
       {
         name: 'window',
-        message: 'Use `self` instead of `window` to access the global context everywhere (including workers).',
+        message:
+          'Use `self` instead of `window` to access the global context everywhere (including workers).',
       },
       {
         name: 'SourceBuffer',

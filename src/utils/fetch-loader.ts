@@ -1,9 +1,21 @@
-import { LoaderCallbacks, LoaderContext, Loader, LoaderStats, LoaderConfiguration, LoaderOnProgress } from '../types/loader';
+import {
+  LoaderCallbacks,
+  LoaderContext,
+  Loader,
+  LoaderStats,
+  LoaderConfiguration,
+  LoaderOnProgress,
+} from '../types/loader';
 import LoadStats from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
 
 export function fetchSupported() {
-  if (self.fetch && self.AbortController && self.ReadableStream && self.Request) {
+  if (
+    self.fetch &&
+    self.AbortController &&
+    self.ReadableStream &&
+    self.Request
+  ) {
     try {
       new self.ReadableStream({}); // eslint-disable-line no-new
       return true;
@@ -49,7 +61,11 @@ class FetchLoader implements Loader<LoaderContext> {
     }
   }
 
-  load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void {
+  load(
+    context: LoaderContext,
+    config: LoaderConfiguration,
+    callbacks: LoaderCallbacks<LoaderContext>
+  ): void {
     const stats = this.stats;
     if (stats.loading.start) {
       throw new Error('Loader can only be used once.');
@@ -57,7 +73,8 @@ class FetchLoader implements Loader<LoaderContext> {
     stats.loading.start = self.performance.now();
 
     const initParams = getRequestParameters(context, this.controller.signal);
-    const onProgress: LoaderOnProgress<LoaderContext> | undefined = callbacks.onProgress;
+    const onProgress: LoaderOnProgress<LoaderContext> | undefined =
+      callbacks.onProgress;
     const isArrayBuffer = context.responseType === 'arraybuffer';
     const LENGTH = isArrayBuffer ? 'byteLength' : 'length';
 
@@ -79,13 +96,26 @@ class FetchLoader implements Loader<LoaderContext> {
 
           if (!response.ok) {
             const { status, statusText } = response;
-            throw new FetchError(statusText || 'fetch, bad network response', status, response);
+            throw new FetchError(
+              statusText || 'fetch, bad network response',
+              status,
+              response
+            );
           }
-          stats.loading.first = Math.max(self.performance.now(), stats.loading.start);
+          stats.loading.first = Math.max(
+            self.performance.now(),
+            stats.loading.start
+          );
           stats.total = parseInt(response.headers.get('Content-Length') || '0');
 
           if (onProgress && Number.isFinite(config.highWaterMark)) {
-            this.loadProgressively(response, stats, context, config.highWaterMark, onProgress);
+            this.loadProgressively(
+              response,
+              stats,
+              context,
+              config.highWaterMark,
+              onProgress
+            );
           }
 
           if (isArrayBuffer) {
@@ -97,7 +127,10 @@ class FetchLoader implements Loader<LoaderContext> {
       .then((responseData: string | ArrayBuffer) => {
         const { response } = this;
         self.clearTimeout(this.requestTimeout);
-        stats.loading.end = Math.max(self.performance.now(), stats.loading.first);
+        stats.loading.end = Math.max(
+          self.performance.now(),
+          stats.loading.first
+        );
         stats.loaded = stats.total = responseData[LENGTH];
 
         const loaderResponse = {
@@ -118,7 +151,11 @@ class FetchLoader implements Loader<LoaderContext> {
         }
         // CORS errors result in an undefined code. Set it to 0 here to align with XHR's behavior
         const code = error.code || 0;
-        callbacks.onError({ code, text: error.message }, context, error.details);
+        callbacks.onError(
+          { code, text: error.message },
+          context,
+          error.details
+        );
       });
   }
 
@@ -133,7 +170,13 @@ class FetchLoader implements Loader<LoaderContext> {
     return null;
   }
 
-  private loadProgressively(response: Response, stats: LoaderStats, context: LoaderContext, highWaterMark: number = 0, onProgress: LoaderOnProgress<LoaderContext>) {
+  private loadProgressively(
+    response: Response,
+    stats: LoaderStats,
+    context: LoaderContext,
+    highWaterMark: number = 0,
+    onProgress: LoaderOnProgress<LoaderContext>
+  ) {
     const chunkCache = new ChunkCache();
     const reader = (response.clone().body as ReadableStream).getReader();
 

@@ -1,5 +1,11 @@
 import type { TrackSet } from './track';
-import { DemuxedAudioTrack, DemuxedTrack, DemuxedVideoTrack, MetadataSample, UserdataSample } from './demuxer';
+import {
+  DemuxedAudioTrack,
+  DemuxedTrack,
+  DemuxedVideoTrack,
+  MetadataSample,
+  UserdataSample,
+} from './demuxer';
 import type { SourceBufferName } from './buffer';
 
 export interface Remuxer {
@@ -11,7 +17,11 @@ export interface Remuxer {
     timeOffset: number,
     accurateTimeOffset: boolean
   ): RemuxerResult;
-  resetInitSegment(initSegment: Uint8Array, audioCodec: string | undefined, videoCodec: string | undefined): void;
+  resetInitSegment(
+    initSegment: Uint8Array,
+    audioCodec: string | undefined,
+    videoCodec: string | undefined
+  ): void;
   resetTimeStamp(defaultInitPTS): void;
   resetNextTimestamp(): void;
   destroy(): void;

@@ -22,7 +22,11 @@ const createDefinePlugin = (type) => {
 };
 
 const basePlugins = [
-  new webpack.BannerPlugin({ entryOnly: true, raw: true, banner: 'typeof window !== "undefined" &&' }), // SSR/Node.js guard
+  new webpack.BannerPlugin({
+    entryOnly: true,
+    raw: true,
+    banner: 'typeof window !== "undefined" &&',
+  }), // SSR/Node.js guard
 ];
 const mainPlugins = [...basePlugins, createDefinePlugin('main')];
 const lightPlugins = [...basePlugins, createDefinePlugin('light')];
@@ -54,7 +58,14 @@ const baseConfig = {
                 loose: true,
                 modules: false,
                 targets: {
-                  browsers: ['chrome >= 47', 'firefox >= 51', 'ie >= 11', 'safari >= 8', 'ios >= 8', 'android >= 4'],
+                  browsers: [
+                    'chrome >= 47',
+                    'firefox >= 51',
+                    'ie >= 11',
+                    'safari >= 8',
+                    'ios >= 8',
+                    'android >= 4',
+                  ],
                 },
               },
             ],
@@ -71,9 +82,21 @@ const baseConfig = {
               visitor: {
                 CallExpression: function (espath) {
                   if (espath.get('callee').matchesPattern('Number.isFinite')) {
-                    espath.node.callee = importHelper.addNamed(espath, 'isFiniteNumber', path.resolve('src/polyfills/number'));
-                  } else if (espath.get('callee').matchesPattern('Number.MAX_SAFE_INTEGER')) {
-                    espath.node.callee = importHelper.addNamed(espath, 'MAX_SAFE_INTEGER', path.resolve('src/polyfills/number'));
+                    espath.node.callee = importHelper.addNamed(
+                      espath,
+                      'isFiniteNumber',
+                      path.resolve('src/polyfills/number')
+                    );
+                  } else if (
+                    espath
+                      .get('callee')
+                      .matchesPattern('Number.MAX_SAFE_INTEGER')
+                  ) {
+                    espath.node.callee = importHelper.addNamed(
+                      espath,
+                      'MAX_SAFE_INTEGER',
+                      path.resolve('src/polyfills/number')
+                    );
                   }
                 },
               },
@@ -219,7 +242,10 @@ const multiConfig = [
             ? {
                 branch: process.env.BRANCH,
                 commitRef: process.env.COMMIT_REF,
-                reviewID: process.env.PULL_REQUEST === 'true' ? parseInt(process.env.REVIEW_ID) : null,
+                reviewID:
+                  process.env.PULL_REQUEST === 'true'
+                    ? parseInt(process.env.REVIEW_ID)
+                    : null,
               }
             : {}
         ),
@@ -253,16 +279,24 @@ module.exports = (envArgs) => {
   } else {
     const enabledConfigNames = Object.keys(envArgs);
     // Filter out enabled configs
-    const enabledConfigs = multiConfig.filter((config) => enabledConfigNames.includes(config.name));
+    const enabledConfigs = multiConfig.filter((config) =>
+      enabledConfigNames.includes(config.name)
+    );
     if (!enabledConfigs.length) {
       throw new Error(
-        `Couldn't find a valid config with the names ${JSON.stringify(enabledConfigNames)}. Known configs are: ${multiConfig.map((config) => config.name).join(', ')}`
+        `Couldn't find a valid config with the names ${JSON.stringify(
+          enabledConfigNames
+        )}. Known configs are: ${multiConfig
+          .map((config) => config.name)
+          .join(', ')}`
       );
     }
 
     configs = enabledConfigs;
   }
 
-  console.log(`Building configs: ${configs.map((config) => config.name).join(', ')}.\n`);
+  console.log(
+    `Building configs: ${configs.map((config) => config.name).join(', ')}.\n`
+  );
   return configs;
 };

@@ -56,8 +56,12 @@ export default class LevelDetails {
     }
     const partSnDiff = this.lastPartSn - previous.lastPartSn;
     const partIndexDiff = this.lastPartIndex - previous.lastPartIndex;
-    this.updated = this.endSN !== previous.endSN || !!partIndexDiff || !!partSnDiff;
-    this.advanced = this.endSN > previous.endSN || partSnDiff > 0 || (partSnDiff === 0 && partIndexDiff > 0);
+    this.updated =
+      this.endSN !== previous.endSN || !!partIndexDiff || !!partSnDiff;
+    this.advanced =
+      this.endSN > previous.endSN ||
+      partSnDiff > 0 ||
+      (partSnDiff === 0 && partIndexDiff > 0);
     if (this.updated || this.advanced) {
       this.misses = Math.floor(previous.misses * 0.6);
     } else {
@@ -68,13 +72,19 @@ export default class LevelDetails {
 
   get hasProgramDateTime(): boolean {
     if (this.fragments.length) {
-      return Number.isFinite(this.fragments[this.fragments.length - 1].programDateTime as number);
+      return Number.isFinite(
+        this.fragments[this.fragments.length - 1].programDateTime as number
+      );
     }
     return false;
   }
 
   get levelTargetDuration(): number {
-    return this.averagetargetduration || this.targetduration || DEFAULT_TARGET_DURATION;
+    return (
+      this.averagetargetduration ||
+      this.targetduration ||
+      DEFAULT_TARGET_DURATION
+    );
   }
 
   get edge(): number {
