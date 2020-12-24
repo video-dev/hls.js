@@ -312,7 +312,7 @@ jobs:
           name: build
 
       - name: start SauceConnect tunnel
-        uses: tjenkinson/sauce-connect-action@be563c4
+        uses: saucelabs/sauce-connect-action@5c0cf29
         with:
           username: ${{ secrets.SAUCE_USERNAME }}
           accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
@@ -402,7 +402,7 @@ jobs:
           name: build
 
       - name: start SauceConnect tunnel
-        uses: tjenkinson/sauce-connect-action@be563c4
+        uses: saucelabs/sauce-connect-action@5c0cf29
         with:
           username: ${{ secrets.SAUCE_USERNAME }}
           accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
