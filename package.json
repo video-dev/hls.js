@@ -99,6 +99,7 @@
     "karma-sourcemap-loader": "^0.3.8",
     "karma-webpack": "^4.0.2",
     "lint-staged": "^10.5.3",
+    "micromatch": "^4.0.2",
     "mocha": "^8.2.1",
     "netlify-cli": "^2.69.11",
     "prettier": "^2.2.1",
@@ -113,9 +114,5 @@
     "webpack-dev-server": "^3.11.0",
     "webpack-merge": "^5.7.2",
     "webworkify-webpack": "^2.1.5"
-  },
-  "lint-staged": {
-    "{src,tests}/**/*.{js,ts}": "eslint --cache --fix",
-    "*.{js,ts,md,yml,json}": "prettier --write"
   }
 }
