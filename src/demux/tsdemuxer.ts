@@ -17,7 +17,15 @@ import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { DemuxedAvcTrack, DemuxedAudioTrack, DemuxedTrack, Demuxer, DemuxerResult, AvcSample, DemuxedMetadataTrack } from '../types/demuxer';
+import {
+  DemuxedAvcTrack,
+  DemuxedAudioTrack,
+  DemuxedTrack,
+  Demuxer,
+  DemuxerResult,
+  AvcSample,
+  DemuxedMetadataTrack,
+} from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
 import type { HlsConfig } from '../config';
@@ -75,7 +83,9 @@ class TSDemuxer implements Demuxer {
       return false;
     } else {
       if (syncOffset) {
-        logger.warn(`MPEG2-TS detected but first sync word found @ offset ${syncOffset}, junk ahead ?`);
+        logger.warn(
+          `MPEG2-TS detected but first sync word found @ offset ${syncOffset}, junk ahead ?`
+        );
       }
 
       return true;
@@ -88,7 +98,11 @@ class TSDemuxer implements Demuxer {
     let i = 0;
     while (i < scanwindow) {
       // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
-      if (data[i] === 0x47 && data[i + 188] === 0x47 && data[i + 2 * 188] === 0x47) {
+      if (
+        data[i] === 0x47 &&
+        data[i + 188] === 0x47 &&
+        data[i + 2 * 188] === 0x47
+      ) {
         return i;
       } else {
         i++;
@@ -106,7 +120,8 @@ class TSDemuxer implements Demuxer {
    */
   static createTrack(type, duration): DemuxedTrack {
     return {
-      container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined,
+      container:
+        type === 'video' || type === 'audio' ? 'video/mp2t' : undefined,
       type,
       id: RemuxerTrackIdConfig[type],
       pid: -1,
@@ -158,7 +173,13 @@ class TSDemuxer implements Demuxer {
     this.aacLastPTS = null;
   }
 
-  demux(data: Uint8Array, contiguous, timeOffset, isSampleAes = false, flush = false): DemuxerResult {
+  demux(
+    data: Uint8Array,
+    contiguous,
+    timeOffset,
+    isSampleAes = false,
+    flush = false
+  ): DemuxerResult {
     if (!isSampleAes) {
       this.sampleAes = null;
     }
@@ -206,7 +227,11 @@ class TSDemuxer implements Demuxer {
 
     len -= (len + syncOffset) % 188;
     if (len < data.byteLength && !flush) {
-      this.remainderData = new Uint8Array(data.buffer, len, data.buffer.byteLength - len);
+      this.remainderData = new Uint8Array(
+        data.buffer,
+        len,
+        data.buffer.byteLength - len
+      );
     }
 
     // loop through TS packets
@@ -281,7 +306,13 @@ class TSDemuxer implements Demuxer {
               offset += data[offset] + 1;
             }
 
-            const parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true, isSampleAes);
+            const parsedPIDs = parsePMT(
+              data,
+              offset,
+              this.typeSupported.mpeg === true ||
+                this.typeSupported.mp3 === true,
+              isSampleAes
+            );
 
             // only update track id if track PID found while parsing PMT
             // this is to avoid resetting the PID to -1 in case
@@ -385,7 +416,9 @@ class TSDemuxer implements Demuxer {
       audioTrack.pesData = null;
     } else {
       if (audioData?.size) {
-        logger.log('last AAC PES packet truncated,might overlap between fragments');
+        logger.log(
+          'last AAC PES packet truncated,might overlap between fragments'
+        );
       }
 
       // either audioData null or PES truncated, keep it for next frag parsing
@@ -403,9 +436,18 @@ class TSDemuxer implements Demuxer {
 
   demuxSampleAes(data, decryptData, timeOffset): Promise<DemuxerResult> {
     const demuxResult = this.demux(data, timeOffset, true);
-    const sampleAes = (this.sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptData, this.discardEPB));
+    const sampleAes = (this.sampleAes = new SampleAesDecrypter(
+      this.observer,
+      this.config,
+      decryptData,
+      this.discardEPB
+    ));
     return new Promise((resolve, reject) => {
-      this.decrypt(demuxResult.audioTrack, demuxResult.avcTrack, sampleAes).then(() => {
+      this.decrypt(
+        demuxResult.audioTrack,
+        demuxResult.avcTrack,
+        sampleAes
+      ).then(() => {
         resolve(demuxResult);
       });
     });
@@ -486,7 +528,12 @@ class TSDemuxer implements Demuxer {
         case 1: {
           push = true;
           if (!avcSample) {
-            avcSample = this.avcSample = createAVCSample(true, pes.pts, pes.dts, '');
+            avcSample = this.avcSample = createAVCSample(
+              true,
+              pes.pts,
+              pes.dts,
+              ''
+            );
           }
 
           if (debug) {
@@ -504,7 +551,12 @@ class TSDemuxer implements Demuxer {
             // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
             // I slice: A slice that is not an SI slice that is decoded using intra prediction only.
             // if (sliceType === 2 || sliceType === 7) {
-            if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
+            if (
+              sliceType === 2 ||
+              sliceType === 4 ||
+              sliceType === 7 ||
+              sliceType === 9
+            ) {
               avcSample.key = true;
             }
           }
@@ -515,7 +567,12 @@ class TSDemuxer implements Demuxer {
           push = true;
           // handle PES not starting with AUD
           if (!avcSample) {
-            avcSample = this.avcSample = createAVCSample(true, pes.pts, pes.dts, '');
+            avcSample = this.avcSample = createAVCSample(
+              true,
+              pes.pts,
+              pes.dts,
+              ''
+            );
           }
 
           if (debug) {
@@ -587,12 +644,19 @@ class TSDemuxer implements Demuxer {
                         byteArray.push(expGolombDecoder.readUByte());
                       }
 
-                      this._insertSampleInOrder(this._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
+                      this._insertSampleInOrder(this._txtTrack.samples, {
+                        type: 3,
+                        pts: pes.pts,
+                        bytes: byteArray,
+                      });
                     }
                   }
                 }
               }
-            } else if (payloadType === 5 && expGolombDecoder.bytesAvailable !== 0) {
+            } else if (
+              payloadType === 5 &&
+              expGolombDecoder.bytesAvailable !== 0
+            ) {
               endOfCaptions = true;
 
               if (payloadSize > 16) {
@@ -675,7 +739,12 @@ class TSDemuxer implements Demuxer {
             pushAccessUnit(avcSample, track);
           }
 
-          avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
+          avcSample = this.avcSample = createAVCSample(
+            false,
+            pes.pts,
+            pes.dts,
+            debug ? 'AUD ' : ''
+          );
           break;
         // Filler Data
         case 12:
@@ -774,7 +843,10 @@ class TSDemuxer implements Demuxer {
         state = 3;
       } else if (value === 1) {
         if (lastUnitStart >= 0) {
-          unit = { data: array.subarray(lastUnitStart, i - state - 1), type: lastUnitType };
+          unit = {
+            data: array.subarray(lastUnitStart, i - state - 1),
+            type: lastUnitType,
+          };
           // logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
           units.push(unit);
         } else {
@@ -790,7 +862,10 @@ class TSDemuxer implements Demuxer {
               // check if lastUnit had a state different from zero
               if (lastUnit.state) {
                 // strip last bytes
-                lastUnit.data = lastUnit.data.subarray(0, lastUnit.data.byteLength - lastState);
+                lastUnit.data = lastUnit.data.subarray(
+                  0,
+                  lastUnit.data.byteLength - lastState
+                );
               }
             }
             // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
@@ -820,7 +895,11 @@ class TSDemuxer implements Demuxer {
       }
     }
     if (lastUnitStart >= 0 && state >= 0) {
-      unit = { data: array.subarray(lastUnitStart, len), type: lastUnitType, state: state };
+      unit = {
+        data: array.subarray(lastUnitStart, len),
+        type: lastUnitType,
+        state: state,
+      };
       units.push(unit);
       // logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
     }
@@ -937,7 +1016,11 @@ class TSDemuxer implements Demuxer {
     if (aacOverFlow && aacLastPTS) {
       const newPTS = aacLastPTS + frameDuration;
       if (Math.abs(newPTS - pts) > 1) {
-        logger.log(`[tsdemuxer]: AAC: align PTS for overlapping frames by ${Math.round((newPTS - pts) / 90)}`);
+        logger.log(
+          `[tsdemuxer]: AAC: align PTS for overlapping frames by ${Math.round(
+            (newPTS - pts) / 90
+          )}`
+        );
         pts = newPTS;
       }
     }
@@ -983,7 +1066,13 @@ class TSDemuxer implements Demuxer {
 
     while (offset < length) {
       if (MpegAudio.isHeader(data, offset)) {
-        const frame = MpegAudio.appendFrame(this._audioTrack, data, offset, pts, frameIndex);
+        const frame = MpegAudio.appendFrame(
+          this._audioTrack,
+          data,
+          offset,
+          pts,
+          frameIndex
+        );
         if (frame) {
           offset += frame.length;
           frameIndex++;
@@ -1003,7 +1092,12 @@ class TSDemuxer implements Demuxer {
   }
 }
 
-function createAVCSample(key: boolean, pts: number, dts: number, debug: string): AvcSample {
+function createAVCSample(
+  key: boolean,
+  pts: number,
+  dts: number,
+  debug: string
+): AvcSample {
   return {
     key,
     frame: false,
@@ -1027,7 +1121,8 @@ function parsePMT(data, offset, mpegSupported, isSampleAes) {
   const tableEnd = offset + 3 + sectionLength - 4;
   // to determine where the table is, we have to figure out how
   // long the program info descriptors are
-  const programInfoLength = ((data[offset + 10] & 0x0f) << 8) | data[offset + 11];
+  const programInfoLength =
+    ((data[offset + 10] & 0x0f) << 8) | data[offset + 11];
   // advance the offset to the first entry in the mapping table
   offset += 12 + programInfoLength;
   while (offset < tableEnd) {
@@ -1035,7 +1130,9 @@ function parsePMT(data, offset, mpegSupported, isSampleAes) {
     switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
-          logger.log('ADTS AAC with AES-128-CBC frame encryption found in unencrypted stream');
+          logger.log(
+            'ADTS AAC with AES-128-CBC frame encryption found in unencrypted stream'
+          );
           break;
         }
       /* falls through */
@@ -1058,7 +1155,9 @@ function parsePMT(data, offset, mpegSupported, isSampleAes) {
 
       case 0xdb: // SAMPLE-AES AVC
         if (!isSampleAes) {
-          logger.log('H.264 with AES-128-CBC slice encryption found in unencrypted stream');
+          logger.log(
+            'H.264 with AES-128-CBC slice encryption found in unencrypted stream'
+          );
           break;
         }
       /* falls through */
@@ -1156,7 +1255,11 @@ function parsePES(stream) {
           (frag[18] & 0xfe) / 2;
 
         if (pesPts - pesDts > 60 * 90000) {
-          logger.warn(`${Math.round((pesPts - pesDts) / 90000)}s delta between PTS and DTS, align them`);
+          logger.warn(
+            `${Math.round(
+              (pesPts - pesDts) / 90000
+            )}s delta between PTS and DTS, align them`
+          );
           pesPts = pesDts;
         }
       } else {

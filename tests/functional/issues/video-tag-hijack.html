@@ -7,7 +7,11 @@
     <script src="../../../dist/hls.js"></script>
     <!--<script src="//localhost:8000/dist/hls.js"></script>-->
 
-    <video id="video" controls="controls" style="width: 640px; height: 360px; background: #000"></video>
+    <video
+      id="video"
+      controls="controls"
+      style="width: 640px; height: 360px; background: #000"
+    ></video>
     <div id="status">
       Hijacking video tag in:
       <span id="counter"></span>
@@ -32,17 +36,22 @@
         let hls1 = null;
 
         // 1. create instance
-        initInstance1('http://www.streambox.fr/playlists/x31jrg1/x31jrg1.m3u8', function onPlaying() {
-          // 2. allow 3 seconds of playback
-          countDown(3000, counterEl, () => {
-            // 3. create another instance
-            initInstance2('https://nasa-i.akamaihd.net/hls/live/253565/NASA-NTV1-Public/master.m3u8');
-            statusEl.innerText = 'Hijacked!';
+        initInstance1(
+          'http://www.streambox.fr/playlists/x31jrg1/x31jrg1.m3u8',
+          function onPlaying() {
+            // 2. allow 3 seconds of playback
+            countDown(3000, counterEl, () => {
+              // 3. create another instance
+              initInstance2(
+                'https://nasa-i.akamaihd.net/hls/live/253565/NASA-NTV1-Public/master.m3u8'
+              );
+              statusEl.innerText = 'Hijacked!';
 
-            // 4. destroy the first instance
-            hls1.destroy();
-          });
-        });
+              // 4. destroy the first instance
+              hls1.destroy();
+            });
+          }
+        );
 
         // hoist line
 

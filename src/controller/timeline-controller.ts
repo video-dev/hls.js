@@ -6,7 +6,15 @@ import { logger } from '../utils/logger';
 import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import Fragment from '../loader/fragment';
-import { FragParsingUserdataData, FragLoadedData, FragDecryptedData, MediaAttachingData, ManifestLoadedData, InitPTSFoundData, SubtitleTracksUpdatedData } from '../types/events';
+import {
+  FragParsingUserdataData,
+  FragLoadedData,
+  FragDecryptedData,
+  MediaAttachingData,
+  ManifestLoadedData,
+  InitPTSFoundData,
+  SubtitleTracksUpdatedData,
+} from '../types/events';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type { HlsConfig } from '../config';
@@ -118,12 +126,23 @@ export class TimelineController implements ComponentAPI {
     hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
   }
 
-  addCues(trackName: string, startTime: number, endTime: number, screen: CaptionScreen, cueRanges: Array<[number, number]>) {
+  addCues(
+    trackName: string,
+    startTime: number,
+    endTime: number,
+    screen: CaptionScreen,
+    cueRanges: Array<[number, number]>
+  ) {
     // skip cues which overlap more than 50% with previously parsed time ranges
     let merged = false;
     for (let i = cueRanges.length; i--; ) {
       const cueRange = cueRanges[i];
-      const overlap = intersection(cueRange[0], cueRange[1], startTime, endTime);
+      const overlap = intersection(
+        cueRange[0],
+        cueRange[1],
+        startTime,
+        endTime
+      );
       if (overlap >= 0) {
         cueRange[0] = Math.min(cueRange[0], startTime);
         cueRange[1] = Math.max(cueRange[1], endTime);
@@ -138,15 +157,27 @@ export class TimelineController implements ComponentAPI {
     }
 
     if (this.config.renderTextTracksNatively) {
-      this.Cues.newCue(this.captionsTracks[trackName], startTime, endTime, screen);
+      this.Cues.newCue(
+        this.captionsTracks[trackName],
+        startTime,
+        endTime,
+        screen
+      );
     } else {
       const cues = this.Cues.newCue(null, startTime, endTime, screen);
-      this.hls.trigger(Events.CUES_PARSED, { type: 'captions', cues, track: trackName });
+      this.hls.trigger(Events.CUES_PARSED, {
+        type: 'captions',
+        cues,
+        track: trackName,
+      });
     }
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
-  onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale }: InitPTSFoundData) {
+  onInitPtsFound(
+    event: Events.INIT_PTS_FOUND,
+    { frag, id, initPTS, timescale }: InitPTSFoundData
+  ) {
     const { unparsedVttFrags } = this;
     if (id === 'main') {
       this.initPTS[frag.cc] = initPTS;
@@ -227,7 +258,11 @@ export class TimelineController implements ComponentAPI {
     this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
   }
 
-  createTextTrack(kind: TextTrackKind, label: string, lang?: string): TextTrack | undefined {
+  createTextTrack(
+    kind: TextTrackKind,
+    label: string,
+    lang?: string
+  ): TextTrack | undefined {
     const media = this.media;
     if (!media) {
       return;
@@ -285,12 +320,16 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
-  onSubtitleTracksUpdated(event: Events.SUBTITLE_TRACKS_UPDATED, data: SubtitleTracksUpdatedData) {
+  onSubtitleTracksUpdated(
+    event: Events.SUBTITLE_TRACKS_UPDATED,
+    data: SubtitleTracksUpdatedData
+  ) {
     this.textTracks = [];
     const tracks: Array<MediaPlaylist> = data.subtitleTracks || [];
     const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
     if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
-      const sameTracks = this.tracks && tracks && this.tracks.length === tracks.length;
+      const sameTracks =
+        this.tracks && tracks && this.tracks.length === tracks.length;
       this.tracks = tracks || [];
 
       if (this.config.renderTextTracksNatively) {
@@ -314,7 +353,11 @@ export class TimelineController implements ComponentAPI {
             }
           }
           if (!textTrack) {
-            textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+            textTrack = this.createTextTrack(
+              'subtitles',
+              track.name,
+              track.lang
+            );
             if (textTrack) {
               textTrack.mode = 'disabled';
             }
@@ -334,7 +377,9 @@ export class TimelineController implements ComponentAPI {
             subtitleTrack: track,
           };
         });
-        this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
+        this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, {
+          tracks: tracksList,
+        });
       }
     }
   }
@@ -342,12 +387,16 @@ export class TimelineController implements ComponentAPI {
   onManifestLoaded(event: Events.MANIFEST_LOADED, data: ManifestLoadedData) {
     if (this.config.enableCEA708Captions && data.captions) {
       data.captions.forEach((captionsTrack) => {
-        const instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(captionsTrack.instreamId as string);
+        const instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(
+          captionsTrack.instreamId as string
+        );
         if (!instreamIdMatch) {
           return;
         }
         const trackName = `textTrack${instreamIdMatch[1]}`;
-        const trackProperties: TrackProperties = this.captionsProperties[trackName];
+        const trackProperties: TrackProperties = this.captionsProperties[
+          trackName
+        ];
         if (!trackProperties) {
           return;
         }
@@ -363,7 +412,13 @@ export class TimelineController implements ComponentAPI {
 
   onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
     const { frag, payload } = data;
-    const { cea608Parser1, cea608Parser2, initPTS, lastSn, unparsedVttFrags } = this;
+    const {
+      cea608Parser1,
+      cea608Parser2,
+      initPTS,
+      lastSn,
+      unparsedVttFrags,
+    } = this;
     if (frag.type === 'main') {
       const sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
@@ -382,21 +437,36 @@ export class TimelineController implements ComponentAPI {
           unparsedVttFrags.push(data);
           if (initPTS.length) {
             // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
-            this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: false, frag, error: new Error('Missing initial subtitle PTS') });
+            this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+              success: false,
+              frag,
+              error: new Error('Missing initial subtitle PTS'),
+            });
           }
           return;
         }
 
         const decryptData = frag.decryptdata;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
-        if (decryptData == null || decryptData.key == null || decryptData.method !== 'AES-128') {
+        if (
+          decryptData == null ||
+          decryptData.key == null ||
+          decryptData.method !== 'AES-128'
+        ) {
           const trackPlaylistMedia = this.tracks[frag.level];
           const vttCCs = this.vttCCs;
           if (!vttCCs[frag.cc]) {
-            vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
+            vttCCs[frag.cc] = {
+              start: frag.start,
+              prevCC: this.prevCC,
+              new: true,
+            };
             this.prevCC = frag.cc;
           }
-          if (trackPlaylistMedia && trackPlaylistMedia.textCodec === IMSC1_CODEC) {
+          if (
+            trackPlaylistMedia &&
+            trackPlaylistMedia.textCodec === IMSC1_CODEC
+          ) {
             this._parseIMSC1(frag, payload);
           } else {
             this._parseVTTs(frag, payload, vttCCs);
@@ -404,7 +474,11 @@ export class TimelineController implements ComponentAPI {
         }
       } else {
         // In case there is no payload, finish unsuccessfully.
-        this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: false, frag, error: new Error('Empty subtitle payload') });
+        this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+          success: false,
+          frag,
+          error: new Error('Empty subtitle payload'),
+        });
       }
     }
   }
@@ -417,11 +491,18 @@ export class TimelineController implements ComponentAPI {
       this.timescale[frag.cc],
       (cues) => {
         this._appendCues(cues, frag.level);
-        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
+        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+          success: true,
+          frag: frag,
+        });
       },
       (error) => {
         logger.log(`Failed to parse IMSC1: ${error}`);
-        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
+        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+          success: false,
+          frag: frag,
+          error,
+        });
       }
     );
   }
@@ -437,13 +518,20 @@ export class TimelineController implements ComponentAPI {
       frag.cc,
       (cues) => {
         this._appendCues(cues, frag.level);
-        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
+        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+          success: true,
+          frag: frag,
+        });
       },
       (error) => {
         this._fallbackToIMSC1(frag, payload);
         // Something went wrong while parsing. Trigger event with success false.
         logger.log(`Failed to parse VTT cue: ${error}`);
-        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag, error });
+        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+          success: false,
+          frag: frag,
+          error,
+        });
       }
     );
   }
@@ -491,7 +579,11 @@ export class TimelineController implements ComponentAPI {
             }
           } catch (err) {
             logger.debug(`Failed occurred on adding cues: ${err}`);
-            const textTrackCue = new (self.TextTrackCue as any)(cue.startTime, cue.endTime, cue.text);
+            const textTrackCue = new (self.TextTrackCue as any)(
+              cue.startTime,
+              cue.endTime,
+              cue.text
+            );
             textTrackCue.id = cue.id;
             textTrack.addCue(textTrackCue);
           }
@@ -510,7 +602,10 @@ export class TimelineController implements ComponentAPI {
         this.unparsedVttFrags.push((data as unknown) as FragLoadedData);
         return;
       }
-      this.onFragLoaded(Events.FRAG_LOADED, (data as unknown) as FragLoadedData);
+      this.onFragLoaded(
+        Events.FRAG_LOADED,
+        (data as unknown) as FragLoadedData
+      );
     }
   }
 
@@ -519,7 +614,10 @@ export class TimelineController implements ComponentAPI {
     this.captionsTracks = {};
   }
 
-  onFragParsingUserdata(event: Events.FRAG_PARSING_USERDATA, data: FragParsingUserdataData) {
+  onFragParsingUserdata(
+    event: Events.FRAG_PARSING_USERDATA,
+    data: FragParsingUserdataData
+  ) {
     const { cea608Parser1, cea608Parser2 } = this;
     if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
       return;
@@ -565,7 +663,11 @@ export class TimelineController implements ComponentAPI {
 }
 
 function canReuseVttTextTrack(inUseTrack, manifestTrack): boolean {
-  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
+  return (
+    inUseTrack &&
+    inUseTrack.label === manifestTrack.name &&
+    !(inUseTrack.textTrack1 || inUseTrack.textTrack2)
+  );
 }
 
 function intersection(x1: number, x2: number, y1: number, y2: number): number {

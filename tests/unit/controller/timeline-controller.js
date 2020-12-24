@@ -18,12 +18,15 @@ describe('TimelineController', function () {
     it('should reuse text track when track order is same between manifests', function () {
       hls.subtitleTrackController = { subtitleDisplay: false };
 
-      timelineController.onSubtitleTracksUpdated(Events.SUBTITLE_TRACKS_UPDATED, {
-        subtitleTracks: [
-          { id: 0, name: 'en' },
-          { id: 1, name: 'ru' },
-        ],
-      });
+      timelineController.onSubtitleTracksUpdated(
+        Events.SUBTITLE_TRACKS_UPDATED,
+        {
+          subtitleTracks: [
+            { id: 0, name: 'en' },
+            { id: 1, name: 'ru' },
+          ],
+        }
+      );
 
       // text tracks model contain only newly added manifest tracks, in same order as in manifest
       expect(timelineController.textTracks[0].label).to.equal('en');
@@ -34,12 +37,15 @@ describe('TimelineController', function () {
       expect(timelineController.media.textTracks[1].label).to.equal('ru');
       expect(timelineController.media.textTracks.length).to.equal(2);
 
-      timelineController.onSubtitleTracksUpdated(Events.SUBTITLE_TRACKS_UPDATED, {
-        subtitleTracks: [
-          { id: 0, name: 'en' },
-          { id: 1, name: 'ru' },
-        ],
-      });
+      timelineController.onSubtitleTracksUpdated(
+        Events.SUBTITLE_TRACKS_UPDATED,
+        {
+          subtitleTracks: [
+            { id: 0, name: 'en' },
+            { id: 1, name: 'ru' },
+          ],
+        }
+      );
 
       // text tracks model contain only newly added manifest tracks, in same order
       expect(timelineController.textTracks[0].label).to.equal('en');

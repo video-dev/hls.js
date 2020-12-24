@@ -97,7 +97,10 @@ class AttrList {
     while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
       let value = match[2];
 
-      if (value.indexOf(quote) === 0 && value.lastIndexOf(quote) === value.length - 1) {
+      if (
+        value.indexOf(quote) === 0 &&
+        value.lastIndexOf(quote) === value.length - 1
+      ) {
         value = value.slice(1, -1);
       }
 

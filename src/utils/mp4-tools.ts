@@ -14,7 +14,10 @@ export function bin2str(buffer: Uint8Array): string {
   return String.fromCharCode.apply(null, buffer);
 }
 
-export function readUint16(buffer: Uint8Array | Mp4BoxData, offset: number): number {
+export function readUint16(
+  buffer: Uint8Array | Mp4BoxData,
+  offset: number
+): number {
   if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
@@ -25,17 +28,28 @@ export function readUint16(buffer: Uint8Array | Mp4BoxData, offset: number): num
   return val < 0 ? 65536 + val : val;
 }
 
-export function readUint32(buffer: Uint8Array | Mp4BoxData, offset: number): number {
+export function readUint32(
+  buffer: Uint8Array | Mp4BoxData,
+  offset: number
+): number {
   if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
   }
 
-  const val = (buffer[offset] << 24) | (buffer[offset + 1] << 16) | (buffer[offset + 2] << 8) | buffer[offset + 3];
+  const val =
+    (buffer[offset] << 24) |
+    (buffer[offset + 1] << 16) |
+    (buffer[offset + 2] << 8) |
+    buffer[offset + 3];
   return val < 0 ? 4294967296 + val : val;
 }
 
-export function writeUint32(buffer: Uint8Array | Mp4BoxData, offset: number, value: number) {
+export function writeUint32(
+  buffer: Uint8Array | Mp4BoxData,
+  offset: number,
+  value: number
+) {
   if ('data' in buffer) {
     offset += buffer.start;
     buffer = buffer.data;
@@ -47,7 +61,10 @@ export function writeUint32(buffer: Uint8Array | Mp4BoxData, offset: number, val
 }
 
 // Find the data for a box specified by its path
-export function findBox(input: Uint8Array | Mp4BoxData, path: Array<string>): Array<Mp4BoxData> {
+export function findBox(
+  input: Uint8Array | Mp4BoxData,
+  path: Array<string>
+): Array<Mp4BoxData> {
   const results = [] as Array<Mp4BoxData>;
   if (!path.length) {
     // short-circuit the search for empty paths
@@ -79,7 +96,10 @@ export function findBox(input: Uint8Array | Mp4BoxData, path: Array<string>): Ar
         results.push({ data: data, start: i + 8, end: endbox });
       } else {
         // recursively search for the next box along the path
-        const subresults = findBox({ data: data, start: i + 8, end: endbox }, path.slice(1));
+        const subresults = findBox(
+          { data: data, start: i + 8, end: endbox },
+          path.slice(1)
+        );
         if (subresults.length) {
           push.apply(results, subresults);
         }
@@ -250,15 +270,22 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
         const timescale = readUint32(mdhd, index);
         const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
         if (hdlr) {
-          const hdlrType = bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
-          const type: HdlrType = { soun: ElementaryStreamTypes.AUDIO, vide: ElementaryStreamTypes.VIDEO }[hdlrType];
+          const hdlrType = bin2str(
+            hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12)
+          );
+          const type: HdlrType = {
+            soun: ElementaryStreamTypes.AUDIO,
+            vide: ElementaryStreamTypes.VIDEO,
+          }[hdlrType];
           if (type) {
             // TODO: Parse codec details to be able to build MIME type.
             const codexBoxes = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);
             let codec;
             if (codexBoxes.length) {
               const codecBox = codexBoxes[0];
-              codec = bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
+              codec = bin2str(
+                codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16)
+              );
             }
             result[trackId] = { timescale, type };
             result[type] = { timescale, id: trackId, codec };
@@ -306,27 +333,37 @@ export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
     findBox(fmp4, ['moof', 'traf']).reduce((result: number | null, traf) => {
       const tfdt = findBox(traf, ['tfdt'])[0];
       const version = tfdt.data[tfdt.start];
-      const start = findBox(traf, ['tfhd']).reduce((result: number | null, tfhd) => {
-        // get the track id from the tfhd
-        const id = readUint32(tfhd, 4);
-        const track = initData[id];
-        if (track) {
-          let baseTime = readUint32(tfdt, 4);
-          if (version === 1) {
-            baseTime *= Math.pow(2, 32);
-            baseTime += readUint32(tfdt, 8);
+      const start = findBox(traf, ['tfhd']).reduce(
+        (result: number | null, tfhd) => {
+          // get the track id from the tfhd
+          const id = readUint32(tfhd, 4);
+          const track = initData[id];
+          if (track) {
+            let baseTime = readUint32(tfdt, 4);
+            if (version === 1) {
+              baseTime *= Math.pow(2, 32);
+              baseTime += readUint32(tfdt, 8);
+            }
+            // assume a 90kHz clock if no timescale was specified
+            const scale = track.timescale || 90e3;
+            // convert base time to seconds
+            const startTime = baseTime / scale;
+            if (
+              isFinite(startTime) &&
+              (result === null || startTime < result)
+            ) {
+              return startTime;
+            }
           }
-          // assume a 90kHz clock if no timescale was specified
-          const scale = track.timescale || 90e3;
-          // convert base time to seconds
-          const startTime = baseTime / scale;
-          if (isFinite(startTime) && (result === null || startTime < result)) {
-            return startTime;
-          }
-        }
-        return result;
-      }, null);
-      if (start !== null && isFinite(start) && (result === null || start < result)) {
+          return result;
+        },
+        null
+      );
+      if (
+        start !== null &&
+        isFinite(start) &&
+        (result === null || start < result)
+      ) {
         return start;
       }
       return result;
@@ -400,7 +437,10 @@ export function getDuration(data: Uint8Array, initData: InitData) {
     // If duration samples are not available in the traf use sidx subsegment_duration
     const sidx = parseSegmentIndex(data);
     if (sidx?.references) {
-      return sidx.references.reduce((dur, ref) => dur + ref.info.duration || 0, 0);
+      return sidx.references.reduce(
+        (dur, ref) => dur + ref.info.duration || 0,
+        0
+      );
     }
   }
   if (videoDuration) {
@@ -468,7 +508,11 @@ export function computeRawDurationFromSamples(trun): number {
   return duration;
 }
 
-export function offsetStartDTS(initData: InitData, fmp4: Uint8Array, timeOffset: number) {
+export function offsetStartDTS(
+  initData: InitData,
+  fmp4: Uint8Array,
+  timeOffset: number
+) {
   findBox(fmp4, ['moof', 'traf']).forEach(function (traf) {
     findBox(traf, ['tfhd']).forEach(function (tfhd) {
       // get the track id from the tfhd
@@ -526,7 +570,10 @@ export interface SegmentedRange {
   remainder: Uint8Array | null;
 }
 
-export function appendUint8Array(data1: Uint8Array, data2: Uint8Array): Uint8Array {
+export function appendUint8Array(
+  data1: Uint8Array,
+  data2: Uint8Array
+): Uint8Array {
   const temp = new Uint8Array(data1.length + data2.length);
   temp.set(data1);
   temp.set(data2, data1.length);

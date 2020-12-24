@@ -68,7 +68,9 @@ describe('EMEController', function () {
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
 
-    emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: fakeLevels });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, {
+      levels: fakeLevels,
+    });
 
     self.setTimeout(function () {
       expect(media.setMediaKeys.callCount).to.equal(0);
@@ -98,13 +100,21 @@ describe('EMEController', function () {
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
 
-    emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: fakeLevels });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, {
+      levels: fakeLevels,
+    });
 
     self.setTimeout(function () {
       expect(reqMediaKsAccessSpy.callCount).to.equal(1);
       const baseConfig = reqMediaKsAccessSpy.getCall(0).args[1][0];
-      expect(baseConfig.audioCapabilities[0]).to.have.property('robustness', 'HW_SECURE_ALL');
-      expect(baseConfig.videoCapabilities[0]).to.have.property('robustness', 'HW_SECURE_ALL');
+      expect(baseConfig.audioCapabilities[0]).to.have.property(
+        'robustness',
+        'HW_SECURE_ALL'
+      );
+      expect(baseConfig.videoCapabilities[0]).to.have.property(
+        'robustness',
+        'HW_SECURE_ALL'
+      );
       done();
     }, 0);
   });
@@ -127,14 +137,20 @@ describe('EMEController', function () {
     };
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
-    emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: fakeLevels });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, {
+      levels: fakeLevels,
+    });
 
     media.emit('encrypted', badData);
 
     self.setTimeout(function () {
       expect(emeController.hls.trigger).to.have.been.calledTwice;
-      expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
-      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_SESSION);
+      expect(emeController.hls.trigger.args[0][1].details).to.equal(
+        ErrorDetails.KEY_SYSTEM_NO_KEYS
+      );
+      expect(emeController.hls.trigger.args[1][1].details).to.equal(
+        ErrorDetails.KEY_SYSTEM_NO_SESSION
+      );
       done();
     }, 0);
   });

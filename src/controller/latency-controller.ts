@@ -1,7 +1,11 @@
 import LevelDetails from '../loader/level-details';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
-import type { ErrorData, LevelUpdatedData, MediaAttachingData } from '../types/events';
+import type {
+  ErrorData,
+  LevelUpdatedData,
+  MediaAttachingData,
+} from '../types/events';
 import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
@@ -32,7 +36,9 @@ export default class LatencyController implements ComponentAPI {
     if (config.liveMaxLatencyDuration !== undefined) {
       return config.liveMaxLatencyDuration;
     }
-    return levelDetails ? config.liveMaxLatencyDurationCount * levelDetails.targetduration : 0;
+    return levelDetails
+      ? config.liveMaxLatencyDurationCount * levelDetails.targetduration
+      : 0;
   }
 
   get targetLatency(): number | null {
@@ -41,24 +47,48 @@ export default class LatencyController implements ComponentAPI {
       return null;
     }
     const { holdBack, partHoldBack, targetduration } = levelDetails;
-    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode } = this.config;
+    const {
+      liveSyncDuration,
+      liveSyncDurationCount,
+      lowLatencyMode,
+    } = this.config;
     const userConfig = this.hls.userConfig;
     let targetLatency = lowLatencyMode ? partHoldBack || holdBack : holdBack;
-    if (userConfig.liveSyncDuration || userConfig.liveSyncDurationCount || targetLatency === 0) {
-      targetLatency = liveSyncDuration !== undefined ? liveSyncDuration : liveSyncDurationCount * targetduration;
+    if (
+      userConfig.liveSyncDuration ||
+      userConfig.liveSyncDurationCount ||
+      targetLatency === 0
+    ) {
+      targetLatency =
+        liveSyncDuration !== undefined
+          ? liveSyncDuration
+          : liveSyncDurationCount * targetduration;
     }
     const maxLiveSyncOnStallIncrease = levelDetails.targetduration;
     const liveSyncOnStallIncrease = 1.0;
-    return targetLatency + Math.min(this.stallCount * liveSyncOnStallIncrease, maxLiveSyncOnStallIncrease);
+    return (
+      targetLatency +
+      Math.min(
+        this.stallCount * liveSyncOnStallIncrease,
+        maxLiveSyncOnStallIncrease
+      )
+    );
   }
 
   get liveSyncPosition(): number | null {
     const liveEdge = this.estimateLiveEdge();
     const targetLatency = this.targetLatency;
-    if (liveEdge === null || targetLatency === null || this.levelDetails === null) {
+    if (
+      liveEdge === null ||
+      targetLatency === null ||
+      this.levelDetails === null
+    ) {
       return null;
     }
-    return Math.min(this.levelDetails.edge, liveEdge - targetLatency - this.edgeStalled);
+    return Math.min(
+      this.levelDetails.edge,
+      liveEdge - targetLatency - this.edgeStalled
+    );
   }
 
   get edgeStalled(): number {
@@ -66,7 +96,9 @@ export default class LatencyController implements ComponentAPI {
     if (levelDetails === null) {
       return 0;
     }
-    const maxLevelUpdateAge = ((this.config.lowLatencyMode && levelDetails.partTarget) || levelDetails.targetduration) * 3;
+    const maxLevelUpdateAge =
+      ((this.config.lowLatencyMode && levelDetails.partTarget) ||
+        levelDetails.targetduration) * 3;
     return Math.max(levelDetails.age - maxLevelUpdateAge, 0);
   }
 
@@ -76,7 +108,9 @@ export default class LatencyController implements ComponentAPI {
       return 0;
     }
     const bufferedRanges = media.buffered.length;
-    return bufferedRanges ? media.buffered.end(bufferedRanges - 1) : levelDetails.edge - this.currentTime;
+    return bufferedRanges
+      ? media.buffered.end(bufferedRanges - 1)
+      : levelDetails.edge - this.currentTime;
   }
 
   public destroy(): void {
@@ -100,7 +134,10 @@ export default class LatencyController implements ComponentAPI {
     this.hls.off(Events.ERROR, this.onError);
   }
 
-  private onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachingData) {
+  private onMediaAttached(
+    event: Events.MEDIA_ATTACHED,
+    data: MediaAttachingData
+  ) {
     this.media = data.media;
     this.media.addEventListener('timeupdate', this.timeupdateHandler);
   }
@@ -118,7 +155,10 @@ export default class LatencyController implements ComponentAPI {
     this.stallCount = 0;
   }
 
-  private onLevelUpdated(event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData) {
+  private onLevelUpdated(
+    event: Events.LEVEL_UPDATED,
+    { details }: LevelUpdatedData
+  ) {
     this.levelDetails = details;
     if (details.advanced) {
       this.timeupdate();
@@ -133,7 +173,9 @@ export default class LatencyController implements ComponentAPI {
       return;
     }
     this.stallCount++;
-    logger.warn('[playback-rate-controller]: Stall detected, adjusting target latency');
+    logger.warn(
+      '[playback-rate-controller]: Stall detected, adjusting target latency'
+    );
   }
 
   private timeupdate() {
@@ -162,11 +204,23 @@ export default class LatencyController implements ComponentAPI {
     // Only adjust playbackRate when within one target duration of targetLatency
     // and more than one second from under-buffering.
     // Playback further than one target duration from target can be considered DVR playback.
-    const liveMinLatencyDuration = Math.min(this.maxLatency, targetLatency + levelDetails.targetduration);
+    const liveMinLatencyDuration = Math.min(
+      this.maxLatency,
+      targetLatency + levelDetails.targetduration
+    );
     const inLiveRange = distanceFromTarget < liveMinLatencyDuration;
-    if (levelDetails.live && inLiveRange && distanceFromTarget > 0.05 && this.forwardBufferLength > 1) {
+    if (
+      levelDetails.live &&
+      inLiveRange &&
+      distanceFromTarget > 0.05 &&
+      this.forwardBufferLength > 1
+    ) {
       const max = Math.min(2, Math.max(1.0, maxLiveSyncPlaybackRate));
-      const rate = Math.round((2 / (1 + Math.exp(-0.75 * distanceFromTarget - this.edgeStalled))) * 20) / 20;
+      const rate =
+        Math.round(
+          (2 / (1 + Math.exp(-0.75 * distanceFromTarget - this.edgeStalled))) *
+            20
+        ) / 20;
       media.playbackRate = Math.min(max, Math.max(1, rate));
     } else if (media.playbackRate !== 1 && media.playbackRate !== 0) {
       media.playbackRate = 1;

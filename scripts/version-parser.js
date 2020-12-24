@@ -25,7 +25,10 @@ module.exports = {
   // returns true if the provided version is definitely greater than any existing
   // auto generated canary versions
   isDefinitelyGreaterThanCanaries: (version) => {
-    const parsed = semver.parse(version, { loose: false, includePrerelease: true });
+    const parsed = semver.parse(version, {
+      loose: false,
+      includePrerelease: true,
+    });
     if (!parsed) {
       throw new Error('Error parsing version.');
     }

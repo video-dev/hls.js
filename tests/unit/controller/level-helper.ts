@@ -1,4 +1,10 @@
-import { adjustSliding, computeReloadInterval, mapFragmentIntersection, mapPartIntersection, mergeDetails } from '../../../src/controller/level-helper';
+import {
+  adjustSliding,
+  computeReloadInterval,
+  mapFragmentIntersection,
+  mapPartIntersection,
+  mergeDetails,
+} from '../../../src/controller/level-helper';
 import LevelDetails from '../../../src/loader/level-details';
 import Fragment, { Part } from '../../../src/loader/fragment';
 import LoadStats from '../../../src/loader/load-stats';
@@ -107,9 +113,18 @@ describe('LevelHelper Tests', function () {
       const intersectionFn = sinon.spy();
       mapPartIntersection(oldParts, newParts, intersectionFn);
       expect(intersectionFn).to.have.been.calledThrice;
-      expect(intersectionFn.firstCall).to.have.been.calledWith(oldParts[3], newParts[0]);
-      expect(intersectionFn.secondCall).to.have.been.calledWith(oldParts[4], newParts[1]);
-      expect(intersectionFn.thirdCall).to.have.been.calledWith(oldParts[5], newParts[2]);
+      expect(intersectionFn.firstCall).to.have.been.calledWith(
+        oldParts[3],
+        newParts[0]
+      );
+      expect(intersectionFn.secondCall).to.have.been.calledWith(
+        oldParts[4],
+        newParts[1]
+      );
+      expect(intersectionFn.thirdCall).to.have.been.calledWith(
+        oldParts[5],
+        newParts[2]
+      );
     });
   });
 

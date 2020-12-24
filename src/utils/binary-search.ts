@@ -16,7 +16,10 @@ const BinarySearch = {
    *
    * @return {T | null} The object if it is found or null otherwise.
    */
-  search: function <T>(list: T[], comparisonFn: BinarySearchComparison<T>): T | null {
+  search: function <T>(
+    list: T[],
+    comparisonFn: BinarySearchComparison<T>
+  ): T | null {
     let minIndex: number = 0;
     let maxIndex: number = list.length - 1;
     let currentIndex: number | null = null;

@@ -1,6 +1,10 @@
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Fragment from './fragment';
-import { Loader, LoaderConfiguration, FragmentLoaderContext } from '../types/loader';
+import {
+  Loader,
+  LoaderConfiguration,
+  FragmentLoaderContext,
+} from '../types/loader';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
 import type { FragLoadedData } from '../types/events';
@@ -23,7 +27,10 @@ export default class FragmentLoader {
     }
   }
 
-  load(frag: Fragment, onProgress?: FragmentLoadProgressCallback): Promise<FragLoadedData> {
+  load(
+    frag: Fragment,
+    onProgress?: FragmentLoadProgressCallback
+  ): Promise<FragLoadedData> {
     const url = frag.url;
     if (!url) {
       return Promise.reject(
@@ -46,7 +53,9 @@ export default class FragmentLoader {
     const DefaultILoader = config.loader;
 
     return new Promise((resolve, reject) => {
-      const loader = (this.loader = frag.loader = FragmentILoader ? new FragmentILoader(config) : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
+      const loader = (this.loader = frag.loader = FragmentILoader
+        ? new FragmentILoader(config)
+        : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag);
       const loaderConfig: LoaderConfiguration = {
         timeout: config.fragLoadingTimeOut,
@@ -118,7 +127,11 @@ export default class FragmentLoader {
     });
   }
 
-  public loadPart(frag: Fragment, part: Part, onProgress: FragmentLoadProgressCallback): Promise<FragLoadedData> {
+  public loadPart(
+    frag: Fragment,
+    part: Part,
+    onProgress: FragmentLoadProgressCallback
+  ): Promise<FragLoadedData> {
     this.abort();
 
     const config = this.config;
@@ -126,7 +139,9 @@ export default class FragmentLoader {
     const DefaultILoader = config.loader;
 
     return new Promise((resolve, reject) => {
-      const loader = (this.loader = frag.loader = FragmentILoader ? new FragmentILoader(config) : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
+      const loader = (this.loader = frag.loader = FragmentILoader
+        ? new FragmentILoader(config)
+        : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag, part);
       const loaderConfig: LoaderConfiguration = {
         timeout: config.fragLoadingTimeOut,
@@ -202,9 +217,13 @@ export default class FragmentLoader {
     fragStats.loaded += partStats.loaded;
     if (partTotal) {
       const estTotalParts = Math.round(frag.duration / part.duration);
-      const estLoadedParts = Math.min(Math.round(fragStats.loaded / partTotal), estTotalParts);
+      const estLoadedParts = Math.min(
+        Math.round(fragStats.loaded / partTotal),
+        estTotalParts
+      );
       const estRemainingParts = estTotalParts - estLoadedParts;
-      const estRemainingBytes = estRemainingParts * Math.round(fragStats.loaded / estLoadedParts);
+      const estRemainingBytes =
+        estRemainingParts * Math.round(fragStats.loaded / estLoadedParts);
       fragStats.total = fragStats.loaded + estRemainingBytes;
     } else {
       fragStats.total = Math.max(fragStats.loaded, fragStats.total);
@@ -230,7 +249,10 @@ export default class FragmentLoader {
   }
 }
 
-function createLoaderContext(frag: Fragment, part: Part | null = null): FragmentLoaderContext {
+function createLoaderContext(
+  frag: Fragment,
+  part: Part | null = null
+): FragmentLoaderContext {
   const segment: BaseSegment = part || frag;
   const loaderContext: FragmentLoaderContext = {
     frag,

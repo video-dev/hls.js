@@ -20,7 +20,12 @@ export default function TransmuxerWorker(self) {
     switch (data.cmd) {
       case 'init': {
         const config = JSON.parse(data.config);
-        self.transmuxer = new Transmuxer(observer, data.typeSupported, config, data.vendor);
+        self.transmuxer = new Transmuxer(
+          observer,
+          data.typeSupported,
+          config,
+          data.vendor
+        );
         enableLogs(config.debug);
         forwardMessage('init', null);
         break;
@@ -30,7 +35,13 @@ export default function TransmuxerWorker(self) {
         break;
       }
       case 'demux': {
-        const transmuxResult: TransmuxerResult | Promise<TransmuxerResult> = self.transmuxer.push(data.data, data.decryptdata, data.chunkMeta);
+        const transmuxResult:
+          | TransmuxerResult
+          | Promise<TransmuxerResult> = self.transmuxer.push(
+          data.data,
+          data.decryptdata,
+          data.chunkMeta
+        );
         if (isPromise(transmuxResult)) {
           transmuxResult.then((data) => {
             emitTransmuxComplete(self, data);
@@ -48,7 +59,11 @@ export default function TransmuxerWorker(self) {
             handleFlushResult(self, results as Array<TransmuxerResult>, id);
           });
         } else {
-          handleFlushResult(self, transmuxResult as Array<TransmuxerResult>, id);
+          handleFlushResult(
+            self,
+            transmuxResult as Array<TransmuxerResult>,
+            id
+          );
         }
         break;
       }
@@ -70,12 +85,18 @@ function emitTransmuxComplete(self: any, transmuxResult: TransmuxerResult) {
   if (video) {
     addToTransferable(transferable, video);
   }
-  self.postMessage({ event: 'transmuxComplete', data: transmuxResult }, transferable);
+  self.postMessage(
+    { event: 'transmuxComplete', data: transmuxResult },
+    transferable
+  );
 }
 
 // Converts data to a transferable object https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast)
 // in order to minimize message passing overhead
-function addToTransferable(transferable: Array<ArrayBuffer>, track: RemuxedTrack) {
+function addToTransferable(
+  transferable: Array<ArrayBuffer>,
+  track: RemuxedTrack
+) {
   if (track.data1) {
     transferable.push(track.data1.buffer);
   }
@@ -84,7 +105,11 @@ function addToTransferable(transferable: Array<ArrayBuffer>, track: RemuxedTrack
   }
 }
 
-function handleFlushResult(self: any, results: Array<TransmuxerResult>, chunkMeta: ChunkMetadata) {
+function handleFlushResult(
+  self: any,
+  results: Array<TransmuxerResult>,
+  chunkMeta: ChunkMetadata
+) {
   results.forEach((result) => {
     emitTransmuxComplete(self, result);
   });
@@ -92,5 +117,11 @@ function handleFlushResult(self: any, results: Array<TransmuxerResult>, chunkMet
 }
 
 function isEmptyResult(remuxResult: RemuxerResult) {
-  return !remuxResult.audio && !remuxResult.video && !remuxResult.text && !remuxResult.id3 && !remuxResult.initSegment;
+  return (
+    !remuxResult.audio &&
+    !remuxResult.video &&
+    !remuxResult.text &&
+    !remuxResult.id3 &&
+    !remuxResult.initSegment
+  );
 }

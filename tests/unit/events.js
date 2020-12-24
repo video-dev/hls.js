@@ -23,11 +23,15 @@ function getAllCapsSnakeCaseToCamelCase(eventType) {
 describe('Events tests', function () {
   describe('Events enumeration', function () {
     Object.keys(Events).forEach(function (event) {
-      it('should have a value matching generics convention for event type: ' + event, function () {
-        const value = Events[event];
-        const expected = 'hls' + getAllCapsSnakeCaseToCamelCase(event);
-        expect(value).to.equal(expected);
-      });
+      it(
+        'should have a value matching generics convention for event type: ' +
+          event,
+        function () {
+          const value = Events[event];
+          const expected = 'hls' + getAllCapsSnakeCaseToCamelCase(event);
+          expect(value).to.equal(expected);
+        }
+      );
     });
   });
 });

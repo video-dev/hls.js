@@ -78,7 +78,17 @@ const BitratesMap = [
   160,
 ];
 
-const SamplingRateMap = [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000];
+const SamplingRateMap = [
+  44100,
+  48000,
+  32000,
+  22050,
+  24000,
+  16000,
+  11025,
+  12000,
+  8000,
+];
 
 const SamplesCoefficients = [
   // MPEG 2.5
@@ -118,7 +128,13 @@ const BytesInSlot = [
   4, // Layer1
 ];
 
-export function appendFrame(track: DemuxedAudioTrack, data: Uint8Array, offset: number, pts: number, frameIndex: number) {
+export function appendFrame(
+  track: DemuxedAudioTrack,
+  data: Uint8Array,
+  offset: number,
+  pts: number,
+  frameIndex: number
+) {
   // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
   if (offset + 24 > data.length) {
     return;
@@ -128,7 +144,11 @@ export function appendFrame(track: DemuxedAudioTrack, data: Uint8Array, offset: 
   if (header && offset + header.frameLength <= data.length) {
     const frameDuration = (header.samplesPerFrame * 90000) / header.sampleRate;
     const stamp = pts + frameIndex * frameDuration;
-    const sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
+    const sample = {
+      unit: data.subarray(offset, offset + header.frameLength),
+      pts: stamp,
+      dts: stamp,
+    };
 
     track.config = [];
     track.channelCount = header.channelCount;
@@ -144,18 +164,29 @@ export function parseHeader(data: Uint8Array, offset: number) {
   const mpegLayer = (data[offset + 1] >> 1) & 3;
   const bitRateIndex = (data[offset + 2] >> 4) & 15;
   const sampleRateIndex = (data[offset + 2] >> 2) & 3;
-  if (mpegVersion !== 1 && bitRateIndex !== 0 && bitRateIndex !== 15 && sampleRateIndex !== 3) {
+  if (
+    mpegVersion !== 1 &&
+    bitRateIndex !== 0 &&
+    bitRateIndex !== 15 &&
+    sampleRateIndex !== 3
+  ) {
     const paddingBit = (data[offset + 2] >> 1) & 1;
     const channelMode = data[offset + 3] >> 6;
-    const columnInBitrates = mpegVersion === 3 ? 3 - mpegLayer : mpegLayer === 3 ? 3 : 4;
-    const bitRate = BitratesMap[columnInBitrates * 14 + bitRateIndex - 1] * 1000;
-    const columnInSampleRates = mpegVersion === 3 ? 0 : mpegVersion === 2 ? 1 : 2;
-    const sampleRate = SamplingRateMap[columnInSampleRates * 3 + sampleRateIndex];
+    const columnInBitrates =
+      mpegVersion === 3 ? 3 - mpegLayer : mpegLayer === 3 ? 3 : 4;
+    const bitRate =
+      BitratesMap[columnInBitrates * 14 + bitRateIndex - 1] * 1000;
+    const columnInSampleRates =
+      mpegVersion === 3 ? 0 : mpegVersion === 2 ? 1 : 2;
+    const sampleRate =
+      SamplingRateMap[columnInSampleRates * 3 + sampleRateIndex];
     const channelCount = channelMode === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
     const sampleCoefficient = SamplesCoefficients[mpegVersion][mpegLayer];
     const bytesInSlot = BytesInSlot[mpegLayer];
     const samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
-    const frameLength = Math.floor((sampleCoefficient * bitRate) / sampleRate + paddingBit) * bytesInSlot;
+    const frameLength =
+      Math.floor((sampleCoefficient * bitRate) / sampleRate + paddingBit) *
+      bytesInSlot;
 
     if (chromeVersion === null) {
       const userAgent = navigator.userAgent || '';
@@ -164,7 +195,12 @@ export function parseHeader(data: Uint8Array, offset: number) {
     }
     const needChromeFix = !!chromeVersion && chromeVersion <= 87;
 
-    if (needChromeFix && mpegLayer === 2 && bitRate >= 224000 && channelMode === 0) {
+    if (
+      needChromeFix &&
+      mpegLayer === 2 &&
+      bitRate >= 224000 &&
+      channelMode === 0
+    ) {
       // Work around bug in Chromium by setting channelMode to dual-channel (01) instead of stereo (00)
       data[offset + 3] = data[offset + 3] | 0x80;
     }
@@ -174,7 +210,11 @@ export function parseHeader(data: Uint8Array, offset: number) {
 }
 
 export function isHeaderPattern(data: Uint8Array, offset: number): boolean {
-  return data[offset] === 0xff && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00;
+  return (
+    data[offset] === 0xff &&
+    (data[offset + 1] & 0xe0) === 0xe0 &&
+    (data[offset + 1] & 0x06) !== 0x00
+  );
 }
 
 export function isHeader(data: Uint8Array, offset: number): boolean {

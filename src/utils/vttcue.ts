@@ -28,7 +28,13 @@ export default (function () {
   const AllowedDirections = ['', 'lr', 'rl'] as const;
   type Direction = typeof AllowedDirections[number];
 
-  const AllowedAlignments = ['start', 'middle', 'end', 'left', 'right'] as const;
+  const AllowedAlignments = [
+    'start',
+    'middle',
+    'end',
+    'left',
+    'right',
+  ] as const;
   type Alignment = typeof AllowedAlignments[number];
 
   function isAllowedValue<T, A>(allowed: T, value: string): A | false {
@@ -50,11 +56,17 @@ export default (function () {
   }
 
   function findDirectionSetting(value: string) {
-    return isAllowedValue<typeof AllowedDirections, Direction>(AllowedDirections, value);
+    return isAllowedValue<typeof AllowedDirections, Direction>(
+      AllowedDirections,
+      value
+    );
   }
 
   function findAlignSetting(value: string) {
-    return isAllowedValue<typeof AllowedAlignments, Alignment>(AllowedAlignments, value);
+    return isAllowedValue<typeof AllowedAlignments, Alignment>(
+      AllowedAlignments,
+      value
+    );
   }
 
   function extend(obj: Record<string, any>, ...rest: Record<string, any>[]) {
@@ -204,7 +216,9 @@ export default (function () {
           const setting = findDirectionSetting(value);
           // Have to check for false because the setting an be an empty string.
           if (setting === false) {
-            throw new SyntaxError('An invalid or illegal string was specified.');
+            throw new SyntaxError(
+              'An invalid or illegal string was specified.'
+            );
           }
 
           _vertical = setting;
@@ -236,7 +250,9 @@ export default (function () {
         },
         set: function (value: number | 'auto') {
           if (typeof value !== 'number' && value !== 'auto') {
-            throw new SyntaxError('An invalid number or illegal string was specified.');
+            throw new SyntaxError(
+              'An invalid number or illegal string was specified.'
+            );
           }
 
           _line = value;
@@ -255,7 +271,9 @@ export default (function () {
         set: function (value: string) {
           const setting = findAlignSetting(value);
           if (!setting) {
-            throw new SyntaxError('An invalid or illegal string was specified.');
+            throw new SyntaxError(
+              'An invalid or illegal string was specified.'
+            );
           }
 
           _lineAlign = setting;
@@ -292,7 +310,9 @@ export default (function () {
         set: function (value: string) {
           const setting = findAlignSetting(value);
           if (!setting) {
-            throw new SyntaxError('An invalid or illegal string was specified.');
+            throw new SyntaxError(
+              'An invalid or illegal string was specified.'
+            );
           }
 
           _positionAlign = setting;
@@ -329,7 +349,9 @@ export default (function () {
         set: function (value: string) {
           const setting = findAlignSetting(value);
           if (!setting) {
-            throw new SyntaxError('An invalid or illegal string was specified.');
+            throw new SyntaxError(
+              'An invalid or illegal string was specified.'
+            );
           }
 
           _align = setting;

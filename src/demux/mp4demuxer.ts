@@ -2,7 +2,11 @@
  * MP4 demuxer
  */
 import { Demuxer, DemuxerResult, DemuxedTrack } from '../types/demuxer';
-import { findBox, segmentValidRange, appendUint8Array } from '../utils/mp4-tools';
+import {
+  findBox,
+  segmentValidRange,
+  appendUint8Array,
+} from '../utils/mp4-tools';
 import { dummyTrack } from './dummy-demuxed-track';
 import type { HlsEventEmitter } from '../events';
 import type { HlsConfig } from '../config';
@@ -24,7 +28,11 @@ class MP4Demuxer implements Demuxer {
 
   static probe(data) {
     // ensure we find a moof box in the first 16 kB
-    return findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, ['moof']).length > 0;
+    return (
+      findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, [
+        'moof',
+      ]).length > 0
+    );
   }
 
   demux(data): DemuxerResult {
@@ -66,8 +74,14 @@ class MP4Demuxer implements Demuxer {
     };
   }
 
-  demuxSampleAes(data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
-    return Promise.reject(new Error('The MP4 demuxer does not support SAMPLE-AES decryption'));
+  demuxSampleAes(
+    data: Uint8Array,
+    decryptData: Uint8Array,
+    timeOffset: number
+  ): Promise<DemuxerResult> {
+    return Promise.reject(
+      new Error('The MP4 demuxer does not support SAMPLE-AES decryption')
+    );
   }
 
   destroy() {}

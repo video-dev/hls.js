@@ -57,7 +57,11 @@ export class BufferHelper {
     return false;
   }
 
-  static bufferInfo(media: Bufferable | null, pos: number, maxHoleDuration: number): BufferInfo {
+  static bufferInfo(
+    media: Bufferable | null,
+    pos: number,
+    maxHoleDuration: number
+  ): BufferInfo {
     try {
       if (media) {
         const vbuffered = BufferHelper.getBuffered(media);
@@ -150,7 +154,12 @@ export class BufferHelper {
         break;
       }
     }
-    return { len: bufferLen, start: bufferStart || 0, end: bufferEnd || 0, nextStart: bufferStartNext };
+    return {
+      len: bufferLen,
+      start: bufferStart || 0,
+      end: bufferEnd || 0,
+      nextStart: bufferStartNext,
+    };
   }
 
   /**

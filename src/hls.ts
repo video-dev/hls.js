@@ -11,7 +11,12 @@ import LevelController from './controller/level-controller';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import { enableStreamingMode, HlsConfig, hlsDefaultConfig, mergeConfig } from './config';
+import {
+  enableStreamingMode,
+  HlsConfig,
+  hlsDefaultConfig,
+  mergeConfig,
+} from './config';
 
 import { Events } from './events';
 import { EventEmitter } from 'eventemitter3';
@@ -110,7 +115,9 @@ export default class Hls implements HlsEventEmitter {
     // core controllers and network loaders
     const abrController = (this.abrController = new config.abrController(this)); // eslint-disable-line new-cap
     const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
-    const capLevelController = (this.capLevelController = new config.capLevelController(this)); // eslint-disable-line new-cap
+    const capLevelController = (this.capLevelController = new config.capLevelController(
+      this
+    )); // eslint-disable-line new-cap
     const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
     const playListLoader = new PlaylistLoader(this);
     const keyLoader = new KeyLoader(this);
@@ -120,7 +127,10 @@ export default class Hls implements HlsEventEmitter {
     const levelController = (this.levelController = new LevelController(this));
     // FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
-    const streamController = (this.streamController = new StreamController(this, fragmentTracker));
+    const streamController = (this.streamController = new StreamController(
+      this,
+      fragmentTracker
+    ));
 
     // Level Controller initiates loading after all controllers have received MANIFEST_PARSED
     levelController.onParsedComplete = () => {
@@ -137,23 +147,58 @@ export default class Hls implements HlsEventEmitter {
     const networkControllers = [levelController, streamController];
 
     this.networkControllers = networkControllers;
-    const coreComponents = [playListLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController, fragmentTracker];
+    const coreComponents = [
+      playListLoader,
+      keyLoader,
+      abrController,
+      bufferController,
+      capLevelController,
+      fpsController,
+      id3TrackController,
+      fragmentTracker,
+    ];
 
-    this.audioTrackController = this.createController(config.audioTrackController, null, networkControllers);
-    this.createController(config.audioStreamController, fragmentTracker, networkControllers);
+    this.audioTrackController = this.createController(
+      config.audioTrackController,
+      null,
+      networkControllers
+    );
+    this.createController(
+      config.audioStreamController,
+      fragmentTracker,
+      networkControllers
+    );
     // subtitleTrackController must be defined before  because the order of event handling is important
-    this.subtitleTrackController = this.createController(config.subtitleTrackController, null, networkControllers);
-    this.createController(config.subtitleStreamController, fragmentTracker, networkControllers);
+    this.subtitleTrackController = this.createController(
+      config.subtitleTrackController,
+      null,
+      networkControllers
+    );
+    this.createController(
+      config.subtitleStreamController,
+      fragmentTracker,
+      networkControllers
+    );
     this.createController(config.timelineController, null, coreComponents);
-    this.emeController = this.createController(config.emeController, null, coreComponents);
-    this.latencyController = this.createController(LatencyController, null, coreComponents);
+    this.emeController = this.createController(
+      config.emeController,
+      null,
+      coreComponents
+    );
+    this.latencyController = this.createController(
+      LatencyController,
+      null,
+      coreComponents
+    );
 
     this.coreComponents = coreComponents;
   }
 
   createController(ControllerClass, fragmentTracker, components) {
     if (ControllerClass) {
-      const controllerInstance = fragmentTracker ? new ControllerClass(this, fragmentTracker) : new ControllerClass(this);
+      const controllerInstance = fragmentTracker
+        ? new ControllerClass(this, fragmentTracker)
+        : new ControllerClass(this);
       if (components) {
         components.push(controllerInstance);
       }
@@ -163,7 +208,11 @@ export default class Hls implements HlsEventEmitter {
   }
 
   // Delegate the EventEmitter through the public API of Hls.js
-  on<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context) {
+  on<E extends keyof HlsListeners, Context = undefined>(
+    event: E,
+    listener: HlsListeners[E],
+    context?: Context
+  ) {
     const hlsjs = this;
     this._emitter.on(
       event,
@@ -174,7 +223,14 @@ export default class Hls implements HlsEventEmitter {
           try {
             listener.apply(this, args);
           } catch (e) {
-            logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
+            logger.error(
+              'An internal error happened while handling event ' +
+                event +
+                '. Error message: "' +
+                e.message +
+                '". Here is a stacktrace:',
+              e
+            );
             hlsjs.trigger(Events.ERROR, {
               type: ErrorTypes.OTHER_ERROR,
               details: ErrorDetails.INTERNAL_EXCEPTION,
@@ -189,7 +245,11 @@ export default class Hls implements HlsEventEmitter {
     );
   }
 
-  once<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context) {
+  once<E extends keyof HlsListeners, Context = undefined>(
+    event: E,
+    listener: HlsListeners[E],
+    context?: Context
+  ) {
     const hlsjs = this;
     this._emitter.once(
       event,
@@ -200,7 +260,14 @@ export default class Hls implements HlsEventEmitter {
           try {
             listener.apply(this, args);
           } catch (e) {
-            logger.error('An internal error happened while handling event ' + event + '. Error message: "' + e.message + '". Here is a stacktrace:', e);
+            logger.error(
+              'An internal error happened while handling event ' +
+                event +
+                '. Error message: "' +
+                e.message +
+                '". Here is a stacktrace:',
+              e
+            );
             hlsjs.trigger(Events.ERROR, {
               type: ErrorTypes.OTHER_ERROR,
               details: ErrorDetails.INTERNAL_EXCEPTION,
@@ -219,7 +286,12 @@ export default class Hls implements HlsEventEmitter {
     this._emitter.removeAllListeners(event);
   }
 
-  off<E extends keyof HlsListeners, Context = undefined>(event: E, listener?: HlsListeners[E] | undefined, context?: Context, once?: boolean | undefined) {
+  off<E extends keyof HlsListeners, Context = undefined>(
+    event: E,
+    listener?: HlsListeners[E] | undefined,
+    context?: Context,
+    once?: boolean | undefined
+  ) {
     this._emitter.off(event, listener, context, once);
   }
 
@@ -227,11 +299,18 @@ export default class Hls implements HlsEventEmitter {
     return this._emitter.listeners(event);
   }
 
-  emit<E extends keyof HlsListeners>(event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean {
+  emit<E extends keyof HlsListeners>(
+    event: E,
+    name: E,
+    eventObject: Parameters<HlsListeners[E]>[1]
+  ): boolean {
     return this._emitter.emit(event, name, eventObject);
   }
 
-  trigger<E extends keyof HlsListeners>(event: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean {
+  trigger<E extends keyof HlsListeners>(
+    event: E,
+    eventObject: Parameters<HlsListeners[E]>[1]
+  ): boolean {
     return this._emitter.emit(event, event, eventObject);
   }
 
@@ -283,7 +362,9 @@ export default class Hls implements HlsEventEmitter {
       this.detachMedia();
       this.attachMedia(media);
     }
-    url = URLToolkit.buildAbsoluteURL(self.location.href, url, { alwaysNormalize: true });
+    url = URLToolkit.buildAbsoluteURL(self.location.href, url, {
+      alwaysNormalize: true,
+    });
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
@@ -587,7 +668,10 @@ export default class Hls implements HlsEventEmitter {
    */
   get nextAutoLevel(): number {
     // ensure next auto level is between  min and max auto level
-    return Math.min(Math.max(this.abrController.nextAutoLevel, this.minAutoLevel), this.maxAutoLevel);
+    return Math.min(
+      Math.max(this.abrController.nextAutoLevel, this.minAutoLevel),
+      this.maxAutoLevel
+    );
   }
 
   /**
@@ -636,7 +720,9 @@ export default class Hls implements HlsEventEmitter {
    */
   get subtitleTracks(): Array<MediaPlaylist> {
     const subtitleTrackController = this.subtitleTrackController;
-    return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
+    return subtitleTrackController
+      ? subtitleTrackController.subtitleTracks
+      : [];
   }
 
   /**
@@ -668,7 +754,9 @@ export default class Hls implements HlsEventEmitter {
    */
   get subtitleDisplay(): boolean {
     const subtitleTrackController = this.subtitleTrackController;
-    return subtitleTrackController ? subtitleTrackController.subtitleDisplay : false;
+    return subtitleTrackController
+      ? subtitleTrackController.subtitleDisplay
+      : false;
   }
 
   /**

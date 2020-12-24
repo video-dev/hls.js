@@ -28,7 +28,12 @@ describe('OutputFilter', function () {
     outputFilter.newCue(0, 1, lastScreen);
     outputFilter.dispatchCue();
     expect(timelineController.addCues).to.have.been.calledOnce;
-    expect(timelineController.addCues).to.have.been.calledWith(1, 0, 1, lastScreen);
+    expect(timelineController.addCues).to.have.been.calledWith(
+      1,
+      0,
+      1,
+      lastScreen
+    );
   });
 
   it('handles multiple cues and dispatch', function () {
@@ -38,7 +43,12 @@ describe('OutputFilter', function () {
     outputFilter.newCue(3, 4, lastScreen);
     outputFilter.dispatchCue();
     expect(timelineController.addCues).to.have.been.calledOnce;
-    expect(timelineController.addCues).to.have.been.calledWith(1, 0, 4, lastScreen);
+    expect(timelineController.addCues).to.have.been.calledWith(
+      1,
+      0,
+      4,
+      lastScreen
+    );
   });
 
   it('does not dispatch empty cues', function () {

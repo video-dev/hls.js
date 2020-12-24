@@ -6,7 +6,11 @@ import type { Level } from '../../src/types/level';
 import type { TrackSet } from '../../src/types/track';
 import type { MediaPlaylist } from '../../src/types/media-playlist';
 import type LevelDetails from '../../src/loader/level-details';
-import { FragChangedData, FragLoadedData, FragParsedData } from '../../src/types/events';
+import {
+  FragChangedData,
+  FragLoadedData,
+  FragParsedData,
+} from '../../src/types/events';
 
 declare global {
   interface Window {
@@ -27,7 +31,11 @@ interface ChartScale {
   buildTicks: () => void;
   getLabelForIndex: (index: number, datasetIndex: number) => string;
   getPixelForTick: (index: number) => number;
-  getPixelForValue: (value: number, index?: number, datasetIndex?: number) => number;
+  getPixelForValue: (
+    value: number,
+    index?: number,
+    datasetIndex?: number
+  ) => number;
   getValueForPixel: (pixel: number) => number;
 }
 
@@ -43,7 +51,9 @@ export class TimelineChart {
   constructor(canvas: HTMLCanvasElement, chartJsOptions?: any) {
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-      throw new Error(`Could not get CanvasRenderingContext2D from canvas: ${canvas}`);
+      throw new Error(
+        `Could not get CanvasRenderingContext2D from canvas: ${canvas}`
+      );
     }
     const chart = (this.chart = self.chart = new Chart(ctx, {
       type: 'horizontalBar',
@@ -145,7 +155,11 @@ export class TimelineChart {
     if (datasets?.length) {
       const scale = this.chartScales[X_AXIS_SECONDS];
       const { top } = this.chart.chartArea;
-      const height = top + datasets.reduce((val, dataset) => val + dataset.barThickness, 0) + scale.height + 5;
+      const height =
+        top +
+        datasets.reduce((val, dataset) => val + dataset.barThickness, 0) +
+        scale.height +
+        5;
       const container = this.chart.canvas?.parentElement;
       if (container) {
         container.style.height = `${height}px`;
@@ -172,7 +186,8 @@ export class TimelineChart {
     }
     const { loadLevel, nextLoadLevel, nextAutoLevel } = self.hls;
     // eslint-disable-next-line no-undefined
-    const currentLevel = levelSwitched !== undefined ? levelSwitched : self.hls.currentLevel;
+    const currentLevel =
+      levelSwitched !== undefined ? levelSwitched : self.hls.currentLevel;
     levels.forEach((level, i) => {
       const index = level.id || i;
       labels.push(getLevelName(level, index));
@@ -188,7 +203,9 @@ export class TimelineChart {
       }
       datasets.push(
         datasetWithDefaults({
-          url: Array.isArray(level.url) ? level.url[level.urlId || 0] : level.url,
+          url: Array.isArray(level.url)
+            ? level.url[level.urlId || 0]
+            : level.url,
           trackType: 'level',
           borderColor,
           level: index,
@@ -247,7 +264,9 @@ export class TimelineChart {
     this.resize(datasets);
   }
 
-  removeType(trackType: 'level' | 'audioTrack' | 'subtitleTrack' | 'textTrack') {
+  removeType(
+    trackType: 'level' | 'audioTrack' | 'subtitleTrack' | 'textTrack'
+  ) {
     const { labels, datasets } = this.chart.data;
     if (!labels || !datasets) {
       return;
@@ -266,7 +285,12 @@ export class TimelineChart {
     const { datasets } = this.chart.data;
     // eslint-disable-next-line no-restricted-properties
     const deliveryDirectivePattern = /[?&]_HLS_(?:msn|part|skip)=[^?&]+/g;
-    const levelDataSet = arrayFind(datasets, (dataset) => dataset.url?.toString().replace(deliveryDirectivePattern, '') === url.replace(deliveryDirectivePattern, ''));
+    const levelDataSet = arrayFind(
+      datasets,
+      (dataset) =>
+        dataset.url?.toString().replace(deliveryDirectivePattern, '') ===
+        url.replace(deliveryDirectivePattern, '')
+    );
     if (!levelDataSet) {
       return;
     }
@@ -310,7 +334,10 @@ export class TimelineChart {
       }
     }
     const start = getPlaylistStart(details);
-    this.maxZoom = Math.max(start + totalduration + targetduration * 3, this.maxZoom);
+    this.maxZoom = Math.max(
+      start + totalduration + targetduration * 3,
+      this.maxZoom
+    );
     if (this.hidden) {
       return;
     }
@@ -351,12 +378,18 @@ export class TimelineChart {
   updateFragment(data: FragLoadedData | FragParsedData | FragChangedData) {
     const { datasets } = this.chart.data;
     const frag: Fragment = data.frag;
-    const levelDataSet = arrayFind(datasets, (dataset) => dataset.url === frag.baseurl);
+    const levelDataSet = arrayFind(
+      datasets,
+      (dataset) => dataset.url === frag.baseurl
+    );
     if (!levelDataSet) {
       return;
     }
     // eslint-disable-next-line no-restricted-properties
-    const fragData = arrayFind(levelDataSet.data, (fragData) => fragData.relurl === frag.relurl && fragData.sn === frag.sn);
+    const fragData = arrayFind(
+      levelDataSet.data,
+      (fragData) => fragData.relurl === frag.relurl && fragData.sn === frag.sn
+    );
     if (fragData && fragData !== frag) {
       Object.assign(fragData, frag);
     }
@@ -371,7 +404,9 @@ export class TimelineChart {
     if (!labels || !datasets) {
       return;
     }
-    const trackTypes = Object.keys(tracks).sort((type) => (type === 'video' ? 1 : -1));
+    const trackTypes = Object.keys(tracks).sort((type) =>
+      type === 'video' ? 1 : -1
+    );
     const mediaBufferData = [];
 
     this.removeSourceBuffers();
@@ -430,7 +465,8 @@ export class TimelineChart {
 
     // TextTrackList
     const { textTracks } = media;
-    this.tracksChangeHandler = this.tracksChangeHandler || ((e) => this.setTextTracks(e.currentTarget));
+    this.tracksChangeHandler =
+      this.tracksChangeHandler || ((e) => this.setTextTracks(e.currentTarget));
     textTracks.removeEventListener('addtrack', this.tracksChangeHandler);
     textTracks.removeEventListener('removetrack', this.tracksChangeHandler);
     textTracks.removeEventListener('change', this.tracksChangeHandler);
@@ -467,18 +503,27 @@ export class TimelineChart {
       //   return;
       // }
       const data = [];
-      labels.push(`${textTrack.name || textTrack.label} ${textTrack.kind} (${textTrack.mode})`);
+      labels.push(
+        `${textTrack.name || textTrack.label} ${textTrack.kind} (${
+          textTrack.mode
+        })`
+      );
       datasets.push(
         datasetWithDefaults({
           data,
           categoryPercentage: 0.5,
           url: '',
           trackType: 'textTrack',
-          borderColor: (textTrack.mode !== 'hidden') === i ? 'rgba(32, 32, 240, 1.0)' : null,
+          borderColor:
+            (textTrack.mode !== 'hidden') === i
+              ? 'rgba(32, 32, 240, 1.0)'
+              : null,
           textTrack: i,
         })
       );
-      this.cuesChangeHandler = this.cuesChangeHandler || ((e) => this.updateTextTrackCues(e.currentTarget));
+      this.cuesChangeHandler =
+        this.cuesChangeHandler ||
+        ((e) => this.updateTextTrackCues(e.currentTarget));
       textTrack._data = data;
       textTrack.removeEventListener('cuechange', this.cuesChangeHandler);
       textTrack.addEventListener('cuechange', this.cuesChangeHandler);
@@ -511,7 +556,9 @@ export class TimelineChart {
         }
         if (cue) {
           activeMin = Math.min(activeMin, cue.startTime);
-          activeMax = cue.endTime ? Math.max(activeMax, cue.endTime) : activeMax;
+          activeMax = cue.endTime
+            ? Math.max(activeMax, cue.endTime)
+            : activeMax;
         } else {
           activeLength--;
         }
@@ -530,7 +577,9 @@ export class TimelineChart {
       const content = getCueLabel(cue);
       let active = false;
       if (activeLength && end >= activeMin && start <= activeMax) {
-        active = [].some.call(activeCues, (activeCue) => cuesMatch(activeCue, cue));
+        active = [].some.call(activeCues, (activeCue) =>
+          cuesMatch(activeCue, cue)
+        );
       }
       data.push({
         start,
@@ -588,7 +637,12 @@ export class TimelineChart {
   drawLineX(ctx, x: number, chartArea) {
     if (!this.imageDataBuffer) {
       const devicePixelRatio = self.devicePixelRatio || 1;
-      this.imageDataBuffer = ctx.getImageData(0, 0, chartArea.right * devicePixelRatio, chartArea.bottom * devicePixelRatio);
+      this.imageDataBuffer = ctx.getImageData(
+        0,
+        0,
+        chartArea.right * devicePixelRatio,
+        chartArea.bottom * devicePixelRatio
+      );
     } else {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, chartArea.right, chartArea.bottom);
@@ -618,7 +672,9 @@ function datasetWithDefaults(options) {
 }
 
 function getPlaylistStart(details: LevelDetails): number {
-  return details.fragments && details.fragments.length ? details.fragments[0].start : 0;
+  return details.fragments && details.fragments.length
+    ? details.fragments[0].start
+    : 0;
 }
 
 function getLevelName(level: Level, index: number) {

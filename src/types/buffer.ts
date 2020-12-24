@@ -5,7 +5,9 @@ export type ExtendedSourceBuffer = SourceBuffer & {
   ended?: boolean;
 };
 
-export type SourceBuffers = Partial<Record<SourceBufferName, ExtendedSourceBuffer>>;
+export type SourceBuffers = Partial<
+  Record<SourceBufferName, ExtendedSourceBuffer>
+>;
 
 export interface BufferOperationQueues {
   video: Array<BufferOperation>;

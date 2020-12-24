@@ -25,13 +25,20 @@ describe('BufferController tests', function () {
 
     it('flushes a specific type when provided a type', function () {
       const spy = sandbox.spy(bufferController.operationQueue, 'append');
-      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 10, type: 'video' });
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
+        startOffset: 0,
+        endOffset: 10,
+        type: 'video',
+      });
       expect(spy).to.have.been.calledOnce;
     });
 
     it('flushes all source buffers when buffer flush event type is undefined', function () {
       const spy = sandbox.spy(bufferController.operationQueue, 'append');
-      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, { startOffset: 0, endOffset: 10 });
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
+        startOffset: 0,
+        endOffset: 10,
+      });
       expect(spy).to.have.been.calledTwice;
     });
   });
@@ -138,7 +145,10 @@ describe('BufferController tests', function () {
     let checkPendingTracksSpy;
     beforeEach(function () {
       createSbStub = sandbox.stub(bufferController, 'createSourceBuffers');
-      checkPendingTracksSpy = sandbox.spy(bufferController, 'checkPendingTracks');
+      checkPendingTracksSpy = sandbox.spy(
+        bufferController,
+        'checkPendingTracks'
+      );
     });
 
     it('initializes with zero expected BUFFER_CODEC events', function () {
@@ -156,7 +166,9 @@ describe('BufferController tests', function () {
       bufferController.createSourceBuffers.restore();
 
       let video = document.createElement('video');
-      bufferController.onMediaAttaching(Events.MEDIA_ATTACHING, { media: video });
+      bufferController.onMediaAttaching(Events.MEDIA_ATTACHING, {
+        media: video,
+      });
 
       hls.on(Hls.Events.BUFFER_CREATED, (event, data) => {
         const tracks = data.tracks;
@@ -177,12 +189,18 @@ describe('BufferController tests', function () {
     });
 
     it('expects two bufferCodec events if altAudio is signaled', function () {
-      bufferController.onManifestParsed(Events.MANIFEST_PARSED, { altAudio: true });
+      bufferController.onManifestParsed(Events.MANIFEST_PARSED, {
+        altAudio: true,
+      });
       expect(bufferController.bufferCodecEventsExpected).to.equal(2);
     });
 
     it('expects one bufferCodec event if altAudio is signaled with audio only', function () {
-      bufferController.onManifestParsed(Events.MANIFEST_PARSED, { altAudio: true, audio: true, video: false });
+      bufferController.onManifestParsed(Events.MANIFEST_PARSED, {
+        altAudio: true,
+        audio: true,
+        video: false,
+      });
       expect(bufferController.bufferCodecEventsExpected).to.equal(1);
     });
 
@@ -231,9 +249,14 @@ describe('BufferController tests', function () {
 
     it('creates the expected amount of sourceBuffers given the standard event flow', function () {
       bufferController.sourceBuffer = {};
-      bufferController.mediaSource = { readyState: 'open', removeEventListener: sandbox.stub() };
+      bufferController.mediaSource = {
+        readyState: 'open',
+        removeEventListener: sandbox.stub(),
+      };
 
-      bufferController.onManifestParsed(Events.MANIFEST_PARSED, { altAudio: true });
+      bufferController.onManifestParsed(Events.MANIFEST_PARSED, {
+        altAudio: true,
+      });
       bufferController._onMediaSourceOpen();
       bufferController.onBufferCodecs(Events.BUFFER_CODECS, { audio: {} });
       bufferController.onBufferCodecs(Events.BUFFER_CODECS, { video: {} });

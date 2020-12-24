@@ -1,9 +1,21 @@
 export interface Demuxer {
-  demux(data: Uint8Array, timeOffset: number, isSampleAes?: boolean): DemuxerResult;
-  demuxSampleAes(data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult>;
+  demux(
+    data: Uint8Array,
+    timeOffset: number,
+    isSampleAes?: boolean
+  ): DemuxerResult;
+  demuxSampleAes(
+    data: Uint8Array,
+    decryptData: Uint8Array,
+    timeOffset: number
+  ): Promise<DemuxerResult>;
   flush(timeOffset?: number): DemuxerResult;
   destroy(): void;
-  resetInitSegment(audioCodec: string | undefined, videoCodec: string | undefined, duration: number);
+  resetInitSegment(
+    audioCodec: string | undefined,
+    videoCodec: string | undefined,
+    duration: number
+  );
   resetTimeStamp(defaultInitPTS?: number | null): void;
   resetContiguity(): void;
 }

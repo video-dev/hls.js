@@ -8,7 +8,11 @@ import AttrList from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import type { CodecType } from '../utils/codecs';
 import { isCodecType } from '../utils/codecs';
-import type { MediaPlaylist, AudioGroup, MediaPlaylistType } from '../types/media-playlist';
+import type {
+  MediaPlaylist,
+  AudioGroup,
+  MediaPlaylistType,
+} from '../types/media-playlist';
 import type { PlaylistLevelType } from '../types/loader';
 import type { LevelAttributes, LevelParsed } from '../types/level';
 
@@ -58,7 +62,10 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
 export default class M3U8Parser {
-  static findGroup(groups: Array<AudioGroup>, mediaGroupId: string): AudioGroup | undefined {
+  static findGroup(
+    groups: Array<AudioGroup>,
+    mediaGroupId: string
+  ): AudioGroup | undefined {
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
       if (group.id === mediaGroupId) {
@@ -97,7 +104,9 @@ export default class M3U8Parser {
         const attrs = new AttrList(result[1]);
         const level: LevelParsed = {
           attrs,
-          bitrate: attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH'),
+          bitrate:
+            attrs.decimalInteger('AVERAGE-BANDWIDTH') ||
+            attrs.decimalInteger('BANDWIDTH'),
           name: attrs.NAME,
           url: M3U8Parser.resolve(result[2], baseurl),
         };
@@ -130,7 +139,12 @@ export default class M3U8Parser {
     };
   }
 
-  static parseMasterPlaylistMedia(string: string, baseurl: string, type: MediaPlaylistType, groups: Array<AudioGroup> = []): Array<MediaPlaylist> {
+  static parseMasterPlaylistMedia(
+    string: string,
+    baseurl: string,
+    type: MediaPlaylistType,
+    groups: Array<AudioGroup> = []
+  ): Array<MediaPlaylist> {
     let result: RegExpExecArray | null;
     const medias: Array<MediaPlaylist> = [];
     let id = 0;
@@ -157,7 +171,8 @@ export default class M3U8Parser {
           // If there are audio or text groups signalled in the manifest, let's look for a matching codec string for this track
           // If we don't find the track signalled, lets use the first audio groups codec we have
           // Acting as a best guess
-          const groupCodec = M3U8Parser.findGroup(groups, media.groupId as string) || groups[0];
+          const groupCodec =
+            M3U8Parser.findGroup(groups, media.groupId as string) || groups[0];
           assignCodec(media, groupCodec, 'audioCodec');
           assignCodec(media, groupCodec, 'textCodec');
         }
@@ -168,7 +183,13 @@ export default class M3U8Parser {
     return medias;
   }
 
-  static parseLevelPlaylist(string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number): LevelDetails {
+  static parseLevelPlaylist(
+    string: string,
+    baseurl: string,
+    id: number,
+    type: PlaylistLevelType,
+    levelUrlId: number
+  ): LevelDetails {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
     let currentSN = 0;
@@ -263,7 +284,9 @@ export default class M3U8Parser {
             break;
           case 'SKIP': {
             const skipAttrs = new AttrList(value1);
-            const skippedSegments = skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
+            const skippedSegments = skipAttrs.decimalInteger(
+              'SKIPPED-SEGMENTS'
+            );
             if (Number.isFinite(skippedSegments)) {
               level.skippedSegments = skippedSegments;
               // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
@@ -272,9 +295,13 @@ export default class M3U8Parser {
               }
               currentSN += skippedSegments;
             }
-            const recentlyRemovedDateranges = skipAttrs.enumeratedString('RECENTLY-REMOVED-DATERANGES');
+            const recentlyRemovedDateranges = skipAttrs.enumeratedString(
+              'RECENTLY-REMOVED-DATERANGES'
+            );
             if (recentlyRemovedDateranges) {
-              level.recentlyRemovedDateranges = recentlyRemovedDateranges.split('\t');
+              level.recentlyRemovedDateranges = recentlyRemovedDateranges.split(
+                '\t'
+              );
             }
             break;
           }
@@ -312,10 +339,13 @@ export default class M3U8Parser {
             const decryptmethod = keyAttrs.enumeratedString('METHOD');
             const decrypturi = keyAttrs.URI;
             const decryptiv = keyAttrs.hexadecimalInteger('IV');
-            const decryptkeyformatversions = keyAttrs.enumeratedString('KEYFORMATVERSIONS');
+            const decryptkeyformatversions = keyAttrs.enumeratedString(
+              'KEYFORMATVERSIONS'
+            );
             const decryptkeyid = keyAttrs.enumeratedString('KEYID');
             // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
-            const decryptkeyformat = keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
+            const decryptkeyformat =
+              keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
 
             const unsupportedKnownKeyformatsInManifest = [
               'com.apple.streamingkeydelivery',
@@ -324,8 +354,13 @@ export default class M3U8Parser {
               'com.widevine', // earlier widevine (v1)
             ];
 
-            if (unsupportedKnownKeyformatsInManifest.indexOf(decryptkeyformat) > -1) {
-              logger.warn(`Keyformat ${decryptkeyformat} is not supported from the manifest`);
+            if (
+              unsupportedKnownKeyformatsInManifest.indexOf(decryptkeyformat) >
+              -1
+            ) {
+              logger.warn(
+                `Keyformat ${decryptkeyformat} is not supported from the manifest`
+              );
               continue;
             } else if (decryptkeyformat !== 'identity') {
               // We are supposed to skip keys we don't understand.
@@ -340,7 +375,12 @@ export default class M3U8Parser {
               // TODO: need to determine if the level key is actually a relative URL
               // if it isn't, then we should instead construct the LevelKey using fromURI.
               levelkey = LevelKey.fromURL(baseurl, decrypturi);
-              if (decrypturi && ['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0) {
+              if (
+                decrypturi &&
+                ['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(
+                  decryptmethod
+                ) >= 0
+              ) {
                 levelkey.method = decryptmethod;
                 levelkey.keyFormat = decryptkeyformat;
 
@@ -360,7 +400,9 @@ export default class M3U8Parser {
           }
           case 'START': {
             const startAttrs = new AttrList(value1);
-            const startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+            const startTimeOffset = startAttrs.decimalFloatingPoint(
+              'TIME-OFFSET'
+            );
             // TIME-OFFSET can be 0
             if (Number.isFinite(startTimeOffset)) {
               level.startTimeOffset = startTimeOffset;
@@ -386,9 +428,17 @@ export default class M3U8Parser {
           case 'SERVER-CONTROL': {
             const serverControlAttrs = new AttrList(value1);
             level.canBlockReload = serverControlAttrs.bool('CAN-BLOCK-RELOAD');
-            level.canSkipUntil = serverControlAttrs.optionalFloat('CAN-SKIP-UNTIL', 0);
-            level.canSkipDateRanges = level.canSkipUntil > 0 && serverControlAttrs.bool('CAN-SKIP-DATERANGES');
-            level.partHoldBack = serverControlAttrs.optionalFloat('PART-HOLD-BACK', 0);
+            level.canSkipUntil = serverControlAttrs.optionalFloat(
+              'CAN-SKIP-UNTIL',
+              0
+            );
+            level.canSkipDateRanges =
+              level.canSkipUntil > 0 &&
+              serverControlAttrs.bool('CAN-SKIP-DATERANGES');
+            level.partHoldBack = serverControlAttrs.optionalFloat(
+              'PART-HOLD-BACK',
+              0
+            );
             level.holdBack = serverControlAttrs.optionalFloat('HOLD-BACK', 0);
             break;
           }
@@ -402,9 +452,16 @@ export default class M3U8Parser {
             if (!partList) {
               partList = level.partList = [];
             }
-            const previousFragmentPart = currentPart > 0 ? partList[partList.length - 1] : undefined;
+            const previousFragmentPart =
+              currentPart > 0 ? partList[partList.length - 1] : undefined;
             const index = currentPart++;
-            const part = new Part(new AttrList(value1), frag, baseurl, index, previousFragmentPart);
+            const part = new Part(
+              new AttrList(value1),
+              frag,
+              baseurl,
+              index,
+              previousFragmentPart
+            );
             partList.push(part);
             frag.duration += part.duration;
             break;
@@ -447,8 +504,14 @@ export default class M3U8Parser {
           // this is a bit lurky but HLS really has no other way to tell us
           // if the fragments are TS or MP4, except if we download them :/
           // but this is to be able to handle SIDX.
-          if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl as string))) {
-            logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
+          if (
+            level.fragments.every((frag) =>
+              MP4_REGEX_SUFFIX.test(frag.relurl as string)
+            )
+          ) {
+            logger.warn(
+              'MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX'
+            );
             frag = new Fragment(type, baseurl);
             frag.relurl = lastFragment.relurl;
             frag.level = id;
@@ -490,7 +553,10 @@ function setCodecs(codecs: Array<string>, level: LevelParsed) {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
     if (filtered.length) {
       const preferred = filtered.filter((codec) => {
-        return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+        return (
+          codec.lastIndexOf('avc1', 0) === 0 ||
+          codec.lastIndexOf('mp4a', 0) === 0
+        );
       });
       level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
 
@@ -509,7 +575,10 @@ function assignCodec(media, groupItem, codecProperty) {
   }
 }
 
-function backfillProgramDateTimes(fragments: M3U8ParserFragments, firstPdtIndex: number) {
+function backfillProgramDateTimes(
+  fragments: M3U8ParserFragments,
+  firstPdtIndex: number
+) {
   let fragPrev = fragments[firstPdtIndex] as Fragment;
   for (let i = firstPdtIndex; i--; ) {
     const frag = fragments[i];
@@ -517,7 +586,8 @@ function backfillProgramDateTimes(fragments: M3U8ParserFragments, firstPdtIndex:
     if (!frag) {
       return;
     }
-    frag.programDateTime = (fragPrev.programDateTime as number) - frag.duration * 1000;
+    frag.programDateTime =
+      (fragPrev.programDateTime as number) - frag.duration * 1000;
     fragPrev = frag;
   }
 }

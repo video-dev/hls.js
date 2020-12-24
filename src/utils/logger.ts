@@ -41,15 +41,23 @@ function consolePrintFn(type: string): ILogFunction {
   return noop;
 }
 
-function exportLoggerFunctions(debugConfig: boolean | ILogger, ...functions: string[]): void {
+function exportLoggerFunctions(
+  debugConfig: boolean | ILogger,
+  ...functions: string[]
+): void {
   functions.forEach(function (type) {
-    exportedLogger[type] = debugConfig[type] ? debugConfig[type].bind(debugConfig) : consolePrintFn(type);
+    exportedLogger[type] = debugConfig[type]
+      ? debugConfig[type].bind(debugConfig)
+      : consolePrintFn(type);
   });
 }
 
 export function enableLogs(debugConfig: boolean | ILogger): void {
   // check that console is available
-  if ((self.console && debugConfig === true) || typeof debugConfig === 'object') {
+  if (
+    (self.console && debugConfig === true) ||
+    typeof debugConfig === 'object'
+  ) {
     exportLoggerFunctions(
       debugConfig,
       // Remove out from list here to hard-disable a log-level

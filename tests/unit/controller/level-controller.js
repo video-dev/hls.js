@@ -27,12 +27,42 @@ describe('LevelController', function () {
     const data = {
       audioTracks: [],
       levels: [
-        { id: 1, bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } },
-        { id: 2, bitrate: 246440, name: '240', details: { totalduration: 10, fragments: [{}] } },
-        { id: 3, bitrate: 460560, name: '380', details: { totalduration: 10, fragments: [{}] } },
-        { id: 4, bitrate: 836280, name: '480', details: { totalduration: 10, fragments: [{}] } },
-        { id: 5, bitrate: 2149280, name: '720', details: { totalduration: 10, fragments: [{}] } },
-        { id: 6, bitrate: 6221600, name: '1080', details: { totalduration: 10, fragments: [{}] } },
+        {
+          id: 1,
+          bitrate: 105000,
+          name: '144',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 2,
+          bitrate: 246440,
+          name: '240',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 3,
+          bitrate: 460560,
+          name: '380',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 4,
+          bitrate: 836280,
+          name: '480',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 5,
+          bitrate: 2149280,
+          name: '720',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 6,
+          bitrate: 6221600,
+          name: '1080',
+          details: { totalduration: 10, fragments: [{}] },
+        },
       ],
       networkDetails: '',
       subtitles: [],
@@ -93,12 +123,36 @@ describe('LevelController', function () {
       const data = {
         audioTracks: [],
         levels: [
-          { bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 246440, name: '240', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 460560, name: '380', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 836280, name: '480', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 2149280, name: '720', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 6221600, name: '1080', details: { totalduration: 10, fragments: [{}] } },
+          {
+            bitrate: 105000,
+            name: '144',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 246440,
+            name: '240',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 460560,
+            name: '380',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 836280,
+            name: '480',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 2149280,
+            name: '720',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 6221600,
+            name: '1080',
+            details: { totalduration: 10, fragments: [{}] },
+          },
         ],
         networkDetails: '',
         subtitles: [],
@@ -123,7 +177,13 @@ describe('LevelController', function () {
     it('should signal altAudio if present in the manifest without codec attributes', function () {
       const data = {
         audioTracks: [{ audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }],
-        levels: [{ bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } }],
+        levels: [
+          {
+            bitrate: 105000,
+            name: '144',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+        ],
         networkDetails: '',
         subtitles: [],
         stats: {},
@@ -213,7 +273,13 @@ describe('LevelController', function () {
     beforeEach(function () {
       data = {
         audioTracks: [],
-        levels: [{ bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } }],
+        levels: [
+          {
+            bitrate: 105000,
+            name: '144',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+        ],
         networkDetails: '',
         subtitles: [],
         url: 'foo',
@@ -252,7 +318,8 @@ describe('LevelController', function () {
           default: true,
           autoselect: true,
           forced: false,
-          url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/05845f51-c319-41ca-8e84-b84299925a0c/playlist.m3u8',
+          url:
+            'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/05845f51-c319-41ca-8e84-b84299925a0c/playlist.m3u8',
           id: 0,
         },
         {

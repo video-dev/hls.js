@@ -46,7 +46,11 @@ var // this is the start of a huge multi-line var decl
     };
   },
   nalParse = function (avcStream) {
-    var avcView = new DataView(avcStream.buffer, avcStream.byteOffset, avcStream.byteLength),
+    var avcView = new DataView(
+        avcStream.buffer,
+        avcStream.byteOffset,
+        avcStream.byteLength
+      ),
       result = [],
       i,
       length;
@@ -119,7 +123,9 @@ var // this is the start of a huge multi-line var decl
       for (i = 0; i < numOfSequenceParameterSets; i++) {
         nalSize = view.getUint16(offset);
         offset += 2;
-        result.sps.push(new Uint8Array(data.subarray(offset, offset + nalSize)));
+        result.sps.push(
+          new Uint8Array(data.subarray(offset, offset + nalSize))
+        );
         offset += nalSize;
       }
       // iterate past any PPSs
@@ -128,7 +134,9 @@ var // this is the start of a huge multi-line var decl
       for (i = 0; i < numOfPictureParameterSets; i++) {
         nalSize = view.getUint16(offset);
         offset += 2;
-        result.pps.push(new Uint8Array(data.subarray(offset, offset + nalSize)));
+        result.pps.push(
+          new Uint8Array(data.subarray(offset, offset + nalSize))
+        );
         offset += nalSize;
       }
       return result;
@@ -244,7 +252,8 @@ var // this is the start of a huge multi-line var decl
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),
-        sequenceNumber: (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7],
+        sequenceNumber:
+          (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7],
       };
     },
     minf: function (data) {
@@ -444,7 +453,8 @@ var // this is the start of a huge multi-line var decl
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),
-        baseMediaDecodeTime: (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7],
+        baseMediaDecodeTime:
+          (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7],
       };
     },
     tfhd: function (data) {

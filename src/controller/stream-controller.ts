@@ -37,7 +37,9 @@ import type {
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
-export default class StreamController extends BaseStreamController implements NetworkComponentAPI {
+export default class StreamController
+  extends BaseStreamController
+  implements NetworkComponentAPI {
   private audioCodecSwap: boolean = false;
   private bitrateTest: boolean = false;
   private gapController: GapController | null = null;
@@ -72,7 +74,11 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.on(Events.FRAG_LOAD_EMERGENCY_ABORTED, this.onFragLoadEmergencyAborted, this);
+    hls.on(
+      Events.FRAG_LOAD_EMERGENCY_ABORTED,
+      this.onFragLoadEmergencyAborted,
+      this
+    );
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
     hls.on(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
@@ -89,7 +95,11 @@ export default class StreamController extends BaseStreamController implements Ne
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.off(Events.FRAG_LOAD_EMERGENCY_ABORTED, this.onFragLoadEmergencyAborted, this);
+    hls.off(
+      Events.FRAG_LOAD_EMERGENCY_ABORTED,
+      this.onFragLoadEmergencyAborted,
+      this
+    );
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
     hls.off(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
@@ -129,7 +139,11 @@ export default class StreamController extends BaseStreamController implements Ne
       }
       // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
       if (lastCurrentTime > 0 && startPosition === -1) {
-        this.log(`Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
+        this.log(
+          `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
+            3
+          )}`
+        );
         startPosition = lastCurrentTime;
       }
       this.state = State.IDLE;
@@ -195,7 +209,10 @@ export default class StreamController extends BaseStreamController implements Ne
     // if start level not parsed yet OR
     // if video not attached AND start fragment already requested OR start frag prefetch not enabled
     // exit loop, as we either need more info (level not parsed) or we need media to be attached to load new fragment
-    if (levelLastLoaded === null || (!media && (this.startFragRequested || !config.startFragPrefetch))) {
+    if (
+      levelLastLoaded === null ||
+      (!media && (this.startFragRequested || !config.startFragPrefetch))
+    ) {
       return;
     }
 
@@ -218,7 +235,11 @@ export default class StreamController extends BaseStreamController implements Ne
     // if level info not retrieved yet, switch state and wait for level retrieval
     // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
     // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
-    if (!levelDetails || this.state === State.WAITING_LEVEL || (levelDetails.live && this.levelLastLoaded !== level)) {
+    if (
+      !levelDetails ||
+      this.state === State.WAITING_LEVEL ||
+      (levelDetails.live && this.levelLastLoaded !== level)
+    ) {
       this.state = State.WAITING_LEVEL;
       return;
     }
@@ -235,7 +256,10 @@ export default class StreamController extends BaseStreamController implements Ne
       const levelBitrate = levelInfo.maxBitrate;
       let maxBufLen;
       if (levelBitrate) {
-        maxBufLen = Math.max((8 * config.maxBufferSize) / levelBitrate, config.maxBufferLength);
+        maxBufLen = Math.max(
+          (8 * config.maxBufferSize) / levelBitrate,
+          config.maxBufferLength
+        );
       } else {
         maxBufLen = config.maxBufferLength;
       }
@@ -243,8 +267,15 @@ export default class StreamController extends BaseStreamController implements Ne
 
       // determine next candidate fragment to be loaded, based on current position and end of buffer position
       // ensure up to `config.maxMaxBufferLength` of buffer upfront
-      const maxBufferHole = pos < config.maxBufferHole ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole) : config.maxBufferHole;
-      const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, maxBufferHole);
+      const maxBufferHole =
+        pos < config.maxBufferHole
+          ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
+          : config.maxBufferHole;
+      const bufferInfo = BufferHelper.bufferInfo(
+        this.mediaBuffer ? this.mediaBuffer : media,
+        pos,
+        maxBufferHole
+      );
       const bufferLen = bufferInfo.len;
       // Stay idle if we are still with buffer margins
       if (bufferLen >= maxBufLen) {
@@ -266,7 +297,11 @@ export default class StreamController extends BaseStreamController implements Ne
       frag = this.getNextFragment(targetBufferTime, levelDetails);
       // Avoid loop loading by using nextLoadPosition set for backtracking
       // TODO: this could be improved to simply pick next sn fragment
-      if (frag && this.fragmentTracker.getState(frag) === FragmentState.OK && this.nextLoadPosition > targetBufferTime) {
+      if (
+        frag &&
+        this.fragmentTracker.getState(frag) === FragmentState.OK &&
+        this.nextLoadPosition > targetBufferTime
+      ) {
         frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
       }
       if (!frag) {
@@ -277,7 +312,9 @@ export default class StreamController extends BaseStreamController implements Ne
     // We want to load the key if we're dealing with an identity key, because we will decrypt
     // this content using the key we fetch. Other keys will be handled by the DRM CDM via EME.
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.log(`Loading key for ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${level}`);
+      this.log(
+        `Loading key for ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${level}`
+      );
       this.loadKey(frag);
     } else {
       this.loadFragment(frag, levelDetails, targetBufferTime);
@@ -289,7 +326,11 @@ export default class StreamController extends BaseStreamController implements Ne
     this.hls.trigger(Events.KEY_LOADING, { frag });
   }
 
-  protected loadFragment(frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number) {
+  protected loadFragment(
+    frag: Fragment,
+    levelDetails: LevelDetails,
+    targetBufferTime: number
+  ) {
     // Check if fragment is not loaded
     const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
@@ -307,12 +348,17 @@ export default class StreamController extends BaseStreamController implements Ne
         return;
       }
     }
-    if (fragState === FragmentState.NOT_LOADED || fragState === FragmentState.PARTIAL) {
+    if (
+      fragState === FragmentState.NOT_LOADED ||
+      fragState === FragmentState.PARTIAL
+    ) {
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
       } else if (this.bitrateTest) {
         frag.bitrateTest = true;
-        this.log(`Fragment ${frag.sn} of level ${frag.level} is being downloaded to test bitrate and will not be buffered`);
+        this.log(
+          `Fragment ${frag.sn} of level ${frag.level} is being downloaded to test bitrate and will not be buffered`
+        );
         this._loadBitrateTestFrag(frag);
       } else {
         this.startFragRequested = true;
@@ -330,11 +376,17 @@ export default class StreamController extends BaseStreamController implements Ne
   }
 
   getAppendedFrag(position) {
-    return this.fragmentTracker.getAppendedFrag(position, PlaylistLevelType.MAIN);
+    return this.fragmentTracker.getAppendedFrag(
+      position,
+      PlaylistLevelType.MAIN
+    );
   }
 
   getBufferedFrag(position) {
-    return this.fragmentTracker.getBufferedFrag(position, PlaylistLevelType.MAIN);
+    return this.fragmentTracker.getBufferedFrag(
+      position,
+      PlaylistLevelType.MAIN
+    );
   }
 
   followingBufferedFrag(frag: Fragment | null) {
@@ -387,7 +439,10 @@ export default class StreamController extends BaseStreamController implements Ne
     const media = this.media;
     if (BufferHelper.getBuffered(media).length) {
       this.immediateSwitch = false;
-      if (media.currentTime > 0 && BufferHelper.isBuffered(media, media.currentTime)) {
+      if (
+        media.currentTime > 0 &&
+        BufferHelper.isBuffered(media, media.currentTime)
+      ) {
         // only nudge if currentTime is buffered
         media.currentTime -= 0.0001;
       }
@@ -420,7 +475,10 @@ export default class StreamController extends BaseStreamController implements Ne
         const nextLevel = levels[nextLevelId];
         const fragLastKbps = this.fragLastKbps;
         if (fragLastKbps && this.fragCurrent) {
-          fetchdelay = (this.fragCurrent.duration * nextLevel.maxBitrate) / (1000 * fragLastKbps) + 1;
+          fetchdelay =
+            (this.fragCurrent.duration * nextLevel.maxBitrate) /
+              (1000 * fragLastKbps) +
+            1;
         } else {
           fetchdelay = 0;
         }
@@ -444,8 +502,17 @@ export default class StreamController extends BaseStreamController implements Ne
           // start flush position is the start PTS of next buffered frag.
           // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
           // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
-          const maxStart = nextBufferedFrag.maxStartPTS ? nextBufferedFrag.maxStartPTS : nextBufferedFrag.start;
-          const startPts = Math.max(bufferedFrag.end, maxStart + Math.min(this.config.maxFragLookUpTolerance, nextBufferedFrag.duration));
+          const maxStart = nextBufferedFrag.maxStartPTS
+            ? nextBufferedFrag.maxStartPTS
+            : nextBufferedFrag.start;
+          const startPts = Math.max(
+            bufferedFrag.end,
+            maxStart +
+              Math.min(
+                this.config.maxFragLookUpTolerance,
+                nextBufferedFrag.duration
+              )
+          );
           this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY);
         }
       }
@@ -453,7 +520,11 @@ export default class StreamController extends BaseStreamController implements Ne
   }
 
   flushMainBuffer(startOffset: number, endOffset: number) {
-    super.flushMainBuffer(startOffset, endOffset, this.altAudio ? 'video' : null);
+    super.flushMainBuffer(
+      startOffset,
+      endOffset,
+      this.altAudio ? 'video' : null
+    );
   }
 
   onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachedData) {
@@ -463,7 +534,12 @@ export default class StreamController extends BaseStreamController implements Ne
     this.onvseeked = this.onMediaSeeked.bind(this);
     media.addEventListener('playing', this.onvplaying as EventListener);
     media.addEventListener('seeked', this.onvseeked as EventListener);
-    this.gapController = new GapController(this.config, media, this.fragmentTracker, this.hls);
+    this.gapController = new GapController(
+      this.config,
+      media,
+      this.fragmentTracker,
+      this.hls
+    );
   }
 
   onMediaDetaching() {
@@ -522,7 +598,9 @@ export default class StreamController extends BaseStreamController implements Ne
     });
     this.audioCodecSwitch = aac && heaac;
     if (this.audioCodecSwitch) {
-      this.log('Both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC');
+      this.log(
+        'Both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC'
+      );
     }
 
     this.levels = data.levels;
@@ -535,7 +613,11 @@ export default class StreamController extends BaseStreamController implements Ne
       return;
     }
     const level = levels[data.level];
-    if (!level.details || (level.details.live && this.levelLastLoaded !== data.level) || this.waitForCdnTuneIn(level.details)) {
+    if (
+      !level.details ||
+      (level.details.live && this.levelLastLoaded !== data.level) ||
+      this.waitForCdnTuneIn(level.details)
+    ) {
       this.state = State.WAITING_LEVEL;
     }
   }
@@ -550,10 +632,16 @@ export default class StreamController extends BaseStreamController implements Ne
       this.warn(`Levels were reset while loading level ${newLevelId}`);
       return;
     }
-    this.log(`Level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}], cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`);
+    this.log(
+      `Level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}], cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`
+    );
 
     const fragCurrent = this.fragCurrent;
-    if (fragCurrent && (this.state === State.FRAG_LOADING || this.state === State.FRAG_LOADING_WAITING_RETRY)) {
+    if (
+      fragCurrent &&
+      (this.state === State.FRAG_LOADING ||
+        this.state === State.FRAG_LOADING_WAITING_RETRY)
+    ) {
       if (fragCurrent.level !== data.level && fragCurrent.loader) {
         this.state = State.IDLE;
         fragCurrent.loader.abort();
@@ -575,7 +663,10 @@ export default class StreamController extends BaseStreamController implements Ne
     curLevel.details = newDetails;
     this.levelLastLoaded = newLevelId;
 
-    this.hls.trigger(Events.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
+    this.hls.trigger(Events.LEVEL_UPDATED, {
+      details: newDetails,
+      level: newLevelId,
+    });
 
     // only switch back to IDLE state if we were waiting for level to start downloading a new fragment
     if (this.state === State.WAITING_LEVEL) {
@@ -600,13 +691,17 @@ export default class StreamController extends BaseStreamController implements Ne
     const { frag, part, payload } = data;
     const { levels } = this;
     if (!levels) {
-      this.warn(`Levels were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`);
+      this.warn(
+        `Levels were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`
+      );
       return;
     }
     const currentLevel = levels[frag.level];
     const details = currentLevel.details as LevelDetails;
     if (!details) {
-      this.warn(`Dropping fragment ${frag.sn} of level ${frag.level} after level details were reset`);
+      this.warn(
+        `Dropping fragment ${frag.sn} of level ${frag.level} after level details were reset`
+      );
       return;
     }
     const videoCodec = currentLevel.videoCodec;
@@ -619,13 +714,37 @@ export default class StreamController extends BaseStreamController implements Ne
     // transmux the MPEG-TS data to ISO-BMFF segments
     // this.log(`Transmuxing ${frag.sn} of [${details.startSN} ,${details.endSN}],level ${frag.level}, cc ${frag.cc}`);
     const transmuxer = (this.transmuxer =
-      this.transmuxer || new TransmuxerInterface(this.hls, PlaylistLevelType.MAIN, this._handleTransmuxComplete.bind(this), this._handleTransmuxerFlush.bind(this)));
+      this.transmuxer ||
+      new TransmuxerInterface(
+        this.hls,
+        PlaylistLevelType.MAIN,
+        this._handleTransmuxComplete.bind(this),
+        this._handleTransmuxerFlush.bind(this)
+      ));
     const partIndex = part ? part.index : -1;
     const partial = partIndex !== -1;
-    const chunkMeta = new ChunkMetadata(frag.level, frag.sn as number, frag.stats.chunkCount, payload.byteLength, partIndex, partial);
+    const chunkMeta = new ChunkMetadata(
+      frag.level,
+      frag.sn as number,
+      frag.stats.chunkCount,
+      payload.byteLength,
+      partIndex,
+      partial
+    );
     const initPTS = this.initPTS[frag.cc];
 
-    transmuxer.push(payload, initSegmentData, audioCodec, videoCodec, frag, part, details.totalduration, accurateTimeOffset, chunkMeta, initPTS);
+    transmuxer.push(
+      payload,
+      initSegmentData,
+      audioCodec,
+      videoCodec,
+      frag,
+      part,
+      details.totalduration,
+      accurateTimeOffset,
+      chunkMeta,
+      initPTS
+    );
   }
 
   private resetTransmuxer() {
@@ -635,7 +754,10 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  onAudioTrackSwitching(event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) {
+  onAudioTrackSwitching(
+    event: Events.AUDIO_TRACK_SWITCHING,
+    data: AudioTrackSwitchingData
+  ) {
     // if any URL found on new audio track, it is an alternate audio track
     const fromAltAudio = this.altAudio;
     const altAudio = !!data.url;
@@ -645,7 +767,9 @@ export default class StreamController extends BaseStreamController implements Ne
     // we will just have to change buffer scheduling on audioTrackSwitched
     if (!altAudio) {
       if (this.mediaBuffer !== this.media) {
-        this.log('Switching on main audio, use media.buffered to schedule main fragment loading');
+        this.log(
+          'Switching on main audio, use media.buffered to schedule main fragment loading'
+        );
         this.mediaBuffer = this.media;
         const fragCurrent = this.fragCurrent;
         // we need to refill audio buffer from main: cancel any frag loading to speed up audio switch
@@ -678,14 +802,19 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  onAudioTrackSwitched(event: Events.AUDIO_TRACK_SWITCHED, data: AudioTrackSwitchedData) {
+  onAudioTrackSwitched(
+    event: Events.AUDIO_TRACK_SWITCHED,
+    data: AudioTrackSwitchedData
+  ) {
     const trackId = data.id;
     const altAudio = !!this.hls.audioTracks[trackId].url;
     if (altAudio) {
       const videoBuffer = this.videoBuffer;
       // if we switched on alternate audio, ensure that main fragment scheduling is synced with video sourcebuffer buffered
       if (videoBuffer && this.mediaBuffer !== videoBuffer) {
-        this.log('Switching on alternate audio, use video.buffered to schedule main fragment loading');
+        this.log(
+          'Switching on alternate audio, use video.buffered to schedule main fragment loading'
+        );
         this.mediaBuffer = videoBuffer;
       }
     }
@@ -715,7 +844,9 @@ export default class StreamController extends BaseStreamController implements Ne
       }
     }
     if (alternate && mediaTrack) {
-      this.log(`Alternate track found, use ${name}.buffered to schedule main fragment loading`);
+      this.log(
+        `Alternate track found, use ${name}.buffered to schedule main fragment loading`
+      );
       this.mediaBuffer = mediaTrack.buffer;
     } else {
       this.mediaBuffer = this.media;
@@ -730,11 +861,17 @@ export default class StreamController extends BaseStreamController implements Ne
     if (this.fragContextChanged(frag)) {
       // If a level switch was requested while a fragment was buffering, it will emit the FRAG_BUFFERED event upon completion
       // Avoid setting state back to IDLE, since that will interfere with a level switch
-      this.warn(`Fragment ${frag.sn}${part ? ' p: ' + part.index : ''} of level ${frag.level} finished buffering, but was aborted. state: ${this.state}`);
+      this.warn(
+        `Fragment ${frag.sn}${part ? ' p: ' + part.index : ''} of level ${
+          frag.level
+        } finished buffering, but was aborted. state: ${this.state}`
+      );
       return;
     }
     const stats = part ? part.stats : frag.stats;
-    this.fragLastKbps = Math.round((8 * stats.total) / (stats.buffering.end - stats.loading.first));
+    this.fragLastKbps = Math.round(
+      (8 * stats.total) / (stats.buffering.end - stats.loading.first)
+    );
     this.fragPrevious = frag;
     this.fragBufferedComplete(frag, part);
   }
@@ -747,7 +884,10 @@ export default class StreamController extends BaseStreamController implements Ne
     }
 
     // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-    const mediaBuffered = !!this.media && BufferHelper.isBuffered(this.media, this.media.currentTime) && BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
+    const mediaBuffered =
+      !!this.media &&
+      BufferHelper.isBuffered(this.media, this.media.currentTime) &&
+      BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
 
     switch (data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -758,9 +898,15 @@ export default class StreamController extends BaseStreamController implements Ne
           // keep retrying until the limit will be reached
           if (this.fragLoadError + 1 <= this.config.fragLoadingMaxRetry) {
             // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            const delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
+            const delay = Math.min(
+              Math.pow(2, this.fragLoadError) *
+                this.config.fragLoadingRetryDelay,
+              this.config.fragLoadingMaxRetryTimeout
+            );
             // @ts-ignore - frag is potentially null according to TS here
-            this.warn(`Fragment ${frag?.sn} of level ${frag?.level} failed to load, retrying in ${delay}ms`);
+            this.warn(
+              `Fragment ${frag?.sn} of level ${frag?.level} failed to load, retrying in ${delay}ms`
+            );
             this.retryDate = self.performance.now() + delay;
             // retry loading state
             // if loadedmetadata is not set, it means that we are emergency switch down on first frag
@@ -772,7 +918,9 @@ export default class StreamController extends BaseStreamController implements Ne
             this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
-            logger.error(`[stream-controller]: ${data.details} reaches max retry, redispatch as fatal ...`);
+            logger.error(
+              `[stream-controller]: ${data.details} reaches max retry, redispatch as fatal ...`
+            );
             // switch error to fatal
             data.fatal = true;
             this.state = State.ERROR;
@@ -796,7 +944,10 @@ export default class StreamController extends BaseStreamController implements Ne
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
         // if in appending state
-        if (data.parent === 'main' && (this.state === State.PARSING || this.state === State.PARSED)) {
+        if (
+          data.parent === 'main' &&
+          (this.state === State.PARSING || this.state === State.PARSED)
+        ) {
           // reduce max buf len if current position is buffered
           if (mediaBuffered) {
             this._reduceMaxBufferLength(this.config.maxBufferLength);
@@ -805,7 +956,9 @@ export default class StreamController extends BaseStreamController implements Ne
             // current position is not buffered, but browser is still complaining about buffer full error
             // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole buffer to recover
-            this.warn('buffer full error also media.currentTime is not buffered, flush everything');
+            this.warn(
+              'buffer full error also media.currentTime is not buffered, flush everything'
+            );
             this.fragCurrent = null;
             // flush everything
             this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
@@ -867,9 +1020,15 @@ export default class StreamController extends BaseStreamController implements Ne
     /* after successful buffer flushing, filter flushed fragments from bufferedFrags
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
-    const media = (type === ElementaryStreamTypes.VIDEO ? this.videoBuffer : this.mediaBuffer) || this.media;
+    const media =
+      (type === ElementaryStreamTypes.VIDEO
+        ? this.videoBuffer
+        : this.mediaBuffer) || this.media;
     if (media && type !== ElementaryStreamTypes.AUDIO) {
-      this.fragmentTracker.detectEvictedFragments(type, BufferHelper.getBuffered(media));
+      this.fragmentTracker.detectEvictedFragments(
+        type,
+        BufferHelper.getBuffered(media)
+      );
     }
     // reset reference to frag
     this.fragPrevious = null;
@@ -897,18 +1056,24 @@ export default class StreamController extends BaseStreamController implements Ne
     // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
     if (currentTime !== startPosition && startPosition >= 0) {
       if (media.seeking) {
-        logger.log(`could not seek to ${startPosition}, already seeking at ${currentTime}`);
+        logger.log(
+          `could not seek to ${startPosition}, already seeking at ${currentTime}`
+        );
         return;
       }
       const buffered = BufferHelper.getBuffered(media);
       const bufferStart = buffered.length ? buffered.start(0) : 0;
       const delta = bufferStart - startPosition;
       if (delta > 0 && delta < this.config.maxBufferHole) {
-        logger.log(`adjusting start position by ${delta} to match buffer start`);
+        logger.log(
+          `adjusting start position by ${delta} to match buffer start`
+        );
         startPosition += delta;
         this.startPosition = startPosition;
       }
-      this.log(`seek to target start position ${startPosition} from current time ${currentTime}`);
+      this.log(
+        `seek to target start position ${startPosition} from current time ${currentTime}`
+      );
       media.currentTime = startPosition;
     }
   }
@@ -960,7 +1125,9 @@ export default class StreamController extends BaseStreamController implements Ne
 
     const context = this.getCurrentContext(chunkMeta);
     if (!context) {
-      this.warn(`The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`);
+      this.warn(
+        `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
+      );
       return;
     }
     const { frag, part, level } = context;
@@ -979,7 +1146,11 @@ export default class StreamController extends BaseStreamController implements Ne
     if (initSegment) {
       if (initSegment.tracks) {
         this._bufferInitSegment(level, initSegment.tracks, frag, chunkMeta);
-        hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, { frag, id, tracks: initSegment.tracks });
+        hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, {
+          frag,
+          id,
+          tracks: initSegment.tracks,
+        });
       }
 
       // This would be nice if Number.isFinite acted as a typeguard, but it doesn't. See: https://github.com/Microsoft/TypeScript/issues/10038
@@ -996,12 +1167,30 @@ export default class StreamController extends BaseStreamController implements Ne
       if (level.details) {
         const { startPTS, endPTS, startDTS, endDTS } = video;
         if (part) {
-          part.elementaryStreams[video.type] = { startPTS, endPTS, startDTS, endDTS };
+          part.elementaryStreams[video.type] = {
+            startPTS,
+            endPTS,
+            startDTS,
+            endDTS,
+          };
         } else if (video.dropped && video.independent) {
           // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
-          frag.setElementaryStreamInfo(video.type as ElementaryStreamTypes, frag.start, endPTS, frag.start, endDTS, true);
+          frag.setElementaryStreamInfo(
+            video.type as ElementaryStreamTypes,
+            frag.start,
+            endPTS,
+            frag.start,
+            endDTS,
+            true
+          );
         }
-        frag.setElementaryStreamInfo(video.type as ElementaryStreamTypes, startPTS, endPTS, startDTS, endDTS);
+        frag.setElementaryStreamInfo(
+          video.type as ElementaryStreamTypes,
+          startPTS,
+          endPTS,
+          startDTS,
+          endDTS
+        );
         this.bufferFragmentData(video, frag, part, chunkMeta);
       }
     } else if (remuxResult.independent === false) {
@@ -1012,9 +1201,20 @@ export default class StreamController extends BaseStreamController implements Ne
     if (audio) {
       const { startPTS, endPTS, startDTS, endDTS } = audio;
       if (part) {
-        part.elementaryStreams[ElementaryStreamTypes.AUDIO] = { startPTS, endPTS, startDTS, endDTS };
+        part.elementaryStreams[ElementaryStreamTypes.AUDIO] = {
+          startPTS,
+          endPTS,
+          startDTS,
+          endDTS,
+        };
       }
-      frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, startPTS, endPTS, startDTS, endDTS);
+      frag.setElementaryStreamInfo(
+        ElementaryStreamTypes.AUDIO,
+        startPTS,
+        endPTS,
+        startDTS,
+        endDTS
+      );
       this.bufferFragmentData(audio, frag, part, chunkMeta);
     }
 
@@ -1036,7 +1236,12 @@ export default class StreamController extends BaseStreamController implements Ne
     }
   }
 
-  private _bufferInitSegment(currentLevel: Level, tracks: TrackSet, frag: Fragment, chunkMeta: ChunkMetadata) {
+  private _bufferInitSegment(
+    currentLevel: Level,
+    tracks: TrackSet,
+    frag: Fragment,
+    chunkMeta: ChunkMetadata
+  ) {
     if (this.state !== State.PARSING) {
       return;
     }
@@ -1086,7 +1291,9 @@ export default class StreamController extends BaseStreamController implements Ne
     Object.keys(tracks).forEach((trackName) => {
       const track = tracks[trackName];
       const initSegment = track.initSegment;
-      this.log(`Main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
+      this.log(
+        `Main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
+      );
       if (initSegment) {
         this.hls.trigger(Events.BUFFER_APPENDING, {
           type: trackName as SourceBufferName,
@@ -1132,10 +1339,17 @@ export default class StreamController extends BaseStreamController implements Ne
       if (fragPlayingCurrent) {
         const fragPlaying = this.fragPlaying;
         const fragCurrentLevel = fragPlayingCurrent.level;
-        if (!fragPlaying || fragPlayingCurrent.sn !== fragPlaying.sn || fragPlaying.level !== fragCurrentLevel || fragPlayingCurrent.urlId !== fragPlaying.urlId) {
+        if (
+          !fragPlaying ||
+          fragPlayingCurrent.sn !== fragPlaying.sn ||
+          fragPlaying.level !== fragCurrentLevel ||
+          fragPlayingCurrent.urlId !== fragPlaying.urlId
+        ) {
           this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
           if (!fragPlaying || fragPlaying.level !== fragCurrentLevel) {
-            this.hls.trigger(Events.LEVEL_SWITCHED, { level: fragCurrentLevel });
+            this.hls.trigger(Events.LEVEL_SWITCHED, {
+              level: fragCurrentLevel,
+            });
           }
           this.fragPlaying = fragPlayingCurrent;
         }

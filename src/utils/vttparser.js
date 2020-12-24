@@ -184,7 +184,14 @@ function parseCue(input, cue, regionList) {
             vals = v.split(',');
             settings.percent(k, vals[0]);
             if (vals.length === 2) {
-              settings.alt('positionAlign', vals[1], ['start', center, 'end', 'line-left', 'line-right', 'auto']);
+              settings.alt('positionAlign', vals[1], [
+                'start',
+                center,
+                'end',
+                'line-left',
+                'line-right',
+                'auto',
+              ]);
             }
 
             break;
@@ -216,7 +223,12 @@ function parseCue(input, cue, regionList) {
     let position = settings.get('position', 'auto');
     if (position === 'auto' && defaults.position === 50) {
       // set numeric position for Safari
-      position = cue.align === 'start' || cue.align === 'left' ? 0 : cue.align === 'end' || cue.align === 'right' ? 100 : 50;
+      position =
+        cue.align === 'start' || cue.align === 'left'
+          ? 0
+          : cue.align === 'end' || cue.align === 'right'
+          ? 100
+          : 50;
     }
     cue.position = position;
   }
@@ -231,7 +243,9 @@ function parseCue(input, cue, regionList) {
   skipWhitespace();
   if (input.substr(0, 3) !== '-->') {
     // (3) next characters must match '-->'
-    throw new Error("Malformed time stamp (time stamps must be separated by '-->'): " + oInput);
+    throw new Error(
+      "Malformed time stamp (time stamps must be separated by '-->'): " + oInput
+    );
   }
   input = input.substr(3);
   skipWhitespace();
@@ -264,7 +278,11 @@ VTTParser.prototype = {
 
       buffer = fixLineBreaks(buffer);
 
-      while (pos < buffer.length && buffer[pos] !== '\r' && buffer[pos] !== '\n') {
+      while (
+        pos < buffer.length &&
+        buffer[pos] !== '\r' &&
+        buffer[pos] !== '\n'
+      ) {
         ++pos;
       }
 

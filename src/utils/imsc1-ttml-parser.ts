@@ -12,14 +12,22 @@ const HMSF_REGEX = /^(\d{2,}):(\d{2}):(\d{2}):(\d{2})\.?(\d+)?$/;
 // Time format: hours, minutes, seconds, milliseconds, frames, ticks
 const TIME_UNIT_REGEX = /^(\d*(?:\.\d*)?)(h|m|s|ms|f|t)$/;
 
-export function parseIMSC1(payload: ArrayBuffer, initPTS: number, timescale: number, callBack: (cues: Array<VTTCue>) => any, errorCallBack: (error: Error) => any) {
+export function parseIMSC1(
+  payload: ArrayBuffer,
+  initPTS: number,
+  timescale: number,
+  callBack: (cues: Array<VTTCue>) => any,
+  errorCallBack: (error: Error) => any
+) {
   const results = findBox(new Uint8Array(payload), ['mdat']);
   if (results.length === 0) {
     errorCallBack(new Error('Could not parse IMSC1 mdat'));
     return;
   }
   const mdat = results[0];
-  const ttml = utf8ArrayToStr(new Uint8Array(payload, mdat.start, mdat.end - mdat.start));
+  const ttml = utf8ArrayToStr(
+    new Uint8Array(payload, mdat.start, mdat.end - mdat.start)
+  );
   const syncTime = toTimescaleFromScale(initPTS, 1, timescale);
 
   try {
@@ -42,15 +50,22 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
     frameRateMultiplier: 0,
     tickRate: 0,
   };
-  const rateInfo: Object = Object.keys(defaultRateInfo).reduce((result, key) => {
-    result[key] = tt.getAttribute(`ttp:${key}`) || defaultRateInfo[key];
-    return result;
-  }, {});
+  const rateInfo: Object = Object.keys(defaultRateInfo).reduce(
+    (result, key) => {
+      result[key] = tt.getAttribute(`ttp:${key}`) || defaultRateInfo[key];
+      return result;
+    },
+    {}
+  );
 
   const trim = tt.getAttribute('xml:space') !== 'preserve';
 
-  const styleElements = collectionToDictionary(getElementCollection(tt, 'styling', 'style'));
-  const regionElements = collectionToDictionary(getElementCollection(tt, 'layout', 'region'));
+  const styleElements = collectionToDictionary(
+    getElementCollection(tt, 'styling', 'style')
+  );
+  const regionElements = collectionToDictionary(
+    getElementCollection(tt, 'layout', 'region')
+  );
   const cueElements = getElementCollection(tt, 'body', '[begin]');
 
   return [].map
@@ -60,7 +75,10 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       if (!cueText || !cueElement.hasAttribute('begin')) {
         return null;
       }
-      const startTime = parseTtmlTime(cueElement.getAttribute('begin'), rateInfo);
+      const startTime = parseTtmlTime(
+        cueElement.getAttribute('begin'),
+        rateInfo
+      );
       const duration = parseTtmlTime(cueElement.getAttribute('dur'), rateInfo);
       let endTime = parseTtmlTime(cueElement.getAttribute('end'), rateInfo);
       if (startTime === null) {
@@ -103,7 +121,11 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
     .filter((cue) => cue !== null);
 }
 
-function getElementCollection(fromElement, parentName, childName): Array<HTMLElement> {
+function getElementCollection(
+  fromElement,
+  parentName,
+  childName
+): Array<HTMLElement> {
   const parent = fromElement.getElementsByTagName(parentName)[0];
   if (parent) {
     return [].slice.call(parent.querySelectorAll(childName));
@@ -111,7 +133,9 @@ function getElementCollection(fromElement, parentName, childName): Array<HTMLEle
   return [];
 }
 
-function collectionToDictionary(elementsWithId: Array<HTMLElement>): { [id: string]: HTMLElement } {
+function collectionToDictionary(
+  elementsWithId: Array<HTMLElement>
+): { [id: string]: HTMLElement } {
   return elementsWithId.reduce((dict, element: HTMLElement) => {
     const id = element.getAttribute('xml:id');
     if (id) {
@@ -152,7 +176,8 @@ function getTtmlStyles(region, style): { [style: string]: string } {
     // 'writingMode'
   ];
   return styleAttributes.reduce((styles, name) => {
-    const value = getAttributeNS(style, ttsNs, name) || getAttributeNS(region, ttsNs, name);
+    const value =
+      getAttributeNS(style, ttsNs, name) || getAttributeNS(region, ttsNs, name);
     if (value) {
       styles[name] = value;
     }
@@ -161,7 +186,9 @@ function getTtmlStyles(region, style): { [style: string]: string } {
 }
 
 function getAttributeNS(element, ns, name): string | null {
-  return element.hasAttributeNS(ns, name) ? element.getAttributeNS(ns, name) : null;
+  return element.hasAttributeNS(ns, name)
+    ? element.getAttributeNS(ns, name)
+    : null;
 }
 
 function timestampParsingError(node) {
@@ -186,7 +213,12 @@ function parseTtmlTime(timeAttributeValue, rateInfo): number | null {
 function parseHoursMinutesSecondsFrames(timeAttributeValue, rateInfo): number {
   const m = HMSF_REGEX.exec(timeAttributeValue) as Array<any>;
   const frames = (m[4] | 0) + (m[5] | 0) / rateInfo.subFrameRate;
-  return (m[1] | 0) * 3600 + (m[2] | 0) * 60 + (m[3] | 0) + frames / rateInfo.frameRate;
+  return (
+    (m[1] | 0) * 3600 +
+    (m[2] | 0) * 60 +
+    (m[3] | 0) +
+    frames / rateInfo.frameRate
+  );
 }
 
 function parseTimeUnits(timeAttributeValue, rateInfo): number {

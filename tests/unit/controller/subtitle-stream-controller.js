@@ -21,13 +21,20 @@ describe('SubtitleStreamController', function () {
   beforeEach(function () {
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
-    subtitleStreamController = new SubtitleStreamController(hls, fragmentTracker);
+    subtitleStreamController = new SubtitleStreamController(
+      hls,
+      fragmentTracker
+    );
 
-    subtitleStreamController.onMediaAttached(Events.MEDIA_ATTACHED, { media: mediaMock });
+    subtitleStreamController.onMediaAttached(Events.MEDIA_ATTACHED, {
+      media: mediaMock,
+    });
   });
 
   afterEach(function () {
-    subtitleStreamController.onMediaDetaching(Events.MEDIA_DETACHING, { media: mediaMock });
+    subtitleStreamController.onMediaDetaching(Events.MEDIA_DETACHING, {
+      media: mediaMock,
+    });
   });
 
   describe('onSubtitleTracksUpdate', function () {

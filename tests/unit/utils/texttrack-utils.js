@@ -1,4 +1,7 @@
-import { sendAddTrackEvent, clearCurrentCues } from '../../../src/utils/texttrack-utils';
+import {
+  sendAddTrackEvent,
+  clearCurrentCues,
+} from '../../../src/utils/texttrack-utils';
 import sinon from 'sinon';
 
 describe('text track utils', function () {

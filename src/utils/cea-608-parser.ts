@@ -157,12 +157,56 @@ const getCharForByte = function (byte: number) {
 const NR_ROWS = 15;
 const NR_COLS = 100;
 // Tables to look up row from PAC data
-const rowsLowCh1 = { 0x11: 1, 0x12: 3, 0x15: 5, 0x16: 7, 0x17: 9, 0x10: 11, 0x13: 12, 0x14: 14 };
-const rowsHighCh1 = { 0x11: 2, 0x12: 4, 0x15: 6, 0x16: 8, 0x17: 10, 0x13: 13, 0x14: 15 };
-const rowsLowCh2 = { 0x19: 1, 0x1a: 3, 0x1d: 5, 0x1e: 7, 0x1f: 9, 0x18: 11, 0x1b: 12, 0x1c: 14 };
-const rowsHighCh2 = { 0x19: 2, 0x1a: 4, 0x1d: 6, 0x1e: 8, 0x1f: 10, 0x1b: 13, 0x1c: 15 };
+const rowsLowCh1 = {
+  0x11: 1,
+  0x12: 3,
+  0x15: 5,
+  0x16: 7,
+  0x17: 9,
+  0x10: 11,
+  0x13: 12,
+  0x14: 14,
+};
+const rowsHighCh1 = {
+  0x11: 2,
+  0x12: 4,
+  0x15: 6,
+  0x16: 8,
+  0x17: 10,
+  0x13: 13,
+  0x14: 15,
+};
+const rowsLowCh2 = {
+  0x19: 1,
+  0x1a: 3,
+  0x1d: 5,
+  0x1e: 7,
+  0x1f: 9,
+  0x18: 11,
+  0x1b: 12,
+  0x1c: 14,
+};
+const rowsHighCh2 = {
+  0x19: 2,
+  0x1a: 4,
+  0x1d: 6,
+  0x1e: 8,
+  0x1f: 10,
+  0x1b: 13,
+  0x1c: 15,
+};
 
-const backgroundColors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'black', 'transparent'];
+const backgroundColors = [
+  'white',
+  'green',
+  'blue',
+  'cyan',
+  'red',
+  'yellow',
+  'magenta',
+  'black',
+  'transparent',
+];
 
 enum VerboseLevel {
   ERROR = 0,
@@ -208,7 +252,13 @@ class PenState {
   public background: string;
   public flash: boolean;
 
-  constructor(foreground?: string, underline?: boolean, italics?: boolean, background?: string, flash?: boolean) {
+  constructor(
+    foreground?: string,
+    underline?: boolean,
+    italics?: boolean,
+    background?: string,
+    flash?: boolean
+  ) {
     this.foreground = foreground || 'white';
     this.underline = underline || false;
     this.italics = italics || false;
@@ -225,7 +275,13 @@ class PenState {
   }
 
   setStyles(styles: Partial<PenStyles>) {
-    const attribs = ['foreground', 'underline', 'italics', 'background', 'flash'];
+    const attribs = [
+      'foreground',
+      'underline',
+      'italics',
+      'background',
+      'flash',
+    ];
     for (let i = 0; i < attribs.length; i++) {
       const style = attribs[i];
       if (styles.hasOwnProperty(style)) {
@@ -235,7 +291,13 @@ class PenState {
   }
 
   isDefault() {
-    return this.foreground === 'white' && !this.underline && !this.italics && this.background === 'black' && !this.flash;
+    return (
+      this.foreground === 'white' &&
+      !this.underline &&
+      !this.italics &&
+      this.background === 'black' &&
+      !this.flash
+    );
   }
 
   equals(other: PenState) {
@@ -257,7 +319,18 @@ class PenState {
   }
 
   toString(): string {
-    return 'color=' + this.foreground + ', underline=' + this.underline + ', italics=' + this.italics + ', background=' + this.background + ', flash=' + this.flash;
+    return (
+      'color=' +
+      this.foreground +
+      ', underline=' +
+      this.underline +
+      ', italics=' +
+      this.italics +
+      ', background=' +
+      this.background +
+      ', flash=' +
+      this.flash
+    );
   }
 }
 
@@ -269,9 +342,22 @@ class StyledUnicodeChar {
   uchar: string;
   penState: PenState;
 
-  constructor(uchar?: string, foreground?: string, underline?: boolean, italics?: boolean, background?: string, flash?: boolean) {
+  constructor(
+    uchar?: string,
+    foreground?: string,
+    underline?: boolean,
+    italics?: boolean,
+    background?: string,
+    flash?: boolean
+  ) {
     this.uchar = uchar || ' '; // unicode character
-    this.penState = new PenState(foreground, underline, italics, background, flash);
+    this.penState = new PenState(
+      foreground,
+      underline,
+      italics,
+      background,
+      flash
+    );
   }
 
   reset() {
@@ -361,10 +447,16 @@ export class Row {
     }
 
     if (this.pos < 0) {
-      this.logger.log(VerboseLevel.DEBUG, 'Negative cursor position ' + this.pos);
+      this.logger.log(
+        VerboseLevel.DEBUG,
+        'Negative cursor position ' + this.pos
+      );
       this.pos = 0;
     } else if (this.pos > NR_COLS) {
-      this.logger.log(VerboseLevel.DEBUG, 'Too large cursor position ' + this.pos);
+      this.logger.log(
+        VerboseLevel.DEBUG,
+        'Too large cursor position ' + this.pos
+      );
       this.pos = NR_COLS;
     }
   }
@@ -397,7 +489,16 @@ export class Row {
     }
     const char = getCharForByte(byte);
     if (this.pos >= NR_COLS) {
-      this.logger.log(VerboseLevel.ERROR, 'Cannot insert ' + byte.toString(16) + ' (' + char + ') at position ' + this.pos + '. Skipping it!');
+      this.logger.log(
+        VerboseLevel.ERROR,
+        'Cannot insert ' +
+          byte.toString(16) +
+          ' (' +
+          char +
+          ') at position ' +
+          this.pos +
+          '. Skipping it!'
+      );
       return;
     }
     this.chars[this.pos].setChar(char, this.currPenState);
@@ -565,7 +666,9 @@ export class CaptionScreen {
         const time = this.logger.time;
         if (prevLineTime && time !== null && prevLineTime < time) {
           for (let i = 0; i < this.nrRollUpRows; i++) {
-            this.rows[newRow - this.nrRollUpRows + i + 1].copy(lastOutputScreen.rows[topRowIndex + i]);
+            this.rows[newRow - this.nrRollUpRows + i + 1].copy(
+              lastOutputScreen.rows[topRowIndex + i]
+            );
           }
         }
       }
@@ -579,7 +682,13 @@ export class CaptionScreen {
       row.setCursor(pacData.indent);
       pacData.color = row.chars[prevPos].penState.foreground;
     }
-    const styles: PenStyles = { foreground: pacData.color, underline: pacData.underline, italics: pacData.italics, background: 'black', flash: false };
+    const styles: PenStyles = {
+      foreground: pacData.color,
+      underline: pacData.underline,
+      italics: pacData.italics,
+      background: 'black',
+      flash: false,
+    };
     this.setPen(styles);
   }
 
@@ -599,7 +708,10 @@ export class CaptionScreen {
 
   rollUp() {
     if (this.nrRollUpRows === null) {
-      this.logger.log(VerboseLevel.DEBUG, 'roll_up but nrRollUpRows not set yet');
+      this.logger.log(
+        VerboseLevel.DEBUG,
+        'roll_up but nrRollUpRows not set yet'
+      );
       return; // Not properly setup
     }
     this.logger.log(VerboseLevel.TEXT, this.getDisplayText());
@@ -647,7 +759,12 @@ export class CaptionScreen {
 
 // var modes = ['MODE_ROLL-UP', 'MODE_POP-ON', 'MODE_PAINT-ON', 'MODE_TEXT'];
 
-type CaptionModes = 'MODE_ROLL-UP' | 'MODE_POP-ON' | 'MODE_PAINT-ON' | 'MODE_TEXT' | null;
+type CaptionModes =
+  | 'MODE_ROLL-UP'
+  | 'MODE_POP-ON'
+  | 'MODE_PAINT-ON'
+  | 'MODE_TEXT'
+  | null;
 
 class Cea608Channel {
   chNr: number;
@@ -662,7 +779,11 @@ class Cea608Channel {
   cueStartTime: number | null;
   logger: CaptionsLogger;
 
-  constructor(channelNumber: number, outputFilter: OutputFilter, logger: CaptionsLogger) {
+  constructor(
+    channelNumber: number,
+    outputFilter: OutputFilter,
+    logger: CaptionsLogger
+  ) {
     this.chNr = channelNumber;
     this.outputFilter = outputFilter;
     this.mode = null;
@@ -730,10 +851,17 @@ class Cea608Channel {
       this.writeScreen.insertChar(chars[i]);
     }
 
-    const screen = this.writeScreen === this.displayedMemory ? 'DISP' : 'NON_DISP';
-    this.logger.log(VerboseLevel.INFO, screen + ': ' + this.writeScreen.getDisplayText(true));
+    const screen =
+      this.writeScreen === this.displayedMemory ? 'DISP' : 'NON_DISP';
+    this.logger.log(
+      VerboseLevel.INFO,
+      screen + ': ' + this.writeScreen.getDisplayText(true)
+    );
     if (this.mode === 'MODE_PAINT-ON' || this.mode === 'MODE_ROLL-UP') {
-      this.logger.log(VerboseLevel.TEXT, 'DISPLAYED: ' + this.displayedMemory.getDisplayText(true));
+      this.logger.log(
+        VerboseLevel.TEXT,
+        'DISPLAYED: ' + this.displayedMemory.getDisplayText(true)
+      );
       this.outputDataUpdate();
     }
   }
@@ -832,7 +960,10 @@ class Cea608Channel {
       this.displayedMemory = this.nonDisplayedMemory;
       this.nonDisplayedMemory = tmp;
       this.writeScreen = this.nonDisplayedMemory;
-      this.logger.log(VerboseLevel.TEXT, 'DISP: ' + this.displayedMemory.getDisplayText());
+      this.logger.log(
+        VerboseLevel.TEXT,
+        'DISP: ' + this.displayedMemory.getDisplayText()
+      );
     }
     this.outputDataUpdate(true);
   }
@@ -850,7 +981,15 @@ class Cea608Channel {
     styles.italics = secondByte >= 0x2e;
     if (!styles.italics) {
       const colorIndex = Math.floor(secondByte / 2) - 0x10;
-      const colors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta'];
+      const colors = [
+        'white',
+        'green',
+        'blue',
+        'cyan',
+        'red',
+        'yellow',
+        'magenta',
+      ];
       styles.foreground = colors[colorIndex];
     } else {
       styles.foreground = 'white';
@@ -871,7 +1010,11 @@ class Cea608Channel {
         this.cueStartTime = time;
       } else {
         if (!this.displayedMemory.equals(this.lastOutputScreen)) {
-          this.outputFilter.newCue(this.cueStartTime!, time, this.lastOutputScreen);
+          this.outputFilter.newCue(
+            this.cueStartTime!,
+            time,
+            this.lastOutputScreen
+          );
           if (dispatch && this.outputFilter.dispatchCue) {
             this.outputFilter.dispatchCue();
           }
@@ -921,7 +1064,11 @@ class Cea608Parser {
 
   constructor(field: SupportedField, out1: OutputFilter, out2: OutputFilter) {
     const logger = new CaptionsLogger();
-    this.channels = [null, new Cea608Channel(field, out1, logger), new Cea608Channel(field + 1, out2, logger)];
+    this.channels = [
+      null,
+      new Cea608Channel(field, out1, logger),
+      new Cea608Channel(field + 1, out2, logger),
+    ];
     this.cmdHistory = createCmdHistory();
     this.logger = logger;
   }
@@ -951,7 +1098,14 @@ class Cea608Parser {
       if (a === 0 && b === 0) {
         continue;
       } else {
-        this.logger.log(VerboseLevel.DATA, '[' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
+        this.logger.log(
+          VerboseLevel.DATA,
+          '[' +
+            numArrayToHexArray([byteList[i], byteList[i + 1]]) +
+            '] -> (' +
+            numArrayToHexArray([a, b]) +
+            ')'
+        );
       }
 
       cmdFound = this.parseCmd(a, b);
@@ -976,12 +1130,21 @@ class Cea608Parser {
             const channel = this.channels[currChNr] as Cea608Channel;
             channel.insertChars(charsFound);
           } else {
-            this.logger.log(VerboseLevel.WARNING, 'No channel found yet. TEXT-MODE?');
+            this.logger.log(
+              VerboseLevel.WARNING,
+              'No channel found yet. TEXT-MODE?'
+            );
           }
         }
       }
       if (!cmdFound && !charsFound) {
-        this.logger.log(VerboseLevel.WARNING, "Couldn't parse cleaned data " + numArrayToHexArray([a, b]) + ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
+        this.logger.log(
+          VerboseLevel.WARNING,
+          "Couldn't parse cleaned data " +
+            numArrayToHexArray([a, b]) +
+            ' orig: ' +
+            numArrayToHexArray([byteList[i], byteList[i + 1]])
+        );
       }
     }
   }
@@ -992,7 +1155,10 @@ class Cea608Parser {
    */
   parseCmd(a: number, b: number) {
     const { cmdHistory } = this;
-    const cond1 = (a === 0x14 || a === 0x1c || a === 0x15 || a === 0x1d) && b >= 0x20 && b <= 0x2f;
+    const cond1 =
+      (a === 0x14 || a === 0x1c || a === 0x15 || a === 0x1d) &&
+      b >= 0x20 &&
+      b <= 0x2f;
     const cond2 = (a === 0x17 || a === 0x1f) && b >= 0x21 && b <= 0x23;
     if (!(cond1 || cond2)) {
       return false;
@@ -1000,7 +1166,10 @@ class Cea608Parser {
 
     if (hasCmdRepeated(a, b, cmdHistory)) {
       setLastCmd(null, null, cmdHistory);
-      this.logger.log(VerboseLevel.DEBUG, 'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
+      this.logger.log(
+        VerboseLevel.DEBUG,
+        'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped'
+      );
       return true;
     }
 
@@ -1065,7 +1234,10 @@ class Cea608Parser {
       }
 
       if (chNr !== this.currentChannel) {
-        this.logger.log(VerboseLevel.ERROR, 'Mismatch channel in midrow parsing');
+        this.logger.log(
+          VerboseLevel.ERROR,
+          'Mismatch channel in midrow parsing'
+        );
         return false;
       }
       const channel = this.channels[chNr];
@@ -1073,7 +1245,10 @@ class Cea608Parser {
         return false;
       }
       channel.ccMIDROW(b);
-      this.logger.log(VerboseLevel.DEBUG, 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
+      this.logger.log(
+        VerboseLevel.DEBUG,
+        'MIDROW (' + numArrayToHexArray([a, b]) + ')'
+      );
       return true;
     }
     return false;
@@ -1087,7 +1262,10 @@ class Cea608Parser {
     let row: number;
     const cmdHistory = this.cmdHistory;
 
-    const case1 = ((a >= 0x11 && a <= 0x17) || (a >= 0x19 && a <= 0x1f)) && b >= 0x40 && b <= 0x7f;
+    const case1 =
+      ((a >= 0x11 && a <= 0x17) || (a >= 0x19 && a <= 0x1f)) &&
+      b >= 0x40 &&
+      b <= 0x7f;
     const case2 = (a === 0x10 || a === 0x18) && b >= 0x40 && b <= 0x5f;
     if (!(case1 || case2)) {
       return false;
@@ -1122,7 +1300,13 @@ class Cea608Parser {
    */
   interpretPAC(row: number, byte: number): PACData {
     let pacIndex = byte;
-    const pacData: PACData = { color: null, italics: false, indent: null, underline: false, row: row };
+    const pacData: PACData = {
+      color: null,
+      italics: false,
+      indent: null,
+      underline: false,
+      row: row,
+    };
 
     if (byte > 0x5f) {
       pacIndex = byte - 0x60;
@@ -1132,7 +1316,16 @@ class Cea608Parser {
 
     pacData.underline = (pacIndex & 1) === 1;
     if (pacIndex <= 0xd) {
-      pacData.color = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'white'][Math.floor(pacIndex / 2)];
+      pacData.color = [
+        'white',
+        'green',
+        'blue',
+        'cyan',
+        'red',
+        'yellow',
+        'magenta',
+        'white',
+      ][Math.floor(pacIndex / 2)];
     } else if (pacIndex <= 0xf) {
       pacData.italics = true;
       pacData.color = 'white';
@@ -1169,14 +1362,20 @@ class Cea608Parser {
         oneCode = b + 0x90;
       }
 
-      this.logger.log(VerboseLevel.INFO, "Special char '" + getCharForByte(oneCode) + "' in channel " + channelNr);
+      this.logger.log(
+        VerboseLevel.INFO,
+        "Special char '" + getCharForByte(oneCode) + "' in channel " + channelNr
+      );
       charCodes = [oneCode];
     } else if (a >= 0x20 && a <= 0x7f) {
       charCodes = b === 0 ? [a] : [a, b];
     }
     if (charCodes) {
       const hexCodes = numArrayToHexArray(charCodes);
-      this.logger.log(VerboseLevel.DEBUG, 'Char codes =  ' + hexCodes.join(','));
+      this.logger.log(
+        VerboseLevel.DEBUG,
+        'Char codes =  ' + hexCodes.join(',')
+      );
       setLastCmd(a, b, this.cmdHistory);
     }
     return charCodes;
@@ -1241,7 +1440,11 @@ class Cea608Parser {
   }
 }
 
-function setLastCmd(a: number | null, b: number | null, cmdHistory: CmdHistory) {
+function setLastCmd(
+  a: number | null,
+  b: number | null,
+  cmdHistory: CmdHistory
+) {
   cmdHistory.a = a;
   cmdHistory.b = b;
 }

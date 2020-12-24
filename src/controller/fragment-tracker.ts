@@ -1,10 +1,18 @@
 import { Events } from '../events';
 import Fragment, { Part } from '../loader/fragment';
 import type { SourceBufferName } from '../types/buffer';
-import type { FragmentBufferedRange, FragmentEntity, FragmentTimeRange } from '../types/fragment-tracker';
+import type {
+  FragmentBufferedRange,
+  FragmentEntity,
+  FragmentTimeRange,
+} from '../types/fragment-tracker';
 import type { PlaylistLevelType } from '../types/loader';
 import type { ComponentAPI } from '../types/component-api';
-import type { BufferAppendedData, FragBufferedData, FragLoadedData } from '../types/events';
+import type {
+  BufferAppendedData,
+  FragBufferedData,
+  FragLoadedData,
+} from '../types/events';
 import type Hls from '../hls';
 
 export enum FragmentState {
@@ -18,7 +26,9 @@ export enum FragmentState {
 export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;
   private activePart: Part | null = null;
-  private fragments: Partial<Record<string, FragmentEntity>> = Object.create(null);
+  private fragments: Partial<Record<string, FragmentEntity>> = Object.create(
+    null
+  );
   private timeRanges:
     | {
         [key in SourceBufferName]: TimeRanges;
@@ -58,12 +68,19 @@ export class FragmentTracker implements ComponentAPI {
    * Return a Fragment with an appended range that matches the position and levelType.
    * If not found any Fragment, return null
    */
-  public getAppendedFrag(position: number, levelType: PlaylistLevelType): Fragment | null {
+  public getAppendedFrag(
+    position: number,
+    levelType: PlaylistLevelType
+  ): Fragment | null {
     const { activeFragment } = this;
     if (!activeFragment) {
       return null;
     }
-    if (activeFragment.appendedPTS !== undefined && activeFragment.start <= position && position <= activeFragment.appendedPTS) {
+    if (
+      activeFragment.appendedPTS !== undefined &&
+      activeFragment.start <= position &&
+      position <= activeFragment.appendedPTS
+    ) {
       return activeFragment;
     }
     return this.getBufferedFrag(position, levelType);
@@ -74,7 +91,10 @@ export class FragmentTracker implements ComponentAPI {
    * A buffered Fragment is one whose loading, parsing and appending is done (completed or "partial" meaning aborted).
    * If not found any Fragment, return null
    */
-  public getBufferedFrag(position: number, levelType: PlaylistLevelType): Fragment | null {
+  public getBufferedFrag(
+    position: number,
+    levelType: PlaylistLevelType
+  ): Fragment | null {
     const { fragments } = this;
     const keys = Object.keys(fragments);
     for (let i = keys.length; i--; ) {
@@ -94,7 +114,10 @@ export class FragmentTracker implements ComponentAPI {
    * The browser will unload parts of the buffer to free up memory for new buffer data
    * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
    */
-  public detectEvictedFragments(elementaryStream: SourceBufferName, timeRange: TimeRanges) {
+  public detectEvictedFragments(
+    elementaryStream: SourceBufferName,
+    timeRange: TimeRanges
+  ) {
     // Check if any flagged fragments have been unloaded
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
@@ -106,7 +129,11 @@ export class FragmentTracker implements ComponentAPI {
         return;
       }
       esData.time.some((time: FragmentTimeRange) => {
-        const isNotBuffered = !this.isTimeBuffered(time.startPTS, time.endPTS, timeRange);
+        const isNotBuffered = !this.isTimeBuffered(
+          time.startPTS,
+          time.endPTS,
+          timeRange
+        );
         if (isNotBuffered) {
           // Unregister partial fragment as it needs to load again to be reused
           this.removeFragment(fragmentEntity.body);
@@ -141,11 +168,21 @@ export class FragmentTracker implements ComponentAPI {
       }
       const timeRange = timeRanges[elementaryStream];
       const partial = part !== null || streamInfo.partial === true;
-      fragmentEntity.range[elementaryStream] = this.getBufferedTimes(frag, part, partial, timeRange);
+      fragmentEntity.range[elementaryStream] = this.getBufferedTimes(
+        frag,
+        part,
+        partial,
+        timeRange
+      );
     });
   }
 
-  private getBufferedTimes(fragment: Fragment, part: Part | null, partial: boolean, timeRange: TimeRanges): FragmentBufferedRange {
+  private getBufferedTimes(
+    fragment: Fragment,
+    part: Part | null,
+    partial: boolean,
+    timeRange: TimeRanges
+  ): FragmentBufferedRange {
     const buffered: FragmentBufferedRange = {
       time: [],
       partial,
@@ -252,7 +289,11 @@ export class FragmentTracker implements ComponentAPI {
     return null;
   }
 
-  private isTimeBuffered(startPTS: number, endPTS: number, timeRange: TimeRanges): boolean {
+  private isTimeBuffered(
+    startPTS: number,
+    endPTS: number,
+    timeRange: TimeRanges
+  ): boolean {
     let startTime;
     let endTime;
     for (let i = 0; i < timeRange.length; i++) {
@@ -290,7 +331,10 @@ export class FragmentTracker implements ComponentAPI {
     };
   }
 
-  private onBufferAppended(event: Events.BUFFER_APPENDED, data: BufferAppendedData) {
+  private onBufferAppended(
+    event: Events.BUFFER_APPENDED,
+    data: BufferAppendedData
+  ) {
     const { frag, part, timeRanges } = data;
     this.activeFragment = frag;
     this.activePart = part;
@@ -329,7 +373,10 @@ export class FragmentTracker implements ComponentAPI {
 }
 
 function isPartial(fragmentEntity: FragmentEntity): boolean {
-  return fragmentEntity.buffered && (fragmentEntity.range.video?.partial || fragmentEntity.range.audio?.partial);
+  return (
+    fragmentEntity.buffered &&
+    (fragmentEntity.range.video?.partial || fragmentEntity.range.audio?.partial)
+  );
 }
 
 function getFragmentKey(fragment: Fragment): string {

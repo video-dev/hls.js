@@ -15,12 +15,17 @@ describe('Fragment class tests', function () {
     it('returns true if an EXT-X-KEY is associated with the fragment', function () {
       // From https://docs.microsoft.com/en-us/azure/media-services/previous/media-services-protect-with-aes128
 
-      const key = LevelKey.fromURL('https://wamsbayclus001kd-hs.cloudapp.net', './HlsHandler.ashx?kid=da3813af-55e6-48e7-aa9f-a4d6031f7b4d');
+      const key = LevelKey.fromURL(
+        'https://wamsbayclus001kd-hs.cloudapp.net',
+        './HlsHandler.ashx?kid=da3813af-55e6-48e7-aa9f-a4d6031f7b4d'
+      );
       key.method = 'AES-128';
       key.iv = '0XD7D7D7D7D7D7D7D7D7D7D7D7D7D7D7D7';
       key.keyFormat = 'identity';
       frag.levelkey = key;
-      expect(frag.decryptdata.uri).to.equal('https://wamsbayclus001kd-hs.cloudapp.net/HlsHandler.ashx?kid=da3813af-55e6-48e7-aa9f-a4d6031f7b4d');
+      expect(frag.decryptdata.uri).to.equal(
+        'https://wamsbayclus001kd-hs.cloudapp.net/HlsHandler.ashx?kid=da3813af-55e6-48e7-aa9f-a4d6031f7b4d'
+      );
       expect(frag.encrypted).to.equal(true);
     });
 
@@ -28,12 +33,16 @@ describe('Fragment class tests', function () {
       // #EXT-X-KEY:METHOD=SAMPLE-AES,URI=”data:text/plain;base64,AAAAPXBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB0aDXdpZGV2aW5lX3Rlc3QiDHRlc3QgY29udGVudA==”,KEYID=0x112233445566778899001122334455,KEYFORMAT=”urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed”,KEYFORMATVERSION=”1”
       // From https://www.academia.edu/36030972/Widevine_DRM_for_HLS
 
-      const key = LevelKey.fromURI('data:text/plain;base64,AAAAPXBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB0aDXdpZGV2aW5lX3Rlc3QiDHRlc3QgY29udGVudA==');
+      const key = LevelKey.fromURI(
+        'data:text/plain;base64,AAAAPXBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB0aDXdpZGV2aW5lX3Rlc3QiDHRlc3QgY29udGVudA=='
+      );
       key.method = 'SAMPLE-AES';
       key.keyFormat = 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed';
       key.keyFormatVersions = '1';
       frag.levelkey = key;
-      expect(frag.decryptdata.uri).to.equal('data:text/plain;base64,AAAAPXBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB0aDXdpZGV2aW5lX3Rlc3QiDHRlc3QgY29udGVudA==');
+      expect(frag.decryptdata.uri).to.equal(
+        'data:text/plain;base64,AAAAPXBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB0aDXdpZGV2aW5lX3Rlc3QiDHRlc3QgY29udGVudA=='
+      );
       expect(frag.encrypted).to.equal(true);
     });
 

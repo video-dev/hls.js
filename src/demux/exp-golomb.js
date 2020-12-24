@@ -76,7 +76,11 @@ class ExpGolomb {
   // ():uint
   skipLZ() {
     let leadingZeroCount; // :uint
-    for (leadingZeroCount = 0; leadingZeroCount < this.bitsAvailable; ++leadingZeroCount) {
+    for (
+      leadingZeroCount = 0;
+      leadingZeroCount < this.bitsAvailable;
+      ++leadingZeroCount
+    ) {
       if ((this.word & (0x80000000 >>> leadingZeroCount)) !== 0) {
         // the first bit of working word is 1
         this.word <<= leadingZeroCount;
@@ -310,15 +314,25 @@ class ExpGolomb {
             pixelRatio = [2, 1];
             break;
           case 255: {
-            pixelRatio = [(readUByte() << 8) | readUByte(), (readUByte() << 8) | readUByte()];
+            pixelRatio = [
+              (readUByte() << 8) | readUByte(),
+              (readUByte() << 8) | readUByte(),
+            ];
             break;
           }
         }
       }
     }
     return {
-      width: Math.ceil((picWidthInMbsMinus1 + 1) * 16 - frameCropLeftOffset * 2 - frameCropRightOffset * 2),
-      height: (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 - (frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset),
+      width: Math.ceil(
+        (picWidthInMbsMinus1 + 1) * 16 -
+          frameCropLeftOffset * 2 -
+          frameCropRightOffset * 2
+      ),
+      height:
+        (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 -
+        (frameMbsOnlyFlag ? 2 : 4) *
+          (frameCropTopOffset + frameCropBottomOffset),
       pixelRatio: pixelRatio,
     };
   }

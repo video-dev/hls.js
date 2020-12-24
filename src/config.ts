@@ -15,7 +15,12 @@ import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { logger } from './utils/logger';
 
 import type { MediaKeyFunc } from './utils/mediakeys-helper';
-import type { FragmentLoaderContext, Loader, LoaderContext, PlaylistLoaderContext } from './types/loader';
+import type {
+  FragmentLoaderContext,
+  Loader,
+  LoaderContext,
+  PlaylistLoaderContext,
+} from './types/loader';
 
 type ABRControllerConfig = {
   abrEwmaFastLive: number;
@@ -253,8 +258,12 @@ export const hlsDefaultConfig: HlsConfig = {
 
   // Dynamic Modules
   ...timelineConfig(),
-  subtitleStreamController: __USE_SUBTITLES__ ? SubtitleStreamController : undefined,
-  subtitleTrackController: __USE_SUBTITLES__ ? SubtitleTrackController : undefined,
+  subtitleStreamController: __USE_SUBTITLES__
+    ? SubtitleStreamController
+    : undefined,
+  subtitleTrackController: __USE_SUBTITLES__
+    ? SubtitleTrackController
+    : undefined,
   timelineController: __USE_SUBTITLES__ ? TimelineController : undefined,
   audioStreamController: __USE_ALT_AUDIO__ ? AudioStreamController : undefined,
   audioTrackController: __USE_ALT_AUDIO__ ? AudioTrackController : undefined,
@@ -279,20 +288,39 @@ function timelineConfig(): TimelineControllerConfig {
   };
 }
 
-export function mergeConfig(defaultConfig: HlsConfig, userConfig: Partial<HlsConfig>): HlsConfig {
-  if ((userConfig.liveSyncDurationCount || userConfig.liveMaxLatencyDurationCount) && (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)) {
-    throw new Error("Illegal hls.js config: don't mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration");
+export function mergeConfig(
+  defaultConfig: HlsConfig,
+  userConfig: Partial<HlsConfig>
+): HlsConfig {
+  if (
+    (userConfig.liveSyncDurationCount ||
+      userConfig.liveMaxLatencyDurationCount) &&
+    (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)
+  ) {
+    throw new Error(
+      "Illegal hls.js config: don't mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration"
+    );
   }
 
   if (
     userConfig.liveMaxLatencyDurationCount !== undefined &&
-    (userConfig.liveSyncDurationCount === undefined || userConfig.liveMaxLatencyDurationCount <= userConfig.liveSyncDurationCount)
+    (userConfig.liveSyncDurationCount === undefined ||
+      userConfig.liveMaxLatencyDurationCount <=
+        userConfig.liveSyncDurationCount)
   ) {
-    throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"');
+    throw new Error(
+      'Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"'
+    );
   }
 
-  if (userConfig.liveMaxLatencyDuration !== undefined && (userConfig.liveSyncDuration === undefined || userConfig.liveMaxLatencyDuration <= userConfig.liveSyncDuration)) {
-    throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"');
+  if (
+    userConfig.liveMaxLatencyDuration !== undefined &&
+    (userConfig.liveSyncDuration === undefined ||
+      userConfig.liveMaxLatencyDuration <= userConfig.liveSyncDuration)
+  ) {
+    throw new Error(
+      'Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"'
+    );
   }
 
   return Object.assign({}, defaultConfig, userConfig);
@@ -302,7 +330,9 @@ export function enableStreamingMode(config) {
   const currentLoader = config.loader;
   if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
     // If a developer has configured their own loader, respect that choice
-    logger.log('[config]: Custom loader detected, cannot enable progressive streaming');
+    logger.log(
+      '[config]: Custom loader detected, cannot enable progressive streaming'
+    );
     config.progressive = false;
   } else {
     const canStreamProgressively = fetchSupported();
