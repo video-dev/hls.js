@@ -1,19 +1,24 @@
 import { logger } from '../utils/logger';
-import type { BufferOperation, BufferOperationQueues, SourceBuffers, SourceBufferName } from '../types/buffer';
+import type {
+  BufferOperation,
+  BufferOperationQueues,
+  SourceBuffers,
+  SourceBufferName,
+} from '../types/buffer';
 
 export default class BufferOperationQueue {
   private buffers: SourceBuffers;
   private queues: BufferOperationQueues = {
     video: [],
     audio: [],
-    audiovideo: []
+    audiovideo: [],
   };
 
-  constructor (sourceBufferReference: SourceBuffers) {
+  constructor(sourceBufferReference: SourceBuffers) {
     this.buffers = sourceBufferReference;
   }
 
-  public append (operation: BufferOperation, type: SourceBufferName) {
+  public append(operation: BufferOperation, type: SourceBufferName) {
     const queue = this.queues[type];
     queue.push(operation);
     if (queue.length === 1 && this.buffers[type]) {
@@ -21,13 +26,13 @@ export default class BufferOperationQueue {
     }
   }
 
-  public insertAbort (operation: BufferOperation, type: SourceBufferName) {
+  public insertAbort(operation: BufferOperation, type: SourceBufferName) {
     const queue = this.queues[type];
     queue.unshift(operation);
     this.executeNext(type, true);
   }
 
-  public appendBlocker (type: SourceBufferName) : Promise<{}> {
+  public appendBlocker(type: SourceBufferName): Promise<{}> {
     let execute;
     const promise: Promise<{}> = new Promise((resolve) => {
       execute = resolve;
@@ -36,17 +41,20 @@ export default class BufferOperationQueue {
       execute,
       onStart: () => {},
       onComplete: () => {},
-      onError: () => {}
+      onError: () => {},
     };
 
     this.append(operation, type);
     return promise;
   }
 
-  public executeNext (type: SourceBufferName, ignoreUpdating?: boolean) {
+  public executeNext(type: SourceBufferName, ignoreUpdating?: boolean) {
     const { buffers, queues } = this;
     const sb = buffers[type];
-    console.assert(!sb || ignoreUpdating || !sb.updating, `${type} sourceBuffer must exist, and must not be updating`);
+    console.assert(
+      !sb || ignoreUpdating || !sb.updating,
+      `${type} sourceBuffer must exist, and must not be updating`
+    );
 
     const queue = queues[type];
     if (queue.length) {
@@ -56,7 +64,9 @@ export default class BufferOperationQueue {
         // which do not end with this event must call _onSBUpdateEnd manually
         operation.execute();
       } catch (e) {
-        logger.warn('[buffer-operation-queue]: Unhandled exception executing the current operation');
+        logger.warn(
+          '[buffer-operation-queue]: Unhandled exception executing the current operation'
+        );
         operation.onError(e);
 
         // Only shift the current operation off, otherwise the updateend handler will do this for us
@@ -67,12 +77,12 @@ export default class BufferOperationQueue {
     }
   }
 
-  public shiftAndExecuteNext (type: SourceBufferName) {
+  public shiftAndExecuteNext(type: SourceBufferName) {
     this.queues[type].shift();
     this.executeNext(type);
   }
 
-  public current (type: SourceBufferName) {
+  public current(type: SourceBufferName) {
     return this.queues[type][0];
   }
 }

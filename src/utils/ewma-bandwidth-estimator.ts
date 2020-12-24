@@ -15,7 +15,7 @@ class EwmaBandWidthEstimator {
   private slow_: EWMA;
   private fast_: EWMA;
 
-  constructor (slow: number, fast: number, defaultEstimate: number) {
+  constructor(slow: number, fast: number, defaultEstimate: number) {
     this.defaultEstimate_ = defaultEstimate;
     this.minWeight_ = 0.001;
     this.minDelayMs_ = 50;
@@ -23,7 +23,7 @@ class EwmaBandWidthEstimator {
     this.fast_ = new EWMA(fast);
   }
 
-  update (slow: number, fast: number) {
+  update(slow: number, fast: number) {
     const { slow_, fast_ } = this;
     if (this.slow_.halfLife !== slow) {
       this.slow_ = new EWMA(slow, slow_.getEstimate(), slow_.getTotalWeight());
@@ -33,7 +33,7 @@ class EwmaBandWidthEstimator {
     }
   }
 
-  sample (durationMs: number, numBytes: number) {
+  sample(durationMs: number, numBytes: number) {
     durationMs = Math.max(durationMs, this.minDelayMs_);
     const numBits = 8 * numBytes;
     // weight is duration in seconds
@@ -44,12 +44,12 @@ class EwmaBandWidthEstimator {
     this.slow_.sample(durationS, bandwidthInBps);
   }
 
-  canEstimate (): boolean {
+  canEstimate(): boolean {
     const fast = this.fast_;
-    return (fast && fast.getTotalWeight() >= this.minWeight_);
+    return fast && fast.getTotalWeight() >= this.minWeight_;
   }
 
-  getEstimate (): number {
+  getEstimate(): number {
     if (this.canEstimate()) {
       // console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
       // console.log('fast estimate:'+ Math.round(this.fast_.getEstimate()));
@@ -61,7 +61,6 @@ class EwmaBandWidthEstimator {
     }
   }
 
-  destroy () {
-  }
+  destroy() {}
 }
 export default EwmaBandWidthEstimator;

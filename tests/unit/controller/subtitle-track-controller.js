@@ -12,38 +12,40 @@ describe('SubtitleTrackController', function () {
 
   beforeEach(function () {
     const hls = new Hls({
-      renderNatively: true
+      renderNatively: true,
     });
 
     videoElement = document.createElement('video');
     subtitleTrackController = new SubtitleTrackController(hls);
     subtitleTrackController.media = videoElement;
-    subtitleTrackController.tracks = subtitleTrackController.tracksInGroup = [{
-      id: 0,
-      groupId: 'default-text-group',
-      lang: 'en',
-      name: 'English',
-      type: 'SUBTITLES',
-      url: 'baz',
-      details: { live: false }
-    },
-    {
-      id: 1,
-      groupId: 'default-text-group',
-      lang: 'en',
-      name: 'English',
-      type: 'SUBTITLES',
-      url: 'bar'
-    },
-    {
-      id: 2,
-      groupId: 'default-text-group',
-      lang: 'en',
-      name: 'English',
-      type: 'SUBTITLES',
-      url: 'foo',
-      details: { live: true }
-    }];
+    subtitleTrackController.tracks = subtitleTrackController.tracksInGroup = [
+      {
+        id: 0,
+        groupId: 'default-text-group',
+        lang: 'en',
+        name: 'English',
+        type: 'SUBTITLES',
+        url: 'baz',
+        details: { live: false },
+      },
+      {
+        id: 1,
+        groupId: 'default-text-group',
+        lang: 'en',
+        name: 'English',
+        type: 'SUBTITLES',
+        url: 'bar',
+      },
+      {
+        id: 2,
+        groupId: 'default-text-group',
+        lang: 'en',
+        name: 'English',
+        type: 'SUBTITLES',
+        url: 'foo',
+        details: { live: true },
+      },
+    ];
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
@@ -123,7 +125,14 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 1;
 
       expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: 1, type: 'SUBTITLES', url: 'bar' });
+      expect(triggerSpy.firstCall).to.have.been.calledWith(
+        'hlsSubtitleTrackSwitch',
+        {
+          id: 1,
+          type: 'SUBTITLES',
+          url: 'bar',
+        }
+      );
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track has no details', function () {
@@ -133,12 +142,15 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 1;
 
       expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', {
-        url: 'bar',
-        id: 1,
-        groupId: 'default-text-group',
-        deliveryDirectives: null
-      });
+      expect(triggerSpy.secondCall).to.have.been.calledWith(
+        'hlsSubtitleTrackLoading',
+        {
+          url: 'bar',
+          id: 1,
+          groupId: 'default-text-group',
+          deliveryDirectives: null,
+        }
+      );
     });
 
     it('should not trigger SUBTITLE_TRACK_LOADING if the track has details and is not live', function () {
@@ -147,7 +159,14 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 0;
 
       expect(triggerSpy).to.have.been.calledOnce;
-      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: 0, type: 'SUBTITLES', url: 'baz' });
+      expect(triggerSpy.firstCall).to.have.been.calledWith(
+        'hlsSubtitleTrackSwitch',
+        {
+          id: 0,
+          type: 'SUBTITLES',
+          url: 'baz',
+        }
+      );
     });
 
     it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
@@ -155,7 +174,9 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
 
-      expect(triggerSpy.firstCall).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: -1 });
+      expect(
+        triggerSpy.firstCall
+      ).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: -1 });
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {
@@ -165,12 +186,15 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.subtitleTrack = 2;
 
       expect(triggerSpy).to.have.been.calledTwice;
-      expect(triggerSpy.secondCall).to.have.been.calledWith('hlsSubtitleTrackLoading', {
-        url: 'foo',
-        id: 2,
-        groupId: 'default-text-group',
-        deliveryDirectives: null
-      });
+      expect(triggerSpy.secondCall).to.have.been.calledWith(
+        'hlsSubtitleTrackLoading',
+        {
+          url: 'foo',
+          id: 2,
+          groupId: 'default-text-group',
+          deliveryDirectives: null,
+        }
+      );
     });
 
     it('should do nothing if called with out of bound indices', function () {
@@ -194,11 +218,11 @@ describe('SubtitleTrackController', function () {
       });
 
       it('should disable all textTracks if called with -1', function () {
-        [].slice.call(videoElement.textTracks).forEach(t => {
+        [].slice.call(videoElement.textTracks).forEach((t) => {
           t.mode = 'showing';
         });
         subtitleTrackController.toggleTrackModes(-1);
-        [].slice.call(videoElement.textTracks).forEach(t => {
+        [].slice.call(videoElement.textTracks).forEach((t) => {
           expect(t.mode).to.equal('disabled');
         });
       });
@@ -211,22 +235,38 @@ describe('SubtitleTrackController', function () {
 
     describe('onSubtitleTrackLoaded', function () {
       it('exits early if the loaded track does not match the requested track', function () {
-        const playlistLoadedSpy = sandbox.spy(subtitleTrackController, 'playlistLoaded');
+        const playlistLoadedSpy = sandbox.spy(
+          subtitleTrackController,
+          'playlistLoaded'
+        );
         subtitleTrackController.canLoad = true;
         subtitleTrackController.trackId = 1;
 
-        const mockLoadedEvent = { id: 999, details: { foo: 'bar' }, stats: new LoadStats() };
-        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
+        const mockLoadedEvent = {
+          id: 999,
+          details: { foo: 'bar' },
+          stats: new LoadStats(),
+        };
+        subtitleTrackController.onSubtitleTrackLoaded(
+          Events.SUBTITLE_TRACK_LOADED,
+          mockLoadedEvent
+        );
         expect(subtitleTrackController.timer).to.equal(-1);
         expect(playlistLoadedSpy).to.have.not.been.called;
 
         mockLoadedEvent.id = 0;
-        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
+        subtitleTrackController.onSubtitleTrackLoaded(
+          Events.SUBTITLE_TRACK_LOADED,
+          mockLoadedEvent
+        );
         expect(subtitleTrackController.timer).to.equal(-1);
         expect(playlistLoadedSpy).to.have.not.been.called;
 
         mockLoadedEvent.id = 1;
-        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
+        subtitleTrackController.onSubtitleTrackLoaded(
+          Events.SUBTITLE_TRACK_LOADED,
+          mockLoadedEvent
+        );
         expect(subtitleTrackController.timer).to.equal(-1);
         expect(playlistLoadedSpy).to.have.been.calledOnce;
       });
@@ -235,7 +275,10 @@ describe('SubtitleTrackController', function () {
         const details = new LevelDetails('');
         subtitleTrackController.canLoad = false;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, { id: 1, details, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded(
+          Events.SUBTITLE_TRACK_LOADED,
+          { id: 1, details, stats: new LoadStats() }
+        );
         expect(subtitleTrackController.timer).to.equal(-1);
       });
 
@@ -243,7 +286,10 @@ describe('SubtitleTrackController', function () {
         const details = new LevelDetails('');
         subtitleTrackController.canLoad = true;
         subtitleTrackController.trackId = 1;
-        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, { id: 1, details, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded(
+          Events.SUBTITLE_TRACK_LOADED,
+          { id: 1, details, stats: new LoadStats() }
+        );
         expect(subtitleTrackController.timer).to.exist;
       });
 
@@ -252,14 +298,20 @@ describe('SubtitleTrackController', function () {
         details.live = false;
         subtitleTrackController.trackId = 1;
         subtitleTrackController.timer = self.setTimeout(() => {}, 0);
-        subtitleTrackController.onSubtitleTrackLoaded(Events.SUBTITLE_TRACK_LOADED, { id: 1, details, stats: new LoadStats() });
+        subtitleTrackController.onSubtitleTrackLoaded(
+          Events.SUBTITLE_TRACK_LOADED,
+          { id: 1, details, stats: new LoadStats() }
+        );
         expect(subtitleTrackController.timer).to.equal(-1);
       });
     });
 
     describe('stopLoad', function () {
       it('stops loading', function () {
-        const clearReloadSpy = sandbox.spy(subtitleTrackController, 'clearTimer');
+        const clearReloadSpy = sandbox.spy(
+          subtitleTrackController,
+          'clearTimer'
+        );
         subtitleTrackController.stopLoad();
         expect(subtitleTrackController.canLoad).to.be.false;
         expect(clearReloadSpy).to.have.been.calledOnce;
@@ -268,7 +320,10 @@ describe('SubtitleTrackController', function () {
 
     describe('startLoad', function () {
       it('starts loading', function () {
-        const loadCurrentTrackSpy = sandbox.spy(subtitleTrackController, 'loadPlaylist');
+        const loadCurrentTrackSpy = sandbox.spy(
+          subtitleTrackController,
+          'loadPlaylist'
+        );
         subtitleTrackController.startLoad();
         expect(subtitleTrackController.canLoad).to.be.true;
         expect(loadCurrentTrackSpy).to.have.been.calledOnce;

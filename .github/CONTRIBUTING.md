@@ -4,13 +4,13 @@
 
 #### **Did you find a bug?**
 
-* **Ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/video-dev/hls.js/issues).
+- **Ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/video-dev/hls.js/issues).
 
-* If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/video-dev/hls.js/issues/new). Be sure to include a **title and clear description**, as much relevant information as possible, and a **code sample** or an **executable test case** demonstrating the expected behavior that is not occurring.
+- If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/video-dev/hls.js/issues/new). Be sure to include a **title and clear description**, as much relevant information as possible, and a **code sample** or an **executable test case** demonstrating the expected behavior that is not occurring.
 
 #### **Did you write a patch that fixes a bug?**
 
- - First, checkout the repository and install required dependencies
+- First, checkout the repository and install required dependencies
 
 ```sh
 git clone https://github.com/video-dev/hls.js.git
@@ -25,7 +25,7 @@ npm run lint
 npm run test
 ```
 
- - Use [EditorConfig](http://editorconfig.org/) or at least stay consistent to the file formats defined in the `.editorconfig` file.
- - Develop in a topic branch, not master
+- Use [EditorConfig](http://editorconfig.org/) or at least stay consistent to the file formats defined in the `.editorconfig` file.
+- Develop in a topic branch, not master
 
- Thanks! :heart: :heart: :heart:
+Thanks! :heart: :heart: :heart:

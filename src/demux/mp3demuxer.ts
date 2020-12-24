@@ -9,7 +9,7 @@ import * as MpegAudio from './mpegaudio';
 class MP3Demuxer extends BaseAudioDemuxer {
   static readonly minProbeByteLength: number = 4;
 
-  resetInitSegment (audioCodec, videoCodec, duration) {
+  resetInitSegment(audioCodec, videoCodec, duration) {
     super.resetInitSegment(audioCodec, videoCodec, duration);
     this._audioTrack = {
       container: 'audio/mpeg',
@@ -22,11 +22,11 @@ class MP3Demuxer extends BaseAudioDemuxer {
       manifestCodec: audioCodec,
       duration: duration,
       inputTimeScale: 90000,
-      dropped: 0
+      dropped: 0,
     };
   }
 
-  static probe (data): boolean {
+  static probe(data): boolean {
     if (!data) {
       return false;
     }
@@ -47,15 +47,21 @@ class MP3Demuxer extends BaseAudioDemuxer {
     return false;
   }
 
-  canParse (data, offset) {
+  canParse(data, offset) {
     return MpegAudio.canParse(data, offset);
   }
 
-  appendFrame (track, data, offset) {
+  appendFrame(track, data, offset) {
     if (this.initPTS === null) {
       return;
     }
-    return MpegAudio.appendFrame(track, data, offset, this.initPTS, this.frameIndex);
+    return MpegAudio.appendFrame(
+      track,
+      data,
+      offset,
+      this.initPTS,
+      this.frameIndex
+    );
   }
 }
 

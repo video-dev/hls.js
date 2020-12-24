@@ -10,7 +10,11 @@ describe('AESDecryptor', function () {
 
     it('removes 1 byte when the last byte is 1', function () {
       const arr = new Uint8Array([1, 2, 3, 1]);
-      expect(Array.from(new Uint8Array(removePadding(arr)))).to.deep.equal([1, 2, 3]);
+      expect(Array.from(new Uint8Array(removePadding(arr)))).to.deep.equal([
+        1,
+        2,
+        3,
+      ]);
     });
 
     it('removes 3 bytes when the last byte is 3', function () {

@@ -1,0 +1,5 @@
+/dist
+/api-docs
+package-lock.json
+/coverage
+libs/

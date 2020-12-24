@@ -1,10 +1,13 @@
 export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 
-export type ExtendedSourceBuffer = SourceBuffer & { // eslint-disable-line no-restricted-globals
-  ended?: boolean
+// eslint-disable-next-line no-restricted-globals
+export type ExtendedSourceBuffer = SourceBuffer & {
+  ended?: boolean;
 };
 
-export type SourceBuffers = Partial<Record<SourceBufferName, ExtendedSourceBuffer>>;
+export type SourceBuffers = Partial<
+  Record<SourceBufferName, ExtendedSourceBuffer>
+>;
 
 export interface BufferOperationQueues {
   video: Array<BufferOperation>;
@@ -13,12 +16,12 @@ export interface BufferOperationQueues {
 }
 
 export interface BufferOperation {
-  execute: Function
-  onStart: Function
-  onComplete: Function
-  onError: Function
-  start?: number
-  end?: number
+  execute: Function;
+  onStart: Function;
+  onComplete: Function;
+  onError: Function;
+  start?: number;
+  end?: number;
 }
 
 export interface SourceBufferListeners {
@@ -28,6 +31,6 @@ export interface SourceBufferListeners {
 }
 
 export interface SourceBufferListener {
-  event: string,
-  listener: EventListener
+  event: string;
+  listener: EventListener;
 }

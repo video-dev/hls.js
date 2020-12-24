@@ -5,9 +5,9 @@ const ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g; // eslint-disab
 
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
 class AttrList {
-  [key: string]: any
+  [key: string]: any;
 
-  constructor (attrs: string | StringMap) {
+  constructor(attrs: string | StringMap) {
     if (typeof attrs === 'string') {
       attrs = AttrList.parseAttrList(attrs);
     }
@@ -19,7 +19,7 @@ class AttrList {
     }
   }
 
-  decimalInteger (attrName: string): number {
+  decimalInteger(attrName: string): number {
     const intValue = parseInt(this[attrName], 10);
     if (intValue > Number.MAX_SAFE_INTEGER) {
       return Infinity;
@@ -28,10 +28,10 @@ class AttrList {
     return intValue;
   }
 
-  hexadecimalInteger (attrName: string) {
+  hexadecimalInteger(attrName: string) {
     if (this[attrName]) {
       let stringValue = (this[attrName] || '0x').slice(2);
-      stringValue = ((stringValue.length & 1) ? '0' : '') + stringValue;
+      stringValue = (stringValue.length & 1 ? '0' : '') + stringValue;
 
       const value = new Uint8Array(stringValue.length / 2);
       for (let i = 0; i < stringValue.length / 2; i++) {
@@ -44,7 +44,7 @@ class AttrList {
     }
   }
 
-  hexadecimalIntegerAsNumber (attrName: string): number {
+  hexadecimalIntegerAsNumber(attrName: string): number {
     const intValue = parseInt(this[attrName], 16);
     if (intValue > Number.MAX_SAFE_INTEGER) {
       return Infinity;
@@ -53,27 +53,31 @@ class AttrList {
     return intValue;
   }
 
-  decimalFloatingPoint (attrName: string): number {
+  decimalFloatingPoint(attrName: string): number {
     return parseFloat(this[attrName]);
   }
 
-  optionalFloat (attrName: string, defaultValue: number): number {
+  optionalFloat(attrName: string, defaultValue: number): number {
     const value = this[attrName];
     return value ? parseFloat(value) : defaultValue;
   }
 
-  enumeratedString (attrName: string): string | undefined {
+  enumeratedString(attrName: string): string | undefined {
     return this[attrName];
   }
 
-  bool (attrName: string): boolean {
+  bool(attrName: string): boolean {
     return this[attrName] === 'YES';
   }
 
-  decimalResolution (attrName: string): {
-    width: number,
-    height: number
-  } | undefined {
+  decimalResolution(
+    attrName: string
+  ):
+    | {
+        width: number;
+        height: number;
+      }
+    | undefined {
     const res = DECIMAL_RESOLUTION_REGEX.exec(this[attrName]);
     if (res === null) {
       return undefined;
@@ -81,11 +85,11 @@ class AttrList {
 
     return {
       width: parseInt(res[1], 10),
-      height: parseInt(res[2], 10)
+      height: parseInt(res[2], 10),
     };
   }
 
-  static parseAttrList (input: string): StringMap {
+  static parseAttrList(input: string): StringMap {
     let match;
     const attrs = {};
     const quote = '"';
@@ -93,8 +97,10 @@ class AttrList {
     while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
       let value = match[2];
 
-      if (value.indexOf(quote) === 0 &&
-          value.lastIndexOf(quote) === (value.length - 1)) {
+      if (
+        value.indexOf(quote) === 0 &&
+        value.lastIndexOf(quote) === value.length - 1
+      ) {
         value = value.slice(1, -1);
       }
 

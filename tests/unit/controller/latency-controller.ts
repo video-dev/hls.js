@@ -13,15 +13,18 @@ chai.use(sinonChai);
 const expect = chai.expect;
 
 // Write to .age and .edge getter stubs for testing LevelDetails in LatencyController
-interface TestLevelDetails extends LevelDetails { age: number, edge: number }
+interface TestLevelDetails extends LevelDetails {
+  age: number;
+  edge: number;
+}
 
 describe('LatencyController', function () {
   let latencyController: LatencyController;
   let hls: Hls;
   let media: {
-    currentTime: number,
-    playbackRate: number,
-    buffered: TimeRanges
+    currentTime: number;
+    playbackRate: number;
+    buffered: TimeRanges;
   };
   let mockTimeRanges: [number, number][] = [];
   let levelDetails: TestLevelDetails;
@@ -34,19 +37,25 @@ describe('LatencyController', function () {
     levelDetails.targetduration = 5;
     const levelUpdatedData: LevelUpdatedData = {
       details: levelDetails,
-      level: 0
+      level: 0,
     };
     const edgeStub = sinon.stub(levelDetails, 'edge');
     edgeStub.get(() => 0);
     edgeStub.set((value: number) => {
       edgeStub.get(() => value);
-      latencyController['onLevelUpdated'](Events.LEVEL_UPDATED, levelUpdatedData);
+      latencyController['onLevelUpdated'](
+        Events.LEVEL_UPDATED,
+        levelUpdatedData
+      );
     });
     const ageStub = sinon.stub(levelDetails, 'age');
     ageStub.get(() => 0);
     ageStub.set((value: number) => {
       ageStub.get(() => value);
-      latencyController['onLevelUpdated'](Events.LEVEL_UPDATED, levelUpdatedData);
+      latencyController['onLevelUpdated'](
+        Events.LEVEL_UPDATED,
+        levelUpdatedData
+      );
     });
     let currentTime = 0;
     // @ts-ignore
@@ -54,16 +63,16 @@ describe('LatencyController', function () {
       currentTime: 0,
       playbackRate: 1,
       buffered: {
-        get length () {
+        get length() {
           return mockTimeRanges.length;
         },
-        start (index) {
+        start(index) {
           return mockTimeRanges[index][0];
         },
-        end (index) {
+        end(index) {
           return mockTimeRanges[index][1];
-        }
-      }
+        },
+      },
     };
     const currentTimeStub = sinon.stub(media, 'currentTime');
     currentTimeStub.get(() => currentTime);

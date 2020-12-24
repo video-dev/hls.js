@@ -3,8 +3,8 @@ import type { HlsChunkPerformanceTiming } from './loader';
 import type { SourceBufferName } from './buffer';
 
 export interface TransmuxerResult {
-    remuxResult: RemuxerResult
-    chunkMeta: ChunkMetadata
+  remuxResult: RemuxerResult;
+  chunkMeta: ChunkMetadata;
 }
 
 export class ChunkMetadata {
@@ -15,13 +15,22 @@ export class ChunkMetadata {
   public readonly size: number;
   public readonly partial: boolean;
   public readonly transmuxing: HlsChunkPerformanceTiming = getNewPerformanceTiming();
-  public readonly buffering: { [key in SourceBufferName]: HlsChunkPerformanceTiming } = {
+  public readonly buffering: {
+    [key in SourceBufferName]: HlsChunkPerformanceTiming;
+  } = {
     audio: getNewPerformanceTiming(),
     video: getNewPerformanceTiming(),
-    audiovideo: getNewPerformanceTiming()
+    audiovideo: getNewPerformanceTiming(),
   };
 
-  constructor (level: number, sn: number, id: number, size = 0, part = -1, partial = false) {
+  constructor(
+    level: number,
+    sn: number,
+    id: number,
+    size = 0,
+    part = -1,
+    partial = false
+  ) {
     this.level = level;
     this.sn = sn;
     this.id = id;
@@ -31,6 +40,6 @@ export class ChunkMetadata {
   }
 }
 
-function getNewPerformanceTiming (): HlsChunkPerformanceTiming {
+function getNewPerformanceTiming(): HlsChunkPerformanceTiming {
   return { start: 0, executeStart: 0, executeEnd: 0, end: 0 };
 }

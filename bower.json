@@ -4,15 +4,7 @@
   "license": "Apache-2.0",
   "description": "Media Source Extension - HLS library, by/for Dailymotion",
   "homepage": "https://github.com/video-dev/hls.js",
-  "authors": [
-    "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>"
-  ],
+  "authors": ["Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>"],
   "main": "dist/hls.js",
-  "ignore": [
-    "**/.*",
-    "node_modules",
-    "bower_components",
-    "test",
-    "tests"
-  ]
+  "ignore": ["**/.*", "node_modules", "bower_components", "test", "tests"]
 }

@@ -1,7 +1,7 @@
-type RawFrame = {type: string, size: number, data: Uint8Array};
+type RawFrame = { type: string; size: number; data: Uint8Array };
 
 // breaking up those two types in order to clarify what is happening in the decoding path.
-type DecodedFrame<T> = {key: string, data: T, info?: any};
+type DecodedFrame<T> = { key: string; data: T; info?: any };
 export type Frame = DecodedFrame<ArrayBuffer | string>;
 
 /**
@@ -12,25 +12,34 @@ export type Frame = DecodedFrame<ArrayBuffer | string>;
  */
 export const isHeader = (data: Uint8Array, offset: number): boolean => {
   /*
-  * http://id3.org/id3v2.3.0
-  * [0]     = 'I'
-  * [1]     = 'D'
-  * [2]     = '3'
-  * [3,4]   = {Version}
-  * [5]     = {Flags}
-  * [6-9]   = {ID3 Size}
-  *
-  * An ID3v2 tag can be detected with the following pattern:
-  *  $49 44 33 yy yy xx zz zz zz zz
-  * Where yy is less than $FF, xx is the 'flags' byte and zz is less than $80
-  */
+   * http://id3.org/id3v2.3.0
+   * [0]     = 'I'
+   * [1]     = 'D'
+   * [2]     = '3'
+   * [3,4]   = {Version}
+   * [5]     = {Flags}
+   * [6-9]   = {ID3 Size}
+   *
+   * An ID3v2 tag can be detected with the following pattern:
+   *  $49 44 33 yy yy xx zz zz zz zz
+   * Where yy is less than $FF, xx is the 'flags' byte and zz is less than $80
+   */
   if (offset + 10 <= data.length) {
     // look for 'ID3' identifier
-    if (data[offset] === 0x49 && data[offset + 1] === 0x44 && data[offset + 2] === 0x33) {
+    if (
+      data[offset] === 0x49 &&
+      data[offset + 1] === 0x44 &&
+      data[offset + 2] === 0x33
+    ) {
       // check version is within range
-      if (data[offset + 3] < 0xFF && data[offset + 4] < 0xFF) {
+      if (data[offset + 3] < 0xff && data[offset + 4] < 0xff) {
         // check size is within range
-        if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80) {
+        if (
+          data[offset + 6] < 0x80 &&
+          data[offset + 7] < 0x80 &&
+          data[offset + 8] < 0x80 &&
+          data[offset + 9] < 0x80
+        ) {
           return true;
         }
       }
@@ -48,15 +57,24 @@ export const isHeader = (data: Uint8Array, offset: number): boolean => {
  */
 export const isFooter = (data: Uint8Array, offset: number): boolean => {
   /*
-  * The footer is a copy of the header, but with a different identifier
-  */
+   * The footer is a copy of the header, but with a different identifier
+   */
   if (offset + 10 <= data.length) {
     // look for '3DI' identifier
-    if (data[offset] === 0x33 && data[offset + 1] === 0x44 && data[offset + 2] === 0x49) {
+    if (
+      data[offset] === 0x33 &&
+      data[offset + 1] === 0x44 &&
+      data[offset + 2] === 0x49
+    ) {
       // check version is within range
-      if (data[offset + 3] < 0xFF && data[offset + 4] < 0xFF) {
+      if (data[offset + 3] < 0xff && data[offset + 4] < 0xff) {
         // check size is within range
-        if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80) {
+        if (
+          data[offset + 6] < 0x80 &&
+          data[offset + 7] < 0x80 &&
+          data[offset + 8] < 0x80 &&
+          data[offset + 9] < 0x80
+        ) {
           return true;
         }
       }
@@ -73,7 +91,10 @@ export const isFooter = (data: Uint8Array, offset: number): boolean => {
  * @return {Uint8Array | undefined} - The block of data containing any ID3 tags found
  * or *undefined* if no header is found at the starting offset
  */
-export const getID3Data = (data: Uint8Array, offset: number): Uint8Array | undefined => {
+export const getID3Data = (
+  data: Uint8Array,
+  offset: number
+): Uint8Array | undefined => {
   const front = offset;
   let length = 0;
 
@@ -101,15 +122,18 @@ export const getID3Data = (data: Uint8Array, offset: number): Uint8Array | undef
 
 const readSize = (data: Uint8Array, offset: number): number => {
   let size = 0;
-  size = ((data[offset] & 0x7f) << 21);
-  size |= ((data[offset + 1] & 0x7f) << 14);
-  size |= ((data[offset + 2] & 0x7f) << 7);
-  size |= (data[offset + 3] & 0x7f);
+  size = (data[offset] & 0x7f) << 21;
+  size |= (data[offset + 1] & 0x7f) << 14;
+  size |= (data[offset + 2] & 0x7f) << 7;
+  size |= data[offset + 3] & 0x7f;
   return size;
 };
 
 export const canParse = (data: Uint8Array, offset: number): boolean => {
-  return isHeader(data, offset) && readSize(data, offset + 6) + 10 <= data.length - offset;
+  return (
+    isHeader(data, offset) &&
+    readSize(data, offset + 6) + 10 <= data.length - offset
+  );
 };
 
 /**
@@ -136,7 +160,11 @@ export const getTimeStamp = (data: Uint8Array): number | undefined => {
  * @param {ID3 frame} frame
  */
 export const isTimeStampFrame = (frame: Frame): boolean => {
-  return (frame && frame.key === 'PRIV' && frame.info === 'com.apple.streaming.transportStreamTimestamp');
+  return (
+    frame &&
+    frame.key === 'PRIV' &&
+    frame.info === 'com.apple.streaming.transportStreamTimestamp'
+  );
 };
 
 const getFrameData = (data: Uint8Array): RawFrame => {
@@ -198,7 +226,9 @@ export const decodeFrame = (frame: RawFrame): Frame | undefined => {
   return decodeTextFrame(frame);
 };
 
-const decodePrivFrame = (frame: RawFrame): DecodedFrame<ArrayBuffer> | undefined => {
+const decodePrivFrame = (
+  frame: RawFrame
+): DecodedFrame<ArrayBuffer> | undefined => {
   /*
   Format: <text string>\0<binary data>
   */
@@ -252,7 +282,10 @@ const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
     }
 
     let index = 1;
-    const description: string = utf8ArrayToStr(frame.data.subarray(index), true);
+    const description: string = utf8ArrayToStr(
+      frame.data.subarray(index),
+      true
+    );
 
     index += description.length + 1;
     const value: string = utf8ArrayToStr(frame.data.subarray(index));
@@ -267,16 +300,16 @@ const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
   return { key: frame.type, data: url };
 };
 
-const readTimeStamp = (timeStampFrame: DecodedFrame<ArrayBuffer>): number | undefined => {
+const readTimeStamp = (
+  timeStampFrame: DecodedFrame<ArrayBuffer>
+): number | undefined => {
   if (timeStampFrame.data.byteLength === 8) {
     const data = new Uint8Array(timeStampFrame.data);
     // timestamp is 33 bit expressed as a big-endian eight-octet number,
     // with the upper 31 bits set to zero.
     const pts33Bit = data[3] & 0x1;
-    let timestamp = (data[4] << 23) +
-                    (data[5] << 15) +
-                    (data[6] << 7) +
-                     data[7];
+    let timestamp =
+      (data[4] << 23) + (data[5] << 15) + (data[6] << 7) + data[7];
     timestamp /= 45;
 
     if (pts33Bit) {
@@ -298,7 +331,10 @@ const readTimeStamp = (timeStampFrame: DecodedFrame<ArrayBuffer>): number | unde
  * LastModified: Dec 25 1999
  * This library is free.  You can redistribute it and/or modify it.
  */
-export const utf8ArrayToStr = (array: Uint8Array, exitOnNull:boolean = false): string => {
+export const utf8ArrayToStr = (
+  array: Uint8Array,
+  exitOnNull: boolean = false
+): string => {
   const decoder = getTextDecoder();
   if (decoder) {
     const decoded = decoder.decode(array);
@@ -328,36 +364,44 @@ export const utf8ArrayToStr = (array: Uint8Array, exitOnNull:boolean = false): s
       continue;
     }
     switch (c >> 4) {
-    case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
-      // 0xxxxxxx
-      out += String.fromCharCode(c);
-      break;
-    case 12: case 13:
-      // 110x xxxx   10xx xxxx
-      char2 = array[i++];
-      out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
-      break;
-    case 14:
-      // 1110 xxxx  10xx xxxx  10xx xxxx
-      char2 = array[i++];
-      char3 = array[i++];
-      out += String.fromCharCode(((c & 0x0F) << 12) |
-                  ((char2 & 0x3F) << 6) |
-                  ((char3 & 0x3F) << 0));
-      break;
-    default:
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+        // 0xxxxxxx
+        out += String.fromCharCode(c);
+        break;
+      case 12:
+      case 13:
+        // 110x xxxx   10xx xxxx
+        char2 = array[i++];
+        out += String.fromCharCode(((c & 0x1f) << 6) | (char2 & 0x3f));
+        break;
+      case 14:
+        // 1110 xxxx  10xx xxxx  10xx xxxx
+        char2 = array[i++];
+        char3 = array[i++];
+        out += String.fromCharCode(
+          ((c & 0x0f) << 12) | ((char2 & 0x3f) << 6) | ((char3 & 0x3f) << 0)
+        );
+        break;
+      default:
     }
   }
   return out;
 };
 
 export const testables = {
-  decodeTextFrame: decodeTextFrame
+  decodeTextFrame: decodeTextFrame,
 };
 
 let decoder: TextDecoder;
 
-function getTextDecoder () {
+function getTextDecoder() {
   if (!decoder && typeof self.TextDecoder !== 'undefined') {
     decoder = new self.TextDecoder('utf-8');
   }

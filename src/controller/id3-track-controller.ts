@@ -1,7 +1,15 @@
 import { Events } from '../events';
-import { sendAddTrackEvent, clearCurrentCues, getCuesInRange } from '../utils/texttrack-utils';
+import {
+  sendAddTrackEvent,
+  clearCurrentCues,
+  getCuesInRange,
+} from '../utils/texttrack-utils';
 import * as ID3 from '../demux/id3';
-import type { BufferFlushingData, FragParsingMetadataData, MediaAttachedData } from '../types/events';
+import type {
+  BufferFlushingData,
+  FragParsingMetadataData,
+  MediaAttachedData,
+} from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 
@@ -18,16 +26,16 @@ class ID3TrackController implements ComponentAPI {
   private id3Track: TextTrack | null = null;
   private media: HTMLMediaElement | null = null;
 
-  constructor (hls) {
+  constructor(hls) {
     this.hls = hls;
     this._registerListeners();
   }
 
-  destroy () {
+  destroy() {
     this._unregisterListeners();
   }
 
-  private _registerListeners () {
+  private _registerListeners() {
     const { hls } = this;
     hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
@@ -35,7 +43,7 @@ class ID3TrackController implements ComponentAPI {
     hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
   }
 
-  private _unregisterListeners () {
+  private _unregisterListeners() {
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
@@ -44,11 +52,14 @@ class ID3TrackController implements ComponentAPI {
   }
 
   // Add ID3 metatadata text track.
-  protected onMediaAttached (event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void {
+  protected onMediaAttached(
+    event: Events.MEDIA_ATTACHED,
+    data: MediaAttachedData
+  ): void {
     this.media = data.media;
   }
 
-  protected onMediaDetaching (): void {
+  protected onMediaDetaching(): void {
     if (!this.id3Track) {
       return;
     }
@@ -57,7 +68,7 @@ class ID3TrackController implements ComponentAPI {
     this.media = null;
   }
 
-  getID3Track (textTracks: TextTrackList): TextTrack | void {
+  getID3Track(textTracks: TextTrackList): TextTrack | void {
     if (!this.media) {
       return;
     }
@@ -74,7 +85,10 @@ class ID3TrackController implements ComponentAPI {
     return this.media.addTextTrack('metadata', 'id3');
   }
 
-  onFragParsingMetadata (event: Events.FRAG_PARSING_METADATA, data: FragParsingMetadataData) {
+  onFragParsingMetadata(
+    event: Events.FRAG_PARSING_METADATA,
+    data: FragParsingMetadataData
+  ) {
     if (!this.media) {
       return;
     }
@@ -96,7 +110,8 @@ class ID3TrackController implements ComponentAPI {
       const frames = ID3.getID3Frames(samples[i].data);
       if (frames) {
         const startTime = samples[i].pts;
-        let endTime: number = i < samples.length - 1 ? samples[i + 1].pts : fragment.end;
+        let endTime: number =
+          i < samples.length - 1 ? samples[i + 1].pts : fragment.end;
 
         const timeDiff = endTime - startTime;
         if (timeDiff <= 0) {
@@ -116,7 +131,10 @@ class ID3TrackController implements ComponentAPI {
     }
   }
 
-  onBufferFlushing (event: Events.BUFFER_FLUSHING, { startOffset, endOffset, type }: BufferFlushingData) {
+  onBufferFlushing(
+    event: Events.BUFFER_FLUSHING,
+    { startOffset, endOffset, type }: BufferFlushingData
+  ) {
     if (!type || type === 'audio') {
       // id3 cues come from parsed audio only remove cues when audio buffer is cleared
       const { id3Track } = this;

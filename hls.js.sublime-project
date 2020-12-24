@@ -1,14 +1,8 @@
 {
-  "folders":
-  [
+  "folders": [
     {
       "path": ".",
-      "folder_exclude_patterns": [
-        ".git",
-        "node_modules",
-        "dist",
-        "lib"
-        ],
+      "folder_exclude_patterns": [".git", "node_modules", "dist", "lib"],
       "file_exclude_patterns": [
         ".gitignore",
         "hls.js.sublime-project",
