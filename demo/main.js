@@ -27,7 +27,8 @@ if (demoConfig) {
 const hlsjsDefaults = {
   debug: true,
   enableWorker: true,
-  liveBackBufferLength: 60 * 15
+  lowLatencyMode: true,
+  liveBackBufferLength: 60 * 1.5
 };
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
@@ -35,6 +36,7 @@ let autoRecoverError = getDemoConfigPropOrDefault('autoRecoverError', true);
 let levelCapping = getDemoConfigPropOrDefault('levelCapping', -1);
 let limitMetrics = getDemoConfigPropOrDefault('limitMetrics', -1);
 let dumpfMP4 = getDemoConfigPropOrDefault('dumpfMP4', false);
+let stopOnStall = getDemoConfigPropOrDefault('stopOnStall', false);
 
 let bufferingIdx = -1;
 let selectedTestStream = null;
@@ -107,7 +109,8 @@ $(document).ready(function () {
   }
 
   $('#streamSelect').change(function () {
-    selectedTestStream = testStreams[$('#streamSelect').val()];
+    const key = $('#streamSelect').val() || Object.keys(testStreams)[0];
+    selectedTestStream = testStreams[key];
     const streamUrl = selectedTestStream.url;
     $('#streamURL').val(streamUrl);
     loadSelectedStream();
@@ -135,6 +138,11 @@ $(document).ready(function () {
     onDemoConfigChanged();
   });
 
+  $('#stopOnStall').click(function () {
+    stopOnStall = this.checked;
+    onDemoConfigChanged();
+  });
+
   $('#dumpfMP4').click(function () {
     dumpfMP4 = this.checked;
     $('.btn-dump').toggle(dumpfMP4);
@@ -154,6 +162,7 @@ $(document).ready(function () {
   $('#limitMetrics').val(limitMetrics);
   $('#enableStreaming').prop('checked', enableStreaming);
   $('#autoRecoverError').prop('checked', autoRecoverError);
+  $('#stopOnStall').prop('checked', stopOnStall);
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
@@ -207,18 +216,19 @@ $(document).ready(function () {
   }
 });
 
-
-
 function setupGlobals () {
   self.events = events = {
     url: url,
-    t0: performance.now(),
+    t0: self.performance.now(),
     load: [],
     buffer: [],
     video: [],
     level: [],
     bitrate: []
   };
+  lastAudioTrackSwitchingIdx = undefined;
+  lastSeekingIdx = undefined;
+  bufferingIdx = -1;
 
   // actual values, only on window
   self.recoverDecodingErrorDate = null;
@@ -311,7 +321,7 @@ function loadSelectedStream () {
     logStatus('Media element attached');
     bufferingIdx = -1;
     events.video.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'Media attached'
     });
     trimEventHistory();
@@ -323,7 +333,7 @@ function loadSelectedStream () {
     bufferingIdx = -1;
     tracks = [];
     events.video.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'Media detached'
     });
     trimEventHistory();
@@ -339,7 +349,7 @@ function loadSelectedStream () {
   hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (eventName, data) {
     showCanvas();
     events.video.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: data.id + ' init segment'
     });
     trimEventHistory();
@@ -351,7 +361,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.LEVEL_SWITCHING, function (eventName, data) {
     events.level.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       id: data.level,
       bitrate: Math.round(hls.levels[data.level].bitrate / 1000)
     });
@@ -365,10 +375,10 @@ function loadSelectedStream () {
       name: '',
       start: 0,
       end: data.levels.length,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      duration: data.stats.loading.end - data.stats.loading.first
     });
     trimEventHistory();
     self.refreshCanvas();
@@ -394,7 +404,7 @@ function loadSelectedStream () {
     logStatus('Audio track switching...');
     updateAudioTrackInfo();
     events.video.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'audio switching',
       name: '@' + data.id
     });
@@ -406,7 +416,7 @@ function loadSelectedStream () {
     logStatus('Audio track switched');
     updateAudioTrackInfo();
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'audio switched',
       name: '@' + data.id
     };
@@ -425,13 +435,14 @@ function loadSelectedStream () {
       id: data.level,
       start: data.details.startSN,
       end: data.details.endSN,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      duration: data.stats.loading.end - data.stats.loading.first
     };
-    const parsingDuration = data.stats.tparsed - data.stats.tload;
+
+    const parsingDuration = data.stats.parsing.end - data.stats.loading.end;
     if (stats.levelParsed) {
       this.sumLevelParsingMs += parsingDuration;
     } else {
@@ -455,11 +466,11 @@ function loadSelectedStream () {
       id: data.id,
       start: data.details.startSN,
       end: data.details.endSN,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      duration: data.stats.tload - data.stats.tfirst
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      duration: data.stats.loading.end - data.stats.loading.first
     };
     events.load.push(event);
     trimEventHistory();
@@ -468,21 +479,22 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.FRAG_BUFFERED, function (eventName, data) {
     const event = {
-      type: data.frag.type + ' fragment',
+      type: data.frag.type + (data.part ? ' part' : ' fragment'),
       id: data.frag.level,
       id2: data.frag.sn,
-      time: data.stats.trequest - events.t0,
-      latency: data.stats.tfirst - data.stats.trequest,
-      load: data.stats.tload - data.stats.tfirst,
-      parsing: data.stats.tparsed - data.stats.tload,
-      buffer: data.stats.tbuffered - data.stats.tparsed,
-      duration: data.stats.tbuffered - data.stats.tfirst,
-      bw: Math.round(8 * data.stats.total / (data.stats.tbuffered - data.stats.trequest)),
+      id3: data.part ? data.part.index : undefined,
+      time: data.stats.loading.start - events.t0,
+      latency: data.stats.loading.first - data.stats.loading.start,
+      load: data.stats.loading.end - data.stats.loading.first,
+      parsing: data.stats.parsing.end - data.stats.loading.end,
+      buffer: data.stats.buffering.end - data.stats.parsing.end,
+      duration: data.stats.buffering.end - data.stats.loading.first,
+      bw: Math.round(8 * data.stats.total / (data.stats.buffering.end - data.stats.loading.start)),
       size: data.stats.total
     };
     events.load.push(event);
     events.bitrate.push({
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       bitrate: event.bw,
       duration: data.frag.duration,
       level: event.id
@@ -500,10 +512,11 @@ function loadSelectedStream () {
     self.refreshCanvas();
     updateLevelInfo();
 
-    const latency = data.stats.tfirst - data.stats.trequest;
-    const parsing = data.stats.tparsed - data.stats.tload;
-    const process = data.stats.tbuffered - data.stats.trequest;
-    const bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
+    const latency = data.stats.loading.first - data.stats.loading.start;
+    const parsing = data.stats.parsing.end - data.stats.loading.end;
+    const process = data.stats.buffering.end - data.stats.loading.start;
+    const bitrate = Math.round(8 * data.stats.total / (data.stats.buffering.end - data.stats.loading.first));
+
     if (stats.fragBuffered) {
       stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
       stats.fragMaxLatency = Math.max(stats.fragMaxLatency, latency);
@@ -544,7 +557,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'level switched',
       name: data.level
     };
@@ -556,7 +569,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.FRAG_CHANGED, function (eventName, data) {
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'frag changed',
       name: data.frag.sn + ' @ ' + data.frag.level
     };
@@ -697,6 +710,10 @@ function loadSelectedStream () {
       break;
     case Hls.ErrorDetails.BUFFER_STALLED_ERROR:
       logError('Buffer stalled error');
+      if (stopOnStall) {
+        hls.stopLoad();
+        video.pause();
+      }
       break;
     default:
       break;
@@ -751,7 +768,7 @@ function loadSelectedStream () {
 
   hls.on(Hls.Events.FPS_DROP, function (eventName, data) {
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       type: 'frame drop',
       name: data.currentDropped + '/' + data.currentDecoded
     };
@@ -782,10 +799,10 @@ function loadSelectedStream () {
   video.addEventListener('loadeddata', handleVideoEvent);
   video.addEventListener('durationchange', handleVideoEvent);
   video.addEventListener('volumechange', (evt) => {
-      localStorage.setItem(STORAGE_KEYS.volume, JSON.stringify({
-        muted: video.muted,
-        volume: video.volume
-      }));
+    localStorage.setItem(STORAGE_KEYS.volume, JSON.stringify({
+      muted: video.muted,
+      volume: video.volume
+    }));
   });
 }
 
@@ -828,7 +845,8 @@ function handleVideoEvent (evt) {
   case 'error':
     data = Math.round(evt.target.currentTime * 1000);
     if (evt.type === 'error') {
-      let errorTxt; let mediaError = evt.currentTarget.error;
+      let errorTxt;
+      const mediaError = evt.currentTarget.error;
       switch (mediaError.code) {
       case mediaError.MEDIA_ERR_ABORTED:
         errorTxt = 'You aborted the video playback';
@@ -858,7 +876,7 @@ function handleVideoEvent (evt) {
   }
 
   const event = {
-    time: performance.now() - events.t0,
+    time: self.performance.now() - events.t0,
     type: evt.type,
     name: data
   };
@@ -892,14 +910,14 @@ function handleLevelError (data) {
 
 function handleMediaError () {
   if (autoRecoverError) {
-    const now = performance.now();
+    const now = self.performance.now();
     if (!self.recoverDecodingErrorDate || (now - self.recoverDecodingErrorDate) > 3000) {
-      self.recoverDecodingErrorDate = performance.now();
+      self.recoverDecodingErrorDate = self.performance.now();
       $('#statusOut').append(', trying to recover media error.');
       hls.recoverMediaError();
     } else {
       if (!self.recoverSwapAudioCodecDate || (now - self.recoverSwapAudioCodecDate) > 3000) {
-        self.recoverSwapAudioCodecDate = performance.now();
+        self.recoverSwapAudioCodecDate = self.performance.now();
         $('#statusOut').append(', trying to swap audio codec and recover media error.');
         hls.swapAudioCodec();
         hls.recoverMediaError();
@@ -949,13 +967,13 @@ function checkBuffer () {
       } else {
         // we are not at the end of the playlist ... real buffering
         if (bufferingIdx !== -1) {
-          bufferingDuration = performance.now() - events.t0 - events.video[bufferingIdx].time;
+          bufferingDuration = self.performance.now() - events.t0 - events.video[bufferingIdx].time;
           events.video[bufferingIdx].duration = bufferingDuration;
           events.video[bufferingIdx].name = bufferingDuration;
         } else {
           events.video.push({
             type: 'buffering',
-            time: performance.now() - events.t0
+            time: self.performance.now() - events.t0
           });
           trimEventHistory();
           // we are in buffering state
@@ -965,7 +983,7 @@ function checkBuffer () {
     }
 
     if (bufferLen > 0.1 && bufferingIdx !== -1) {
-      bufferingDuration = performance.now() - events.t0 - events.video[bufferingIdx].time;
+      bufferingDuration = self.performance.now() - events.t0 - events.video[bufferingIdx].time;
       events.video[bufferingIdx].duration = bufferingDuration;
       events.video[bufferingIdx].name = bufferingDuration;
       // we are out of buffering state
@@ -974,7 +992,7 @@ function checkBuffer () {
 
     // update buffer/position for current Time
     const event = {
-      time: performance.now() - events.t0,
+      time: self.performance.now() - events.t0,
       buffer: Math.round(bufferLen * 1000),
       pos: Math.round(pos * 1000)
     };
@@ -1002,19 +1020,26 @@ function checkBuffer () {
 
     if ($('#statsDisplayTab').is(':visible')) {
       let log = `Duration: ${video.duration}\nBuffered: ${timeRangesToString(video.buffered)}\nSeekable: ${timeRangesToString(video.seekable)}\nPlayed: ${timeRangesToString(video.played)}\n`;
-
       if (hls.media) {
         for (const type in tracks) {
-          log += 'Buffer for ' + type + ' contains: ' + timeRangesToString(tracks[type].buffer.buffered) + '\n';
+          log += `Buffer for ${type} contains:${timeRangesToString(tracks[type].buffer.buffered)}\n`;
         }
-
         const videoPlaybackQuality = video.getVideoPlaybackQuality;
         if (videoPlaybackQuality && typeof (videoPlaybackQuality) === typeof (Function)) {
           log += `Dropped frames: ${video.getVideoPlaybackQuality().droppedVideoFrames}\n`;
           log += `Corrupted frames: ${video.getVideoPlaybackQuality().corruptedVideoFrames}\n`;
         } else if (video.webkitDroppedFrameCount) {
-          log += `Dropped frames: ${video.webkitDroppedFrameCount}`;
+          log += `Dropped frames: ${video.webkitDroppedFrameCount}\n`;
         }
+      }
+      log += `Bandwidth Estimate: ${hls.bandwidthEstimate.toFixed(3)}\n`;
+      if (events.isLive) {
+        log += 'Live Stats:\n' +
+          `  Max Latency: ${hls.maxLatency}\n` +
+          `  Target Latency: ${hls.targetLatency}\n` +
+          `  Latency: ${hls.latency}\n` +
+          `  Edge Stall: ${hls.latencyController.edgeStalled}\n` +
+          `  Playback rate: ${video.playbackRate.toFixed(2)}\n`;
       }
 
       $('#bufferedOut').text(log);
@@ -1244,6 +1269,7 @@ function onDemoConfigChanged () {
   demoConfig = {
     enableStreaming,
     autoRecoverError,
+    stopOnStall,
     dumpfMP4,
     levelCapping,
     limitMetrics
@@ -1351,16 +1377,18 @@ function addChartEventListeners (hls) {
     if (data.stats) {
       // Convert 0.x stats to partial v1 stats
       const { retry, loaded, total, trequest, tfirst, tload } = data.stats;
-      data.frag.stats = {
-        loaded,
-        retry,
-        total,
-        loading: {
-          start: trequest,
-          first: tfirst,
-          end: tload
-        }
-      };
+      if (trequest && tload) {
+        data.frag.stats = {
+          loaded,
+          retry,
+          total,
+          loading: {
+            start: trequest,
+            first: tfirst,
+            end: tload
+          }
+        };
+      }
     }
     chart.updateFragment(data);
   };
@@ -1371,13 +1399,11 @@ function addChartEventListeners (hls) {
     chart.reset();
   }, chart);
   hls.on(Hls.Events.MANIFEST_LOADED, (eventName, data) => {
-    const { levels, audioTracks, subtitles = [] } = data;
+    const { levels } = data;
     chart.removeType('level');
     chart.removeType('audioTrack');
     chart.removeType('subtitleTrack');
     chart.updateLevels(levels);
-    chart.updateAudioTracks(audioTracks);
-    chart.updateSubtitleTracks(subtitles);
   }, chart);
   hls.on(Hls.Events.BUFFER_CREATED, (eventName, { tracks }) => {
     chart.updateSourceBuffers(tracks, hls.media);
@@ -1390,8 +1416,6 @@ function addChartEventListeners (hls) {
     chart.updateLevels(levels);
   });
   hls.on(Hls.Events.LEVEL_SWITCHED, (eventName, { level }) => {
-    // TODO: mutate level datasets
-    // Update currentLevel
     chart.removeType('level');
     chart.updateLevels(hls.levels, level);
   }, chart);
@@ -1493,7 +1517,7 @@ function toggleTabClick (btn) {
 function toggleTab (btn, dontHideOpenTabs) {
   const tabElId = $(btn).data('tab');
   // eslint-disable-next-line no-restricted-globals
-  const modifierPressed = dontHideOpenTabs || window.event && (window.event.metaKey || window.event.shiftKey);
+  const modifierPressed = dontHideOpenTabs || (self.event && (self.event.metaKey || self.event.shiftKey));
   if (!modifierPressed) {
     hideAllTabs();
   }
