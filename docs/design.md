@@ -97,12 +97,11 @@ design idea is pretty simple :
         - trigger BUFFER_APPENDING on FRAG_PARSING_DATA
         - once FRAG_PARSED is received an all segments have been appended (BUFFER_APPENDED) then buffer controller will recheck whether it needs to buffer more data.
       - **monitor current playback quality level** (buffer controller maintains a map between media position and quality level)
-      - **monitor playback progress** : if playhead is not moving for more than `config.lowBufferWatchdogPeriod` although it should (video metadata is known and video is not ended, nor paused, nor in seeking state) and if we have less than 500ms buffered upfront, one of two things will happen.
+      - **monitor playback progress** : if playhead is not moving for more than `config.highBufferWatchdogPeriod` although it should (video metadata is known and video is not ended, nor paused, nor in seeking state) and if we have less than 500ms buffered upfront, one of two things will happen.
         - if there is a known malformed fragment then hls.js will **jump over the buffer hole** and seek to the beginning the next playable buffered range.
         - hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
       500 ms is a "magic number" that has been set to overcome browsers not always stopping playback at the exact end of a buffered range.
       these holes in media buffered are often encountered on stream discontinuity or on quality level switch. holes could be "large" especially if fragments are not starting with a keyframe.
-       if playhead is stuck for more than `config.highBufferWatchdogPeriod` second in a buffered area, hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
     - convert non-fatal `FRAG_LOAD_ERROR`/`FRAG_LOAD_TIMEOUT`/`KEY_LOAD_ERROR`/`KEY_LOAD_TIMEOUT` error into fatal error when media position is not buffered and max load retry has been reached
     - stream controller actions are scheduled by a tick timer (invoked every 100ms) and actions are controlled by a state machine.
   - [src/controller/subtitle-stream-controller.js][]
@@ -146,7 +145,7 @@ design idea is pretty simple :
     - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
   - [src/demux/exp-golomb.js][]
     - utility class to extract Exponential-Golomb coded data. needed by TS demuxer for SPS parsing.
-  - [src/demux/id3.js][]
+  - [src/demux/id3.ts][]
     - utility class that detect and parse ID3 tags, used by AAC demuxer
   - [src/demux/tsdemuxer.js][]
     - highly optimized TS demuxer:
@@ -245,7 +244,7 @@ design idea is pretty simple :
 [src/demux/demuxer-inline.js]: ../src/demux/demuxer-inline.js
 [src/demux/demuxer-worker.js]: ../src/demux/demuxer-worker.js
 [src/demux/exp-golomb.js]: ../src/demux/exp-golomb.js
-[src/demux/id3.js]: ../src/demux/id3.js
+[src/demux/id3.ts]: ../src/demux/id3.ts
 [src/demux/sample-aes.js]: ../src/demux/sample-aes.js
 [src/demux/tsdemuxer.js]: ../src/demux/tsdemuxer.js
 [src/helper/aac.js]: ../src/helper/aac.js

@@ -83,14 +83,13 @@ module.exports = {
     description: 'AES encrypted,ABR',
     abr: true
   },
-  /*
   bbbAES: {
     url: 'https://test-streams.mux.dev/bbbAES/playlists/sample_aes/index.m3u8',
     description: 'SAMPLE-AES encrypted',
     live: false,
-    abr: false
+    abr: false,
+    skipFunctionalTests: true
   },
-  */
   mp3Audio: {
     url: 'https://playertest.longtailvideo.com/adaptive/vod-with-mp3/manifest.m3u8',
     description: 'MP3 VOD demo',
@@ -114,24 +113,25 @@ module.exports = {
     abr: true,
     blacklist_ua: ['internet explorer']
   },
+  fmp4BitmovinHevc: {
+    url: 'https://bitmovin-a.akamaihd.net/content/dataset/multi-codec/hevc/stream_fmp4.m3u8',
+    description: 'HLS HEVC fMP4 by Bitmovin (Safari and Edge? only as of 2020-08)',
+    abr: true,
+    blacklist_ua: ['internet explorer'],
+    skipFunctionalTests: true
+  },
   offset_pts: {
     url: 'https://test-streams.mux.dev/pts_shift/master.m3u8',
     description: 'DK Turntable, PTS shifted by 2.3s',
     abr: true
   },
-  /*
-  uspHLSAteam: createTestStream(
-    'http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199',
-    'A-Team movie trailer - HLS by Unified Streaming Platform'
-  ),
-  */
   angelOneShakaWidevine: createTestStreamWithConfig({
     url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8',
     description: 'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
     abr: true,
     blacklist_ua: ['firefox', 'safari', 'internet explorer']
   }, {
-    widevineLicenseUrl: 'http://cwip-shaka-proxy.appspot.com/no_auth',
+    widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
     emeEnabled: true
   }),
   audioOnlyMultipleLevels: {
@@ -166,11 +166,8 @@ module.exports = {
   }, {
     avBufferOffset: 10.5
   }),
-  // altAudioNoVideoCodecSignaled: {
-  //   url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/3cbf1114-b2f4-4320-afb3-f0f7eeeb8630/playlist.m3u8',
-  //   description: 'Alternate audio track, but no video codec is signaled in the master manifest'
-  // },
   altAudioAndTracks: {
+    // url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
     url: 'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/index.m3u8',
     description: 'Alternate audio tracks, and multiple VTT tracks',
     vendor: 'wowza',
@@ -202,5 +199,31 @@ module.exports = {
     // Disable smooth switch on this stream. Test is flakey because of what looks like (auto)play issue. To be expected with this large a gap (for now).
     // abr: true,
     startSeek: true
+  },
+  AppleAdvancedHevcAvcHls: {
+    url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8',
+    description: 'Advanced stream (HEVC/H.264, AC-3/AAC,  WebVTT, fMP4 segments)'
+  },
+  AppleLowLatencyHls: {
+    url: 'https://ll-hls-test.apple.com/master.m3u8',
+    description: 'Apple Low-Latency HLS sample (TS segments)',
+    live: true
+  },
+  AppleLowLatencyCmafHls: {
+    url: 'https://ll-hls-test.apple.com/cmaf/master.m3u8',
+    description: 'Apple Low-Latency HLS sample (fMP4 segments)',
+    live: true
+  },
+  groupIds: {
+    url: 'https://mtoczko.github.io/hls-test-streams/test-group/playlist.m3u8',
+    description: 'Group-id: subtitle and audio',
+    abr: true,
+    skipFunctionalTests: true
+  },
+  redundantLevelsWithTrackGroups: {
+    url: 'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/redundant.m3u8',
+    description: 'Redundant levels with subtitle and audio track groups',
+    abr: true,
+    skipFunctionalTests: true
   }
 };
