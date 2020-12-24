@@ -7,22 +7,10 @@
     "strict": false,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
-    "lib": [
-      "dom",
-      "es2015"
-    ],
+    "lib": ["dom", "es2015"],
     "outDir": "./dist/",
     "allowSyntheticDefaultImports": true
   },
-  "include": [
-    "src/**/*",
-    "tests/unit/**/*",
-    "demo/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist/**/*",
-    "demo/libs/**/*",
-    "**/*.spec.*"
-  ]
+  "include": ["src/**/*", "tests/unit/**/*", "demo/**/*"],
+  "exclude": ["node_modules", "dist/**/*", "demo/libs/**/*", "**/*.spec.*"]
 }

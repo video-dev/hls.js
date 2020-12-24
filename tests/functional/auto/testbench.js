@@ -5,13 +5,14 @@ var video;
 var logString = '';
 var hls;
 
-function setupConsoleLogRedirection () {
+function setupConsoleLogRedirection() {
   var log = document.getElementById('log');
   var inner = log.getElementsByClassName('inner')[0];
 
   // append log message
-  function append (methodName, msg) {
-    var a = (new Date()).toISOString().replace('T', ' ').replace('Z', '') + ': ' + msg;
+  function append(methodName, msg) {
+    var a =
+      new Date().toISOString().replace('T', ' ').replace('Z', '') + ': ' + msg;
     var text = document.createTextNode(a);
     var line = document.createElement('pre');
     line.className = 'line line-' + methodName;
@@ -31,13 +32,19 @@ function setupConsoleLogRedirection () {
     }
 
     self.console[methodName] = function () {
-      append(methodName, Array.prototype.slice.call(arguments).map(function (arg) {
-        try {
-          return JSON.stringify(arg);
-        } catch (err) {
-          return 'Unserializable (reason: ' + err.message + ')';
-        }
-      }).join(' '));
+      append(
+        methodName,
+        Array.prototype.slice
+          .call(arguments)
+          .map(function (arg) {
+            try {
+              return JSON.stringify(arg);
+            } catch (err) {
+              return 'Unserializable (reason: ' + err.message + ')';
+            }
+          })
+          .join(' ')
+      );
 
       return original.apply(this, arguments);
     };
@@ -45,7 +52,7 @@ function setupConsoleLogRedirection () {
 }
 
 // Object.assign polyfill
-function objectAssign (target, firstSource) {
+function objectAssign(target, firstSource) {
   if (target === undefined || target === null) {
     throw new TypeError('Cannot convert first argument to object');
   }
@@ -58,7 +65,11 @@ function objectAssign (target, firstSource) {
     }
 
     var keysArray = Object.keys(Object(nextSource));
-    for (var nextIndex = 0, len = keysArray.length; nextIndex < len; nextIndex++) {
+    for (
+      var nextIndex = 0, len = keysArray.length;
+      nextIndex < len;
+      nextIndex++
+    ) {
       var nextKey = keysArray[nextIndex];
       var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
       if (desc !== undefined && desc.enumerable) {
@@ -69,7 +80,7 @@ function objectAssign (target, firstSource) {
   return to;
 }
 
-function startStream (streamUrl, config, callback, autoplay) {
+function startStream(streamUrl, config, callback, autoplay) {
   var Hls = self.Hls;
   if (!Hls) {
     throw new Error('Hls not installed');
@@ -84,16 +95,18 @@ function startStream (streamUrl, config, callback, autoplay) {
   }
   self.video = video = document.getElementById('video');
   try {
-    self.hls = hls = new Hls(objectAssign({}, config, {
-      // debug: true
-      debug: {
-        debug: function () {},
-        log: console.log.bind(console),
-        info: console.info.bind(console, '[info]'),
-        warn: console.warn.bind(console, '[warn]'),
-        error: console.error.bind(console, '[error]')
-      }
-    }));
+    self.hls = hls = new Hls(
+      objectAssign({}, config, {
+        // debug: true
+        debug: {
+          debug: function () {},
+          log: console.log.bind(console),
+          info: console.info.bind(console, '[info]'),
+          warn: console.warn.bind(console, '[warn]'),
+          error: console.error.bind(console, '[error]'),
+        },
+      })
+    );
     console.log('[test] > userAgent:', navigator.userAgent);
     if (autoplay !== false) {
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
@@ -101,7 +114,12 @@ function startStream (streamUrl, config, callback, autoplay) {
         var playPromise = video.play();
         if (playPromise) {
           playPromise.catch(function (error) {
-            console.log('[test] > video.play() failed with error: ' + error.name + ' ' + error.message);
+            console.log(
+              '[test] > video.play() failed with error: ' +
+                error.name +
+                ' ' +
+                error.message
+            );
             if (error.name === 'NotAllowedError') {
               console.log('[test] > Attempting to play with video muted');
               video.muted = true;
@@ -116,7 +134,9 @@ function startStream (streamUrl, config, callback, autoplay) {
         console.log('[test] > hlsjs fatal error :' + data.details);
         if (data.details === Hls.ErrorDetails.INTERNAL_EXCEPTION) {
           console.log('[test] > exception in :' + data.event);
-          console.log(data.err.stack ? JSON.stringify(data.err.stack) : data.err.message);
+          console.log(
+            data.err.stack ? JSON.stringify(data.err.stack) : data.err.message
+          );
         }
         callback({ code: data.details, logs: logString });
       }
@@ -132,36 +152,36 @@ function startStream (streamUrl, config, callback, autoplay) {
   }
 }
 
-function switchToLowestLevel (mode) {
+function switchToLowestLevel(mode) {
   console.log('[test] > switch to lowest level', mode);
   switch (mode) {
-  case 'current':
-    hls.currentLevel = 0;
-    break;
-  case 'next':
-    hls.nextLevel = 0;
-    break;
-  case 'load':
-  default:
-    hls.loadLevel = 0;
-    break;
+    case 'current':
+      hls.currentLevel = 0;
+      break;
+    case 'next':
+      hls.nextLevel = 0;
+      break;
+    case 'load':
+    default:
+      hls.loadLevel = 0;
+      break;
   }
 }
 
-function switchToHighestLevel (mode) {
+function switchToHighestLevel(mode) {
   var highestLevel = hls.levels.length - 1;
   console.log('[test] > switch to highest level', highestLevel, mode);
   switch (mode) {
-  case 'current':
-    hls.currentLevel = highestLevel;
-    break;
-  case 'next':
-    hls.nextLevel = highestLevel;
-    break;
-  case 'load':
-  default:
-    hls.loadLevel = highestLevel;
-    break;
+    case 'current':
+      hls.currentLevel = highestLevel;
+      break;
+    case 'next':
+      hls.nextLevel = highestLevel;
+      break;
+    case 'load':
+    default:
+      hls.loadLevel = highestLevel;
+      break;
   }
 }
 

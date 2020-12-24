@@ -21,13 +21,19 @@ describe('binary search util', function () {
     it('finds the element if it is present', function () {
       for (let i = 0; i < list.length; i++) {
         const item = list[i];
-        const foundItem = BinarySearch.search(list, buildComparisonFunction(item));
+        const foundItem = BinarySearch.search(
+          list,
+          buildComparisonFunction(item)
+        );
         expect(foundItem).to.equal(item);
       }
     });
     it('does not find the element if it is not present', function () {
       const item = 1000;
-      const foundItem = BinarySearch.search(list, buildComparisonFunction(item));
+      const foundItem = BinarySearch.search(
+        list,
+        buildComparisonFunction(item)
+      );
       expect(foundItem).to.not.exist;
     });
   });

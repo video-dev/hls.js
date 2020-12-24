@@ -3,12 +3,12 @@ interface ILogFunction {
 }
 
 interface ILogger {
-  trace: ILogFunction,
-  debug: ILogFunction,
-  log: ILogFunction,
-  warn: ILogFunction,
-  info: ILogFunction,
-  error: ILogFunction
+  trace: ILogFunction;
+  debug: ILogFunction;
+  log: ILogFunction;
+  warn: ILogFunction;
+  info: ILogFunction;
+  error: ILogFunction;
 }
 
 const noop: ILogFunction = function () {};
@@ -19,7 +19,7 @@ const fakeLogger: ILogger = {
   log: noop,
   warn: noop,
   info: noop,
-  error: noop
+  error: noop,
 };
 
 let exportedLogger: ILogger = fakeLogger;
@@ -33,7 +33,7 @@ let exportedLogger: ILogger = fakeLogger;
 //   return msg;
 // }
 
-function consolePrintFn (type: string): ILogFunction {
+function consolePrintFn(type: string): ILogFunction {
   const func: ILogFunction = self.console[type];
   if (func) {
     return func.bind(self.console, `[${type}] >`);
@@ -41,16 +41,25 @@ function consolePrintFn (type: string): ILogFunction {
   return noop;
 }
 
-function exportLoggerFunctions (debugConfig: boolean | ILogger, ...functions: string[]): void {
+function exportLoggerFunctions(
+  debugConfig: boolean | ILogger,
+  ...functions: string[]
+): void {
   functions.forEach(function (type) {
-    exportedLogger[type] = debugConfig[type] ? debugConfig[type].bind(debugConfig) : consolePrintFn(type);
+    exportedLogger[type] = debugConfig[type]
+      ? debugConfig[type].bind(debugConfig)
+      : consolePrintFn(type);
   });
 }
 
-export function enableLogs (debugConfig: boolean | ILogger): void {
+export function enableLogs(debugConfig: boolean | ILogger): void {
   // check that console is available
-  if ((self.console && debugConfig === true) || typeof debugConfig === 'object') {
-    exportLoggerFunctions(debugConfig,
+  if (
+    (self.console && debugConfig === true) ||
+    typeof debugConfig === 'object'
+  ) {
+    exportLoggerFunctions(
+      debugConfig,
       // Remove out from list here to hard-disable a log-level
       // 'trace',
       'debug',

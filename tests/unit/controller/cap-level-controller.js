@@ -7,42 +7,54 @@ const levels = [
   {
     width: 360,
     height: 360,
-    bandwidth: 1000
+    bandwidth: 1000,
   },
   {
     width: 540,
     height: 540,
-    bandwidth: 2000
+    bandwidth: 2000,
   },
   {
     width: 540,
     height: 540,
-    bandwidth: 3000
+    bandwidth: 3000,
   },
   {
     width: 720,
     height: 720,
-    bandwidth: 4000
-  }
+    bandwidth: 4000,
+  },
 ];
 
 describe('CapLevelController', function () {
   describe('getMaxLevelByMediaSize', function () {
     it('Should choose the level whose dimensions are >= the media dimensions', function () {
       const expected = 0;
-      const actual = CapLevelController.getMaxLevelByMediaSize(levels, 300, 300);
+      const actual = CapLevelController.getMaxLevelByMediaSize(
+        levels,
+        300,
+        300
+      );
       expect(expected).to.equal(actual);
     });
 
     it('Should choose the level whose bandwidth is greater if level dimensions are equal', function () {
       const expected = 2;
-      const actual = CapLevelController.getMaxLevelByMediaSize(levels, 500, 500);
+      const actual = CapLevelController.getMaxLevelByMediaSize(
+        levels,
+        500,
+        500
+      );
       expect(expected).to.equal(actual);
     });
 
     it('Should choose the highest level if the media is greater than every level', function () {
       const expected = 3;
-      const actual = CapLevelController.getMaxLevelByMediaSize(levels, 5000, 5000);
+      const actual = CapLevelController.getMaxLevelByMediaSize(
+        levels,
+        5000,
+        5000
+      );
       expect(expected).to.equal(actual);
     });
 
@@ -54,7 +66,11 @@ describe('CapLevelController', function () {
 
     it('Should return -1 if there levels is undefined', function () {
       const expected = -1;
-      const actual = CapLevelController.getMaxLevelByMediaSize(undefined, 5000, 5000);
+      const actual = CapLevelController.getMaxLevelByMediaSize(
+        undefined,
+        5000,
+        5000
+      );
       expect(expected).to.equal(actual);
     });
   });
@@ -72,10 +88,10 @@ describe('CapLevelController', function () {
       media = document.createElement('video');
       capLevelController = new CapLevelController(hls);
       capLevelController.onMediaAttaching(Events.MEDIA_ATTACHING, {
-        media
+        media,
       });
       capLevelController.onManifestParsed(Events.MANIFEST_PARSED, {
-        levels
+        levels,
       });
     });
 
@@ -134,7 +150,10 @@ describe('CapLevelController', function () {
 
     describe('start and stop', function () {
       it('immediately caps and sets a timer for monitoring size size', function () {
-        const detectPlayerSizeSpy = sinon.spy(capLevelController, 'detectPlayerSize');
+        const detectPlayerSizeSpy = sinon.spy(
+          capLevelController,
+          'detectPlayerSize'
+        );
         capLevelController.startCapping();
 
         expect(capLevelController.timer).to.exist;
@@ -147,7 +166,9 @@ describe('CapLevelController', function () {
         capLevelController.timer = 1;
         capLevelController.stopCapping();
 
-        expect(capLevelController.autoLevelCapping).to.equal(Number.POSITIVE_INFINITY);
+        expect(capLevelController.autoLevelCapping).to.equal(
+          Number.POSITIVE_INFINITY
+        );
         expect(capLevelController.restrictedLevels).to.be.empty;
         expect(capLevelController.firstLevel).to.equal(-1);
         expect(capLevelController.timer).to.not.exist;
@@ -158,7 +179,9 @@ describe('CapLevelController', function () {
       expect(capLevelController.levels).to.be.empty;
       expect(capLevelController.restrictedLevels).to.be.empty;
       expect(capLevelController.timer).to.not.exist;
-      expect(capLevelController.autoLevelCapping).to.equal(Number.POSITIVE_INFINITY);
+      expect(capLevelController.autoLevelCapping).to.equal(
+        Number.POSITIVE_INFINITY
+      );
 
       expect(firstLevelSpy.set.notCalled).to.be.true;
     });
@@ -185,7 +208,7 @@ describe('CapLevelController', function () {
       capLevelController.restrictedLevels = [1];
       const data = {
         levels: [{ foo: 'bar' }],
-        firstLevel: 0
+        firstLevel: 0,
       };
 
       capLevelController.onManifestParsed(Events.MANIFEST_PARSED, data);
@@ -195,12 +218,17 @@ describe('CapLevelController', function () {
     });
 
     it('should start capping in MANIFEST_PARSED if a video codec was signaled in the manifest', function () {
-      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, { video: {} });
+      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, {
+        video: {},
+      });
       expect(startCappingSpy.calledOnce).to.be.true;
     });
 
     it('does not start capping on MANIFEST_PARSED if no video codec was signaled in the manifest', function () {
-      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, { levels: [{}], altAudio: true });
+      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, {
+        levels: [{}],
+        altAudio: true,
+      });
       expect(startCappingSpy.notCalled).to.be.true;
     });
 
@@ -214,7 +242,10 @@ describe('CapLevelController', function () {
         streamController = hls.streamController;
 
         nextLevelSwitchSpy = sinon.spy(streamController, 'nextLevelSwitch');
-        capLevelController.onManifestParsed(Events.MANIFEST_PARSED, { levels, video: {} });
+        capLevelController.onManifestParsed(Events.MANIFEST_PARSED, {
+          levels,
+          video: {},
+        });
       });
 
       it('continues capping without second timer', function () {

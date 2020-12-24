@@ -7,9 +7,11 @@ const expect = chai.expect;
 
 describe('VTTParser', function () {
   describe('parseTimeStamp', function () {
-    function assertTimeStampValue (timestamp, value) {
-      expect(parseTimeStamp(timestamp)).to.eq(value,
-        `"${timestamp}" should equal ${value}`);
+    function assertTimeStampValue(timestamp, value) {
+      expect(parseTimeStamp(timestamp)).to.eq(
+        value,
+        `"${timestamp}" should equal ${value}`
+      );
     }
     it('should parse fractional seconds correctly regardless of length', function () {
       assertTimeStampValue('00:00:01.5', 1.5);

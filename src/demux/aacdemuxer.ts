@@ -13,13 +13,13 @@ class AACDemuxer extends BaseAudioDemuxer {
   private readonly config: HlsConfig;
   static readonly minProbeByteLength: number = 9;
 
-  constructor (observer, config) {
+  constructor(observer, config) {
     super();
     this.observer = observer;
     this.config = config;
   }
 
-  resetInitSegment (audioCodec, videoCodec, duration) {
+  resetInitSegment(audioCodec, videoCodec, duration) {
     super.resetInitSegment(audioCodec, videoCodec, duration);
     this._audioTrack = {
       container: 'audio/adts',
@@ -32,12 +32,12 @@ class AACDemuxer extends BaseAudioDemuxer {
       manifestCodec: audioCodec,
       duration: duration,
       inputTimeScale: 90000,
-      dropped: 0
+      dropped: 0,
     };
   }
 
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
-  static probe (data): boolean {
+  static probe(data): boolean {
     if (!data) {
       return false;
     }
@@ -58,13 +58,25 @@ class AACDemuxer extends BaseAudioDemuxer {
     return false;
   }
 
-  canParse (data, offset) {
+  canParse(data, offset) {
     return ADTS.canParse(data, offset);
   }
 
-  appendFrame (track, data, offset) {
-    ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec);
-    return ADTS.appendFrame(track, data, offset, this.initPTS as number, this.frameIndex);
+  appendFrame(track, data, offset) {
+    ADTS.initTrackConfig(
+      track,
+      this.observer,
+      data,
+      offset,
+      track.manifestCodec
+    );
+    return ADTS.appendFrame(
+      track,
+      data,
+      offset,
+      this.initPTS as number,
+      this.frameIndex
+    );
   }
 }
 
