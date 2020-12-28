@@ -49,8 +49,6 @@ export default class StreamController
   private altAudio: boolean = false;
   private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
-  private previouslyPaused: boolean = false;
-  private immediateSwitch: boolean = false;
   private onvplaying: EventListener | null = null;
   private onvseeked: EventListener | null = null;
   private fragLastKbps: number = 0;
@@ -113,7 +111,7 @@ export default class StreamController
     this._unregisterListeners();
   }
 
-  startLoad(startPosition: number): void {
+  public startLoad(startPosition: number): void {
     if (this.levels) {
       const { lastCurrentTime, hls } = this;
       this.stopLoad();
@@ -155,12 +153,12 @@ export default class StreamController
     }
   }
 
-  stopLoad() {
+  public stopLoad() {
     this._forceStartLoad = false;
     super.stopLoad();
   }
 
-  doTick() {
+  protected doTick() {
     switch (this.state) {
       case State.IDLE:
         this.doTickIdle();
@@ -375,21 +373,21 @@ export default class StreamController
     }
   }
 
-  getAppendedFrag(position) {
+  private getAppendedFrag(position) {
     return this.fragmentTracker.getAppendedFrag(
       position,
       PlaylistLevelType.MAIN
     );
   }
 
-  getBufferedFrag(position) {
+  private getBufferedFrag(position) {
     return this.fragmentTracker.getBufferedFrag(
       position,
       PlaylistLevelType.MAIN
     );
   }
 
-  followingBufferedFrag(frag: Fragment | null) {
+  private followingBufferedFrag(frag: Fragment | null) {
     if (frag) {
       // try to get range of next fragment (500ms after this range)
       return this.getBufferedFrag(frag.end + 0.5);
@@ -403,53 +401,9 @@ export default class StreamController
      - cancel any pending load request
      - and trigger a buffer flush
   */
-  immediateLevelSwitch() {
-    this.log('immediateLevelSwitch');
-    if (!this.immediateSwitch) {
-      this.immediateSwitch = true;
-      const media = this.media;
-      let previouslyPaused;
-      if (media) {
-        previouslyPaused = media.paused;
-        if (!previouslyPaused) {
-          media.pause();
-        }
-      } else {
-        // don't restart playback after instant level switch in case media not attached
-        previouslyPaused = true;
-      }
-      this.previouslyPaused = previouslyPaused;
-    }
-    const fragCurrent = this.fragCurrent;
-    if (fragCurrent?.loader) {
-      fragCurrent.loader.abort();
-    }
-
-    this.fragCurrent = null;
-    // flush everything
+  public immediateLevelSwitch() {
+    this.abortCurrentFrag();
     this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
-  }
-
-  /**
-   * on immediate level switch end, after new fragment has been buffered:
-   * - nudge video decoder by slightly adjusting video currentTime (if currentTime buffered)
-   * - resume the playback if needed
-   */
-  immediateLevelSwitchEnd() {
-    const media = this.media;
-    if (BufferHelper.getBuffered(media).length) {
-      this.immediateSwitch = false;
-      if (
-        media.currentTime > 0 &&
-        BufferHelper.isBuffered(media, media.currentTime)
-      ) {
-        // only nudge if currentTime is buffered
-        media.currentTime -= 0.0001;
-      }
-      if (!this.previouslyPaused) {
-        media.play();
-      }
-    }
   }
 
   /**
@@ -458,7 +412,7 @@ export default class StreamController
    * we need to find the next flushable buffer range
    * we should take into account new segment fetch time
    */
-  nextLevelSwitch() {
+  public nextLevelSwitch() {
     const { levels, media } = this;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
     if (media?.readyState) {
@@ -493,12 +447,7 @@ export default class StreamController
         const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag);
         if (nextBufferedFrag) {
           // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
-          const fragCurrent = this.fragCurrent;
-          if (fragCurrent?.loader) {
-            fragCurrent.loader.abort();
-          }
-
-          this.fragCurrent = null;
+          this.abortCurrentFrag();
           // start flush position is the start PTS of next buffered frag.
           // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
           // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
@@ -519,7 +468,15 @@ export default class StreamController
     }
   }
 
-  flushMainBuffer(startOffset: number, endOffset: number) {
+  private abortCurrentFrag() {
+    const fragCurrent = this.fragCurrent;
+    if (fragCurrent?.loader) {
+      fragCurrent.loader.abort();
+    }
+    this.fragCurrent = null;
+  }
+
+  protected flushMainBuffer(startOffset: number, endOffset: number) {
     super.flushMainBuffer(
       startOffset,
       endOffset,
@@ -527,7 +484,10 @@ export default class StreamController
     );
   }
 
-  onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachedData) {
+  protected onMediaAttached(
+    event: Events.MEDIA_ATTACHED,
+    data: MediaAttachedData
+  ) {
     super.onMediaAttached(event, data);
     const media = data.media;
     this.onvplaying = this.onMediaPlaying.bind(this);
@@ -542,7 +502,7 @@ export default class StreamController
     );
   }
 
-  onMediaDetaching() {
+  protected onMediaDetaching() {
     const { media } = this;
     if (media) {
       media.removeEventListener('playing', this.onvplaying);
@@ -553,12 +513,12 @@ export default class StreamController
     super.onMediaDetaching();
   }
 
-  onMediaPlaying() {
+  private onMediaPlaying() {
     // tick to speed up FRAG_CHANGED triggering
     this.tick();
   }
 
-  onMediaSeeked() {
+  private onMediaSeeked() {
     const media = this.media;
     const currentTime = media ? media.currentTime : null;
     if (Number.isFinite(currentTime)) {
@@ -569,7 +529,7 @@ export default class StreamController
     this.tick();
   }
 
-  onManifestLoading() {
+  private onManifestLoading() {
     // reset buffer on manifest loading
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
@@ -579,7 +539,10 @@ export default class StreamController
     this.fragPlaying = null;
   }
 
-  onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData) {
+  private onManifestParsed(
+    event: Events.MANIFEST_PARSED,
+    data: ManifestParsedData
+  ) {
     let aac = false;
     let heaac = false;
     let codec;
@@ -607,7 +570,7 @@ export default class StreamController
     this.startFragRequested = false;
   }
 
-  onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData) {
+  private onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData) {
     const { levels } = this;
     if (!levels || this.state !== State.IDLE) {
       return;
@@ -622,7 +585,7 @@ export default class StreamController
     }
   }
 
-  onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  private onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     const { levels } = this;
     const newLevelId = data.level;
     const newDetails = data.details;
@@ -687,7 +650,7 @@ export default class StreamController
     this.tick();
   }
 
-  _handleFragmentLoadProgress(data: FragLoadedData) {
+  protected _handleFragmentLoadProgress(data: FragLoadedData) {
     const { frag, part, payload } = data;
     const { levels } = this;
     if (!levels) {
@@ -754,7 +717,7 @@ export default class StreamController
     }
   }
 
-  onAudioTrackSwitching(
+  private onAudioTrackSwitching(
     event: Events.AUDIO_TRACK_SWITCHING,
     data: AudioTrackSwitchingData
   ) {
@@ -802,7 +765,7 @@ export default class StreamController
     }
   }
 
-  onAudioTrackSwitched(
+  private onAudioTrackSwitched(
     event: Events.AUDIO_TRACK_SWITCHED,
     data: AudioTrackSwitchedData
   ) {
@@ -822,7 +785,10 @@ export default class StreamController
     this.tick();
   }
 
-  onBufferCreated(event: Events.BUFFER_CREATED, data: BufferCreatedData) {
+  private onBufferCreated(
+    event: Events.BUFFER_CREATED,
+    data: BufferCreatedData
+  ) {
     const tracks = data.tracks;
     let mediaTrack;
     let name;
@@ -853,7 +819,7 @@ export default class StreamController
     }
   }
 
-  onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+  private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     const { frag, part } = data;
     if (frag && frag.type !== 'main') {
       return;
@@ -876,7 +842,7 @@ export default class StreamController
     this.fragBufferedComplete(frag, part);
   }
 
-  onError(event: Events.ERROR, data: ErrorData) {
+  private onError(event: Events.ERROR, data: ErrorData) {
     const frag = data.frag || this.fragCurrent;
     // don't handle frag error not related to main fragment
     if (frag && frag.type !== 'main') {
@@ -959,9 +925,8 @@ export default class StreamController
             this.warn(
               'buffer full error also media.currentTime is not buffered, flush everything'
             );
-            this.fragCurrent = null;
             // flush everything
-            this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+            this.immediateLevelSwitch();
           }
         }
         break;
@@ -970,7 +935,7 @@ export default class StreamController
     }
   }
 
-  _reduceMaxBufferLength(minLength) {
+  private _reduceMaxBufferLength(minLength) {
     const config = this.config;
     if (config.maxMaxBufferLength >= minLength) {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
@@ -995,8 +960,6 @@ export default class StreamController
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
       this._seekToStartPos();
-    } else if (this.immediateSwitch) {
-      this.immediateLevelSwitchEnd();
     } else {
       // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
       gapController.poll(this.lastCurrentTime);
@@ -1005,7 +968,7 @@ export default class StreamController
     this.lastCurrentTime = media.currentTime;
   }
 
-  onFragLoadEmergencyAborted() {
+  private onFragLoadEmergencyAborted() {
     this.state = State.IDLE;
     // if loadedmetadata is not set, it means that we are emergency switch down on first frag
     // in that case, reset startFragRequested flag
@@ -1016,7 +979,10 @@ export default class StreamController
     this.tick();
   }
 
-  onBufferFlushed(event: Events.BUFFER_FLUSHED, { type }: BufferFlushedData) {
+  private onBufferFlushed(
+    event: Events.BUFFER_FLUSHED,
+    { type }: BufferFlushedData
+  ) {
     /* after successful buffer flushing, filter flushed fragments from bufferedFrags
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
@@ -1036,11 +1002,14 @@ export default class StreamController
     this.state = State.IDLE;
   }
 
-  onLevelsUpdated(event: Events.LEVELS_UPDATED, data: LevelsUpdatedData) {
+  private onLevelsUpdated(
+    event: Events.LEVELS_UPDATED,
+    data: LevelsUpdatedData
+  ) {
     this.levels = data.levels;
   }
 
-  swapAudioCodec() {
+  public swapAudioCodec() {
     this.audioCodecSwap = !this.audioCodecSwap;
   }
 
@@ -1048,7 +1017,7 @@ export default class StreamController
    * Seeks to the set startPosition if not equal to the mediaElement's current time.
    * @private
    */
-  _seekToStartPos() {
+  private _seekToStartPos() {
     const { media } = this;
     const currentTime = media.currentTime;
     let startPosition = this.startPosition;
@@ -1078,7 +1047,7 @@ export default class StreamController
     }
   }
 
-  _getAudioCodec(currentLevel) {
+  private _getAudioCodec(currentLevel) {
     let audioCodec = this.config.defaultAudioCodec || currentLevel.audioCodec;
     if (this.audioCodecSwap) {
       this.log('Swapping playlist audio codec');
