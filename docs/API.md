@@ -1190,7 +1190,7 @@ It is also possible to manually control quality swith using below API.
 ### `hls.currentLevel`
 
 - get: Return current playback quality level.
-- set: Trigger an immediate quality level switch to new quality level. This will pause the video if it was playing, flush the whole buffer, and fetch fragment matching with current position and requested quality level. Then resume the video if needed once fetched fragment will have been buffered.
+- set: Trigger an immediate quality level switch to new quality level. This will abort the current fragment request if any, flush the whole buffer, and fetch fragment matching with current position and requested quality level.
 
 Set to `-1` for automatic level selection.
 
