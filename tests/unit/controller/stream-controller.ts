@@ -78,7 +78,7 @@ describe('StreamController', function () {
       );
       // load levels data
       const levels = levelsParsed.map((levelParsed) => new Level(levelParsed));
-      streamController.onManifestParsed(Events.MANIFEST_PARSED, {
+      streamController['onManifestParsed'](Events.MANIFEST_PARSED, {
         altAudio: false,
         audio: false,
         audioTracks: [],
@@ -262,6 +262,7 @@ describe('StreamController', function () {
     });
 
     it('should seek to start pos when metadata has not yet been loaded', function () {
+      // @ts-ignore
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController['loadedmetadata'] = false;
       streamController['checkBuffer']();
@@ -270,6 +271,7 @@ describe('StreamController', function () {
     });
 
     it('should not seek to start pos when metadata has been loaded', function () {
+      // @ts-ignore
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController['loadedmetadata'] = true;
       streamController['checkBuffer']();
@@ -278,6 +280,7 @@ describe('StreamController', function () {
     });
 
     it('should not seek to start pos when nothing has been buffered', function () {
+      // @ts-ignore
       const seekStub = sandbox.stub(streamController, '_seekToStartPos');
       streamController['media'].buffered.length = 0;
       streamController['checkBuffer']();
@@ -285,28 +288,17 @@ describe('StreamController', function () {
       expect(streamController['loadedmetadata']).to.be.false;
     });
 
-    it('should complete the immediate switch if signalled', function () {
-      const levelSwitchStub = sandbox.stub(
-        streamController,
-        'immediateLevelSwitchEnd'
-      );
-      streamController['loadedmetadata'] = true;
-      streamController['immediateSwitch'] = true;
-      streamController['checkBuffer']();
-      expect(levelSwitchStub).to.have.been.calledOnce;
-    });
-
     describe('_seekToStartPos', function () {
       it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
         streamController['startPosition'] = 5;
-        streamController._seekToStartPos();
+        streamController['_seekToStartPos']();
         expect(streamController['media'].currentTime).to.equal(5);
       });
 
       it('should not seek to startPosition when it is buffered', function () {
         streamController['startPosition'] = 5;
         streamController['media'].currentTime = 5;
-        streamController._seekToStartPos();
+        streamController['_seekToStartPos']();
         expect(streamController['media'].currentTime).to.equal(5);
       });
     });
