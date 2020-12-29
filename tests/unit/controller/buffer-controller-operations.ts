@@ -369,9 +369,11 @@ describe('BufferController', function () {
 
   describe('flushLiveBackBuffer', function () {
     beforeEach(function () {
-      bufferController._live = true;
+      bufferController.details = {
+        live: true,
+        levelTargetDuration: 10,
+      };
       hls.config.liveBackBufferLength = 10;
-      bufferController._levelTargetDuration = 10;
       queueNames.forEach((name) => {
         const sb = bufferController.sourceBuffer[name];
         sb.setBuffered(0, 30);
@@ -387,7 +389,9 @@ describe('BufferController', function () {
     });
 
     it('exits early if the stream is not live', function () {
-      bufferController._live = false;
+      bufferController.details = {
+        live: false,
+      };
       bufferController.flushLiveBackBuffer();
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
@@ -477,37 +481,12 @@ describe('BufferController', function () {
     it('exits early if the fragments array is empty', function () {
       data.details.fragments = [];
       bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
-      expect(bufferController._levelTargetDuration, '_levelTargetDuration').to
-        .be.null;
-      expect(bufferController._live, '_live').to.be.false;
+      expect(bufferController.details, 'details').to.be.null;
     });
 
     it('updates class properties based on level data', function () {
       bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
-      expect(
-        bufferController._levelTargetDuration,
-        '_levelTargetDuration'
-      ).to.equal(6);
-      expect(bufferController._live, '_live').to.be.true;
-
-      // It prefers averagetargetduration, but falls back to targetduration
-      delete data.details.averagetargetduration;
-      data.details.targetduration = 7;
-      data.details.live = false;
-      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
-      expect(
-        bufferController._levelTargetDuration,
-        '_levelTargetDuration'
-      ).to.equal(7);
-      expect(bufferController._live, '_live').to.be.false;
-
-      // Defaults to 10 if no duration is provided
-      delete data.details.targetduration;
-      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
-      expect(
-        bufferController._levelTargetDuration,
-        '_levelTargetDuration'
-      ).to.equal(10);
+      expect(bufferController.details).to.equal(data.details);
     });
 
     it('enqueues a blocking operation which updates the MediaSource duration', function () {
@@ -521,7 +500,6 @@ describe('BufferController', function () {
       bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(queueAppendBlockerSpy).to.have.not.been.called;
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(10);
-      expect(bufferController.duration, 'duration').to.equal(10);
     });
 
     it('sets media duration when attaching after level update', function () {
@@ -532,17 +510,14 @@ describe('BufferController', function () {
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(
         Infinity
       );
-      expect(bufferController.duration, 'duration').to.equal(null);
       bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(
         Infinity
       );
-      expect(bufferController.duration, 'duration').to.equal(10);
       // simulate attach and open source buffers
       bufferController.media = media;
       bufferController._onMediaSourceOpen();
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(10);
-      expect(bufferController.duration, 'duration').to.equal(10);
     });
   });
 

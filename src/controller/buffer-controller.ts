@@ -25,17 +25,13 @@ import type {
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
+import LevelDetails from '../loader/level-details';
 
 const MediaSource = getMediaSource();
 
 export default class BufferController implements ComponentAPI {
-  // The value mediasource.duration should have
-  // (the browser may return a slightly different value for mediasource.duration after being set)
-  private duration: number | null = null;
-  // the target duration of the current media playlist
-  private _levelTargetDuration: number | null = null;
-  // current stream state: true - for live broadcast, false - for VoD content
-  private _live: boolean = false;
+  // The level details used to determine duration, target-duration and live
+  private details: LevelDetails | null = null;
   // cache the self generated object url to detect hijack of video tag
   private _objectUrl: string | null = null;
   // A queue of buffer operations which require the SourceBuffer to not be updating upon execution
@@ -72,6 +68,7 @@ export default class BufferController implements ComponentAPI {
 
   public destroy() {
     this.unregisterListeners();
+    this.details = null;
   }
 
   protected registerListeners() {
@@ -127,7 +124,7 @@ export default class BufferController implements ComponentAPI {
       codecEvents = 1;
     }
     this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
-    this.duration = null;
+    this.details = null;
     logger.log(
       `${this.bufferCodecEventsExpected} bufferCodec event(s) expected`
     );
@@ -450,17 +447,12 @@ export default class BufferController implements ComponentAPI {
     if (!details.fragments.length) {
       return;
     }
-    this._levelTargetDuration = details.levelTargetDuration;
-    this._live = details.live;
+    this.details = details;
 
-    const levelEnd = details.fragments[0].start + details.totalduration;
     if (this.getSourceBufferTypes().length) {
-      this.blockBuffers(this.updateMediaElementDuration.bind(this, levelEnd));
+      this.blockBuffers(this.updateMediaElementDuration.bind(this));
     } else {
-      this.updateMediaElementDuration(levelEnd);
-      if (this.hls.config.liveDurationInfinity) {
-        this.updateSeekableRange(details);
-      }
+      this.updateMediaElementDuration();
     }
   }
 
@@ -535,8 +527,8 @@ export default class BufferController implements ComponentAPI {
 
   flushLiveBackBuffer() {
     // clear back buffer for live only
-    const { hls, _levelTargetDuration, _live, media, sourceBuffer } = this;
-    if (!media || !_live || _levelTargetDuration === null) {
+    const { hls, details, media, sourceBuffer } = this;
+    if (!media || details === null || details.live === false) {
       return;
     }
 
@@ -547,7 +539,7 @@ export default class BufferController implements ComponentAPI {
 
     const currentTime = media.currentTime;
     const targetBackBufferPosition =
-      currentTime - Math.max(liveBackBufferLength, _levelTargetDuration);
+      currentTime - Math.max(liveBackBufferLength, details.levelTargetDuration);
     this.getSourceBufferTypes().forEach((type: SourceBufferName) => {
       const sb = sourceBuffer[type];
       if (sb) {
@@ -575,25 +567,29 @@ export default class BufferController implements ComponentAPI {
    * 'liveDurationInfinity` is set to `true`
    * More details: https://github.com/video-dev/hls.js/issues/355
    */
-  private updateMediaElementDuration(levelDuration: number) {
+  private updateMediaElementDuration() {
     if (
+      !this.details ||
       !this.media ||
       !this.mediaSource ||
       this.mediaSource.readyState !== 'open'
     ) {
-      this.duration = levelDuration;
       return;
     }
-    const { hls, _live, media, mediaSource, duration } = this;
+    const { details, hls, media, mediaSource } = this;
+    const levelDuration = details.fragments[0].start + details.totalduration;
     const mediaDuration = media.duration;
-    const msDuration = duration === null ? mediaSource.duration : duration;
+    const msDuration = Number.isFinite(mediaSource.duration)
+      ? mediaSource.duration
+      : 0;
 
-    if (_live && hls.config.liveDurationInfinity) {
+    if (details.live && hls.config.liveDurationInfinity) {
       // Override duration to Infinity
       logger.log(
         '[buffer-controller]: Media Source duration is set to Infinity'
       );
-      this.duration = mediaSource.duration = Infinity;
+      mediaSource.duration = Infinity;
+      this.updateSeekableRange(details);
     } else if (
       (levelDuration > msDuration && levelDuration > mediaDuration) ||
       !Number.isFinite(mediaDuration)
@@ -607,9 +603,7 @@ export default class BufferController implements ComponentAPI {
           3
         )}`
       );
-      this.duration = mediaSource.duration = levelDuration;
-    } else {
-      this.duration = msDuration;
+      mediaSource.duration = levelDuration;
     }
   }
 
@@ -618,8 +612,8 @@ export default class BufferController implements ComponentAPI {
     const fragments = levelDetails.fragments;
     const len = fragments.length;
     if (len && levelDetails.live && mediaSource?.setLiveSeekableRange) {
-      const start = fragments[0].start;
-      const end = start + levelDetails.totalduration;
+      const start = Math.max(0, fragments[0].start);
+      const end = Math.max(start, start + levelDetails.totalduration);
       mediaSource.setLiveSeekableRange(start, end);
     }
   }
@@ -701,9 +695,7 @@ export default class BufferController implements ComponentAPI {
     const { hls, media, mediaSource } = this;
     logger.log('[buffer-controller]: Media source opened');
     if (media) {
-      if (this.duration !== null) {
-        this.updateMediaElementDuration(this.duration);
-      }
+      this.updateMediaElementDuration();
       hls.trigger(Events.MEDIA_ATTACHED, { media });
     }
 

@@ -1036,6 +1036,7 @@ function checkBuffer() {
   const canvas = document.querySelector('#bufferedCanvas');
   const ctx = canvas.getContext('2d');
   const r = video.buffered;
+  const seekableEnd = getSeekableEnd();
   let bufferingDuration;
   if (r) {
     ctx.fillStyle = 'black';
@@ -1047,8 +1048,8 @@ function checkBuffer() {
     let bufferLen = 0;
     ctx.fillStyle = 'gray';
     for (let i = 0; i < r.length; i++) {
-      const start = (r.start(i) / video.duration) * canvas.width;
-      const end = (r.end(i) / video.duration) * canvas.width;
+      const start = (r.start(i) / seekableEnd) * canvas.width;
+      const end = (r.end(i) / seekableEnd) * canvas.width;
       ctx.fillRect(start, 2, Math.max(2, end - start), 11);
       if (pos >= r.start(i) && pos < r.end(i)) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
@@ -1167,7 +1168,7 @@ function checkBuffer() {
     }
 
     ctx.fillStyle = 'blue';
-    const x = (video.currentTime / video.duration) * canvas.width;
+    const x = (video.currentTime / seekableEnd) * canvas.width;
     ctx.fillRect(x, 0, 2, 15);
   } else if (ctx.fillStyle !== 'black') {
     ctx.fillStyle = 'black';
@@ -1214,10 +1215,19 @@ function goToMetricsPermaLink() {
 function onClickBufferedRange(event) {
   const canvas = document.querySelector('#bufferedCanvas');
   const target =
-    ((event.clientX - canvas.offsetLeft) / canvas.width) * video.duration;
+    ((event.clientX - canvas.offsetLeft) / canvas.width) * getSeekableEnd();
   video.currentTime = target;
 }
 
+function getSeekableEnd() {
+  if (isFinite(video.duration)) {
+    return video.duration;
+  }
+  if (video.seekable.length) {
+    return video.seekable.end(video.seekable.length - 1);
+  }
+  return 0;
+}
 function updateLevelInfo() {
   if (!hls.levels) {
     return;
