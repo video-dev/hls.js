@@ -1079,7 +1079,7 @@ export default class MP4Remuxer implements Remuxer {
   }
 }
 
-function PTSNormalize(value: number, reference: number | null): number {
+export function PTSNormalize(value: number, reference: number | null): number {
   let offset;
   if (reference === null) {
     return value;
