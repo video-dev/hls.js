@@ -516,6 +516,7 @@ export class TimelineController implements ComponentAPI {
       this.timescale[frag.cc],
       vttCCs,
       frag.cc,
+      frag.start,
       (cues) => {
         this._appendCues(cues, frag.level);
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
