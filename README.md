@@ -56,6 +56,33 @@ _Note you can access the docs for a particular version using "[https://github.co
 
 Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.md](https://github.com/video-dev/hls.js/blob/deployments/README.md).
 
+## Compatibility
+
+hls.js is only compatible with browsers supporting MediaSource extensions (MSE) API with 'video/MP4' mime-type inputs.
+
+As of today, hls.js is supported on:
+
+- Chrome for Android 34+
+- Chrome for Desktop 34+
+- Firefox for Android 41+
+- Firefox for Desktop 42+
+- IE11+ for Windows 8.1+
+- Edge for Windows 10+
+- Opera for Desktop
+- Vivaldi for Desktop
+- Safari for Mac 8+ (beta)
+- Safari for ipadOS 13+
+
+**Please note:** iOS Safari (iPhones) does not support the MediaSource API. This includes all browsers on iOS as well as apps using UIWebView and WKWebView.
+
+Safari browsers (iOS, ipadOS and macOS) do however have built-in HLS support through the plain video "tag" source URL. See the example below (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
+
+When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
+
+_Keep in mind that if the intention is to support HLS on multiple platforms, beyond those compatible with hls.js, the HLS streams need to strictly follow the specifications of RFC8216, especially if apps, smart TVs and set-top boxes are to be supported._
+
+Find a support matrix of the MediaSource API here: https://developer.mozilla.org/en-US/docs/Web/API/MediaSource
+
 ## Getting Started
 
 ```html
@@ -201,28 +228,6 @@ Optionally there is a declaration file available to help with code completion an
 ```sh
 npm install --save-dev @types/hls.js
 ```
-
-## Compatibility
-
-hls.js is compatible with browsers supporting MediaSource extensions (MSE) API with 'video/MP4' mimetypes inputs.
-
-Find a support matrix of the MediaSource API here: https://developer.mozilla.org/en-US/docs/Web/API/MediaSource
-
-As of today, it is supported on:
-
-- Chrome for Android 34+
-- Chrome for Desktop 34+
-- Firefox for Android 41+
-- Firefox for Desktop 42+
-- IE11+ for Windows 8.1+
-- Edge for Windows 10+
-- Opera for Desktop
-- Vivaldi for Desktop
-- Safari for Mac 8+ (beta)
-
-Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example above (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
-
-When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
 
 ### Server-side-rendering (SSR) and `require` from a Node.js runtime
 
