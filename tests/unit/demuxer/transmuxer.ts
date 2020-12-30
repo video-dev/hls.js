@@ -116,6 +116,7 @@ describe('TransmuxerInterface tests', function () {
     const duration = 0;
     const accurateTimeOffset = true;
     let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn, 0);
+    let state = new TransmuxState(false, true, true, false, 0);
     transmuxerInterface.push(
       data,
       initSegmentData,
@@ -132,12 +133,13 @@ describe('TransmuxerInterface tests', function () {
     const firstCall = stub.args[0][0];
     expect(
       firstCall,
-      'Demux call 1' + JSON.stringify(firstCall, null, 2)
+      'Demux call 1: ' + JSON.stringify(firstCall, null, 2)
     ).to.deep.equal({
       cmd: 'demux',
       data,
       decryptdata: currentFrag.decryptdata,
       chunkMeta,
+      state,
     });
 
     const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
@@ -147,12 +149,13 @@ describe('TransmuxerInterface tests', function () {
     newFrag.start = 1000;
     newFrag.startPTS = 1000;
     chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
+    state = new TransmuxState(false, true, true, false, 1000);
     transmuxerInterface.push(
       data,
       initSegmentData,
       audioCodec,
       videoCodec,
-      currentFrag,
+      newFrag,
       part,
       duration,
       accurateTimeOffset,
@@ -163,12 +166,13 @@ describe('TransmuxerInterface tests', function () {
     const secondCall = stub.args[1][0];
     expect(
       secondCall,
-      'Demux call 2' + JSON.stringify(secondCall, null, 2)
+      'Demux call 2: ' + JSON.stringify(secondCall, null, 2)
     ).to.deep.equal({
       cmd: 'demux',
       data,
       decryptdata: newFrag.decryptdata,
       chunkMeta,
+      state,
     });
   });
 
@@ -228,13 +232,14 @@ describe('TransmuxerInterface tests', function () {
     const tConfig = new TransmuxConfig('', '', initSegmentData, 0);
     const state = new TransmuxState(true, false, true, true, 1000);
     expect(configureStub).to.have.been.calledOnce;
-    expect(configureStub).to.have.been.calledWith(tConfig, state);
+    expect(configureStub).to.have.been.calledWith(tConfig);
 
     expect(pushStub).to.have.been.calledOnce;
     expect(pushStub).to.have.been.calledWith(
       data,
       newFrag.decryptdata,
-      chunkMeta
+      chunkMeta,
+      state
     );
   });
 

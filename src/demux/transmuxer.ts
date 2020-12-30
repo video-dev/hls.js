@@ -70,9 +70,8 @@ export default class Transmuxer {
     this.vendor = vendor;
   }
 
-  configure(transmuxConfig: TransmuxConfig, state: TransmuxState) {
+  configure(transmuxConfig: TransmuxConfig) {
     this.transmuxConfig = transmuxConfig;
-    this.currentTransmuxState = state;
     if (this.decrypter) {
       this.decrypter.reset();
     }
@@ -81,13 +80,17 @@ export default class Transmuxer {
   push(
     data: ArrayBuffer,
     decryptdata: any | null,
-    chunkMeta: ChunkMetadata
+    chunkMeta: ChunkMetadata,
+    state?: TransmuxState
   ): TransmuxerResult | Promise<TransmuxerResult> {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
     let uintData: Uint8Array = new Uint8Array(data);
-    const { cache, config, currentTransmuxState: state, transmuxConfig } = this;
+    const { cache, config, currentTransmuxState, transmuxConfig } = this;
+    if (state) {
+      this.currentTransmuxState = state;
+    }
 
     const encryptionType = getEncryptionType(uintData, decryptdata);
     if (encryptionType === 'AES-128') {
@@ -136,7 +139,7 @@ export default class Transmuxer {
       trackSwitch,
       accurateTimeOffset,
       timeOffset,
-    } = state;
+    } = state || currentTransmuxState;
     const {
       audioCodec,
       videoCodec,
@@ -184,10 +187,11 @@ export default class Transmuxer {
       accurateTimeOffset,
       chunkMeta
     );
+    const currentState = this.currentTransmuxState;
 
-    state.contiguous = true;
-    state.discontinuity = false;
-    state.trackSwitch = false;
+    currentState.contiguous = true;
+    currentState.discontinuity = false;
+    currentState.trackSwitch = false;
 
     stats.executeEnd = now();
     return result;
@@ -435,9 +439,6 @@ export default class Transmuxer {
     // Ensure that muxers are always initialized with an initSegment
     this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
     this.resetInitialTimestamp(defaultInitPts);
-    logger.log(
-      `[transmuxer]: Probe succeeded with a data length of ${data.length}.`
-    );
     return { demuxer, remuxer };
   }
 

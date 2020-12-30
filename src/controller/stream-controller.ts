@@ -1023,7 +1023,7 @@ export default class StreamController
     let startPosition = this.startPosition;
     // only adjust currentTime if different from startPosition or if startPosition not buffered
     // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-    if (currentTime !== startPosition && startPosition >= 0) {
+    if (startPosition >= 0 && currentTime < startPosition) {
       if (media.seeking) {
         logger.log(
           `could not seek to ${startPosition}, already seeking at ${currentTime}`

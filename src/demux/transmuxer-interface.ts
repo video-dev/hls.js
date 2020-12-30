@@ -175,6 +175,13 @@ export default class TransmuxerInterface {
     if (part && (partDiff || !contiguous)) {
       part.stats.parsing.start = now;
     }
+    const state = new TransmuxState(
+      discontinuity,
+      contiguous,
+      accurateTimeOffset,
+      trackSwitch,
+      timeOffset
+    );
     if (!contiguous || discontinuity) {
       logger.log(`[transmuxer-interface, ${frag.type}]: Starting new transmux session for sn: ${chunkMeta.sn} p: ${chunkMeta.part} level: ${chunkMeta.level} id: ${chunkMeta.id}
         discontinuity: ${discontinuity}
@@ -189,14 +196,7 @@ export default class TransmuxerInterface {
         duration,
         defaultInitPTS
       );
-      const state = new TransmuxState(
-        discontinuity,
-        contiguous,
-        accurateTimeOffset,
-        trackSwitch,
-        timeOffset
-      );
-      this.configureTransmuxer(config, state);
+      this.configureTransmuxer(config);
     }
 
     this.frag = frag;
@@ -211,11 +211,17 @@ export default class TransmuxerInterface {
           data,
           decryptdata,
           chunkMeta,
+          state,
         },
         data instanceof ArrayBuffer ? [data] : []
       );
     } else if (transmuxer) {
-      const transmuxResult = transmuxer.push(data, decryptdata, chunkMeta);
+      const transmuxResult = transmuxer.push(
+        data,
+        decryptdata,
+        chunkMeta,
+        state
+      );
       if (isPromise(transmuxResult)) {
         transmuxResult.then((data) => {
           this.handleTransmuxComplete(data);
@@ -290,16 +296,15 @@ export default class TransmuxerInterface {
     }
   }
 
-  private configureTransmuxer(config: TransmuxConfig, state: TransmuxState) {
+  private configureTransmuxer(config: TransmuxConfig) {
     const { worker, transmuxer } = this;
     if (worker) {
       worker.postMessage({
         cmd: 'configure',
         config,
-        state,
       });
     } else if (transmuxer) {
-      transmuxer.configure(config, state);
+      transmuxer.configure(config);
     }
   }
 

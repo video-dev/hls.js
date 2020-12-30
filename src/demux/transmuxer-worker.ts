@@ -31,7 +31,7 @@ export default function TransmuxerWorker(self) {
         break;
       }
       case 'configure': {
-        self.transmuxer.configure(data.config, data.state);
+        self.transmuxer.configure(data.config);
         break;
       }
       case 'demux': {
@@ -40,7 +40,8 @@ export default function TransmuxerWorker(self) {
           | Promise<TransmuxerResult> = self.transmuxer.push(
           data.data,
           data.decryptdata,
-          data.chunkMeta
+          data.chunkMeta,
+          data.state
         );
         if (isPromise(transmuxResult)) {
           transmuxResult.then((data) => {
