@@ -455,7 +455,6 @@ export default class LevelController extends BasePlaylistController {
       }
       return;
     }
-    this.log(`level ${level} loaded [${details.startSN}-${details.endSN}]`);
 
     // only process level loaded events matching with expected level
     if (level === this.currentLevelIndex) {

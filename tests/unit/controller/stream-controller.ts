@@ -248,6 +248,7 @@ describe('StreamController', function () {
           },
           length: 1,
         },
+        currentTime: 0,
         readyState: 4,
       };
       streamController['mediaBuffer'] = null;

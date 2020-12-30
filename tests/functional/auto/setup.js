@@ -243,9 +243,9 @@ async function testSeekOnVOD(url, config) {
                   logs: self.logString,
                 });
               }
-            }, 5000);
+            }, 3000);
           };
-          video.currentTime = video.seekable.end(0) - 5;
+          video.currentTime = video.seekable.end(0) - 3;
           // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
           const allowedBufferedRanges =
             config.allowedBufferedRangesInSeekTest || 2;
@@ -259,7 +259,7 @@ async function testSeekOnVOD(url, config) {
               });
             }
           };
-        }, 5000);
+        }, 3000);
       };
       video.onended = function () {
         callback({ code: 'ended', logs: self.logString });
@@ -573,7 +573,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
             testIsPlayingVOD.bind(null, url, config)
           );
           it(
-            `should seek 5s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
+            `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
             testSeekOnVOD.bind(null, url, config)
           );
           // TODO: Seeking to or past VOD duration should result in the video ending
