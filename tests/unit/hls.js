@@ -8,15 +8,17 @@ describe('Hls', function () {
       const hls = new Hls();
       hls.abrController = {
         bwEstimator: {
-          getEstimate: () => MOCKED_ESTIMATE
-        }
+          getEstimate: () => MOCKED_ESTIMATE,
+        },
       };
       expect(hls.bandwidthEstimate).to.equal(MOCKED_ESTIMATE);
     });
 
     it('should return a default bandwidth estimate', function () {
       const hls = new Hls();
-      expect(hls.bandwidthEstimate).to.equal(hlsDefaultConfig.abrEwmaDefaultEstimate);
+      expect(hls.bandwidthEstimate).to.equal(
+        hlsDefaultConfig.abrEwmaDefaultEstimate
+      );
     });
   });
 });

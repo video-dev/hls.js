@@ -6,7 +6,7 @@ import type { Level } from '../types/level';
 import type { RequiredProperties } from '../types/general';
 import { adjustSliding } from '../controller/level-helper';
 
-export function findFirstFragWithCC (fragments: Fragment[], cc: number) {
+export function findFirstFragWithCC(fragments: Fragment[], cc: number) {
   let firstFrag: Fragment | null = null;
 
   for (let i = 0, len = fragments.length; i < len; i++) {
@@ -20,9 +20,16 @@ export function findFirstFragWithCC (fragments: Fragment[], cc: number) {
   return firstFrag;
 }
 
-export function shouldAlignOnDiscontinuities (lastFrag: Fragment | null, lastLevel: Level, details: LevelDetails): lastLevel is RequiredProperties<Level, 'details'> {
+export function shouldAlignOnDiscontinuities(
+  lastFrag: Fragment | null,
+  lastLevel: Level,
+  details: LevelDetails
+): lastLevel is RequiredProperties<Level, 'details'> {
   if (lastLevel.details) {
-    if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC)) {
+    if (
+      details.endCC > details.startCC ||
+      (lastFrag && lastFrag.cc < details.startCC)
+    ) {
       return true;
     }
   }
@@ -30,7 +37,10 @@ export function shouldAlignOnDiscontinuities (lastFrag: Fragment | null, lastLev
 }
 
 // Find the first frag in the previous level which matches the CC of the first frag of the new level
-export function findDiscontinuousReferenceFrag (prevDetails: LevelDetails, curDetails: LevelDetails) {
+export function findDiscontinuousReferenceFrag(
+  prevDetails: LevelDetails,
+  curDetails: LevelDetails
+) {
   const prevFrags = prevDetails.fragments;
   const curFrags = curDetails.fragments;
 
@@ -49,7 +59,7 @@ export function findDiscontinuousReferenceFrag (prevDetails: LevelDetails, curDe
   return prevStartFrag;
 }
 
-function adjustFragmentStart (frag: Fragment, sliding: number) {
+function adjustFragmentStart(frag: Fragment, sliding: number) {
   if (frag) {
     const start = frag.start + sliding;
     frag.start = frag.startPTS = start;
@@ -57,7 +67,7 @@ function adjustFragmentStart (frag: Fragment, sliding: number) {
   }
 }
 
-export function adjustSlidingStart (sliding: number, details: LevelDetails) {
+export function adjustSlidingStart(sliding: number, details: LevelDetails) {
   // Update segments
   const fragments = details.fragments;
   for (let i = 0, len = fragments.length; i < len; i++) {
@@ -80,7 +90,11 @@ export function adjustSlidingStart (sliding: number, details: LevelDetails) {
  * @param lastLevel
  * @param details
  */
-export function alignStream (lastFrag: Fragment | null, lastLevel: Level | null, details: LevelDetails) {
+export function alignStream(
+  lastFrag: Fragment | null,
+  lastLevel: Level | null,
+  details: LevelDetails
+) {
   if (!lastLevel) {
     return;
   }
@@ -91,7 +105,11 @@ export function alignStream (lastFrag: Fragment | null, lastLevel: Level | null,
     // discontinuity sequence.
     alignPDT(details, lastLevel.details);
   }
-  if (!details.alignedSliding && lastLevel.details && !details.skippedSegments) {
+  if (
+    !details.alignedSliding &&
+    lastLevel.details &&
+    !details.skippedSegments
+  ) {
     // Try to align on sn so that we pick a better start fragment.
     // Do not perform this on playlists with delta updates as this is only to align levels on switch
     // and adjustSliding only adjusts fragments after skippedSegments.
@@ -106,11 +124,20 @@ export function alignStream (lastFrag: Fragment | null, lastLevel: Level | null,
  * @param lastLevel - The details of the last loaded level
  * @param details - The details of the new level
  */
-function alignDiscontinuities (lastFrag: Fragment | null, details: LevelDetails, lastLevel: Level) {
+function alignDiscontinuities(
+  lastFrag: Fragment | null,
+  details: LevelDetails,
+  lastLevel: Level
+) {
   if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
-    const referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
+    const referenceFrag = findDiscontinuousReferenceFrag(
+      lastLevel.details,
+      details
+    );
     if (referenceFrag?.start) {
-      logger.log(`Adjusting PTS using last level due to CC increase within current level ${details.url}`);
+      logger.log(
+        `Adjusting PTS using last level due to CC increase within current level ${details.url}`
+      );
       adjustSlidingStart(referenceFrag.start, details);
     }
   }
@@ -121,9 +148,13 @@ function alignDiscontinuities (lastFrag: Fragment | null, details: LevelDetails,
  * @param details - The details of the new level
  * @param lastDetails - The details of the last loaded level
  */
-export function alignPDT (details: LevelDetails, lastDetails: LevelDetails) {
+export function alignPDT(details: LevelDetails, lastDetails: LevelDetails) {
   // This check protects the unsafe "!" usage below for null program date time access.
-  if (!lastDetails.fragments.length || !details.hasProgramDateTime || !lastDetails.hasProgramDateTime) {
+  if (
+    !lastDetails.fragments.length ||
+    !details.hasProgramDateTime ||
+    !lastDetails.hasProgramDateTime
+  ) {
     return;
   }
   // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
@@ -134,7 +165,11 @@ export function alignPDT (details: LevelDetails, lastDetails: LevelDetails) {
   // date diff is in ms. frag.start is in seconds
   const sliding = (newPDT - lastPDT) / 1000 + lastDetails.fragments[0].start;
   if (sliding && Number.isFinite(sliding)) {
-    logger.log(`Adjusting PTS using programDateTime delta ${newPDT - lastPDT}ms, sliding:${sliding.toFixed(3)} ${details.url} `);
+    logger.log(
+      `Adjusting PTS using programDateTime delta ${
+        newPDT - lastPDT
+      }ms, sliding:${sliding.toFixed(3)} ${details.url} `
+    );
     adjustSlidingStart(sliding, details);
   }
 }

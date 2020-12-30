@@ -4,10 +4,20 @@ import type { CaptionScreen, Row } from './cea-608-parser';
 const WHITESPACE_CHAR = /\s/;
 
 export interface CuesInterface {
-  newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[]
+  newCue(
+    track: TextTrack | null,
+    startTime: number,
+    endTime: number,
+    captionScreen: CaptionScreen
+  ): VTTCue[];
 }
 
-export function newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[] {
+export function newCue(
+  track: TextTrack | null,
+  startTime: number,
+  endTime: number,
+  captionScreen: CaptionScreen
+): VTTCue[] {
   const result: VTTCue[] = [];
   let row: Row;
   // the type data states this is VTTCue, but it can potentially be a TextTrackCue on old browsers
@@ -53,7 +63,7 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
       // Clamp the position between 10 and 80 percent (CEA-608 PAC indent code)
       // https://dvcs.w3.org/hg/text-tracks/raw-file/default/608toVTT/608toVTT.html#positioning-in-cea-608
       // Firefox throws an exception and captions break with out of bounds 0-100 values
-      cue.position = 10 + Math.min(80, Math.floor(indent * 8 / 32) * 10);
+      cue.position = 10 + Math.min(80, Math.floor((indent * 8) / 32) * 10);
       result.push(cue);
     }
   }

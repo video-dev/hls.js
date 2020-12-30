@@ -6,30 +6,30 @@
  * In general, a helper around HTML5 MediaElement TimeRanges gathered from `buffered` property.
  *
  * Also @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/buffered
-*/
+ */
 
 import { logger } from '../utils/logger';
 
 type BufferTimeRange = {
-  start: number
-  end: number
+  start: number;
+  end: number;
 };
 
 export type Bufferable = {
-  buffered: TimeRanges
+  buffered: TimeRanges;
 };
 
 export type BufferInfo = {
-  len: number,
-  start: number,
-  end: number,
-  nextStart?: number,
+  len: number;
+  start: number;
+  end: number;
+  nextStart?: number;
 };
 
 const noopBuffered: TimeRanges = {
   length: 0,
   start: () => 0,
-  end: () => 0
+  end: () => 0,
 };
 
 export class BufferHelper {
@@ -39,7 +39,7 @@ export class BufferHelper {
    * @param {number} position
    * @returns {boolean}
    */
-  static isBuffered (media: Bufferable, position: number): boolean {
+  static isBuffered(media: Bufferable, position: number): boolean {
     try {
       if (media) {
         const buffered = BufferHelper.getBuffered(media);
@@ -57,7 +57,7 @@ export class BufferHelper {
     return false;
   }
 
-  static bufferInfo (
+  static bufferInfo(
     media: Bufferable | null,
     pos: number,
     maxHoleDuration: number
@@ -81,15 +81,15 @@ export class BufferHelper {
     return { len: 0, start: pos, end: pos, nextStart: undefined };
   }
 
-  static bufferedInfo (
+  static bufferedInfo(
     buffered: BufferTimeRange[],
     pos: number,
     maxHoleDuration: number
   ): {
-    len: number,
-    start: number,
-    end: number,
-    nextStart?: number,
+    len: number;
+    start: number;
+    end: number;
+    nextStart?: number;
   } {
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
     buffered.sort(function (a, b) {
@@ -111,7 +111,7 @@ export class BufferHelper {
         if (buf2len) {
           const buf2end = buffered2[buf2len - 1].end;
           // if small hole (value between 0 or maxHoleDuration ) or overlapping (negative)
-          if ((buffered[i].start - buf2end) < maxHoleDuration) {
+          if (buffered[i].start - buf2end < maxHoleDuration) {
             // merge overlapping time ranges
             // update lastRange.end only if smaller than item.end
             // e.g.  [ 1, 15] with  [ 2,8] => [ 1,15] (no need to modify lastRange.end)
@@ -144,24 +144,29 @@ export class BufferHelper {
       const start = buffered2[i].start;
       const end = buffered2[i].end;
       // logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
-      if ((pos + maxHoleDuration) >= start && pos < end) {
+      if (pos + maxHoleDuration >= start && pos < end) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferStart = start;
         bufferEnd = end;
         bufferLen = bufferEnd - pos;
-      } else if ((pos + maxHoleDuration) < start) {
+      } else if (pos + maxHoleDuration < start) {
         bufferStartNext = start;
         break;
       }
     }
-    return { len: bufferLen, start: bufferStart || 0, end: bufferEnd || 0, nextStart: bufferStartNext };
+    return {
+      len: bufferLen,
+      start: bufferStart || 0,
+      end: bufferEnd || 0,
+      nextStart: bufferStartNext,
+    };
   }
 
   /**
    * Safe method to get buffered property.
    * SourceBuffer.buffered may throw if SourceBuffer is removed from it's MediaSource
    */
-  static getBuffered (media: Bufferable): TimeRanges {
+  static getBuffered(media: Bufferable): TimeRanges {
     try {
       return media.buffered;
     } catch (e) {

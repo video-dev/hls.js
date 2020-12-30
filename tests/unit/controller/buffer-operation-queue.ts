@@ -12,14 +12,14 @@ const queueNames = ['audio', 'video'];
 describe('BufferOperationQueue tests', function () {
   const sandbox = sinon.createSandbox();
   let operationQueue;
-  const sbMock = {
+  const sbMock = ({
     audio: {
-      updating: false
+      updating: false,
     },
     video: {
-      updating: false
-    }
-  } as any as SourceBuffers;
+      updating: false,
+    },
+  } as any) as SourceBuffers;
 
   beforeEach(function () {
     operationQueue = new BufferOperationQueue(sbMock);
@@ -41,13 +41,19 @@ describe('BufferOperationQueue tests', function () {
         execute,
         onStart: () => {},
         onComplete: () => {},
-        onError: () => {}
+        onError: () => {},
       };
 
       queueNames.forEach((name, i) => {
         operationQueue.append(operation, name);
-        expect(execute, `The ${name} queue operation should have been executed`).to.have.callCount(i + 1);
-        expect(operationQueue.queues[name], `The ${name} queue should have a length of 1`).to.have.length(1);
+        expect(
+          execute,
+          `The ${name} queue operation should have been executed`
+        ).to.have.callCount(i + 1);
+        expect(
+          operationQueue.queues[name],
+          `The ${name} queue should have a length of 1`
+        ).to.have.length(1);
       });
     });
   });
@@ -62,25 +68,34 @@ describe('BufferOperationQueue tests', function () {
       execute,
       onStart: () => {},
       onComplete: () => {},
-      onError: () => {}
+      onError: () => {},
     };
 
     queueNames.forEach((name) => {
       operationQueue.append(operation, name);
-      expect(execute, `The ${name} queue operation should not have been executed`).to.have.not.been.called;
-      expect(operationQueue.queues[name], `The ${name} queue should have a length of 2`).to.have.length(2);
+      expect(
+        execute,
+        `The ${name} queue operation should not have been executed`
+      ).to.have.not.been.called;
+      expect(
+        operationQueue.queues[name],
+        `The ${name} queue should have a length of 2`
+      ).to.have.length(2);
     });
   });
 
   describe('appendBlocker', function () {
     it('appends a blocking promise, which resolves upon execution', function () {
       const promises: Promise<{}>[] = [];
-      queueNames.forEach(name => {
+      queueNames.forEach((name) => {
         promises.push(operationQueue.appendBlocker(name));
       });
       return Promise.all(promises).then(() => {
-        queueNames.forEach(name => {
-          expect(operationQueue.queues[name], `The ${name} queue should have a length of 1`).to.have.length(1);
+        queueNames.forEach((name) => {
+          expect(
+            operationQueue.queues[name],
+            `The ${name} queue should have a length of 1`
+          ).to.have.length(1);
         });
       });
     });
@@ -88,7 +103,7 @@ describe('BufferOperationQueue tests', function () {
 
   describe('executeNext', function () {
     it('does nothing if executing against an empty queue', function () {
-      queueNames.forEach(name => {
+      queueNames.forEach((name) => {
         expect(operationQueue.executeNext(name)).to.not.throw;
       });
     });
@@ -102,13 +117,21 @@ describe('BufferOperationQueue tests', function () {
         },
         onStart: () => {},
         onComplete: () => {},
-        onError
+        onError,
       };
       queueNames.forEach((name, i) => {
         operationQueue.append(operation, name);
-        expect(onError, 'onError should have been called').to.have.callCount(i + 1);
-        expect(onError, 'onError should have been called with the thrown exception').to.have.been.calledWith(error);
-        expect(operationQueue.queues[name], `The ${name} queue should have a length of 0`).to.have.length(0);
+        expect(onError, 'onError should have been called').to.have.callCount(
+          i + 1
+        );
+        expect(
+          onError,
+          'onError should have been called with the thrown exception'
+        ).to.have.been.calledWith(error);
+        expect(
+          operationQueue.queues[name],
+          `The ${name} queue should have a length of 0`
+        ).to.have.length(0);
       });
     });
   });
@@ -119,7 +142,7 @@ describe('BufferOperationQueue tests', function () {
       execute,
       onStart: () => {},
       onComplete: () => {},
-      onError: () => {}
+      onError: () => {},
     };
     it('should dequeue the current operation and execute the next', function () {
       queueNames.forEach((name) => {
@@ -128,8 +151,14 @@ describe('BufferOperationQueue tests', function () {
 
       queueNames.forEach((name, i) => {
         operationQueue.shiftAndExecuteNext(name);
-        expect(execute, `The ${name} queue operation should have been executed`).to.have.callCount(i + 1);
-        expect(operationQueue.queues[name], `The ${name} queue should have a length of 1`).to.have.length(1);
+        expect(
+          execute,
+          `The ${name} queue operation should have been executed`
+        ).to.have.callCount(i + 1);
+        expect(
+          operationQueue.queues[name],
+          `The ${name} queue should have a length of 1`
+        ).to.have.length(1);
       });
     });
   });

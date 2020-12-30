@@ -32,7 +32,7 @@ const sampleEntryCodesISO = {
     sqcp: true,
     ssmv: true,
     twos: true,
-    ulaw: true
+    ulaw: true,
   },
   video: {
     avc1: true,
@@ -59,23 +59,25 @@ const sampleEntryCodesISO = {
     svc2: true,
     'vc-1': true,
     vp08: true,
-    vp09: true
+    vp09: true,
   },
   text: {
     stpp: true,
-    wvtt: true
-  }
+    wvtt: true,
+  },
 };
 
 export type CodecType = 'audio' | 'video';
 
-function isCodecType (codec: string, type: CodecType): boolean {
+function isCodecType(codec: string, type: CodecType): boolean {
   const typeCodes = sampleEntryCodesISO[type];
   return !!typeCodes && typeCodes[codec.slice(0, 4)] === true;
 }
 
-function isCodecSupportedInMp4 (codec: string, type: CodecType): boolean {
-  return MediaSource.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`);
+function isCodecSupportedInMp4(codec: string, type: CodecType): boolean {
+  return MediaSource.isTypeSupported(
+    `${type || 'video'}/mp4;codecs="${codec}"`
+  );
 }
 
 export { isCodecType, isCodecSupportedInMp4 };

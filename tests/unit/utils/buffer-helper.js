@@ -1,10 +1,10 @@
 import { BufferHelper } from '../../../src/utils/buffer-helper';
 
-function createMockBuffer (buffered) {
+function createMockBuffer(buffered) {
   return {
-    start: i => (buffered.length > i) ? buffered[i].startPTS : null,
-    end: i => (buffered.length > i) ? buffered[i].endPTS : null,
-    length: buffered.length
+    start: (i) => (buffered.length > i ? buffered[i].startPTS : null),
+    end: (i) => (buffered.length > i ? buffered[i].endPTS : null),
+    length: buffered.length,
   };
 }
 
@@ -13,18 +13,18 @@ describe('BufferHelper', function () {
     // |////////|________|////////////////|
     // 0       0.5       1                2
     const media = {
-      get buffered () {
+      get buffered() {
         return createMockBuffer([
           {
             startPTS: 0,
-            endPTS: 0.5
+            endPTS: 0.5,
           },
           {
             startPTS: 1,
-            endPTS: 2
-          }
+            endPTS: 2,
+          },
         ]);
-      }
+      },
     };
 
     it('should return true if some media.buffered includes the position', function () {
@@ -44,9 +44,9 @@ describe('BufferHelper', function () {
 
     it('should return false if media.buffered throws error', function () {
       const invalidMedia = {
-        get buffered () {
+        get buffered() {
           throw new Error('InvalidStateError');
-        }
+        },
       };
       expect(BufferHelper.isBuffered(invalidMedia, 0)).to.be.false;
     });
@@ -60,39 +60,41 @@ describe('BufferHelper', function () {
       // |////////|________|////////////////|
       // 0       0.5       1                2
       const media = {
-        get buffered () {
+        get buffered() {
           return createMockBuffer([
             {
               startPTS: 0,
-              endPTS: 0.5
+              endPTS: 0.5,
             },
             {
               startPTS: 1,
-              endPTS: 2
-            }
+              endPTS: 2,
+            },
           ]);
-        }
+        },
       };
       const maxHoleDuration = 0;
       expect(BufferHelper.bufferInfo(media, 0, maxHoleDuration)).to.deep.equal({
         len: 0.5,
         start: 0,
         end: 0.5,
-        nextStart: 1
+        nextStart: 1,
       });
     });
     it('should return empty buffer info if media does not exist', function () {
       const invalidMedia = {
-        get buffered () {
+        get buffered() {
           throw new Error('InvalidStateError');
-        }
+        },
       };
       const maxHoleDuration = 0;
-      expect(BufferHelper.bufferInfo(invalidMedia, 0, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferInfo(invalidMedia, 0, maxHoleDuration)
+      ).to.deep.equal({
         len: 0,
         start: 0,
         end: 0,
-        nextStart: undefined
+        nextStart: undefined,
       });
     });
     it('should return empty buffer info if media does not exist', function () {
@@ -101,7 +103,7 @@ describe('BufferHelper', function () {
         len: 0,
         start: 0,
         end: 0,
-        nextStart: undefined
+        nextStart: undefined,
       });
     });
   });
@@ -113,37 +115,45 @@ describe('BufferHelper', function () {
       const buffered = [
         {
           start: 0,
-          end: 0.5
+          end: 0.5,
         },
         {
           start: 1,
-          end: 2
-        }
+          end: 2,
+        },
       ];
       const maxHoleDuration = 0;
-      expect(BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)
+      ).to.deep.equal({
         len: 0.5,
         start: 0,
         end: 0.5,
-        nextStart: 1
+        nextStart: 1,
       });
-      expect(BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)
+      ).to.deep.equal({
         len: 0,
         start: 0.5,
         end: 0.5,
-        nextStart: 1
+        nextStart: 1,
       });
-      expect(BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration)
+      ).to.deep.equal({
         len: 1,
         start: 1,
         end: 2,
-        nextStart: undefined
+        nextStart: undefined,
       });
-      expect(BufferHelper.bufferedInfo(buffered, 1.5, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 1.5, maxHoleDuration)
+      ).to.deep.equal({
         len: 0.5,
         start: 1,
         end: 2,
-        nextStart: undefined
+        nextStart: undefined,
       });
     });
     it('should return found buffer info when maxHoleDuration is 0.5', function () {
@@ -152,40 +162,48 @@ describe('BufferHelper', function () {
       const buffered = [
         {
           start: 0,
-          end: 0.5
+          end: 0.5,
         },
         {
           start: 1,
-          end: 2
-        }
+          end: 2,
+        },
       ];
       const maxHoleDuration = 0.5;
-      expect(BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)
+      ).to.deep.equal({
         len: 0.5,
         start: 0,
         end: 0.5,
-        nextStart: 1
+        nextStart: 1,
       });
       // M: maxHoleDuration: 0.5
       // |////////|________|////////////////|
       // 0       0.5 - M - 1                2
-      expect(BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)
+      ).to.deep.equal({
         len: 1.5,
         start: 1,
         end: 2,
-        nextStart: undefined
+        nextStart: undefined,
       });
-      expect(BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration)
+      ).to.deep.equal({
         len: 1,
         start: 1,
         end: 2,
-        nextStart: undefined
+        nextStart: undefined,
       });
-      expect(BufferHelper.bufferedInfo(buffered, 2, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 2, maxHoleDuration)
+      ).to.deep.equal({
         len: 0,
         start: 2,
         end: 2,
-        nextStart: undefined
+        nextStart: undefined,
       });
     });
     it('should be able to handle unordered buffered', function () {
@@ -194,19 +212,21 @@ describe('BufferHelper', function () {
       const buffered = [
         {
           start: 1,
-          end: 2
+          end: 2,
         },
         {
           start: 0,
-          end: 0.5
-        }
+          end: 0.5,
+        },
       ];
       const maxHoleDuration = 0.5;
-      expect(BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)
+      ).to.deep.equal({
         len: 0.5,
         start: 0,
         end: 0.5,
-        nextStart: 1
+        nextStart: 1,
       });
     });
     it('should be able to merge adjacent time ranges with a small hole', function () {
@@ -215,19 +235,21 @@ describe('BufferHelper', function () {
       const buffered = [
         {
           start: 0,
-          end: 0.5
+          end: 0.5,
         },
         {
           start: 1,
-          end: 2
-        }
+          end: 2,
+        },
       ];
       const maxHoleDuration = 1;
-      expect(BufferHelper.bufferedInfo(buffered, 0.8, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 0.8, maxHoleDuration)
+      ).to.deep.equal({
         len: 1.2,
         start: 0,
         end: 2,
-        nextStart: undefined
+        nextStart: undefined,
       });
     });
     it('should be able to merge overlapping time ranges', function () {
@@ -237,48 +259,54 @@ describe('BufferHelper', function () {
       const buffered = [
         {
           start: 0,
-          end: 0.5
+          end: 0.5,
         },
         {
           start: 0,
-          end: 1
-        }
+          end: 1,
+        },
       ];
       const maxHoleDuration = 0.5;
-      expect(BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)
+      ).to.deep.equal({
         len: 0.5,
         start: 0,
         end: 1,
-        nextStart: undefined
+        nextStart: undefined,
       });
     });
     it('should return empty buffered if pos is out of range', function () {
       const buffered = [
         {
           start: 0,
-          end: 0.5
+          end: 0.5,
         },
         {
           start: 0,
-          end: 1
-        }
+          end: 1,
+        },
       ];
       const maxHoleDuration = 0;
-      expect(BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration)
+      ).to.deep.equal({
         len: 0,
         start: 5,
         end: 5,
-        nextStart: undefined
+        nextStart: undefined,
       });
     });
     it('should return empty buffered if buffered is empty', function () {
       const buffered = [];
       const maxHoleDuration = 0;
-      expect(BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration)).to.deep.equal({
+      expect(
+        BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration)
+      ).to.deep.equal({
         len: 0,
         start: 5,
         end: 5,
-        nextStart: undefined
+        nextStart: undefined,
       });
     });
   });
@@ -288,18 +316,18 @@ describe('BufferHelper', function () {
       const media = {
         buffered: {
           length: 10,
-          start () {},
-          end () {}
-        }
+          start() {},
+          end() {},
+        },
       };
       expect(BufferHelper.getBuffered(media)).to.eql(media.buffered);
     });
 
     it('should return return noop value if error is thrown', function () {
       const media = {
-        get buffered () {
+        get buffered() {
           throw new Error();
-        }
+        },
       };
       expect(BufferHelper.getBuffered(media).length).to.eql(0);
     });

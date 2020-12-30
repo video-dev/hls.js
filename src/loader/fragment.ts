@@ -3,23 +3,30 @@ import { logger } from '../utils/logger';
 import LevelKey from './level-key';
 import LoadStats from './load-stats';
 import AttrList from '../utils/attr-list';
-import type { FragmentLoaderContext, Loader, PlaylistLevelType } from '../types/loader';
+import type {
+  FragmentLoaderContext,
+  Loader,
+  PlaylistLevelType,
+} from '../types/loader';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
   VIDEO = 'video',
-  AUDIOVIDEO = 'audiovideo'
+  AUDIOVIDEO = 'audiovideo',
 }
 
 interface ElementaryStreamInfo {
-  startPTS: number
-  endPTS: number
-  startDTS: number
-  endDTS: number
-  partial?: boolean
+  startPTS: number;
+  endPTS: number;
+  startDTS: number;
+  endDTS: number;
+  partial?: boolean;
 }
 
-type ElementaryStreams = Record<ElementaryStreamTypes, ElementaryStreamInfo | null>;
+type ElementaryStreams = Record<
+  ElementaryStreamTypes,
+  ElementaryStreamInfo | null
+>;
 
 export class BaseSegment {
   private _byteRange: number[] | null = null;
@@ -33,15 +40,15 @@ export class BaseSegment {
   public elementaryStreams: ElementaryStreams = {
     [ElementaryStreamTypes.AUDIO]: null,
     [ElementaryStreamTypes.VIDEO]: null,
-    [ElementaryStreamTypes.AUDIOVIDEO]: null
+    [ElementaryStreamTypes.AUDIOVIDEO]: null,
   };
 
-  constructor (baseurl: string) {
+  constructor(baseurl: string) {
     this.baseurl = baseurl;
   }
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
-  setByteRange (value: string, previous?: BaseSegment) {
+  setByteRange(value: string, previous?: BaseSegment) {
     const params = value.split('@', 2);
     const byteRange: number[] = [];
     if (params.length === 1) {
@@ -53,7 +60,7 @@ export class BaseSegment {
     this._byteRange = byteRange;
   }
 
-  get byteRange (): number[] {
+  get byteRange(): number[] {
     if (!this._byteRange) {
       return [];
     }
@@ -61,22 +68,24 @@ export class BaseSegment {
     return this._byteRange;
   }
 
-  get byteRangeStartOffset (): number {
+  get byteRangeStartOffset(): number {
     return this.byteRange[0];
   }
 
-  get byteRangeEndOffset (): number {
+  get byteRangeEndOffset(): number {
     return this.byteRange[1];
   }
 
-  get url (): string {
+  get url(): string {
     if (!this._url && this.baseurl && this.relurl) {
-      this._url = buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
+      this._url = buildAbsoluteURL(this.baseurl, this.relurl, {
+        alwaysNormalize: true,
+      });
     }
     return this._url || '';
   }
 
-  set url (value: string) {
+  set url(value: string) {
     this._url = value;
   }
 }
@@ -131,12 +140,12 @@ export default class Fragment extends BaseSegment {
   // #EXTINF  segment title
   public title: string | null = null;
 
-  constructor (type: PlaylistLevelType, baseurl: string) {
+  constructor(type: PlaylistLevelType, baseurl: string) {
     super(baseurl);
     this.type = type;
   }
 
-  get decryptdata (): LevelKey | null {
+  get decryptdata(): LevelKey | null {
     if (!this.levelkey && !this._decryptdata) {
       return null;
     }
@@ -147,8 +156,14 @@ export default class Fragment extends BaseSegment {
         // We are fetching decryption data for a initialization segment
         // If the segment was encrypted with AES-128
         // It must have an IV defined. We cannot substitute the Segment Number in.
-        if (this.levelkey && this.levelkey.method === 'AES-128' && !this.levelkey.iv) {
-          logger.warn(`missing IV for initialization segment with method="${this.levelkey.method}" - compliance issue`);
+        if (
+          this.levelkey &&
+          this.levelkey.method === 'AES-128' &&
+          !this.levelkey.iv
+        ) {
+          logger.warn(
+            `missing IV for initialization segment with method="${this.levelkey.method}" - compliance issue`
+          );
         }
 
         /*
@@ -166,11 +181,11 @@ export default class Fragment extends BaseSegment {
     return this._decryptdata;
   }
 
-  get end (): number {
+  get end(): number {
     return this.start + this.duration;
   }
 
-  get endProgramDateTime () {
+  get endProgramDateTime() {
     if (this.programDateTime === null) {
       return null;
     }
@@ -181,10 +196,10 @@ export default class Fragment extends BaseSegment {
 
     const duration = !Number.isFinite(this.duration) ? 0 : this.duration;
 
-    return this.programDateTime + (duration * 1000);
+    return this.programDateTime + duration * 1000;
   }
 
-  get encrypted () {
+  get encrypted() {
     // At the m3u8-parser level we need to add support for manifest signalled keyformats
     // when we want the fragment to start reporting that it is encrypted.
     // Currently, keyFormat will only be set for identity keys
@@ -200,11 +215,11 @@ export default class Fragment extends BaseSegment {
    * @param {number} segmentNumber - segment number to generate IV with
    * @returns {Uint8Array}
    */
-  createInitializationVector (segmentNumber: number): Uint8Array {
+  createInitializationVector(segmentNumber: number): Uint8Array {
     const uint8View = new Uint8Array(16);
 
     for (let i = 12; i < 16; i++) {
-      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+      uint8View[i] = (segmentNumber >> (8 * (15 - i))) & 0xff;
     }
 
     return uint8View;
@@ -216,7 +231,10 @@ export default class Fragment extends BaseSegment {
    * @param segmentNumber - the fragment's segment number
    * @returns {LevelKey} - an object to be applied as a fragment's decryptdata
    */
-  setDecryptDataFromLevelKey (levelkey: LevelKey, segmentNumber: number): LevelKey {
+  setDecryptDataFromLevelKey(
+    levelkey: LevelKey,
+    segmentNumber: number
+  ): LevelKey {
     let decryptdata = levelkey;
 
     if (levelkey?.method === 'AES-128' && levelkey.uri && !levelkey.iv) {
@@ -229,7 +247,14 @@ export default class Fragment extends BaseSegment {
     return decryptdata;
   }
 
-  setElementaryStreamInfo (type: ElementaryStreamTypes, startPTS: number, endPTS: number, startDTS: number, endDTS: number, partial: boolean = false) {
+  setElementaryStreamInfo(
+    type: ElementaryStreamTypes,
+    startPTS: number,
+    endPTS: number,
+    startDTS: number,
+    endDTS: number,
+    partial: boolean = false
+  ) {
     const { elementaryStreams } = this;
     const info = elementaryStreams[type];
     if (!info) {
@@ -238,7 +263,7 @@ export default class Fragment extends BaseSegment {
         endPTS,
         startDTS,
         endDTS,
-        partial
+        partial,
       };
       return;
     }
@@ -249,7 +274,7 @@ export default class Fragment extends BaseSegment {
     info.endDTS = Math.max(info.endDTS, endDTS);
   }
 
-  clearElementaryStreamInfo () {
+  clearElementaryStreamInfo() {
     const { elementaryStreams } = this;
     elementaryStreams[ElementaryStreamTypes.AUDIO] = null;
     elementaryStreams[ElementaryStreamTypes.VIDEO] = null;
@@ -267,11 +292,19 @@ export class Part extends BaseSegment {
   public readonly index: number;
   public stats: LoadStats = new LoadStats();
 
-  constructor (partAttrs: AttrList, frag: Fragment, baseurl: string, index: number, previous?: Part) {
+  constructor(
+    partAttrs: AttrList,
+    frag: Fragment,
+    baseurl: string,
+    index: number,
+    previous?: Part
+  ) {
     super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');
     this.gap = partAttrs.bool('GAP');
-    this.independent = partAttrs.INDEPENDENT ? partAttrs.bool('INDEPENDENT') : true;
+    this.independent = partAttrs.INDEPENDENT
+      ? partAttrs.bool('INDEPENDENT')
+      : true;
     this.relurl = partAttrs.enumeratedString('URI') as string;
     this.fragment = frag;
     this.index = index;
@@ -284,16 +317,20 @@ export class Part extends BaseSegment {
     }
   }
 
-  get start (): number {
+  get start(): number {
     return this.fragment.start + this.fragOffset;
   }
 
-  get end (): number {
+  get end(): number {
     return this.start + this.duration;
   }
 
-  get loaded (): boolean {
+  get loaded(): boolean {
     const { elementaryStreams } = this;
-    return !!(elementaryStreams.audio || elementaryStreams.video || elementaryStreams.audiovideo);
+    return !!(
+      elementaryStreams.audio ||
+      elementaryStreams.video ||
+      elementaryStreams.audiovideo
+    );
   }
 }

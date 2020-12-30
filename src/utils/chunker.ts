@@ -4,11 +4,11 @@ import { sliceUint8 } from './typed-array';
 export default class Chunker {
   private chunkSize: number;
   public cache: Uint8Array | null = null;
-  constructor (chunkSize = Math.pow(2, 19)) {
+  constructor(chunkSize = Math.pow(2, 19)) {
     this.chunkSize = chunkSize;
   }
 
-  public push (data: Uint8Array) : Array<Uint8Array> {
+  public push(data: Uint8Array): Array<Uint8Array> {
     const { cache, chunkSize } = this;
     const result: Array<Uint8Array> = [];
 
@@ -28,7 +28,7 @@ export default class Chunker {
     if (temp.length > chunkSize) {
       let offset = 0;
       const len = temp.length;
-      while (offset < (len - chunkSize)) {
+      while (offset < len - chunkSize) {
         result.push(sliceUint8(temp, offset, offset + chunkSize));
         offset += chunkSize;
       }

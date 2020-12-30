@@ -2,7 +2,11 @@
  * MP4 demuxer
  */
 import { Demuxer, DemuxerResult, DemuxedTrack } from '../types/demuxer';
-import { findBox, segmentValidRange, appendUint8Array } from '../utils/mp4-tools';
+import {
+  findBox,
+  segmentValidRange,
+  appendUint8Array,
+} from '../utils/mp4-tools';
 import { dummyTrack } from './dummy-demuxed-track';
 import type { HlsEventEmitter } from '../events';
 import type { HlsConfig } from '../config';
@@ -12,25 +16,26 @@ class MP4Demuxer implements Demuxer {
   private remainderData: Uint8Array | null = null;
   private config: HlsConfig;
 
-  constructor (observer: HlsEventEmitter, config: HlsConfig) {
+  constructor(observer: HlsEventEmitter, config: HlsConfig) {
     this.config = config;
   }
 
-  resetTimeStamp () {
-  }
+  resetTimeStamp() {}
 
-  resetInitSegment () {
-  }
+  resetInitSegment() {}
 
-  resetContiguity (): void {
-  }
+  resetContiguity(): void {}
 
-  static probe (data) {
+  static probe(data) {
     // ensure we find a moof box in the first 16 kB
-    return findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, ['moof']).length > 0;
+    return (
+      findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, [
+        'moof',
+      ]).length > 0
+    );
   }
 
-  demux (data): DemuxerResult {
+  demux(data): DemuxerResult {
     // Load all data into the avc track. The CMAF remuxer will look for the data in the samples object; the rest of the fields do not matter
     let avcSamples = data;
     const avcTrack = dummyTrack();
@@ -52,11 +57,11 @@ class MP4Demuxer implements Demuxer {
       audioTrack: dummyTrack(),
       avcTrack,
       id3Track: dummyTrack(),
-      textTrack: dummyTrack()
+      textTrack: dummyTrack(),
     };
   }
 
-  flush () {
+  flush() {
     const avcTrack: DemuxedTrack = dummyTrack();
     avcTrack.samples = this.remainderData;
     this.remainderData = null;
@@ -65,15 +70,21 @@ class MP4Demuxer implements Demuxer {
       audioTrack: dummyTrack(),
       avcTrack,
       id3Track: dummyTrack(),
-      textTrack: dummyTrack()
+      textTrack: dummyTrack(),
     };
   }
 
-  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
-    return Promise.reject(new Error('The MP4 demuxer does not support SAMPLE-AES decryption'));
+  demuxSampleAes(
+    data: Uint8Array,
+    decryptData: Uint8Array,
+    timeOffset: number
+  ): Promise<DemuxerResult> {
+    return Promise.reject(
+      new Error('The MP4 demuxer does not support SAMPLE-AES decryption')
+    );
   }
 
-  destroy () {}
+  destroy() {}
 }
 
 export default MP4Demuxer;

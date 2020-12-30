@@ -1,10 +1,17 @@
 import VTTParser from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
 import { toMpegTsClockFromTimescale } from './timescale-conversion';
+import { PTSNormalize } from '../remux/mp4-remuxer';
 import type { VTTCCs } from '../types/vtt';
 
+const LINEBREAKS = /\r\n|\n\r|\n|\r/g;
+
 // String.prototype.startsWith is not supported in IE11
-const startsWith = function (inputString: string, searchString: string, position: number = 0) {
+const startsWith = function (
+  inputString: string,
+  searchString: string,
+  position: number = 0
+) {
   return inputString.substr(position, searchString.length) === searchString;
 };
 
@@ -12,9 +19,17 @@ const cueString2millis = function (timeString: string) {
   let ts = parseInt(timeString.substr(-3));
   const secs = parseInt(timeString.substr(-6, 2));
   const mins = parseInt(timeString.substr(-9, 2));
-  const hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
+  const hours =
+    timeString.length > 9
+      ? parseInt(timeString.substr(0, timeString.indexOf(':')))
+      : 0;
 
-  if (!Number.isFinite(ts) || !Number.isFinite(secs) || !Number.isFinite(mins) || !Number.isFinite(hours)) {
+  if (
+    !Number.isFinite(ts) ||
+    !Number.isFinite(secs) ||
+    !Number.isFinite(mins) ||
+    !Number.isFinite(hours)
+  ) {
     throw Error(`Malformed X-TIMESTAMP-MAP: Local:${timeString}`);
   }
 
@@ -60,60 +75,74 @@ const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
   vttCCs.presentationOffset = presentationTime;
 };
 
-// TODO(typescript-vttparser): When VTT parser is typed, errorCallback needs to get the proper typing here.
-export function parseWebVTT (
-  vttByteArray: ArrayBuffer, initPTS: number, timescale: number, vttCCs: VTTCCs,
-  cc: number, callBack: (cues: VTTCue[]) => void, errorCallBack: (arg0: any) => void
+export function parseWebVTT(
+  vttByteArray: ArrayBuffer,
+  initPTS: number,
+  timescale: number,
+  vttCCs: VTTCCs,
+  cc: number,
+  timeOffset: number,
+  callBack: (cues: VTTCue[]) => void,
+  errorCallBack: (error: Error) => void
 ) {
+  const parser = new VTTParser();
   // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
-  const re = /\r\n|\n\r|\n|\r/g;
   // Uint8Array.prototype.reduce is not implemented in IE11
-  const vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
-
-  let syncPTS = toMpegTsClockFromTimescale(initPTS, timescale);
-  let cueTime = '00:00.000';
-  let mpegTs = 0;
-  let localTime = 0;
-  let presentationTime = 0;
+  const vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray))
+    .trim()
+    .replace(LINEBREAKS, '\n')
+    .split('\n');
   const cues: VTTCue[] = [];
-  let parsingError;
+  const initPTS90Hz = toMpegTsClockFromTimescale(initPTS, timescale);
+  let cueTime = '00:00.000';
+  let timestampMapMPEGTS = 0;
+  let timestampMapLOCAL = 0;
+  let parsingError: Error;
   let inHeader = true;
   let timestampMap = false;
-  // let VTTCue = VTTCue || window.TextTrackCue;
-
-  // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
-  const parser = new VTTParser();
 
   parser.oncue = function (cue: VTTCue) {
     // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
     const currCC = vttCCs[cc];
     let cueOffset = vttCCs.ccOffset;
 
+    // Calculate subtitle PTS offset
+    const webVttMpegTsMapOffset = (timestampMapMPEGTS - initPTS90Hz) / 90000;
+
     // Update offsets for new discontinuities
     if (currCC?.new) {
-      if (localTime !== undefined) {
+      if (timestampMapLOCAL !== undefined) {
         // When local time is provided, offset = discontinuity start time - local time
         cueOffset = vttCCs.ccOffset = currCC.start;
       } else {
-        calculateOffset(vttCCs, cc, presentationTime);
+        calculateOffset(vttCCs, cc, webVttMpegTsMapOffset);
       }
     }
 
-    if (presentationTime) {
+    if (webVttMpegTsMapOffset) {
       // If we have MPEGTS, offset = presentation time + discontinuity offset
-      cueOffset = presentationTime - vttCCs.presentationOffset;
+      cueOffset = webVttMpegTsMapOffset - vttCCs.presentationOffset;
     }
 
     if (timestampMap) {
-      cue.startTime += cueOffset - localTime;
-      cue.endTime += cueOffset - localTime;
+      const duration = cue.endTime - cue.startTime;
+      const startTime =
+        PTSNormalize(
+          (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
+          timeOffset * 90000
+        ) / 90000;
+      cue.startTime = startTime;
+      cue.endTime = startTime + duration;
     }
 
     // If the cue was not assigned an id from the VTT file (line above the content),
     // then create a unique hash id for a cue based on start/end times.
     // This helps timeline-controller to avoid showing repeated captions.
     if (!cue.id) {
-      cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);
+      cue.id =
+        hash(cue.startTime.toString()) +
+        hash(cue.endTime.toString()) +
+        hash(cue.text);
     }
 
     // Fix encoding of special characters
@@ -123,8 +152,8 @@ export function parseWebVTT (
     }
   };
 
-  parser.onparsingerror = function (e) {
-    parsingError = e;
+  parser.onparsingerror = function (error: Error) {
+    parsingError = error;
   };
 
   parser.onflush = function () {
@@ -136,7 +165,7 @@ export function parseWebVTT (
   };
 
   // Go through contents line by line.
-  vttLines.forEach(line => {
+  vttLines.forEach((line) => {
     if (inHeader) {
       // Look for X-TIMESTAMP-MAP in header.
       if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
@@ -144,27 +173,22 @@ export function parseWebVTT (
         inHeader = false;
         timestampMap = true;
         // Extract LOCAL and MPEGTS.
-        line.substr(16).split(',').forEach(timestamp => {
-          if (startsWith(timestamp, 'LOCAL:')) {
-            cueTime = timestamp.substr(6);
-          } else if (startsWith(timestamp, 'MPEGTS:')) {
-            mpegTs = parseInt(timestamp.substr(7));
-          }
-        });
+        line
+          .substr(16)
+          .split(',')
+          .forEach((timestamp) => {
+            if (startsWith(timestamp, 'LOCAL:')) {
+              cueTime = timestamp.substr(6);
+            } else if (startsWith(timestamp, 'MPEGTS:')) {
+              timestampMapMPEGTS = parseInt(timestamp.substr(7));
+            }
+          });
         try {
-          // Calculate subtitle offset in milliseconds.
-          if (Math.abs(syncPTS - ((vttCCs[cc].start * 90000) || 0)) > 4294967296) {
-            syncPTS += 8589934592;
-          }
-          // Adjust MPEGTS by sync PTS.
-          mpegTs -= syncPTS;
           // Convert cue time to seconds
-          localTime = cueString2millis(cueTime) / 1000;
-          // Convert MPEGTS to seconds from 90kHz.
-          presentationTime = mpegTs / 90000;
-        } catch (e) {
+          timestampMapLOCAL = cueString2millis(cueTime) / 1000;
+        } catch (error) {
           timestampMap = false;
-          parsingError = e;
+          parsingError = error;
         }
         // Return without parsing X-TIMESTAMP-MAP line.
         return;

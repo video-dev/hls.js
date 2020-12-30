@@ -6,20 +6,20 @@ import type { SourceBufferName } from './buffer';
 import type { FragLoadedData } from './events';
 
 export interface FragmentEntity {
-  body: Fragment,
-  part: Part | null
-  loaded: FragLoadedData | null,
-  backtrack: FragLoadedData | null,
-  buffered: boolean,
-  range: { [key in SourceBufferName]: FragmentBufferedRange }
+  body: Fragment;
+  part: Part | null;
+  loaded: FragLoadedData | null;
+  backtrack: FragLoadedData | null;
+  buffered: boolean;
+  range: { [key in SourceBufferName]: FragmentBufferedRange };
 }
 
 export interface FragmentTimeRange {
-  startPTS: number
-  endPTS: number
+  startPTS: number;
+  endPTS: number;
 }
 
 export interface FragmentBufferedRange {
-  time: Array<FragmentTimeRange>
-  partial: boolean
+  time: Array<FragmentTimeRange>;
+  partial: boolean;
 }

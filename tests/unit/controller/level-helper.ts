@@ -3,7 +3,7 @@ import {
   computeReloadInterval,
   mapFragmentIntersection,
   mapPartIntersection,
-  mergeDetails
+  mergeDetails,
 } from '../../../src/controller/level-helper';
 import LevelDetails from '../../../src/loader/level-details';
 import Fragment, { Part } from '../../../src/loader/fragment';
@@ -100,7 +100,7 @@ describe('LevelHelper Tests', function () {
         new Part(attr, oldFrags[1], '', 2),
         new Part(attr, oldFrags[2], '', 0),
         new Part(attr, oldFrags[2], '', 1),
-        new Part(attr, oldFrags[2], '', 2)
+        new Part(attr, oldFrags[2], '', 2),
       ];
       const newParts: Part[] = [
         new Part(attr, newFrags[1], '', 0),
@@ -108,14 +108,23 @@ describe('LevelHelper Tests', function () {
         new Part(attr, newFrags[1], '', 2),
         new Part(attr, newFrags[2], '', 0),
         new Part(attr, newFrags[2], '', 1),
-        new Part(attr, newFrags[2], '', 2)
+        new Part(attr, newFrags[2], '', 2),
       ];
       const intersectionFn = sinon.spy();
       mapPartIntersection(oldParts, newParts, intersectionFn);
       expect(intersectionFn).to.have.been.calledThrice;
-      expect(intersectionFn.firstCall).to.have.been.calledWith(oldParts[3], newParts[0]);
-      expect(intersectionFn.secondCall).to.have.been.calledWith(oldParts[4], newParts[1]);
-      expect(intersectionFn.thirdCall).to.have.been.calledWith(oldParts[5], newParts[2]);
+      expect(intersectionFn.firstCall).to.have.been.calledWith(
+        oldParts[3],
+        newParts[0]
+      );
+      expect(intersectionFn.secondCall).to.have.been.calledWith(
+        oldParts[4],
+        newParts[1]
+      );
+      expect(intersectionFn.thirdCall).to.have.been.calledWith(
+        oldParts[5],
+        newParts[2]
+      );
     });
   });
 
@@ -125,7 +134,7 @@ describe('LevelHelper Tests', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]); // start times: 0, 5, 10
       const newPlaylist = generatePlaylist([3, 4, 5]);
       adjustSliding(oldPlaylist, newPlaylist);
-      const actual = newPlaylist.fragments.map(f => f.start);
+      const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([10, 15, 20]);
     });
 
@@ -133,7 +142,7 @@ describe('LevelHelper Tests', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
       adjustSliding(oldPlaylist, newPlaylist);
-      const actual = newPlaylist.fragments.map(f => f.start);
+      const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
 
@@ -141,7 +150,7 @@ describe('LevelHelper Tests', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([4, 5, 6]);
       adjustSliding(oldPlaylist, newPlaylist);
-      const actual = newPlaylist.fragments.map(f => f.start);
+      const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
   });
@@ -151,7 +160,7 @@ describe('LevelHelper Tests', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3, 4]); // start times: 0, 5, 10, 15
       const newPlaylist = generatePlaylist([2, 3, 4, 5]);
       mergeDetails(oldPlaylist, newPlaylist);
-      const actual = newPlaylist.fragments.map(f => f.start);
+      const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([5, 10, 15, 20]);
     });
 
@@ -159,18 +168,18 @@ describe('LevelHelper Tests', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
       mergeDetails(oldPlaylist, newPlaylist);
-      const actual = newPlaylist.fragments.map(f => f.start);
+      const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
 
     it('does not extrapolate if the new playlist starts before the old', function () {
       const oldPlaylist = generatePlaylist([3, 4, 5]);
-      oldPlaylist.fragments.forEach(f => {
+      oldPlaylist.fragments.forEach((f) => {
         f.start += 10;
       });
       const newPlaylist = generatePlaylist([1, 2, 3]);
       mergeDetails(oldPlaylist, newPlaylist);
-      const actual = newPlaylist.fragments.map(f => f.start);
+      const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([0, 5, 10]);
     });
 
@@ -186,9 +195,12 @@ describe('LevelHelper Tests', function () {
       expect(newPlaylist.deltaUpdateFailed).to.equal(false);
       expect(newPlaylist.fragments.length).to.equal(merged.fragments.length);
       newPlaylist.fragments.forEach((frag, i) => {
-        expect(frag, `Fragment sn: ${frag.sn} does not match expected:
+        expect(
+          frag,
+          `Fragment sn: ${frag.sn} does not match expected:
 actual: ${JSON.stringify(frag)}
-expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[i]);
+expect: ${JSON.stringify(merged.fragments[i])}`
+        ).to.deep.equal(merged.fragments[i]);
       });
     });
 
@@ -205,9 +217,12 @@ expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[
       expect(newPlaylist.deltaUpdateFailed).to.equal(true);
       expect(newPlaylist.fragments.length).to.equal(3);
       newPlaylist.fragments.forEach((frag, i) => {
-        expect(frag, `Fragment sn: ${frag.sn} does not match expected:
+        expect(
+          frag,
+          `Fragment sn: ${frag.sn} does not match expected:
 actual: ${JSON.stringify(frag)}
-expect: ${JSON.stringify(merged.fragments[i])}`).to.deep.equal(merged.fragments[i]);
+expect: ${JSON.stringify(merged.fragments[i])}`
+        ).to.deep.equal(merged.fragments[i]);
       });
     });
   });

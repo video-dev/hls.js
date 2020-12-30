@@ -7,14 +7,11 @@ import { SubtitleStreamController } from '../../../src/controller/subtitle-strea
 
 const mediaMock = {
   currentTime: 0,
-  addEventListener () {},
-  removeEventListener () {}
+  addEventListener() {},
+  removeEventListener() {},
 };
 
-const tracksMock = [
-  { id: 0, details: { url: '' } },
-  { id: 1 }
-];
+const tracksMock = [{ id: 0, details: { url: '' } }, { id: 1 }];
 
 describe('SubtitleStreamController', function () {
   let hls;
@@ -24,19 +21,26 @@ describe('SubtitleStreamController', function () {
   beforeEach(function () {
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
-    subtitleStreamController = new SubtitleStreamController(hls, fragmentTracker);
+    subtitleStreamController = new SubtitleStreamController(
+      hls,
+      fragmentTracker
+    );
 
-    subtitleStreamController.onMediaAttached(Events.MEDIA_ATTACHED, { media: mediaMock });
+    subtitleStreamController.onMediaAttached(Events.MEDIA_ATTACHED, {
+      media: mediaMock,
+    });
   });
 
   afterEach(function () {
-    subtitleStreamController.onMediaDetaching(Events.MEDIA_DETACHING, { media: mediaMock });
+    subtitleStreamController.onMediaDetaching(Events.MEDIA_DETACHING, {
+      media: mediaMock,
+    });
   });
 
   describe('onSubtitleTracksUpdate', function () {
     beforeEach(function () {
       hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, {
-        subtitleTracks: tracksMock
+        subtitleTracks: tracksMock,
       });
     });
 
@@ -54,7 +58,7 @@ describe('SubtitleStreamController', function () {
       subtitleStreamController.setInterval = sinon.spy();
 
       hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
-        id: 0
+        id: 0,
       });
     });
 
@@ -65,14 +69,14 @@ describe('SubtitleStreamController', function () {
     it('should call clearInterval if no tracks present', function () {
       subtitleStreamController.levels = [];
       hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
-        id: 0
+        id: 0,
       });
       expect(subtitleStreamController.clearInterval).to.have.been.calledOnce;
     });
 
     it('should call clearInterval if new track id === -1', function () {
       hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
-        id: -1
+        id: -1,
       });
       expect(subtitleStreamController.clearInterval).to.have.been.calledOnce;
     });
@@ -90,7 +94,7 @@ describe('SubtitleStreamController', function () {
       subtitleStreamController.currentTrackId = 1;
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 1,
-        details: details
+        details: details,
       });
       expect(subtitleStreamController.levels[1].details).to.equal(details);
       expect(subtitleStreamController.setInterval).to.have.been.calledOnce;
@@ -100,7 +104,8 @@ describe('SubtitleStreamController', function () {
       const details = { foo: 'bar' };
       subtitleStreamController.currentTrackId = 0;
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
-        id: 1, details
+        id: 1,
+        details,
       });
       expect(subtitleStreamController.levels[0].details).to.not.equal(details);
       expect(subtitleStreamController.setInterval).to.not.have.been.called;
@@ -111,7 +116,8 @@ describe('SubtitleStreamController', function () {
       subtitleStreamController.trackId = 0;
       const details = { foo: 'bar' };
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
-        id: 0, details
+        id: 0,
+        details,
       });
       expect(subtitleStreamController.levels[0]).to.not.exist;
       expect(subtitleStreamController.setInterval).to.not.have.been.called;

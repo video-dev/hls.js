@@ -14,16 +14,16 @@ const mergeConfig = merge(webpackConfig, {
           {
             loader: 'istanbul-instrumenter-loader',
             options: {
-              esModules: true
-            }
-          }
-        ]
-      }
-    ]
+              esModules: true,
+            },
+          },
+        ],
+      },
+    ],
   },
   node: {
-    global: true
-  }
+    global: true,
+  },
 });
 
 module.exports = function (config) {
@@ -34,10 +34,12 @@ module.exports = function (config) {
 
     // list of files / patterns to load in the browser
     // https://github.com/webpack-contrib/karma-webpack#alternative-usage
-    files: [{
-      pattern: 'tests/index.js',
-      watched: false
-    }],
+    files: [
+      {
+        pattern: 'tests/index.js',
+        watched: false,
+      },
+    ],
 
     // list of files to exclude
     exclude: [],
@@ -46,7 +48,7 @@ module.exports = function (config) {
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     // node_modules must not be webpacked or else Karma will fail to load frameworks
     preprocessors: {
-      'tests/index.js': ['webpack', 'sourcemap']
+      'tests/index.js': ['webpack', 'sourcemap'],
     },
 
     // test results reporter to use
@@ -56,7 +58,7 @@ module.exports = function (config) {
 
     coverageIstanbulReporter: {
       reports: ['lcov', 'text-summary'],
-      fixWebpackSourcePaths: true
+      fixWebpackSourcePaths: true,
     },
 
     webpack: mergeConfig,
@@ -84,6 +86,6 @@ module.exports = function (config) {
 
     // Concurrency level
     // how many browser should be started simultaneous
-    concurrency: Infinity
+    concurrency: Infinity,
   });
 };

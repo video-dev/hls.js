@@ -21,7 +21,12 @@ describe('TransmuxerInterface tests', function () {
     const hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
-    const transmuxerInterface = new TransmuxerInterface(hls, id, onTransmuxComplete, onFlush) as any;
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      id,
+      onTransmuxComplete,
+      onFlush
+    ) as any;
     expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
     expect(transmuxerInterface.observer.emit, 'emit exists').to.exist;
@@ -34,7 +39,12 @@ describe('TransmuxerInterface tests', function () {
     const hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
-    const transmuxerInterface = new TransmuxerInterface(hls, id, onTransmuxComplete, onFlush) as any;
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      id,
+      onTransmuxComplete,
+      onFlush
+    ) as any;
     expect(transmuxerInterface.hls).to.equal(hls, 'Hls object created');
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
     expect(transmuxerInterface.observer.emit, 'emit exists').to.exist;
@@ -47,7 +57,12 @@ describe('TransmuxerInterface tests', function () {
     const hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
-    const transmuxerInterface = new TransmuxerInterface(hls, id, onTransmuxComplete, onFlush);
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      id,
+      onTransmuxComplete,
+      onFlush
+    );
     const transmuxerInterfacePrivates = transmuxerInterface as any;
     transmuxerInterface.destroy();
     expect(transmuxerInterfacePrivates.observer, 'observer').to.not.exist;
@@ -60,7 +75,12 @@ describe('TransmuxerInterface tests', function () {
     const hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
-    const transmuxerInterface = new TransmuxerInterface(hls, id, onTransmuxComplete, onFlush);
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      id,
+      onTransmuxComplete,
+      onFlush
+    );
     const transmuxerInterfacePrivates = transmuxerInterface as any;
     transmuxerInterface.destroy();
     expect(transmuxerInterfacePrivates.observer, 'observer').to.not.exist;
@@ -73,7 +93,12 @@ describe('TransmuxerInterface tests', function () {
     const hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
-    const transmuxerInterface = new TransmuxerInterface(hls, id, onTransmuxComplete, onFlush);
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      id,
+      onTransmuxComplete,
+      onFlush
+    );
     const transmuxerInterfacePrivates = transmuxerInterface as any;
     const stub = sinon.stub(transmuxerInterfacePrivates.worker, 'postMessage');
     const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
@@ -91,15 +116,30 @@ describe('TransmuxerInterface tests', function () {
     const duration = 0;
     const accurateTimeOffset = true;
     let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn, 0);
-    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, currentFrag, part, duration, accurateTimeOffset, chunkMeta);
+    let state = new TransmuxState(false, true, true, false, 0);
+    transmuxerInterface.push(
+      data,
+      initSegmentData,
+      audioCodec,
+      videoCodec,
+      currentFrag,
+      part,
+      duration,
+      accurateTimeOffset,
+      chunkMeta
+    );
 
     expect(stub).to.have.been.calledOnce;
     const firstCall = stub.args[0][0];
-    expect(firstCall, 'Demux call 1' + JSON.stringify(firstCall, null, 2)).to.deep.equal({
+    expect(
+      firstCall,
+      'Demux call 1: ' + JSON.stringify(firstCall, null, 2)
+    ).to.deep.equal({
       cmd: 'demux',
       data,
       decryptdata: currentFrag.decryptdata,
-      chunkMeta
+      chunkMeta,
+      state,
     });
 
     const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
@@ -109,15 +149,30 @@ describe('TransmuxerInterface tests', function () {
     newFrag.start = 1000;
     newFrag.startPTS = 1000;
     chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
-    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, currentFrag, part, duration, accurateTimeOffset, chunkMeta);
+    state = new TransmuxState(false, true, true, false, 1000);
+    transmuxerInterface.push(
+      data,
+      initSegmentData,
+      audioCodec,
+      videoCodec,
+      newFrag,
+      part,
+      duration,
+      accurateTimeOffset,
+      chunkMeta
+    );
 
     expect(stub).to.have.been.calledTwice;
     const secondCall = stub.args[1][0];
-    expect(secondCall, 'Demux call 2' + JSON.stringify(secondCall, null, 2)).to.deep.equal({
+    expect(
+      secondCall,
+      'Demux call 2: ' + JSON.stringify(secondCall, null, 2)
+    ).to.deep.equal({
       cmd: 'demux',
       data,
       decryptdata: newFrag.decryptdata,
-      chunkMeta
+      chunkMeta,
+      state,
     });
   });
 
@@ -126,7 +181,12 @@ describe('TransmuxerInterface tests', function () {
     const hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
-    const transmuxerInterface = new TransmuxerInterface(hls, id, onTransmuxComplete, onFlush);
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      id,
+      onTransmuxComplete,
+      onFlush
+    );
     const transmuxerInterfacePrivates = transmuxerInterface as any;
 
     const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
@@ -151,18 +211,36 @@ describe('TransmuxerInterface tests', function () {
     const accurateTimeOffset = true;
     const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
 
-    const configureStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'configure');
+    const configureStub = sinon.stub(
+      transmuxerInterfacePrivates.transmuxer,
+      'configure'
+    );
     const pushStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'push');
     pushStub.returns(Promise.reject(new Error('Stubbed transmux result')));
-    transmuxerInterface.push(data, initSegmentData, audioCodec, videoCodec, newFrag, part, duration, accurateTimeOffset, chunkMeta);
+    transmuxerInterface.push(
+      data,
+      initSegmentData,
+      audioCodec,
+      videoCodec,
+      newFrag,
+      part,
+      duration,
+      accurateTimeOffset,
+      chunkMeta
+    );
 
     const tConfig = new TransmuxConfig('', '', initSegmentData, 0);
     const state = new TransmuxState(true, false, true, true, 1000);
     expect(configureStub).to.have.been.calledOnce;
-    expect(configureStub).to.have.been.calledWith(tConfig, state);
+    expect(configureStub).to.have.been.calledWith(tConfig);
 
     expect(pushStub).to.have.been.calledOnce;
-    expect(pushStub).to.have.been.calledWith(data, newFrag.decryptdata, chunkMeta);
+    expect(pushStub).to.have.been.calledWith(
+      data,
+      newFrag.decryptdata,
+      chunkMeta,
+      state
+    );
   });
 
   it('sends worker generic message', function () {
@@ -176,15 +254,20 @@ describe('TransmuxerInterface tests', function () {
       expect(evt.data.data.id).to.equal('main');
       return true;
     });
-    const transmuxerInterface = new TransmuxerInterface(hls, PlaylistLevelType.MAIN, onTransmuxComplete, onFlush);
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      PlaylistLevelType.MAIN,
+      onTransmuxComplete,
+      onFlush
+    );
     const transmuxerInterfacePrivates = transmuxerInterface as any;
     transmuxerInterfacePrivates.frag = {};
 
     const evt = {
       data: {
         event: {},
-        data: {}
-      }
+        data: {},
+      },
     } as any;
 
     transmuxerInterfacePrivates.onWorkerMessage(evt);
@@ -195,13 +278,18 @@ describe('TransmuxerInterface tests', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
     const hls = new Hls(config);
     sinon.stub(hls, 'trigger');
-    const transmuxerInterface = new TransmuxerInterface(hls, PlaylistLevelType.MAIN, onTransmuxComplete, onFlush);
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      PlaylistLevelType.MAIN,
+      onTransmuxComplete,
+      onFlush
+    );
     const transmuxerInterfacePrivates = transmuxerInterface as any;
     const evt = {
       data: {
         event: 'init',
-        data: {}
-      }
+        data: {},
+      },
     };
 
     const spy = sinon.spy(self.URL, 'revokeObjectURL');

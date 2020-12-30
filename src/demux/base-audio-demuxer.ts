@@ -1,5 +1,11 @@
 import * as ID3 from '../demux/id3';
-import type { DemuxerResult, Demuxer, DemuxedTrack, DemuxedAudioTrack, AppendedAudioFrame } from '../types/demuxer';
+import type {
+  DemuxerResult,
+  Demuxer,
+  DemuxedTrack,
+  DemuxedAudioTrack,
+  AppendedAudioFrame,
+} from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
@@ -11,7 +17,7 @@ class BaseAudioDemuxer implements Demuxer {
   protected cachedData: Uint8Array | null = null;
   protected initPTS: number | null = null;
 
-  resetInitSegment (audioCodec: string, videoCodec: string, duration: number) {
+  resetInitSegment(audioCodec: string, videoCodec: string, duration: number) {
     this._id3Track = {
       type: 'id3',
       id: 0,
@@ -19,24 +25,26 @@ class BaseAudioDemuxer implements Demuxer {
       inputTimeScale: 90000,
       sequenceNumber: 0,
       samples: [],
-      dropped: 0
+      dropped: 0,
     };
   }
 
-  resetTimeStamp () {
-  }
+  resetTimeStamp() {}
 
-  resetContiguity (): void {
-  }
+  resetContiguity(): void {}
 
-  canParse (data: Uint8Array, offset: number): boolean {
+  canParse(data: Uint8Array, offset: number): boolean {
     return false;
   }
 
-  appendFrame (track: DemuxedAudioTrack, data: Uint8Array, offset: number): AppendedAudioFrame | void {}
+  appendFrame(
+    track: DemuxedAudioTrack,
+    data: Uint8Array,
+    offset: number
+  ): AppendedAudioFrame | void {}
 
   // feed incoming data to the front of the parsing pipeline
-  demux (data: Uint8Array, timeOffset: number): DemuxerResult {
+  demux(data: Uint8Array, timeOffset: number): DemuxerResult {
     if (this.cachedData) {
       data = appendUint8Array(this.cachedData, data);
       this.cachedData = null;
@@ -57,7 +65,11 @@ class BaseAudioDemuxer implements Demuxer {
 
     // more expressive than alternative: id3Data?.length
     if (id3Data && id3Data.length > 0) {
-      id3Track.samples.push({ pts: this.initPTS, dts: this.initPTS, data: id3Data });
+      id3Track.samples.push({
+        pts: this.initPTS,
+        dts: this.initPTS,
+        data: id3Data,
+      });
     }
 
     pts = this.initPTS;
@@ -96,15 +108,21 @@ class BaseAudioDemuxer implements Demuxer {
       audioTrack: track,
       avcTrack: dummyTrack(),
       id3Track,
-      textTrack: dummyTrack()
+      textTrack: dummyTrack(),
     };
   }
 
-  demuxSampleAes (data: Uint8Array, decryptData: Uint8Array, timeOffset: number): Promise<DemuxerResult> {
-    return Promise.reject(new Error(`[${this}] This demuxer does not support Sample-AES decryption`));
+  demuxSampleAes(
+    data: Uint8Array,
+    decryptData: Uint8Array,
+    timeOffset: number
+  ): Promise<DemuxerResult> {
+    return Promise.reject(
+      new Error(`[${this}] This demuxer does not support Sample-AES decryption`)
+    );
   }
 
-  flush (timeOffset: number): DemuxerResult {
+  flush(timeOffset: number): DemuxerResult {
     // Parse cache in case of remaining frames.
     if (this.cachedData) {
       this.demux(this.cachedData, 0);
@@ -118,11 +136,11 @@ class BaseAudioDemuxer implements Demuxer {
       audioTrack: this._audioTrack,
       avcTrack: dummyTrack(),
       id3Track: this._id3Track,
-      textTrack: dummyTrack()
+      textTrack: dummyTrack(),
     };
   }
 
-  destroy () {}
+  destroy() {}
 }
 
 /**
@@ -131,7 +149,12 @@ class BaseAudioDemuxer implements Demuxer {
  *    use timestamp unless it is undefined, NaN or Infinity
  * </p>
  */
-export const initPTSFn = (timestamp: number | undefined, timeOffset: number): number => {
-  return Number.isFinite(timestamp as number) ? timestamp! * 90 : timeOffset * 90000;
+export const initPTSFn = (
+  timestamp: number | undefined,
+  timeOffset: number
+): number => {
+  return Number.isFinite(timestamp as number)
+    ? timestamp! * 90
+    : timeOffset * 90000;
 };
 export default BaseAudioDemuxer;

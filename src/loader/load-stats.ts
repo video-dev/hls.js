@@ -1,4 +1,8 @@
-import type { HlsPerformanceTiming, HlsProgressivePerformanceTiming, LoaderStats } from '../types/loader';
+import type {
+  HlsPerformanceTiming,
+  HlsProgressivePerformanceTiming,
+  LoaderStats,
+} from '../types/loader';
 
 export default class LoadStats implements LoaderStats {
   aborted: boolean = false;

@@ -8,7 +8,11 @@ import AttrList from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import type { CodecType } from '../utils/codecs';
 import { isCodecType } from '../utils/codecs';
-import type { MediaPlaylist, AudioGroup, MediaPlaylistType } from '../types/media-playlist';
+import type {
+  MediaPlaylist,
+  AudioGroup,
+  MediaPlaylistType,
+} from '../types/media-playlist';
 import type { PlaylistLevelType } from '../types/loader';
 import type { LevelAttributes, LevelParsed } from '../types/level';
 
@@ -18,42 +22,50 @@ type M3U8ParserFragments = Array<Fragment | null>;
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)|#EXT-X-SESSION-DATA:([^\n\r]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
-const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
-  /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
-  /(?!#) *(\S[\S ]*)/.source, // segment URI, group 3 => the URI (note newline is not eaten)
-  /#EXT-X-BYTERANGE:*(.+)/.source, // next segment's byterange, group 4 => range spec (x@y)
-  /#EXT-X-PROGRAM-DATE-TIME:(.+)/.source, // next segment's program date/time group 5 => the datetime spec
-  /#.*/.source // All other non-segment oriented tags will match with all groups empty
-].join('|'), 'g');
+const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
+  [
+    /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
+    /(?!#) *(\S[\S ]*)/.source, // segment URI, group 3 => the URI (note newline is not eaten)
+    /#EXT-X-BYTERANGE:*(.+)/.source, // next segment's byterange, group 4 => range spec (x@y)
+    /#EXT-X-PROGRAM-DATE-TIME:(.+)/.source, // next segment's program date/time group 5 => the datetime spec
+    /#.*/.source, // All other non-segment oriented tags will match with all groups empty
+  ].join('|'),
+  'g'
+);
 
-const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp([
-  /#(EXTM3U)/.source,
-  /#EXT-X-(PLAYLIST-TYPE):(.+)/.source,
-  /#EXT-X-(MEDIA-SEQUENCE): *(\d+)/.source,
-  /#EXT-X-(SKIP):(.+)/.source,
-  /#EXT-X-(TARGETDURATION): *(\d+)/.source,
-  /#EXT-X-(KEY):(.+)/.source,
-  /#EXT-X-(START):(.+)/.source,
-  /#EXT-X-(ENDLIST)/.source,
-  /#EXT-X-(DISCONTINUITY-SEQ)UENCE: *(\d+)/.source,
-  /#EXT-X-(DIS)CONTINUITY/.source,
-  /#EXT-X-(VERSION):(\d+)/.source,
-  /#EXT-X-(MAP):(.+)/.source,
-  /#EXT-X-(SERVER-CONTROL):(.+)/.source,
-  /#EXT-X-(PART-INF):(.+)/.source,
-  /#EXT-X-(GAP)/.source,
-  /#EXT-X-(BITRATE):\s*(\d+)/.source,
-  /#EXT-X-(PART):(.+)/.source,
-  /#EXT-X-(PRELOAD-HINT):(.+)/.source,
-  /#EXT-X-(RENDITION-REPORT):(.+)/.source,
-  /(#)([^:]*):(.*)/.source,
-  /(#)(.*)(?:.*)\r?\n?/.source
-].join('|'));
+const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
+  [
+    /#(EXTM3U)/.source,
+    /#EXT-X-(PLAYLIST-TYPE):(.+)/.source,
+    /#EXT-X-(MEDIA-SEQUENCE): *(\d+)/.source,
+    /#EXT-X-(SKIP):(.+)/.source,
+    /#EXT-X-(TARGETDURATION): *(\d+)/.source,
+    /#EXT-X-(KEY):(.+)/.source,
+    /#EXT-X-(START):(.+)/.source,
+    /#EXT-X-(ENDLIST)/.source,
+    /#EXT-X-(DISCONTINUITY-SEQ)UENCE: *(\d+)/.source,
+    /#EXT-X-(DIS)CONTINUITY/.source,
+    /#EXT-X-(VERSION):(\d+)/.source,
+    /#EXT-X-(MAP):(.+)/.source,
+    /#EXT-X-(SERVER-CONTROL):(.+)/.source,
+    /#EXT-X-(PART-INF):(.+)/.source,
+    /#EXT-X-(GAP)/.source,
+    /#EXT-X-(BITRATE):\s*(\d+)/.source,
+    /#EXT-X-(PART):(.+)/.source,
+    /#EXT-X-(PRELOAD-HINT):(.+)/.source,
+    /#EXT-X-(RENDITION-REPORT):(.+)/.source,
+    /(#)([^:]*):(.*)/.source,
+    /(#)(.*)(?:.*)\r?\n?/.source,
+  ].join('|')
+);
 
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
 export default class M3U8Parser {
-  static findGroup (groups: Array<AudioGroup>, mediaGroupId: string): AudioGroup | undefined {
+  static findGroup(
+    groups: Array<AudioGroup>,
+    mediaGroupId: string
+  ): AudioGroup | undefined {
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
       if (group.id === mediaGroupId) {
@@ -62,7 +74,7 @@ export default class M3U8Parser {
     }
   }
 
-  static convertAVC1ToAVCOTI (codec) {
+  static convertAVC1ToAVCOTI(codec) {
     const avcdata = codec.split('.');
     let result;
     if (avcdata.length > 2) {
@@ -75,11 +87,11 @@ export default class M3U8Parser {
     return result;
   }
 
-  static resolve (url, baseUrl) {
+  static resolve(url, baseUrl) {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
-  static parseMasterPlaylist (string: string, baseurl: string) {
+  static parseMasterPlaylist(string: string, baseurl: string) {
     const levels: Array<LevelParsed> = [];
     const sessionData: Record<string, AttrList> = {};
     let hasSessionData = false;
@@ -92,9 +104,11 @@ export default class M3U8Parser {
         const attrs = new AttrList(result[1]);
         const level: LevelParsed = {
           attrs,
-          bitrate: attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH'),
+          bitrate:
+            attrs.decimalInteger('AVERAGE-BANDWIDTH') ||
+            attrs.decimalInteger('BANDWIDTH'),
           name: attrs.NAME,
-          url: M3U8Parser.resolve(result[2], baseurl)
+          url: M3U8Parser.resolve(result[2], baseurl),
         };
 
         const resolution = attrs.decimalResolution('RESOLUTION');
@@ -121,11 +135,16 @@ export default class M3U8Parser {
     }
     return {
       levels,
-      sessionData: hasSessionData ? sessionData : null
+      sessionData: hasSessionData ? sessionData : null,
     };
   }
 
-  static parseMasterPlaylistMedia (string: string, baseurl: string, type: MediaPlaylistType, groups: Array<AudioGroup> = []): Array<MediaPlaylist> {
+  static parseMasterPlaylistMedia(
+    string: string,
+    baseurl: string,
+    type: MediaPlaylistType,
+    groups: Array<AudioGroup> = []
+  ): Array<MediaPlaylist> {
     let result: RegExpExecArray | null;
     const medias: Array<MediaPlaylist> = [];
     let id = 0;
@@ -145,14 +164,15 @@ export default class M3U8Parser {
           autoselect: attrs.bool('AUTOSELECT'),
           forced: attrs.bool('FORCED'),
           lang: attrs.LANGUAGE,
-          url: attrs.URI ? M3U8Parser.resolve(attrs.URI, baseurl) : ''
+          url: attrs.URI ? M3U8Parser.resolve(attrs.URI, baseurl) : '',
         };
 
         if (groups.length) {
           // If there are audio or text groups signalled in the manifest, let's look for a matching codec string for this track
           // If we don't find the track signalled, lets use the first audio groups codec we have
           // Acting as a best guess
-          const groupCodec = M3U8Parser.findGroup(groups, media.groupId as string) || groups[0];
+          const groupCodec =
+            M3U8Parser.findGroup(groups, media.groupId as string) || groups[0];
           assignCodec(media, groupCodec, 'audioCodec');
           assignCodec(media, groupCodec, 'textCodec');
         }
@@ -163,7 +183,13 @@ export default class M3U8Parser {
     return medias;
   }
 
-  static parseLevelPlaylist (string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number): LevelDetails {
+  static parseLevelPlaylist(
+    string: string,
+    baseurl: string,
+    id: number,
+    type: PlaylistLevelType,
+    levelUrlId: number
+  ): LevelDetails {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
     let currentSN = 0;
@@ -182,13 +208,15 @@ export default class M3U8Parser {
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       const duration = result[1];
-      if (duration) { // INF
+      if (duration) {
+        // INF
         frag.duration = parseFloat(duration);
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const title = (' ' + result[2]).slice(1);
         frag.title = title || null;
         frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
-      } else if (result[3]) { // url
+      } else if (result[3]) {
+        // url
         if (Number.isFinite(frag.duration)) {
           frag.start = totalduration;
           if (levelkey) {
@@ -214,14 +242,16 @@ export default class M3U8Parser {
           frag.cc = discontinuityCounter;
           frag.level = id;
         }
-      } else if (result[4]) { // X-BYTERANGE
+      } else if (result[4]) {
+        // X-BYTERANGE
         const data = (' ' + result[4]).slice(1);
         if (prevFrag) {
           frag.setByteRange(data, prevFrag);
         } else {
           frag.setByteRange(data);
         }
-      } else if (result[5]) { // PROGRAM-DATE-TIME
+      } else if (result[5]) {
+        // PROGRAM-DATE-TIME
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
@@ -246,174 +276,210 @@ export default class M3U8Parser {
         const value2 = result[i + 2] ? (' ' + result[i + 2]).slice(1) : '';
 
         switch (tag) {
-        case 'PLAYLIST-TYPE':
-          level.type = value1.toUpperCase();
-          break;
-        case 'MEDIA-SEQUENCE':
-          currentSN = level.startSN = parseInt(value1);
-          break;
-        case 'SKIP': {
-          const skipAttrs = new AttrList(value1);
-          const skippedSegments = skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
-          if (Number.isFinite(skippedSegments)) {
-            level.skippedSegments = skippedSegments;
-            // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
-            for (let i = skippedSegments; i--;) {
-              fragments.unshift(null);
+          case 'PLAYLIST-TYPE':
+            level.type = value1.toUpperCase();
+            break;
+          case 'MEDIA-SEQUENCE':
+            currentSN = level.startSN = parseInt(value1);
+            break;
+          case 'SKIP': {
+            const skipAttrs = new AttrList(value1);
+            const skippedSegments = skipAttrs.decimalInteger(
+              'SKIPPED-SEGMENTS'
+            );
+            if (Number.isFinite(skippedSegments)) {
+              level.skippedSegments = skippedSegments;
+              // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
+              for (let i = skippedSegments; i--; ) {
+                fragments.unshift(null);
+              }
+              currentSN += skippedSegments;
             }
-            currentSN += skippedSegments;
+            const recentlyRemovedDateranges = skipAttrs.enumeratedString(
+              'RECENTLY-REMOVED-DATERANGES'
+            );
+            if (recentlyRemovedDateranges) {
+              level.recentlyRemovedDateranges = recentlyRemovedDateranges.split(
+                '\t'
+              );
+            }
+            break;
           }
-          const recentlyRemovedDateranges = skipAttrs.enumeratedString('RECENTLY-REMOVED-DATERANGES');
-          if (recentlyRemovedDateranges) {
-            level.recentlyRemovedDateranges = recentlyRemovedDateranges.split('\t');
-          }
-          break;
-        }
-        case 'TARGETDURATION':
-          level.targetduration = parseFloat(value1);
-          break;
-        case 'VERSION':
-          level.version = parseInt(value1);
-          break;
-        case 'EXTM3U':
-          break;
-        case 'ENDLIST':
-          level.live = false;
-          break;
-        case '#':
-          if (value1 || value2) {
-            frag.tagList.push(value2 ? [value1, value2] : [value1]);
-          }
-          break;
-        case 'DIS':
-          discontinuityCounter++;
+          case 'TARGETDURATION':
+            level.targetduration = parseFloat(value1);
+            break;
+          case 'VERSION':
+            level.version = parseInt(value1);
+            break;
+          case 'EXTM3U':
+            break;
+          case 'ENDLIST':
+            level.live = false;
+            break;
+          case '#':
+            if (value1 || value2) {
+              frag.tagList.push(value2 ? [value1, value2] : [value1]);
+            }
+            break;
+          case 'DIS':
+            discontinuityCounter++;
           /* falls through */
-        case 'GAP':
-          frag.tagList.push([tag]);
-          break;
-        case 'BITRATE':
-          frag.tagList.push([tag, value1]);
-          break;
-        case 'DISCONTINUITY-SEQ':
-          discontinuityCounter = parseInt(value1);
-          break;
-        case 'KEY': {
-          // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
-          const keyAttrs = new AttrList(value1);
-          const decryptmethod = keyAttrs.enumeratedString('METHOD');
-          const decrypturi = keyAttrs.URI;
-          const decryptiv = keyAttrs.hexadecimalInteger('IV');
-          const decryptkeyformatversions = keyAttrs.enumeratedString('KEYFORMATVERSIONS');
-          const decryptkeyid = keyAttrs.enumeratedString('KEYID');
-          // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
-          const decryptkeyformat = keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
+          case 'GAP':
+            frag.tagList.push([tag]);
+            break;
+          case 'BITRATE':
+            frag.tagList.push([tag, value1]);
+            break;
+          case 'DISCONTINUITY-SEQ':
+            discontinuityCounter = parseInt(value1);
+            break;
+          case 'KEY': {
+            // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
+            const keyAttrs = new AttrList(value1);
+            const decryptmethod = keyAttrs.enumeratedString('METHOD');
+            const decrypturi = keyAttrs.URI;
+            const decryptiv = keyAttrs.hexadecimalInteger('IV');
+            const decryptkeyformatversions = keyAttrs.enumeratedString(
+              'KEYFORMATVERSIONS'
+            );
+            const decryptkeyid = keyAttrs.enumeratedString('KEYID');
+            // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
+            const decryptkeyformat =
+              keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
 
-          const unsupportedKnownKeyformatsInManifest = [
-            'com.apple.streamingkeydelivery',
-            'com.microsoft.playready',
-            'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed', // widevine (v2)
-            'com.widevine' // earlier widevine (v1)
-          ];
+            const unsupportedKnownKeyformatsInManifest = [
+              'com.apple.streamingkeydelivery',
+              'com.microsoft.playready',
+              'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed', // widevine (v2)
+              'com.widevine', // earlier widevine (v1)
+            ];
 
-          if (unsupportedKnownKeyformatsInManifest.indexOf(decryptkeyformat) > -1) {
-            logger.warn(`Keyformat ${decryptkeyformat} is not supported from the manifest`);
-            continue;
-          } else if (decryptkeyformat !== 'identity') {
-            // We are supposed to skip keys we don't understand.
-            // As we currently only officially support identity keys
-            // from the manifest we shouldn't save any other key.
-            continue;
-          }
-
-          // TODO: multiple keys can be defined on a fragment, and we need to support this
-          // for clients that support both playready and widevine
-          if (decryptmethod) {
-            // TODO: need to determine if the level key is actually a relative URL
-            // if it isn't, then we should instead construct the LevelKey using fromURI.
-            levelkey = LevelKey.fromURL(baseurl, decrypturi);
-            if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
-              levelkey.method = decryptmethod;
-              levelkey.keyFormat = decryptkeyformat;
-
-              if (decryptkeyid) {
-                levelkey.keyID = decryptkeyid;
-              }
-
-              if (decryptkeyformatversions) {
-                levelkey.keyFormatVersions = decryptkeyformatversions;
-              }
-
-              // Initialization Vector (IV)
-              levelkey.iv = decryptiv;
+            if (
+              unsupportedKnownKeyformatsInManifest.indexOf(decryptkeyformat) >
+              -1
+            ) {
+              logger.warn(
+                `Keyformat ${decryptkeyformat} is not supported from the manifest`
+              );
+              continue;
+            } else if (decryptkeyformat !== 'identity') {
+              // We are supposed to skip keys we don't understand.
+              // As we currently only officially support identity keys
+              // from the manifest we shouldn't save any other key.
+              continue;
             }
+
+            // TODO: multiple keys can be defined on a fragment, and we need to support this
+            // for clients that support both playready and widevine
+            if (decryptmethod) {
+              // TODO: need to determine if the level key is actually a relative URL
+              // if it isn't, then we should instead construct the LevelKey using fromURI.
+              levelkey = LevelKey.fromURL(baseurl, decrypturi);
+              if (
+                decrypturi &&
+                ['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(
+                  decryptmethod
+                ) >= 0
+              ) {
+                levelkey.method = decryptmethod;
+                levelkey.keyFormat = decryptkeyformat;
+
+                if (decryptkeyid) {
+                  levelkey.keyID = decryptkeyid;
+                }
+
+                if (decryptkeyformatversions) {
+                  levelkey.keyFormatVersions = decryptkeyformatversions;
+                }
+
+                // Initialization Vector (IV)
+                levelkey.iv = decryptiv;
+              }
+            }
+            break;
           }
-          break;
-        }
-        case 'START': {
-          const startAttrs = new AttrList(value1);
-          const startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-          // TIME-OFFSET can be 0
-          if (Number.isFinite(startTimeOffset)) {
-            level.startTimeOffset = startTimeOffset;
+          case 'START': {
+            const startAttrs = new AttrList(value1);
+            const startTimeOffset = startAttrs.decimalFloatingPoint(
+              'TIME-OFFSET'
+            );
+            // TIME-OFFSET can be 0
+            if (Number.isFinite(startTimeOffset)) {
+              level.startTimeOffset = startTimeOffset;
+            }
+            break;
           }
-          break;
-        }
-        case 'MAP': {
-          const mapAttrs = new AttrList(value1);
-          frag.relurl = mapAttrs.URI;
-          if (mapAttrs.BYTERANGE) {
-            frag.setByteRange(mapAttrs.BYTERANGE);
+          case 'MAP': {
+            const mapAttrs = new AttrList(value1);
+            frag.relurl = mapAttrs.URI;
+            if (mapAttrs.BYTERANGE) {
+              frag.setByteRange(mapAttrs.BYTERANGE);
+            }
+            frag.level = id;
+            frag.sn = 'initSegment';
+            if (levelkey) {
+              frag.levelkey = levelkey;
+            }
+            level.initSegment = frag;
+            frag = new Fragment(type, baseurl);
+            frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
+            break;
           }
-          frag.level = id;
-          frag.sn = 'initSegment';
-          if (levelkey) {
-            frag.levelkey = levelkey;
+          case 'SERVER-CONTROL': {
+            const serverControlAttrs = new AttrList(value1);
+            level.canBlockReload = serverControlAttrs.bool('CAN-BLOCK-RELOAD');
+            level.canSkipUntil = serverControlAttrs.optionalFloat(
+              'CAN-SKIP-UNTIL',
+              0
+            );
+            level.canSkipDateRanges =
+              level.canSkipUntil > 0 &&
+              serverControlAttrs.bool('CAN-SKIP-DATERANGES');
+            level.partHoldBack = serverControlAttrs.optionalFloat(
+              'PART-HOLD-BACK',
+              0
+            );
+            level.holdBack = serverControlAttrs.optionalFloat('HOLD-BACK', 0);
+            break;
           }
-          level.initSegment = frag;
-          frag = new Fragment(type, baseurl);
-          frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
-          break;
-        }
-        case 'SERVER-CONTROL': {
-          const serverControlAttrs = new AttrList(value1);
-          level.canBlockReload = serverControlAttrs.bool('CAN-BLOCK-RELOAD');
-          level.canSkipUntil = serverControlAttrs.optionalFloat('CAN-SKIP-UNTIL', 0);
-          level.canSkipDateRanges = level.canSkipUntil > 0 && serverControlAttrs.bool('CAN-SKIP-DATERANGES');
-          level.partHoldBack = serverControlAttrs.optionalFloat('PART-HOLD-BACK', 0);
-          level.holdBack = serverControlAttrs.optionalFloat('HOLD-BACK', 0);
-          break;
-        }
-        case 'PART-INF': {
-          const partInfAttrs = new AttrList(value1);
-          level.partTarget = partInfAttrs.decimalFloatingPoint('PART-TARGET');
-          break;
-        }
-        case 'PART': {
-          let partList = level.partList;
-          if (!partList) {
-            partList = level.partList = [];
+          case 'PART-INF': {
+            const partInfAttrs = new AttrList(value1);
+            level.partTarget = partInfAttrs.decimalFloatingPoint('PART-TARGET');
+            break;
           }
-          const previousFragmentPart = currentPart > 0 ? partList[partList.length - 1] : undefined;
-          const index = currentPart++;
-          const part = new Part(new AttrList(value1), frag, baseurl, index, previousFragmentPart);
-          partList.push(part);
-          frag.duration += part.duration;
-          break;
-        }
-        case 'PRELOAD-HINT': {
-          const preloadHintAttrs = new AttrList(value1);
-          level.preloadHint = preloadHintAttrs;
-          break;
-        }
-        case 'RENDITION-REPORT': {
-          const renditionReportAttrs = new AttrList(value1);
-          level.renditionReports = level.renditionReports || [];
-          level.renditionReports.push(renditionReportAttrs);
-          break;
-        }
-        default:
-          logger.warn(`line parsed but not handled: ${result}`);
-          break;
+          case 'PART': {
+            let partList = level.partList;
+            if (!partList) {
+              partList = level.partList = [];
+            }
+            const previousFragmentPart =
+              currentPart > 0 ? partList[partList.length - 1] : undefined;
+            const index = currentPart++;
+            const part = new Part(
+              new AttrList(value1),
+              frag,
+              baseurl,
+              index,
+              previousFragmentPart
+            );
+            partList.push(part);
+            frag.duration += part.duration;
+            break;
+          }
+          case 'PRELOAD-HINT': {
+            const preloadHintAttrs = new AttrList(value1);
+            level.preloadHint = preloadHintAttrs;
+            break;
+          }
+          case 'RENDITION-REPORT': {
+            const renditionReportAttrs = new AttrList(value1);
+            level.renditionReports = level.renditionReports || [];
+            level.renditionReports.push(renditionReportAttrs);
+            break;
+          }
+          default:
+            logger.warn(`line parsed but not handled: ${result}`);
+            break;
         }
       }
     }
@@ -438,8 +504,14 @@ export default class M3U8Parser {
           // this is a bit lurky but HLS really has no other way to tell us
           // if the fragments are TS or MP4, except if we download them :/
           // but this is to be able to handle SIDX.
-          if (level.fragments.every((frag) => MP4_REGEX_SUFFIX.test(frag.relurl as string))) {
-            logger.warn('MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX');
+          if (
+            level.fragments.every((frag) =>
+              MP4_REGEX_SUFFIX.test(frag.relurl as string)
+            )
+          ) {
+            logger.warn(
+              'MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX'
+            );
             frag = new Fragment(type, baseurl);
             frag.relurl = lastFragment.relurl;
             frag.level = id;
@@ -476,12 +548,15 @@ export default class M3U8Parser {
   }
 }
 
-function setCodecs (codecs: Array<string>, level: LevelParsed) {
+function setCodecs(codecs: Array<string>, level: LevelParsed) {
   ['video', 'audio', 'text'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
     if (filtered.length) {
       const preferred = filtered.filter((codec) => {
-        return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+        return (
+          codec.lastIndexOf('avc1', 0) === 0 ||
+          codec.lastIndexOf('mp4a', 0) === 0
+        );
       });
       level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
 
@@ -493,27 +568,31 @@ function setCodecs (codecs: Array<string>, level: LevelParsed) {
   level.unknownCodecs = codecs;
 }
 
-function assignCodec (media, groupItem, codecProperty) {
+function assignCodec(media, groupItem, codecProperty) {
   const codecValue = groupItem[codecProperty];
   if (codecValue) {
     media[codecProperty] = codecValue;
   }
 }
 
-function backfillProgramDateTimes (fragments: M3U8ParserFragments, firstPdtIndex: number) {
+function backfillProgramDateTimes(
+  fragments: M3U8ParserFragments,
+  firstPdtIndex: number
+) {
   let fragPrev = fragments[firstPdtIndex] as Fragment;
-  for (let i = firstPdtIndex; i--;) {
+  for (let i = firstPdtIndex; i--; ) {
     const frag = fragments[i];
     // Exit on delta-playlist skipped segments
     if (!frag) {
       return;
     }
-    frag.programDateTime = (fragPrev.programDateTime as number) - (frag.duration * 1000);
+    frag.programDateTime =
+      (fragPrev.programDateTime as number) - frag.duration * 1000;
     fragPrev = frag;
   }
 }
 
-function assignProgramDateTime (frag, prevFrag) {
+function assignProgramDateTime(frag, prevFrag) {
   if (frag.rawProgramDateTime) {
     frag.programDateTime = Date.parse(frag.rawProgramDateTime);
   } else if (prevFrag?.programDateTime) {
