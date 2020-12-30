@@ -23,6 +23,10 @@ select option {
   float: right;
 }
 
+.innerControls.permalink {
+  display: inline-block;
+}
+
 @media (prefers-color-scheme: dark) {
   body {
     color: #ddd;
@@ -209,11 +213,8 @@ select option {
 }
 
 #StreamPermalink {
-  flex: 1 1 auto;
-  min-width: 0;
   overflow-wrap: break-word;
   overflow: hidden; /* for IE11 */
-  padding: 10px 0 0 10px;
 }
 
 #StreamPermalink a {
