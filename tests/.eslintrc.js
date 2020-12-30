@@ -29,6 +29,6 @@ module.exports = {
       { property: 'only' }, // Intended to block usage of it.only in commits
     ],
     'node/no-restricted-require': ['error', ['assert']],
-    'mocha/no-mocha-arrows': 2
-  }
+    'mocha/no-mocha-arrows': 2,
+  },
 };
