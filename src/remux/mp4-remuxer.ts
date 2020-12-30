@@ -72,7 +72,7 @@ export default class MP4Remuxer implements Remuxer {
   destroy() {}
 
   resetTimeStamp(defaultTimeStamp) {
-    logger.log('[mp4-remuxer]: initPTS & initDTS reset reset');
+    logger.log('[mp4-remuxer]: initPTS & initDTS reset');
     this._initPTS = this._initDTS = defaultTimeStamp;
   }
 
@@ -256,12 +256,6 @@ export default class MP4Remuxer implements Remuxer {
     videoTrack: DemuxedAvcTrack,
     timeOffset
   ): InitSegmentData | undefined {
-    logger.log(
-      '[mp4-remuxer]: generateIS',
-      Object.assign({}, audioTrack),
-      Object.assign({}, videoTrack),
-      timeOffset
-    );
     const audioSamples = audioTrack.samples;
     const videoSamples = videoTrack.samples;
     const typeSupported = this.typeSupported;
@@ -1085,7 +1079,7 @@ export default class MP4Remuxer implements Remuxer {
   }
 }
 
-function PTSNormalize(value: number, reference: number | null): number {
+export function PTSNormalize(value: number, reference: number | null): number {
   let offset;
   if (reference === null) {
     return value;
