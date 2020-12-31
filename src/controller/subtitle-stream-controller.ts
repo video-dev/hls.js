@@ -168,7 +168,6 @@ export class SubtitleStreamController
     event: Events.SUBTITLE_TRACKS_UPDATED,
     { subtitleTracks }: SubtitleTracksUpdatedData
   ) {
-    logger.log('subtitle levels updated');
     this.tracksBuffered = [];
     this.levels = subtitleTracks.map(
       (mediaPlaylist) => new Level(mediaPlaylist)

@@ -15,10 +15,11 @@ export interface Remuxer {
     id3Track: DemuxedTrack,
     textTrack: DemuxedTrack,
     timeOffset: number,
-    accurateTimeOffset: boolean
+    accurateTimeOffset: boolean,
+    flush: boolean
   ): RemuxerResult;
   resetInitSegment(
-    initSegment: Uint8Array,
+    initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined
   ): void;

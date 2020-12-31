@@ -113,7 +113,8 @@ export default class MP4Remuxer implements Remuxer {
     id3Track: DemuxedTrack,
     textTrack: DemuxedTrack,
     timeOffset: number,
-    accurateTimeOffset: boolean
+    accurateTimeOffset: boolean,
+    flush: boolean
   ): RemuxerResult {
     let video;
     let audio;
@@ -124,10 +125,11 @@ export default class MP4Remuxer implements Remuxer {
     let audioTimeOffset = timeOffset;
     let videoTimeOffset = timeOffset;
 
-    // If we're remuxing audio and video, wait until we've received enough samples for each track before proceeding.
+    // If we're remuxing audio and video progressively, wait until we've received enough samples for each track before proceeding.
     // This is done to synchronize the audio and video streams. We know if the current segment will have samples if the "pid"
     // parameter is greater than -1. The pid is set when the PMT is parsed, which contains the tracks list.
-    // However, if the initSegment has already been generated, we can remux one track without waiting for the other.
+    // However, if the initSegment has already been generated, or we've reached the end of a segment (flush),
+    // then we can remux one track without waiting for the other.
     const hasAudio = audioTrack.pid > -1;
     const hasVideo = videoTrack.pid > -1;
     const enoughAudioSamples = audioTrack.samples.length > 0;
@@ -135,7 +137,8 @@ export default class MP4Remuxer implements Remuxer {
     const canRemuxAvc =
       ((!hasAudio || enoughAudioSamples) &&
         (!hasVideo || enoughVideoSamples)) ||
-      this.ISGenerated;
+      this.ISGenerated ||
+      flush;
 
     if (canRemuxAvc) {
       if (!this.ISGenerated) {

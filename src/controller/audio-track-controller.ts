@@ -120,6 +120,9 @@ class AudioTrackController extends BasePlaylistController {
 
       this.tracksInGroup = audioTracks;
       const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks };
+      this.log(
+        `Updating audio tracks, ${audioTracks.length} track(s) found in "${audioGroupId}" group-id`
+      );
       this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
 
       this.selectInitialTrack();

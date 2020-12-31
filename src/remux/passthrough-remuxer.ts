@@ -40,7 +40,7 @@ class PassThroughRemuxer implements Remuxer {
   }
 
   resetInitSegment(
-    initSegment: Uint8Array,
+    initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined
   ) {
@@ -50,7 +50,7 @@ class PassThroughRemuxer implements Remuxer {
     this.emitInitSegment = true;
   }
 
-  generateInitSegment(initSegment: Uint8Array): void {
+  generateInitSegment(initSegment: Uint8Array | undefined): void {
     let { audioCodec, videoCodec } = this;
     if (!initSegment || !initSegment.byteLength) {
       this.initTracks = undefined;
@@ -60,7 +60,7 @@ class PassThroughRemuxer implements Remuxer {
     const initData = (this.initData = parseInitSegment(initSegment));
 
     // default audio codec if nothing specified
-    // TODO : extract that from initsegment
+    // TODO : extract that from initSegment
     if (!audioCodec) {
       audioCodec = 'mp4a.40.5';
     }
