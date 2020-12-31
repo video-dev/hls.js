@@ -371,7 +371,6 @@ class AudioStreamController
     event: Events.AUDIO_TRACKS_UPDATED,
     { audioTracks }: AudioTracksUpdatedData
   ) {
-    this.log('Audio tracks updated');
     this.levels = audioTracks.map((mediaPlaylist) => new Level(mediaPlaylist));
   }
 
@@ -506,7 +505,7 @@ class AudioStreamController
     // Check if we have video initPTS
     // If not we need to wait for it
     const initPTS = this.initPTS[frag.cc];
-    const initSegmentData = details.initSegment?.data || new Uint8Array(0);
+    const initSegmentData = details.initSegment?.data;
     if (initPTS !== undefined) {
       // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
@@ -854,15 +853,15 @@ class AudioStreamController
     ) {
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
-      } else if (Number.isFinite(this.initPTS[frag.cc])) {
+      } else if (trackDetails.live && !Number.isFinite(this.initPTS[frag.cc])) {
+        this.log(
+          `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`
+        );
+        this.state = State.WAITING_INIT_PTS;
+      } else {
         this.startFragRequested = true;
         this.nextLoadPosition = frag.start + frag.duration;
         super.loadFragment(frag, trackDetails, targetBufferTime);
-      } else {
-        this.log(
-          `Unknown video PTS for continuity counter ${frag.cc}, waiting for video PTS before loading audio fragment ${frag.sn} of level ${this.trackId}`
-        );
-        this.state = State.WAITING_INIT_PTS;
       }
     }
   }

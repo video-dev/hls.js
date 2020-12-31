@@ -145,7 +145,7 @@ export default class TransmuxerInterface {
 
   push(
     data: ArrayBuffer,
-    initSegmentData: Uint8Array,
+    initSegmentData: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     frag: Fragment,
@@ -192,7 +192,7 @@ export default class TransmuxerInterface {
       const config = new TransmuxConfig(
         audioCodec,
         videoCodec,
-        new Uint8Array(initSegmentData),
+        initSegmentData,
         duration,
         defaultInitPTS
       );

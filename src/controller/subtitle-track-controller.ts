@@ -12,6 +12,7 @@ import type {
 import type { MediaPlaylist } from '../types/media-playlist';
 import { ErrorData, LevelLoadingData } from '../types/events';
 import { PlaylistContextType } from '../types/loader';
+import { logger } from '../utils/logger';
 
 class SubtitleTrackController extends BasePlaylistController {
   private media: HTMLMediaElement | null = null;
@@ -184,6 +185,9 @@ class SubtitleTrackController extends BasePlaylistController {
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
         subtitleTracks,
       };
+      this.log(
+        `Updating subtitle tracks, ${subtitleTracks.length} track(s) found in "${textGroupId}" group-id`
+      );
       this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
       if (initialTrackId !== -1) {
@@ -321,7 +325,7 @@ class SubtitleTrackController extends BasePlaylistController {
 
     // exit if track id as already set or invalid
     if (
-      (this.trackId === newId && tracks[newId]?.details) ||
+      (this.trackId === newId && (newId === -1 || tracks[newId]?.details)) ||
       newId < -1 ||
       newId >= tracks.length
     ) {

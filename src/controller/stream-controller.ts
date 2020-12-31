@@ -671,7 +671,7 @@ export default class StreamController
 
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
     const accurateTimeOffset = details.PTSKnown || !details.live;
-    const initSegmentData = details.initSegment?.data || new Uint8Array(0);
+    const initSegmentData = details.initSegment?.data;
     const audioCodec = this._getAudioCodec(currentLevel);
 
     // transmux the MPEG-TS data to ISO-BMFF segments
