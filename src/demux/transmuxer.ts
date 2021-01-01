@@ -266,7 +266,8 @@ export default class Transmuxer {
       id3Track,
       textTrack,
       timeOffset,
-      accurateTimeOffset
+      accurateTimeOffset,
+      true
     );
     transmuxResults.push({
       remuxResult,
@@ -296,7 +297,7 @@ export default class Transmuxer {
   }
 
   resetInitSegment(
-    initSegmentData: Uint8Array,
+    initSegmentData: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     duration: number
@@ -365,7 +366,8 @@ export default class Transmuxer {
       id3Track,
       textTrack,
       timeOffset,
-      accurateTimeOffset
+      accurateTimeOffset,
+      false
     );
     return {
       remuxResult,
@@ -389,7 +391,8 @@ export default class Transmuxer {
           demuxResult.id3Track,
           demuxResult.textTrack,
           timeOffset,
-          accurateTimeOffset
+          accurateTimeOffset,
+          false
         ),
         chunkMeta,
       })
@@ -481,14 +484,14 @@ export function isPromise<T>(p: Promise<T> | any): p is Promise<T> {
 export class TransmuxConfig {
   public audioCodec?: string;
   public videoCodec?: string;
-  public initSegmentData: Uint8Array;
+  public initSegmentData?: Uint8Array;
   public duration: number;
   public defaultInitPts?: number;
 
   constructor(
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    initSegmentData: Uint8Array,
+    initSegmentData: Uint8Array | undefined,
     duration: number,
     defaultInitPts?: number
   ) {
