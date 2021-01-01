@@ -1051,14 +1051,12 @@ export default class StreamController
 
   private _getAudioCodec(currentLevel) {
     let audioCodec = this.config.defaultAudioCodec || currentLevel.audioCodec;
-    if (this.audioCodecSwap) {
-      this.log('Swapping playlist audio codec');
-      if (audioCodec) {
-        if (audioCodec.indexOf('mp4a.40.5') !== -1) {
-          audioCodec = 'mp4a.40.2';
-        } else {
-          audioCodec = 'mp4a.40.5';
-        }
+    if (this.audioCodecSwap && audioCodec) {
+      this.log('Swapping audio codec');
+      if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+        audioCodec = 'mp4a.40.2';
+      } else {
+        audioCodec = 'mp4a.40.5';
       }
     }
 
@@ -1230,21 +1228,20 @@ export default class StreamController
       delete tracks.audio;
     }
     // include levelCodec in audio and video tracks
-    const { audio, video } = tracks;
+    const { audio, video, audiovideo } = tracks;
     if (audio) {
       let audioCodec = currentLevel.audioCodec;
       const ua = navigator.userAgent.toLowerCase();
-      if (audioCodec && this.audioCodecSwap) {
-        this.log('Swapping playlist audio codec');
-        if (audioCodec.indexOf('mp4a.40.5') !== -1) {
-          audioCodec = 'mp4a.40.2';
-        } else {
-          audioCodec = 'mp4a.40.5';
-        }
-      }
-      // In the case that AAC and HE-AAC audio codecs are signalled in manifest,
-      // force HE-AAC, as it seems that most browsers prefers it.
       if (this.audioCodecSwitch) {
+        if (audioCodec) {
+          if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+            audioCodec = 'mp4a.40.2';
+          } else {
+            audioCodec = 'mp4a.40.5';
+          }
+        }
+        // In the case that AAC and HE-AAC audio codecs are signalled in manifest,
+        // force HE-AAC, as it seems that most browsers prefers it.
         // don't force HE-AAC if mono stream, or in Firefox
         if (audio.metadata.channelCount !== 1 && ua.indexOf('firefox') === -1) {
           audioCodec = 'mp4a.40.5';
@@ -1256,21 +1253,46 @@ export default class StreamController
         audioCodec = 'mp4a.40.2';
         this.log(`Android: force audio codec to ${audioCodec}`);
       }
+      if (currentLevel.audioCodec && currentLevel.audioCodec !== audioCodec) {
+        this.log(
+          `Swapping manifest audio codec "${currentLevel.audioCodec}" for "${audioCodec}"`
+        );
+      }
       audio.levelCodec = audioCodec;
       audio.id = 'main';
+      this.log(
+        `Init audio buffer, container:${
+          audio.container
+        }, codecs[selected/level/parsed]=[${audioCodec || ''}/${
+          currentLevel.audioCodec || ''
+        }/${audio.codec}]`
+      );
     }
     if (video) {
       video.levelCodec = currentLevel.videoCodec;
       video.id = 'main';
+      this.log(
+        `Init video buffer, container:${
+          video.container
+        }, codecs[level/parsed]=[${currentLevel.videoCodec || ''}/${
+          video.codec
+        }]`
+      );
+    }
+    if (audiovideo) {
+      this.log(
+        `Init audiovideo buffer, container:${
+          audiovideo.container
+        }, codecs[level/parsed]=[${currentLevel.attrs.CODECS || ''}/${
+          audiovideo.codec
+        }]`
+      );
     }
     this.hls.trigger(Events.BUFFER_CODECS, tracks);
     // loop through tracks that are going to be provided to bufferController
     Object.keys(tracks).forEach((trackName) => {
       const track = tracks[trackName];
       const initSegment = track.initSegment;
-      this.log(
-        `Main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
-      );
       if (initSegment) {
         this.hls.trigger(Events.BUFFER_APPENDING, {
           type: trackName as SourceBufferName,

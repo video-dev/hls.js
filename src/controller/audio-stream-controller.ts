@@ -817,10 +817,10 @@ class AudioStreamController
 
     track.levelCodec = track.codec;
     track.id = 'audio';
-    this.hls.trigger(Events.BUFFER_CODECS, tracks);
     this.log(
-      `Audio, container:${track.container}, codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
+      `Init audio buffer, container:${track.container}, codecs[parsed]=[${track.codec}]`
     );
+    this.hls.trigger(Events.BUFFER_CODECS, tracks);
     const initSegment = track.initSegment;
     if (initSegment) {
       const segment: BufferAppendingData = {
