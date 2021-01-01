@@ -15,7 +15,8 @@ import type {
 } from '../types/remuxer';
 import type {
   DemuxedAudioTrack,
-  DemuxedTrack,
+  DemuxedMetadataTrack,
+  DemuxedUserdataTrack,
   PassthroughVideoTrack,
 } from '../types/demuxer';
 
@@ -102,8 +103,8 @@ class PassThroughRemuxer implements Remuxer {
   remux(
     audioTrack: DemuxedAudioTrack,
     videoTrack: PassthroughVideoTrack,
-    id3Track: DemuxedTrack,
-    textTrack: DemuxedTrack,
+    id3Track: DemuxedMetadataTrack,
+    textTrack: DemuxedUserdataTrack,
     timeOffset: number
   ): RemuxerResult {
     let { initPTS, lastEndDTS } = this;

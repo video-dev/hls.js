@@ -1,7 +1,15 @@
 /**
  * MP4 demuxer
  */
-import { Demuxer, DemuxerResult, DemuxedTrack } from '../types/demuxer';
+import {
+  Demuxer,
+  DemuxerResult,
+  DemuxedTrack,
+  PassthroughVideoTrack,
+  DemuxedAudioTrack,
+  DemuxedUserdataTrack,
+  DemuxedMetadataTrack,
+} from '../types/demuxer';
 import {
   findBox,
   segmentValidRange,
@@ -38,7 +46,7 @@ class MP4Demuxer implements Demuxer {
   demux(data): DemuxerResult {
     // Load all data into the avc track. The CMAF remuxer will look for the data in the samples object; the rest of the fields do not matter
     let avcSamples = data;
-    const avcTrack = dummyTrack();
+    const avcTrack = dummyTrack() as PassthroughVideoTrack;
     if (this.config.progressive) {
       // Split the bytestream into two ranges: one encompassing all data up until the start of the last moof, and everything else.
       // This is done to guarantee that we're sending valid data to MSE - when demuxing progressively, we have no guarantee
@@ -48,29 +56,29 @@ class MP4Demuxer implements Demuxer {
       }
       const segmentedData = segmentValidRange(avcSamples);
       this.remainderData = segmentedData.remainder;
-      avcTrack.samples = segmentedData.valid;
+      avcTrack.samples = segmentedData.valid || new Uint8Array();
     } else {
       avcTrack.samples = avcSamples;
     }
 
     return {
-      audioTrack: dummyTrack(),
+      audioTrack: dummyTrack() as DemuxedAudioTrack,
       avcTrack,
-      id3Track: dummyTrack(),
-      textTrack: dummyTrack(),
+      id3Track: dummyTrack() as DemuxedMetadataTrack,
+      textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
   }
 
   flush() {
-    const avcTrack: DemuxedTrack = dummyTrack();
-    avcTrack.samples = this.remainderData;
+    const avcTrack = dummyTrack() as PassthroughVideoTrack;
+    avcTrack.samples = this.remainderData || new Uint8Array();
     this.remainderData = null;
 
     return {
-      audioTrack: dummyTrack(),
+      audioTrack: dummyTrack() as DemuxedAudioTrack,
       avcTrack,
-      id3Track: dummyTrack(),
-      textTrack: dummyTrack(),
+      id3Track: dummyTrack() as DemuxedMetadataTrack,
+      textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
   }
 

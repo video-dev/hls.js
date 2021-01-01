@@ -2,9 +2,11 @@ import * as ID3 from '../demux/id3';
 import type {
   DemuxerResult,
   Demuxer,
-  DemuxedTrack,
   DemuxedAudioTrack,
   AppendedAudioFrame,
+  DemuxedMetadataTrack,
+  DemuxedAvcTrack,
+  DemuxedUserdataTrack,
 } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
@@ -12,7 +14,7 @@ import { sliceUint8 } from '../utils/typed-array';
 
 class BaseAudioDemuxer implements Demuxer {
   protected _audioTrack!: DemuxedAudioTrack;
-  protected _id3Track!: DemuxedTrack;
+  protected _id3Track!: DemuxedMetadataTrack;
   protected frameIndex: number = 0;
   protected cachedData: Uint8Array | null = null;
   protected initPTS: number | null = null;
@@ -59,7 +61,7 @@ class BaseAudioDemuxer implements Demuxer {
     const timestamp = id3Data ? ID3.getTimeStamp(id3Data) : undefined;
     const length = data.length;
 
-    if (this.initPTS === null) {
+    if (this.frameIndex === 0 || this.initPTS === null) {
       this.initPTS = initPTSFn(timestamp, timeOffset);
     }
 
@@ -106,9 +108,9 @@ class BaseAudioDemuxer implements Demuxer {
 
     return {
       audioTrack: track,
-      avcTrack: dummyTrack(),
+      avcTrack: dummyTrack() as DemuxedAvcTrack,
       id3Track,
-      textTrack: dummyTrack(),
+      textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
   }
 
@@ -129,14 +131,13 @@ class BaseAudioDemuxer implements Demuxer {
     }
 
     this.frameIndex = 0;
-    this.initPTS = null;
     this.cachedData = null;
 
     return {
       audioTrack: this._audioTrack,
-      avcTrack: dummyTrack(),
+      avcTrack: dummyTrack() as DemuxedAvcTrack,
       id3Track: this._id3Track,
-      textTrack: dummyTrack(),
+      textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
   }
 

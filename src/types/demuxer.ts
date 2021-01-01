@@ -22,9 +22,9 @@ export interface Demuxer {
 
 export interface DemuxerResult {
   audioTrack: DemuxedAudioTrack;
-  avcTrack: DemuxedAvcTrack;
-  id3Track: DemuxedTrack;
-  textTrack: DemuxedTrack;
+  avcTrack: DemuxedVideoTrack;
+  id3Track: DemuxedMetadataTrack;
+  textTrack: DemuxedUserdataTrack;
 }
 
 export interface DemuxedTrack {
@@ -33,7 +33,12 @@ export interface DemuxedTrack {
   pid: number;
   inputTimeScale: number;
   sequenceNumber: number;
-  samples: any;
+  samples:
+    | AudioSample[]
+    | AvcSample[]
+    | MetadataSample[]
+    | UserdataSample[]
+    | Uint8Array;
   timescale?: number;
   container?: string;
   dropped: number;
@@ -43,11 +48,12 @@ export interface DemuxedTrack {
 }
 
 export interface DemuxedAudioTrack extends DemuxedTrack {
-  config?: Array<number>;
+  config?: number[];
   samplerate?: number;
   isAAC?: boolean;
   channelCount?: number;
   manifestCodec?: string;
+  samples: AudioSample[];
 }
 
 export interface DemuxedVideoTrack extends DemuxedTrack {
@@ -55,13 +61,14 @@ export interface DemuxedVideoTrack extends DemuxedTrack {
   height?: number;
   pixelRatio?: number;
   audFound?: boolean;
-  pps?: Array<number>;
-  sps?: Array<number>;
+  pps?: number[];
+  sps?: number[];
   naluState?: number;
+  samples: AvcSample[] | Uint8Array;
 }
 
 export interface DemuxedAvcTrack extends DemuxedVideoTrack {
-  samples: Array<AvcSample>;
+  samples: AvcSample[];
 }
 
 export interface PassthroughVideoTrack extends DemuxedVideoTrack {
@@ -79,7 +86,7 @@ export interface DemuxedUserdataTrack extends DemuxedTrack {
 export interface MetadataSample {
   pts: number;
   dts: number;
-  len: number;
+  len?: number;
   data: Uint8Array;
 }
 
@@ -93,7 +100,7 @@ export interface AvcSample {
   pts: number;
   key: boolean;
   frame: boolean;
-  units: Array<AvcSampleUnit>;
+  units: AvcSampleUnit[];
   debug: string;
   length: number;
 }
@@ -102,7 +109,7 @@ export interface AvcSampleUnit {
   data: Uint8Array;
 }
 
-type AudioSample = {
+export type AudioSample = {
   unit: Uint8Array;
   pts: number;
   dts: number;
@@ -114,6 +121,6 @@ export type AppendedAudioFrame = {
 };
 
 export interface ElementaryStreamData {
-  data: Array<Uint8Array>;
+  data: Uint8Array[];
   size: number;
 }
