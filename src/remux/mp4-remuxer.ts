@@ -13,10 +13,12 @@ import {
   RemuxedUserdata,
 } from '../types/remuxer';
 import type {
+  AudioSample,
   AvcSample,
   DemuxedAudioTrack,
   DemuxedAvcTrack,
-  DemuxedTrack,
+  DemuxedMetadataTrack,
+  DemuxedUserdataTrack,
 } from '../types/demuxer';
 import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
@@ -110,8 +112,8 @@ export default class MP4Remuxer implements Remuxer {
   remux(
     audioTrack: DemuxedAudioTrack,
     videoTrack: DemuxedAvcTrack,
-    id3Track: DemuxedTrack,
-    textTrack: DemuxedTrack,
+    id3Track: DemuxedMetadataTrack,
+    textTrack: DemuxedUserdataTrack,
     timeOffset: number,
     accurateTimeOffset: boolean,
     flush: boolean
@@ -201,7 +203,7 @@ export default class MP4Remuxer implements Remuxer {
             audioTimeOffset,
             this.isAudioContiguous,
             accurateTimeOffset,
-            videoTimeOffset
+            enoughVideoSamples ? videoTimeOffset : undefined
           );
           if (enoughVideoSamples) {
             const audioTrackLength = audio ? audio.endPTS - audio.startPTS : 0;
@@ -677,7 +679,7 @@ export default class MP4Remuxer implements Remuxer {
     const rawMPEG: boolean = !track.isAAC && this.typeSupported.mpeg;
     const outputSamples: Array<Mp4Sample> = [];
 
-    let inputSamples: Array<any> = track.samples;
+    let inputSamples: Array<AudioSample> = track.samples;
     let offset: number = rawMPEG ? 0 : 8;
     let fillFrame: any;
     let nextAudioPts: number = this.nextAudioPts || -1;
@@ -692,40 +694,44 @@ export default class MP4Remuxer implements Remuxer {
     // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
     // this helps ensuring audio continuity
     // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
+    const timeOffsetMpegTS = timeOffset * inputTimeScale;
     this.isAudioContiguous = contiguous =
       contiguous ||
       ((inputSamples.length &&
         nextAudioPts > 0 &&
         ((accurateTimeOffset &&
-          Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1) ||
-          Math.abs(inputSamples[0].pts - nextAudioPts - initPTS) <
+          Math.abs(timeOffsetMpegTS - nextAudioPts) < 9000) ||
+          Math.abs(
+            PTSNormalize(inputSamples[0].pts - initPTS, timeOffsetMpegTS) -
+              nextAudioPts
+          ) <
             20 * inputSampleDuration)) as boolean);
 
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
       sample.pts = sample.dts = PTSNormalize(
         sample.pts - initPTS,
-        timeOffset * inputTimeScale
+        timeOffsetMpegTS
       );
     });
 
-    // filter out sample with negative PTS that are not playable anyway
-    // if we don't remove these negative samples, they will shift all audio samples forward.
-    // leading to audio overlap between current / next fragment
-    inputSamples = inputSamples.filter((sample) => sample.pts >= 0);
-
-    // in case all samples have negative PTS, and have been filtered out, return now
-    if (!inputSamples.length) {
-      return;
-    }
-
     if (!contiguous || nextAudioPts < 0) {
+      // filter out sample with negative PTS that are not playable anyway
+      // if we don't remove these negative samples, they will shift all audio samples forward.
+      // leading to audio overlap between current / next fragment
+      inputSamples = inputSamples.filter((sample) => sample.pts >= 0);
+
+      // in case all samples have negative PTS, and have been filtered out, return now
+      if (!inputSamples.length) {
+        return;
+      }
+
       if (videoTimeOffset === 0) {
         // Set the start to 0 to match video so that start gaps larger than inputSampleDuration are filled with silence
         nextAudioPts = 0;
       } else if (accurateTimeOffset) {
         // When not seeking, not live, and LevelDetails.PTSKnown, use fragment start as predicted next audio PTS
-        nextAudioPts = Math.max(0, timeOffset * inputTimeScale);
+        nextAudioPts = Math.max(0, timeOffsetMpegTS);
       } else {
         // if frags are not contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
         nextAudioPts = inputSamples[0].pts;
@@ -747,8 +753,11 @@ export default class MP4Remuxer implements Remuxer {
         const delta = pts - nextPts;
         const duration = Math.abs((1000 * delta) / inputTimeScale);
 
-        // If we're overlapping by more than a duration, drop this sample
-        if (delta <= -maxAudioFramesDrift * inputSampleDuration) {
+        // When remuxing with video, if we're overlapping by more than a duration, drop this sample to stay in sync
+        if (
+          delta <= -maxAudioFramesDrift * inputSampleDuration &&
+          videoTimeOffset !== undefined
+        ) {
           if (contiguous || i > 0) {
             logger.warn(
               `[mp4-remuxer]: Dropping 1 audio frame @ ${(
@@ -776,9 +785,11 @@ export default class MP4Remuxer implements Remuxer {
         // 1: We're more than maxAudioFramesDrift frame away
         // 2: Not more than MAX_SILENT_FRAME_DURATION away
         // 3: currentTime (aka nextPtsNorm) is not 0
+        // 4: remuxing with video (videoTimeOffset !== undefined)
         else if (
           delta >= maxAudioFramesDrift * inputSampleDuration &&
-          duration < MAX_SILENT_FRAME_DURATION
+          duration < MAX_SILENT_FRAME_DURATION &&
+          videoTimeOffset !== undefined
         ) {
           const missing = Math.floor(delta / inputSampleDuration);
           // Adjust nextPts so that silent samples are aligned with media pts. This will prevent media samples from
@@ -1026,7 +1037,7 @@ export default class MP4Remuxer implements Remuxer {
   }
 
   remuxID3(
-    track: DemuxedTrack,
+    track: DemuxedMetadataTrack,
     timeOffset: number
   ): RemuxedMetadata | undefined {
     const length = track.samples.length;
@@ -1055,7 +1066,7 @@ export default class MP4Remuxer implements Remuxer {
   }
 
   remuxText(
-    track: DemuxedTrack,
+    track: DemuxedUserdataTrack,
     timeOffset: number
   ): RemuxedUserdata | undefined {
     const length = track.samples.length;

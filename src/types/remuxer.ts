@@ -1,7 +1,9 @@
 import type { TrackSet } from './track';
 import {
   DemuxedAudioTrack,
+  DemuxedMetadataTrack,
   DemuxedTrack,
+  DemuxedUserdataTrack,
   DemuxedVideoTrack,
   MetadataSample,
   UserdataSample,
@@ -12,8 +14,8 @@ export interface Remuxer {
   remux(
     audioTrack: DemuxedAudioTrack,
     videoTrack: DemuxedVideoTrack,
-    id3Track: DemuxedTrack,
-    textTrack: DemuxedTrack,
+    id3Track: DemuxedMetadataTrack,
+    textTrack: DemuxedUserdataTrack,
     timeOffset: number,
     accurateTimeOffset: boolean,
     flush: boolean

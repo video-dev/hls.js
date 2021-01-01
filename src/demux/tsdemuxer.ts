@@ -25,6 +25,7 @@ import {
   DemuxerResult,
   AvcSample,
   DemuxedMetadataTrack,
+  DemuxedUserdataTrack,
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
@@ -66,8 +67,8 @@ class TSDemuxer implements Demuxer {
   private _avcTrack!: DemuxedAvcTrack;
   private _audioTrack!: DemuxedAudioTrack;
   private _id3Track!: DemuxedMetadataTrack;
-  private _txtTrack!: DemuxedTrack;
-  private aacOverFlow: any;
+  private _txtTrack!: DemuxedUserdataTrack;
+  private aacOverFlow: Uint8Array | null = null;
   private avcSample: AvcSample | null = null;
   private remainderData: Uint8Array | null = null;
 
@@ -141,10 +142,22 @@ class TSDemuxer implements Demuxer {
     this.pmtParsed = false;
     this._pmtId = -1;
 
-    this._avcTrack = TSDemuxer.createTrack('video', duration);
-    this._audioTrack = TSDemuxer.createTrack('audio', duration);
-    this._id3Track = TSDemuxer.createTrack('id3', duration);
-    this._txtTrack = TSDemuxer.createTrack('text', duration);
+    this._avcTrack = TSDemuxer.createTrack(
+      'video',
+      duration
+    ) as DemuxedAvcTrack;
+    this._audioTrack = TSDemuxer.createTrack(
+      'audio',
+      duration
+    ) as DemuxedAudioTrack;
+    this._id3Track = TSDemuxer.createTrack(
+      'id3',
+      duration
+    ) as DemuxedMetadataTrack;
+    this._txtTrack = TSDemuxer.createTrack(
+      'text',
+      duration
+    ) as DemuxedUserdataTrack;
     this._audioTrack.isAAC = true;
 
     // flush any partial content
