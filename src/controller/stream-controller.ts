@@ -330,7 +330,7 @@ export default class StreamController
     targetBufferTime: number
   ) {
     // Check if fragment is not loaded
-    const fragState = this.fragmentTracker.getState(frag);
+    let fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
     // Don't update nextLoadPosition for fragments which are not buffered
     if (Number.isFinite(frag.sn as number) && !this.bitrateTest) {
@@ -344,6 +344,8 @@ export default class StreamController
         this._handleFragmentLoadProgress(data);
         this._handleFragmentLoadComplete(data);
         return;
+      } else {
+        fragState = FragmentState.NOT_LOADED;
       }
     }
     if (
@@ -1146,7 +1148,7 @@ export default class StreamController
           // Backtrack if dropped frames create a gap at currentTime
           const pos = this.getLoadPosition() + this.config.maxBufferHole;
           if (pos > frag.start && pos < startPTS) {
-            this.backtrack();
+            this.backtrack(frag);
             return;
           }
           // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
@@ -1169,7 +1171,7 @@ export default class StreamController
         this.bufferFragmentData(video, frag, part, chunkMeta);
       }
     } else if (remuxResult.independent === false) {
-      this.backtrack();
+      this.backtrack(frag);
       return;
     }
 
@@ -1283,9 +1285,13 @@ export default class StreamController
     this.tick();
   }
 
-  private backtrack() {
+  private backtrack(frag: Fragment) {
     // Causes findFragments to backtrack through fragments to find the keyframe
     this.resetTransmuxer();
+    this.flushMainBuffer(0, frag.start);
+    this.fragmentTracker.backtrack(frag);
+    this.fragPrevious = null;
+    this.nextLoadPosition = frag.start;
     this.state = State.BACKTRACKING;
   }
 
