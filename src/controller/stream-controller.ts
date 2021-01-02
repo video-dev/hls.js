@@ -1143,6 +1143,12 @@ export default class StreamController
             endDTS,
           };
         } else if (video.dropped && video.independent) {
+          // Backtrack if dropped frames create a gap at currentTime
+          const pos = this.getLoadPosition() + this.config.maxBufferHole;
+          if (pos > frag.start && pos < startPTS) {
+            this.backtrack();
+            return;
+          }
           // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
           frag.setElementaryStreamInfo(
             video.type as ElementaryStreamTypes,
