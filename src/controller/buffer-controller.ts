@@ -749,18 +749,23 @@ export default class BufferController implements ComponentAPI {
     startOffset: number,
     endOffset: number
   ) {
-    const { media, operationQueue, sourceBuffer } = this;
+    const { media, mediaSource, operationQueue, sourceBuffer } = this;
     const sb = sourceBuffer[type];
-    if (!media || !sb) {
+    if (!media || !mediaSource || !sb) {
       logger.warn(
         `[buffer-controller]: Attempting to remove from the ${type} SourceBuffer, but it does not exist`
       );
       operationQueue.shiftAndExecuteNext(type);
       return;
     }
-
+    const mediaDuration = Number.isFinite(media.duration)
+      ? media.duration
+      : Infinity;
+    const msDuration = Number.isFinite(mediaSource.duration)
+      ? mediaSource.duration
+      : Infinity;
     const removeStart = Math.max(0, startOffset);
-    const removeEnd = Math.min(media.duration, endOffset);
+    const removeEnd = Math.min(endOffset, mediaDuration, msDuration);
     if (removeEnd > removeStart) {
       logger.log(
         `[buffer-controller]: Removing [${removeStart},${removeEnd}] from the ${type} SourceBuffer`
