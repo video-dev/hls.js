@@ -29,7 +29,7 @@ export default class BufferOperationQueue {
   public insertAbort(operation: BufferOperation, type: SourceBufferName) {
     const queue = this.queues[type];
     queue.unshift(operation);
-    this.executeNext(type, true);
+    this.executeNext(type);
   }
 
   public appendBlocker(type: SourceBufferName): Promise<{}> {
@@ -48,14 +48,9 @@ export default class BufferOperationQueue {
     return promise;
   }
 
-  public executeNext(type: SourceBufferName, ignoreUpdating?: boolean) {
+  public executeNext(type: SourceBufferName) {
     const { buffers, queues } = this;
     const sb = buffers[type];
-    console.assert(
-      !sb || ignoreUpdating || !sb.updating,
-      `${type} sourceBuffer must exist, and must not be updating`
-    );
-
     const queue = queues[type];
     if (queue.length) {
       const operation: BufferOperation = queue[0];
