@@ -413,7 +413,7 @@ function loadSelectedStream() {
   });
 
   hls.on(Hls.Events.MANIFEST_PARSED, function (eventName, data) {
-    logStatus('No of quality levels found: ' + hls.levels.length);
+    logStatus(`${hls.levels.length} quality levels found`);
     logStatus('Manifest successfully loaded');
     stats = {
       levelNb: data.levels.length,
@@ -1743,6 +1743,8 @@ function appendLog(textElId, message) {
   logText += newMessage;
   // update
   el.text(logText);
+  const element = el[0];
+  element.scrollTop = element.scrollHeight - element.clientHeight;
 }
 
 function logStatus(message) {
