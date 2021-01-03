@@ -550,6 +550,7 @@ class AudioStreamController
 
   protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData) {
     if (this.waitingData) {
+      this.waitingData.complete = true;
       return;
     }
     super._handleFragmentLoadComplete(fragLoadedData);
