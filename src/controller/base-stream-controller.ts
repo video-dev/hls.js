@@ -319,11 +319,9 @@ export default class BaseStreamController
         this.hls.trigger(Events.FRAG_LOADED, data);
 
         // Tracker backtrack must be called after onFragLoaded to update the fragment entity state to BACKTRACKED
+        // This happens after handleTransmuxComplete when the worker or progressive is disabled
         if (this.state === State.BACKTRACKING) {
-          this.flushMainBuffer(0, frag.start);
-          this.fragmentTracker.backtrack(data);
-          this.fragPrevious = null;
-          this.nextLoadPosition = frag.start;
+          this.fragmentTracker.backtrack(frag, data);
           return;
         }
       }
