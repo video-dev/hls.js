@@ -83,30 +83,33 @@ export class HlsUrlParameters {
 }
 
 export class Level {
-  public attrs: LevelAttributes;
-  public audioCodec?: string;
+  public readonly attrs: LevelAttributes;
+  public readonly audioCodec: string | undefined;
+  public readonly bitrate: number;
+  public readonly codecSet: string;
+  public readonly height: number;
+  public readonly id: number;
+  public readonly name: string | undefined;
+  public readonly videoCodec: string | undefined;
+  public readonly width: number;
+  public readonly unknownCodecs: string[] | undefined;
   public audioGroupIds?: string[];
-  public bitrate: number;
   public details?: LevelDetails;
   public fragmentError: boolean = false;
-  public height: number;
-  public id: number;
   public loadError: number = 0;
   public loaded?: { bytes: number; duration: number };
-  public name: string | undefined;
   public realBitrate: number = 0;
   public textGroupIds?: string[];
   public url: string[];
-  public videoCodec?: string;
-  public width: number;
-  public unknownCodecs: string[] | undefined;
   private _urlId: number = 0;
 
   constructor(data: LevelParsed) {
     this.url = [data.url];
     this.attrs = data.attrs;
     this.bitrate = data.bitrate;
-    this.details = data.details;
+    if (data.details) {
+      this.details = data.details;
+    }
     this.id = data.id || 0;
     this.name = data.name;
     this.width = data.width || 0;
@@ -114,6 +117,10 @@ export class Level {
     this.audioCodec = data.audioCodec;
     this.videoCodec = data.videoCodec;
     this.unknownCodecs = data.unknownCodecs;
+    this.codecSet = [data.videoCodec, data.audioCodec]
+      .filter((c) => c)
+      .join(',')
+      .replace(/\.[^.,]+/g, '');
   }
 
   get maxBitrate(): number {

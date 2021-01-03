@@ -117,7 +117,10 @@ export default class M3U8Parser {
           level.height = resolution.height;
         }
 
-        setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+        setCodecs(
+          (attrs.CODECS || '').split(/[ ,]+/).filter((c) => c),
+          level
+        );
 
         if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
           level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);

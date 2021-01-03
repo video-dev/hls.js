@@ -303,7 +303,7 @@ class AbrController implements ComponentAPI {
     }
 
     // compute next level using ABR logic
-    let nextABRAutoLevel = this._nextABRAutoLevel;
+    let nextABRAutoLevel = this.getNextABRAutoLevel();
     // if forced auto level has been defined, use it to cap ABR computed quality level
     if (forcedAutoLevel !== -1) {
       nextABRAutoLevel = Math.min(forcedAutoLevel, nextABRAutoLevel);
@@ -312,7 +312,7 @@ class AbrController implements ComponentAPI {
     return nextABRAutoLevel;
   }
 
-  get _nextABRAutoLevel() {
+  private getNextABRAutoLevel() {
     const { fragCurrent, partCurrent, hls } = this;
     const { maxAutoLevel, config, minAutoLevel, media } = hls;
     const currentFragDuration = partCurrent
@@ -337,7 +337,7 @@ class AbrController implements ComponentAPI {
       playbackRate;
 
     // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
-    let bestLevel = this._findBestLevel(
+    let bestLevel = this.findBestLevel(
       avgbw,
       minAutoLevel,
       maxAutoLevel,
@@ -347,55 +347,56 @@ class AbrController implements ComponentAPI {
     );
     if (bestLevel >= 0) {
       return bestLevel;
-    } else {
-      logger.trace(
-        'rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering'
-      );
-      // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
-      // if no matching level found, logic will return 0
-      let maxStarvationDelay = currentFragDuration
-        ? Math.min(currentFragDuration, config.maxStarvationDelay)
-        : config.maxStarvationDelay;
-      let bwFactor = config.abrBandWidthFactor;
-      let bwUpFactor = config.abrBandWidthUpFactor;
-
-      if (!bufferStarvationDelay) {
-        // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
-        const bitrateTestDelay = this.bitrateTestDelay;
-        if (bitrateTestDelay) {
-          // if it is the case, then we need to adjust our max starvation delay using maxLoadingDelay config value
-          // max video loading delay used in  automatic start level selection :
-          // in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level +
-          // the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
-          // cap maxLoadingDelay and ensure it is not bigger 'than bitrate test' frag duration
-          const maxLoadingDelay = currentFragDuration
-            ? Math.min(currentFragDuration, config.maxLoadingDelay)
-            : config.maxLoadingDelay;
-          maxStarvationDelay = maxLoadingDelay - bitrateTestDelay;
-          logger.trace(
-            `bitrate test took ${Math.round(
-              1000 * bitrateTestDelay
-            )}ms, set first fragment max fetchDuration to ${Math.round(
-              1000 * maxStarvationDelay
-            )} ms`
-          );
-          // don't use conservative factor on bitrate test
-          bwFactor = bwUpFactor = 1;
-        }
-      }
-      bestLevel = this._findBestLevel(
-        avgbw,
-        minAutoLevel,
-        maxAutoLevel,
-        bufferStarvationDelay + maxStarvationDelay,
-        bwFactor,
-        bwUpFactor
-      );
-      return Math.max(bestLevel, 0);
     }
+    logger.trace(
+      `${
+        bufferStarvationDelay ? 'rebuffering expected' : 'buffer is empty'
+      }, finding optimal quality level`
+    );
+    // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
+    // if no matching level found, logic will return 0
+    let maxStarvationDelay = currentFragDuration
+      ? Math.min(currentFragDuration, config.maxStarvationDelay)
+      : config.maxStarvationDelay;
+    let bwFactor = config.abrBandWidthFactor;
+    let bwUpFactor = config.abrBandWidthUpFactor;
+
+    if (!bufferStarvationDelay) {
+      // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
+      const bitrateTestDelay = this.bitrateTestDelay;
+      if (bitrateTestDelay) {
+        // if it is the case, then we need to adjust our max starvation delay using maxLoadingDelay config value
+        // max video loading delay used in  automatic start level selection :
+        // in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level +
+        // the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
+        // cap maxLoadingDelay and ensure it is not bigger 'than bitrate test' frag duration
+        const maxLoadingDelay = currentFragDuration
+          ? Math.min(currentFragDuration, config.maxLoadingDelay)
+          : config.maxLoadingDelay;
+        maxStarvationDelay = maxLoadingDelay - bitrateTestDelay;
+        logger.trace(
+          `bitrate test took ${Math.round(
+            1000 * bitrateTestDelay
+          )}ms, set first fragment max fetchDuration to ${Math.round(
+            1000 * maxStarvationDelay
+          )} ms`
+        );
+        // don't use conservative factor on bitrate test
+        bwFactor = bwUpFactor = 1;
+      }
+    }
+    bestLevel = this.findBestLevel(
+      avgbw,
+      minAutoLevel,
+      maxAutoLevel,
+      bufferStarvationDelay + maxStarvationDelay,
+      bwFactor,
+      bwUpFactor
+    );
+    return Math.max(bestLevel, 0);
   }
 
-  private _findBestLevel(
+  private findBestLevel(
     currentBw: number,
     minAutoLevel: number,
     maxAutoLevel: number,
@@ -409,7 +410,10 @@ class AbrController implements ComponentAPI {
       lastLoadedFragLevel: currentLevel,
     } = this;
     const { levels } = this.hls;
-    const live = levels[currentLevel]?.details?.live || false;
+    const level = levels[currentLevel];
+    const live = !!level?.details?.live;
+    const currentCodecSet = level?.codecSet;
+
     const currentFragDuration = partCurrent
       ? partCurrent.duration
       : fragCurrent
@@ -418,7 +422,10 @@ class AbrController implements ComponentAPI {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
 
-      if (!levelInfo) {
+      if (
+        !levelInfo ||
+        (currentCodecSet && levelInfo.codecSet !== currentCodecSet)
+      ) {
         continue;
       }
 
@@ -454,7 +461,7 @@ class AbrController implements ComponentAPI {
         adjustedbw > bitrate &&
         // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
         // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
-        // special case to support startLevel = -1 (bitrateTest) on live streams : in that case we should not exit loop so that _findBestLevel will return -1
+        // special case to support startLevel = -1 (bitrateTest) on live streams : in that case we should not exit loop so that findBestLevel will return -1
         (!fetchDuration ||
           (live && !this.bitrateTestDelay) ||
           fetchDuration < maxFetchDuration)
