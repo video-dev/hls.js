@@ -12,7 +12,6 @@ import type {
 import type { MediaPlaylist } from '../types/media-playlist';
 import { ErrorData, LevelLoadingData } from '../types/events';
 import { PlaylistContextType } from '../types/loader';
-import { logger } from '../utils/logger';
 
 class SubtitleTrackController extends BasePlaylistController {
   private media: HTMLMediaElement | null = null;
