@@ -269,14 +269,13 @@ export class FragmentTracker implements ComponentAPI {
     return FragmentState.NOT_LOADED;
   }
 
-  public backtrack(data: FragLoadedData) {
-    const { frag } = data;
+  public backtrack(frag: Fragment, data?: FragLoadedData) {
     const fragKey = getFragmentKey(frag);
     const fragmentEntity = this.fragments[fragKey];
-    if (!fragmentEntity) {
+    if (!fragmentEntity || fragmentEntity.backtrack) {
       return;
     }
-    fragmentEntity.backtrack = fragmentEntity.loaded || data;
+    fragmentEntity.backtrack = data ? data : fragmentEntity.loaded;
     fragmentEntity.loaded = null;
   }
 
@@ -284,7 +283,13 @@ export class FragmentTracker implements ComponentAPI {
     const fragKey = getFragmentKey(fragment);
     const fragmentEntity = this.fragments[fragKey];
     if (fragmentEntity) {
-      return fragmentEntity.backtrack;
+      const { backtrack } = fragmentEntity;
+      // If data was already sent to Worker it is detached no longer available
+      if (backtrack?.payload?.byteLength) {
+        return backtrack;
+      } else {
+        this.removeFragment(fragment);
+      }
     }
     return null;
   }
