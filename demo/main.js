@@ -83,6 +83,9 @@ const playerResize = () => {
       Math.round(bounds.height * 10) / 10
     }`
   );
+  if (video.videoWidth && video.videoHeight) {
+    $('#currentResolution').html(`${video.videoWidth} x ${video.videoHeight}`);
+  }
 };
 resizeHandlers.push(playerResize);
 
@@ -288,6 +291,8 @@ function trimEventHistory() {
 }
 
 function loadSelectedStream() {
+  $('#statusOut,#errorOut').empty();
+
   if (!Hls.isSupported()) {
     handleUnsupported();
     return;
@@ -794,16 +799,17 @@ function loadSelectedStream() {
     }
 
     if (data.fatal) {
-      console.error('Fatal error :' + data.details);
+      console.error(`Fatal error : ${data.details}`);
       switch (data.type) {
         case Hls.ErrorTypes.MEDIA_ERROR:
+          logError(`A media error occurred: ${data.details}`);
           handleMediaError();
           break;
         case Hls.ErrorTypes.NETWORK_ERROR:
-          logError('A network error occurred');
+          logError(`A network error occurred: ${data.details}`);
           break;
         default:
-          logError('An unrecoverable error occurred');
+          logError(`An unrecoverable error occurred: ${data.details}`);
           hls.destroy();
           break;
       }
@@ -1228,118 +1234,78 @@ function getSeekableEnd() {
   }
   return 0;
 }
+
+function getLevelButtonHtml(key, levels, onclickReplace, autoEnabled) {
+  const onclickAuto = `${key}=-1`.replace(/^(\w+)=([^=]+)$/, onclickReplace);
+  const codecs = levels.reduce((uniqueCodecs, level) => {
+    const levelCodecs = codecs2label(level.attrs.CODECS);
+    if (levelCodecs && uniqueCodecs.indexOf(levelCodecs) === -1) {
+      uniqueCodecs.push(levelCodecs);
+    }
+    return uniqueCodecs;
+  }, []);
+  return (
+    `<button type="button" class="btn btn-sm ${
+      autoEnabled ? 'btn-primary' : 'btn-success'
+    }" onclick="${onclickAuto}">auto</button>` +
+    levels
+      .map((level, i) => {
+        const enabled = hls[key] === i;
+        const onclick = `${key}=${i}`.replace(/^(\w+)=(\w+)$/, onclickReplace);
+        const label = level2label(levels[i], i, codecs);
+        return `<button type="button" class="btn btn-sm ${
+          enabled ? 'btn-primary' : 'btn-success'
+        }" onclick="${onclick}">${label}</button>`;
+      })
+      .join('')
+  );
+}
+
 function updateLevelInfo() {
-  if (!hls.levels) {
+  const levels = hls.levels;
+  if (!levels) {
     return;
   }
-  const buttonTemplate = '<button type="button" class="btn btn-sm ';
-  const buttonEnabled = 'btn-primary" ';
-  const buttonDisabled = 'btn-success" ';
 
-  let html1 = buttonTemplate;
-  if (hls.autoLevelEnabled) {
-    html1 += buttonEnabled;
-  } else {
-    html1 += buttonDisabled;
+  const htmlCurrentLevel = getLevelButtonHtml(
+    'currentLevel',
+    levels,
+    'hls.$1=$2',
+    hls.autoLevelEnabled
+  );
+  const htmlNextLevel = getLevelButtonHtml(
+    'nextLevel',
+    levels,
+    'hls.$1=$2',
+    hls.autoLevelEnabled
+  );
+  const htmlLoadLevel = getLevelButtonHtml(
+    'loadLevel',
+    levels,
+    'hls.$1=$2',
+    hls.autoLevelEnabled
+  );
+  const htmlCapLevel = getLevelButtonHtml(
+    'autoLevelCapping',
+    levels,
+    'levelCapping=hls.$1=$2;updateLevelInfo();onDemoConfigChanged();',
+    hls.autoLevelCapping === -1
+  );
+
+  if ($('#currentLevelControl').html() !== htmlCurrentLevel) {
+    $('#currentLevelControl').html(htmlCurrentLevel);
   }
 
-  html1 += 'onclick="hls.currentLevel=-1">auto</button>';
-
-  let html2 = buttonTemplate;
-  if (hls.autoLevelEnabled) {
-    html2 += buttonEnabled;
-  } else {
-    html2 += buttonDisabled;
+  if ($('#nextLevelControl').html() !== htmlNextLevel) {
+    $('#nextLevelControl').html(htmlNextLevel);
   }
 
-  html2 += 'onclick="hls.loadLevel=-1">auto</button>';
-
-  let html3 = buttonTemplate;
-  if (hls.autoLevelCapping === -1) {
-    html3 += buttonEnabled;
-  } else {
-    html3 += buttonDisabled;
+  if ($('#loadLevelControl').html() !== htmlLoadLevel) {
+    $('#loadLevelControl').html(htmlLoadLevel);
   }
 
-  html3 +=
-    'onclick="levelCapping=hls.autoLevelCapping=-1;updateLevelInfo();onDemoConfigChanged();">auto</button>';
-
-  let html4 = buttonTemplate;
-  if (hls.autoLevelEnabled) {
-    html4 += buttonEnabled;
-  } else {
-    html4 += buttonDisabled;
-  }
-
-  html4 += 'onclick="hls.nextLevel=-1">auto</button>';
-
-  for (let i = 0; i < hls.levels.length; i++) {
-    html1 += buttonTemplate;
-    if (hls.currentLevel === i) {
-      html1 += buttonEnabled;
-    } else {
-      html1 += buttonDisabled;
-    }
-
-    let levelName = i;
-    const label = level2label(i);
-    if (label) {
-      levelName += ' (' + level2label(i) + 'p)';
-    }
-
-    html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
-
-    html2 += buttonTemplate;
-    if (hls.loadLevel === i) {
-      html2 += buttonEnabled;
-    } else {
-      html2 += buttonDisabled;
-    }
-
-    html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
-
-    html3 += buttonTemplate;
-    if (hls.autoLevelCapping === i) {
-      html3 += buttonEnabled;
-    } else {
-      html3 += buttonDisabled;
-    }
-
-    html3 +=
-      'onclick="levelCapping=hls.autoLevelCapping=' +
-      i +
-      ';updateLevelInfo();onDemoConfigChanged();">' +
-      levelName +
-      '</button>';
-
-    html4 += buttonTemplate;
-    if (hls.nextLevel === i) {
-      html4 += buttonEnabled;
-    } else {
-      html4 += buttonDisabled;
-    }
-
-    html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
-  }
-
-  if (video.videoWidth && video.videoHeight) {
-    $('#currentResolution').html(`${video.videoWidth} x ${video.videoHeight}`);
-  }
-
-  if ($('#currentLevelControl').html() !== html1) {
-    $('#currentLevelControl').html(html1);
-  }
-
-  if ($('#loadLevelControl').html() !== html2) {
-    $('#loadLevelControl').html(html2);
-  }
-
-  if ($('#levelCappingControl').html() !== html3) {
-    $('#levelCappingControl').html(html3);
-  }
-
-  if ($('#nextLevelControl').html() !== html4) {
-    $('#nextLevelControl').html(html4);
+  if ($('#levelCappingControl').html() !== htmlCapLevel) {
+    $('#levelCappingControl').html(htmlCapLevel);
   }
 }
 
@@ -1374,23 +1340,37 @@ function updateAudioTrackInfo() {
   $('#audioTrackControl').html(html1);
 }
 
-function level2label(index) {
-  if (hls && hls.levels.length - 1 >= index) {
-    const level = hls.levels[index];
-    if (level.name) {
-      return level.name;
-    } else {
-      if (level.height) {
-        return level.height + 'p / ' + Math.round(level.bitrate / 1024) + 'kb';
-      } else {
-        if (level.bitrate) {
-          return Math.round(level.bitrate / 1024) + 'kb';
-        } else {
-          return null;
-        }
-      }
-    }
+function codecs2label(levelCodecs) {
+  if (levelCodecs) {
+    return levelCodecs
+      .replace(/([ah]vc.)[^,;]+/, '$1')
+      .replace('mp4a.40.2', 'mp4a');
   }
+  return '';
+}
+
+function level2label(level, i, manifestCodecs) {
+  const levelCodecs = codecs2label(level.attrs.CODECS);
+  const levelNameInfo = level.name ? `"${level.name}": ` : '';
+  const codecInfo =
+    levelCodecs && manifestCodecs.length > 1 ? ` / ${levelCodecs}` : '';
+  if (level.height) {
+    return `${i} (${levelNameInfo}${level.height}p / ${Math.round(
+      level.bitrate / 1024
+    )}kb${codecInfo})`;
+  }
+  if (level.bitrate) {
+    return `${i} (${levelNameInfo}${Math.round(
+      level.bitrate / 1024
+    )}kb${codecInfo})`;
+  }
+  if (codecInfo) {
+    return `${i} (${levelNameInfo}${levelCodecs})`;
+  }
+  if (level.name) {
+    return `${i} (${level.name})`;
+  }
+  return `${i}`;
 }
 
 function getDemoConfigPropOrDefault(propName, defaultVal) {
