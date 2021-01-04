@@ -1293,7 +1293,7 @@ export default class StreamController
     Object.keys(tracks).forEach((trackName) => {
       const track = tracks[trackName];
       const initSegment = track.initSegment;
-      if (initSegment) {
+      if (initSegment?.byteLength) {
         this.hls.trigger(Events.BUFFER_APPENDING, {
           type: trackName as SourceBufferName,
           data: initSegment,
