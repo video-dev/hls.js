@@ -1,4 +1,5 @@
 import BaseStreamController, { State } from './base-stream-controller';
+import { changeTypeSupported } from '../is-supported';
 import type { NetworkComponentAPI } from '../types/component-api';
 import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -561,7 +562,7 @@ export default class StreamController
         }
       }
     });
-    this.audioCodecSwitch = aac && heaac;
+    this.audioCodecSwitch = aac && heaac && !changeTypeSupported();
     if (this.audioCodecSwitch) {
       this.log(
         'Both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC'

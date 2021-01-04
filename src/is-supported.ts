@@ -1,13 +1,16 @@
 import { getMediaSource } from './utils/mediasource-helper';
+import { ExtendedSourceBuffer } from './types/buffer';
+
+function getSourceBuffer(): typeof self.SourceBuffer {
+  return self.SourceBuffer || (self as any).WebKitSourceBuffer;
+}
 
 export function isSupported(): boolean {
   const mediaSource = getMediaSource();
   if (!mediaSource) {
     return false;
   }
-  const sourceBuffer =
-    self.SourceBuffer || ((self as any).WebKitSourceBuffer as SourceBuffer); // eslint-disable-line no-restricted-globals
-
+  const sourceBuffer = getSourceBuffer();
   const isTypeSupported =
     mediaSource &&
     typeof mediaSource.isTypeSupported === 'function' &&
@@ -21,4 +24,12 @@ export function isSupported(): boolean {
       typeof sourceBuffer.prototype.appendBuffer === 'function' &&
       typeof sourceBuffer.prototype.remove === 'function');
   return !!isTypeSupported && !!sourceBufferValidAPI;
+}
+
+export function changeTypeSupported(): boolean {
+  const sourceBuffer = getSourceBuffer();
+  return (
+    typeof (sourceBuffer?.prototype as ExtendedSourceBuffer)?.changeType ===
+    'function'
+  );
 }
