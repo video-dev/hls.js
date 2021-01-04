@@ -1068,6 +1068,7 @@ export default class BaseStreamController
           level,
           drift,
           type,
+          frag,
           start: info.startPTS,
           end: info.endPTS,
         });

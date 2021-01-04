@@ -81,7 +81,6 @@ export default class BufferController implements ComponentAPI {
     hls.on(Events.BUFFER_CODECS, this.onBufferCodecs, this);
     hls.on(Events.BUFFER_EOS, this.onBufferEos, this);
     hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
-    hls.on(Events.LEVEL_PTS_UPDATED, this.onLevelPtsUpdated, this);
     hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.on(Events.FRAG_PARSED, this.onFragParsed, this);
   }
@@ -96,7 +95,6 @@ export default class BufferController implements ComponentAPI {
     hls.off(Events.BUFFER_CODECS, this.onBufferCodecs, this);
     hls.off(Events.BUFFER_EOS, this.onBufferEos, this);
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
-    hls.off(Events.LEVEL_PTS_UPDATED, this.onLevelPtsUpdated, this);
     hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.off(Events.FRAG_PARSED, this.onFragParsed, this);
   }
@@ -252,24 +250,47 @@ export default class BufferController implements ComponentAPI {
     event: Events.BUFFER_APPENDING,
     eventData: BufferAppendingData
   ) {
-    const { hls, operationQueue } = this;
+    const { hls, operationQueue, tracks } = this;
     const { data, type, frag, part, chunkMeta } = eventData;
     const chunkStats = chunkMeta.buffering[type];
 
-    const start = self.performance.now();
-    chunkStats.start = start;
+    const bufferAppendingStart = self.performance.now();
+    chunkStats.start = bufferAppendingStart;
     const fragBuffering = frag.stats.buffering;
     const partBuffering = part ? part.stats.buffering : null;
     if (fragBuffering.start === 0) {
-      fragBuffering.start = start;
+      fragBuffering.start = bufferAppendingStart;
     }
     if (partBuffering && partBuffering.start === 0) {
-      partBuffering.start = start;
+      partBuffering.start = bufferAppendingStart;
     }
+
+    // TODO: Only update timestampOffset when audio/mpeg fragment or part is not contiguous with previously appended
+    // Adjusting `SourceBuffer.timestampOffset` (desired point in the timeline where the next frames should be appended)
+    // in Chrome browser when we detect MPEG audio container and time delta between level PTS and `SourceBuffer.timestampOffset`
+    // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos).
+    // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
+    const audioTrack = tracks.audio;
+    const checkTimestampOffset =
+      type === 'audio' &&
+      chunkMeta.id === 1 &&
+      audioTrack?.container === 'audio/mpeg';
 
     const operation: BufferOperation = {
       execute: () => {
         chunkStats.executeStart = self.performance.now();
+        if (checkTimestampOffset) {
+          const sb = this.sourceBuffer[type];
+          if (sb) {
+            const delta = frag.start - sb.timestampOffset;
+            if (Math.abs(delta) >= 0.1) {
+              logger.log(
+                `[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${frag.start} (delta: ${delta}) sn: ${frag.sn})`
+              );
+              sb.timestampOffset = frag.start;
+            }
+          }
+        }
         this.appendExecutor(data, type);
       },
       onStart: () => {
@@ -453,75 +474,6 @@ export default class BufferController implements ComponentAPI {
       this.blockBuffers(this.updateMediaElementDuration.bind(this));
     } else {
       this.updateMediaElementDuration();
-    }
-  }
-
-  // Adjusting `SourceBuffer.timestampOffset` (desired point in the timeline where the next frames should be appended)
-  // in Chrome browser when we detect MPEG audio container and time delta between level PTS and `SourceBuffer.timestampOffset`
-  // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos). At the time of change we issue
-  // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
-  // event if SB is in updating state.
-  // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
-  protected onLevelPtsUpdated(
-    event: Events.LEVEL_PTS_UPDATED,
-    data: LevelPTSUpdatedData
-  ) {
-    const { operationQueue, sourceBuffer, tracks } = this;
-    const type = data.type;
-    const audioTrack = tracks.audio;
-
-    if (
-      type !== 'audio' ||
-      (audioTrack && audioTrack.container !== 'audio/mpeg')
-    ) {
-      return;
-    }
-    const audioBuffer = sourceBuffer[type];
-    if (!audioBuffer) {
-      return;
-    }
-    const start = data.start;
-    const delta = Math.abs(audioBuffer.timestampOffset - start);
-    if (delta < 0.1) {
-      return;
-    }
-    // SourceBuffers can be aborted while the updating flag is true, but only if it is because of an append operation -
-    // aborting during a remove will throw an InvalidStateError. It's safer to enqueue aborts and execute them only if
-    // updating is false
-    if (audioBuffer.updating) {
-      const operation = {
-        execute() {
-          logger.log(`[buffer-controller]: Aborting the ${type} SourceBuffer`);
-          audioBuffer.abort();
-        },
-        onStart() {
-          logger.debug(
-            `[buffer-controller]: Starting abort on source buffer ${type}`
-          );
-        },
-        onComplete() {
-          logger.log(
-            `[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${start}`
-          );
-          audioBuffer.timestampOffset = start;
-        },
-        onError(error) {
-          logger.warn(
-            '[buffer-controller]: Failed to abort the audio SourceBuffer',
-            error
-          );
-        },
-      };
-      operationQueue.insertAbort(operation, type);
-    } else {
-      logger.log(
-        `[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${start}`
-      );
-      audioBuffer.timestampOffset = start;
-    }
-
-    if (this.hls.config.liveDurationInfinity) {
-      this.updateSeekableRange(data.details);
     }
   }
 
