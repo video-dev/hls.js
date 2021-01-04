@@ -446,17 +446,12 @@ export default class BaseStreamController
 
   protected fragBufferedComplete(frag: Fragment, part: Part | null) {
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    const timestampInfo = frag.startPTS
-      ? `PTS:[${frag.startPTS},${frag.endPTS}],DTS:[${frag.startDTS}/${frag.endDTS}]`
-      : `start-end:[${frag.start}-${frag.end}]`;
     this.log(
       `Buffered ${frag.type} sn: ${frag.sn}${
         part ? ' part: ' + part.index : ''
       } of ${this.logPrefix === '[stream-controller]' ? 'level' : 'track'} ${
         frag.level
-      }. ${timestampInfo}, Buffered: ${TimeRanges.toString(
-        BufferHelper.getBuffered(media)
-      )}`
+      } ${TimeRanges.toString(BufferHelper.getBuffered(media))}`
     );
     this.state = State.IDLE;
     this.tick();
@@ -511,7 +506,7 @@ export default class BaseStreamController
               details.endSN
             }] parts [0-${partIndex}-${partList.length - 1}] ${
               this.logPrefix === '[stream-controller]' ? 'level' : 'track'
-            }: ${frag.level}, target buffer time: ${parseFloat(
+            }: ${frag.level}, target: ${parseFloat(
               targetBufferTime.toFixed(3)
             )}`
           );
@@ -542,7 +537,7 @@ export default class BaseStreamController
         details ? 'of [' + details.startSN + '-' + details.endSN + '] ' : ''
       }${this.logPrefix === '[stream-controller]' ? 'level' : 'track'}: ${
         frag.level
-      }, target buffer time: ${parseFloat(targetBufferTime.toFixed(3))}`
+      }, target: ${parseFloat(targetBufferTime.toFixed(3))}`
     );
 
     this.state = State.FRAG_LOADING;

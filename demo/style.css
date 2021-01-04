@@ -187,13 +187,13 @@ select option {
 
 #statusOut {
   height: auto;
-  max-height: 4em;
+  max-height: calc((17px * 3) + 19px);
   overflow: auto;
 }
 
 #errorOut {
   height: auto;
-  max-height: 4em;
+  max-height: calc((17px * 3) + 19px);
   overflow: auto;
 }
 
