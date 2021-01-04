@@ -536,10 +536,10 @@ export default class M3U8Parser {
 
     /**
      * Backfill any missing PDT values
-       "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
-       one or more Media Segment URIs, the client SHOULD extrapolate
-       backward from that tag (using EXTINF durations and/or media
-       timestamps) to associate dates with those segments."
+     * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
+     * one or more Media Segment URIs, the client SHOULD extrapolate
+     * backward from that tag (using EXTINF durations and/or media
+     * timestamps) to associate dates with those segments."
      * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
      * computed.
      */
