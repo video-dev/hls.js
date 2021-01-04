@@ -80,6 +80,7 @@ describe('LevelController', function () {
       audioCodec: undefined,
       audioGroupIds: undefined,
       bitrate: 246440,
+      codecSet: '',
       details: data.levels[1].details,
       fragmentError: false,
       height: 0,
