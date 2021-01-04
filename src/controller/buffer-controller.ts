@@ -28,6 +28,7 @@ import type Hls from '../hls';
 import LevelDetails from '../loader/level-details';
 
 const MediaSource = getMediaSource();
+const VIDEO_CODEC_PROFILE_REPACE = /([ha]vc.)(?:\.[^.,]+)+/;
 
 export default class BufferController implements ComponentAPI {
   // The level details used to determine duration, target-duration and live
@@ -227,15 +228,37 @@ export default class BufferController implements ComponentAPI {
     event: Events.BUFFER_CODECS,
     data: BufferCodecsData
   ) {
-    // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
-    // if sourcebuffers already created, do nothing ...
-    if (Object.keys(this.sourceBuffer).length) {
-      return;
-    }
+    const sourceBufferCount = Object.keys(this.sourceBuffer).length;
 
     Object.keys(data).forEach((trackName) => {
-      this.pendingTracks[trackName] = data[trackName];
+      if (sourceBufferCount) {
+        // check if SourceBuffer codec needs to change
+        const track = this.tracks[trackName];
+        if (track && typeof track.buffer.changeType === 'function') {
+          const { codec, levelCodec, container } = data[trackName];
+          const currentCodec = (track.levelCodec || track.codec).replace(
+            VIDEO_CODEC_PROFILE_REPACE,
+            '$1'
+          );
+          const nextCodec = (levelCodec || codec).replace(
+            VIDEO_CODEC_PROFILE_REPACE,
+            '$1'
+          );
+          if (currentCodec !== nextCodec) {
+            const mimeType = `${container};codecs=${levelCodec || codec}`;
+            this.appendChangeType(trackName, mimeType);
+          }
+        }
+      } else {
+        // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
+        this.pendingTracks[trackName] = data[trackName];
+      }
     });
+
+    // if sourcebuffers already created, do nothing ...
+    if (sourceBufferCount) {
+      return;
+    }
 
     this.bufferCodecEventsExpected = Math.max(
       this.bufferCodecEventsExpected - 1,
@@ -244,6 +267,32 @@ export default class BufferController implements ComponentAPI {
     if (this.mediaSource && this.mediaSource.readyState === 'open') {
       this.checkPendingTracks();
     }
+  }
+
+  protected appendChangeType(type, mimeType) {
+    const { operationQueue } = this;
+    const operation: BufferOperation = {
+      execute: () => {
+        const sb = this.sourceBuffer[type];
+        if (sb) {
+          logger.log(
+            `[buffer-controller]: changing ${type} sourceBuffer type to ${mimeType}`
+          );
+          sb.changeType(mimeType);
+        }
+        operationQueue.shiftAndExecuteNext(type);
+      },
+      onStart: () => {},
+      onComplete: () => {},
+      onError: (e) => {
+        logger.warn(
+          `[buffer-controller]: Failed to change ${type} SourceBuffer type`,
+          e
+        );
+      },
+    };
+
+    operationQueue.append(operation, type);
   }
 
   protected onBufferAppending(
