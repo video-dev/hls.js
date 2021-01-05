@@ -823,7 +823,7 @@ class AudioStreamController
     );
     this.hls.trigger(Events.BUFFER_CODECS, tracks);
     const initSegment = track.initSegment;
-    if (initSegment) {
+    if (initSegment?.byteLength) {
       const segment: BufferAppendingData = {
         type: 'audio',
         data: initSegment,

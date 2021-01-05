@@ -149,6 +149,7 @@ export interface LevelPTSUpdatedData {
   level: Level;
   drift: number;
   type: string;
+  frag: Fragment;
   start: number;
   end: number;
 }

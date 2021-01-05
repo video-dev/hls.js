@@ -3,6 +3,7 @@ export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 // eslint-disable-next-line no-restricted-globals
 export type ExtendedSourceBuffer = SourceBuffer & {
   ended?: boolean;
+  changeType?: (type: string) => void;
 };
 
 export type SourceBuffers = Partial<
