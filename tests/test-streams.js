@@ -101,13 +101,6 @@ module.exports = {
     description: 'AES encrypted,ABR',
     abr: true,
   },
-  bbbAES: {
-    url: 'https://test-streams.mux.dev/bbbAES/playlists/sample_aes/index.m3u8',
-    description: 'SAMPLE-AES encrypted',
-    live: false,
-    abr: false,
-    skipFunctionalTests: true,
-  },
   mp3Audio: {
     url:
       'https://playertest.longtailvideo.com/adaptive/vod-with-mp3/manifest.m3u8',

@@ -232,37 +232,60 @@ async function testSeekOnVOD(url, config) {
           }
           // After seeking timeout if paused after 5 seconds
           video.onseeked = function () {
+            console.log('[test] > video  "onseeked"');
             self.setTimeout(function () {
               const { currentTime, paused } = video;
               if (currentTime === 0 || paused) {
                 callback({
                   code: 'paused',
                   currentTime,
-                  paused,
                   duration,
+                  paused,
                   logs: self.logString,
                 });
               }
             }, 3000);
-          };
-          video.currentTime = video.seekable.end(0) - 3;
-          // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
-          const allowedBufferedRanges =
-            config.allowedBufferedRangesInSeekTest || 2;
-          video.onprogress = function () {
-            if (video.buffered.length > allowedBufferedRanges) {
+            self.setTimeout(function () {
+              const { currentTime, paused } = video;
               callback({
-                code: 'buffer-gaps',
-                bufferedRanges: video.buffered.length,
+                code: 'timeout-waiting-for-ended-event',
+                currentTime,
                 duration,
+                paused,
                 logs: self.logString,
               });
-            }
+            }, 10000);
           };
+          const seekToTime = video.seekable.end(0) - 3;
+          console.log(
+            '[test] > Set video.currentTime from ' +
+              video.currentTime +
+              ' to ' +
+              seekToTime
+          );
+          video.currentTime = seekToTime;
         }, 3000);
       };
+      // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
+      const allowedBufferedRanges = config.allowedBufferedRangesInSeekTest || 2;
+      video.onprogress = function () {
+        if (video.buffered.length > allowedBufferedRanges) {
+          const duration = video.duration;
+          callback({
+            code: 'buffer-gaps',
+            bufferedRanges: video.buffered.length,
+            duration,
+            logs: self.logString,
+          });
+        }
+      };
       video.onended = function () {
+        console.log('[test] > video  "ended"');
         callback({ code: 'ended', logs: self.logString });
+      };
+
+      video.oncanplaythrough = video.onwaiting = function (e) {
+        console.log('[test] > video  "' + e.type + '"');
       };
     },
     url,
