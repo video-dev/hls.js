@@ -34,6 +34,7 @@ import type {
   FragBufferedData,
   BufferFlushedData,
   ErrorData,
+  BufferEOSData,
 } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -282,7 +283,7 @@ export default class StreamController
       }
 
       if (this._streamEnded(bufferInfo, levelDetails)) {
-        const data: any = {};
+        const data: BufferEOSData = {};
         if (this.altAudio) {
           data.type = 'video';
         }

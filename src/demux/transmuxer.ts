@@ -355,11 +355,8 @@ export default class Transmuxer {
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata
   ): TransmuxerResult {
-    const { audioTrack, avcTrack, id3Track, textTrack } = this.demuxer!.demux(
-      data,
-      timeOffset,
-      false
-    );
+    const { audioTrack, avcTrack, id3Track, textTrack } = (this
+      .demuxer as Demuxer).demux(data, timeOffset, false);
     const remuxResult = this.remuxer!.remux(
       audioTrack,
       avcTrack,
@@ -383,8 +380,9 @@ export default class Transmuxer {
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata
   ): Promise<TransmuxerResult> {
-    return this.demuxer!.demuxSampleAes(data, decryptData, timeOffset).then(
-      (demuxResult) => ({
+    return (this.demuxer as Demuxer)
+      .demuxSampleAes(data, decryptData, timeOffset)
+      .then((demuxResult) => ({
         remuxResult: this.remuxer!.remux(
           demuxResult.audioTrack,
           demuxResult.avcTrack,
@@ -395,8 +393,7 @@ export default class Transmuxer {
           false
         ),
         chunkMeta,
-      })
-    );
+      }));
   }
 
   private configureTransmuxer(
