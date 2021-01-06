@@ -1,6 +1,7 @@
 /* global $, Hls, __NETLIFY__ */
 /* eslint camelcase: 0 */
 
+import 'promise-polyfill/src/polyfill';
 import { sortObject, copyTextToClipboard } from './demo-utils';
 import { TimelineChart } from './chart/timeline-chart';
 

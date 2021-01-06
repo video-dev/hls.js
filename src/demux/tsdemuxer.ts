@@ -188,7 +188,6 @@ class TSDemuxer implements Demuxer {
 
   demux(
     data: Uint8Array,
-    contiguous,
     timeOffset,
     isSampleAes = false,
     flush = false
@@ -197,7 +196,6 @@ class TSDemuxer implements Demuxer {
       this.sampleAes = null;
     }
 
-    this.contiguous = contiguous;
     let start;
     let stt;
     let pid;
@@ -391,7 +389,7 @@ class TSDemuxer implements Demuxer {
     this.remainderData = null;
     let result;
     if (remainderData) {
-      result = this.demux(remainderData, this.contiguous, -1, false, true);
+      result = this.demux(remainderData, -1, false, true);
     } else {
       result = {
         audioTrack: this._audioTrack,
