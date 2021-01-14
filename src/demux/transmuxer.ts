@@ -8,7 +8,7 @@ import TSDemuxer from '../demux/tsdemuxer';
 import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import type { Demuxer } from '../types/demuxer';
+import type { Demuxer, KeyData } from '../types/demuxer';
 import type { Remuxer } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import ChunkCache from './chunk-cache';
@@ -16,6 +16,7 @@ import { appendUint8Array } from '../utils/mp4-tools';
 
 import { logger } from '../utils/logger';
 import type { HlsConfig } from '../config';
+import LevelKey from '../loader/level-key';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -79,7 +80,7 @@ export default class Transmuxer {
 
   push(
     data: ArrayBuffer,
-    decryptdata: any | null,
+    decryptdata: LevelKey | null,
     chunkMeta: ChunkMetadata,
     state?: TransmuxState
   ): TransmuxerResult | Promise<TransmuxerResult> {
@@ -92,8 +93,8 @@ export default class Transmuxer {
       this.currentTransmuxState = state;
     }
 
-    const encryptionType = getEncryptionType(uintData, decryptdata);
-    if (encryptionType === 'AES-128') {
+    const keyData = getEncryptionType(uintData, decryptdata);
+    if (keyData && keyData.method === 'AES-128') {
       const decrypter = this.getDecrypter();
       // Software decryption is synchronous; webCrypto is not
       if (config.enableSoftwareAES) {
@@ -101,8 +102,8 @@ export default class Transmuxer {
         // data is handled in the flush() call
         const decryptedData: ArrayBuffer = decrypter.softwareDecrypt(
           uintData,
-          decryptdata.key.buffer,
-          decryptdata.iv.buffer
+          keyData.key.buffer,
+          keyData.iv.buffer
         );
         if (!decryptedData) {
           stats.executeEnd = now();
@@ -111,11 +112,7 @@ export default class Transmuxer {
         uintData = new Uint8Array(decryptedData);
       } else {
         this.decryptionPromise = decrypter
-          .webCryptoDecrypt(
-            uintData,
-            decryptdata.key.buffer,
-            decryptdata.iv.buffer
-          )
+          .webCryptoDecrypt(uintData, keyData.key.buffer, keyData.iv.buffer)
           .then(
             (decryptedData): TransmuxerResult => {
               // Calling push here is important; if flush() is called while this is still resolving, this ensures that
@@ -181,8 +178,7 @@ export default class Transmuxer {
 
     const result = this.transmux(
       uintData,
-      decryptdata,
-      encryptionType,
+      keyData,
       timeOffset,
       accurateTimeOffset,
       chunkMeta
@@ -323,17 +319,16 @@ export default class Transmuxer {
 
   private transmux(
     data: Uint8Array,
-    decryptData: Uint8Array,
-    encryptionType: string | null,
+    keyData: KeyData | null,
     timeOffset: number,
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata
   ): TransmuxerResult | Promise<TransmuxerResult> {
     let result: TransmuxerResult | Promise<TransmuxerResult>;
-    if (encryptionType === 'SAMPLE-AES') {
+    if (keyData && keyData.method === 'SAMPLE-AES') {
       result = this.transmuxSampleAes(
         data,
-        decryptData,
+        keyData,
         timeOffset,
         accurateTimeOffset,
         chunkMeta
@@ -375,7 +370,7 @@ export default class Transmuxer {
   // TODO: Handle flush with Sample-AES
   private transmuxSampleAes(
     data: Uint8Array,
-    decryptData: any,
+    decryptData: KeyData,
     timeOffset: number,
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata
@@ -461,10 +456,19 @@ export default class Transmuxer {
   }
 }
 
-function getEncryptionType(data: Uint8Array, decryptData: any): string | null {
-  let encryptionType = null;
-  if (data.byteLength > 0 && decryptData != null && decryptData.key != null) {
-    encryptionType = decryptData.method;
+function getEncryptionType(
+  data: Uint8Array,
+  decryptData: LevelKey | null
+): KeyData | null {
+  let encryptionType: KeyData | null = null;
+  if (
+    data.byteLength > 0 &&
+    decryptData != null &&
+    decryptData.key != null &&
+    decryptData.iv !== null &&
+    decryptData.method != null
+  ) {
+    encryptionType = decryptData as KeyData;
   }
   return encryptionType;
 }

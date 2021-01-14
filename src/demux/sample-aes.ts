@@ -2,28 +2,56 @@
  * SAMPLE-AES decrypter
  */
 
+import { HlsConfig } from '../config';
 import Decrypter from '../crypt/decrypter';
+import { HlsEventEmitter } from '../events';
+import {
+  AudioSample,
+  AvcSample,
+  AvcSampleUnit,
+  DemuxedVideoTrack,
+  KeyData,
+} from '../types/demuxer';
 
 class SampleAesDecrypter {
-  constructor(observer, config, decryptdata, discardEPB) {
-    this.decryptdata = decryptdata;
+  private keyData: KeyData;
+  private discardEPB: (data: Uint8Array) => Uint8Array;
+  private decrypter: Decrypter;
+
+  constructor(
+    observer: HlsEventEmitter,
+    config: HlsConfig,
+    keyData: KeyData,
+    discardEPB: (data: Uint8Array) => Uint8Array
+  ) {
+    this.keyData = keyData;
     this.discardEPB = discardEPB;
     this.decrypter = new Decrypter(observer, config, {
       removePKCS7Padding: false,
     });
   }
 
-  decryptBuffer(encryptedData, callback) {
-    this.decrypter.decrypt(
+  // TODO: Fix callback return type.
+  decryptBuffer(
+    encryptedData: Uint8Array | ArrayBufferLike,
+    callback: (decryptedData: any) => void
+  ) {
+    // TODO: `this.decrypter` is an instance of `Decrypter`, which has no function named decrypt!?
+    (this.decrypter as any).decrypt(
       encryptedData,
-      this.decryptdata.key.buffer,
-      this.decryptdata.iv.buffer,
+      this.keyData.key.buffer,
+      this.keyData.iv.buffer,
       callback
     );
   }
 
   // AAC - encrypt all full 16 bytes blocks starting from offset 16
-  decryptAacSample(samples, sampleIndex, callback, sync) {
+  decryptAacSample(
+    samples: AudioSample[],
+    sampleIndex: number,
+    callback: () => void,
+    sync: boolean
+  ) {
     const curUnit = samples[sampleIndex].unit;
     const encryptedData = curUnit.subarray(
       16,
@@ -45,7 +73,11 @@ class SampleAesDecrypter {
     });
   }
 
-  decryptAacSamples(samples, sampleIndex, callback) {
+  decryptAacSamples(
+    samples: AudioSample[],
+    sampleIndex: number,
+    callback: () => void
+  ) {
     for (; ; sampleIndex++) {
       if (sampleIndex >= samples.length) {
         callback();
@@ -67,7 +99,7 @@ class SampleAesDecrypter {
   }
 
   // AVC - encrypt one 16 bytes block out of ten, starting from offset 32
-  getAvcEncryptedData(decodedData) {
+  getAvcEncryptedData(decodedData: Uint8Array) {
     const encryptedDataLen =
       Math.floor((decodedData.length - 48) / 160) * 16 + 16;
     const encryptedData = new Int8Array(encryptedDataLen);
@@ -86,8 +118,11 @@ class SampleAesDecrypter {
     return encryptedData;
   }
 
-  getAvcDecryptedUnit(decodedData, decryptedData) {
-    decryptedData = new Uint8Array(decryptedData);
+  getAvcDecryptedUnit(
+    decodedData: Uint8Array,
+    decryptedData: ArrayLike<number> | ArrayBuffer | SharedArrayBuffer
+  ) {
+    const uint8DecryptedData = new Uint8Array(decryptedData);
     let inputPos = 0;
     for (
       let outputPos = 32;
@@ -95,7 +130,7 @@ class SampleAesDecrypter {
       outputPos += 160, inputPos += 16
     ) {
       decodedData.set(
-        decryptedData.subarray(inputPos, inputPos + 16),
+        uint8DecryptedData.subarray(inputPos, inputPos + 16),
         outputPos
       );
     }
@@ -103,7 +138,14 @@ class SampleAesDecrypter {
     return decodedData;
   }
 
-  decryptAvcSample(samples, sampleIndex, unitIndex, callback, curUnit, sync) {
+  decryptAvcSample(
+    samples: AvcSample[],
+    sampleIndex: number,
+    unitIndex: number,
+    callback: () => void,
+    curUnit: AvcSampleUnit,
+    sync: boolean
+  ) {
     const decodedData = this.discardEPB(curUnit.data);
     const encryptedData = this.getAvcEncryptedData(decodedData);
     const localthis = this;
@@ -122,7 +164,16 @@ class SampleAesDecrypter {
     });
   }
 
-  decryptAvcSamples(samples, sampleIndex, unitIndex, callback) {
+  decryptAvcSamples(
+    samples: DemuxedVideoTrack['samples'],
+    sampleIndex: number,
+    unitIndex: number,
+    callback: () => void
+  ) {
+    if (samples instanceof Uint8Array) {
+      throw new Error('Cannot decrypte samples of type Uint8Array');
+    }
+
     for (; ; sampleIndex++, unitIndex = 0) {
       if (sampleIndex >= samples.length) {
         callback();
