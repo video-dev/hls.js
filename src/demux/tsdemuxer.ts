@@ -26,6 +26,9 @@ import {
   AvcSample,
   DemuxedMetadataTrack,
   DemuxedUserdataTrack,
+  ElementaryStreamData,
+  DemuxedVideoTrack,
+  KeyData,
 } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { utf8ArrayToStr } from '../demux/id3';
@@ -46,12 +49,31 @@ const RemuxerTrackIdConfig = {
   text: 4,
 };
 
+interface PES {
+  data: Uint8Array;
+  // TODO: `parsePES()` returns `pts` and `dts` as `number | undefined`,
+  // but most callers assume `pts` and `dts` are `number` and will never
+  // be undefined.  In most cases, this works out, as either the resulting
+  // calculations end up with NaN and this is detected, or things just
+  // happen to work out OK, but there could be some exciting bugs hiding
+  // here in unusual corner cases.  For now we define these as `any`
+  // to prevent tsc from complaining.
+  pts: any;
+  dts: any;
+  len: number;
+}
+
+export interface TypeSupported {
+  mpeg: boolean;
+  mp3: boolean;
+}
+
 class TSDemuxer implements Demuxer {
   static readonly minProbeByteLength = 188;
 
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
-  private typeSupported: any;
+  private typeSupported: TypeSupported;
 
   private sampleAes: any = null;
   private pmtParsed: boolean = false;
@@ -72,13 +94,17 @@ class TSDemuxer implements Demuxer {
   private avcSample: AvcSample | null = null;
   private remainderData: Uint8Array | null = null;
 
-  constructor(observer: HlsEventEmitter, config: HlsConfig, typeSupported) {
+  constructor(
+    observer: HlsEventEmitter,
+    config: HlsConfig,
+    typeSupported: TypeSupported
+  ) {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
   }
 
-  static probe(data) {
+  static probe(data: Uint8Array) {
     const syncOffset = TSDemuxer._syncOffset(data);
     if (syncOffset < 0) {
       return false;
@@ -93,7 +119,7 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  static _syncOffset(data) {
+  static _syncOffset(data: Uint8Array) {
     // scan 1000 first bytes
     const scanwindow = Math.min(1000, data.length - 3 * 188);
     let i = 0;
@@ -115,11 +141,14 @@ class TSDemuxer implements Demuxer {
   /**
    * Creates a track model internal to demuxer used to drive remuxing input
    *
-   * @param {string} type 'audio' | 'video' | 'id3' | 'text'
-   * @param {number} duration
-   * @return {object} TSDemuxer's internal track model
+   * @param type 'audio' | 'video' | 'id3' | 'text'
+   * @param duration
+   * @return TSDemuxer's internal track model
    */
-  static createTrack(type, duration): DemuxedTrack {
+  static createTrack(
+    type: 'audio' | 'video' | 'id3' | 'text',
+    duration: number
+  ): DemuxedTrack {
     return {
       container:
         type === 'video' || type === 'audio' ? 'video/mp2t' : undefined,
@@ -138,7 +167,7 @@ class TSDemuxer implements Demuxer {
    * Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start)
    * Resets all internal track instances of the demuxer.
    */
-  resetInitSegment(audioCodec, videoCodec, duration) {
+  resetInitSegment(audioCodec: string, videoCodec: string, duration: number) {
     this.pmtParsed = false;
     this._pmtId = -1;
 
@@ -188,7 +217,7 @@ class TSDemuxer implements Demuxer {
 
   demux(
     data: Uint8Array,
-    timeOffset,
+    timeOffset: number,
     isSampleAes = false,
     flush = false
   ): DemuxerResult {
@@ -196,12 +225,7 @@ class TSDemuxer implements Demuxer {
       this.sampleAes = null;
     }
 
-    let start;
-    let stt;
-    let pid;
-    let atf;
-    let offset;
-    let pes;
+    let pes: PES | null;
 
     const avcTrack = this._avcTrack;
     const audioTrack = this._audioTrack;
@@ -246,13 +270,15 @@ class TSDemuxer implements Demuxer {
     }
 
     // loop through TS packets
-    for (start = syncOffset; start < len; start += 188) {
+    for (let start = syncOffset; start < len; start += 188) {
       if (data[start] === 0x47) {
-        stt = !!(data[start + 1] & 0x40);
+        const stt = !!(data[start + 1] & 0x40);
         // pid is a 13-bit field starting at the last bit of TS[1]
-        pid = ((data[start + 1] & 0x1f) << 8) + data[start + 2];
-        atf = (data[start + 3] & 0x30) >> 4;
+        const pid = ((data[start + 1] & 0x1f) << 8) + data[start + 2];
+        const atf = (data[start + 3] & 0x30) >> 4;
+
         // if an adaption field is present, its length is specified by the fifth byte of the TS packet header.
+        let offset: number;
         if (atf > 1) {
           offset = start + 5 + data[start + 4];
           // continue if there is only adaptation field
@@ -408,7 +434,7 @@ class TSDemuxer implements Demuxer {
     const audioData = audioTrack.pesData;
     const id3Data = id3Track.pesData;
     // try to parse last PES packets
-    let pes;
+    let pes: PES | null;
     if (avcData && (pes = parsePES(avcData))) {
       this._parseAVCPES(pes, true);
       avcTrack.pesData = null;
@@ -445,15 +471,19 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  demuxSampleAes(data, decryptData, timeOffset): Promise<DemuxerResult> {
+  demuxSampleAes(
+    data: Uint8Array,
+    keyData: KeyData,
+    timeOffset: number
+  ): Promise<DemuxerResult> {
     const demuxResult = this.demux(data, timeOffset, true);
     const sampleAes = (this.sampleAes = new SampleAesDecrypter(
       this.observer,
       this.config,
-      decryptData,
+      keyData,
       this.discardEPB
     ));
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       this.decrypt(
         demuxResult.audioTrack,
         demuxResult.avcTrack,
@@ -464,7 +494,11 @@ class TSDemuxer implements Demuxer {
     });
   }
 
-  decrypt(audioTrack, videoTrack, sampleAes): Promise<void> {
+  decrypt(
+    audioTrack: DemuxedAudioTrack,
+    videoTrack: DemuxedVideoTrack,
+    sampleAes: SampleAesDecrypter
+  ): Promise<void> {
     return new Promise((resolve) => {
       if (audioTrack.samples && audioTrack.isAAC) {
         sampleAes.decryptAacSamples(audioTrack.samples, 0, () => {
@@ -512,19 +546,17 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  _parseAVCPES(pes, last) {
+  _parseAVCPES(pes: PES, last: boolean) {
     // logger.log('parse new PES');
     const track = this._avcTrack;
     const units = this._parseAVCNALu(pes.data);
     const debug = false;
-    let expGolombDecoder;
     let avcSample = this.avcSample;
-    let push;
+    let push: boolean;
     let spsfound = false;
-    let i;
     const pushAccessUnit = this.pushAccessUnit.bind(this);
     // free pes.data to save up some memory
-    pes.data = null;
+    (pes as any).data = null;
 
     // if new NAL units found and last sample still there, let's push ...
     // this helps parsing streams with missing AUD (only do this if AUD never found)
@@ -600,7 +632,7 @@ class TSDemuxer implements Demuxer {
             avcSample.debug += 'SEI ';
           }
 
-          expGolombDecoder = new ExpGolomb(this.discardEPB(unit.data));
+          const expGolombDecoder = new ExpGolomb(this.discardEPB(unit.data));
 
           // skip frameType
           expGolombDecoder.readUByte();
@@ -648,7 +680,7 @@ class TSDemuxer implements Demuxer {
                       const totalCCs = 31 & firstByte;
                       const byteArray = [firstByte, secondByte];
 
-                      for (i = 0; i < totalCCs; i++) {
+                      for (let i = 0; i < totalCCs; i++) {
                         // 3 bytes per CC
                         byteArray.push(expGolombDecoder.readUByte());
                         byteArray.push(expGolombDecoder.readUByte());
@@ -672,7 +704,7 @@ class TSDemuxer implements Demuxer {
 
               if (payloadSize > 16) {
                 const uuidStrArray: Array<string> = [];
-                for (i = 0; i < 16; i++) {
+                for (let i = 0; i < 16; i++) {
                   uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
 
                   if (i === 3 || i === 5 || i === 7 || i === 9) {
@@ -681,7 +713,7 @@ class TSDemuxer implements Demuxer {
                 }
                 const length = payloadSize - 16;
                 const userDataPayloadBytes = new Uint8Array(length);
-                for (i = 0; i < length; i++) {
+                for (let i = 0; i < length; i++) {
                   userDataPayloadBytes[i] = expGolombDecoder.readUByte();
                 }
 
@@ -694,7 +726,7 @@ class TSDemuxer implements Demuxer {
                 });
               }
             } else if (payloadSize < expGolombDecoder.bytesAvailable) {
-              for (i = 0; i < payloadSize; i++) {
+              for (let i = 0; i < payloadSize; i++) {
                 expGolombDecoder.readUByte();
               }
             }
@@ -710,16 +742,17 @@ class TSDemuxer implements Demuxer {
           }
 
           if (!track.sps) {
-            expGolombDecoder = new ExpGolomb(unit.data);
+            const expGolombDecoder = new ExpGolomb(unit.data);
             const config = expGolombDecoder.readSPS();
             track.width = config.width;
             track.height = config.height;
             track.pixelRatio = config.pixelRatio;
-            track.sps = [unit.data];
+            // TODO: `track.sps` is defined as a `number[]`, but we're setting it to a `Uint8Array[]`.
+            track.sps = [unit.data] as any;
             track.duration = this._duration;
             const codecarray = unit.data.subarray(1, 4);
             let codecstring = 'avc1.';
-            for (i = 0; i < 3; i++) {
+            for (let i = 0; i < 3; i++) {
               let h = codecarray[i].toString(16);
               if (h.length < 2) {
                 h = '0' + h;
@@ -738,7 +771,8 @@ class TSDemuxer implements Demuxer {
           }
 
           if (!track.pps) {
-            track.pps = [unit.data];
+            // TODO: `track.pss` is defined as a `number[]`, but we're setting it to a `Uint8Array[]`.
+            track.pps = [unit.data] as any;
           }
 
           break;
@@ -814,19 +848,28 @@ class TSDemuxer implements Demuxer {
     return lastUnit;
   }
 
-  _parseAVCNALu(array): Array<any> {
+  _parseAVCNALu(
+    array: Uint8Array
+  ): Array<{
+    data: Uint8Array;
+    type: number;
+    state?: number;
+  }> {
     const len = array.byteLength;
     const track = this._avcTrack;
     let state = track.naluState || 0;
     const lastState = state;
-    const units = [] as Array<any>;
+    const units = [] as Array<{
+      data: Uint8Array;
+      type: number;
+      state?: number;
+    }>;
     let i = 0;
     let value;
     let overflow;
-    let unit;
     let unitType;
     let lastUnitStart = -1;
-    let lastUnitType;
+    let lastUnitType: number = 0;
     // logger.log('PES:' + Hex.hexDump(array));
 
     if (state === -1) {
@@ -854,7 +897,7 @@ class TSDemuxer implements Demuxer {
         state = 3;
       } else if (value === 1) {
         if (lastUnitStart >= 0) {
-          unit = {
+          const unit = {
             data: array.subarray(lastUnitStart, i - state - 1),
             type: lastUnitType,
           };
@@ -906,7 +949,7 @@ class TSDemuxer implements Demuxer {
       }
     }
     if (lastUnitStart >= 0 && state >= 0) {
-      unit = {
+      const unit = {
         data: array.subarray(lastUnitStart, len),
         type: lastUnitType,
         state: state,
@@ -932,7 +975,7 @@ class TSDemuxer implements Demuxer {
   /**
    * remove Emulation Prevention bytes from a RBSP
    */
-  discardEPB(data) {
+  discardEPB(data: Uint8Array): Uint8Array {
     const length = data.byteLength;
     const EPBPositions = [] as Array<number>;
     let i = 1;
@@ -970,7 +1013,7 @@ class TSDemuxer implements Demuxer {
     return newData;
   }
 
-  _parseAACPES(pes) {
+  _parseAACPES(pes: PES) {
     const startOffset = 0;
     const track = this._audioTrack;
     const aacLastPTS = this.aacLastPTS;
@@ -1026,7 +1069,7 @@ class TSDemuxer implements Demuxer {
     // first sample PTS should be equal to last sample PTS + frameDuration
     if (aacOverFlow && aacLastPTS) {
       const newPTS = aacLastPTS + frameDuration;
-      if (Math.abs(newPTS - pts) > 1) {
+      if (pts !== undefined && Math.abs(newPTS - pts) > 1) {
         logger.log(
           `[tsdemuxer]: AAC: align PTS for overlapping frames by ${Math.round(
             (newPTS - pts) / 90
@@ -1068,7 +1111,7 @@ class TSDemuxer implements Demuxer {
     this.aacLastPTS = stamp;
   }
 
-  _parseMPEGPES(pes) {
+  _parseMPEGPES(pes: PES) {
     const data = pes.data;
     const length = data.length;
     let frameIndex = 0;
@@ -1098,7 +1141,7 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  _parseID3PES(pes) {
+  _parseID3PES(pes: PES) {
     this._id3Track.samples.push(pes);
   }
 }
@@ -1208,16 +1251,13 @@ function parsePMT(data, offset, mpegSupported, isSampleAes) {
   return result;
 }
 
-function parsePES(stream) {
+function parsePES(stream: ElementaryStreamData): PES | null {
   let i = 0;
-  let frag;
-  let pesFlags;
-  let pesLen;
-  let pesHdrLen;
-  let pesData;
-  let pesPts;
-  let pesDts;
-  let payloadStartOffset;
+  let frag: Uint8Array;
+  let pesLen: number;
+  let pesHdrLen: number;
+  let pesPts: number | undefined;
+  let pesDts: number | undefined;
   const data = stream.data;
   // safety check
   if (!stream || stream.size === 0) {
@@ -1245,7 +1285,7 @@ function parsePES(stream) {
       return null;
     }
 
-    pesFlags = frag[7];
+    const pesFlags = frag[7];
     if (pesFlags & 0xc0) {
       /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
           as PTS / DTS is 33 bit we cannot use bitwise operator in JS,
@@ -1279,13 +1319,13 @@ function parsePES(stream) {
     }
     pesHdrLen = frag[8];
     // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
-    payloadStartOffset = pesHdrLen + 9;
+    let payloadStartOffset = pesHdrLen + 9;
     if (stream.size <= payloadStartOffset) {
       return null;
     }
     stream.size -= payloadStartOffset;
     // reassemble PES packet
-    pesData = new Uint8Array(stream.size);
+    const pesData = new Uint8Array(stream.size);
     for (let j = 0, dataLen = data.length; j < dataLen; j++) {
       frag = data[j];
       let len = frag.byteLength;

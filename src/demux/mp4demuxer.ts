@@ -4,11 +4,11 @@
 import {
   Demuxer,
   DemuxerResult,
-  DemuxedTrack,
   PassthroughVideoTrack,
   DemuxedAudioTrack,
   DemuxedUserdataTrack,
   DemuxedMetadataTrack,
+  KeyData,
 } from '../types/demuxer';
 import {
   findBox,
@@ -84,7 +84,7 @@ class MP4Demuxer implements Demuxer {
 
   demuxSampleAes(
     data: Uint8Array,
-    decryptData: Uint8Array,
+    keyData: KeyData,
     timeOffset: number
   ): Promise<DemuxerResult> {
     return Promise.reject(
