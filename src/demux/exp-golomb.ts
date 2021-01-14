@@ -5,7 +5,12 @@
 import { logger } from '../utils/logger';
 
 class ExpGolomb {
-  constructor(data) {
+  private data: Uint8Array;
+  public bytesAvailable: number;
+  private word: number;
+  private bitsAvailable: number;
+
+  constructor(data: Uint8Array) {
     this.data = data;
     // the number of bytes left to examine in this.data
     this.bytesAvailable = data.byteLength;
@@ -16,7 +21,7 @@ class ExpGolomb {
   }
 
   // ():void
-  loadWord() {
+  loadWord(): void {
     const data = this.data;
     const bytesAvailable = this.bytesAvailable;
     const position = data.byteLength - bytesAvailable;
@@ -34,7 +39,7 @@ class ExpGolomb {
   }
 
   // (count:int):void
-  skipBits(count) {
+  skipBits(count: number): void {
     let skipBytes; // :int
     if (this.bitsAvailable > count) {
       this.word <<= count;
@@ -51,7 +56,7 @@ class ExpGolomb {
   }
 
   // (size:int):uint
-  readBits(size) {
+  readBits(size: number): number {
     let bits = Math.min(this.bitsAvailable, size); // :uint
     const valu = this.word >>> (32 - bits); // :uint
     if (size > 32) {
@@ -74,7 +79,7 @@ class ExpGolomb {
   }
 
   // ():uint
-  skipLZ() {
+  skipLZ(): number {
     let leadingZeroCount; // :uint
     for (
       leadingZeroCount = 0;
@@ -94,23 +99,23 @@ class ExpGolomb {
   }
 
   // ():void
-  skipUEG() {
+  skipUEG(): void {
     this.skipBits(1 + this.skipLZ());
   }
 
   // ():void
-  skipEG() {
+  skipEG(): void {
     this.skipBits(1 + this.skipLZ());
   }
 
   // ():uint
-  readUEG() {
+  readUEG(): number {
     const clz = this.skipLZ(); // :uint
     return this.readBits(clz + 1) - 1;
   }
 
   // ():int
-  readEG() {
+  readEG(): number {
     const valu = this.readUEG(); // :int
     if (0x01 & valu) {
       // the number is odd if the low order bit is set
@@ -122,22 +127,22 @@ class ExpGolomb {
 
   // Some convenience functions
   // :Boolean
-  readBoolean() {
+  readBoolean(): boolean {
     return this.readBits(1) === 1;
   }
 
   // ():int
-  readUByte() {
+  readUByte(): number {
     return this.readBits(8);
   }
 
   // ():int
-  readUShort() {
+  readUShort(): number {
     return this.readBits(16);
   }
 
   // ():int
-  readUInt() {
+  readUInt(): number {
     return this.readBits(32);
   }
 
@@ -145,10 +150,10 @@ class ExpGolomb {
    * Advance the ExpGolomb decoder past a scaling list. The scaling
    * list is optionally transmitted as part of a sequence parameter
    * set and is not relevant to transmuxing.
-   * @param count {number} the number of entries in this scaling list
+   * @param count the number of entries in this scaling list
    * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
    */
-  skipScalingList(count) {
+  skipScalingList(count: number): void {
     let lastScale = 8;
     let nextScale = 8;
     let deltaScale;
@@ -170,7 +175,11 @@ class ExpGolomb {
    * sequence parameter set, including the dimensions of the
    * associated video frames.
    */
-  readSPS() {
+  readSPS(): {
+    width: number;
+    height: number;
+    pixelRatio: [number, number];
+  } {
     let frameCropLeftOffset = 0;
     let frameCropRightOffset = 0;
     let frameCropTopOffset = 0;
@@ -258,7 +267,7 @@ class ExpGolomb {
       frameCropTopOffset = readUEG();
       frameCropBottomOffset = readUEG();
     }
-    let pixelRatio = [1, 1];
+    let pixelRatio: [number, number] = [1, 1];
     if (readBoolean()) {
       // vui_parameters_present_flag
       if (readBoolean()) {
