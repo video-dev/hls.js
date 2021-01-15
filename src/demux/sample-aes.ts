@@ -5,7 +5,7 @@
 import { HlsConfig } from '../config';
 import Decrypter from '../crypt/decrypter';
 import { HlsEventEmitter } from '../events';
-import {
+import type {
   AudioSample,
   AvcSample,
   AvcSampleUnit,
@@ -171,7 +171,7 @@ class SampleAesDecrypter {
     callback: () => void
   ) {
     if (samples instanceof Uint8Array) {
-      throw new Error('Cannot decrypte samples of type Uint8Array');
+      throw new Error('Cannot decrypt samples of type Uint8Array');
     }
 
     for (; ; sampleIndex++, unitIndex = 0) {

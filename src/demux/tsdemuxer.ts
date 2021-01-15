@@ -66,6 +66,7 @@ interface PES {
 export interface TypeSupported {
   mpeg: boolean;
   mp3: boolean;
+  mp4: boolean;
 }
 
 class TSDemuxer implements Demuxer {
