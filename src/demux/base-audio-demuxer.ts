@@ -7,6 +7,7 @@ import type {
   DemuxedMetadataTrack,
   DemuxedAvcTrack,
   DemuxedUserdataTrack,
+  KeyData,
 } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
@@ -116,7 +117,7 @@ class BaseAudioDemuxer implements Demuxer {
 
   demuxSampleAes(
     data: Uint8Array,
-    decryptData: Uint8Array,
+    keyData: KeyData,
     timeOffset: number
   ): Promise<DemuxerResult> {
     return Promise.reject(

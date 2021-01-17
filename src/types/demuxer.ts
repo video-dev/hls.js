@@ -6,7 +6,7 @@ export interface Demuxer {
   ): DemuxerResult;
   demuxSampleAes(
     data: Uint8Array,
-    decryptData: Uint8Array,
+    keyData: KeyData,
     timeOffset: number
   ): Promise<DemuxerResult>;
   flush(timeOffset?: number): DemuxerResult;
@@ -59,7 +59,7 @@ export interface DemuxedAudioTrack extends DemuxedTrack {
 export interface DemuxedVideoTrack extends DemuxedTrack {
   width?: number;
   height?: number;
-  pixelRatio?: number;
+  pixelRatio?: [number, number];
   audFound?: boolean;
   pps?: number[];
   sps?: number[];
@@ -107,6 +107,7 @@ export interface AvcSample {
 
 export interface AvcSampleUnit {
   data: Uint8Array;
+  type: number;
 }
 
 export type AudioSample = {
@@ -123,4 +124,10 @@ export type AppendedAudioFrame = {
 export interface ElementaryStreamData {
   data: Uint8Array[];
   size: number;
+}
+
+export interface KeyData {
+  method: string;
+  key: Uint8Array;
+  iv: Uint8Array;
 }
