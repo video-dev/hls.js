@@ -38,20 +38,21 @@ export default class Decrypter {
           this.subtle =
             browserCrypto.subtle ||
             ((browserCrypto as any).webkitSubtle as SubtleCrypto);
-        } else {
-          this.config.enableSoftwareAES = true;
         }
       } catch (e) {
         /* no-op */
       }
     }
+    if (this.subtle === null) {
+      this.config.enableSoftwareAES = true;
+    }
   }
 
-  isSync() {
+  public isSync() {
     return this.config.enableSoftwareAES;
   }
 
-  flush(): Uint8Array | void {
+  public flush(): Uint8Array | void {
     const { currentResult } = this;
     if (!currentResult) {
       this.reset();
@@ -65,12 +66,29 @@ export default class Decrypter {
     return data;
   }
 
-  reset() {
+  public reset() {
     this.currentResult = null;
     this.currentIV = null;
     this.remainderData = null;
     if (this.softwareDecrypter) {
       this.softwareDecrypter = null;
+    }
+  }
+
+  public decrypt(
+    data: Uint8Array | ArrayBuffer,
+    key: ArrayBuffer,
+    iv: ArrayBuffer,
+    callback: (decryptedData: ArrayBuffer) => void
+  ) {
+    if (this.config.enableSoftwareAES) {
+      this.softwareDecrypt(new Uint8Array(data), key, iv);
+      const decryptResult = this.flush();
+      if (decryptResult) {
+        callback(decryptResult.buffer);
+      }
+    } else {
+      this.webCryptoDecrypt(new Uint8Array(data), key, iv).then(callback);
     }
   }
 

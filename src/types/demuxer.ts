@@ -9,7 +9,7 @@ export interface Demuxer {
     keyData: KeyData,
     timeOffset: number
   ): Promise<DemuxerResult>;
-  flush(timeOffset?: number): DemuxerResult;
+  flush(timeOffset?: number): DemuxerResult | Promise<DemuxerResult>;
   destroy(): void;
   resetInitSegment(
     audioCodec: string | undefined,
