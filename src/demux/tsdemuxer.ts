@@ -76,7 +76,7 @@ class TSDemuxer implements Demuxer {
   private readonly config: HlsConfig;
   private typeSupported: TypeSupported;
 
-  private sampleAes: any = null;
+  private sampleAes: SampleAesDecrypter | null = null;
   private pmtParsed: boolean = false;
   private contiguous: boolean = false;
   private audioCodec!: string;
@@ -411,10 +411,10 @@ class TSDemuxer implements Demuxer {
     };
   }
 
-  flush() {
+  flush(): DemuxerResult | Promise<DemuxerResult> {
     const { remainderData } = this;
     this.remainderData = null;
-    let result;
+    let result: DemuxerResult;
     if (remainderData) {
       result = this.demux(remainderData, -1, false, true);
     } else {
@@ -426,6 +426,9 @@ class TSDemuxer implements Demuxer {
       };
     }
     this.extractRemainingSamples(result);
+    if (this.sampleAes) {
+      return this.decrypt(result, this.sampleAes);
+    }
     return result;
   }
 
@@ -484,36 +487,28 @@ class TSDemuxer implements Demuxer {
       keyData,
       this.discardEPB
     ));
-    return new Promise((resolve) => {
-      this.decrypt(
-        demuxResult.audioTrack,
-        demuxResult.avcTrack,
-        sampleAes
-      ).then(() => {
-        resolve(demuxResult);
-      });
-    });
+    return this.decrypt(demuxResult, sampleAes);
   }
 
   decrypt(
-    audioTrack: DemuxedAudioTrack,
-    videoTrack: DemuxedVideoTrack,
+    demuxResult: DemuxerResult,
     sampleAes: SampleAesDecrypter
-  ): Promise<void> {
+  ): Promise<DemuxerResult> {
     return new Promise((resolve) => {
+      const { audioTrack, avcTrack } = demuxResult;
       if (audioTrack.samples && audioTrack.isAAC) {
         sampleAes.decryptAacSamples(audioTrack.samples, 0, () => {
-          if (videoTrack.samples) {
-            sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, () => {
-              resolve();
+          if (avcTrack.samples) {
+            sampleAes.decryptAvcSamples(avcTrack.samples, 0, 0, () => {
+              resolve(demuxResult);
             });
           } else {
-            resolve();
+            resolve(demuxResult);
           }
         });
-      } else if (videoTrack.samples) {
-        sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, () => {
-          resolve();
+      } else if (avcTrack.samples) {
+        sampleAes.decryptAvcSamples(avcTrack.samples, 0, 0, () => {
+          resolve(demuxResult);
         });
       }
     });
