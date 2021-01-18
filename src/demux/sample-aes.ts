@@ -12,20 +12,14 @@ import type {
   DemuxedVideoTrack,
   KeyData,
 } from '../types/demuxer';
+import { discardEPB } from './tsdemuxer';
 
 class SampleAesDecrypter {
   private keyData: KeyData;
-  private discardEPB: (data: Uint8Array) => Uint8Array;
   private decrypter: Decrypter;
 
-  constructor(
-    observer: HlsEventEmitter,
-    config: HlsConfig,
-    keyData: KeyData,
-    discardEPB: (data: Uint8Array) => Uint8Array
-  ) {
+  constructor(observer: HlsEventEmitter, config: HlsConfig, keyData: KeyData) {
     this.keyData = keyData;
-    this.discardEPB = discardEPB;
     this.decrypter = new Decrypter(observer, config, {
       removePKCS7Padding: false,
     });
@@ -144,7 +138,7 @@ class SampleAesDecrypter {
     curUnit: AvcSampleUnit,
     sync: boolean
   ) {
-    const decodedData = this.discardEPB(curUnit.data);
+    const decodedData = discardEPB(curUnit.data);
     const encryptedData = this.getAvcEncryptedData(decodedData);
     const localthis = this;
 
