@@ -352,6 +352,10 @@ export default class LevelController extends BasePlaylistController {
     }
 
     if (levelIndex !== undefined) {
+      if (!this._levels[levelIndex]) {
+        data.fatal = true;
+        return;
+      }
       this.recoverLevel(
         data,
         levelIndex,
