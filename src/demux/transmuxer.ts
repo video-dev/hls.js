@@ -52,7 +52,7 @@ export default class Transmuxer {
   private vendor: any;
   private demuxer?: Demuxer;
   private remuxer?: Remuxer;
-  private decrypter: any;
+  private decrypter?: Decrypter;
   private probe!: Function;
   private decryptionPromise: Promise<TransmuxerResult> | null = null;
   private transmuxConfig!: TransmuxConfig;
@@ -100,7 +100,7 @@ export default class Transmuxer {
       if (config.enableSoftwareAES) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
         // data is handled in the flush() call
-        const decryptedData: ArrayBuffer = decrypter.softwareDecrypt(
+        const decryptedData = decrypter.softwareDecrypt(
           uintData,
           keyData.key.buffer,
           keyData.iv.buffer
@@ -200,14 +200,7 @@ export default class Transmuxer {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
-    const {
-      decrypter,
-      cache,
-      currentTransmuxState,
-      decryptionPromise,
-      observer,
-    } = this;
-    const transmuxResults: Array<TransmuxerResult> = [];
+    const { decrypter, cache, currentTransmuxState, decryptionPromise } = this;
 
     if (decryptionPromise) {
       // Upon resolution, the decryption promise calls push() and returns its TransmuxerResult up the stack. Therefore
@@ -217,7 +210,8 @@ export default class Transmuxer {
       });
     }
 
-    const { accurateTimeOffset, timeOffset } = currentTransmuxState;
+    const transmuxResults: Array<TransmuxerResult> = [];
+    const { timeOffset } = currentTransmuxState;
     if (decrypter) {
       // The decrypter may have data cached, which needs to be demuxed. In this case we'll have two TransmuxResults
       // This happens in the case that we receive only 1 push call for a segment (either for non-progressive downloads,
@@ -237,7 +231,7 @@ export default class Transmuxer {
     if (!demuxer || !remuxer) {
       // If probing failed, and each demuxer saw enough bytes to be able to probe, then Hls.js has been given content its not able to handle
       if (bytesSeen >= minProbeByteLength) {
-        observer.emit(Events.ERROR, Events.ERROR, {
+        this.observer.emit(Events.ERROR, Events.ERROR, {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.FRAG_PARSING_ERROR,
           fatal: true,
@@ -248,15 +242,28 @@ export default class Transmuxer {
       return [emptyResult(chunkMeta)];
     }
 
-    const { audioTrack, avcTrack, id3Track, textTrack } = demuxer.flush(
-      timeOffset
-    );
+    const demuxResultOrPromise = demuxer.flush(timeOffset);
+    if (isPromise(demuxResultOrPromise)) {
+      // Decrypt final SAMPLE-AES samples
+      return demuxResultOrPromise.then((demuxResult) => {
+        this.flushRemux(transmuxResults, demuxResult, chunkMeta);
+        return transmuxResults;
+      });
+    }
+
+    this.flushRemux(transmuxResults, demuxResultOrPromise, chunkMeta);
+    return transmuxResults;
+  }
+
+  private flushRemux(transmuxResults, demuxResult, chunkMeta) {
+    const { audioTrack, avcTrack, id3Track, textTrack } = demuxResult;
+    const { accurateTimeOffset, timeOffset } = this.currentTransmuxState;
     logger.log(
       `[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${
         chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''
       } of level ${chunkMeta.level}`
     );
-    const remuxResult = remuxer.remux(
+    const remuxResult = this.remuxer!.remux(
       audioTrack,
       avcTrack,
       id3Track,
@@ -270,8 +277,7 @@ export default class Transmuxer {
       chunkMeta,
     });
 
-    stats.executeEnd = now();
-    return transmuxResults;
+    chunkMeta.transmuxing.executeEnd = now();
   }
 
   resetInitialTimestamp(defaultInitPts: number | undefined) {
@@ -367,7 +373,6 @@ export default class Transmuxer {
     };
   }
 
-  // TODO: Handle flush with Sample-AES
   private transmuxSampleAes(
     data: Uint8Array,
     decryptData: KeyData,
@@ -377,8 +382,8 @@ export default class Transmuxer {
   ): Promise<TransmuxerResult> {
     return (this.demuxer as Demuxer)
       .demuxSampleAes(data, decryptData, timeOffset)
-      .then((demuxResult) => ({
-        remuxResult: this.remuxer!.remux(
+      .then((demuxResult) => {
+        const remuxResult = this.remuxer!.remux(
           demuxResult.audioTrack,
           demuxResult.avcTrack,
           demuxResult.id3Track,
@@ -386,9 +391,12 @@ export default class Transmuxer {
           timeOffset,
           accurateTimeOffset,
           false
-        ),
-        chunkMeta,
-      }));
+        );
+        return {
+          remuxResult,
+          chunkMeta,
+        };
+      });
   }
 
   private configureTransmuxer(
@@ -447,7 +455,7 @@ export default class Transmuxer {
     return !this.demuxer || discontinuity || trackSwitch;
   }
 
-  private getDecrypter() {
+  private getDecrypter(): Decrypter {
     let decrypter = this.decrypter;
     if (!decrypter) {
       decrypter = this.decrypter = new Decrypter(this.observer, this.config);
