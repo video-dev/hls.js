@@ -12,32 +12,24 @@ import type {
   DemuxedVideoTrack,
   KeyData,
 } from '../types/demuxer';
+import { discardEPB } from './tsdemuxer';
 
 class SampleAesDecrypter {
   private keyData: KeyData;
-  private discardEPB: (data: Uint8Array) => Uint8Array;
   private decrypter: Decrypter;
 
-  constructor(
-    observer: HlsEventEmitter,
-    config: HlsConfig,
-    keyData: KeyData,
-    discardEPB: (data: Uint8Array) => Uint8Array
-  ) {
+  constructor(observer: HlsEventEmitter, config: HlsConfig, keyData: KeyData) {
     this.keyData = keyData;
-    this.discardEPB = discardEPB;
     this.decrypter = new Decrypter(observer, config, {
       removePKCS7Padding: false,
     });
   }
 
-  // TODO: Fix callback return type.
   decryptBuffer(
-    encryptedData: Uint8Array | ArrayBufferLike,
-    callback: (decryptedData: any) => void
+    encryptedData: Uint8Array | ArrayBuffer,
+    callback: (decryptedData: ArrayBuffer) => void
   ) {
-    // TODO: `this.decrypter` is an instance of `Decrypter`, which has no function named decrypt!?
-    (this.decrypter as any).decrypt(
+    this.decrypter.decrypt(
       encryptedData,
       this.keyData.key.buffer,
       this.keyData.iv.buffer,
@@ -46,7 +38,7 @@ class SampleAesDecrypter {
   }
 
   // AAC - encrypt all full 16 bytes blocks starting from offset 16
-  decryptAacSample(
+  private decryptAacSample(
     samples: AudioSample[],
     sampleIndex: number,
     callback: () => void,
@@ -63,8 +55,8 @@ class SampleAesDecrypter {
     );
 
     const localthis = this;
-    this.decryptBuffer(encryptedBuffer, function (decryptedData) {
-      decryptedData = new Uint8Array(decryptedData);
+    this.decryptBuffer(encryptedBuffer, (decryptedBuffer: ArrayBuffer) => {
+      const decryptedData = new Uint8Array(decryptedBuffer);
       curUnit.set(decryptedData, 16);
 
       if (!sync) {
@@ -146,22 +138,28 @@ class SampleAesDecrypter {
     curUnit: AvcSampleUnit,
     sync: boolean
   ) {
-    const decodedData = this.discardEPB(curUnit.data);
+    const decodedData = discardEPB(curUnit.data);
     const encryptedData = this.getAvcEncryptedData(decodedData);
     const localthis = this;
 
-    this.decryptBuffer(encryptedData.buffer, function (decryptedData) {
-      curUnit.data = localthis.getAvcDecryptedUnit(decodedData, decryptedData);
-
-      if (!sync) {
-        localthis.decryptAvcSamples(
-          samples,
-          sampleIndex,
-          unitIndex + 1,
-          callback
+    this.decryptBuffer(
+      encryptedData.buffer,
+      function (decryptedBuffer: ArrayBuffer) {
+        curUnit.data = localthis.getAvcDecryptedUnit(
+          decodedData,
+          decryptedBuffer
         );
+
+        if (!sync) {
+          localthis.decryptAvcSamples(
+            samples,
+            sampleIndex,
+            unitIndex + 1,
+            callback
+          );
+        }
       }
-    });
+    );
   }
 
   decryptAvcSamples(
