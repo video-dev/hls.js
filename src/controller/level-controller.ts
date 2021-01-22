@@ -317,7 +317,6 @@ export default class LevelController extends BasePlaylistController {
     }
 
     let levelError = false;
-    let fragmentError = false;
     let levelSwitch = true;
     let levelIndex;
 
@@ -327,11 +326,18 @@ export default class LevelController extends BasePlaylistController {
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-        // FIXME: What distinguishes these fragment events from level or track fragments?
-        //   We shouldn't recover a level if the fragment or key is for a media track
-        console.assert(data.frag, 'Event has a fragment defined.');
-        levelIndex = (data.frag as Fragment).level;
-        fragmentError = true;
+        if (data.frag) {
+          const level = this._levels[data.frag.level];
+          // Set levelIndex when we're out of fragment retries
+          if (level) {
+            level.fragmentError++;
+            if (level.fragmentError > this.hls.config.fragLoadingMaxRetry) {
+              levelIndex = data.frag.level;
+            }
+          } else {
+            levelIndex = data.frag.level;
+          }
+        }
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
@@ -352,17 +358,7 @@ export default class LevelController extends BasePlaylistController {
     }
 
     if (levelIndex !== undefined) {
-      if (!this._levels[levelIndex]) {
-        data.fatal = true;
-        return;
-      }
-      this.recoverLevel(
-        data,
-        levelIndex,
-        levelError,
-        fragmentError,
-        levelSwitch
-      );
+      this.recoverLevel(data, levelIndex, levelError, levelSwitch);
     }
   }
 
@@ -374,14 +370,12 @@ export default class LevelController extends BasePlaylistController {
     errorEvent: ErrorData,
     levelIndex: number,
     levelError: boolean,
-    fragmentError: boolean,
     levelSwitch: boolean
   ): void {
     const { details: errorDetails } = errorEvent;
     const level = this._levels[levelIndex];
 
     level.loadError++;
-    level.fragmentError = fragmentError;
 
     if (levelError) {
       const retrying = this.retryLoadingOrFail(errorEvent);
@@ -394,30 +388,23 @@ export default class LevelController extends BasePlaylistController {
       }
     }
 
-    // Try any redundant streams if available for both errors: level and fragment
-    // If level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
-    if (levelSwitch && (levelError || fragmentError)) {
+    if (levelSwitch) {
       const redundantLevels = level.url.length;
-
+      // Try redundant fail-over until level.loadError reaches redundantLevels
       if (redundantLevels > 1 && level.loadError < redundantLevels) {
+        errorEvent.levelRetry = true;
         this.redundantFailover(levelIndex);
-      } else {
-        // Search for available level
-        if (this.manualLevelIndex === -1) {
-          // When lowest level has been reached, let's start hunt from the top
-          const nextLevel =
-            levelIndex === 0 ? this._levels.length - 1 : levelIndex - 1;
-          if (this.currentLevelIndex !== nextLevel) {
-            fragmentError = false;
-            this.warn(`${errorDetails}: switch to ${nextLevel}`);
-            this.hls.nextAutoLevel = this.currentLevelIndex = nextLevel;
-          }
-        }
-        if (fragmentError) {
-          // Allow fragment retry as long as configuration allows.
-          // reset this._level so that another call to set level() will trigger again a frag load
-          this.warn(`${errorDetails}: reload a fragment`);
-          this.currentLevelIndex = -1;
+      } else if (this.manualLevelIndex === -1) {
+        // Search for available level in auto level selection mode, cycling from highest to lowest bitrate
+        const nextLevel =
+          levelIndex === 0 ? this._levels.length - 1 : levelIndex - 1;
+        if (
+          this.currentLevelIndex !== nextLevel &&
+          this._levels[nextLevel].loadError === 0
+        ) {
+          this.warn(`${errorDetails}: switch to ${nextLevel}`);
+          errorEvent.levelRetry = true;
+          this.hls.nextAutoLevel = nextLevel;
         }
       }
     }
@@ -442,7 +429,7 @@ export default class LevelController extends BasePlaylistController {
     if (frag !== undefined && frag.type === 'main') {
       const level = this._levels[frag.level];
       if (level !== undefined) {
-        level.fragmentError = false;
+        level.fragmentError = 0;
         level.loadError = 0;
       }
     }
@@ -463,7 +450,7 @@ export default class LevelController extends BasePlaylistController {
     // only process level loaded events matching with expected level
     if (level === this.currentLevelIndex) {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
-      if (!curLevel.fragmentError) {
+      if (curLevel.fragmentError === 0) {
         curLevel.loadError = 0;
         this.retryCount = 0;
       }

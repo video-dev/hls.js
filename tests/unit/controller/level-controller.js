@@ -82,7 +82,7 @@ describe('LevelController', function () {
       bitrate: 246440,
       codecSet: '',
       details: data.levels[1].details,
-      fragmentError: false,
+      fragmentError: 0,
       height: 0,
       id: 2,
       level: 1,
