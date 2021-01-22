@@ -34,6 +34,7 @@ import type {
   FragParsingUserdataData,
   FragBufferedData,
 } from '../types/events';
+import type { ErrorData } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -556,7 +557,7 @@ class AudioStreamController
     super._handleFragmentLoadComplete(fragLoadedData);
   }
 
-  onBufferReset() {
+  onBufferReset(/* event: Events.BUFFER_RESET */) {
     // reset reference to sourcebuffers
     this.mediaBuffer = this.videoBuffer = null;
     this.loadedmetadata = false;
@@ -597,43 +598,40 @@ class AudioStreamController
     this.fragBufferedComplete(frag, part);
   }
 
-  onError(data) {
-    const frag = data.frag;
-    // don't handle frag error not related to audio fragment
-    if (frag && frag.type !== 'audio') {
-      return;
-    }
-
+  private onError(event: Events.ERROR, data: ErrorData) {
     switch (data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
-      case ErrorDetails.FRAG_LOAD_TIMEOUT: {
-        const frag = data.frag;
-        // don't handle frag error not related to audio fragment
-        if (frag && frag.type !== 'audio') {
-          break;
-        }
-
+      case ErrorDetails.FRAG_LOAD_TIMEOUT:
+      case ErrorDetails.KEY_LOAD_ERROR:
+      case ErrorDetails.KEY_LOAD_TIMEOUT: {
         if (!data.fatal) {
-          let loadError = this.fragLoadError;
-          if (loadError) {
-            loadError++;
-          } else {
-            loadError = 1;
+          const frag = data.frag;
+          const fragCurrent = this.fragCurrent;
+          // don't handle frag error not related to audio fragment
+          if (!frag || frag.type !== 'audio') {
+            break;
           }
-
+          console.assert(
+            fragCurrent &&
+              frag.sn === fragCurrent.sn &&
+              frag.level === fragCurrent.level &&
+              frag.urlId === fragCurrent.urlId,
+            'Frag load error must match current frag to retry'
+          );
           const config = this.config;
-          if (loadError <= config.fragLoadingMaxRetry) {
-            this.fragLoadError = loadError;
+          if (this.fragLoadError + 1 <= this.config.fragLoadingMaxRetry) {
             // exponential backoff capped to config.fragLoadingMaxRetryTimeout
             const delay = Math.min(
-              Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay,
+              Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
               config.fragLoadingMaxRetryTimeout
             );
             this.warn(`Frag loading failed, retry in ${delay} ms`);
             this.retryDate = performance.now() + delay;
-            // retry loading state
+            this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else if (data.levelRetry) {
+            // Reset current fragment since audio track audio is essential and may not have a fail-over track
+            this.fragCurrent = null;
             // Fragment errors that result in a level switch or redundant fail-over
             // should reset the audio stream controller state to idle
             this.fragLoadError = 0;
@@ -644,6 +642,7 @@ class AudioStreamController
             );
             // switch error to fatal
             data.fatal = true;
+            this.hls.stopLoad();
             this.state = State.ERROR;
           }
         }
@@ -651,8 +650,6 @@ class AudioStreamController
       }
       case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
       case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
-      case ErrorDetails.KEY_LOAD_ERROR:
-      case ErrorDetails.KEY_LOAD_TIMEOUT:
         //  when in ERROR state, don't switch back to IDLE state in case a non-fatal error is received
         if (this.state !== State.ERROR && this.state !== State.STOPPED) {
           // if fatal error, stop processing, otherwise move to IDLE to retry loading
@@ -676,14 +673,7 @@ class AudioStreamController
             BufferHelper.isBuffered(media, currentTime + 0.5);
           // reduce max buf len if current position is buffered
           if (mediaBuffered) {
-            const config = this.config;
-            if (config.maxMaxBufferLength >= config.maxBufferLength) {
-              // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-              config.maxMaxBufferLength /= 2;
-              this.warn(
-                `Reduce max buffer length to ${config.maxMaxBufferLength}s`
-              );
-            }
+            this.reduceMaxBufferLength();
             this.state = State.IDLE;
           } else {
             // current position is not buffered, but browser is still complaining about buffer full error
