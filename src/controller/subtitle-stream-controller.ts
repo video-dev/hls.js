@@ -6,6 +6,7 @@ import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import FragmentLoader from '../loader/fragment-loader';
+import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
@@ -152,7 +153,7 @@ export class SubtitleStreamController
   onError(event: Events.ERROR, data: ErrorData) {
     const frag = data.frag;
     // don't handle error not related to subtitle fragment
-    if (!frag || frag.type !== 'subtitle') {
+    if (!frag || frag.type !== PlaylistLevelType.SUBTITLE) {
       return;
     }
 

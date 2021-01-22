@@ -16,9 +16,8 @@ import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import { addGroupId, assignTrackIdsByGroup } from './level-helper';
-import Fragment from '../loader/fragment';
 import BasePlaylistController from './base-playlist-controller';
-import { PlaylistContextType } from '../types/loader';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
@@ -426,7 +425,7 @@ export default class LevelController extends BasePlaylistController {
 
   // reset errors on the successful load of a fragment
   protected onFragLoaded(event: Events.FRAG_LOADED, { frag }: FragLoadedData) {
-    if (frag !== undefined && frag.type === 'main') {
+    if (frag !== undefined && frag.type === PlaylistLevelType.MAIN) {
       const level = this._levels[frag.level];
       if (level !== undefined) {
         level.fragmentError = 0;
