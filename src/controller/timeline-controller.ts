@@ -15,6 +15,7 @@ import {
   InitPTSFoundData,
   SubtitleTracksUpdatedData,
 } from '../types/events';
+import { PlaylistLevelType } from '../types/loader';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type { HlsConfig } from '../config';
@@ -419,7 +420,7 @@ export class TimelineController implements ComponentAPI {
       lastSn,
       unparsedVttFrags,
     } = this;
-    if (frag.type === 'main') {
+    if (frag.type === PlaylistLevelType.MAIN) {
       const sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
       if (sn !== lastSn + 1) {
@@ -429,7 +430,7 @@ export class TimelineController implements ComponentAPI {
         }
       }
       this.lastSn = sn as number;
-    } else if (frag.type === 'subtitle') {
+    } else if (frag.type === PlaylistLevelType.SUBTITLE) {
       // If fragment is subtitle type, parse as WebVTT.
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
@@ -598,7 +599,7 @@ export class TimelineController implements ComponentAPI {
 
   onFragDecrypted(event: Events.FRAG_DECRYPTED, data: FragDecryptedData) {
     const { frag } = data;
-    if (frag.type === 'subtitle') {
+    if (frag.type === PlaylistLevelType.SUBTITLE) {
       if (!Number.isFinite(this.initPTS[frag.cc])) {
         this.unparsedVttFrags.push((data as unknown) as FragLoadedData);
         return;

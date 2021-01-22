@@ -75,16 +75,15 @@ export default class M3U8Parser {
   }
 
   static convertAVC1ToAVCOTI(codec) {
+    // Convert avc1 codec string from RFC-4281 to RFC-6381 for MediaSource.isTypeSupported
     const avcdata = codec.split('.');
-    let result;
     if (avcdata.length > 2) {
-      result = avcdata.shift() + '.';
+      let result = avcdata.shift() + '.';
       result += parseInt(avcdata.shift()).toString(16);
       result += ('000' + parseInt(avcdata.shift()).toString(16)).substr(-4);
-    } else {
-      result = codec;
+      return result;
     }
-    return result;
+    return codec;
   }
 
   static resolve(url, baseUrl) {

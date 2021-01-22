@@ -575,7 +575,7 @@ class AudioStreamController
 
   onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     const { frag, part } = data;
-    if (frag && frag.type !== 'audio') {
+    if (frag.type !== PlaylistLevelType.AUDIO) {
       return;
     }
     if (this.fragContextChanged(frag)) {
@@ -603,19 +603,19 @@ class AudioStreamController
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
-      case ErrorDetails.KEY_LOAD_TIMEOUT: {
+      case ErrorDetails.KEY_LOAD_TIMEOUT:
         if (!data.fatal) {
           const frag = data.frag;
-          const fragCurrent = this.fragCurrent;
           // don't handle frag error not related to audio fragment
-          if (!frag || frag.type !== 'audio') {
-            break;
+          if (!frag || frag.type !== PlaylistLevelType.AUDIO) {
+            return;
           }
+          const fragCurrent = this.fragCurrent;
           console.assert(
             fragCurrent &&
               frag.sn === fragCurrent.sn &&
               frag.level === fragCurrent.level &&
-              frag.urlId === fragCurrent.urlId,
+              frag.urlId === fragCurrent.urlId, // FIXME: audio-group id
             'Frag load error must match current frag to retry'
           );
           const config = this.config;
@@ -647,7 +647,6 @@ class AudioStreamController
           }
         }
         break;
-      }
       case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
       case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
         //  when in ERROR state, don't switch back to IDLE state in case a non-fatal error is received
