@@ -674,6 +674,18 @@ export default class BaseStreamController
     }
   }
 
+  protected reduceMaxBufferLength(threshold?: number) {
+    const config = this.config;
+    const minLength = threshold || config.maxBufferLength;
+    if (config.maxMaxBufferLength >= minLength) {
+      // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+      config.maxMaxBufferLength /= 2;
+      this.warn(`Reduce max buffer length to ${config.maxMaxBufferLength}s`);
+      return true;
+    }
+    return false;
+  }
+
   protected getNextFragment(
     pos: number,
     levelDetails: LevelDetails
