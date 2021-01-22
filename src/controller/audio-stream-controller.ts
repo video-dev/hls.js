@@ -633,6 +633,11 @@ class AudioStreamController
             this.retryDate = performance.now() + delay;
             // retry loading state
             this.state = State.FRAG_LOADING_WAITING_RETRY;
+          } else if (data.levelRetry) {
+            // Fragment errors that result in a level switch or redundant fail-over
+            // should reset the audio stream controller state to idle
+            this.fragLoadError = 0;
+            this.state = State.IDLE;
           } else {
             logger.error(
               `${data.details} reaches max retry, redispatch as fatal ...`

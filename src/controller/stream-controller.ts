@@ -887,12 +887,18 @@ export default class StreamController
             }
             this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;
+          } else if (data.levelRetry) {
+            // Fragment errors that result in a level switch or redundant fail-over
+            // should reset the stream controller state to idle
+            this.fragLoadError = 0;
+            this.state = State.IDLE;
           } else {
             logger.error(
               `[stream-controller]: ${data.details} reaches max retry, redispatch as fatal ...`
             );
             // switch error to fatal
             data.fatal = true;
+            this.hls.stopLoad();
             this.state = State.ERROR;
           }
         }

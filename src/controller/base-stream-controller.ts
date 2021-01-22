@@ -298,11 +298,11 @@ export default class BaseStreamController
       targetBufferTime,
       progressCallback
     ).then((data) => {
-      this.fragLoadError = 0;
       if (!data) {
         // if we're here we probably needed to backtrack or are waiting for more parts
         return;
       }
+      this.fragLoadError = 0;
       if (this.fragContextChanged(frag)) {
         if (
           this.state === State.FRAG_LOADING ||
@@ -1080,7 +1080,7 @@ export default class BaseStreamController
     const previousState = this._state;
     if (previousState !== nextState) {
       this._state = nextState;
-      // this.log(`${previousState}->${nextState}`);
+      this.log(`${previousState}->${nextState}`);
     }
   }
 
