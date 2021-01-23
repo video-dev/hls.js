@@ -217,7 +217,12 @@ async function testSeekOnVOD(url, config) {
       self.startStream(url, config, callback);
       const video = self.video;
       video.ondurationchange = function () {
-        console.log('[test] > video  "durationchange": ' + video.duration);
+        console.log(
+          '[test] > video  "durationchange": ' +
+            video.duration +
+            ', currentTime: ' +
+            video.currentTime
+        );
       };
       video.onloadeddata = function () {
         console.log('[test] > video  "loadeddata"');
@@ -285,7 +290,9 @@ async function testSeekOnVOD(url, config) {
       };
 
       video.oncanplaythrough = video.onwaiting = function (e) {
-        console.log('[test] > video  "' + e.type + '"');
+        console.log(
+          '[test] > video  "' + e.type + '", currentTime: ' + video.currentTime
+        );
       };
     },
     url,
