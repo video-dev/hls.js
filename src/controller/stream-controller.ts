@@ -368,7 +368,7 @@ export default class StreamController
       }
     } else if (fragState === FragmentState.APPENDING) {
       // Lower the buffer size and try again
-      if (this._reduceMaxBufferLength(frag.duration)) {
+      if (this.reduceMaxBufferLength(frag.duration)) {
         this.fragmentTracker.removeFragment(frag);
       }
     } else if (this.media?.buffered.length === 0) {
@@ -825,7 +825,7 @@ export default class StreamController
 
   private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     const { frag, part } = data;
-    if (frag && frag.type !== 'main') {
+    if (frag && frag.type !== PlaylistLevelType.MAIN) {
       return;
     }
     if (this.fragContextChanged(frag)) {
@@ -847,31 +847,32 @@ export default class StreamController
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
-    const frag = data.frag || this.fragCurrent;
-    // don't handle frag error not related to main fragment
-    if (frag && frag.type !== 'main') {
-      return;
-    }
-
-    // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-    const mediaBuffered =
-      !!this.media &&
-      BufferHelper.isBuffered(this.media, this.media.currentTime) &&
-      BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
-
     switch (data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         if (!data.fatal) {
+          const frag = data.frag;
+          // don't handle frag error not related to main fragment
+          if (!frag || frag.type !== PlaylistLevelType.MAIN) {
+            return;
+          }
+          const fragCurrent = this.fragCurrent;
+          console.assert(
+            fragCurrent &&
+              frag.sn === fragCurrent.sn &&
+              frag.level === fragCurrent.level &&
+              frag.urlId === fragCurrent.urlId,
+            'Frag load error must match current frag to retry'
+          );
+          const config = this.config;
           // keep retrying until the limit will be reached
-          if (this.fragLoadError + 1 <= this.config.fragLoadingMaxRetry) {
+          if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
             // exponential backoff capped to config.fragLoadingMaxRetryTimeout
             const delay = Math.min(
-              Math.pow(2, this.fragLoadError) *
-                this.config.fragLoadingRetryDelay,
-              this.config.fragLoadingMaxRetryTimeout
+              Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
+              config.fragLoadingMaxRetryTimeout
             );
             // @ts-ignore - frag is potentially null according to TS here
             this.warn(
@@ -887,12 +888,18 @@ export default class StreamController
             }
             this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;
+          } else if (data.levelRetry) {
+            // Fragment errors that result in a level switch or redundant fail-over
+            // should reset the stream controller state to idle
+            this.fragLoadError = 0;
+            this.state = State.IDLE;
           } else {
             logger.error(
               `[stream-controller]: ${data.details} reaches max retry, redispatch as fatal ...`
             );
             // switch error to fatal
             data.fatal = true;
+            this.hls.stopLoad();
             this.state = State.ERROR;
           }
         }
@@ -918,9 +925,14 @@ export default class StreamController
           data.parent === 'main' &&
           (this.state === State.PARSING || this.state === State.PARSED)
         ) {
+          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+          const mediaBuffered =
+            !!this.media &&
+            BufferHelper.isBuffered(this.media, this.media.currentTime) &&
+            BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
           // reduce max buf len if current position is buffered
           if (mediaBuffered) {
-            this._reduceMaxBufferLength(this.config.maxBufferLength);
+            this.reduceMaxBufferLength();
             this.state = State.IDLE;
           } else {
             // current position is not buffered, but browser is still complaining about buffer full error
@@ -937,17 +949,6 @@ export default class StreamController
       default:
         break;
     }
-  }
-
-  private _reduceMaxBufferLength(minLength) {
-    const config = this.config;
-    if (config.maxMaxBufferLength >= minLength) {
-      // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-      config.maxMaxBufferLength /= 2;
-      this.warn(`Reduce max buffer length to ${config.maxMaxBufferLength}s`);
-      return true;
-    }
-    return false;
   }
 
   // Checks the health of the buffer and attempts to resolve playback stalls.

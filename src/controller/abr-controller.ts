@@ -1,19 +1,11 @@
-/*
- * simple ABR Controller
- *  - compute next level based on last fragment bw heuristics
- *  - implement an abandon rules triggered if we have less than 2 frag buffered and if computed bw shows that we risk buffer stalling
- */
-
+import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorDetails } from '../errors';
+import { PlaylistLevelType } from '../types/loader';
 import { logger } from '../utils/logger';
-import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
-
 import type { Bufferable } from '../utils/buffer-helper';
-// eslint-disable-next-line import/no-duplicates
 import type Fragment from '../loader/fragment';
-// eslint-disable-next-line import/no-duplicates
 import type { Part } from '../loader/fragment';
 import type { LoaderStats } from '../types/loader';
 import type Hls from '../hls';
@@ -76,7 +68,7 @@ class AbrController implements ComponentAPI {
 
   protected onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
     const frag = data.frag;
-    if (frag.type === 'main') {
+    if (frag.type === PlaylistLevelType.MAIN) {
       if (!this.timer) {
         this.fragCurrent = frag;
         this.partCurrent = data.part ?? null;
@@ -214,7 +206,10 @@ class AbrController implements ComponentAPI {
     event: Events.FRAG_LOADED,
     { frag, part }: FragLoadedData
   ) {
-    if (frag.type === 'main' && Number.isFinite(frag.sn as number)) {
+    if (
+      frag.type === PlaylistLevelType.MAIN &&
+      Number.isFinite(frag.sn as number)
+    ) {
       const stats = part ? part.stats : frag.stats;
       const duration = part ? part.duration : frag.duration;
       // stop monitoring bw once frag loaded
@@ -257,7 +252,11 @@ class AbrController implements ComponentAPI {
       return;
     }
     // Only count non-alt-audio frags which were actually buffered in our BW calculations
-    if (frag.type !== 'main' || frag.sn === 'initSegment' || frag.bitrateTest) {
+    if (
+      frag.type !== PlaylistLevelType.MAIN ||
+      frag.sn === 'initSegment' ||
+      frag.bitrateTest
+    ) {
       return;
     }
     // Use the difference between parsing and request instead of buffering and request to compute fragLoadingProcessing;

@@ -69,15 +69,13 @@ const sampleEntryCodesISO = {
 
 export type CodecType = 'audio' | 'video';
 
-function isCodecType(codec: string, type: CodecType): boolean {
+export function isCodecType(codec: string, type: CodecType): boolean {
   const typeCodes = sampleEntryCodesISO[type];
   return !!typeCodes && typeCodes[codec.slice(0, 4)] === true;
 }
 
-function isCodecSupportedInMp4(codec: string, type: CodecType): boolean {
+export function isCodecSupportedInMp4(codec: string, type: CodecType): boolean {
   return MediaSource.isTypeSupported(
     `${type || 'video'}/mp4;codecs="${codec}"`
   );
 }
-
-export { isCodecType, isCodecSupportedInMp4 };

@@ -95,7 +95,7 @@ export class Level {
   public readonly unknownCodecs: string[] | undefined;
   public audioGroupIds?: string[];
   public details?: LevelDetails;
-  public fragmentError: boolean = false;
+  public fragmentError: number = 0;
   public loadError: number = 0;
   public loaded?: { bytes: number; duration: number };
   public realBitrate: number = 0;
