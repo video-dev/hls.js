@@ -298,11 +298,11 @@ export default class BaseStreamController
       targetBufferTime,
       progressCallback
     ).then((data) => {
-      this.fragLoadError = 0;
       if (!data) {
         // if we're here we probably needed to backtrack or are waiting for more parts
         return;
       }
+      this.fragLoadError = 0;
       if (this.fragContextChanged(frag)) {
         if (
           this.state === State.FRAG_LOADING ||
@@ -672,6 +672,18 @@ export default class BaseStreamController
       // Clear buffer so that we reload previous segments sequentially if required
       this.flushMainBuffer(0, frag.start);
     }
+  }
+
+  protected reduceMaxBufferLength(threshold?: number) {
+    const config = this.config;
+    const minLength = threshold || config.maxBufferLength;
+    if (config.maxMaxBufferLength >= minLength) {
+      // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+      config.maxMaxBufferLength /= 2;
+      this.warn(`Reduce max buffer length to ${config.maxMaxBufferLength}s`);
+      return true;
+    }
+    return false;
   }
 
   protected getNextFragment(
@@ -1080,7 +1092,7 @@ export default class BaseStreamController
     const previousState = this._state;
     if (previousState !== nextState) {
       this._state = nextState;
-      // this.log(`${previousState}->${nextState}`);
+      this.log(`${previousState}->${nextState}`);
     }
   }
 
