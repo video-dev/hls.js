@@ -8,6 +8,7 @@ import type {
   MediaAttachedData,
   SubtitleTracksUpdatedData,
   ManifestParsedData,
+  LevelSwitchingData,
 } from '../types/events';
 import type { MediaPlaylist } from '../types/media-playlist';
 import { ErrorData, LevelLoadingData } from '../types/events';
@@ -44,6 +45,7 @@ class SubtitleTrackController extends BasePlaylistController {
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
+    hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
     hls.on(Events.ERROR, this.onError, this);
   }
@@ -55,6 +57,7 @@ class SubtitleTrackController extends BasePlaylistController {
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.off(Events.LEVEL_LOADING, this.onLevelLoading, this);
+    hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
   }
@@ -163,8 +166,18 @@ class SubtitleTrackController extends BasePlaylistController {
     event: Events.LEVEL_LOADING,
     data: LevelLoadingData
   ): void {
-    const levelInfo = this.hls.levels[data.level];
+    this.switchLevel(data.level);
+  }
 
+  protected onLevelSwitching(
+    event: Events.LEVEL_SWITCHING,
+    data: LevelSwitchingData
+  ): void {
+    this.switchLevel(data.level);
+  }
+
+  private switchLevel(levelIndex: number) {
+    const levelInfo = this.hls.levels[levelIndex];
     if (!levelInfo?.textGroupIds) {
       return;
     }

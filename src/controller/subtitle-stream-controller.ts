@@ -140,6 +140,7 @@ export class SubtitleStreamController
       return;
     }
     this.fragmentTracker.removeAllFragments();
+    this.fragPrevious = null;
     this.currentTrackId = -1;
     this.levels.forEach((level: Level) => {
       this.tracksBuffered[level.id] = [];
@@ -173,6 +174,8 @@ export class SubtitleStreamController
     this.levels = subtitleTracks.map(
       (mediaPlaylist) => new Level(mediaPlaylist)
     );
+    this.fragmentTracker.removeAllFragments();
+    this.fragPrevious = null;
     this.levels.forEach((level: Level) => {
       this.tracksBuffered[level.id] = [];
     });

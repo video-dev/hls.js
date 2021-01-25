@@ -1,5 +1,7 @@
 import { fixLineBreaks } from './vttparser';
 import type { CaptionScreen, Row } from './cea-608-parser';
+import { generateCueId } from './webvtt-parser';
+import { addCueToTrack } from './texttrack-utils';
 
 const WHITESPACE_CHAR = /\s/;
 
@@ -50,26 +52,32 @@ export function newCue(
         endTime += 0.0001;
       }
 
-      cue = new Cue(startTime, endTime, fixLineBreaks(text.trim()));
-
       if (indent >= 16) {
         indent--;
       } else {
         indent++;
       }
 
-      cue.line = r + 1;
-      cue.align = 'left';
-      // Clamp the position between 10 and 80 percent (CEA-608 PAC indent code)
-      // https://dvcs.w3.org/hg/text-tracks/raw-file/default/608toVTT/608toVTT.html#positioning-in-cea-608
-      // Firefox throws an exception and captions break with out of bounds 0-100 values
-      cue.position = 10 + Math.min(80, Math.floor((indent * 8) / 32) * 10);
-      result.push(cue);
+      const cueText = fixLineBreaks(text.trim());
+      const id = generateCueId(startTime, endTime, cueText);
+
+      // If this cue already exists in the track do not push it
+      if (!track || !track.cues || !track.cues.getCueById(id)) {
+        cue = new Cue(startTime, endTime, cueText);
+        cue.id = id;
+        cue.line = r + 1;
+        cue.align = 'left';
+        // Clamp the position between 10 and 80 percent (CEA-608 PAC indent code)
+        // https://dvcs.w3.org/hg/text-tracks/raw-file/default/608toVTT/608toVTT.html#positioning-in-cea-608
+        // Firefox throws an exception and captions break with out of bounds 0-100 values
+        cue.position = 10 + Math.min(80, Math.floor((indent * 8) / 32) * 10);
+        result.push(cue);
+      }
     }
   }
   if (track && result.length) {
     // Sort bottom cues in reverse order so that they render in line order when overlapping in Chrome
-    const sortedCues = result.sort((cueA, cueB) => {
+    result.sort((cueA, cueB) => {
       if (cueA.line === 'auto' || cueB.line === 'auto') {
         return 0;
       }
@@ -78,9 +86,7 @@ export function newCue(
       }
       return cueA.line - cueB.line;
     });
-    for (let i = 0; i < sortedCues.length; i++) {
-      track.addCue(sortedCues[i]);
-    }
+    result.forEach((cue) => addCueToTrack(track, cue));
   }
   return result;
 }
