@@ -10,6 +10,7 @@ interface VTTCue extends TextTrackCue {
   line: number
   align: string
   position: number
+  text: string
 }
 
 export function newCue (track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[] {
@@ -62,15 +63,12 @@ export function newCue (track: TextTrack | null, startTime: number, endTime: num
   }
   if (track && result.length) {
     // Sort bottom cues in reverse order so that they render in line order when overlapping in Chrome
-    const sortedCues = result.sort((cueA, cueB) => {
+    return result.sort((cueA, cueB) => {
       if (cueA.line > 8 && cueB.line > 8) {
         return cueB.line - cueA.line;
       }
       return cueA.line - cueB.line;
     });
-    for (let i = 0; i < sortedCues.length; i++) {
-      track.addCue(sortedCues[i]);
-    }
   }
   return result;
 }
