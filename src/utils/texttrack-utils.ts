@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 export function sendAddTrackEvent(track: TextTrack, videoEl: HTMLMediaElement) {
   let event: Event;
   try {
@@ -11,17 +13,73 @@ export function sendAddTrackEvent(track: TextTrack, videoEl: HTMLMediaElement) {
   videoEl.dispatchEvent(event);
 }
 
+export function addCueToTrack(track: TextTrack, cue: VTTCue) {
+  // Sometimes there are cue overlaps on segmented vtts so the same
+  // cue can appear more than once in different vtt files.
+  // This avoid showing duplicated cues with same timecode and text.
+  const mode = track.mode;
+  if (mode === 'disabled') {
+    track.mode = 'hidden';
+  }
+  if (track.cues && !track.cues.getCueById(cue.id)) {
+    try {
+      track.addCue(cue);
+      if (!track.cues.getCueById(cue.id)) {
+        throw new Error(`addCue is failed for: ${cue}`);
+      }
+    } catch (err) {
+      logger.debug(`[texttrack-utils]: ${err}`);
+      const textTrackCue = new (self.TextTrackCue as any)(
+        cue.startTime,
+        cue.endTime,
+        cue.text
+      );
+      textTrackCue.id = cue.id;
+      track.addCue(textTrackCue);
+    }
+  }
+  if (mode === 'disabled') {
+    track.mode = mode;
+  }
+}
+
 export function clearCurrentCues(track: TextTrack) {
-  if (track?.cues) {
-    // When track.mode is disabled, track.cues will be null.
-    // To guarantee the removal of cues, we need to temporarily
-    // change the mode to hidden
-    if (track.mode === 'disabled') {
-      track.mode = 'hidden';
-    }
-    while (track.cues.length > 0) {
-      track.removeCue(track.cues[0]);
-    }
+  // When track.mode is disabled, track.cues will be null.
+  // To guarantee the removal of cues, we need to temporarily
+  // change the mode to hidden
+  const mode = track.mode;
+  if (mode === 'disabled') {
+    track.mode = 'hidden';
+  }
+  if (!track.cues) {
+    return;
+  }
+  for (let i = track.cues.length; i--; ) {
+    track.removeCue(track.cues[i]);
+  }
+  if (mode === 'disabled') {
+    track.mode = mode;
+  }
+}
+
+export function removeCuesInRange(
+  track: TextTrack,
+  start: number,
+  end: number
+) {
+  const mode = track.mode;
+  if (mode === 'disabled') {
+    track.mode = 'hidden';
+  }
+  if (!track.cues || !track.cues.length) {
+    return;
+  }
+  const cues = getCuesInRange(track.cues, start, end);
+  for (let i = 0; i < cues.length; i++) {
+    track.removeCue(cues[i]);
+  }
+  if (mode === 'disabled') {
+    track.mode = mode;
   }
 }
 

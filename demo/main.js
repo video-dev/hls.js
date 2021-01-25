@@ -42,7 +42,7 @@ let stopOnStall = getDemoConfigPropOrDefault('stopOnStall', false);
 let bufferingIdx = -1;
 let selectedTestStream = null;
 
-const video = document.querySelector('#video');
+let video = document.querySelector('#video');
 const startTime = Date.now();
 
 let lastSeekingIdx;
@@ -340,7 +340,32 @@ function loadSelectedStream() {
 
   logStatus('Loading manifest and attaching video element...');
 
+  const expiredTracks = [].filter.call(
+    video.textTracks,
+    (track) => track.kind !== 'metadata'
+  );
+  if (expiredTracks.length) {
+    const kinds = expiredTracks
+      .map((track) => track.kind)
+      .filter((kind, index, self) => self.indexOf(kind) === index);
+    logStatus(
+      `Replacing video element to remove ${kinds.join(' and ')} text tracks`
+    );
+    const videoWithExpiredTextTracks = video;
+    video = videoWithExpiredTextTracks.cloneNode(false);
+    video.removeAttribute('src');
+    video.volume = videoWithExpiredTextTracks.volume;
+    video.muted = videoWithExpiredTextTracks.muted;
+    videoWithExpiredTextTracks.parentNode.insertBefore(
+      video,
+      videoWithExpiredTextTracks
+    );
+    videoWithExpiredTextTracks.parentNode.removeChild(
+      videoWithExpiredTextTracks
+    );
+  }
   addChartEventListeners(hls);
+  addVideoEventListeners(video);
 
   hls.loadSource(url);
   hls.autoLevelCapping = levelCapping;
@@ -865,7 +890,23 @@ function loadSelectedStream() {
       stats.fpsTotalDroppedFrames = data.totalDroppedFrames;
     }
   });
+}
 
+function addVideoEventListeners(video) {
+  video.removeEventListener('resize', handleVideoEvent);
+  video.removeEventListener('seeking', handleVideoEvent);
+  video.removeEventListener('seeked', handleVideoEvent);
+  video.removeEventListener('pause', handleVideoEvent);
+  video.removeEventListener('play', handleVideoEvent);
+  video.removeEventListener('canplay', handleVideoEvent);
+  video.removeEventListener('canplaythrough', handleVideoEvent);
+  video.removeEventListener('ended', handleVideoEvent);
+  video.removeEventListener('playing', handleVideoEvent);
+  video.removeEventListener('error', handleVideoEvent);
+  video.removeEventListener('loadedmetadata', handleVideoEvent);
+  video.removeEventListener('loadeddata', handleVideoEvent);
+  video.removeEventListener('durationchange', handleVideoEvent);
+  video.removeEventListener('volumechange', handleVolumeEvent);
   video.addEventListener('resize', handleVideoEvent);
   video.addEventListener('seeking', handleVideoEvent);
   video.addEventListener('seeked', handleVideoEvent);
@@ -879,15 +920,7 @@ function loadSelectedStream() {
   video.addEventListener('loadedmetadata', handleVideoEvent);
   video.addEventListener('loadeddata', handleVideoEvent);
   video.addEventListener('durationchange', handleVideoEvent);
-  video.addEventListener('volumechange', (evt) => {
-    localStorage.setItem(
-      STORAGE_KEYS.volume,
-      JSON.stringify({
-        muted: video.muted,
-        volume: video.volume,
-      })
-    );
-  });
+  video.addEventListener('volumechange', handleVolumeEvent);
 }
 
 function handleUnsupported() {
@@ -983,6 +1016,16 @@ function handleVideoEvent(evt) {
   }
 
   trimEventHistory();
+}
+
+function handleVolumeEvent() {
+  localStorage.setItem(
+    STORAGE_KEYS.volume,
+    JSON.stringify({
+      muted: video.muted,
+      volume: video.volume,
+    })
+  );
 }
 
 function handleLevelError(data) {

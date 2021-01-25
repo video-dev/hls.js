@@ -6,6 +6,7 @@ import {
   ErrorData,
   LevelLoadingData,
   AudioTrackLoadedData,
+  LevelSwitchingData,
 } from '../types/events';
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType } from '../types/loader';
@@ -30,6 +31,7 @@ class AudioTrackController extends BasePlaylistController {
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
+    hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     hls.on(Events.AUDIO_TRACK_LOADED, this.onAudioTrackLoaded, this);
     hls.on(Events.ERROR, this.onError, this);
   }
@@ -39,6 +41,7 @@ class AudioTrackController extends BasePlaylistController {
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.off(Events.LEVEL_LOADING, this.onLevelLoading, this);
+    hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     hls.off(Events.AUDIO_TRACK_LOADED, this.onAudioTrackLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
   }
@@ -85,18 +88,22 @@ class AudioTrackController extends BasePlaylistController {
     }
   }
 
-  /**
-   * When a level is loading, if it has redundant audioGroupIds (in the same ordinality as it's redundant URLs)
-   * we are setting our audio-group ID internally to the one set, if it is different from the group ID currently set.
-   *
-   * If group-ID got update, we re-select the appropriate audio-track with this group-ID matching the currently
-   * selected one (based on NAME property).
-   */
   protected onLevelLoading(
     event: Events.LEVEL_LOADING,
     data: LevelLoadingData
   ): void {
-    const levelInfo = this.hls.levels[data.level];
+    this.switchLevel(data.level);
+  }
+
+  protected onLevelSwitching(
+    event: Events.LEVEL_SWITCHING,
+    data: LevelSwitchingData
+  ): void {
+    this.switchLevel(data.level);
+  }
+
+  private switchLevel(levelIndex: number) {
+    const levelInfo = this.hls.levels[levelIndex];
 
     if (!levelInfo?.audioGroupIds) {
       return;

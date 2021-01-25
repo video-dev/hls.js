@@ -3,6 +3,7 @@ import { parseTimeStamp } from './vttparser';
 import VTTCue from './vttcue';
 import { utf8ArrayToStr } from '../demux/id3';
 import { toTimescaleFromScale } from './timescale-conversion';
+import { generateCueId } from './webvtt-parser';
 
 export const IMSC1_CODEC = 'stpp.ttml.im1t';
 
@@ -91,6 +92,7 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
         endTime = startTime + duration;
       }
       const cue = new VTTCue(startTime - syncTime, endTime - syncTime, cueText);
+      cue.id = generateCueId(cue.startTime, cue.endTime, cue.text);
 
       const region = regionElements[cueElement.getAttribute('region')];
       const style = styleElements[cueElement.getAttribute('style')];
