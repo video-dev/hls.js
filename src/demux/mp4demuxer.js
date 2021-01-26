@@ -1,7 +1,9 @@
 /**
  * MP4 demuxer
  */
+import { dummyTrack } from './dummy-demuxed-track';
 import { logger } from '../utils/logger';
+import { bin2str, findBox, parseVideoSegmentTextTrackSamples, readUint32 } from '../utils/mp4-tools';
 import Event from '../events';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
@@ -57,11 +59,7 @@ class MP4Demuxer {
 
   static probe (data) {
     // ensure we find a moof box in the first 16 kB
-    return MP4Demuxer.findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, ['moof']).length > 0;
-  }
-
-  static bin2str (buffer) {
-    return String.fromCharCode.apply(null, buffer);
+    return findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, ['moof']).length > 0;
   }
 
   static readUint16 (buffer, offset) {
@@ -76,19 +74,6 @@ class MP4Demuxer {
     return val < 0 ? 65536 + val : val;
   }
 
-  static readUint32 (buffer, offset) {
-    if (buffer.data) {
-      offset += buffer.start;
-      buffer = buffer.data;
-    }
-
-    const val = buffer[offset] << 24 |
-                buffer[offset + 1] << 16 |
-                buffer[offset + 2] << 8 |
-                buffer[offset + 3];
-    return val < 0 ? 4294967296 + val : val;
-  }
-
   static writeUint32 (buffer, offset, value) {
     if (buffer.data) {
       offset += buffer.start;
@@ -100,56 +85,12 @@ class MP4Demuxer {
     buffer[offset + 3] = value & 0xff;
   }
 
-  // Find the data for a box specified by its path
-  static findBox (data, path) {
-    let results = [],
-      i, size, type, end, subresults, start, endbox;
-
-    if (data.data) {
-      start = data.start;
-      end = data.end;
-      data = data.data;
-    } else {
-      start = 0;
-      end = data.byteLength;
-    }
-
-    if (!path.length) {
-      // short-circuit the search for empty paths
-      return null;
-    }
-
-    for (i = start; i < end;) {
-      size = MP4Demuxer.readUint32(data, i);
-      type = MP4Demuxer.bin2str(data.subarray(i + 4, i + 8));
-      endbox = size > 1 ? i + size : end;
-
-      if (type === path[0]) {
-        if (path.length === 1) {
-          // this is the end of the path and we've found the box we were
-          // looking for
-          results.push({ data: data, start: i + 8, end: endbox });
-        } else {
-          // recursively search for the next box along the path
-          subresults = MP4Demuxer.findBox({ data: data, start: i + 8, end: endbox }, path.slice(1));
-          if (subresults.length) {
-            results = results.concat(subresults);
-          }
-        }
-      }
-      i = endbox;
-    }
-
-    // we've finished searching all of data
-    return results;
-  }
-
   static parseSegmentIndex (initSegment) {
-    const moov = MP4Demuxer.findBox(initSegment, ['moov'])[0];
+    const moov = findBox(initSegment, ['moov'])[0];
     const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
 
     let index = 0;
-    let sidx = MP4Demuxer.findBox(initSegment, ['sidx']);
+    let sidx = findBox(initSegment, ['sidx']);
     let references;
 
     if (!sidx || !sidx[0]) {
@@ -164,7 +105,7 @@ class MP4Demuxer {
     // set initial offset, we skip the reference ID (not needed)
     index = version === 0 ? 8 : 16;
 
-    const timescale = MP4Demuxer.readUint32(sidx, index);
+    const timescale = readUint32(sidx, index);
     index += 4;
 
     // TODO: parse earliestPresentationTime and firstOffset
@@ -189,7 +130,7 @@ class MP4Demuxer {
     for (let i = 0; i < referencesCount; i++) {
       let referenceIndex = index;
 
-      const referenceInfo = MP4Demuxer.readUint32(sidx, referenceIndex);
+      const referenceInfo = readUint32(sidx, referenceIndex);
       referenceIndex += 4;
 
       const referenceSize = referenceInfo & 0x7FFFFFFF;
@@ -200,7 +141,7 @@ class MP4Demuxer {
         return;
       }
 
-      const subsegmentDuration = MP4Demuxer.readUint32(sidx, referenceIndex);
+      const subsegmentDuration = readUint32(sidx, referenceIndex);
       referenceIndex += 4;
 
       references.push({
@@ -254,31 +195,31 @@ class MP4Demuxer {
    */
   static parseInitSegment (initSegment) {
     let result = [];
-    let traks = MP4Demuxer.findBox(initSegment, ['moov', 'trak']);
+    let traks = findBox(initSegment, ['moov', 'trak']);
 
     traks.forEach(trak => {
-      const tkhd = MP4Demuxer.findBox(trak, ['tkhd'])[0];
+      const tkhd = findBox(trak, ['tkhd'])[0];
       if (tkhd) {
         let version = tkhd.data[tkhd.start];
         let index = version === 0 ? 12 : 20;
-        let trackId = MP4Demuxer.readUint32(tkhd, index);
+        let trackId = readUint32(tkhd, index);
 
-        const mdhd = MP4Demuxer.findBox(trak, ['mdia', 'mdhd'])[0];
+        const mdhd = findBox(trak, ['mdia', 'mdhd'])[0];
         if (mdhd) {
           version = mdhd.data[mdhd.start];
           index = version === 0 ? 12 : 20;
-          const timescale = MP4Demuxer.readUint32(mdhd, index);
+          const timescale = readUint32(mdhd, index);
 
-          const hdlr = MP4Demuxer.findBox(trak, ['mdia', 'hdlr'])[0];
+          const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
           if (hdlr) {
-            const hdlrType = MP4Demuxer.bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
+            const hdlrType = bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
             let type = { 'soun': 'audio', 'vide': 'video' }[hdlrType];
             if (type) {
               // extract codec info. TODO : parse codec details to be able to build MIME type
-              let codecBox = MP4Demuxer.findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);
+              let codecBox = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);
               if (codecBox.length) {
                 codecBox = codecBox[0];
-                let codecType = MP4Demuxer.bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
+                let codecType = bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
                 logger.log(`MP4Demuxer:${type}:${codecType} found`);
               }
               result[trackId] = { timescale: timescale, type: type };
@@ -311,28 +252,28 @@ class MP4Demuxer {
     let trafs, baseTimes, result;
 
     // we need info from two childrend of each track fragment box
-    trafs = MP4Demuxer.findBox(fragment, ['moof', 'traf']);
+    trafs = findBox(fragment, ['moof', 'traf']);
 
     // determine the start times for each track
     baseTimes = [].concat.apply([], trafs.map(function (traf) {
-      return MP4Demuxer.findBox(traf, ['tfhd']).map(function (tfhd) {
+      return findBox(traf, ['tfhd']).map(function (tfhd) {
         let id, scale, baseTime;
 
         // get the track id from the tfhd
-        id = MP4Demuxer.readUint32(tfhd, 4);
+        id = readUint32(tfhd, 4);
         // assume a 90kHz clock if no timescale was specified
         scale = initData[id].timescale || 90e3;
 
         // get the base media decode time from the tfdt
-        baseTime = MP4Demuxer.findBox(traf, ['tfdt']).map(function (tfdt) {
+        baseTime = findBox(traf, ['tfdt']).map(function (tfdt) {
           let version, result;
 
           version = tfdt.data[tfdt.start];
-          result = MP4Demuxer.readUint32(tfdt, 4);
+          result = readUint32(tfdt, 4);
           if (version === 1) {
             result *= Math.pow(2, 32);
 
-            result += MP4Demuxer.readUint32(tfdt, 8);
+            result += readUint32(tfdt, 8);
           }
           return result;
         })[0];
@@ -347,22 +288,22 @@ class MP4Demuxer {
   }
 
   static offsetStartDTS (initData, fragment, timeOffset) {
-    MP4Demuxer.findBox(fragment, ['moof', 'traf']).map(function (traf) {
-      return MP4Demuxer.findBox(traf, ['tfhd']).map(function (tfhd) {
+    findBox(fragment, ['moof', 'traf']).map(function (traf) {
+      return findBox(traf, ['tfhd']).map(function (tfhd) {
       // get the track id from the tfhd
-        let id = MP4Demuxer.readUint32(tfhd, 4);
+        let id = readUint32(tfhd, 4);
         // assume a 90kHz clock if no timescale was specified
         let timescale = initData[id].timescale || 90e3;
 
         // get the base media decode time from the tfdt
-        MP4Demuxer.findBox(traf, ['tfdt']).map(function (tfdt) {
+        findBox(traf, ['tfdt']).map(function (tfdt) {
           let version = tfdt.data[tfdt.start];
-          let baseMediaDecodeTime = MP4Demuxer.readUint32(tfdt, 4);
+          let baseMediaDecodeTime = readUint32(tfdt, 4);
           if (version === 0) {
             MP4Demuxer.writeUint32(tfdt, 4, baseMediaDecodeTime - timeOffset * timescale);
           } else {
             baseMediaDecodeTime *= Math.pow(2, 32);
-            baseMediaDecodeTime += MP4Demuxer.readUint32(tfdt, 8);
+            baseMediaDecodeTime += readUint32(tfdt, 8);
             baseMediaDecodeTime -= timeOffset * timescale;
             baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
             const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
@@ -391,7 +332,19 @@ class MP4Demuxer {
     }
     MP4Demuxer.offsetStartDTS(initData, data, initPTS);
     startDTS = MP4Demuxer.getStartDTS(initData, data);
-    this.remuxer.remux(initData.audio, initData.video, null, null, startDTS, contiguous, accurateTimeOffset, data);
+
+    const videoTrack = initData.video;
+    const textTrack = dummyTrack();
+    if (data && data.length && videoTrack) {
+      const { id, timescale } = videoTrack;
+      if (id && timescale) {
+        textTrack.samples = parseVideoSegmentTextTrackSamples(data, id);
+        textTrack.timescale = timescale;
+        textTrack.initPTS = initPTS;
+      }
+    }
+
+    this.remuxer.remux(initData.audio, videoTrack, null, textTrack, startDTS, contiguous, accurateTimeOffset, data);
   }
 
   destroy () {}
