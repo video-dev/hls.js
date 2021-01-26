@@ -7,8 +7,10 @@ import { BufferHelper } from '../utils/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { FragmentState } from './fragment-tracker';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import Fragment, { ElementaryStreamTypes } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
+
+import { PlaylistLoader } from '../loader/playlist-loader';
 import * as LevelHelper from './level-helper';
 import TimeRanges from '../utils/time-ranges';
 import { ErrorDetails } from '../errors';
@@ -866,6 +868,16 @@ class StreamController extends BaseStreamController {
       // then this means that we should be able to load a fragment at a higher quality level
       this.bitrateTest = false;
       this.stats = stats;
+
+      if (!details) {
+        // we log this with a bit of additional information in order to debug this
+        // since this type of runtime assertion should actually be avoidable by
+        // aborting fragment requests properly on level switch in the first place.
+        logger.warn('Loaded fragment but level switch occured before. SN:', fragLoaded.sn,
+          'Level:', fragLoaded.level, 'Stats:', stats, 'Current Fragment:', fragCurrent);
+        this.state = State.IDLE;
+        return;
+      }
 
       logger.log(`Loaded ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}`);
       if (fragLoaded.bitrateTest && hls.nextLoadLevel) {

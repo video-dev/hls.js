@@ -58,10 +58,10 @@ class AudioTrackController extends TaskLoop {
 
     /**
      * @public
-     * List of blacklisted audio track IDs (that have caused failure)
-     * @member {number[]}
+     * Flag hash of restricted track IDs (that have caused failure)
+     * @member {{[id: number] => boolean}}
      */
-    this.trackIdBlacklist = Object.create(null);
+    this.restrictedTracks = Object.create(null);
 
     /**
      * @public
@@ -217,7 +217,7 @@ class AudioTrackController extends TaskLoop {
     }
 
     // check if level idx is valid
-    if (newId < 0 || newId >= this.tracks.length) {
+    if (!Number.isFinite(newId) || newId < 0 || newId >= this.tracks.length) {
       logger.warn('Invalid id passed to audio-track controller');
       return;
     }
@@ -250,11 +250,13 @@ class AudioTrackController extends TaskLoop {
     const levelInfo = this.hls.levels[levelId];
 
     if (!levelInfo || !levelInfo.audioGroupIds) {
+      logger.warn('Cant select audio-group, missing level info or current audio group-id');
       return;
     }
 
     const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
     if (this.audioGroupId !== audioGroupId) {
+      logger.debug('audio group-id has changed from:', this.audioGroupId, 'to:', audioGroupId);
       this.audioGroupId = audioGroupId;
       this._selectInitialAudioTrack();
     }
@@ -297,7 +299,7 @@ class AudioTrackController extends TaskLoop {
         }
         // We need to match the (pre-)selected group ID
         // and the NAME of the current track.
-        if ((!this.audioGroupId || track.groupId === this.audioGroupId) &&
+        if ((!this.audioGroupId || track.groupId === this.audioGroupId) &&
           (!name || name === track.name)) {
           // If there was a previous track try to stay with the same `NAME`.
           // It should be unique across tracks of same group, and consistent through redundant track groups.
@@ -376,20 +378,20 @@ class AudioTrackController extends TaskLoop {
    * @private
    */
   _handleLoadError () {
-    // First, let's black list current track id
-    this.trackIdBlacklist[this._trackId] = true;
+    // add current track id to restricted list
+    this.restrictedTracks[this._trackId] = true;
 
-    // Let's try to fall back on a functional audio-track with the same group ID
+    // try to fall back on a functional audio-track with the same group ID
     const previousId = this._trackId;
     const { name, language, groupId } = this.tracks[previousId];
 
     logger.warn(`Loading failed on audio track id: ${previousId}, group-id: ${groupId}, name/language: "${name}" / "${language}"`);
 
-    // Find a non-blacklisted track ID with the same NAME
-    // At least a track that is not blacklisted, thus on another group-ID.
+    // Find a non-restricted track ID with the same NAME
+    // At least a track that is not restricted, thus on another group-ID.
     let newId = previousId;
     for (let i = 0; i < this.tracks.length; i++) {
-      if (this.trackIdBlacklist[i]) {
+      if (this.restrictedTracks[i]) {
         continue;
       }
       const newTrack = this.tracks[i];

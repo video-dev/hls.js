@@ -23,7 +23,7 @@ const { performance } = window;
 /**
  * @constructor
  */
-class PlaylistLoader extends EventHandler {
+export class PlaylistLoader extends EventHandler {
   private loaders: Partial<Record<PlaylistContextType, Loader<PlaylistLoaderContext>>> = {};
 
   /**
@@ -296,7 +296,7 @@ class PlaylistLoader extends EventHandler {
     }));
 
     const audioTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
-    const subtitles = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+    const subtitleTracks = M3U8Parser.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
     const captions = M3U8Parser.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
 
     if (audioTracks.length) {
@@ -330,7 +330,8 @@ class PlaylistLoader extends EventHandler {
     hls.trigger(Event.MANIFEST_LOADED, {
       levels,
       audioTracks,
-      subtitles,
+      subtitleTracks, // legacy/convent-API compat
+      subtitles: subtitleTracks, // FIXME: `subtitles` not documented
       captions,
       url,
       stats,
@@ -382,6 +383,7 @@ class PlaylistLoader extends EventHandler {
       hls.trigger(Event.MANIFEST_LOADED, {
         levels: [singleLevel],
         audioTracks: [],
+        subtitleTracks: [],
         url,
         stats,
         networkDetails,
@@ -477,8 +479,12 @@ class PlaylistLoader extends EventHandler {
       details = (timeout ? ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT : ErrorDetails.AUDIO_TRACK_LOAD_ERROR);
       fatal = false;
       break;
+    case PlaylistContextType.SUBTITLE_TRACK:
+      details = (timeout ? ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT : ErrorDetails.SUBTITLE_TRACK_LOAD_ERROR);
+      fatal = false;
+      break;
     default:
-      // details = ...?
+      logger.warn(`Handled network error for unknown context-type: ${context.type}`);
       fatal = false;
     }
 
@@ -544,5 +550,3 @@ class PlaylistLoader extends EventHandler {
     }
   }
 }
-
-export default PlaylistLoader;

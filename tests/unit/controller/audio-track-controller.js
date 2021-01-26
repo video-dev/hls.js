@@ -364,7 +364,7 @@ describe('AudioTrackController', function () {
       expect(audioTrackController.hasInterval()).to.be.false;
     });
 
-    it('should blacklist current track on fatal network error, and find a backup track (fallback mechanism)', function () {
+    it('should restrict current track on fatal network error, and find a backup track (fallback mechanism)', function () {
       const currentTrackId = 4;
       audioTrackController._trackId = currentTrackId;
       audioTrackController.tracks = tracks;
@@ -373,13 +373,13 @@ describe('AudioTrackController', function () {
         fatal: true
       });
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
+      expect(!!audioTrackController.restrictedTracks[currentTrackId]).to.be.false;
       audioTrackController.onError({
         type: Hls.ErrorTypes.NETWORK_ERROR,
         fatal: true
       });
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.false;
+      expect(!!audioTrackController.restrictedTracks[currentTrackId]).to.be.false;
       audioTrackController.onError({
         type: Hls.ErrorTypes.NETWORK_ERROR,
         details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
@@ -389,7 +389,7 @@ describe('AudioTrackController', function () {
         }
       });
 
-      expect(!!audioTrackController.trackIdBlacklist[currentTrackId]).to.be.true;
+      expect(!!audioTrackController.restrictedTracks[currentTrackId]).to.be.true;
       expect(audioTrackController.audioTrack).to.equal(1);
     });
   });

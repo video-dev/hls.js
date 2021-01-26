@@ -5,7 +5,7 @@ import {
   ErrorDetails
 } from './errors';
 
-import PlaylistLoader from './loader/playlist-loader';
+import { PlaylistLoader } from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import KeyLoader from './loader/key-loader';
 
@@ -21,6 +21,46 @@ import { hlsDefaultConfig, HlsConfig } from './config';
 import HlsEvents from './events';
 
 import { Observer } from './observer';
+import { MediaType, PlaylistLevelType } from './types/loader';
+import { MediaPlaylist } from './types/media-playlist';
+
+function _setPreferredMediaOptions (mediaType: MediaType, name: string, language: string | null = null) {
+  let tracks;
+  switch (mediaType) {
+  case PlaylistLevelType.AUDIO:
+    tracks = this.audioTracksForCurrentLevel;
+    break;
+  case PlaylistLevelType.SUBTITLE:
+    tracks = this.subtitleTracksForCurrentLevel;
+    break;
+  }
+
+  const trackOption = tracks
+    .filter((track) => {
+      if (name === track.name &&
+        (language === null || language === track.lang)) {
+        return true;
+      }
+      return false;
+    })[0];
+
+  if (trackOption) {
+    switch (mediaType) {
+    case PlaylistLevelType.AUDIO:
+      this.audioTrack = trackOption.id;
+      break;
+    case PlaylistLevelType.SUBTITLE:
+      this.subtitleTrack = trackOption.id;
+      break;
+    default:
+      throw new Error('Internal asssertion failed, not a media-type: ' + mediaType);
+    }
+    return true;
+  } else {
+    logger.warn(`Could not find any ${mediaType}-track in current-level respective media-group matching name="${name}" and language="${language}"`);
+    return false;
+  }
+}
 
 /**
  * @module Hls
@@ -614,11 +654,8 @@ export default class Hls extends Observer {
     this.abrController.nextAutoLevel = Math.max(this.minAutoLevel, nextLevel);
   }
 
-  /**
-   * @type {AudioTrack[]}
-   */
   // todo(typescript-audioTrackController)
-  get audioTracks (): any[] {
+  get audioTracks (): MediaPlaylist[] {
     const audioTrackController = this.audioTrackController;
     return audioTrackController ? audioTrackController.audioTracks : [];
   }
@@ -655,7 +692,7 @@ export default class Hls extends Observer {
    * @type {SubtitleTrack[]}
    */
   // todo(typescript-subtitleTrackController)
-  get subtitleTracks (): any[] {
+  get subtitleTracks (): MediaPlaylist[] {
     const subtitleTrackController = this.subtitleTrackController;
     return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
