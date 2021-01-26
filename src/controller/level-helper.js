@@ -119,6 +119,13 @@ export function mergeDetails (oldDetails, newDetails) {
     newDetails.initSegment = oldDetails.initSegment;
   }
 
+  if (newDetails.initSegments && oldDetails.initSegments) {
+    newDetails.initSegments = {
+      ...newDetails.initSegments,
+      ...oldDetails.initSegments
+    };
+  }
+
   // check if old/new playlists have fragments in common
   // loop through overlapping SN and update startPTS , cc, and duration if any found
   let ccOffset = 0;

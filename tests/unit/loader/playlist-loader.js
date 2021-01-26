@@ -773,6 +773,29 @@ main.mp4`;
     expect(result.initSegment.sn).to.equal('initSegment');
   });
 
+  it('parses multiple #EXT-X-MAP URI', function () {
+    let level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-MAP:URI="main.mp4"
+#EXTINF:6.00600,
+frag1.mp4
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI="alt.mp4"
+#EXTINF:4.0
+frag2.mp4
+`;
+    let result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8', 0);
+    expect(result.initSegment.url).to.equal('http://video.example.com/main.mp4');
+    expect(result.initSegment.sn).to.equal('initSegment');
+
+    expect(result.initSegments['main.mp4'].fragment.url).to.equal('http://video.example.com/main.mp4');
+    expect(result.initSegments['alt.mp4'].fragment.url).to.equal('http://video.example.com/alt.mp4');
+  });
+
   describe('PDT calculations', function () {
     it('if playlists contains #EXT-X-PROGRAM-DATE-TIME switching will be applied by PDT', function () {
       let level = `#EXTM3U

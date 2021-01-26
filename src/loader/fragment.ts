@@ -57,6 +57,10 @@ export default class Fragment {
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
   public levelkey?: LevelKey;
 
+  // initSegment is the relurl of the initsegment associated with the fragment which can be found
+  // on level details
+  public initSegment?: string;
+
   // TODO(typescript-xhrloader)
   public loader: any;
 
