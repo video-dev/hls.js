@@ -51,6 +51,16 @@ const hash = function (text: string) {
   return (hash >>> 0).toString();
 };
 
+// Create a unique hash id for a cue based on start/end times and text.
+// This helps timeline-controller to avoid showing repeated captions.
+export function generateCueId(
+  startTime: number,
+  endTime: number,
+  text: string
+) {
+  return hash(startTime.toString()) + hash(endTime.toString()) + hash(text);
+}
+
 const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
   let currCC = vttCCs[cc];
   let prevCC = vttCCs[currCC.prevCC];
@@ -135,18 +145,14 @@ export function parseWebVTT(
       cue.endTime = startTime + duration;
     }
 
-    // If the cue was not assigned an id from the VTT file (line above the content),
-    // then create a unique hash id for a cue based on start/end times.
-    // This helps timeline-controller to avoid showing repeated captions.
-    if (!cue.id) {
-      cue.id =
-        hash(cue.startTime.toString()) +
-        hash(cue.endTime.toString()) +
-        hash(cue.text);
-    }
-
     // Fix encoding of special characters
     cue.text = decodeURIComponent(encodeURIComponent(cue.text));
+
+    // If the cue was not assigned an id from the VTT file (line above the content), create one.
+    if (!cue.id) {
+      cue.id = generateCueId(cue.startTime, cue.endTime, cue.text);
+    }
+
     if (cue.endTime > 0) {
       cues.push(cue);
     }

@@ -2,7 +2,7 @@ import { Events } from '../events';
 import {
   sendAddTrackEvent,
   clearCurrentCues,
-  getCuesInRange,
+  removeCuesInRange,
 } from '../utils/texttrack-utils';
 import * as ID3 from '../demux/id3';
 import type {
@@ -138,12 +138,8 @@ class ID3TrackController implements ComponentAPI {
     if (!type || type === 'audio') {
       // id3 cues come from parsed audio only remove cues when audio buffer is cleared
       const { id3Track } = this;
-      if (!id3Track || !id3Track.cues || !id3Track.cues.length) {
-        return;
-      }
-      const cues = getCuesInRange(id3Track.cues, startOffset, endOffset);
-      for (let i = 0; i < cues.length; i++) {
-        id3Track.removeCue(cues[i]);
+      if (id3Track) {
+        removeCuesInRange(id3Track, startOffset, endOffset);
       }
     }
   }
