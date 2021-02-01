@@ -80,7 +80,7 @@
     "chai": "^4.2.0",
     "chart.js": "^2.9.4",
     "chartjs-plugin-zoom": "^0.7.7",
-    "chromedriver": "^87.0.4",
+    "chromedriver": "^88.0.0",
     "eslint": "^7.16.0",
     "eslint-config-prettier": "^7.1.0",
     "eslint-plugin-import": "^2.22.1",
