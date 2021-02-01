@@ -14,7 +14,7 @@ module.exports = (allStagedFiles) => {
     prettierSupportedExtensions.map((extension) => `**/*${extension}`)
   );
   return [
-    `eslint --cache --fix ${eslintFiles.map(addQuotes).join(' ')}`,
-    `prettier --write ${prettierFiles.map(addQuotes).join(' ')}`,
-  ];
+    eslintFiles.length && `eslint --cache --fix ${eslintFiles.map(addQuotes).join(' ')}`,
+    prettierFiles.length && `prettier --write ${prettierFiles.map(addQuotes).join(' ')}`,
+  ].filter(Boolean);
 };
