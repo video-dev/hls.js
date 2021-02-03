@@ -20,6 +20,7 @@ import {
   InitPTSFoundData,
   SubtitleTracksUpdatedData,
   BufferFlushingData,
+  FragLoadingData,
 } from '../types/events';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
@@ -109,12 +110,13 @@ export class TimelineController implements ComponentAPI {
     const { hls } = this;
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    hls.on(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata, this);
-    hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.on(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
+    hls.on(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.on(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata, this);
+    hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
     hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
     hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
@@ -124,12 +126,13 @@ export class TimelineController implements ComponentAPI {
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    hls.off(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata, this);
-    hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.off(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
+    hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.off(Events.FRAG_PARSING_USERDATA, this.onFragParsingUserdata, this);
+    hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
     hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
@@ -423,6 +426,24 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
+  private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
+    const { cea608Parser1, cea608Parser2, lastSn } = this;
+    if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
+      return;
+    }
+    // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
+    if (data.frag.type === PlaylistLevelType.MAIN) {
+      const sn = data.frag.sn;
+      if (sn !== lastSn + 1) {
+        if (cea608Parser1 && cea608Parser2) {
+          cea608Parser1.reset();
+          cea608Parser2.reset();
+        }
+      }
+      this.lastSn = sn as number;
+    }
+  }
+
   private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
     const { frag, payload } = data;
     const { initPTS, unparsedVttFrags } = this;
@@ -598,21 +619,9 @@ export class TimelineController implements ComponentAPI {
     event: Events.FRAG_PARSING_USERDATA,
     data: FragParsingUserdataData
   ) {
-    const { cea608Parser1, cea608Parser2, lastSn } = this;
+    const { cea608Parser1, cea608Parser2 } = this;
     if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
       return;
-    }
-
-    // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
-    if (data.frag.type === PlaylistLevelType.MAIN) {
-      const sn = data.frag.sn;
-      if (sn !== lastSn + 1) {
-        if (cea608Parser1 && cea608Parser2) {
-          cea608Parser1.reset();
-          cea608Parser2.reset();
-        }
-      }
-      this.lastSn = sn as number;
     }
 
     // If the event contains captions (found in the bytes property), push all bytes into the parser immediately
