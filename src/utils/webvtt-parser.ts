@@ -1,4 +1,4 @@
-import VTTParser from './vttparser';
+import { VTTParser } from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
 import { toMpegTsClockFromTimescale } from './timescale-conversion';
 import { PTSNormalize } from '../remux/mp4-remuxer';
