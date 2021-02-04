@@ -201,7 +201,7 @@ export const hlsDefaultConfig: HlsConfig = {
   liveMaxLatencyDurationCount: Infinity, // used by latency-controller
   liveSyncDuration: undefined, // used by latency-controller
   liveMaxLatencyDuration: undefined, // used by latency-controller
-  maxLiveSyncPlaybackRate: 1.25, // used by latency-controller
+  maxLiveSyncPlaybackRate: 1, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
   liveBackBufferLength: Infinity, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
