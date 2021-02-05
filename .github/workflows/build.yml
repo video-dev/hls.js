@@ -80,7 +80,7 @@ jobs:
 
       - name: build
         run: |
-          npm run type-check
+          npm run build:types
           npm run build
           npm run docs
           # check that hls.js doesn't error if requiring in node
