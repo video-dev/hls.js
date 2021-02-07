@@ -14,5 +14,5 @@
     "emitDeclarationOnly": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist/**/*", "demo/libs/**/*", "**/*.spec.*"]
+  "exclude": ["node_modules", "dist/**/*", "demo/libs/**/*"]
 }
