@@ -1,4 +1,4 @@
-import Fragment from '../../../src/loader/fragment';
+import { Fragment } from '../../../src/loader/fragment';
 import LevelKey from '../../../src/loader/level-key';
 import { PlaylistLevelType } from '../../../src/types/loader';
 

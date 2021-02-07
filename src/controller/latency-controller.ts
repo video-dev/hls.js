@@ -1,4 +1,4 @@
-import LevelDetails from '../loader/level-details';
+import { LevelDetails } from '../loader/level-details';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import type {

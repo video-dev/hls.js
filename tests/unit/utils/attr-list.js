@@ -1,4 +1,4 @@
-import AttrList from '../../../src/utils/attr-list';
+import { AttrList } from '../../../src/utils/attr-list';
 
 describe('AttrList', function () {
   it('constructor() supports empty arguments', function () {
