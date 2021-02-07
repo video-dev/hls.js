@@ -4,6 +4,8 @@
 
 ```ts
 
+// Warning: (ae-missing-release-tag) "ABRControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type ABRControllerConfig = {
     abrEwmaFastLive: number;
@@ -18,6 +20,8 @@ export type ABRControllerConfig = {
     maxLoadingDelay: number;
 };
 
+// Warning: (ae-missing-release-tag) "AttrList" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class AttrList {
     constructor(attrs: string | Record<string, any>);
@@ -46,25 +50,35 @@ export class AttrList {
     static parseAttrList(input: string): Record<string, any>;
 }
 
+// Warning: (ae-missing-release-tag) "AudioPlaylistType" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type AudioPlaylistType = 'AUDIO';
 
+// Warning: (ae-missing-release-tag) "AudioTrackLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface AudioTrackLoadedData extends TrackLoadedData {
 }
 
+// Warning: (ae-missing-release-tag) "AudioTracksUpdatedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface AudioTracksUpdatedData {
     // (undocumented)
     audioTracks: MediaPlaylist[];
 }
 
+// Warning: (ae-missing-release-tag) "AudioTrackSwitchedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface AudioTrackSwitchedData {
     // (undocumented)
     id: number;
 }
 
+// Warning: (ae-missing-release-tag) "AudioTrackSwitchingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface AudioTrackSwitchingData {
     // (undocumented)
@@ -75,6 +89,8 @@ export interface AudioTrackSwitchingData {
     url: string;
 }
 
+// Warning: (ae-missing-release-tag) "BaseSegment" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class BaseSegment {
     constructor(baseurl: string);
@@ -97,6 +113,8 @@ export class BaseSegment {
     set url(value: string);
     }
 
+// Warning: (ae-missing-release-tag) "BufferAppendedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface BufferAppendedData {
     // (undocumented)
@@ -115,6 +133,8 @@ export interface BufferAppendedData {
     };
 }
 
+// Warning: (ae-missing-release-tag) "BufferAppendingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface BufferAppendingData {
     // (undocumented)
@@ -129,6 +149,8 @@ export interface BufferAppendingData {
     type: SourceBufferName;
 }
 
+// Warning: (ae-missing-release-tag) "BufferCodecsData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface BufferCodecsData {
     // (undocumented)
@@ -137,6 +159,8 @@ export interface BufferCodecsData {
     video?: Track;
 }
 
+// Warning: (ae-missing-release-tag) "BufferControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type BufferControllerConfig = {
     appendErrorMaxRetry: number;
@@ -144,24 +168,32 @@ export type BufferControllerConfig = {
     liveBackBufferLength: number;
 };
 
+// Warning: (ae-missing-release-tag) "BufferCreatedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface BufferCreatedData {
     // (undocumented)
     tracks: TrackSet;
 }
 
+// Warning: (ae-missing-release-tag) "BufferEOSData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface BufferEOSData {
     // (undocumented)
     type?: SourceBufferName;
 }
 
+// Warning: (ae-missing-release-tag) "BufferFlushedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface BufferFlushedData {
     // (undocumented)
     type: SourceBufferName;
 }
 
+// Warning: (ae-missing-release-tag) "BufferFlushingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface BufferFlushingData {
     // (undocumented)
@@ -172,11 +204,15 @@ export interface BufferFlushingData {
     type: SourceBufferName | null;
 }
 
+// Warning: (ae-missing-release-tag) "CapLevelControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type CapLevelControllerConfig = {
     capLevelToPlayerSize: boolean;
 };
 
+// Warning: (ae-missing-release-tag) "ChunkMetadata" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class ChunkMetadata {
     constructor(level: number, sn: number, id: number, size?: number, part?: number, partial?: boolean);
@@ -200,6 +236,8 @@ export class ChunkMetadata {
     readonly transmuxing: HlsChunkPerformanceTiming;
 }
 
+// Warning: (ae-missing-release-tag) "CuesInterface" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface CuesInterface {
     // Warning: (ae-forgotten-export) The symbol "CaptionScreen" needs to be exported by the entry point hls.d.ts
@@ -208,6 +246,8 @@ export interface CuesInterface {
     newCue(track: TextTrack | null, startTime: number, endTime: number, captionScreen: CaptionScreen): VTTCue[];
 }
 
+// Warning: (ae-missing-release-tag) "CuesParsedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface CuesParsedData {
     // (undocumented)
@@ -218,12 +258,16 @@ export interface CuesParsedData {
     type: 'captions' | 'subtitles';
 }
 
+// Warning: (ae-missing-release-tag) "DRMSystemOptions" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type DRMSystemOptions = {
     audioRobustness?: string;
     videoRobustness?: string;
 };
 
+// Warning: (ae-missing-release-tag) "ElementaryStreamInfo" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface ElementaryStreamInfo {
     // (undocumented)
@@ -238,9 +282,13 @@ export interface ElementaryStreamInfo {
     startPTS: number;
 }
 
+// Warning: (ae-missing-release-tag) "ElementaryStreams" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type ElementaryStreams = Record<ElementaryStreamTypes, ElementaryStreamInfo | null>;
 
+// Warning: (ae-missing-release-tag) "ElementaryStreamTypes" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export enum ElementaryStreamTypes {
     // (undocumented)
@@ -251,6 +299,8 @@ export enum ElementaryStreamTypes {
     VIDEO = "video"
 }
 
+// Warning: (ae-missing-release-tag) "EMEControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type EMEControllerConfig = {
     licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
@@ -260,6 +310,8 @@ export type EMEControllerConfig = {
     requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
 
+// Warning: (ae-missing-release-tag) "ErrorData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface ErrorData {
     // (undocumented)
@@ -304,6 +356,8 @@ export interface ErrorData {
     url?: string;
 }
 
+// Warning: (ae-missing-release-tag) "ErrorDetails" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public
 export enum ErrorDetails {
     // (undocumented)
@@ -376,6 +430,8 @@ export enum ErrorDetails {
     UNKNOWN = "unknown"
 }
 
+// Warning: (ae-missing-release-tag) "ErrorTypes" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export enum ErrorTypes {
     // (undocumented)
@@ -390,6 +446,8 @@ export enum ErrorTypes {
     OTHER_ERROR = "otherError"
 }
 
+// Warning: (ae-missing-release-tag) "Events" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public
 export enum Events {
     // (undocumented)
@@ -500,6 +558,8 @@ export enum Events {
     SUBTITLE_TRACKS_UPDATED = "hlsSubtitleTracksUpdated"
 }
 
+// Warning: (ae-missing-release-tag) "FPSControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type FPSControllerConfig = {
     capLevelOnFPSDrop: boolean;
@@ -507,6 +567,8 @@ export type FPSControllerConfig = {
     fpsDroppedMonitoringThreshold: number;
 };
 
+// Warning: (ae-missing-release-tag) "FPSDropData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FPSDropData {
     // (undocumented)
@@ -517,6 +579,8 @@ export interface FPSDropData {
     totalDroppedFrames: number;
 }
 
+// Warning: (ae-missing-release-tag) "FPSDropLevelCappingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FPSDropLevelCappingData {
     // (undocumented)
@@ -525,6 +589,8 @@ export interface FPSDropLevelCappingData {
     level: number;
 }
 
+// Warning: (ae-missing-release-tag) "FragBufferedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragBufferedData {
     // (undocumented)
@@ -537,12 +603,16 @@ export interface FragBufferedData {
     stats: LoadStats;
 }
 
+// Warning: (ae-missing-release-tag) "FragChangedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragChangedData {
     // (undocumented)
     frag: Fragment;
 }
 
+// Warning: (ae-missing-release-tag) "FragDecryptedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragDecryptedData {
     // (undocumented)
@@ -556,6 +626,8 @@ export interface FragDecryptedData {
     };
 }
 
+// Warning: (ae-missing-release-tag) "FragLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragLoadedData {
     // (undocumented)
@@ -568,6 +640,8 @@ export interface FragLoadedData {
     payload: ArrayBuffer;
 }
 
+// Warning: (ae-missing-release-tag) "FragLoadEmergencyAbortedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragLoadEmergencyAbortedData {
     // (undocumented)
@@ -578,6 +652,8 @@ export interface FragLoadEmergencyAbortedData {
     stats: LoaderStats;
 }
 
+// Warning: (ae-missing-release-tag) "FragLoadingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragLoadingData {
     // (undocumented)
@@ -588,6 +664,8 @@ export interface FragLoadingData {
     targetBufferTime: number | null;
 }
 
+// Warning: (ae-missing-release-tag) "Fragment" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class Fragment extends BaseSegment {
     constructor(type: PlaylistLevelType, baseurl: string);
@@ -655,6 +733,8 @@ export class Fragment extends BaseSegment {
     urlId: number;
 }
 
+// Warning: (ae-missing-release-tag) "FragmentLoaderConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type FragmentLoaderConfig = {
     fLoader?: {
@@ -666,6 +746,8 @@ export type FragmentLoaderConfig = {
     fragLoadingMaxRetryTimeout: number;
 };
 
+// Warning: (ae-missing-release-tag) "FragmentLoaderContext" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragmentLoaderContext extends LoaderContext {
     // (undocumented)
@@ -674,6 +756,8 @@ export interface FragmentLoaderContext extends LoaderContext {
     part: Part | null;
 }
 
+// Warning: (ae-missing-release-tag) "FragParsedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragParsedData {
     // (undocumented)
@@ -682,10 +766,14 @@ export interface FragParsedData {
     part: Part | null;
 }
 
+// Warning: (ae-missing-release-tag) "FragParsingInitSegmentData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragParsingInitSegmentData {
 }
 
+// Warning: (ae-missing-release-tag) "FragParsingMetadataData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragParsingMetadataData {
     // (undocumented)
@@ -696,6 +784,8 @@ export interface FragParsingMetadataData {
     samples: MetadataSample[];
 }
 
+// Warning: (ae-missing-release-tag) "FragParsingUserdataData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface FragParsingUserdataData {
     // (undocumented)
@@ -706,27 +796,34 @@ export interface FragParsingUserdataData {
     samples: UserdataSample[];
 }
 
+// Warning: (ae-missing-release-tag) "Hls" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public
 class Hls implements HlsEventEmitter {
     constructor(userConfig?: Partial<HlsConfig>);
     attachMedia(media: HTMLMediaElement): void;
     get audioTrack(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "audioTrack" must appear on the getter, not the setter.
     set audioTrack(audioTrackId: number);
     get audioTracks(): Array<MediaPlaylist>;
     get autoLevelCapping(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "autoLevelCapping" must appear on the getter, not the setter.
     set autoLevelCapping(newLevel: number);
     get autoLevelEnabled(): boolean;
     get bandwidthEstimate(): number;
     get capLevelToPlayerSize(): boolean;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "capLevelToPlayerSize" must appear on the getter, not the setter.
     set capLevelToPlayerSize(shouldStartCapping: boolean);
     // (undocumented)
     readonly config: HlsConfig;
     // (undocumented)
     createController(ControllerClass: any, fragmentTracker: any, components: any): any;
     get currentLevel(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "currentLevel" must appear on the getter, not the setter.
     set currentLevel(newLevel: number);
     // (undocumented)
     static get DefaultConfig(): HlsConfig;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "DefaultConfig" must appear on the getter, not the setter.
     static set DefaultConfig(defaultConfig: HlsConfig);
     destroy(): void;
     detachMedia(): void;
@@ -739,6 +836,7 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     static get Events(): typeof Events;
     get firstLevel(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "firstLevel" must appear on the getter, not the setter.
     set firstLevel(newLevel: number);
     // (undocumented)
     static isSupported(): boolean;
@@ -750,9 +848,11 @@ class Hls implements HlsEventEmitter {
     listeners<E extends keyof HlsListeners>(event: E): HlsListeners[E][];
     get liveSyncPosition(): number | null;
     get loadLevel(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "loadLevel" must appear on the getter, not the setter.
     set loadLevel(newLevel: number);
     loadSource(url: string): void;
     get lowLatencyMode(): boolean;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "lowLatencyMode" must appear on the getter, not the setter.
     set lowLatencyMode(mode: boolean);
     get manualLevel(): number;
     get maxAutoLevel(): number;
@@ -761,10 +861,13 @@ class Hls implements HlsEventEmitter {
     get media(): HTMLMediaElement | null;
     get minAutoLevel(): number;
     get nextAutoLevel(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "nextAutoLevel" must appear on the getter, not the setter.
     set nextAutoLevel(nextLevel: number);
     get nextLevel(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "nextLevel" must appear on the getter, not the setter.
     set nextLevel(newLevel: number);
     get nextLoadLevel(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "nextLoadLevel" must appear on the getter, not the setter.
     set nextLoadLevel(level: number);
     // (undocumented)
     off<E extends keyof HlsListeners, Context = undefined>(event: E, listener?: HlsListeners[E] | undefined, context?: Context, once?: boolean | undefined): void;
@@ -778,12 +881,15 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     removeLevel(levelIndex: any, urlId?: number): void;
     get startLevel(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "startLevel" must appear on the getter, not the setter.
     set startLevel(newLevel: number);
     startLoad(startPosition?: number): void;
     stopLoad(): void;
     get subtitleDisplay(): boolean;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "subtitleDisplay" must appear on the getter, not the setter.
     set subtitleDisplay(value: boolean);
     get subtitleTrack(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "subtitleTrack" must appear on the getter, not the setter.
     set subtitleTrack(subtitleTrackId: number);
     get subtitleTracks(): Array<MediaPlaylist>;
     swapAudioCodec(): void;
@@ -798,6 +904,8 @@ class Hls implements HlsEventEmitter {
 
 export default Hls;
 
+// Warning: (ae-missing-release-tag) "HlsChunkPerformanceTiming" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
     // (undocumented)
@@ -806,6 +914,8 @@ export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
     executeStart: number;
 }
 
+// Warning: (ae-missing-release-tag) "HlsConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type HlsConfig = {
     debug: boolean;
@@ -830,6 +940,8 @@ export type HlsConfig = {
     lowLatencyMode: boolean;
 } & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & FragmentLoaderConfig & LevelControllerConfig & MP4RemuxerConfig & PlaylistLoaderConfig & StreamControllerConfig & LatencyControllerConfig & TimelineControllerConfig & TSDemuxerConfig;
 
+// Warning: (ae-missing-release-tag) "HlsEventEmitter" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface HlsEventEmitter {
     // (undocumented)
@@ -848,6 +960,8 @@ export interface HlsEventEmitter {
     removeAllListeners<E extends keyof HlsListeners>(event?: E): void;
 }
 
+// Warning: (ae-missing-release-tag) "HlsListeners" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface HlsListeners {
     // (undocumented)
@@ -958,6 +1072,8 @@ export interface HlsListeners {
     [Events.SUBTITLE_TRACK_SWITCH]: (event: Events.SUBTITLE_TRACK_SWITCH, data: SubtitleTrackSwitchData) => void;
 }
 
+// Warning: (ae-missing-release-tag) "HlsPerformanceTiming" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface HlsPerformanceTiming {
     // (undocumented)
@@ -966,12 +1082,16 @@ export interface HlsPerformanceTiming {
     start: number;
 }
 
+// Warning: (ae-missing-release-tag) "HlsProgressivePerformanceTiming" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface HlsProgressivePerformanceTiming extends HlsPerformanceTiming {
     // (undocumented)
     first: number;
 }
 
+// Warning: (ae-missing-release-tag) "HlsSkip" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export enum HlsSkip {
     // (undocumented)
@@ -982,6 +1102,8 @@ export enum HlsSkip {
     Yes = "YES"
 }
 
+// Warning: (ae-missing-release-tag) "HlsUrlParameters" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class HlsUrlParameters {
     constructor(msn: number, part?: number, skip?: HlsSkip);
@@ -995,6 +1117,8 @@ export class HlsUrlParameters {
     skip?: HlsSkip;
 }
 
+// Warning: (ae-missing-release-tag) "InitPTSFoundData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface InitPTSFoundData {
     // (undocumented)
@@ -1007,18 +1131,24 @@ export interface InitPTSFoundData {
     timescale: number;
 }
 
+// Warning: (ae-missing-release-tag) "KeyLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface KeyLoadedData {
     // (undocumented)
     frag: Fragment;
 }
 
+// Warning: (ae-missing-release-tag) "KeyLoadingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface KeyLoadingData {
     // (undocumented)
     frag: Fragment;
 }
 
+// Warning: (ae-missing-release-tag) "KeySystems" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export enum KeySystems {
     // (undocumented)
@@ -1027,6 +1157,8 @@ export enum KeySystems {
     WIDEVINE = "com.widevine.alpha"
 }
 
+// Warning: (ae-missing-release-tag) "LatencyControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type LatencyControllerConfig = {
     liveSyncDurationCount: number;
@@ -1036,6 +1168,8 @@ export type LatencyControllerConfig = {
     maxLiveSyncPlaybackRate: number;
 };
 
+// Warning: (ae-missing-release-tag) "Level" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class Level {
     constructor(data: LevelParsed);
@@ -1087,6 +1221,8 @@ export class Level {
     readonly width: number;
 }
 
+// Warning: (ae-missing-release-tag) "LevelAttributes" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelAttributes extends AttrList {
     // (undocumented)
@@ -1125,11 +1261,15 @@ export interface LevelAttributes extends AttrList {
     URI?: string;
 }
 
+// Warning: (ae-missing-release-tag) "LevelControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type LevelControllerConfig = {
     startLevel?: number;
 };
 
+// Warning: (ae-missing-release-tag) "LevelDetails" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class LevelDetails {
     constructor(baseUrl: any);
@@ -1229,6 +1369,8 @@ export class LevelDetails {
     version: number | null;
 }
 
+// Warning: (ae-missing-release-tag) "LevelKey" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class LevelKey {
     // (undocumented)
@@ -1251,6 +1393,8 @@ export class LevelKey {
     get uri(): string | null;
     }
 
+// Warning: (ae-missing-release-tag) "LevelLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelLoadedData {
     // (undocumented)
@@ -1267,6 +1411,8 @@ export interface LevelLoadedData {
     stats: LoaderStats;
 }
 
+// Warning: (ae-missing-release-tag) "LevelLoadingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelLoadingData {
     // (undocumented)
@@ -1279,6 +1425,8 @@ export interface LevelLoadingData {
     url: string;
 }
 
+// Warning: (ae-missing-release-tag) "LevelParsed" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelParsed {
     // (undocumented)
@@ -1309,6 +1457,8 @@ export interface LevelParsed {
     width?: number;
 }
 
+// Warning: (ae-missing-release-tag) "LevelPTSUpdatedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelPTSUpdatedData {
     // (undocumented)
@@ -1327,24 +1477,32 @@ export interface LevelPTSUpdatedData {
     type: string;
 }
 
+// Warning: (ae-missing-release-tag) "LevelsUpdatedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelsUpdatedData {
     // (undocumented)
     levels: Array<Level>;
 }
 
+// Warning: (ae-missing-release-tag) "LevelSwitchedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelSwitchedData {
     // (undocumented)
     level: number;
 }
 
+// Warning: (ae-missing-release-tag) "LevelSwitchingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelSwitchingData extends Omit<Level, '_urlId'> {
     // (undocumented)
     level: number;
 }
 
+// Warning: (ae-missing-release-tag) "LevelUpdatedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LevelUpdatedData {
     // (undocumented)
@@ -1353,12 +1511,16 @@ export interface LevelUpdatedData {
     level: number;
 }
 
+// Warning: (ae-missing-release-tag) "LiveBackBufferData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LiveBackBufferData {
     // (undocumented)
     bufferEnd: number;
 }
 
+// Warning: (ae-missing-release-tag) "Loader" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface Loader<T extends LoaderContext> {
     // (undocumented)
@@ -1377,6 +1539,8 @@ export interface Loader<T extends LoaderContext> {
     stats: LoaderStats;
 }
 
+// Warning: (ae-missing-release-tag) "LoaderCallbacks" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LoaderCallbacks<T extends LoaderContext> {
     // (undocumented)
@@ -1391,6 +1555,8 @@ export interface LoaderCallbacks<T extends LoaderContext> {
     onTimeout: LoaderOnTimeout<T>;
 }
 
+// Warning: (ae-missing-release-tag) "LoaderConfiguration" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LoaderConfiguration {
     // (undocumented)
@@ -1405,6 +1571,8 @@ export interface LoaderConfiguration {
     timeout: number;
 }
 
+// Warning: (ae-missing-release-tag) "LoaderContext" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LoaderContext {
     // (undocumented)
@@ -1419,24 +1587,36 @@ export interface LoaderContext {
     url: string;
 }
 
+// Warning: (ae-missing-release-tag) "LoaderOnAbort" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type LoaderOnAbort<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: any) => void;
 
+// Warning: (ae-missing-release-tag) "LoaderOnError" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type LoaderOnError<T extends LoaderContext> = (error: {
     code: number;
     text: string;
 }, context: T, networkDetails: any) => void;
 
+// Warning: (ae-missing-release-tag) "LoaderOnProgress" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type LoaderOnProgress<T extends LoaderContext> = (stats: LoaderStats, context: T, data: string | ArrayBuffer, networkDetails: any) => void;
 
+// Warning: (ae-missing-release-tag) "LoaderOnSuccess" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type LoaderOnSuccess<T extends LoaderContext> = (response: LoaderResponse, stats: LoaderStats, context: T, networkDetails: any) => void;
 
+// Warning: (ae-missing-release-tag) "LoaderOnTimeout" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type LoaderOnTimeout<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: any) => void;
 
+// Warning: (ae-missing-release-tag) "LoaderResponse" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LoaderResponse {
     // (undocumented)
@@ -1445,6 +1625,8 @@ export interface LoaderResponse {
     url: string;
 }
 
+// Warning: (ae-missing-release-tag) "LoaderStats" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface LoaderStats {
     // (undocumented)
@@ -1467,6 +1649,8 @@ export interface LoaderStats {
     total: number;
 }
 
+// Warning: (ae-missing-release-tag) "LoadStats" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class LoadStats implements LoaderStats {
     // (undocumented)
@@ -1489,9 +1673,13 @@ export class LoadStats implements LoaderStats {
     total: number;
 }
 
+// Warning: (ae-missing-release-tag) "MainPlaylistType" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type MainPlaylistType = AudioPlaylistType | 'VIDEO';
 
+// Warning: (ae-missing-release-tag) "ManifestLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface ManifestLoadedData {
     // (undocumented)
@@ -1512,12 +1700,16 @@ export interface ManifestLoadedData {
     url: string;
 }
 
+// Warning: (ae-missing-release-tag) "ManifestLoadingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface ManifestLoadingData {
     // (undocumented)
     url: string;
 }
 
+// Warning: (ae-missing-release-tag) "ManifestParsedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface ManifestParsedData {
     // (undocumented)
@@ -1538,21 +1730,29 @@ export interface ManifestParsedData {
     video: boolean;
 }
 
+// Warning: (ae-missing-release-tag) "MediaAttachedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface MediaAttachedData {
     // (undocumented)
     media: HTMLMediaElement;
 }
 
+// Warning: (ae-missing-release-tag) "MediaAttachingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface MediaAttachingData {
     // (undocumented)
     media: HTMLMediaElement;
 }
 
+// Warning: (ae-missing-release-tag) "MediaKeyFunc" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type MediaKeyFunc = (keySystem: KeySystems, supportedConfigurations: MediaKeySystemConfiguration[]) => Promise<MediaKeySystemAccess>;
 
+// Warning: (ae-missing-release-tag) "MediaPlaylist" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface MediaPlaylist extends LevelParsed {
     // (undocumented)
@@ -1575,9 +1775,13 @@ export interface MediaPlaylist extends LevelParsed {
     type: MediaPlaylistType | 'main';
 }
 
+// Warning: (ae-missing-release-tag) "MediaPlaylistType" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 
+// Warning: (ae-missing-release-tag) "MetadataSample" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface MetadataSample {
     // (undocumented)
@@ -1590,12 +1794,16 @@ export interface MetadataSample {
     pts: number;
 }
 
+// Warning: (ae-missing-release-tag) "MP4RemuxerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type MP4RemuxerConfig = {
     stretchShortVideoTrack: boolean;
     maxAudioFramesDrift: number;
 };
 
+// Warning: (ae-missing-release-tag) "NonNativeTextTrack" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface NonNativeTextTrack {
     // (undocumented)
@@ -1612,12 +1820,16 @@ export interface NonNativeTextTrack {
     subtitleTrack?: MediaPlaylist;
 }
 
+// Warning: (ae-missing-release-tag) "NonNativeTextTracksData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface NonNativeTextTracksData {
     // (undocumented)
     tracks: Array<NonNativeTextTrack>;
 }
 
+// Warning: (ae-missing-release-tag) "Part" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export class Part extends BaseSegment {
     constructor(partAttrs: AttrList, frag: Fragment, baseurl: string, index: number, previous?: Part);
@@ -1645,6 +1857,8 @@ export class Part extends BaseSegment {
     stats: LoadStats;
 }
 
+// Warning: (ae-missing-release-tag) "PlaylistContextType" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export enum PlaylistContextType {
     // (undocumented)
@@ -1657,6 +1871,8 @@ export enum PlaylistContextType {
     SUBTITLE_TRACK = "subtitleTrack"
 }
 
+// Warning: (ae-missing-release-tag) "PlaylistLevelType" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export enum PlaylistLevelType {
     // (undocumented)
@@ -1667,6 +1883,8 @@ export enum PlaylistLevelType {
     SUBTITLE = "subtitle"
 }
 
+// Warning: (ae-missing-release-tag) "PlaylistLoaderConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type PlaylistLoaderConfig = {
     pLoader?: {
@@ -1682,6 +1900,8 @@ export type PlaylistLoaderConfig = {
     levelLoadingMaxRetryTimeout: number;
 };
 
+// Warning: (ae-missing-release-tag) "PlaylistLoaderContext" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface PlaylistLoaderContext extends LoaderContext {
     // (undocumented)
@@ -1702,9 +1922,13 @@ export interface PlaylistLoaderContext extends LoaderContext {
     type: PlaylistContextType;
 }
 
+// Warning: (ae-missing-release-tag) "SourceBufferName" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 
+// Warning: (ae-missing-release-tag) "StreamControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type StreamControllerConfig = {
     autoStartLoad: boolean;
@@ -1723,6 +1947,8 @@ export type StreamControllerConfig = {
     testBandwidth: boolean;
 };
 
+// Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface SubtitleFragProcessedData {
     // (undocumented)
@@ -1733,19 +1959,27 @@ export interface SubtitleFragProcessedData {
     success: boolean;
 }
 
+// Warning: (ae-missing-release-tag) "SubtitlePlaylistType" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type SubtitlePlaylistType = 'SUBTITLES' | 'CLOSED-CAPTIONS';
 
+// Warning: (ae-missing-release-tag) "SubtitleTrackLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface SubtitleTrackLoadedData extends TrackLoadedData {
 }
 
+// Warning: (ae-missing-release-tag) "SubtitleTracksUpdatedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface SubtitleTracksUpdatedData {
     // (undocumented)
     subtitleTracks: MediaPlaylist[];
 }
 
+// Warning: (ae-missing-release-tag) "SubtitleTrackSwitchData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface SubtitleTrackSwitchData {
     // (undocumented)
@@ -1756,6 +1990,8 @@ export interface SubtitleTrackSwitchData {
     url?: string;
 }
 
+// Warning: (ae-missing-release-tag) "TimelineControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type TimelineControllerConfig = {
     cueHandler: CuesInterface;
@@ -1773,6 +2009,8 @@ export type TimelineControllerConfig = {
     renderTextTracksNatively: boolean;
 };
 
+// Warning: (ae-missing-release-tag) "Track" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface Track {
     // (undocumented)
@@ -1791,6 +2029,8 @@ export interface Track {
     metadata?: any;
 }
 
+// Warning: (ae-missing-release-tag) "TrackLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface TrackLoadedData {
     // (undocumented)
@@ -1807,6 +2047,8 @@ export interface TrackLoadedData {
     stats: LoaderStats;
 }
 
+// Warning: (ae-missing-release-tag) "TrackLoadingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface TrackLoadingData {
     // (undocumented)
@@ -1819,6 +2061,8 @@ export interface TrackLoadingData {
     url: string;
 }
 
+// Warning: (ae-missing-release-tag) "TrackSet" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface TrackSet {
     // (undocumented)
@@ -1829,11 +2073,15 @@ export interface TrackSet {
     video?: Track;
 }
 
+// Warning: (ae-missing-release-tag) "TSDemuxerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export type TSDemuxerConfig = {
     forceKeyFrameOnDiscontinuity: boolean;
 };
 
+// Warning: (ae-missing-release-tag) "UserdataSample" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
 // @public (undocumented)
 export interface UserdataSample {
     // (undocumented)

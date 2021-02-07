@@ -7,13 +7,15 @@
   },
   "apiReport": {
     "enabled": true,
-    "reportFolder": "<projectFolder>/docs"
+    "reportFolder": "<projectFolder>/api-extractor/report",
+    "reportTempFolder": "<projectFolder>/api-extractor/report-temp"
   },
   "docModel": {
     "enabled": false
   },
   "dtsRollup": {
-    "enabled": true
+    "enabled": true,
+    "untrimmedFilePath": "<projectFolder>/dist/hls.js.d.ts"
   },
   "tsdocMetadata": {
     "enabled": false
@@ -22,17 +24,20 @@
   "messages": {
     "compilerMessageReporting": {
       "default": {
-        "logLevel": "warning"
+        "logLevel": "warning",
+        "addToApiReportFile": true
       }
     },
     "extractorMessageReporting": {
       "default": {
-        "logLevel": "warning"
+        "logLevel": "warning",
+        "addToApiReportFile": true
       }
     },
     "tsdocMessageReporting": {
       "default": {
-        "logLevel": "warning"
+        "logLevel": "none",
+        "addToApiReportFile": false
       }
     }
   }

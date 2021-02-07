@@ -3,4 +3,4 @@
 package-lock.json
 /coverage
 libs/
-docs/hls.js.api.md
+api-extractor/report*
