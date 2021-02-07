@@ -3,4 +3,4 @@
 package-lock.json
 /coverage
 libs/
-api-extractor/report*
+/api-extractor/report*
