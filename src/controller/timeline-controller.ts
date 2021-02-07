@@ -10,7 +10,7 @@ import {
 } from '../utils/texttrack-utils';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { PlaylistLevelType } from '../types/loader';
-import Fragment from '../loader/fragment';
+import { Fragment } from '../loader/fragment';
 import {
   FragParsingUserdataData,
   FragLoadedData,

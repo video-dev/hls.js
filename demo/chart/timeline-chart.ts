@@ -1,11 +1,11 @@
 import Chart from 'chart.js';
 import 'chartjs-plugin-zoom';
 import { applyChartInstanceOverrides, hhmmss } from './chartjs-horizontal-bar';
-import Fragment from '../../src/loader/fragment';
+import { Fragment } from '../../src/loader/fragment';
 import type { Level } from '../../src/types/level';
 import type { TrackSet } from '../../src/types/track';
 import type { MediaPlaylist } from '../../src/types/media-playlist';
-import type LevelDetails from '../../src/loader/level-details';
+import type { LevelDetails } from '../../src/loader/level-details';
 import {
   FragChangedData,
   FragLoadedData,
@@ -83,7 +83,7 @@ export class TimelineChart {
         const obj = dataset.data![(element[0] as any)._index];
         // eslint-disable-next-line no-console
         console.log(obj);
-        if (self.hls && self.hls.media) {
+        if (self.hls?.media) {
           const scale = this.chartScales[X_AXIS_SECONDS];
           const pos = Chart.helpers.getRelativePosition(event, chart);
           self.hls.media.currentTime = scale.getValueForPixel(pos.x);
@@ -600,7 +600,7 @@ export class TimelineChart {
 
   drawCurrentTime() {
     const chart = this.chart;
-    if (self.hls && self.hls.media && chart.data.datasets!.length) {
+    if (self.hls?.media && chart.data.datasets!.length) {
       const currentTime = self.hls.media.currentTime;
       const scale = this.chartScales[X_AXIS_SECONDS];
       const ctx = chart.ctx;
@@ -672,14 +672,12 @@ function datasetWithDefaults(options) {
 }
 
 function getPlaylistStart(details: LevelDetails): number {
-  return details.fragments && details.fragments.length
-    ? details.fragments[0].start
-    : 0;
+  return details.fragments?.length ? details.fragments[0].start : 0;
 }
 
 function getLevelName(level: Level, index: number) {
   let label = '(main playlist)';
-  if (level.attrs && level.attrs.BANDWIDTH) {
+  if (level.attrs?.BANDWIDTH) {
     label = `${getMainLevelAttribute(level)}@${level.attrs.BANDWIDTH}`;
     if (level.name) {
       label = `${label} (${level.name})`;

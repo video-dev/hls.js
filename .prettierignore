@@ -3,3 +3,4 @@
 package-lock.json
 /coverage
 libs/
+docs/hls.js.api.md

@@ -1,7 +1,3 @@
-export interface StringMap {
-  [key: string]: any;
-}
-
 /**
  * Make specific properties in T required
  */

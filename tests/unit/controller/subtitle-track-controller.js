@@ -1,8 +1,8 @@
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import Hls from '../../../src/hls';
 import sinon from 'sinon';
-import LoadStats from '../../../src/loader/load-stats';
-import LevelDetails from '../../../src/loader/level-details';
+import { LoadStats } from '../../../src/loader/load-stats';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { Events } from '../../../src/events';
 
 describe('SubtitleTrackController', function () {

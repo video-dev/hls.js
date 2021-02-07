@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-duplicates
-import type Fragment from '../loader/fragment';
+import type { Fragment } from '../loader/fragment';
 // eslint-disable-next-line import/no-duplicates
 import type { Part } from '../loader/fragment';
 import type { SourceBufferName } from './buffer';

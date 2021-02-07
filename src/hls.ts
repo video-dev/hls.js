@@ -11,17 +11,12 @@ import LevelController from './controller/level-controller';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import {
-  enableStreamingMode,
-  HlsConfig,
-  hlsDefaultConfig,
-  mergeConfig,
-} from './config';
-
+import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
+import type { HlsConfig } from './config';
 import { Events } from './events';
 import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
-import { MediaPlaylist } from './types/media-playlist';
+import type { MediaPlaylist } from './types/media-playlist';
 import AudioTrackController from './controller/audio-track-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import ID3TrackController from './controller/id3-track-controller';
@@ -31,6 +26,7 @@ import AbrController from './controller/abr-controller';
 import LatencyController from './controller/latency-controller';
 import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 import type { HlsEventEmitter, HlsListeners } from './events';
+import { Fragment } from './loader/fragment';
 
 /**
  * @module Hls
@@ -821,3 +817,132 @@ export default class Hls implements HlsEventEmitter {
     return this.latencyController.targetLatency;
   }
 }
+
+export type {
+  MediaPlaylist,
+  ErrorDetails,
+  ErrorTypes,
+  Events,
+  Level,
+  HlsListeners,
+  HlsEventEmitter,
+  HlsConfig,
+  Fragment,
+};
+
+export type {
+  ABRControllerConfig,
+  BufferControllerConfig,
+  CapLevelControllerConfig,
+  EMEControllerConfig,
+  DRMSystemOptions,
+  FPSControllerConfig,
+  FragmentLoaderConfig,
+  LevelControllerConfig,
+  MP4RemuxerConfig,
+  PlaylistLoaderConfig,
+  StreamControllerConfig,
+  LatencyControllerConfig,
+  TimelineControllerConfig,
+  TSDemuxerConfig,
+} from './config';
+export type { CuesInterface } from './utils/cues';
+export type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
+export type { LoadStats } from './loader/load-stats';
+export type { LevelKey } from './loader/level-key';
+export type { LevelDetails } from './loader/level-details';
+export type { SourceBufferName } from './types/buffer';
+export type { MetadataSample, UserdataSample } from './types/demuxer';
+export type {
+  LevelParsed,
+  LevelAttributes,
+  HlsUrlParameters,
+  HlsSkip,
+} from './types/level';
+export type {
+  PlaylistLevelType,
+  HlsChunkPerformanceTiming,
+  HlsPerformanceTiming,
+  PlaylistContextType,
+  PlaylistLoaderContext,
+  FragmentLoaderContext,
+  Loader,
+  LoaderStats,
+  LoaderContext,
+  LoaderResponse,
+  LoaderConfiguration,
+  LoaderCallbacks,
+  LoaderOnProgress,
+  LoaderOnAbort,
+  LoaderOnError,
+  LoaderOnSuccess,
+  LoaderOnTimeout,
+  HlsProgressivePerformanceTiming,
+} from './types/loader';
+export type {
+  MediaPlaylistType,
+  MainPlaylistType,
+  AudioPlaylistType,
+  SubtitlePlaylistType,
+} from './types/media-playlist';
+export type { Track, TrackSet } from './types/track';
+export type { ChunkMetadata } from './types/transmuxer';
+export type {
+  BaseSegment,
+  Part,
+  ElementaryStreams,
+  ElementaryStreamTypes,
+  ElementaryStreamInfo,
+} from './loader/fragment';
+export type {
+  TrackLoadingData,
+  TrackLoadedData,
+  AudioTrackLoadedData,
+  AudioTracksUpdatedData,
+  AudioTrackSwitchedData,
+  AudioTrackSwitchingData,
+  BufferAppendedData,
+  BufferAppendingData,
+  BufferCodecsData,
+  BufferCreatedData,
+  BufferEOSData,
+  BufferFlushedData,
+  BufferFlushingData,
+  CuesParsedData,
+  ErrorData,
+  FPSDropData,
+  FPSDropLevelCappingData,
+  FragBufferedData,
+  FragChangedData,
+  FragDecryptedData,
+  FragLoadedData,
+  FragLoadEmergencyAbortedData,
+  FragLoadingData,
+  FragParsedData,
+  FragParsingInitSegmentData,
+  FragParsingMetadataData,
+  FragParsingUserdataData,
+  InitPTSFoundData,
+  KeyLoadedData,
+  KeyLoadingData,
+  LevelLoadedData,
+  LevelLoadingData,
+  LevelPTSUpdatedData,
+  LevelsUpdatedData,
+  LevelSwitchedData,
+  LevelSwitchingData,
+  LevelUpdatedData,
+  LiveBackBufferData,
+  ManifestLoadedData,
+  ManifestLoadingData,
+  ManifestParsedData,
+  MediaAttachedData,
+  MediaAttachingData,
+  NonNativeTextTrack,
+  NonNativeTextTracksData,
+  SubtitleFragProcessedData,
+  SubtitleTrackLoadedData,
+  SubtitleTracksUpdatedData,
+  SubtitleTrackSwitchData,
+} from './types/events';
+export type { AttrList } from './utils/attr-list';
