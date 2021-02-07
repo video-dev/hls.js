@@ -26,11 +26,10 @@
     }
   },
   "scripts": {
-    "build": "webpack --progress",
-    "build:ci": "webpack",
+    "build": "webpack --progress && tsc --build tsconfig-lib.json && api-extractor run --local",
+    "build:ci": "webpack && tsc --build tsconfig-lib.json && api-extractor run",
     "build:debug": "webpack --progress --env debug --env demo",
     "build:watch": "webpack --progress --env debug --env demo --watch",
-    "build:types": "tsc --build tsconfig-lib.json && api-extractor run",
     "dev": "webpack serve --progress --env debug --env demo --port 8000",
     "docs": "esdoc",
     "lint": "eslint src/ tests/ --ext .js --ext .ts",
