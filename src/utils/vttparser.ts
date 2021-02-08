@@ -1,35 +1,26 @@
 /*
- * Source: https://github.com/mozilla/vtt.js/blob/master/dist/vtt.js#L1716
+ * Source: https://github.com/mozilla/vtt.js/blob/master/dist/vtt.js
  */
 
 import VTTCue from './vttcue';
 
-const StringDecoder = function StringDecoder() {
-  return {
-    decode: function (data) {
-      if (!data) {
-        return '';
-      }
+class StringDecoder {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  decode(data: string | any, options?: Object): string | never {
+    if (!data) {
+      return '';
+    }
 
-      if (typeof data !== 'string') {
-        throw new Error('Error - expected string data.');
-      }
+    if (typeof data !== 'string') {
+      throw new Error('Error - expected string data.');
+    }
 
-      return decodeURIComponent(encodeURIComponent(data));
-    },
-  };
-};
-
-function VTTParser() {
-  this.window = self;
-  this.state = 'INITIAL';
-  this.buffer = '';
-  this.decoder = new StringDecoder();
-  this.regionList = [];
+    return decodeURIComponent(encodeURIComponent(data));
+  }
 }
 
 // Try to parse input as a time stamp.
-export function parseTimeStamp(input) {
+export function parseTimeStamp(input: string) {
   function computeSeconds(h, m, s, f) {
     return (h | 0) * 3600 + (m | 0) * 60 + (s | 0) + parseFloat(f || 0);
   }
@@ -39,7 +30,7 @@ export function parseTimeStamp(input) {
     return null;
   }
 
-  if (m[2] > 59) {
+  if (parseFloat(m[2]) > 59) {
     // Timestamp takes the form of [hours]:[minutes].[milliseconds]
     // First position is hours as it's over 59.
     return computeSeconds(m[2], m[3], 0, m[4]);
@@ -50,51 +41,49 @@ export function parseTimeStamp(input) {
 
 // A settings object holds key/value pairs and will ignore anything but the first
 // assignment to a specific key.
-function Settings() {
-  this.values = Object.create(null);
-}
+class Settings {
+  private readonly values: { [key: string]: any } = Object.create(null);
 
-Settings.prototype = {
   // Only accept the first assignment to any key.
-  set: function (k, v) {
+  set(k: string, v: any) {
     if (!this.get(k) && v !== '') {
       this.values[k] = v;
     }
-  },
+  }
   // Return the value for a key, or a default value.
   // If 'defaultKey' is passed then 'dflt' is assumed to be an object with
   // a number of possible default values as properties where 'defaultKey' is
   // the key of the property that will be chosen; otherwise it's assumed to be
   // a single value.
-  get: function (k, dflt, defaultKey) {
+  get(k: string, dflt?: any, defaultKey?: string): any {
     if (defaultKey) {
       return this.has(k) ? this.values[k] : dflt[defaultKey];
     }
 
     return this.has(k) ? this.values[k] : dflt;
-  },
+  }
   // Check whether we have a value for a key.
-  has: function (k) {
+  has(k: string): boolean {
     return k in this.values;
-  },
+  }
   // Accept a setting if its one of the given alternatives.
-  alt: function (k, v, a) {
+  alt(k: string, v: any, a: any[]) {
     for (let n = 0; n < a.length; ++n) {
       if (v === a[n]) {
         this.set(k, v);
         break;
       }
     }
-  },
+  }
   // Accept a setting if its a valid (signed) integer.
-  integer: function (k, v) {
+  integer(k: string, v: any) {
     if (/^-?\d+$/.test(v)) {
       // integer
       this.set(k, parseInt(v, 10));
     }
-  },
+  }
   // Accept a setting if its a valid percentage.
-  percent: function (k, v) {
+  percent(k: string, v: any): boolean {
     if (/^([\d]{1,3})(\.[\d]*)?%$/.test(v)) {
       const percent = parseFloat(v);
       if (percent >= 0 && percent <= 100) {
@@ -103,12 +92,17 @@ Settings.prototype = {
       }
     }
     return false;
-  },
-};
+  }
+}
 
 // Helper function to parse input into groups separated by 'groupDelim', and
-// interprete each group as a key/value pair separated by 'keyValueDelim'.
-function parseOptions(input, callback, keyValueDelim, groupDelim) {
+// interpret each group as a key/value pair separated by 'keyValueDelim'.
+function parseOptions(
+  input: string,
+  callback: (k: string, v: any) => void,
+  keyValueDelim: RegExp,
+  groupDelim?: RegExp
+) {
   const groups = groupDelim ? input.split(groupDelim) : [input];
   for (const i in groups) {
     if (typeof groups[i] !== 'string') {
@@ -126,16 +120,16 @@ function parseOptions(input, callback, keyValueDelim, groupDelim) {
   }
 }
 
-const defaults = new VTTCue(0, 0, 0);
+const defaults = new VTTCue(0, 0, '');
 // 'middle' was changed to 'center' in the spec: https://github.com/w3c/webvtt/pull/244
 //  Safari doesn't yet support this change, but FF and Chrome do.
-const center = defaults.align === 'middle' ? 'middle' : 'center';
+const center = (defaults.align as string) === 'middle' ? 'middle' : 'center';
 
-function parseCue(input, cue, regionList) {
+function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
   // Remember the original input if we need to throw an error.
   const oInput = input;
   // 4.1 WebVTT timestamp
-  function consumeTimeStamp() {
+  function consumeTimeStamp(): number | never {
     const ts = parseTimeStamp(input);
     if (ts === null) {
       throw new Error('Malformed timestamp: ' + oInput);
@@ -147,7 +141,7 @@ function parseCue(input, cue, regionList) {
   }
 
   // 4.4.2 WebVTT cue settings
-  function consumeCueSettings(input, cue) {
+  function consumeCueSettings(input: string, cue: VTTCue) {
     const settings = new Settings();
 
     parseOptions(
@@ -256,12 +250,34 @@ function parseCue(input, cue, regionList) {
   consumeCueSettings(input, cue);
 }
 
-function fixLineBreaks(input) {
+export function fixLineBreaks(input: string): string {
   return input.replace(/<br(?: \/)?>/gi, '\n');
 }
 
-VTTParser.prototype = {
-  parse: function (data) {
+type Region = {
+  id: string;
+  region: any;
+};
+
+export class VTTParser {
+  private state:
+    | 'INITIAL'
+    | 'HEADER'
+    | 'ID'
+    | 'CUE'
+    | 'CUETEXT'
+    | 'NOTE'
+    | 'BADWEBVTT'
+    | 'BADCUE' = 'INITIAL';
+  private buffer: string = '';
+  private decoder: StringDecoder = new StringDecoder();
+  private regionList: Region[] = [];
+  private cue: VTTCue | null = null;
+  public oncue?: (cue: VTTCue) => void;
+  public onparsingerror?: (error: Error) => void;
+  public onflush?: () => void;
+
+  parse(data?: string): VTTParser {
     const _this = this;
 
     // If there is no data then we won't decode it, but will just try to parse
@@ -272,8 +288,8 @@ VTTParser.prototype = {
       _this.buffer += _this.decoder.decode(data, { stream: true });
     }
 
-    function collectNextLine() {
-      let buffer = _this.buffer;
+    function collectNextLine(): string {
+      let buffer: string = _this.buffer;
       let pos = 0;
 
       buffer = fixLineBreaks(buffer);
@@ -286,7 +302,7 @@ VTTParser.prototype = {
         ++pos;
       }
 
-      const line = buffer.substr(0, pos);
+      const line: string = buffer.substr(0, pos);
       // Advance the buffer early in case we fail below.
       if (buffer[pos] === '\r') {
         ++pos;
@@ -305,13 +321,13 @@ VTTParser.prototype = {
       parseOptions(
         input,
         function (k, v) {
-          switch (k) {
-            case 'Region':
-              // 3.3 WebVTT region metadata header syntax
-              // console.log('parse region', v);
-              // parseRegion(v);
-              break;
-          }
+          // switch (k) {
+          // case 'region':
+          // 3.3 WebVTT region metadata header syntax
+          // console.log('parse region', v);
+          // parseRegion(v);
+          // break;
+          // }
         },
         /:/
       );
@@ -319,7 +335,7 @@ VTTParser.prototype = {
 
     // 5.1 WebVTT file parsing.
     try {
-      let line;
+      let line: string = '';
       if (_this.state === 'INITIAL') {
         // We can't start parsing until we have the first line.
         if (!/\r\n|\n/.test(_this.buffer)) {
@@ -389,6 +405,10 @@ VTTParser.prototype = {
           /* falls through */
           case 'CUE':
             // 40 - Collect cue timings and settings.
+            if (!_this.cue) {
+              _this.state = 'BADCUE';
+              continue;
+            }
             try {
               parseCue(line, _this.cue, _this.regionList);
             } catch (e) {
@@ -408,7 +428,7 @@ VTTParser.prototype = {
               // one as a new cue.
               if (!line || (hasSubstring && (alreadyCollectedLine = true))) {
                 // We are done parsing self cue.
-                if (_this.oncue) {
+                if (_this.oncue && _this.cue) {
                   _this.oncue(_this.cue);
                 }
 
@@ -416,20 +436,21 @@ VTTParser.prototype = {
                 _this.state = 'ID';
                 continue;
               }
+              if (_this.cue === null) {
+                continue;
+              }
+
               if (_this.cue.text) {
                 _this.cue.text += '\n';
               }
-
               _this.cue.text += line;
             }
             continue;
-          case 'BADCUE': // BADCUE
+          case 'BADCUE':
             // 54-62 - Collect and discard the remaining cue.
             if (!line) {
               _this.state = 'ID';
             }
-
-            continue;
         }
       }
     } catch (e) {
@@ -444,12 +465,13 @@ VTTParser.prototype = {
       _this.state = _this.state === 'INITIAL' ? 'BADWEBVTT' : 'BADCUE';
     }
     return this;
-  },
-  flush: function () {
+  }
+
+  flush(): VTTParser {
     const _this = this;
     try {
       // Finish decoding the stream.
-      _this.buffer += _this.decoder.decode();
+      // _this.buffer += _this.decoder.decode();
       // Synthesize the end of the current cue or region.
       if (_this.cue || _this.state === 'HEADER') {
         _this.buffer += '\n\n';
@@ -471,9 +493,5 @@ VTTParser.prototype = {
     }
 
     return this;
-  },
-};
-
-export { fixLineBreaks };
-
-export default VTTParser;
+  }
+}

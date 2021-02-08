@@ -589,10 +589,10 @@ A value too close from `liveSyncDuration` is likely to cause playback stalls.
 
 ### `maxLiveSyncPlaybackRate`
 
-(default: `1.5` min: `1` max: `2`)
+(default: `1` min: `1` max: `2`)
 
-Increase `video.playbackRate` up to this value to catch up to target latency (`liveSyncDuration(Count)` or manifest (PART-)HOLD-BACK) in a live stream.
-Set `maxLiveSyncPlaybackRate` to `1` to disable setting of playback rate.
+When set to a value greater than `1`, the latency-controller will adjust `video.playbackRate` up to `maxLiveSyncPlaybackRate` to catch up to target latency in a live stream. `hls.targetLatency` is based on `liveSyncDuration|Count` or manifest PART-|HOLD-BACK.
+Defaults to `1`, which disables playback rate adjustment. Set `maxLiveSyncPlaybackRate` to a value greater than `1` to enable playback rate adjustment at the live edge.
 
 ### `liveDurationInfinity`
 

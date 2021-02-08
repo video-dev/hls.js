@@ -1,4 +1,4 @@
-import VTTParser from './vttparser';
+import { VTTParser } from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
 import { toMpegTsClockFromTimescale } from './timescale-conversion';
 import { PTSNormalize } from '../remux/mp4-remuxer';
@@ -145,12 +145,15 @@ export function parseWebVTT(
       cue.endTime = startTime + duration;
     }
 
+    //trim trailing webvtt block whitespaces
+    const text = cue.text.trim();
+
     // Fix encoding of special characters
-    cue.text = decodeURIComponent(encodeURIComponent(cue.text));
+    cue.text = decodeURIComponent(encodeURIComponent(text));
 
     // If the cue was not assigned an id from the VTT file (line above the content), create one.
     if (!cue.id) {
-      cue.id = generateCueId(cue.startTime, cue.endTime, cue.text);
+      cue.id = generateCueId(cue.startTime, cue.endTime, text);
     }
 
     if (cue.endTime > 0) {
