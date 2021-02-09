@@ -335,6 +335,6 @@ export interface KeyLoadedData {
   frag: Fragment;
 }
 
-export interface LiveBackBufferData {
+export interface BackBufferData {
   bufferEnd: number;
 }
