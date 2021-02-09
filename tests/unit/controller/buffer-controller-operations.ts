@@ -242,9 +242,9 @@ describe('BufferController', function () {
 
   describe('onFragParsed', function () {
     it('should trigger FRAG_BUFFERED when all audio/video data has been buffered', function () {
-      const flushLiveBackBufferSpy = sandbox.spy(
+      const flushBackBufferSpy = sandbox.spy(
         bufferController,
-        'flushLiveBackBuffer'
+        'flushBackBuffer'
       );
       const frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
@@ -252,7 +252,7 @@ describe('BufferController', function () {
 
       bufferController.onFragParsed(Events.FRAG_PARSED, { frag });
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;
-      expect(flushLiveBackBufferSpy).to.have.been.calledOnce;
+      expect(flushBackBufferSpy).to.have.been.calledOnce;
       return new Promise<void>((resolve, reject) => {
         hls.on(Events.FRAG_BUFFERED, (event, data) => {
           try {
@@ -367,13 +367,12 @@ describe('BufferController', function () {
     });
   });
 
-  describe('flushLiveBackBuffer', function () {
+  describe('flushBackBuffer', function () {
     beforeEach(function () {
       bufferController.details = {
-        live: true,
         levelTargetDuration: 10,
       };
-      hls.config.liveBackBufferLength = 10;
+      hls.config.backBufferLength = 10;
       queueNames.forEach((name) => {
         const sb = bufferController.sourceBuffer[name];
         sb.setBuffered(0, 30);
@@ -383,33 +382,43 @@ describe('BufferController', function () {
 
     it('exits early if no media is defined', function () {
       delete bufferController.media;
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
     });
 
-    it('exits early if the stream is not live', function () {
-      bufferController.details = {
-        live: false,
-      };
-      bufferController.flushLiveBackBuffer();
-      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
-        .have.not.been.called;
-    });
-
-    it('exits early if the liveBackBufferLength config is not a finite number, or less than 0', function () {
-      hls.config.liveBackBufferLength = null;
-      bufferController.flushLiveBackBuffer();
-      hls.config.liveBackBufferLength = -1;
-      bufferController.flushLiveBackBuffer();
-      hls.config.liveBackBufferLength = Infinity;
-      bufferController.flushLiveBackBuffer();
+    it('exits early if the backBufferLength config is not a finite number, or less than 0', function () {
+      hls.config.backBufferLength = null;
+      bufferController.flushBackBuffer();
+      hls.config.backBufferLength = -1;
+      bufferController.flushBackBuffer();
+      hls.config.backBufferLength = Infinity;
+      bufferController.flushBackBuffer();
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
     });
 
     it('should execute a remove operation if flushing a valid backBuffer range', function () {
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
+      expect(triggerSpy).to.have.callCount(4);
+      queueNames.forEach((name) => {
+        expect(
+          triggerSpy,
+          `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`
+        ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
+          startOffset: 0,
+          endOffset: 20,
+          type: name,
+        });
+      });
+    });
+
+    it('should support the deprecated liveBackBufferLength for live content', function () {
+      bufferController.details.live = true;
+      hls.config.backBufferLength = Infinity;
+      hls.config.liveBackBufferLength = 10;
+      bufferController.flushBackBuffer();
+
       expect(triggerSpy).to.have.callCount(4);
       queueNames.forEach((name) => {
         expect(
@@ -425,8 +434,8 @@ describe('BufferController', function () {
 
     it('removes a maximum of one targetDuration from currentTime', function () {
       mockMedia.currentTime = 25;
-      hls.config.liveBackBufferLength = 5;
-      bufferController.flushLiveBackBuffer();
+      hls.config.backBufferLength = 5;
+      bufferController.flushBackBuffer();
       queueNames.forEach((name) => {
         expect(
           triggerSpy,
@@ -445,7 +454,7 @@ describe('BufferController', function () {
         const buffer = bufferController.sourceBuffer[name];
         buffer.setBuffered(10, 30);
       });
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
     });
@@ -455,10 +464,10 @@ describe('BufferController', function () {
         const buffer = bufferController.sourceBuffer[name];
         buffer.setBuffered(0, 0);
       });
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
 
       bufferController.sourceBuffer = {};
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
 
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
@@ -470,7 +479,6 @@ describe('BufferController', function () {
     beforeEach(function () {
       const details = Object.assign(new LevelDetails(''), {
         averagetargetduration: 6,
-        live: true,
         totalduration: 5,
         fragments: [{ start: 5 }],
       });
