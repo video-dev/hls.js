@@ -6,7 +6,7 @@ import {
   LoaderConfiguration,
   LoaderOnProgress,
 } from '../types/loader';
-import LoadStats from '../loader/load-stats';
+import { LoadStats } from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
 
 export function fetchSupported() {

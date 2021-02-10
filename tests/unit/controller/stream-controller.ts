@@ -8,11 +8,11 @@ import {
 import StreamController from '../../../src/controller/stream-controller';
 import { State } from '../../../src/controller/base-stream-controller';
 import { mockFragments } from '../../mocks/data';
-import Fragment from '../../../src/loader/fragment';
-import LevelDetails from '../../../src/loader/level-details';
+import { Fragment } from '../../../src/loader/fragment';
+import { LevelDetails } from '../../../src/loader/level-details';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
-import AttrList from '../../../src/utils/attr-list';
+import { AttrList } from '../../../src/utils/attr-list';
 import { Level, LevelAttributes } from '../../../src/types/level';
 
 import * as sinon from 'sinon';

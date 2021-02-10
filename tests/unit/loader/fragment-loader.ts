@@ -1,7 +1,7 @@
 import FragmentLoader, { LoadError } from '../../../src/loader/fragment-loader';
-import Fragment from '../../../src/loader/fragment';
+import { Fragment } from '../../../src/loader/fragment';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import LoadStats from '../../../src/loader/load-stats';
+import { LoadStats } from '../../../src/loader/load-stats';
 import {
   FragmentLoaderContext,
   Loader,
@@ -15,7 +15,7 @@ import type { HlsConfig } from '../../../src/config';
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
-import LevelDetails from '../../../src/loader/level-details';
+import { LevelDetails } from '../../../src/loader/level-details';
 
 chai.use(sinonChai);
 const expect = chai.expect;

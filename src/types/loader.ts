@@ -1,6 +1,6 @@
-import Fragment from '../loader/fragment';
+import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
-import type LevelDetails from '../loader/level-details';
+import type { LevelDetails } from '../loader/level-details';
 import type { HlsUrlParameters } from './level';
 
 export interface LoaderContext {
@@ -67,7 +67,7 @@ export interface HlsProgressivePerformanceTiming extends HlsPerformanceTiming {
   first: number;
 }
 
-type LoaderOnSuccess<T extends LoaderContext> = (
+export type LoaderOnSuccess<T extends LoaderContext> = (
   response: LoaderResponse,
   stats: LoaderStats,
   context: T,
@@ -81,7 +81,7 @@ export type LoaderOnProgress<T extends LoaderContext> = (
   networkDetails: any
 ) => void;
 
-type LoaderOnError<T extends LoaderContext> = (
+export type LoaderOnError<T extends LoaderContext> = (
   error: {
     // error status code
     code: number;
@@ -92,13 +92,13 @@ type LoaderOnError<T extends LoaderContext> = (
   networkDetails: any
 ) => void;
 
-type LoaderOnTimeout<T extends LoaderContext> = (
+export type LoaderOnTimeout<T extends LoaderContext> = (
   stats: LoaderStats,
   context: T,
   networkDetails: any
 ) => void;
 
-type LoaderOnAbort<T extends LoaderContext> = (
+export type LoaderOnAbort<T extends LoaderContext> = (
   stats: LoaderStats,
   context: T,
   networkDetails: any

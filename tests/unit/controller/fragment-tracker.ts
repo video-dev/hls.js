@@ -6,8 +6,8 @@ import {
 } from '../../../src/controller/fragment-tracker';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
-import Fragment, { ElementaryStreamTypes } from '../../../src/loader/fragment';
-import LoadStats from '../../../src/loader/load-stats';
+import { Fragment, ElementaryStreamTypes } from '../../../src/loader/fragment';
+import { LoadStats } from '../../../src/loader/load-stats';
 import type {
   BufferAppendedData,
   FragBufferedData,
