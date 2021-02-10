@@ -223,12 +223,6 @@ Or type
 npm install --save hls.js
 ```
 
-Optionally there is a declaration file available to help with code completion and hinting within your IDE for the hls.js api
-
-```sh
-npm install --save-dev @types/hls.js
-```
-
 ### Server-side-rendering (SSR) and `require` from a Node.js runtime
 
 We support this now. You can safely require this library in Node and absolutely nothing will happen :) See https://github.com/video-dev/hls.js/pull/1841
