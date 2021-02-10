@@ -1,9 +1,10 @@
-import Fragment, { Part } from './fragment';
-import type AttrList from '../utils/attr-list';
+import { Part } from './fragment';
+import type { Fragment } from './fragment';
+import type { AttrList } from '../utils/attr-list';
 
 const DEFAULT_TARGET_DURATION = 10;
 
-export default class LevelDetails {
+export class LevelDetails {
   public PTSKnown: boolean = false;
   public alignedSliding: boolean = false;
   public averagetargetduration?: number;

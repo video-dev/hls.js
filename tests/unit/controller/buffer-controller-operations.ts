@@ -9,10 +9,10 @@ import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
 import { BufferAppendingData } from '../../../src/types/events';
 import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import Fragment, { ElementaryStreamTypes } from '../../../src/loader/fragment';
+import { Fragment, ElementaryStreamTypes } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
-import LevelDetails from '../../../src/loader/level-details';
+import { LevelDetails } from '../../../src/loader/level-details';
 
 chai.use(sinonChai);
 const expect = chai.expect;

@@ -3,7 +3,7 @@ import type { NetworkComponentAPI } from '../types/component-api';
 import { getSkipValue, HlsSkip, HlsUrlParameters } from '../types/level';
 import { computeReloadInterval } from './level-helper';
 import { logger } from '../utils/logger';
-import type LevelDetails from '../loader/level-details';
+import type { LevelDetails } from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type {
   AudioTrackLoadedData,

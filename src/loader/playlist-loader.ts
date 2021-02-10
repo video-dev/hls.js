@@ -24,10 +24,10 @@ import type {
   PlaylistLoaderContext,
 } from '../types/loader';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import LevelDetails from './level-details';
-import Fragment from './fragment';
+import { LevelDetails } from './level-details';
+import { Fragment } from './fragment';
 import type Hls from '../hls';
-import AttrList from '../utils/attr-list';
+import { AttrList } from '../utils/attr-list';
 import type {
   ErrorData,
   LevelLoadingData,
