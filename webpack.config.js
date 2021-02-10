@@ -272,20 +272,22 @@ const multiConfig = [
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
+  const requestedConfigs = Object.keys(envArgs).filter(
+    (key) => !/^WEBPACK_/.test(key)
+  );
   let configs;
-  if (!envArgs) {
+  if (!requestedConfigs.length) {
     // If no arguments are specified, return every configuration
     configs = multiConfig;
   } else {
-    const enabledConfigNames = Object.keys(envArgs);
     // Filter out enabled configs
     const enabledConfigs = multiConfig.filter((config) =>
-      enabledConfigNames.includes(config.name)
+      requestedConfigs.includes(config.name)
     );
     if (!enabledConfigs.length) {
       throw new Error(
         `Couldn't find a valid config with the names ${JSON.stringify(
-          enabledConfigNames
+          requestedConfigs
         )}. Known configs are: ${multiConfig
           .map((config) => config.name)
           .join(', ')}`
