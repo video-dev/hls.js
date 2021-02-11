@@ -25,7 +25,7 @@ import type {
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
-import LevelDetails from '../loader/level-details';
+import { LevelDetails } from '../loader/level-details';
 
 const MediaSource = getMediaSource();
 const VIDEO_CODEC_PROFILE_REPACE = /([ha]vc.)(?:\.[^.,]+)+/;

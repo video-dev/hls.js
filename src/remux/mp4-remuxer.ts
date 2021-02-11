@@ -22,7 +22,7 @@ import type {
 } from '../types/demuxer';
 import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
-import Fragment from '../loader/fragment';
+import type { Fragment } from '../loader/fragment';
 import type { HlsConfig } from '../config';
 import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
 

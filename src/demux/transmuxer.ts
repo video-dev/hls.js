@@ -16,7 +16,7 @@ import { appendUint8Array } from '../utils/mp4-tools';
 
 import { logger } from '../utils/logger';
 import type { HlsConfig } from '../config';
-import LevelKey from '../loader/level-key';
+import { LevelKey } from '../loader/level-key';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop

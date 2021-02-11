@@ -1,4 +1,4 @@
-import Fragment from '../../src/loader/fragment';
+import { Fragment } from '../../src/loader/fragment';
 import { PlaylistLevelType } from '../../src/types/loader';
 
 function fragment(options) {

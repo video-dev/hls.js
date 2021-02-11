@@ -1,5 +1,5 @@
-import LevelDetails from '../loader/level-details';
-import AttrList from '../utils/attr-list';
+import { LevelDetails } from '../loader/level-details';
+import { AttrList } from '../utils/attr-list';
 
 export interface LevelParsed {
   attrs: LevelAttributes;

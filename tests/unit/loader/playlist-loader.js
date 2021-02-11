@@ -1,5 +1,5 @@
 import M3U8Parser from '../../../src/loader/m3u8-parser';
-import AttrList from '../../../src/utils/attr-list';
+import { AttrList } from '../../../src/utils/attr-list';
 import { PlaylistLevelType } from '../../../src/types/loader';
 
 describe('PlaylistLoader', function () {
