@@ -2,7 +2,7 @@
 import LatencyController from '../../../src/controller/latency-controller';
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
-import LevelDetails from '../../../src/loader/level-details';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { LevelUpdatedData } from '../../../src/types/events';
 
 import * as sinon from 'sinon';

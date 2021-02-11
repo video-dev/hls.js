@@ -1,10 +1,10 @@
 import * as URLToolkit from 'url-toolkit';
 
-import Fragment, { Part } from './fragment';
-import LevelDetails from './level-details';
-import LevelKey from './level-key';
+import { Fragment, Part } from './fragment';
+import { LevelDetails } from './level-details';
+import { LevelKey } from './level-key';
 
-import AttrList from '../utils/attr-list';
+import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import type { CodecType } from '../utils/codecs';
 import { isCodecType } from '../utils/codecs';

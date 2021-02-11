@@ -1,6 +1,6 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 
-export default class LevelKey {
+export class LevelKey {
   private _uri: string | null = null;
   public method: string | null = null;
   public keyFormat: string | null = null;

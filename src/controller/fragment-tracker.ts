@@ -1,5 +1,5 @@
 import { Events } from '../events';
-import Fragment, { Part } from '../loader/fragment';
+import { Fragment, Part } from '../loader/fragment';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   FragmentBufferedRange,

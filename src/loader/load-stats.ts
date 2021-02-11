@@ -4,7 +4,7 @@ import type {
   LoaderStats,
 } from '../types/loader';
 
-export default class LoadStats implements LoaderStats {
+export class LoadStats implements LoaderStats {
   aborted: boolean = false;
   loaded: number = 0;
   retry: number = 0;

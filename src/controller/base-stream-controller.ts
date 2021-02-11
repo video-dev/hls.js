@@ -14,12 +14,12 @@ import {
   findFragWithCC,
 } from './fragment-finders';
 import TransmuxerInterface from '../demux/transmuxer-interface';
-import Fragment, { Part } from '../loader/fragment';
+import { Fragment, Part } from '../loader/fragment';
 import FragmentLoader, {
   FragmentLoadProgressCallback,
   LoadError,
 } from '../loader/fragment-loader';
-import LevelDetails from '../loader/level-details';
+import { LevelDetails } from '../loader/level-details';
 import {
   BufferAppendingData,
   ErrorData,

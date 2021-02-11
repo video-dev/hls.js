@@ -5,7 +5,7 @@ import { ErrorDetails } from '../errors';
 import { PlaylistLevelType } from '../types/loader';
 import { logger } from '../utils/logger';
 import type { Bufferable } from '../utils/buffer-helper';
-import type Fragment from '../loader/fragment';
+import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { LoaderStats } from '../types/loader';
 import type Hls from '../hls';

@@ -4,8 +4,8 @@
  * */
 
 import { logger } from '../utils/logger';
-import Fragment, { Part } from '../loader/fragment';
-import LevelDetails from '../loader/level-details';
+import { Fragment, Part } from '../loader/fragment';
+import { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
 import type { LoaderStats } from '../types/loader';
 import type { MediaPlaylist } from '../types/media-playlist';

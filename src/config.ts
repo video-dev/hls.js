@@ -10,7 +10,7 @@ import FPSController from './controller/fps-controller';
 import EMEController from './controller/eme-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
-import * as Cues from './utils/cues';
+import { CuesInterface, newCue } from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { logger } from './utils/logger';
 
@@ -22,7 +22,7 @@ import type {
   PlaylistLoaderContext,
 } from './types/loader';
 
-type ABRControllerConfig = {
+export type ABRControllerConfig = {
   abrEwmaFastLive: number;
   abrEwmaSlowLive: number;
   abrEwmaFastVoD: number;
@@ -41,7 +41,7 @@ export type BufferControllerConfig = {
   liveBackBufferLength: number;
 };
 
-type CapLevelControllerConfig = {
+export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
@@ -58,7 +58,7 @@ export type EMEControllerConfig = {
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
 
-type FragmentLoaderConfig = {
+export type FragmentLoaderConfig = {
   fLoader?: { new (confg: HlsConfig): Loader<FragmentLoaderContext> };
 
   fragLoadingTimeOut: number;
@@ -67,13 +67,13 @@ type FragmentLoaderConfig = {
   fragLoadingMaxRetryTimeout: number;
 };
 
-type FPSControllerConfig = {
+export type FPSControllerConfig = {
   capLevelOnFPSDrop: boolean;
   fpsDroppedMonitoringPeriod: number;
   fpsDroppedMonitoringThreshold: number;
 };
 
-type LevelControllerConfig = {
+export type LevelControllerConfig = {
   startLevel?: number;
 };
 
@@ -82,7 +82,7 @@ export type MP4RemuxerConfig = {
   maxAudioFramesDrift: number;
 };
 
-type PlaylistLoaderConfig = {
+export type PlaylistLoaderConfig = {
   pLoader?: { new (confg: HlsConfig): Loader<PlaylistLoaderContext> };
 
   manifestLoadingTimeOut: number;
@@ -96,7 +96,7 @@ type PlaylistLoaderConfig = {
   levelLoadingMaxRetryTimeout: number;
 };
 
-type StreamControllerConfig = {
+export type StreamControllerConfig = {
   autoStartLoad: boolean;
   startPosition: number;
   defaultAudioCodec?: string;
@@ -113,7 +113,7 @@ type StreamControllerConfig = {
   testBandwidth: boolean;
 };
 
-type LatencyControllerConfig = {
+export type LatencyControllerConfig = {
   liveSyncDurationCount: number;
   liveMaxLatencyDurationCount: number;
   liveSyncDuration?: number;
@@ -121,8 +121,8 @@ type LatencyControllerConfig = {
   maxLiveSyncPlaybackRate: number;
 };
 
-type TimelineControllerConfig = {
-  cueHandler: Cues.CuesInterface;
+export type TimelineControllerConfig = {
+  cueHandler: CuesInterface;
   enableCEA708Captions: boolean;
   enableWebVTT: boolean;
   enableIMSC1: boolean;
@@ -137,7 +137,7 @@ type TimelineControllerConfig = {
   renderTextTracksNatively: boolean;
 };
 
-type TSDemuxerConfig = {
+export type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean;
 };
 
@@ -272,7 +272,7 @@ export const hlsDefaultConfig: HlsConfig = {
 
 function timelineConfig(): TimelineControllerConfig {
   return {
-    cueHandler: Cues, // used by timeline-controller
+    cueHandler: { newCue }, // used by timeline-controller
     enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
     enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
     enableIMSC1: __USE_SUBTITLES__, // used by timeline-controller
