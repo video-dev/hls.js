@@ -1,8 +1,8 @@
 // eslint-disable-next-line import/no-duplicates
-import type Fragment from '../loader/fragment';
+import type { Fragment } from '../loader/fragment';
 // eslint-disable-next-line import/no-duplicates
 import type { Part } from '../loader/fragment';
-import type LevelDetails from '../loader/level-details';
+import type { LevelDetails } from '../loader/level-details';
 import type { HlsUrlParameters, Level, LevelParsed } from './level';
 import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
 import type {
@@ -16,10 +16,10 @@ import type {
 import type { Track, TrackSet } from './track';
 import type { SourceBufferName } from './buffer';
 import type { ChunkMetadata } from './transmuxer';
-import type LoadStats from '../loader/load-stats';
+import type { LoadStats } from '../loader/load-stats';
 import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
-import type AttrList from '../utils/attr-list';
+import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
 
 export interface MediaAttachingData {
@@ -243,7 +243,7 @@ export interface CuesParsedData {
   track: string;
 }
 
-interface NonNativeTextTrack {
+export interface NonNativeTextTrack {
   _id?: string;
   label: any;
   kind: string;

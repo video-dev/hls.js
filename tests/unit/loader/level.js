@@ -1,4 +1,4 @@
-import LevelDetails from '../../../src/loader/level-details';
+import { LevelDetails } from '../../../src/loader/level-details';
 
 describe('Level Class tests', function () {
   it('sets programDateTime to true when the first fragment has valid pdt', function () {

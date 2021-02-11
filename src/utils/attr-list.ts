@@ -1,13 +1,11 @@
-import type { StringMap } from '../types/general';
-
 const DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/; // eslint-disable-line no-useless-escape
 const ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g; // eslint-disable-line no-useless-escape
 
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
-class AttrList {
+export class AttrList {
   [key: string]: any;
 
-  constructor(attrs: string | StringMap) {
+  constructor(attrs: string | Record<string, any>) {
     if (typeof attrs === 'string') {
       attrs = AttrList.parseAttrList(attrs);
     }
@@ -89,7 +87,7 @@ class AttrList {
     };
   }
 
-  static parseAttrList(input: string): StringMap {
+  static parseAttrList(input: string): Record<string, any> {
     let match;
     const attrs = {};
     const quote = '"';
@@ -109,5 +107,3 @@ class AttrList {
     return attrs;
   }
 }
-
-export default AttrList;

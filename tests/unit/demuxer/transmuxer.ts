@@ -1,7 +1,7 @@
 import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
 import { TransmuxState, TransmuxConfig } from '../../../src/demux/transmuxer';
 import { ChunkMetadata, TransmuxerResult } from '../../../src/types/transmuxer';
-import Fragment from '../../../src/loader/fragment';
+import { Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import Hls from '../../../src/hls';
 

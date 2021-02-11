@@ -6,7 +6,7 @@ import type {
   Loader,
   LoaderConfiguration,
 } from '../types/loader';
-import LoadStats from '../loader/load-stats';
+import { LoadStats } from '../loader/load-stats';
 
 class XhrLoader implements Loader<LoaderContext> {
   private xhrSetup: Function | null;

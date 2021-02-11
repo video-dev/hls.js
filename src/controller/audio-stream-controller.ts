@@ -6,7 +6,7 @@ import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
-import Fragment, { ElementaryStreamTypes, Part } from '../loader/fragment';
+import { Fragment, ElementaryStreamTypes, Part } from '../loader/fragment';
 import FragmentLoader from '../loader/fragment-loader';
 import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
@@ -18,7 +18,7 @@ import { MAX_START_GAP_JUMP } from './gap-controller';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
-import type LevelDetails from '../loader/level-details';
+import type { LevelDetails } from '../loader/level-details';
 import type { TrackSet } from '../types/track';
 import type {
   BufferCreatedData,
