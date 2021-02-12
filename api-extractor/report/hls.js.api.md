@@ -538,6 +538,8 @@ export enum Events {
     // (undocumented)
     LEVELS_UPDATED = "hlsLevelsUpdated",
     // (undocumented)
+    LIVE_BACK_BUFFER_REACHED = "hlsLiveBackBufferReached",
+    // (undocumented)
     MANIFEST_LOADED = "hlsManifestLoaded",
     // (undocumented)
     MANIFEST_LOADING = "hlsManifestLoading",
@@ -1051,6 +1053,8 @@ export interface HlsListeners {
     [Events.LEVEL_SWITCHING]: (event: Events.LEVEL_SWITCHING, data: LevelSwitchingData) => void;
     // (undocumented)
     [Events.LEVEL_UPDATED]: (event: Events.LEVEL_UPDATED, data: LevelUpdatedData) => void;
+    // (undocumented)
+    [Events.LIVE_BACK_BUFFER_REACHED]: (event: Events.LIVE_BACK_BUFFER_REACHED, data: LiveBackBufferData) => void;
     // (undocumented)
     [Events.MANIFEST_LOADED]: (event: Events.MANIFEST_LOADED, data: ManifestLoadedData) => void;
     // (undocumented)
