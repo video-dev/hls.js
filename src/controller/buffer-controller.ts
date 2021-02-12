@@ -557,6 +557,12 @@ export default class BufferController implements ComponentAPI {
           hls.trigger(Events.BACK_BUFFER_REACHED, {
             bufferEnd: targetBackBufferPosition,
           });
+
+          // Support for deprecated event:
+          hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
+            bufferEnd: targetBackBufferPosition,
+          });
+
           hls.trigger(Events.BUFFER_FLUSHING, {
             startOffset: 0,
             endOffset: targetBackBufferPosition,

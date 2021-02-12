@@ -400,7 +400,7 @@ describe('BufferController', function () {
 
     it('should execute a remove operation if flushing a valid backBuffer range', function () {
       bufferController.flushBackBuffer();
-      expect(triggerSpy).to.have.callCount(4);
+      expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(2);
       queueNames.forEach((name) => {
         expect(
           triggerSpy,
@@ -419,17 +419,9 @@ describe('BufferController', function () {
       hls.config.liveBackBufferLength = 10;
       bufferController.flushBackBuffer();
 
-      expect(triggerSpy).to.have.callCount(4);
-      queueNames.forEach((name) => {
-        expect(
-          triggerSpy,
-          `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`
-        ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
-          startOffset: 0,
-          endOffset: 20,
-          type: name,
-        });
-      });
+      expect(
+        triggerSpy.withArgs(Events.LIVE_BACK_BUFFER_REACHED)
+      ).to.have.callCount(2);
     });
 
     it('removes a maximum of one targetDuration from currentTime', function () {
