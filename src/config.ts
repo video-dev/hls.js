@@ -37,6 +37,7 @@ export type ABRControllerConfig = {
 
 export type BufferControllerConfig = {
   appendErrorMaxRetry: number;
+  backBufferLength: number;
   liveDurationInfinity: boolean;
   liveBackBufferLength: number | null;
 };
@@ -102,7 +103,6 @@ export type StreamControllerConfig = {
   defaultAudioCodec?: string;
   initialLiveManifestSize: number;
   maxBufferLength: number;
-  backBufferLength: number;
   maxBufferSize: number;
   maxBufferHole: number;
   highBufferWatchdogPeriod: number;

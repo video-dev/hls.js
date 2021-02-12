@@ -338,3 +338,8 @@ export interface KeyLoadedData {
 export interface BackBufferData {
   bufferEnd: number;
 }
+
+/**
+ * Deprecated; please use BackBufferData
+ */
+export interface LiveBackBufferData extends BackBufferData {}
