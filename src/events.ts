@@ -44,6 +44,7 @@ import {
   AudioTracksUpdatedData,
   FragLoadEmergencyAbortedData,
   BackBufferData,
+  LiveBackBufferData,
   TrackLoadingData,
   BufferFlushedData,
 } from './types/events';
@@ -161,6 +162,8 @@ export enum Events {
   KEY_LOADING = 'hlsKeyLoading',
   // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : LoaderStats }
   KEY_LOADED = 'hlsKeyLoaded',
+  // deprecated; please use BACK_BUFFER_REACHED - data : { bufferEnd: number }
+  LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached',
   // fired when the back buffer is reached as defined by the backBufferLength config option - data : { bufferEnd: number }
   BACK_BUFFER_REACHED = 'hlsBackBufferReached',
 }
@@ -351,6 +354,10 @@ export interface HlsListeners {
     data: KeyLoadingData
   ) => void;
   [Events.KEY_LOADED]: (event: Events.KEY_LOADED, data: KeyLoadedData) => void;
+  [Events.LIVE_BACK_BUFFER_REACHED]: (
+    event: Events.LIVE_BACK_BUFFER_REACHED,
+    data: LiveBackBufferData
+  ) => void;
   [Events.BACK_BUFFER_REACHED]: (
     event: Events.BACK_BUFFER_REACHED,
     data: BackBufferData
