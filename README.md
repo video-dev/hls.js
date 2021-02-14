@@ -9,20 +9,20 @@ Join the discussion via [video-dev.org](https://video-dev.org) in #hlsjs (our Sl
 
 # ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
 
-hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
+hls.js is a JavaScript library that implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
 It works by transmuxing MPEG-2 Transport Stream and AAC/MP3 streams into ISO BMFF (MP4) fragments.
-This transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
+Transmuxing is performed asynchronously using a [Web Worker] when available in the browser.
 hls.js also supports HLS + fmp4, as announced during [WWDC2016](https://developer.apple.com/videos/play/wwdc2016/504/)
 
-hls.js does not need any player, it works directly on top of a standard HTML`<video>`element.
+hls.js works directly on top of a standard HTML`<video>` element.
 
 hls.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using the [TypeScript compiler].
 
 Modules written in TS and plain JS/ES6 can be interdependent and imported/required by each other.
 
-To build our distro bundle and serve our development environment we use [Webpack].
+[Webpack] is used to build the distro bundle and serve the local development environment.
 
 [html5 video]: https://www.html5rocks.com/en/tutorials/video/basics/
 [mediasource extensions]: https://w3c.github.io/media-source/
@@ -36,7 +36,6 @@ To build our distro bundle and serve our development environment we use [Webpack
 ## API docs and usage guide
 
 - [API and usage docs, with code examples](./docs/API.md)
-
 - [Auto-Generated Docs (Latest Release)](https://hls-js.netlify.com/api-docs)
 - [Auto-Generated Docs (Master)](https://hls-js-dev.netlify.com/api-docs)
 
@@ -60,10 +59,10 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
 
 hls.js is only compatible with browsers supporting MediaSource extensions (MSE) API with 'video/MP4' mime-type inputs.
 
-As of today, hls.js is supported on:
+Hls.js is supported on:
 
-- Chrome for Android 34+
-- Chrome for Desktop 34+
+- Chrome for Android 39+
+- Chrome for Desktop 39+
 - Firefox for Android 41+
 - Firefox for Desktop 42+
 - IE11+ for Windows 8.1+
@@ -73,13 +72,13 @@ As of today, hls.js is supported on:
 - Safari for Mac 8+ (beta)
 - Safari for ipadOS 13+
 
-**Please note:** iOS Safari (iPhones) does not support the MediaSource API. This includes all browsers on iOS as well as apps using UIWebView and WKWebView.
+**Please note:** iOS Safari on iPhone does not support the MediaSource API. This includes all browsers on iOS as well as apps using UIWebView and WKWebView.
 
-Safari browsers (iOS, ipadOS and macOS) do however have built-in HLS support through the plain video "tag" source URL. See the example below (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
+Safari browsers (iOS, iPadOS, and macOS) have built-in HLS support through the plain video "tag" source URL. See the example below (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
 
-When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
+When a platform has neither MediaSource nor native HLS support, the browser cannot play HLS.
 
-_Keep in mind that if the intention is to support HLS on multiple platforms, beyond those compatible with hls.js, the HLS streams need to strictly follow the specifications of RFC8216, especially if apps, smart TVs and set-top boxes are to be supported._
+_Keep in mind that if the intention is to support HLS on multiple platforms, beyond those compatible with hls.js, the HLS streams need to strictly follow the specifications of RFC8216, especially if apps, smart TVs, and set-top boxes are to be supported._
 
 Find a support matrix of the MediaSource API here: https://developer.mozilla.org/en-US/docs/Web/API/MediaSource
 
@@ -119,13 +118,9 @@ Find a support matrix of the MediaSource API here: https://developer.mozilla.org
 
 #### Alternative setup
 
-Note that the example code above will check for hls.js support _first_ and then
-fallback to check if the browser natively supports HLS. If you want to check for
-native browser support first, and then fallback to Hls.js you will want to swap
-those conditionals.
+Note that the example code above will check for hls.js support _first_ and then fallback to check if the browser natively supports HLS. To check for native browser support first and then fallback to Hls.js, swap these conditionals.
 
-The order of these checks depends on if you want to use hls.js whenever possible
-see [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-670021358) to understand some of the tradeoffs.
+See [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-670021358) to understand some of the tradeoffs.
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -153,13 +148,11 @@ see [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-67
 
 ## Video Control
 
-Video is controlled through HTML `<video>` element.
-
-HTMLVideoElement control and events could be used seamlessly.
+Video is controlled through HTML `<video>` element `HTMLVideoElement` methods, events and optional UI controls (`<video controls>`).
 
 ## Player Integration
 
-hls.js is (being) integrated in the following players:
+The following players integrate hls.js for HLS playback:
 
 - [JW Player](https://www.jwplayer.com)
 - [Akamai Adaptive Media Player (AMP)](https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
@@ -198,9 +191,9 @@ made by [gramk](https://github.com/gramk/chrome-hls), plays hls from address bar
 ## Dependencies
 
 No external JS libs are needed.
-Prepackaged build is included [with the releases](https://github.com/video-dev/hls.js/releases).
+A prepackaged build is included [with each release](https://github.com/video-dev/hls.js/releases).
 
-If you want to bundle the application yourself, use node
+Hls.js can be installed as a dependency using npm:
 
 ```
 npm install hls.js
@@ -247,7 +240,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Widevine CDM (beta/experimental) (see Shaka-package test-stream in demo)
 - CEA-608/708 captions
 - WebVTT subtitles
-- Alternate Audio Track Rendition (Master Playlist with alternative Audio) for VoD and Live playlists
+- Alternate Audio Track Rendition (Master Playlist with Alternative Audio) for VoD and Live playlists
 - Adaptive streaming
   - Manual & Auto Quality Switching
     - 3 Quality Switching modes are available (controllable through API means)
@@ -258,16 +251,16 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 - Accurate Seeking on VoD & Live (not limited to fragment or keyframe boundary)
 - Ability to seek in buffer and back buffer without redownloading segments
 - Built-in Analytics
-  - Every internal events could be monitored (Network Events,Video Events)
+  - All internal events can be monitored (Network Events, Video Events)
   - Playback session metrics are also exposed
 - Resilience to errors
   - Retry mechanism embedded in the library
-  - Recovery actions could be triggered fix fatal media or network errors
+  - Recovery actions can be triggered fix fatal media or network errors
 - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
 
 ### Supported M3U8 tags
 
-For details on the HLS format and these tags meanings see https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-08
+For details on the HLS format and these tags' meanings, see https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-08
 
 #### Manifest tags
 
@@ -276,7 +269,7 @@ For details on the HLS format and these tags meanings see https://tools.ietf.org
 - `#EXT-X-MEDIA:<attribute-list>`
 - `#EXT-X-SESSION-DATA:<attribute-list>`
 
-The following properties are added to their respective variants's attribute list, but are not implemented in variant selection and playback
+The following properties are added to their respective variants' attribute list but are not implemented in their selection and playback.
 
 - `VIDEO-RANGE` and `HDCP-LEVEL` (See [#2489](https://github.com/video-dev/hls.js/issues/2489))
 
@@ -302,7 +295,7 @@ The following properties are added to their respective variants's attribute list
 - `#EXT-X-SKIP:<attribute-list>`
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
 
-The following tags are added to their respective fragment's attribute list, but are not implemented in streaming and playback
+The following tags are added to their respective fragment's attribute list but are not implemented in streaming and playback.
 
 - `#EXT-X-DATERANGE:<attribute-list>` (Not added to metadata TextTracks. See [#2218](https://github.com/video-dev/hls.js/issues/2218))
 - `#EXT-X-BITRATE` (Not used in ABR controller)
@@ -310,7 +303,7 @@ The following tags are added to their respective fragment's attribute list, but 
 
 ### Not Supported
 
-For a complete list of issues see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependend on the runtime environment (for example HEV
+For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
 - Multiple `#EXT-X-MAP` tag support [#2279](https://github.com/video-dev/hls.js/issues/2279)
 - CMAF CC support [#2623](https://github.com/video-dev/hls.js/issues/2623)
@@ -333,7 +326,7 @@ hls.js is released under [Apache 2.0 License](LICENSE)
 
 Pull requests are welcome. Here is a quick guide on how to start.
 
-- First, checkout the repository and install required dependencies
+- First, checkout the repository and install the required dependencies
 
 ```sh
 git clone https://github.com/video-dev/hls.js.git
