@@ -157,7 +157,23 @@ Video is controlled through HTML `<video>` element.
 
 HTMLVideoElement control and events could be used seamlessly.
 
-## They use hls.js in production!
+## Player Integration
+
+hls.js is (being) integrated in the following players:
+
+- [JW Player](https://www.jwplayer.com)
+- [Akamai Adaptive Media Player (AMP)](https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
+- [Clappr](https://github.com/clappr/clappr)
+- [Flowplayer](https://www.flowplayer.org) through [flowplayer-hlsjs](https://github.com/flowplayer/flowplayer-hlsjs)
+- [MediaElement.js](https://www.mediaelementjs.com)
+- [Videojs](https://videojs.com) through [Videojs-hlsjs](https://github.com/benjipott/videojs-hlsjs)
+- [Videojs](https://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
+- [Videojs](https://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
+- [Fluid Player](https://www.fluidplayer.com)
+- [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
+- [CDNBye](https://github.com/cdnbye/hlsjs-p2p-engine), a p2p engine for hls.js powered by WebRTC Datachannel.
+
+### They use hls.js in production!
 
 |                                                                                                                                                              |                                                                                                                                                                         |                                                                                                                                                                |                                                                                                                                                                                                                                         |
 | :----------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
@@ -171,21 +187,6 @@ HTMLVideoElement control and events could be used seamlessly.
 |                          [<img src="https://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)                          | [<img src="https://static3.1tv.ru/assets/web/logo-ac67852f1625b338f9d1fb96be089d03557d50bfc5790d5f48dc56799f59dec6.svg" width="120" height="120">](https://www.1tv.ru/) |       [<img src="https://user-images.githubusercontent.com/1480052/40482633-c013ebce-5f55-11e8-96d5-b776415de0ce.png" width="120">](https://www.zdf.de)        |                                              [<img src="https://github.com/cdnbye/hlsjs-p2p-engine/blob/master/figs/cdnbye.png" width="120">](https://github.com/cdnbye/hlsjs-p2p-engine)                                               |
 |                       [<img src="https://streaming.cdn77.com/live-streaming-logo-dark.png" width="120">](https://streaming.cdn77.com/)                       |                                  [<img src="https://avatars0.githubusercontent.com/u/7442371?s=200&v=4" width="120">](https://r7.com/)                                  | [<img src="https://raw.githubusercontent.com/Novage/p2p-media-loader/gh-pages/images/p2pml-logo.png" width="120">](https://github.com/Novage/p2p-media-loader) |                                                              [<img src="https://avatars3.githubusercontent.com/u/45617200?s=400" width="120">](https://kayosports.com.au)                                                               |
 |    [<img src="https://avatars1.githubusercontent.com/u/5279615?s=400&u=9771a216836c613f1edf4afe71cfc69d4c5657ed&v=4" width="120">](https://flosports.tv)     |                                                                                                                                                                         |                                                                                                                                                                |                                                                                                                                                                                                                                         |
-
-## Player Integration
-
-hls.js is (being) integrated in the following players:
-
-- [Akamai Adaptive Media Player (AMP)](https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
-- [Clappr](https://github.com/clappr/clappr)
-- [Flowplayer](https://www.flowplayer.org) through [flowplayer-hlsjs](https://github.com/flowplayer/flowplayer-hlsjs)
-- [MediaElement.js](https://www.mediaelementjs.com)
-- [Videojs](https://videojs.com) through [Videojs-hlsjs](https://github.com/benjipott/videojs-hlsjs)
-- [Videojs](https://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
-- [Videojs](https://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
-- [Fluid Player](https://www.fluidplayer.com)
-- [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
-- [CDNBye](https://github.com/cdnbye/hlsjs-p2p-engine), a p2p engine for hls.js powered by WebRTC Datachannel.
 
 ## Chrome/Firefox integration
 
@@ -222,12 +223,6 @@ Or type
 ```sh
 npm install --save hls.js
 ```
-
-### Server-side-rendering (SSR) and `require` from a Node.js runtime
-
-We support this now. You can safely require this library in Node and absolutely nothing will happen :) See https://github.com/video-dev/hls.js/pull/1841
-
-(This is also known as "Universal builds" and "isomorphic apps")
 
 ## CORS
 
@@ -270,22 +265,22 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Recovery actions could be triggered fix fatal media or network errors
 - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
 
-## Not Supported (Yet)
-
-- MP3 Elementary Stream in Edge for Windows 10+
-
 ### Supported M3U8 tags
 
-For details on the HLS format and these tags meanings see https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-07
+For details on the HLS format and these tags meanings see https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-08
 
-Manifest tags
+#### Manifest tags
 
 - `#EXT-X-STREAM-INF:<attribute-list>`
   `<URI>`
 - `#EXT-X-MEDIA:<attribute-list>`
 - `#EXT-X-SESSION-DATA:<attribute-list>`
 
-Playlist tags
+The following properties are added to their respective variants's attribute list, but are not implemented in variant selection and playback
+
+- `VIDEO-RANGE` and `HDCP-LEVEL` (See [#2489](https://github.com/video-dev/hls.js/issues/2489))
+
+#### Playlist tags
 
 - `#EXTM3U`
 - `#EXT-X-VERSION=<n>`
@@ -297,7 +292,7 @@ Playlist tags
 - `#EXT-X-DISCONTINUITY-SEQUENCE=<n>`
 - `#EXT-X-BYTERANGE=<n>[@<o>]`
 - `#EXT-X-MAP:<attribute-list>`
-- `#EXT-X-KEY:<attribute-list>`
+- `#EXT-X-KEY:<attribute-list>` (`METHOD=SAMPLE-AES` is only supports with MPEG-2 TS segments)
 - `#EXT-X-PROGRAM-DATE-TIME:<attribute-list>`
 - `#EXT-X-START:TIME-OFFSET=<n>`
 - `#EXT-X-SERVER-CONTROL:<attribute-list>`
@@ -306,10 +301,28 @@ Playlist tags
 - `#EXT-X-PRELOAD-HINT:<attribute-list>`
 - `#EXT-X-SKIP:<attribute-list>`
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
-- The following tags are added to their respective fragment's attribute list
-  - `#EXT-X-DATERANGE:<attribute-list>`
-  - `#EXT-X-BITRATE`
-  - `#EXT-X-GAP`
+
+The following tags are added to their respective fragment's attribute list, but are not implemented in streaming and playback
+
+- `#EXT-X-DATERANGE:<attribute-list>` (Not added to metadata TextTracks. See [#2218](https://github.com/video-dev/hls.js/issues/2218))
+- `#EXT-X-BITRATE` (Not used in ABR controller)
+- `#EXT-X-GAP` (Not implemened. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
+
+### Not Supported
+
+For a complete list of issues see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependend on the runtime environment (for example HEV
+
+- Multiple `#EXT-X-MAP` tag support [#2279](https://github.com/video-dev/hls.js/issues/2279)
+- CMAF CC support [#2623](https://github.com/video-dev/hls.js/issues/2623)
+- `Emsg` Inband Timed Metadata for FMP4 (ID3 within Emsgv1) in "metadata" TextTracks [#2360](https://github.com/video-dev/hls.js/issues/2360)
+- `#EXT-X-DATERANGE` in "metadata" TextTracks [#2218](https://github.com/video-dev/hls.js/issues/2218)
+- `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
+- `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
+- Advance variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
+
+### Server-side-rendering (SSR) and `require` from a Node.js runtime
+
+You can safely require this library in Node and **absolutely nothing will happen**. A dummy object is exported so that requiring the library does not throw an error. Hls.js is not instantiable in Node.js. See [#1841](https://github.com/video-dev/hls.js/pull/1841) for more details.
 
 ## License
 
