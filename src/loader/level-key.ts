@@ -1,24 +1,33 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 
-export default class LevelKey {
+export class LevelKey {
   private _uri: string | null = null;
-
-  public baseuri: string;
-  public reluri: string;
   public method: string | null = null;
+  public keyFormat: string | null = null;
+  public keyFormatVersions: string | null = null;
+  public keyID: string | null = null;
   public key: Uint8Array | null = null;
   public iv: Uint8Array | null = null;
 
-  constructor (baseURI: string, relativeURI: string) {
-    this.baseuri = baseURI;
-    this.reluri = relativeURI;
+  static fromURL(baseUrl: string, relativeUrl: string): LevelKey {
+    return new LevelKey(baseUrl, relativeUrl);
   }
 
-  get uri () {
-    if (!this._uri && this.reluri) {
-      this._uri = buildAbsoluteURL(this.baseuri, this.reluri, { alwaysNormalize: true });
-    }
+  static fromURI(uri: string): LevelKey {
+    return new LevelKey(uri);
+  }
 
+  private constructor(absoluteOrBaseURI: string, relativeURL?: string) {
+    if (relativeURL) {
+      this._uri = buildAbsoluteURL(absoluteOrBaseURI, relativeURL, {
+        alwaysNormalize: true,
+      });
+    } else {
+      this._uri = absoluteOrBaseURI;
+    }
+  }
+
+  get uri() {
     return this._uri;
   }
 }

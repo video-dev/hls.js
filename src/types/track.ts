@@ -1,22 +1,15 @@
 export interface TrackSet {
-  audio?: AudioTrack
-  video?: VideoTrack
+  audio?: Track;
+  video?: Track;
+  audiovideo?: Track;
 }
 
-export interface AudioTrack {
-  buffer: SourceBuffer; // eslint-disable-line no-restricted-globals
+export interface Track {
+  id: 'audio' | 'main';
+  buffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
   container: string;
-  codec: string;
-  id: string;
+  codec?: string;
   initSegment?: Uint8Array;
-  levelCodec: string;
-}
-
-export interface VideoTrack {
-  buffer: SourceBuffer; // eslint-disable-line no-restricted-globals
-  container: string;
-  codec: string;
-  id: string;
-  initSegment?: Uint8Array;
-  levelCodec: string;
+  levelCodec?: string;
+  metadata?: any;
 }

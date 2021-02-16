@@ -3,7 +3,7 @@ import BinarySearch from '../../../src/utils/binary-search';
 describe('binary search util', function () {
   describe('search helper', function () {
     let list = null;
-    let buildComparisonFunction = function (itemToSearchFor) {
+    const buildComparisonFunction = function (itemToSearchFor) {
       return function (candidate) {
         if (candidate < itemToSearchFor) {
           return 1;
@@ -20,14 +20,20 @@ describe('binary search util', function () {
     });
     it('finds the element if it is present', function () {
       for (let i = 0; i < list.length; i++) {
-        let item = list[i];
-        let foundItem = BinarySearch.search(list, buildComparisonFunction(item));
+        const item = list[i];
+        const foundItem = BinarySearch.search(
+          list,
+          buildComparisonFunction(item)
+        );
         expect(foundItem).to.equal(item);
       }
     });
     it('does not find the element if it is not present', function () {
-      let item = 1000;
-      let foundItem = BinarySearch.search(list, buildComparisonFunction(item));
+      const item = 1000;
+      const foundItem = BinarySearch.search(
+        list,
+        buildComparisonFunction(item)
+      );
       expect(foundItem).to.not.exist;
     });
   });

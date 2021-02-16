@@ -2,7 +2,8 @@ header {
   text-align: center;
 }
 
-th, td {
+th,
+td {
   padding: 15px;
 }
 
@@ -22,17 +23,24 @@ select option {
   float: right;
 }
 
+.innerControls.permalink {
+  display: inline-block;
+}
+
 @media (prefers-color-scheme: dark) {
   body {
     color: #ddd;
     background-color: #111;
   }
 
-  button, optgroup, select {
+  button,
+  optgroup,
+  select {
     background-color: rgb(0, 40, 70);
   }
 
-  input, textarea {
+  input,
+  textarea {
     background-color: #222;
   }
 
@@ -153,7 +161,7 @@ select option {
   width: 720px;
   margin-left: auto;
   margin-right: auto;
-  display: block
+  display: block;
 }
 
 .center {
@@ -162,12 +170,12 @@ select option {
   overflow: hidden;
   margin-left: auto;
   margin-right: auto;
-  display: block
+  display: block;
 }
 
 #toggleButtons button {
   width: 16%;
-  display : inline-block;
+  display: inline-block;
   text-align: center;
   font-size: 10pt;
   font-weight: bolder;
@@ -179,16 +187,15 @@ select option {
 
 #statusOut {
   height: auto;
-  max-height: 4em;
+  max-height: calc((17px * 3) + 19px);
   overflow: auto;
 }
 
 #errorOut {
   height: auto;
-  max-height: 4em;
+  max-height: calc((17px * 3) + 19px);
   overflow: auto;
 }
-
 
 #streamURL,
 #streamSelect {
@@ -206,11 +213,8 @@ select option {
 }
 
 #StreamPermalink {
-  flex: 1 1 auto;
-  min-width: 0;
   overflow-wrap: break-word;
-  overflow: hidden;  /* for IE11 */
-  padding: 10px 0 0 10px;
+  overflow: hidden; /* for IE11 */
 }
 
 #StreamPermalink a {
@@ -233,5 +237,4 @@ select option {
     border-top: 0;
     border-left: solid 1px #ccc;
   }
-
 }

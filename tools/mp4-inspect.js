@@ -23,7 +23,7 @@ var // this is the start of a huge multi-line var decl
    * @param buffer {Uint8Array} a four-byte buffer to translate
    * @return {string} the corresponding string
    */
-  parseType = function(buffer) {
+  parseType = function (buffer) {
     var result = '';
     result += String.fromCharCode(buffer[0]);
     result += String.fromCharCode(buffer[1]);
@@ -31,10 +31,10 @@ var // this is the start of a huge multi-line var decl
     result += String.fromCharCode(buffer[3]);
     return result;
   },
-  parseMp4Date = function(seconds) {
+  parseMp4Date = function (seconds) {
     return new Date(seconds * 1000 - 2082844800000);
   },
-  parseSampleFlags = function(flags) {
+  parseSampleFlags = function (flags) {
     return {
       isLeading: (flags[0] & 0x0c) >>> 2,
       dependsOn: flags[0] & 0x03,
@@ -42,66 +42,67 @@ var // this is the start of a huge multi-line var decl
       hasRedundancy: (flags[1] & 0x30) >>> 4,
       paddingValue: (flags[1] & 0x0e) >>> 1,
       isNonSyncSample: flags[1] & 0x01,
-      degradationPriority: (flags[2] << 8) | flags[3]
+      degradationPriority: (flags[2] << 8) | flags[3],
     };
   },
-  nalParse = function(avcStream) {
-    var
-      avcView = new DataView(avcStream.buffer, avcStream.byteOffset, avcStream.byteLength),
+  nalParse = function (avcStream) {
+    var avcView = new DataView(
+        avcStream.buffer,
+        avcStream.byteOffset,
+        avcStream.byteLength
+      ),
       result = [],
       i,
       length;
     for (i = 0; i < avcStream.length; i += length) {
       length = avcView.getUint32(i);
       i += 4;
-      switch(avcStream[i] & 0x1F) {
-      case 0x01:
-        result.push('NDR');
-        break;
-      case 0x05:
-        result.push('IDR');
-        break;
-      case 0x06:
-        result.push('SEI');
-        break;
-      case 0x07:
-        result.push('SPS');
-        break;
-      case 0x08:
-        result.push('PPS');
-        break;
-      case 0x09:
-        result.push('AUD');
-        break;
-      default:
-        result.push(avcStream[i] & 0x1F);
-        break;
+      switch (avcStream[i] & 0x1f) {
+        case 0x01:
+          result.push('NDR');
+          break;
+        case 0x05:
+          result.push('IDR');
+          break;
+        case 0x06:
+          result.push('SEI');
+          break;
+        case 0x07:
+          result.push('SPS');
+          break;
+        case 0x08:
+          result.push('PPS');
+          break;
+        case 0x09:
+          result.push('AUD');
+          break;
+        default:
+          result.push(avcStream[i] & 0x1f);
+          break;
       }
     }
     return result;
   },
-
   // registry of handlers for individual mp4 box types
   parse = {
     // codingname, not a first-class box type. stsd entries share the
     // same format as real boxes so the parsing infrastructure can be
     // shared
-    avc1: function(data) {
+    avc1: function (data) {
       var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
       return {
         dataReferenceIndex: view.getUint16(6),
-        width:  view.getUint16(24),
+        width: view.getUint16(24),
         height: view.getUint16(26),
-        horizresolution: view.getUint16(28) + (view.getUint16(30) / 16),
-        vertresolution: view.getUint16(32) + (view.getUint16(34) / 16),
+        horizresolution: view.getUint16(28) + view.getUint16(30) / 16,
+        vertresolution: view.getUint16(32) + view.getUint16(34) / 16,
         frameCount: view.getUint16(40),
         depth: view.getUint16(74),
-        config: mp4toJSON(data.subarray(78, data.byteLength))
+        config: mp4toJSON(data.subarray(78, data.byteLength)),
       };
     },
-    avcC: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    avcC: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         result = {
           configurationVersion: data[0],
           avcProfileIndication: data[1],
@@ -109,7 +110,7 @@ var // this is the start of a huge multi-line var decl
           avcLevelIndication: data[3],
           lengthSizeMinusOne: data[4] & 0x03,
           sps: [],
-          pps: []
+          pps: [],
         },
         numOfSequenceParameterSets = data[5] & 0x1f,
         numOfPictureParameterSets,
@@ -122,7 +123,9 @@ var // this is the start of a huge multi-line var decl
       for (i = 0; i < numOfSequenceParameterSets; i++) {
         nalSize = view.getUint16(offset);
         offset += 2;
-        result.sps.push(new Uint8Array(data.subarray(offset, offset + nalSize)));
+        result.sps.push(
+          new Uint8Array(data.subarray(offset, offset + nalSize))
+        );
         offset += nalSize;
       }
       // iterate past any PPSs
@@ -131,26 +134,27 @@ var // this is the start of a huge multi-line var decl
       for (i = 0; i < numOfPictureParameterSets; i++) {
         nalSize = view.getUint16(offset);
         offset += 2;
-        result.pps.push(new Uint8Array(data.subarray(offset, offset + nalSize)));
+        result.pps.push(
+          new Uint8Array(data.subarray(offset, offset + nalSize))
+        );
         offset += nalSize;
       }
       return result;
     },
-    btrt: function(data) {
+    btrt: function (data) {
       var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
       return {
         bufferSizeDB: view.getUint32(0),
         maxBitrate: view.getUint32(4),
-        avgBitrate: view.getUint32(8)
+        avgBitrate: view.getUint32(8),
       };
     },
-    ftyp: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    ftyp: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         result = {
           majorBrand: parseType(data.subarray(0, 4)),
           minorVersion: view.getUint32(4),
-          compatibleBrands: []
+          compatibleBrands: [],
         },
         i = 8;
       while (i < data.byteLength) {
@@ -159,26 +163,25 @@ var // this is the start of a huge multi-line var decl
       }
       return result;
     },
-    dinf: function(data) {
+    dinf: function (data) {
       return {
-        boxes: mp4toJSON(data)
+        boxes: mp4toJSON(data),
       };
     },
-    dref: function(data) {
+    dref: function (data) {
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),
-        dataReferences: mp4toJSON(data.subarray(8))
+        dataReferences: mp4toJSON(data.subarray(8)),
       };
     },
-    hdlr: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    hdlr: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         result = {
           version: view.getUint8(0),
           flags: new Uint8Array(data.subarray(1, 4)),
           handlerType: parseType(data.subarray(8, 12)),
-          name: ''
+          name: '',
         },
         i = 8;
 
@@ -197,21 +200,20 @@ var // this is the start of a huge multi-line var decl
 
       return result;
     },
-    mdat: function(data) {
+    mdat: function (data) {
       return {
         byteLength: data.byteLength,
-        nals: nalParse(data)
+        nals: nalParse(data),
       };
     },
-    mdhd: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    mdhd: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         i = 4,
         language,
         result = {
           version: view.getUint8(0),
           flags: new Uint8Array(data.subarray(1, 4)),
-          language: ''
+          language: '',
         };
       if (result.version === 1) {
         i += 4;
@@ -241,48 +243,45 @@ var // this is the start of a huge multi-line var decl
 
       return result;
     },
-    mdia: function(data) {
+    mdia: function (data) {
       return {
-        boxes: mp4toJSON(data)
+        boxes: mp4toJSON(data),
       };
     },
-    mfhd: function(data) {
+    mfhd: function (data) {
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),
-        sequenceNumber: (data[4] << 24) |
-          (data[5] << 16) |
-          (data[6] << 8) |
-          (data[7])
+        sequenceNumber:
+          (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7],
       };
     },
-    minf: function(data) {
+    minf: function (data) {
       return {
-        boxes: mp4toJSON(data)
+        boxes: mp4toJSON(data),
       };
     },
-    moof: function(data) {
+    moof: function (data) {
       return {
-        boxes: mp4toJSON(data)
+        boxes: mp4toJSON(data),
       };
     },
-    moov: function(data) {
+    moov: function (data) {
       return {
-        boxes: mp4toJSON(data)
+        boxes: mp4toJSON(data),
       };
     },
-    mvex: function(data) {
+    mvex: function (data) {
       return {
-        boxes: mp4toJSON(data)
+        boxes: mp4toJSON(data),
       };
     },
-    mvhd: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    mvhd: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         i = 4,
         result = {
           version: view.getUint8(0),
-          flags: new Uint8Array(data.subarray(1, 4))
+          flags: new Uint8Array(data.subarray(1, 4)),
         };
 
       if (result.version === 1) {
@@ -306,83 +305,82 @@ var // this is the start of a huge multi-line var decl
       i += 4;
 
       // convert fixed-point, base 16 back to a number
-      result.rate = view.getUint16(i) + (view.getUint16(i + 2) / 16);
+      result.rate = view.getUint16(i) + view.getUint16(i + 2) / 16;
       i += 4;
-      result.volume = view.getUint8(i) + (view.getUint8(i + 1) / 8);
+      result.volume = view.getUint8(i) + view.getUint8(i + 1) / 8;
       i += 2;
       i += 2;
       i += 2 * 4;
-      result.matrix = new Uint32Array(data.subarray(i, i + (9 * 4)));
+      result.matrix = new Uint32Array(data.subarray(i, i + 9 * 4));
       i += 9 * 4;
       i += 6 * 4;
       result.nextTrackId = view.getUint32(i);
       return result;
     },
-    pdin: function(data) {
+    pdin: function (data) {
       var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
       return {
         version: view.getUint8(0),
         flags: new Uint8Array(data.subarray(1, 4)),
         rate: view.getUint32(4),
-        initialDelay: view.getUint32(8)
+        initialDelay: view.getUint32(8),
       };
     },
-    sdtp: function(data) {
-      var
-        result = {
+    sdtp: function (data) {
+      var result = {
           version: data[0],
           flags: new Uint8Array(data.subarray(1, 4)),
-          samples: []
-        }, i;
+          samples: [],
+        },
+        i;
 
       for (i = 4; i < data.byteLength; i++) {
         result.samples.push({
           dependsOn: (data[i] & 0x30) >> 4,
           isDependedOn: (data[i] & 0x0c) >> 2,
-          hasRedundancy: data[i] & 0x03
+          hasRedundancy: data[i] & 0x03,
         });
       }
       return result;
     },
-    sidx: function(data) {
+    sidx: function (data) {
       var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
-          result = {
-            version: data[0],
-            flags: new Uint8Array(data.subarray(1, 4)),
-            references: [],
-            referenceId: view.getUint32(4),
-            timescale: view.getUint32(8),
-            earliestPresentationTime: view.getUint32(12),
-            firstOffset: view.getUint32(16)
-          },
-          referenceCount = view.getUint16(22),
-          i;
-
-      for (i = 24; referenceCount; i += 12, referenceCount-- ) {
-        result.references.push({
-          referenceType: (data[i] & 0x80) >>> 7,
-          referencedSize: view.getUint32(i) & 0x7FFFFFFF,
-          subsegmentDuration: view.getUint32(i + 4),
-          startsWithSap: !!(data[i + 8] & 0x80),
-          sapType: (data[i + 8] & 0x70) >>> 4,
-          sapDeltaTime: view.getUint32(i + 8) & 0x0FFFFFFF
-        });
-      }
-
-      return result;
-    },
-    stbl: function(data) {
-      return {
-        boxes: mp4toJSON(data)
-      };
-    },
-    stco: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         result = {
           version: data[0],
           flags: new Uint8Array(data.subarray(1, 4)),
-          chunkOffsets: []
+          references: [],
+          referenceId: view.getUint32(4),
+          timescale: view.getUint32(8),
+          earliestPresentationTime: view.getUint32(12),
+          firstOffset: view.getUint32(16),
+        },
+        referenceCount = view.getUint16(22),
+        i;
+
+      for (i = 24; referenceCount; i += 12, referenceCount--) {
+        result.references.push({
+          referenceType: (data[i] & 0x80) >>> 7,
+          referencedSize: view.getUint32(i) & 0x7fffffff,
+          subsegmentDuration: view.getUint32(i + 4),
+          startsWithSap: !!(data[i + 8] & 0x80),
+          sapType: (data[i + 8] & 0x70) >>> 4,
+          sapDeltaTime: view.getUint32(i + 8) & 0x0fffffff,
+        });
+      }
+
+      return result;
+    },
+    stbl: function (data) {
+      return {
+        boxes: mp4toJSON(data),
+      };
+    },
+    stco: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+        result = {
+          version: data[0],
+          flags: new Uint8Array(data.subarray(1, 4)),
+          chunkOffsets: [],
         },
         entryCount = view.getUint32(4),
         i;
@@ -391,40 +389,38 @@ var // this is the start of a huge multi-line var decl
       }
       return result;
     },
-    stsc: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    stsc: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         entryCount = view.getUint32(4),
         result = {
           version: data[0],
           flags: new Uint8Array(data.subarray(1, 4)),
-          sampleToChunks: []
+          sampleToChunks: [],
         },
         i;
       for (i = 8; entryCount; i += 12, entryCount--) {
         result.sampleToChunks.push({
           firstChunk: view.getUint32(i),
           samplesPerChunk: view.getUint32(i + 4),
-          sampleDescriptionIndex: view.getUint32(i + 8)
+          sampleDescriptionIndex: view.getUint32(i + 8),
         });
       }
       return result;
     },
-    stsd: function(data) {
+    stsd: function (data) {
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),
-        sampleDescriptions: mp4toJSON(data.subarray(8))
+        sampleDescriptions: mp4toJSON(data.subarray(8)),
       };
     },
-    stsz: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    stsz: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         result = {
           version: data[0],
           flags: new Uint8Array(data.subarray(1, 4)),
           sampleSize: view.getUint32(4),
-          entries: []
+          entries: [],
         },
         i;
       for (i = 12; i < data.byteLength; i += 4) {
@@ -432,13 +428,12 @@ var // this is the start of a huge multi-line var decl
       }
       return result;
     },
-    stts: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    stts: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         result = {
           version: data[0],
           flags: new Uint8Array(data.subarray(1, 4)),
-          timeToSamples: []
+          timeToSamples: [],
         },
         entryCount = view.getUint32(4),
         i;
@@ -446,28 +441,28 @@ var // this is the start of a huge multi-line var decl
       for (i = 8; entryCount; i += 8, entryCount--) {
         result.timeToSamples.push({
           sampleCount: view.getUint32(i),
-          sampleDelta: view.getUint32(i + 4)
+          sampleDelta: view.getUint32(i + 4),
         });
       }
       return result;
     },
-    styp: function(data) {
+    styp: function (data) {
       return parse.ftyp(data);
     },
-    tfdt: function(data) {
+    tfdt: function (data) {
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),
-        baseMediaDecodeTime: data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7]
+        baseMediaDecodeTime:
+          (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7],
       };
     },
-    tfhd: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    tfhd: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         result = {
           version: data[0],
           flags: new Uint8Array(data.subarray(1, 4)),
-          trackId: view.getUint32(4)
+          trackId: view.getUint32(4),
         },
         baseDataOffsetPresent = result.flags[2] & 0x01,
         sampleDescriptionIndexPresent = result.flags[2] & 0x02,
@@ -499,9 +494,8 @@ var // this is the start of a huge multi-line var decl
       }
       return result;
     },
-    tkhd: function(data) {
-      var
-        view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+    tkhd: function (data) {
+      var view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         i = 4,
         result = {
           version: view.getUint8(0),
@@ -534,27 +528,27 @@ var // this is the start of a huge multi-line var decl
       result.alternateGroup = view.getUint16(i);
       i += 2;
       // convert fixed-point, base 16 back to a number
-      result.volume = view.getUint8(i) + (view.getUint8(i + 1) / 8);
+      result.volume = view.getUint8(i) + view.getUint8(i + 1) / 8;
       i += 2;
       i += 2;
-      result.matrix = new Uint32Array(data.subarray(i, i + (9 * 4)));
+      result.matrix = new Uint32Array(data.subarray(i, i + 9 * 4));
       i += 9 * 4;
-      result.width = view.getUint16(i) + (view.getUint16(i + 2) / 16);
+      result.width = view.getUint16(i) + view.getUint16(i + 2) / 16;
       i += 4;
-      result.height = view.getUint16(i) + (view.getUint16(i + 2) / 16);
+      result.height = view.getUint16(i) + view.getUint16(i + 2) / 16;
       return result;
     },
-    traf: function(data) {
+    traf: function (data) {
       return {
-        boxes: mp4toJSON(data)
+        boxes: mp4toJSON(data),
       };
     },
-    trak: function(data) {
+    trak: function (data) {
       return {
-        boxes: mp4toJSON(data)
+        boxes: mp4toJSON(data),
       };
     },
-    trex: function(data) {
+    trex: function (data) {
       var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
       return {
         version: data[0],
@@ -568,15 +562,14 @@ var // this is the start of a huge multi-line var decl
         sampleHasRedundancy: (data[21] & 0x30) >> 4,
         samplePaddingValue: (data[21] & 0x0e) >> 1,
         sampleIsDifferenceSample: !!(data[21] & 0x01),
-        sampleDegradationPriority: view.getUint16(22)
+        sampleDegradationPriority: view.getUint16(22),
       };
     },
-    trun: function(data) {
-      var
-        result = {
+    trun: function (data) {
+      var result = {
           version: data[0],
           flags: new Uint8Array(data.subarray(1, 4)),
-          samples: []
+          samples: [],
         },
         view = new DataView(data.buffer, data.byteOffset, data.byteLength),
         dataOffsetPresent = result.flags[2] & 0x01,
@@ -595,7 +588,7 @@ var // this is the start of a huge multi-line var decl
       }
       if (firstSampleFlagsPresent && sampleCount) {
         sample = {
-          flags: parseSampleFlags(data.subarray(offset, offset + 4))
+          flags: parseSampleFlags(data.subarray(offset, offset + 4)),
         };
         offset += 4;
         if (sampleDurationPresent) {
@@ -635,13 +628,13 @@ var // this is the start of a huge multi-line var decl
       }
       return result;
     },
-    'url ': function(data) {
+    'url ': function (data) {
       return {
         version: data[0],
-        flags: new Uint8Array(data.subarray(1, 4))
+        flags: new Uint8Array(data.subarray(1, 4)),
       };
     },
-    vmhd: function(data) {
+    vmhd: function (data) {
       //var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
       return {
         version: data[0],
@@ -651,7 +644,7 @@ var // this is the start of a huge multi-line var decl
         //                          view.getUint16(8),
         //                          view.getUint16(10)])
       };
-    }
+    },
   };
 
 /**
@@ -660,9 +653,8 @@ var // this is the start of a huge multi-line var decl
  * @param data {Uint8Array} the binary data of the media to be inspected
  * @return {array} a javascript array of potentially nested box objects
  */
-var mp4toJSON = function(data) {
-  var
-    i = 0,
+var mp4toJSON = function (data) {
+  var i = 0,
     result = [],
     view = new DataView(data.buffer, data.byteOffset, data.byteLength),
     size,
@@ -672,16 +664,18 @@ var mp4toJSON = function(data) {
 
   while (i < data.byteLength) {
     // parse box data
-    size = view.getUint32(i),
-    type =  parseType(data.subarray(i + 4, i + 8));
+    (size = view.getUint32(i)), (type = parseType(data.subarray(i + 4, i + 8)));
     end = size > 1 ? i + size : data.byteLength;
 
     // parse type-specific data
-    box = (parse[type] || function(data) {
-      return {
-        data: data
-      };
-    })(data.subarray(i + 8, end));
+    box = (
+      parse[type] ||
+      function (data) {
+        return {
+          data: data,
+        };
+      }
+    )(data.subarray(i + 8, end));
     box.size = size;
     box.type = type;
 
@@ -693,7 +687,7 @@ var mp4toJSON = function(data) {
 };
 
 var MP4Inspect = {
-  mp4toJSON: mp4toJSON
+  mp4toJSON: mp4toJSON,
 };
 
 module.exports = MP4Inspect;
@@ -733,5 +727,3 @@ fs.readFile(resolvedPath, (err, data) => {
 
   console.log('\n' + JSON.stringify(result, null, 4));
 });
-
-

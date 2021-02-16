@@ -1,7 +1,8 @@
 import LevelController from '../../../src/controller/level-controller';
 import HlsMock from '../../mocks/hls.mock';
-import Event from '../../../src/events';
+import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import { Level } from '../../../src/types/level';
 
 describe('LevelController', function () {
   const sandbox = sinon.createSandbox();
@@ -12,6 +13,7 @@ describe('LevelController', function () {
   beforeEach(function () {
     hls = new HlsMock({}, sandbox);
     levelController = new LevelController(hls);
+    levelController.onParsedComplete = () => {};
     triggerSpy = hls.trigger;
   });
 
@@ -22,174 +24,247 @@ describe('LevelController', function () {
   });
 
   it('should trigger level switch when level is manually set', function () {
-    let data = {
+    const data = {
       audioTracks: [],
       levels: [
-        { bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } },
-        { bitrate: 246440, name: '240', details: { totalduration: 10, fragments: [{}] } },
-        { bitrate: 460560, name: '380', details: { totalduration: 10, fragments: [{}] } },
-        { bitrate: 836280, name: '480', details: { totalduration: 10, fragments: [{}] } },
-        { bitrate: 2149280, name: '720', details: { totalduration: 10, fragments: [{}] } },
-        { bitrate: 6221600, name: '1080', details: { totalduration: 10, fragments: [{}] } }
+        {
+          id: 1,
+          bitrate: 105000,
+          name: '144',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 2,
+          bitrate: 246440,
+          name: '240',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 3,
+          bitrate: 460560,
+          name: '380',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 4,
+          bitrate: 836280,
+          name: '480',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 5,
+          bitrate: 2149280,
+          name: '720',
+          details: { totalduration: 10, fragments: [{}] },
+        },
+        {
+          id: 6,
+          bitrate: 6221600,
+          name: '1080',
+          details: { totalduration: 10, fragments: [{}] },
+        },
       ],
       networkDetails: '',
       subtitles: [],
-      url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+      url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     };
 
-    let nextLevel = 1;
+    const nextLevel = 1;
 
-    levelController.onManifestLoaded(data);
+    levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+    // First triggers "hlsManifestParsed"
     levelController.level = nextLevel;
-
-    expect(triggerSpy).to.have.been.calledWith(Event.LEVEL_SWITCHING, {
+    // Then triggers "levelSwitching"
+    expect(triggerSpy).to.have.been.calledWith(Events.LEVEL_SWITCHING, {
+      attrs: undefined,
+      audioCodec: undefined,
+      audioGroupIds: undefined,
       bitrate: 246440,
+      codecSet: '',
       details: data.levels[1].details,
-      fragmentError: false,
+      fragmentError: 0,
+      height: 0,
+      id: 2,
       level: 1,
       loadError: 0,
+      loaded: undefined,
+      maxBitrate: 246440,
       name: '240',
+      realBitrate: 0,
+      textGroupIds: undefined,
+      unknownCodecs: undefined,
+      uri: '',
       url: [undefined],
-      urlId: 0
+      urlId: 0,
+      videoCodec: undefined,
+      width: 0,
     });
   });
 
   describe('onManifestLoaded handler', function () {
     it('should trigger an error when no levels are found in the manifest', function () {
-      levelController.onManifestLoaded({
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         audioTracks: [],
         levels: [],
         networkDetails: '',
         subtitles: [],
-        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       });
 
-      expect(triggerSpy).to.have.been.calledWith(Event.ERROR, {
+      expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
         fatal: true,
-        url: undefined,
-        reason: 'no level with compatible codecs found in manifest'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+        reason: 'no level with compatible codecs found in manifest',
       });
     });
 
     it('should trigger hlsManifestParsed when levels are found in the manifest', function () {
-      let data = {
+      const data = {
         audioTracks: [],
         levels: [
-          { bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 246440, name: '240', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 460560, name: '380', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 836280, name: '480', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 2149280, name: '720', details: { totalduration: 10, fragments: [{}] } },
-          { bitrate: 6221600, name: '1080', details: { totalduration: 10, fragments: [{}] } }
+          {
+            bitrate: 105000,
+            name: '144',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 246440,
+            name: '240',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 460560,
+            name: '380',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 836280,
+            name: '480',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 2149280,
+            name: '720',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+          {
+            bitrate: 6221600,
+            name: '1080',
+            details: { totalduration: 10, fragments: [{}] },
+          },
         ],
         networkDetails: '',
         subtitles: [],
         stats: {},
-        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
-      expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
-        levels: data.levels,
+      expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
+        levels: data.levels.map((levelParsed) => new Level(levelParsed)),
         audioTracks: [],
+        subtitleTracks: [],
         firstLevel: 0,
         stats: {},
         audio: false,
         video: false,
-        altAudio: false
+        altAudio: false,
       });
     });
 
     it('should signal altAudio if present in the manifest without codec attributes', function () {
-      let data = {
-        audioTracks: [
-          { audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }
-        ],
+      const data = {
+        audioTracks: [{ audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }],
         levels: [
-          { bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } }
+          {
+            bitrate: 105000,
+            name: '144',
+            details: { totalduration: 10, fragments: [{}] },
+          },
         ],
         networkDetails: '',
         subtitles: [],
         stats: {},
-        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
-      levelController.onManifestLoaded(data);
-      expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
-        levels: data.levels,
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+      expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
+        levels: data.levels.map((levelParsed) => new Level(levelParsed)),
         audioTracks: data.audioTracks,
+        subtitleTracks: [],
         firstLevel: 0,
         stats: {},
         audio: false,
         video: false,
-        altAudio: true
+        altAudio: true,
       });
     });
 
     it('should signal altAudio if present in the manifest with codec attributes', function () {
-      let data = {
-        audioTracks: [
-          { audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }
-        ],
+      const data = {
+        audioTracks: [{ audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }],
         levels: [
           {
             bitrate: 105000,
             name: '144',
             videoCodec: 'avc1.42001e',
             audioCodec: 'mp4a.40.2',
-            details: { totalduration: 10, fragments: [{}] }
-          }
+            details: { totalduration: 10, fragments: [{}] },
+          },
         ],
         networkDetails: '',
         subtitles: [],
         stats: {},
-        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
-      levelController.onManifestLoaded(data);
-      expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
-        levels: data.levels,
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+      expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
+        levels: data.levels.map((levelParsed) => new Level(levelParsed)),
         audioTracks: data.audioTracks,
+        subtitleTracks: [],
         firstLevel: 0,
         stats: {},
         audio: true,
         video: true,
-        altAudio: true
+        altAudio: true,
       });
     });
 
     it('should not signal altAudio in audio-only streams', function () {
-      let data = {
+      const data = {
         audioTracks: [
           { audioCodec: 'mp4a.40.5', name: 'main' },
-          { audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }
+          { audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' },
         ],
         levels: [
           {
             bitrate: 105000,
             name: 'audio-only',
             audioCodec: 'mp4a.40.2',
-            details: { totalduration: 10, fragments: [{}] }
-          }
+            details: { totalduration: 10, fragments: [{}] },
+          },
         ],
         networkDetails: '',
         subtitles: [],
         stats: {},
-        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
-      levelController.onManifestLoaded(data);
-      expect(triggerSpy).to.have.been.calledWith(Event.MANIFEST_PARSED, {
-        levels: data.levels,
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+      expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
+        levels: data.levels.map((levelParsed) => new Level(levelParsed)),
         audioTracks: data.audioTracks,
+        subtitleTracks: [],
         firstLevel: 0,
         stats: {},
         audio: true,
         video: false,
-        altAudio: false
+        altAudio: false,
       });
     });
   });
@@ -199,19 +274,25 @@ describe('LevelController', function () {
     beforeEach(function () {
       data = {
         audioTracks: [],
-        levels: [{ bitrate: 105000, name: '144', details: { totalduration: 10, fragments: [{}] } }],
+        levels: [
+          {
+            bitrate: 105000,
+            name: '144',
+            details: { totalduration: 10, fragments: [{}] },
+          },
+        ],
         networkDetails: '',
         subtitles: [],
-        url: 'foo'
+        url: 'foo',
       };
     });
 
     it('signals video if there is a videoCodec signaled', function () {
       data.levels[0].videoCodec = 'avc1.42e01e';
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(true);
       expect(payload.audio).to.equal(false);
       expect(payload.altAudio).to.equal(false);
@@ -219,10 +300,10 @@ describe('LevelController', function () {
 
     it('signals audio if there is an audioCodec signaled', function () {
       data.levels[0].audioCodec = 'mp4a.40.5';
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(false);
       expect(payload.audio).to.equal(true);
       expect(payload.altAudio).to.equal(false);
@@ -238,8 +319,9 @@ describe('LevelController', function () {
           default: true,
           autoselect: true,
           forced: false,
-          url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/05845f51-c319-41ca-8e84-b84299925a0c/playlist.m3u8',
-          id: 0
+          url:
+            'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/05845f51-c319-41ca-8e84-b84299925a0c/playlist.m3u8',
+          id: 0,
         },
         {
           groupId: 'audio',
@@ -248,14 +330,14 @@ describe('LevelController', function () {
           default: true,
           autoselect: true,
           forced: false,
-          id: 0
-        }
+          id: 0,
+        },
       ];
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(true);
       expect(payload.audio).to.equal(false);
       expect(payload.altAudio).to.equal(true);
@@ -271,7 +353,7 @@ describe('LevelController', function () {
           default: true,
           autoselect: true,
           forced: false,
-          id: 0
+          id: 0,
         },
         {
           groupId: 'audio',
@@ -280,14 +362,14 @@ describe('LevelController', function () {
           default: true,
           autoselect: true,
           forced: false,
-          id: 0
-        }
+          id: 0,
+        },
       ];
 
-      levelController.onManifestLoaded(data);
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
       const { name, payload } = hls.getEventData(0);
-      expect(name).to.equal(Event.MANIFEST_PARSED);
+      expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(payload.video).to.equal(true);
       expect(payload.audio).to.equal(false);
       expect(payload.altAudio).to.equal(false);

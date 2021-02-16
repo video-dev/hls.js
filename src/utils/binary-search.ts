@@ -1,7 +1,6 @@
-type BinarySearchComparison < T > = (candidate: T) => -1 | 0 | 1;
+type BinarySearchComparison<T> = (candidate: T) => -1 | 0 | 1;
 
 const BinarySearch = {
-
   /**
    * Searches for an item in an array which matches a certain condition.
    * This requires the condition to only match one item in the array,
@@ -17,17 +16,20 @@ const BinarySearch = {
    *
    * @return {T | null} The object if it is found or null otherwise.
    */
-  search: function<T> (list: T[], comparisonFn: BinarySearchComparison<T>): T | null {
+  search: function <T>(
+    list: T[],
+    comparisonFn: BinarySearchComparison<T>
+  ): T | null {
     let minIndex: number = 0;
     let maxIndex: number = list.length - 1;
     let currentIndex: number | null = null;
     let currentElement: T | null = null;
 
     while (minIndex <= maxIndex) {
-      currentIndex = (minIndex + maxIndex) / 2 | 0;
+      currentIndex = ((minIndex + maxIndex) / 2) | 0;
       currentElement = list[currentIndex];
 
-      let comparisonResult = comparisonFn(currentElement);
+      const comparisonResult = comparisonFn(currentElement);
       if (comparisonResult > 0) {
         minIndex = currentIndex + 1;
       } else if (comparisonResult < 0) {
@@ -38,7 +40,7 @@ const BinarySearch = {
     }
 
     return null;
-  }
+  },
 };
 
 export default BinarySearch;

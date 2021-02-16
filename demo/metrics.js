@@ -12,15 +12,14 @@ var timeRangeMouseDown = false;
 $('#windowStart').val(windowStart);
 $('#windowEnd').val(windowEnd);
 
-function showMetrics () {
+function showMetrics() {
   metricsDisplayed = true;
   var width = window.innerWidth - 30;
-  $('#bufferWindow_c')[0].width =
-    $('#bitrateTimerange_c')[0].width =
-    $('#bufferTimerange_c')[0].width =
-    $('#videoEvent_c')[0].width =
-    $('#metricsButton')[0].width =
-    $('#loadEvent_c')[0].width = width;
+  $('#bufferWindow_c')[0].width = $('#bitrateTimerange_c')[0].width = $(
+    '#bufferTimerange_c'
+  )[0].width = $('#videoEvent_c')[0].width = $('#metricsButton')[0].width = $(
+    '#loadEvent_c'
+  )[0].width = width;
   $('#bufferWindow_c').show();
   $('#bitrateTimerange_c').show();
   $('#bufferTimerange_c').show();
@@ -29,7 +28,7 @@ function showMetrics () {
   $('#loadEvent_c').show();
 }
 
-function hideMetrics () {
+function hideMetrics() {
   metricsDisplayed = false;
   $('#bufferWindow_c').hide();
   $('#bitrateTimerange_c').hide();
@@ -39,17 +38,25 @@ function hideMetrics () {
   $('#loadEvent_c').hide();
 }
 
-function timeRangeSetSliding (duration) {
+function timeRangeSetSliding(duration) {
   windowDuration = duration;
   windowSliding = true;
   refreshCanvas();
 }
 
-function timeRangeCanvasonMouseDown (evt) {
+function timeRangeCanvasonMouseDown(evt) {
   var canvas = evt.currentTarget;
   var bRect = canvas.getBoundingClientRect();
-  var mouseX = Math.round((evt.clientX - bRect.left) * (canvas.width / bRect.width));
-  windowStart = Math.max(0, Math.round((mouseX - eventLeftMargin) * getWindowTimeRange().now / (canvas.width - eventLeftMargin)));
+  var mouseX = Math.round(
+    (evt.clientX - bRect.left) * (canvas.width / bRect.width)
+  );
+  windowStart = Math.max(
+    0,
+    Math.round(
+      ((mouseX - eventLeftMargin) * getWindowTimeRange().now) /
+        (canvas.width - eventLeftMargin)
+    )
+  );
   windowEnd = windowStart + 500;
   timeRangeMouseDown = true;
   windowSliding = false;
@@ -59,12 +66,20 @@ function timeRangeCanvasonMouseDown (evt) {
   refreshCanvas();
 }
 
-function timeRangeCanvasonMouseMove (evt) {
+function timeRangeCanvasonMouseMove(evt) {
   if (timeRangeMouseDown) {
     var canvas = evt.currentTarget;
     var bRect = canvas.getBoundingClientRect();
-    var mouseX = Math.round((evt.clientX - bRect.left) * (canvas.width / bRect.width));
-    var pos = Math.max(0, Math.round((mouseX - eventLeftMargin) * getWindowTimeRange().now / (canvas.width - eventLeftMargin)));
+    var mouseX = Math.round(
+      (evt.clientX - bRect.left) * (canvas.width / bRect.width)
+    );
+    var pos = Math.max(
+      0,
+      Math.round(
+        ((mouseX - eventLeftMargin) * getWindowTimeRange().now) /
+          (canvas.width - eventLeftMargin)
+      )
+    );
     if (pos < windowStart) {
       windowStart = pos;
     } else {
@@ -81,45 +96,86 @@ function timeRangeCanvasonMouseMove (evt) {
   }
 }
 
-function timeRangeCanvasonMouseUp (evt) {
+function timeRangeCanvasonMouseUp(evt) {
   timeRangeMouseDown = false;
 }
 
-function timeRangeCanvasonMouseOut (evt) {
+function timeRangeCanvasonMouseOut(evt) {
   timeRangeMouseDown = false;
 }
 
-function windowCanvasonMouseMove (evt) {
+function windowCanvasonMouseMove(evt) {
   var canvas = evt.currentTarget;
   var bRect = canvas.getBoundingClientRect();
-  var mouseX = Math.round((evt.clientX - bRect.left) * (canvas.width / bRect.width));
+  var mouseX = Math.round(
+    (evt.clientX - bRect.left) * (canvas.width / bRect.width)
+  );
   var timeRange = getWindowTimeRange();
-  windowFocus = timeRange.min + Math.max(0, Math.round((mouseX - eventLeftMargin) * (timeRange.max - timeRange.min) / (canvas.width - eventLeftMargin)));
+  windowFocus =
+    timeRange.min +
+    Math.max(
+      0,
+      Math.round(
+        ((mouseX - eventLeftMargin) * (timeRange.max - timeRange.min)) /
+          (canvas.width - eventLeftMargin)
+      )
+    );
   // console.log(windowFocus);
   refreshCanvas();
 }
 
-function refreshCanvas () {
+function refreshCanvas() {
   if (metricsDisplayed) {
     try {
       var windowTime = getWindowTimeRange();
-      canvasBufferTimeRangeUpdate($('#bufferTimerange_c')[0], 0, windowTime.now, windowTime.min, windowTime.max, events.buffer);
+      canvasBufferTimeRangeUpdate(
+        $('#bufferTimerange_c')[0],
+        0,
+        windowTime.now,
+        windowTime.min,
+        windowTime.max,
+        events.buffer
+      );
       if (windowTime.min !== 0 || windowTime.max !== windowTime.now) {
         $('#bufferWindow_c').show();
-        canvasBufferWindowUpdate($('#bufferWindow_c')[0], windowTime.min, windowTime.max, windowTime.focus, events.buffer);
+        canvasBufferWindowUpdate(
+          $('#bufferWindow_c')[0],
+          windowTime.min,
+          windowTime.max,
+          windowTime.focus,
+          events.buffer
+        );
       } else {
         $('#bufferWindow_c').hide();
       }
-      canvasBitrateEventUpdate($('#bitrateTimerange_c')[0], 0, windowTime.now, windowTime.min, windowTime.max, events.level, events.bitrate);
-      canvasVideoEventUpdate($('#videoEvent_c')[0], windowTime.min, windowTime.max, events.video);
-      canvasLoadEventUpdate($('#loadEvent_c')[0], windowTime.min, windowTime.max, events.load);
+      canvasBitrateEventUpdate(
+        $('#bitrateTimerange_c')[0],
+        0,
+        windowTime.now,
+        windowTime.min,
+        windowTime.max,
+        events.level,
+        events.bitrate
+      );
+      canvasVideoEventUpdate(
+        $('#videoEvent_c')[0],
+        windowTime.min,
+        windowTime.max,
+        events.video
+      );
+      canvasLoadEventUpdate(
+        $('#loadEvent_c')[0],
+        windowTime.min,
+        windowTime.max,
+        events.load
+      );
     } catch (err) {
       console.log('refreshCanvas error:' + err.message);
     }
   }
 }
 
-function getWindowTimeRange () {
+function getWindowTimeRange() {
   var tnow;
   var minTime;
   var maxTime;
@@ -141,13 +197,17 @@ function getWindowTimeRange () {
     minTime = windowStart;
     maxTime = windowEnd;
   }
-  if (windowFocus === undefined || windowFocus < minTime || windowFocus > maxTime) {
+  if (
+    windowFocus === undefined ||
+    windowFocus < minTime ||
+    windowFocus > maxTime
+  ) {
     windowFocus = minTime;
   }
   return { min: minTime, max: maxTime, now: tnow, focus: windowFocus };
 }
 
-function timeRangeZoomIn () {
+function timeRangeZoomIn() {
   if (windowSliding) {
     windowDuration /= 2;
   } else {
@@ -163,7 +223,7 @@ function timeRangeZoomIn () {
   refreshCanvas();
 }
 
-function timeRangeZoomOut () {
+function timeRangeZoomOut() {
   if (windowSliding) {
     windowDuration *= 2;
   } else {
@@ -171,14 +231,17 @@ function timeRangeZoomOut () {
     windowStart -= duration / 2;
     windowEnd += duration / 2;
     windowStart = Math.max(0, windowStart);
-    windowEnd = Math.min(events.buffer[events.buffer.length - 1].time, windowEnd);
+    windowEnd = Math.min(
+      events.buffer[events.buffer.length - 1].time,
+      windowEnd
+    );
   }
   $('#windowStart').val(windowStart);
   $('#windowEnd').val(windowEnd);
   refreshCanvas();
 }
 
-function timeRangeSlideLeft () {
+function timeRangeSlideLeft() {
   var duration = windowEnd - windowStart;
   windowStart -= duration / 4;
   windowEnd -= duration / 4;
@@ -189,7 +252,7 @@ function timeRangeSlideLeft () {
   refreshCanvas();
 }
 
-function timeRangeSlideRight () {
+function timeRangeSlideRight() {
   var duration = windowEnd - windowStart;
   windowStart += duration / 4;
   windowEnd += duration / 4;
