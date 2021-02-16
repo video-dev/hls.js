@@ -1,0 +1,18 @@
+{
+  "source": "./src",
+  "destination": "./api-docs",
+  "plugins": [
+    { "name": "@itsjamie/esdoc-standard-plugin" },
+    {
+      "name": "@itsjamie/esdoc-typescript-plugin",
+      "option": { "enable": true }
+    },
+    {
+      "name": "@itsjamie/esdoc-ecmascript-proposal-plugin",
+      "option": {
+        "objectRestSpread": true,
+        "optionalChaining": true
+      }
+    }
+  ]
+}

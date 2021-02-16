@@ -1,9 +1,26 @@
+# MacOS
 .DS_Store
-node_modules/*
-bower_components/*
-/streams.js
-lib
-npm-debug.log
 
-# ignore JetBrains
+# npm
+node_modules/*
+npm-debug.log
+bower_components/*
+
+# NYC
+.nyc_output/
+
+# Coverage
+coverage/
+
+# JetBrains
 .idea/*
+
+# Build
+/lib
+/dist
+/dist.zip
+/netlify
+/api-docs
+
+# eslint
+.eslintcache

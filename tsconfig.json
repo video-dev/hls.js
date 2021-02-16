@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig-lib.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": false
+  },
+  "include": ["src/**/*", "tests/unit/**/*", "demo/**/*"]
+}

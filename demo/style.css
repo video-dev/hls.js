@@ -1,0 +1,240 @@
+header {
+  text-align: center;
+}
+
+th,
+td {
+  padding: 15px;
+}
+
+select {
+  padding: 2px 15px;
+  background-color: rgb(181, 222, 255);
+  font-weight: 600;
+  padding: 5px 0;
+}
+
+select option {
+  font-size: 11px;
+}
+
+.innerControls input {
+  font-weight: normal;
+  float: right;
+}
+
+.innerControls.permalink {
+  display: inline-block;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #ddd;
+    background-color: #111;
+  }
+
+  button,
+  optgroup,
+  select {
+    background-color: rgb(0, 40, 70);
+  }
+
+  input,
+  textarea {
+    background-color: #222;
+  }
+
+  label {
+    font-weight: initial;
+  }
+
+  a {
+    color: #337ab7;
+  }
+
+  pre {
+    background-color: #050505;
+    border-color: #333;
+    color: #ccc;
+  }
+
+  .ace-github {
+    background: #000;
+    color: #fff;
+  }
+
+  .ace-github .ace_gutter {
+    background: #181818;
+    color: #888;
+  }
+
+  .ace-github .ace_marker-layer .ace_active-line {
+    background: #111;
+  }
+
+  .ace-github.ace_focus .ace_marker-layer .ace_active-line {
+    background: #321;
+  }
+
+  div.config-editor-commands {
+    background-color: #444;
+    border-color: #333;
+  }
+
+  button.btn {
+    color: #050505;
+  }
+
+  canvas {
+    background: #bbb;
+  }
+}
+
+#controls {
+  display: flex;
+  flex-direction: column;
+  width: 80%;
+  max-width: 1200px;
+  margin: 0 auto 20px auto;
+  border: 1px solid #606060;
+  overflow: hidden;
+}
+
+.demo-controls-wrapper {
+  flex: 1 1 auto;
+  max-width: 100%;
+  padding: 5px 5px 0 3px;
+}
+
+.config-editor-wrapper {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  border-top: solid 1px #ccc;
+  height: 256px;
+}
+
+.config-editor-container {
+  flex: 1 1 auto;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#config-editor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.config-editor-commands {
+  flex: 1 1 auto;
+  background-color: #ddd;
+  border-top: solid 1px #ccc;
+  padding: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.config-editor-commands label {
+  margin-bottom: 0;
+}
+
+.config-editor-commands button {
+  padding: 5px 8px;
+  font-size: 14px;
+}
+
+.innerControls {
+  display: flex;
+  font-size: 12px;
+  align-items: center;
+  margin-bottom: 5px;
+  padding-left: 5px;
+  justify-content: space-between;
+}
+
+.videoCentered {
+  width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+.center {
+  width: 70%;
+  min-width: 615px;
+  overflow: hidden;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+#toggleButtons button {
+  width: 16%;
+  display: inline-block;
+  text-align: center;
+  font-size: 10pt;
+  font-weight: bolder;
+  background-color: rgb(181, 222, 255);
+  padding: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#statusOut {
+  height: auto;
+  max-height: calc((17px * 3) + 19px);
+  overflow: auto;
+}
+
+#errorOut {
+  height: auto;
+  max-height: calc((17px * 3) + 19px);
+  overflow: auto;
+}
+
+#streamURL,
+#streamSelect {
+  width: calc(100% - 4px);
+  margin-left: 3px;
+}
+
+#streamURL {
+  margin-bottom: 10px;
+  padding-left: 3px;
+}
+
+#streamSelect {
+  padding: 5px 0;
+}
+
+#StreamPermalink {
+  overflow-wrap: break-word;
+  overflow: hidden; /* for IE11 */
+}
+
+#StreamPermalink a {
+  font-size: 10px;
+  font-family: monospace;
+}
+
+/* Small devices (portrait tablets and large phones, 600px and up) */
+@media only screen and (min-width: 600px) {
+  #controls {
+    flex-direction: row;
+  }
+
+  .demo-controls-wrapper {
+    max-width: 50%;
+  }
+
+  .config-editor-wrapper {
+    height: auto;
+    border-top: 0;
+    border-left: solid 1px #ccc;
+  }
+}
