@@ -1359,9 +1359,9 @@ Full list of Events is available below:
   - data: { tracks : { audio? : `[Track]`, video? : `[Track]`, audiovideo?: `[Track]` } }
     interface Track { id: 'audio' | 'main', buffer?: SourceBuffer, container: string, codec?: string, initSegment?: Uint8Array, levelCodec?: string, metadata?: any }
 - `Hls.Events.BUFFER_APPENDING` - fired when we append a segment to the buffer
-- data: { type, data, frag, chunkMeta }
+- data: { parent, type, frag, part, chunkMeta, data }
 - `Hls.Events.BUFFER_APPENDED` - fired when we are done with appending a media segment to the buffer
-  - data: { frag, parent : playlist type triggered `BUFFER_APPENDING`, timeRanges : { video?: TimeRange, audio?: TimeRange, audiovideo?: TimeRange }, chunkMeta }
+  - data: { parent : playlist type triggered `BUFFER_APPENDING`, type, frag, part, chunkMeta, timeRanges : { video?: TimeRange, audio?: TimeRange, audiovideo?: TimeRange } }
 - `Hls.Events.BUFFER_EOS` - fired when the stream is finished and we want to notify the media buffer that there will be no more data
   - data: { type: SourceBufferName }
 - `Hls.Events.BUFFER_FLUSHING` - fired when the media buffer should be flushed

@@ -363,11 +363,12 @@ export default class BufferController implements ComponentAPI {
         }
         this.appendError = 0;
         this.hls.trigger(Events.BUFFER_APPENDED, {
-          parent: frag.type,
-          timeRanges,
+          type,
           frag,
           part,
           chunkMeta,
+          parent: frag.type,
+          timeRanges,
         });
       },
       onError: (err) => {

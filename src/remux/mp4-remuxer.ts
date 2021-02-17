@@ -985,6 +985,8 @@ export default class MP4Remuxer implements Remuxer {
       nb: nbSamples,
     };
 
+    this.isAudioContiguous = true;
+
     console.assert(mdat.length, 'MDAT length must not be zero');
     return audioData;
   }
