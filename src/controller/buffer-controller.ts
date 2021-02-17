@@ -484,7 +484,7 @@ export default class BufferController implements ComponentAPI {
     }
 
     this.blockBuffers(onUnblocked, buffersAppendedTo);
-    this.flushLiveBackBuffer();
+    this.flushBackBuffer();
   }
 
   // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
@@ -527,21 +527,25 @@ export default class BufferController implements ComponentAPI {
     }
   }
 
-  flushLiveBackBuffer() {
-    // clear back buffer for live only
+  flushBackBuffer() {
     const { hls, details, media, sourceBuffer } = this;
-    if (!media || details === null || details.live === false) {
+    if (!media || details === null) {
       return;
     }
 
-    const liveBackBufferLength = hls.config.liveBackBufferLength;
-    if (!Number.isFinite(liveBackBufferLength) || liveBackBufferLength < 0) {
+    // Support for deprecated liveBackBufferLength
+    const backBufferLength =
+      details.live && hls.config.liveBackBufferLength !== null
+        ? hls.config.liveBackBufferLength
+        : hls.config.backBufferLength;
+
+    if (!Number.isFinite(backBufferLength) || backBufferLength < 0) {
       return;
     }
 
     const currentTime = media.currentTime;
     const targetBackBufferPosition =
-      currentTime - Math.max(liveBackBufferLength, details.levelTargetDuration);
+      currentTime - Math.max(backBufferLength, details.levelTargetDuration);
     this.getSourceBufferTypes().forEach((type: SourceBufferName) => {
       const sb = sourceBuffer[type];
       if (sb) {
@@ -551,9 +555,15 @@ export default class BufferController implements ComponentAPI {
           buffered.length > 0 &&
           targetBackBufferPosition > buffered.start(0)
         ) {
+          hls.trigger(Events.BACK_BUFFER_REACHED, {
+            bufferEnd: targetBackBufferPosition,
+          });
+
+          // Support for deprecated event:
           hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
             bufferEnd: targetBackBufferPosition,
           });
+
           hls.trigger(Events.BUFFER_FLUSHING, {
             startOffset: 0,
             endOffset: targetBackBufferPosition,

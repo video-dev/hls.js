@@ -25,6 +25,7 @@
   - [`defaultAudioCodec`](#defaultaudiocodec)
   - [`initialLiveManifestSize`](#initiallivemanifestsize)
   - [`maxBufferLength`](#maxbufferlength)
+  - [`backBufferLength`](#backbufferlength)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
@@ -41,7 +42,7 @@
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`maxLiveSyncPlaybackRate`](#maxLiveSyncPlaybackRate)
   - [`liveDurationInfinity`](#livedurationinfinity)
-  - [`liveBackBufferLength`](#livebackbufferlength)
+  - [`liveBackBufferLength`](#livebackbufferlength) (deprecated)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -324,6 +325,7 @@ var config = {
   initialLiveManifestSize: 1,
   maxBufferLength: 30,
   maxMaxBufferLength: 600,
+  backBufferLength: Infinity,
   maxBufferSize: 60 * 1000 * 1000,
   maxBufferHole: 0.5,
   highBufferWatchdogPeriod: 2,
@@ -333,7 +335,6 @@ var config = {
   liveSyncDurationCount: 3,
   liveMaxLatencyDurationCount: Infinity,
   liveDurationInfinity: false,
-  liveBackBufferLength: Infinity,
   enableWorker: true,
   enableSoftwareAES: true,
   manifestLoadingTimeOut: 10000,
@@ -459,6 +460,12 @@ number of segments needed to start a playback of Live stream. Buffering will beg
 
 Maximum buffer length in seconds. If buffer length is/become less than this value, a new fragment will be loaded.
 This is the guaranteed buffer length hls.js will try to reach, regardless of maxBufferSize.
+
+### `backBufferLength`
+
+(default: `Infinity`)
+
+The maximum duration of buffered media to keep once it has been played, in seconds. Any video buffered past this duration will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted.
 
 ### `maxBufferSize`
 
@@ -604,9 +611,7 @@ If you want to have a native Live UI in environments like iOS Safari, Safari, An
 
 ### `liveBackBufferLength`
 
-(default: `Infinity`)
-
-Sets the maximum length of the buffer, in seconds, to keep during a live stream. Any video buffered past this time will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted.
+`liveBackBufferLength` has been deprecated. Use `backBufferLength` instead.
 
 ### `enableWorker`
 

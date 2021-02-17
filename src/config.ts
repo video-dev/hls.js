@@ -37,8 +37,9 @@ export type ABRControllerConfig = {
 
 export type BufferControllerConfig = {
   appendErrorMaxRetry: number;
+  backBufferLength: number;
   liveDurationInfinity: boolean;
-  liveBackBufferLength: number;
+  liveBackBufferLength: number | null;
 };
 
 export type CapLevelControllerConfig = {
@@ -191,6 +192,7 @@ export const hlsDefaultConfig: HlsConfig = {
   capLevelToPlayerSize: false, // used by cap-level-controller
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
+  backBufferLength: Infinity, // used by buffer-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.1, // used by stream-controller
   highBufferWatchdogPeriod: 2, // used by stream-controller
@@ -203,7 +205,7 @@ export const hlsDefaultConfig: HlsConfig = {
   liveMaxLatencyDuration: undefined, // used by latency-controller
   maxLiveSyncPlaybackRate: 1, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
-  liveBackBufferLength: Infinity, // used by buffer-controller
+  liveBackBufferLength: null, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
   enableSoftwareAES: true, // used by decrypter
