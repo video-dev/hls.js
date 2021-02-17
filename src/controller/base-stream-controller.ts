@@ -661,10 +661,11 @@ export default class BaseStreamController
 
     const segment: BufferAppendingData = {
       type: data.type,
-      data: buffer,
       frag,
       part,
       chunkMeta,
+      parent: frag.type,
+      data: buffer,
     };
     this.hls.trigger(Events.BUFFER_APPENDING, segment);
 

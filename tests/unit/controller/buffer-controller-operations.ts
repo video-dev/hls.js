@@ -9,7 +9,7 @@ import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
 import { BufferAppendingData } from '../../../src/types/events';
 import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import { Fragment, ElementaryStreamTypes } from '../../../src/loader/fragment';
+import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { LevelDetails } from '../../../src/loader/level-details';
@@ -173,6 +173,7 @@ describe('BufferController', function () {
         const frag = new Fragment(PlaylistLevelType.MAIN, '');
         const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
         const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
           type: name,
           data: segmentData,
           frag,
@@ -200,6 +201,7 @@ describe('BufferController', function () {
           'BUFFER_APPENDED should be triggered upon completion of the operation'
         ).to.have.been.calledWith(Events.BUFFER_APPENDED, {
           parent: 'main',
+          type: name,
           timeRanges: {
             audio: buffers.audio.buffered,
             video: buffers.video.buffered,

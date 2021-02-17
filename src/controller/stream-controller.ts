@@ -1303,6 +1303,7 @@ export default class StreamController
           frag,
           part: null,
           chunkMeta,
+          parent: frag.type,
         });
       }
     });

@@ -569,6 +569,7 @@ function createBufferAppendedData(
     frag: new Fragment(PlaylistLevelType.MAIN, ''),
     part: null,
     parent: PlaylistLevelType.MAIN,
+    type: audio && video ? 'audiovideo' : video ? 'video' : 'audio',
     timeRanges: {
       video: createMockBuffer(video),
       audio: createMockBuffer(audio || video),
