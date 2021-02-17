@@ -901,6 +901,7 @@ export type {
   AudioTracksUpdatedData,
   AudioTrackSwitchedData,
   AudioTrackSwitchingData,
+  BackBufferData,
   BufferAppendedData,
   BufferAppendingData,
   BufferCodecsData,

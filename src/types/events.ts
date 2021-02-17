@@ -337,6 +337,11 @@ export interface KeyLoadedData {
   frag: Fragment;
 }
 
-export interface LiveBackBufferData {
+export interface BackBufferData {
   bufferEnd: number;
 }
+
+/**
+ * Deprecated; please use BackBufferData
+ */
+export interface LiveBackBufferData extends BackBufferData {}

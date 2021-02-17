@@ -29,7 +29,7 @@ const hlsjsDefaults = {
   debug: true,
   enableWorker: true,
   lowLatencyMode: true,
-  liveBackBufferLength: 60 * 1.5,
+  backBufferLength: 60 * 1.5,
 };
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
