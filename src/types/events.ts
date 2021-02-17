@@ -41,16 +41,18 @@ export interface BufferCreatedData {
 
 export interface BufferAppendingData {
   type: SourceBufferName;
-  data: Uint8Array;
   frag: Fragment;
   part: Part | null;
   chunkMeta: ChunkMetadata;
+  parent: PlaylistLevelType;
+  data: Uint8Array;
 }
 
 export interface BufferAppendedData {
-  chunkMeta: ChunkMetadata;
+  type: SourceBufferName;
   frag: Fragment;
   part: Part | null;
+  chunkMeta: ChunkMetadata;
   parent: PlaylistLevelType;
   timeRanges: {
     audio?: TimeRanges;

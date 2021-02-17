@@ -820,10 +820,11 @@ class AudioStreamController
     if (initSegment?.byteLength) {
       const segment: BufferAppendingData = {
         type: 'audio',
-        data: initSegment,
         frag,
         part: null,
         chunkMeta,
+        parent: frag.type,
+        data: initSegment,
       };
       this.hls.trigger(Events.BUFFER_APPENDING, segment);
     }

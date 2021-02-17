@@ -131,6 +131,8 @@ export interface BufferAppendedData {
         video?: TimeRanges;
         audiovideo?: TimeRanges;
     };
+    // (undocumented)
+    type: SourceBufferName;
 }
 
 // Warning: (ae-missing-release-tag) "BufferAppendingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -143,6 +145,8 @@ export interface BufferAppendingData {
     data: Uint8Array;
     // (undocumented)
     frag: Fragment;
+    // (undocumented)
+    parent: PlaylistLevelType;
     // (undocumented)
     part: Part | null;
     // (undocumented)
