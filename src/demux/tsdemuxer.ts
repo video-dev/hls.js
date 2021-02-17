@@ -249,7 +249,7 @@ class TSDemuxer implements Demuxer {
       this.remainderData = null;
     }
 
-    if (len < 188 && !flush) {
+    if ((len < 188 || !this.config.progressive) && !flush) {
       this.remainderData = data;
       return {
         audioTrack,
