@@ -249,7 +249,7 @@ class TSDemuxer implements Demuxer {
       this.remainderData = null;
     }
 
-    if ((len < 188 || !this.config.progressive) && !flush) {
+    if (len < 188 && !flush) {
       this.remainderData = data;
       return {
         audioTrack,
@@ -403,12 +403,14 @@ class TSDemuxer implements Demuxer {
     audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
 
-    return {
+    const demuxResult: DemuxerResult = {
       audioTrack,
       avcTrack,
       id3Track,
       textTrack: this._txtTrack,
     };
+    this.extractRemainingSamples(demuxResult);
+    return demuxResult;
   }
 
   public flush(): DemuxerResult | Promise<DemuxerResult> {
