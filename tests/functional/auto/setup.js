@@ -9,6 +9,7 @@ require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
 const useSauce = !!process.env.SAUCE || !!process.env.SAUCE_TUNNEL_ID;
+const HlsjsLightBuild = !!process.env.HLSJS_LIGHT;
 const chai = require('chai');
 const expect = chai.expect;
 
@@ -505,8 +506,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           console.log('Loading test page...');
         }
         try {
+          const testPageExt = HlsjsLightBuild ? '-light' : '';
           await browser.get(
-            `http://${hostname}:8000/tests/functional/auto/index.html`
+            `http://${hostname}:8000/tests/functional/auto/index${testPageExt}.html`
           );
         } catch (e) {
           throw new Error('failed to open test page');
@@ -560,12 +562,18 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     }
   });
 
-  Object.entries(streams)
+  const entries = Object.entries(streams);
+  if (HlsjsLightBuild) {
+    entries.length = 1;
+  }
+
+  entries
     .filter(([name, stream]) => !stream.skipFunctionalTests)
     .forEach(([name, stream]) => {
       const url = stream.url;
       const config = stream.config || {};
       if (
+        !HlsjsLightBuild ||
         !stream.blacklist_ua ||
         stream.blacklist_ua.indexOf(browserConfig.name) === -1
       ) {
@@ -574,14 +582,14 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           testLoadedData.bind(null, url, config)
         );
 
-        if (stream.startSeek) {
+        if (stream.startSeek && !HlsjsLightBuild) {
           it(
             `seek back to start and play for ${stream.description}`,
             testSeekBackToStart.bind(null, url, config)
           );
         }
 
-        if (stream.abr) {
+        if (stream.abr && !HlsjsLightBuild) {
           it(
             `should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`,
             testSmoothSwitch.bind(null, url, config)
@@ -593,7 +601,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
             `should seek near the end and receive video seeked event for ${stream.description}`,
             testSeekOnLive.bind(null, url, config)
           );
-        } else {
+        } else if (!HlsjsLightBuild) {
           it(
             `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
             testIdleBufferLength.bind(null, url, config)
