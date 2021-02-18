@@ -191,7 +191,7 @@ made by [gramk](https://github.com/gramk/chrome-hls), plays hls from address bar
 ## Dependencies
 
 No external JS libs are needed.
-A prepackaged build is included [with each release](https://github.com/video-dev/hls.js/releases).
+Prepackaged builds are included [with each release](https://github.com/video-dev/hls.js/releases).
 
 Hls.js can be installed as a dependency using npm:
 
@@ -204,8 +204,6 @@ or for the version from master (alpha)
 ```
 npm install hls.js@alpha
 ```
-
-**NOTE:** `hls.light.*.js` dist files do not include subtitling and alternate-audio features.
 
 ## Installation
 
@@ -380,11 +378,16 @@ npm run build -- --env dist # replace "dist" by other configuration name, see ab
 
 Note: The "demo" config is always built.
 
-Build with bundle analyzer (to help optimize build size)
+**NOTE:** `hls.light.*.js` dist files do not include EME, subtitles, or alternate-audio support. In addition,
+the following types are not available in the light build:
 
-```
-npm run build:analyze
-```
+- `AudioStreamController`
+- `AudioTrackController`
+- `CuesInterface`
+- `EMEController`
+- `SubtitleStreamController`
+- `SubtitleTrackController`
+- `TimelineController`
 
 ## Linter (ESlint)
 

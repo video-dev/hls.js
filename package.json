@@ -46,6 +46,7 @@
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
+    "test:func:light": "BABEL_ENV=development HLSJS_LIGHT=1 mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "test:func:sauce": "SAUCE=1 UA=safari OS='OS X 10.15' BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch"
