@@ -327,6 +327,7 @@ jobs:
       - name: run functional tests
         run: |
           npm run test:func
+          npm run test:func:light
         env:
           CI: true
           SAUCE_TUNNEL_ID: ${{ github.run_id }}-${{ matrix.config }}

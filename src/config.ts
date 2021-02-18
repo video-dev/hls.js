@@ -10,10 +10,11 @@ import FPSController from './controller/fps-controller';
 import EMEController from './controller/eme-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
-import { CuesInterface, newCue } from './utils/cues';
+import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { logger } from './utils/logger';
 
+import type { CuesInterface } from './utils/cues';
 import type { MediaKeyFunc } from './utils/mediakeys-helper';
 import type {
   FragmentLoaderContext,
@@ -274,7 +275,7 @@ export const hlsDefaultConfig: HlsConfig = {
 
 function timelineConfig(): TimelineControllerConfig {
   return {
-    cueHandler: { newCue }, // used by timeline-controller
+    cueHandler: Cues, // used by timeline-controller
     enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
     enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
     enableIMSC1: __USE_SUBTITLES__, // used by timeline-controller
