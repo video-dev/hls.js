@@ -111,9 +111,10 @@ export default class Hls implements HlsEventEmitter {
     // core controllers and network loaders
     const abrController = (this.abrController = new config.abrController(this)); // eslint-disable-line new-cap
     const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
+    // eslint-disable-next-line new-cap
     const capLevelController = (this.capLevelController = new config.capLevelController(
       this
-    )); // eslint-disable-line new-cap
+    ));
     const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
     const playListLoader = new PlaylistLoader(this);
     const keyLoader = new KeyLoader(this);

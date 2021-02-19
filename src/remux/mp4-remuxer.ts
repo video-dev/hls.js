@@ -96,6 +96,7 @@ export default class MP4Remuxer implements Remuxer {
       if (delta < -4294967296) {
         // 2^32, see PTSNormalize for reasoning, but we're hitting a rollover here, and we don't want that to impact the timeOffset calculation
         rolloverDetected = true;
+        // eslint-disable-next-line new-cap
         return PTSNormalize(minPTS, sample.pts);
       } else if (delta > 0) {
         return minPTS;
@@ -181,8 +182,10 @@ export default class MP4Remuxer implements Remuxer {
           // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
           // drift between audio and video streams
           const startPTS = this.getVideoStartPts(videoTrack.samples);
+          /* eslint-disable new-cap */
           const tsDelta =
             PTSNormalize(audioTrack.samples[0].pts, startPTS) - startPTS;
+          /* eslint-enable new-cap */
           const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
           audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
           videoTimeOffset += Math.max(0, -audiovideoTimestampDelta);
@@ -332,10 +335,12 @@ export default class MP4Remuxer implements Remuxer {
         timescale = videoTrack.inputTimeScale;
         const startPTS = this.getVideoStartPts(videoSamples);
         const startOffset = Math.round(timescale * timeOffset);
+        /* eslint-disable new-cap */
         initDTS = Math.min(
           initDTS as number,
           PTSNormalize(videoSamples[0].dts, startPTS) - startOffset
         );
+        /* eslint-enable new-cap */
         initPTS = Math.min(initPTS as number, startPTS - startOffset);
       }
     }
@@ -379,9 +384,11 @@ export default class MP4Remuxer implements Remuxer {
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
     if (!contiguous || nextAvcDts === null) {
       const pts = timeOffset * timeScale;
+      /* eslint-disable new-cap */
       const cts =
         inputSamples[0].pts -
         PTSNormalize(inputSamples[0].dts, inputSamples[0].pts);
+      /* eslint-enable new-cap */
       // if not contiguous, let's use target timeOffset
       nextAvcDts = pts - cts;
     }
@@ -390,8 +397,10 @@ export default class MP4Remuxer implements Remuxer {
     // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
     for (let i = 0; i < nbSamples; i++) {
       const sample = inputSamples[i];
+      /* eslint-disable new-cap */
       sample.pts = PTSNormalize(sample.pts - initPTS, nextAvcDts);
       sample.dts = PTSNormalize(sample.dts - initPTS, nextAvcDts);
+      /* eslint-enable new-cap */
       if (sample.dts > sample.pts) {
         const PTS_DTS_SHIFT_TOLERANCE_90KHZ = 90000 * 0.2;
         ptsDtsShift = Math.max(
@@ -701,18 +710,22 @@ export default class MP4Remuxer implements Remuxer {
         nextAudioPts > 0 &&
         ((accurateTimeOffset &&
           Math.abs(timeOffsetMpegTS - nextAudioPts) < 9000) ||
+          /* eslint-disable new-cap */
           Math.abs(
             PTSNormalize(inputSamples[0].pts - initPTS, timeOffsetMpegTS) -
               nextAudioPts
           ) <
             20 * inputSampleDuration)) as boolean);
+    /* eslint-enable new-cap */
 
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
+      /* eslint-disable new-cap */
       sample.pts = sample.dts = PTSNormalize(
         sample.pts - initPTS,
         timeOffsetMpegTS
       );
+      /* eslint-enable new-cap */
     });
 
     if (!contiguous || nextAudioPts < 0) {
@@ -1053,12 +1066,14 @@ export default class MP4Remuxer implements Remuxer {
       const sample = track.samples[index];
       // setting id3 pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
+      /* eslint-disable new-cap */
       sample.pts =
         PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale) /
         inputTimeScale;
       sample.dts =
         PTSNormalize(sample.dts - initDTS, timeOffset * inputTimeScale) /
         inputTimeScale;
+      /* eslint-enable new-cap */
     }
     const samples = track.samples;
     track.samples = [];
@@ -1082,9 +1097,11 @@ export default class MP4Remuxer implements Remuxer {
       const sample = track.samples[index];
       // setting text pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
+      /* eslint-disable new-cap */
       sample.pts =
         PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale) /
         inputTimeScale;
+      /* eslint-enable new-cap */
     }
     track.samples.sort((a, b) => a.pts - b.pts);
     const samples = track.samples;

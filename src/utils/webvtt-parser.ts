@@ -136,11 +136,13 @@ export function parseWebVTT(
 
     if (timestampMap) {
       const duration = cue.endTime - cue.startTime;
+      /* eslint-disable new-cap */
       const startTime =
         PTSNormalize(
           (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
           timeOffset * 90000
         ) / 90000;
+      /* eslint-enable new-cap */
       cue.startTime = startTime;
       cue.endTime = startTime + duration;
     }
