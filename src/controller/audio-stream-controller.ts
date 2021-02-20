@@ -590,10 +590,12 @@ class AudioStreamController
       );
       return;
     }
-    this.fragPrevious = frag;
-    if (this.audioSwitch && frag.sn !== 'initSegment') {
-      this.audioSwitch = false;
-      this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: this.trackId });
+    if (frag.sn !== 'initSegment') {
+      this.fragPrevious = frag;
+      if (this.audioSwitch) {
+        this.audioSwitch = false;
+        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: this.trackId });
+      }
     }
     this.fragBufferedComplete(frag, part);
   }

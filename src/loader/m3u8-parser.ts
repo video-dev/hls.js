@@ -490,6 +490,7 @@ export default class M3U8Parser {
       totalduration -= prevFrag.duration;
       level.fragmentHint = prevFrag;
     } else {
+      assignProgramDateTime(frag, prevFrag);
       level.fragmentHint = frag;
     }
     const fragmentLength = fragments.length;
