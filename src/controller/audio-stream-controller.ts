@@ -48,7 +48,6 @@ type WaitingForPTSData = {
 class AudioStreamController
   extends BaseStreamController
   implements NetworkComponentAPI {
-  private retryDate: number = 0;
   private videoBuffer: any | null = null;
   private videoTrackCC: number = -1;
   private waitingVideoCC: number = -1;
@@ -618,61 +617,8 @@ class AudioStreamController
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-        if (!data.fatal) {
-          const frag = data.frag;
-          // don't handle frag error not related to audio fragment
-          if (!frag || frag.type !== PlaylistLevelType.AUDIO) {
-            return;
-          }
-          const fragCurrent = this.fragCurrent;
-          console.assert(
-            fragCurrent &&
-              frag.sn === fragCurrent.sn &&
-              frag.level === fragCurrent.level &&
-              frag.urlId === fragCurrent.urlId, // FIXME: audio-group id
-            'Frag load error must match current frag to retry'
-          );
-          const config = this.config;
-          if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
-            if (!this.loadedmetadata) {
-              this.startFragRequested = false;
-              const details = this.levels
-                ? this.levels[frag.level].details
-                : null;
-              if (details?.live) {
-                // We can't afford to retry after a delay in a live scenario. Update the start position and return to IDLE.
-                this.startPosition = -1;
-                this.setStartPosition(details, 0);
-                this.state = State.IDLE;
-                return;
-              }
-            }
-            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            const delay = Math.min(
-              Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
-              config.fragLoadingMaxRetryTimeout
-            );
-            this.warn(`Frag loading failed, retry in ${delay} ms`);
-            this.retryDate = performance.now() + delay;
-            this.fragLoadError++;
-            this.state = State.FRAG_LOADING_WAITING_RETRY;
-          } else if (data.levelRetry) {
-            // Reset current fragment since audio track audio is essential and may not have a fail-over track
-            this.fragCurrent = null;
-            // Fragment errors that result in a level switch or redundant fail-over
-            // should reset the audio stream controller state to idle
-            this.fragLoadError = 0;
-            this.state = State.IDLE;
-          } else {
-            logger.error(
-              `${data.details} reaches max retry, redispatch as fatal ...`
-            );
-            // switch error to fatal
-            data.fatal = true;
-            this.hls.stopLoad();
-            this.state = State.ERROR;
-          }
-        }
+        // TODO: Skip fragments that do not belong to this.fragCurrent audio-group id
+        this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
         break;
       case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
       case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
