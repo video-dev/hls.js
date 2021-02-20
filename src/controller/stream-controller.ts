@@ -47,7 +47,6 @@ export default class StreamController
   private gapController: GapController | null = null;
   private level: number = -1;
   private _forceStartLoad: boolean = false;
-  private retryDate: number = 0;
   private altAudio: boolean = false;
   private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
@@ -854,66 +853,7 @@ export default class StreamController
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-        if (!data.fatal) {
-          const frag = data.frag;
-          // don't handle frag error not related to main fragment
-          if (!frag || frag.type !== PlaylistLevelType.MAIN) {
-            return;
-          }
-          const fragCurrent = this.fragCurrent;
-          console.assert(
-            fragCurrent &&
-              frag.sn === fragCurrent.sn &&
-              frag.level === fragCurrent.level &&
-              frag.urlId === fragCurrent.urlId,
-            'Frag load error must match current frag to retry'
-          );
-          const config = this.config;
-          // keep retrying until the limit will be reached
-          if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
-            // if loadedmetadata is not set, it means that we are emergency switch down on first frag
-            // in that case, reset startFragRequested flag
-            if (!this.loadedmetadata) {
-              this.startFragRequested = false;
-              const details = this.levels
-                ? this.levels[frag.level].details
-                : null;
-              if (details?.live) {
-                // We can't afford to retry after a delay in a live scenario. Update the start position and return to IDLE.
-                this.startPosition = -1;
-                this.setStartPosition(details, 0);
-                this.state = State.IDLE;
-                return;
-              } else {
-                this.nextLoadPosition = this.startPosition;
-              }
-            }
-            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            const delay = Math.min(
-              Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
-              config.fragLoadingMaxRetryTimeout
-            );
-            this.warn(
-              `Fragment ${frag.sn} of level ${frag.level} failed to load, retrying in ${delay}ms`
-            );
-            this.retryDate = self.performance.now() + delay;
-            this.fragLoadError++;
-            this.state = State.FRAG_LOADING_WAITING_RETRY;
-          } else if (data.levelRetry) {
-            // Fragment errors that result in a level switch or redundant fail-over
-            // should reset the stream controller state to idle
-            this.fragLoadError = 0;
-            this.state = State.IDLE;
-          } else {
-            logger.error(
-              `[stream-controller]: ${data.details} reaches max retry, redispatch as fatal ...`
-            );
-            // switch error to fatal
-            data.fatal = true;
-            this.hls.stopLoad();
-            this.state = State.ERROR;
-          }
-        }
+        this.onFragmentOrKeyLoadError(PlaylistLevelType.MAIN, data);
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
