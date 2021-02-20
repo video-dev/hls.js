@@ -842,7 +842,9 @@ export default class StreamController
     this.fragLastKbps = Math.round(
       (8 * stats.total) / (stats.buffering.end - stats.loading.first)
     );
-    this.fragPrevious = frag;
+    if (frag.sn !== 'initSegment') {
+      this.fragPrevious = frag;
+    }
     this.fragBufferedComplete(frag, part);
   }
 
@@ -876,7 +878,7 @@ export default class StreamController
             );
             // @ts-ignore - frag is potentially null according to TS here
             this.warn(
-              `Fragment ${frag?.sn} of level ${frag?.level} failed to load, retrying in ${delay}ms`
+              `Fragment ${frag.sn} of level ${frag.level} failed to load, retrying in ${delay}ms`
             );
             this.retryDate = self.performance.now() + delay;
             // retry loading state
@@ -884,7 +886,15 @@ export default class StreamController
             // in that case, reset startFragRequested flag
             if (!this.loadedmetadata) {
               this.startFragRequested = false;
-              this.nextLoadPosition = this.startPosition;
+              const details = this.levels
+                ? this.levels[frag.level].details
+                : null;
+              if (details?.live) {
+                this.startPosition = -1;
+                this.setStartPosition(details, 0);
+              } else {
+                this.nextLoadPosition = this.startPosition;
+              }
             }
             this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;

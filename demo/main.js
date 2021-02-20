@@ -1583,7 +1583,7 @@ function addChartEventListeners(hls) {
     chart
   );
   hls.on(
-    Hls.Events.MANIFEST_LOADED,
+    Hls.Events.MANIFEST_PARSED,
     (eventName, data) => {
       const { levels } = data;
       chart.removeType('level');

@@ -792,7 +792,8 @@ export default class BaseStreamController
           fragPrevious.endProgramDateTime,
           config.maxFragLookUpTolerance
         );
-      } else {
+      }
+      if (!frag) {
         // SN does not need to be accurate between renditions, but depending on the packaging it may be so.
         const targetSN = (fragPrevious.sn as number) + 1;
         if (
