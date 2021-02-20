@@ -871,17 +871,6 @@ export default class StreamController
           const config = this.config;
           // keep retrying until the limit will be reached
           if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
-            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            const delay = Math.min(
-              Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
-              config.fragLoadingMaxRetryTimeout
-            );
-            // @ts-ignore - frag is potentially null according to TS here
-            this.warn(
-              `Fragment ${frag.sn} of level ${frag.level} failed to load, retrying in ${delay}ms`
-            );
-            this.retryDate = self.performance.now() + delay;
-            // retry loading state
             // if loadedmetadata is not set, it means that we are emergency switch down on first frag
             // in that case, reset startFragRequested flag
             if (!this.loadedmetadata) {
@@ -890,12 +879,24 @@ export default class StreamController
                 ? this.levels[frag.level].details
                 : null;
               if (details?.live) {
+                // We can't afford to retry after a delay in a live scenario. Update the start position and return to IDLE.
                 this.startPosition = -1;
                 this.setStartPosition(details, 0);
+                this.state = State.IDLE;
+                return;
               } else {
                 this.nextLoadPosition = this.startPosition;
               }
             }
+            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+            const delay = Math.min(
+              Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
+              config.fragLoadingMaxRetryTimeout
+            );
+            this.warn(
+              `Fragment ${frag.sn} of level ${frag.level} failed to load, retrying in ${delay}ms`
+            );
+            this.retryDate = self.performance.now() + delay;
             this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else if (data.levelRetry) {
