@@ -1074,19 +1074,8 @@ export default class BaseStreamController
     const config = this.config;
     // keep retrying until the limit will be reached
     if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
-      // if loadedmetadata is not set, it means that we are emergency switch down on first frag
-      // in that case, reset startFragRequested flag
-      if (!this.loadedmetadata) {
-        this.startFragRequested = false;
-        const details = this.levels ? this.levels[frag.level].details : null;
-        if (details?.live) {
-          // We can't afford to retry after a delay in a live scenario. Update the start position and return to IDLE.
-          this.startPosition = -1;
-          this.setStartPosition(details, 0);
-          this.state = State.IDLE;
-          return;
-        }
-        this.nextLoadPosition = this.startPosition;
+      if (this.resetLiveStartWhenNotLoaded(frag.level)) {
+        return;
       }
       // exponential backoff capped to config.fragLoadingMaxRetryTimeout
       const delay = Math.min(
@@ -1117,6 +1106,24 @@ export default class BaseStreamController
       this.hls.stopLoad();
       this.state = State.ERROR;
     }
+  }
+
+  protected resetLiveStartWhenNotLoaded(level: number): boolean {
+    // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+    // in that case, reset startFragRequested flag
+    if (!this.loadedmetadata) {
+      this.startFragRequested = false;
+      const details = this.levels ? this.levels[level].details : null;
+      if (details?.live) {
+        // We can't afford to retry after a delay in a live scenario. Update the start position and return to IDLE.
+        this.startPosition = -1;
+        this.setStartPosition(details, 0);
+        this.state = State.IDLE;
+        return true;
+      }
+      this.nextLoadPosition = this.startPosition;
+    }
+    return false;
   }
 
   private updateLevelTiming(frag: Fragment, level: Level, partial: boolean) {

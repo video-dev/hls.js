@@ -1051,6 +1051,7 @@ export default class StreamController
       this.warn(
         `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
       );
+      this.resetLiveStartWhenNotLoaded(chunkMeta.level);
       return;
     }
     const { frag, part, level } = context;
