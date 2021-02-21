@@ -151,12 +151,29 @@ async function testSmoothSwitch(url, config) {
   const result = await browser.executeAsyncScript(
     function (url, config) {
       const callback = arguments[arguments.length - 1];
-      self.startStream(url, config, callback);
+      self.startStream(
+        url,
+        self.objectAssign(config, {
+          startLevel: 0,
+        }),
+        callback
+      );
+      self.hls.manualLevel = 0;
       const video = self.video;
       self.hls.once(self.Hls.Events.FRAG_CHANGED, function (eventName, data) {
         console.log(
           '[test] > ' + eventName + ' frag.level: ' + data.frag.level
         );
+        const highestLevel = self.hls.levels.length - 1;
+        if (highestLevel === 0) {
+          callback({
+            highestLevel,
+            currentTimeDelta: 0,
+            message: 'No adaptive variants',
+            logs: self.logString,
+          });
+          return;
+        }
         self.switchToHighestLevel('next');
       });
       self.hls.on(self.Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
@@ -171,7 +188,7 @@ async function testSmoothSwitch(url, config) {
               '[test] > currentTime delta: ' + (newCurrentTime - currentTime)
             );
             callback({
-              highestLevel: highestLevel,
+              highestLevel,
               currentTimeDelta: newCurrentTime - currentTime,
               paused,
               logs: self.logString,
@@ -573,50 +590,58 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       const url = stream.url;
       const config = stream.config || {};
       if (
-        !HlsjsLightBuild ||
-        !stream.blacklist_ua ||
-        stream.blacklist_ua.indexOf(browserConfig.name) === -1
+        stream.blacklist_ua &&
+        stream.blacklist_ua.some((browserInfo) => {
+          if (typeof browserInfo === 'string') {
+            return browserInfo === browserConfig.name;
+          }
+          return (
+            browserInfo.name === browserConfig.name &&
+            browserInfo.version === browserConfig.version
+          );
+        })
       ) {
+        return;
+      }
+      it(
+        `should receive video loadeddata event for ${stream.description}`,
+        testLoadedData.bind(null, url, config)
+      );
+
+      if (stream.startSeek && !HlsjsLightBuild) {
         it(
-          `should receive video loadeddata event for ${stream.description}`,
-          testLoadedData.bind(null, url, config)
+          `seek back to start and play for ${stream.description}`,
+          testSeekBackToStart.bind(null, url, config)
         );
+      }
 
-        if (stream.startSeek && !HlsjsLightBuild) {
-          it(
-            `seek back to start and play for ${stream.description}`,
-            testSeekBackToStart.bind(null, url, config)
-          );
-        }
+      if (stream.abr && !HlsjsLightBuild) {
+        it(
+          `should "smooth switch" to highest level and still play after 2s for ${stream.description}`,
+          testSmoothSwitch.bind(null, url, config)
+        );
+      }
 
-        if (stream.abr && !HlsjsLightBuild) {
-          it(
-            `should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`,
-            testSmoothSwitch.bind(null, url, config)
-          );
-        }
-
-        if (stream.live) {
-          it(
-            `should seek near the end and receive video seeked event for ${stream.description}`,
-            testSeekOnLive.bind(null, url, config)
-          );
-        } else if (!HlsjsLightBuild) {
-          it(
-            `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
-            testIdleBufferLength.bind(null, url, config)
-          );
-          it(
-            `should play ${stream.description}`,
-            testIsPlayingVOD.bind(null, url, config)
-          );
-          it(
-            `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
-            testSeekOnVOD.bind(null, url, config)
-          );
-          // TODO: Seeking to or past VOD duration should result in the video ending
-          // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
-        }
+      if (stream.live) {
+        it(
+          `should seek near the end and receive video seeked event for ${stream.description}`,
+          testSeekOnLive.bind(null, url, config)
+        );
+      } else if (!HlsjsLightBuild) {
+        it(
+          `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
+          testIdleBufferLength.bind(null, url, config)
+        );
+        it(
+          `should play ${stream.description}`,
+          testIsPlayingVOD.bind(null, url, config)
+        );
+        it(
+          `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
+          testSeekOnVOD.bind(null, url, config)
+        );
+        // TODO: Seeking to or past VOD duration should result in the video ending
+        // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
       }
     });
 });
