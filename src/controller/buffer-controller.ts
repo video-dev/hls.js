@@ -533,6 +533,11 @@ export default class BufferController implements ComponentAPI {
       return;
     }
 
+    const sourceBufferTypes = this.getSourceBufferTypes();
+    if (!sourceBufferTypes.length) {
+      return;
+    }
+
     // Support for deprecated liveBackBufferLength
     const backBufferLength =
       details.live && hls.config.liveBackBufferLength !== null
@@ -546,7 +551,7 @@ export default class BufferController implements ComponentAPI {
     const currentTime = media.currentTime;
     const targetBackBufferPosition =
       currentTime - Math.max(backBufferLength, details.levelTargetDuration);
-    this.getSourceBufferTypes().forEach((type: SourceBufferName) => {
+    sourceBufferTypes.forEach((type: SourceBufferName) => {
       const sb = sourceBuffer[type];
       if (sb) {
         const buffered = BufferHelper.getBuffered(sb);

@@ -948,6 +948,10 @@ export default class BaseStreamController
       ) {
         if (!this.loadedmetadata) {
           this.nextLoadPosition = liveSyncPosition;
+          if (this.state === State.PARSED) {
+            logger.warn('Could not append media in sync with live stream');
+            this.state = State.IDLE;
+          }
         }
         if (media.readyState) {
           this.warn(
