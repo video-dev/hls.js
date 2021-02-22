@@ -35,6 +35,7 @@ describe('LatencyController', function () {
     levelDetails = new LevelDetails('');
     levelDetails.live = true;
     levelDetails.targetduration = 5;
+    levelDetails.totalduration = 15;
     const levelUpdatedData: LevelUpdatedData = {
       details: levelDetails,
       level: 0,
@@ -203,7 +204,7 @@ describe('LatencyController', function () {
       levelDetails.age = 10;
       expect(latencyController.liveSyncPosition).to.equal(55);
       levelDetails.age = 20;
-      expect(latencyController.liveSyncPosition).to.equal(60);
+      expect(latencyController.liveSyncPosition).to.equal(55);
     });
 
     it('accounts for level update age up to 3 part targets in low latency mode', function () {
@@ -217,7 +218,7 @@ describe('LatencyController', function () {
       levelDetails.age = 2;
       expect(latencyController.liveSyncPosition).to.equal(59);
       levelDetails.age = 5;
-      expect(latencyController.liveSyncPosition).to.equal(60);
+      expect(latencyController.liveSyncPosition).to.equal(59);
     });
   });
 

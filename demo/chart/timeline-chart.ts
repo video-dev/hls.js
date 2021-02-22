@@ -283,13 +283,11 @@ export class TimelineChart {
   updateLevelOrTrack(details: LevelDetails) {
     const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
-    // eslint-disable-next-line no-restricted-properties
-    const deliveryDirectivePattern = /[?&]_HLS_(?:msn|part|skip)=[^?&]+/g;
     const levelDataSet = arrayFind(
       datasets,
       (dataset) =>
-        dataset.url?.toString().replace(deliveryDirectivePattern, '') ===
-        url.replace(deliveryDirectivePattern, '')
+        stripDeliveryDirectives(url) ===
+        stripDeliveryDirectives(dataset.url || '')
     );
     if (!levelDataSet) {
       return;
@@ -656,6 +654,19 @@ export class TimelineChart {
       ctx.lineTo(x, chartArea.bottom);
       ctx.stroke();
     }
+  }
+}
+
+function stripDeliveryDirectives(url: string): string {
+  try {
+    const webUrl: URL = new self.URL(url);
+    webUrl.searchParams.delete('_HLS_msn');
+    webUrl.searchParams.delete('_HLS_part');
+    webUrl.searchParams.delete('_HLS_skip');
+    webUrl.searchParams.sort();
+    return webUrl.href;
+  } catch (e) {
+    return url.replace(/[?&]_HLS_(?:msn|part|skip)=[^?&]+/g, '');
   }
 }
 
