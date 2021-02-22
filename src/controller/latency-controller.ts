@@ -78,16 +78,19 @@ export default class LatencyController implements ComponentAPI {
   get liveSyncPosition(): number | null {
     const liveEdge = this.estimateLiveEdge();
     const targetLatency = this.targetLatency;
-    if (
-      liveEdge === null ||
-      targetLatency === null ||
-      this.levelDetails === null
-    ) {
+    const levelDetails = this.levelDetails;
+    if (liveEdge === null || targetLatency === null || levelDetails === null) {
       return null;
     }
+    const edge = levelDetails.edge;
     return Math.min(
-      this.levelDetails.edge,
-      liveEdge - targetLatency - this.edgeStalled
+      Math.max(
+        edge - levelDetails.totalduration,
+        liveEdge - targetLatency - this.edgeStalled
+      ),
+      edge -
+        ((this.config.lowLatencyMode && levelDetails.partTarget) ||
+          levelDetails.targetduration)
     );
   }
 
