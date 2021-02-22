@@ -693,7 +693,6 @@ export default class BaseStreamController
     pos: number,
     levelDetails: LevelDetails
   ): Fragment | null {
-    const { config, startFragRequested } = this;
     const fragments = levelDetails.fragments;
     const fragLen = fragments.length;
 
@@ -702,6 +701,7 @@ export default class BaseStreamController
     }
 
     // find fragment index, contiguous with end of buffer position
+    const { config } = this;
     const start = fragments[0].start;
     let frag;
 
@@ -720,7 +720,7 @@ export default class BaseStreamController
       // In order to discover the range, we load the best matching fragment for that level and demux it.
       // Do not load using live logic if the starting frag is requested - we want to use getFragmentAtPosition() so that
       // we get the fragment matching that start time
-      if (!levelDetails.PTSKnown && !startFragRequested) {
+      if (!levelDetails.PTSKnown && !this.startFragRequested) {
         frag = this.getInitialLiveFragment(levelDetails, fragments);
       }
     } else if (pos <= start) {
@@ -824,6 +824,16 @@ export default class BaseStreamController
           }
         }
       }
+    } else {
+      // Find a new start fragment when fragPrevious is null
+      const liveStart =
+        this.hls.liveSyncPosition ||
+        levelDetails.edge - levelDetails.totalduration / 2;
+      frag = this.getFragmentAtPosition(
+        liveStart,
+        levelDetails.edge,
+        levelDetails
+      );
     }
 
     return frag;
@@ -914,13 +924,15 @@ export default class BaseStreamController
     return frag;
   }
 
-  protected synchronizeToLiveEdge(levelDetails: LevelDetails): number | null {
+  protected synchronizeToLiveEdge(levelDetails: LevelDetails) {
     const { config, media } = this;
+    if (!media) {
+      return;
+    }
     const liveSyncPosition = this.hls.liveSyncPosition;
     const currentTime = media.currentTime;
     if (
       liveSyncPosition !== null &&
-      media?.readyState &&
       media.duration > liveSyncPosition &&
       liveSyncPosition > currentTime
     ) {
@@ -934,21 +946,21 @@ export default class BaseStreamController
         currentTime <
         Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)
       ) {
-        this.warn(
-          `Playback: ${currentTime.toFixed(
-            3
-          )} is located too far from the end of live sliding playlist: ${end}, reset currentTime to : ${liveSyncPosition.toFixed(
-            3
-          )}`
-        );
         if (!this.loadedmetadata) {
           this.nextLoadPosition = liveSyncPosition;
         }
-        media.currentTime = liveSyncPosition;
-        return liveSyncPosition;
+        if (media.readyState) {
+          this.warn(
+            `Playback: ${currentTime.toFixed(
+              3
+            )} is located too far from the end of live sliding playlist: ${end}, reset currentTime to : ${liveSyncPosition.toFixed(
+              3
+            )}`
+          );
+          media.currentTime = liveSyncPosition;
+        }
       }
     }
-    return null;
   }
 
   protected alignPlaylists(
