@@ -458,28 +458,6 @@ class EMEController implements ComponentAPI {
     callback: (data: ArrayBuffer) => void
   ): XMLHttpRequest {
     const xhr = new XMLHttpRequest();
-    const licenseXhrSetup = this._licenseXhrSetup;
-
-    try {
-      if (licenseXhrSetup) {
-        try {
-          licenseXhrSetup(xhr, url);
-        } catch (e) {
-          // let's try to open before running setup
-          xhr.open('POST', url, true);
-          licenseXhrSetup(xhr, url);
-        }
-      }
-      // if licenseXhrSetup did not yet call open, let's do it now
-      if (!xhr.readyState) {
-        xhr.open('POST', url, true);
-      }
-    } catch (e) {
-      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      throw new Error(`issue setting up KeySystem license XHR ${e}`);
-    }
-
-    // Because we set responseType to ArrayBuffer here, callback is typed as handling only array buffers
     xhr.responseType = 'arraybuffer';
     xhr.onreadystatechange = this._onLicenseRequestReadyStageChange.bind(
       this,
@@ -488,6 +466,29 @@ class EMEController implements ComponentAPI {
       keyMessage,
       callback
     );
+
+    let licenseXhrSetup = this._licenseXhrSetup;
+    if (licenseXhrSetup) {
+      try {
+        licenseXhrSetup(xhr, url);
+        licenseXhrSetup = undefined;
+      } catch (e) {
+        logger.error(e);
+      }
+    }
+    try {
+      // if licenseXhrSetup did not yet call open, let's do it now
+      if (!xhr.readyState) {
+        xhr.open('POST', url, true);
+      }
+      if (licenseXhrSetup) {
+        licenseXhrSetup(xhr, url);
+      }
+    } catch (e) {
+      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+      throw new Error(`issue setting up KeySystem license XHR ${e}`);
+    }
+
     return xhr;
   }
 
