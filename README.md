@@ -1,5 +1,5 @@
 [![npm](https://img.shields.io/npm/v/hls.js.svg?style=flat)](https://npmjs.org/package/hls.js)
-[![npm](https://img.shields.io/npm/v/hls.js/alpha.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/alpha)
+[![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
 
@@ -199,10 +199,10 @@ Hls.js can be installed as a dependency using npm:
 npm install hls.js
 ```
 
-or for the version from master (alpha)
+or for the version from master (canary)
 
 ```
-npm install hls.js@alpha
+npm install hls.js@canary
 ```
 
 ## Installation
