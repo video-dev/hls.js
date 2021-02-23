@@ -90,6 +90,7 @@
   - [`minAutoBitrate`](#minautobitrate)
   - [`emeEnabled`](#emeEnabled)
   - [`widevineLicenseUrl`](#widevineLicenseUrl)
+  - [`licenseXhrSetup`](#licenseXhrSetup)
   - [`drmSystemOptions`](#drmSystemOptions)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
@@ -386,6 +387,7 @@ var config = {
   minAutoBitrate: 0,
   emeEnabled: false,
   widevineLicenseUrl: undefined,
+  licenseXhrSetup: undefined,
   drmSystemOptions: {},
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess,
 };
@@ -1139,6 +1141,12 @@ Set to `true` to enable DRM key system access and license retrieval.
 (default: `undefined`)
 
 The Widevine license server URL.
+
+### `licenseXhrSetup`
+
+(default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => void`)
+
+A pre-processor function for modifying the `XMLHttpRequest` and request url (using `xhr.open`) prior to sending the license request.
 
 ### `drmSystemOptions`
 
