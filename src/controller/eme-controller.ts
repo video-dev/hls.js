@@ -105,6 +105,10 @@ class EMEController implements ComponentAPI {
   private hls: Hls;
   private _widevineLicenseUrl?: string;
   private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+  private _licenseResponseCallback?: (
+    xhr: XMLHttpRequest,
+    url: string
+  ) => ArrayBuffer;
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: MediaKeyFunc | null;
   private _drmSystemOptions: DRMSystemOptions;
@@ -127,6 +131,7 @@ class EMEController implements ComponentAPI {
 
     this._widevineLicenseUrl = this._config.widevineLicenseUrl;
     this._licenseXhrSetup = this._config.licenseXhrSetup;
+    this._licenseResponseCallback = this._config.licenseResponseCallback;
     this._emeEnabled = this._config.emeEnabled;
     this._requestMediaKeySystemAccess = this._config.requestMediaKeySystemAccessFunc;
     this._drmSystemOptions = this._config.drmSystemOptions;
@@ -470,7 +475,7 @@ class EMEController implements ComponentAPI {
     let licenseXhrSetup = this._licenseXhrSetup;
     if (licenseXhrSetup) {
       try {
-        licenseXhrSetup(xhr, url);
+        licenseXhrSetup.call(this.hls, xhr, url);
         licenseXhrSetup = undefined;
       } catch (e) {
         logger.error(e);
@@ -482,7 +487,7 @@ class EMEController implements ComponentAPI {
         xhr.open('POST', url, true);
       }
       if (licenseXhrSetup) {
-        licenseXhrSetup(xhr, url);
+        licenseXhrSetup.call(this.hls, xhr, url);
       }
     } catch (e) {
       // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
@@ -510,13 +515,16 @@ class EMEController implements ComponentAPI {
         if (xhr.status === 200) {
           this._requestLicenseFailureCount = 0;
           logger.log('License request succeeded');
-
-          if (xhr.responseType !== 'arraybuffer') {
-            logger.warn(
-              'xhr response type was not set to the expected arraybuffer for license request'
-            );
+          let data: ArrayBuffer = xhr.response;
+          const licenseResponseCallback = this._licenseResponseCallback;
+          if (licenseResponseCallback) {
+            try {
+              data = licenseResponseCallback.call(this.hls, xhr, url);
+            } catch (e) {
+              logger.error(e);
+            }
           }
-          callback(xhr.response);
+          callback(data);
         } else {
           logger.error(
             `License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`
