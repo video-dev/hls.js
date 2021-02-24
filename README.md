@@ -181,7 +181,7 @@ The following players integrate hls.js for HLS playback:
 |                       [<img src="https://streaming.cdn77.com/live-streaming-logo-dark.png" width="120">](https://streaming.cdn77.com/)                       |                                  [<img src="https://avatars0.githubusercontent.com/u/7442371?s=200&v=4" width="120">](https://r7.com/)                                  | [<img src="https://raw.githubusercontent.com/Novage/p2p-media-loader/gh-pages/images/p2pml-logo.png" width="120">](https://github.com/Novage/p2p-media-loader) |                                                              [<img src="https://avatars3.githubusercontent.com/u/45617200?s=400" width="120">](https://kayosports.com.au)                                                               |
 |    [<img src="https://avatars1.githubusercontent.com/u/5279615?s=400&u=9771a216836c613f1edf4afe71cfc69d4c5657ed&v=4" width="120">](https://flosports.tv)     |                  [<img src="https://www.logolynx.com/images/logolynx/c6/c67a2cb3ad33a82b5518f8ad8f124703.png" width="120">](https://global.axon.com/)                   |                                                                                                                                                                |                                                                                                                                                                                                                                         |
 
-|
+
 
 ## Chrome/Firefox integration
 
