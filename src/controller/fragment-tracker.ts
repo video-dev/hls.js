@@ -76,12 +76,13 @@ export class FragmentTracker implements ComponentAPI {
     if (!activeFragment) {
       return null;
     }
-    if (
-      activeFragment.appendedPTS !== undefined &&
-      activeFragment.start <= position &&
-      position <= activeFragment.appendedPTS
-    ) {
-      return activeFragment;
+    if (activeFragment.start <= position) {
+      const appendedPTS = this.activePart
+        ? this.activePart.end
+        : activeFragment.appendedPTS;
+      if (appendedPTS !== undefined && position <= appendedPTS) {
+        return activeFragment;
+      }
     }
     return this.getBufferedFrag(position, levelType);
   }
