@@ -159,8 +159,6 @@ export class FragmentTracker implements ComponentAPI {
     if (!fragmentEntity) {
       return;
     }
-    fragmentEntity.buffered = true;
-    fragmentEntity.backtrack = fragmentEntity.loaded = null;
     Object.keys(timeRanges).forEach((elementaryStream) => {
       const streamInfo = frag.elementaryStreams[elementaryStream];
       if (!streamInfo) {
@@ -175,6 +173,13 @@ export class FragmentTracker implements ComponentAPI {
         timeRange
       );
     });
+    fragmentEntity.backtrack = fragmentEntity.loaded = null;
+    if (Object.keys(fragmentEntity.range).length) {
+      fragmentEntity.buffered = true;
+    } else {
+      // remove fragment if nothing was appended
+      this.removeFragment(fragmentEntity.body);
+    }
   }
 
   private getBufferedTimes(
