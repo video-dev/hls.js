@@ -673,7 +673,34 @@ export default class BaseStreamController
 
     if (data.dropped && data.independent && !part) {
       // Clear buffer so that we reload previous segments sequentially if required
+      this.flushBufferGap(frag);
+    }
+  }
+
+  protected flushBufferGap(frag: Fragment) {
+    const media = this.media;
+    if (!media) {
+      return;
+    }
+    // If currentTime is not buffered, clear the back buffer so that we can backtrack as much as needed
+    if (!BufferHelper.isBuffered(media, media.currentTime)) {
       this.flushMainBuffer(0, frag.start);
+      return;
+    }
+    // Remove back-buffer without interrupting playback to allow back tracking
+    const currentTime = media.currentTime;
+    const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
+    const fragDuration = frag.duration;
+    const segmentFraction = Math.min(
+      this.config.maxFragLookUpTolerance * 2,
+      fragDuration * 0.25
+    );
+    const start = Math.max(
+      Math.min(frag.start - segmentFraction, bufferInfo.end - segmentFraction),
+      currentTime + segmentFraction
+    );
+    if (frag.start - start > segmentFraction) {
+      this.flushMainBuffer(start, frag.start);
     }
   }
 
@@ -948,10 +975,6 @@ export default class BaseStreamController
       ) {
         if (!this.loadedmetadata) {
           this.nextLoadPosition = liveSyncPosition;
-          if (this.state === State.PARSED) {
-            logger.warn('Could not append media in sync with live stream');
-            this.state = State.IDLE;
-          }
         }
         if (media.readyState) {
           this.warn(

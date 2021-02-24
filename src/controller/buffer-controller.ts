@@ -479,8 +479,6 @@ export default class BufferController implements ComponentAPI {
       logger.warn(
         `Fragments must have at least one ElementaryStreamType set. type: ${frag.type} level: ${frag.level} sn: ${frag.sn}`
       );
-      Promise.resolve(onUnblocked);
-      return;
     }
 
     this.blockBuffers(onUnblocked, buffersAppendedTo);
