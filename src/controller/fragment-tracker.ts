@@ -76,12 +76,13 @@ export class FragmentTracker implements ComponentAPI {
     if (!activeFragment) {
       return null;
     }
-    if (
-      activeFragment.appendedPTS !== undefined &&
-      activeFragment.start <= position &&
-      position <= activeFragment.appendedPTS
-    ) {
-      return activeFragment;
+    if (activeFragment.start <= position) {
+      const appendedPTS = this.activePart
+        ? this.activePart.end
+        : activeFragment.appendedPTS;
+      if (appendedPTS !== undefined && position <= appendedPTS) {
+        return activeFragment;
+      }
     }
     return this.getBufferedFrag(position, levelType);
   }
@@ -159,8 +160,6 @@ export class FragmentTracker implements ComponentAPI {
     if (!fragmentEntity) {
       return;
     }
-    fragmentEntity.buffered = true;
-    fragmentEntity.backtrack = fragmentEntity.loaded = null;
     Object.keys(timeRanges).forEach((elementaryStream) => {
       const streamInfo = frag.elementaryStreams[elementaryStream];
       if (!streamInfo) {
@@ -175,6 +174,13 @@ export class FragmentTracker implements ComponentAPI {
         timeRange
       );
     });
+    fragmentEntity.backtrack = fragmentEntity.loaded = null;
+    if (Object.keys(fragmentEntity.range).length) {
+      fragmentEntity.buffered = true;
+    } else {
+      // remove fragment if nothing was appended
+      this.removeFragment(fragmentEntity.body);
+    }
   }
 
   private getBufferedTimes(

@@ -450,18 +450,20 @@ export default class StreamController
         if (nextBufferedFrag) {
           // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
           this.abortCurrentFrag();
-          // start flush position is the start PTS of next buffered frag.
-          // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
-          // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
+          // start flush position is in next buffered frag. Leave some padding for non-independent segments and smoother playback.
           const maxStart = nextBufferedFrag.maxStartPTS
             ? nextBufferedFrag.maxStartPTS
             : nextBufferedFrag.start;
+          const fragDuration = nextBufferedFrag.duration;
           const startPts = Math.max(
             bufferedFrag.end,
             maxStart +
               Math.min(
-                this.config.maxFragLookUpTolerance,
-                nextBufferedFrag.duration
+                Math.max(
+                  fragDuration - this.config.maxFragLookUpTolerance,
+                  fragDuration * 0.5
+                ),
+                fragDuration * 0.75
               )
           );
           this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY);
@@ -1265,7 +1267,7 @@ export default class StreamController
   private backtrack(frag: Fragment) {
     // Causes findFragments to backtrack through fragments to find the keyframe
     this.resetTransmuxer();
-    this.flushMainBuffer(0, frag.start);
+    this.flushBufferGap(frag);
     this.fragmentTracker.backtrack(frag);
     this.fragPrevious = null;
     this.nextLoadPosition = frag.start;
