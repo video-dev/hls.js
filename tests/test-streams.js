@@ -240,6 +240,13 @@ module.exports = {
     // abr: true,
     startSeek: true,
   },
+  nonIndependentSegments: {
+    url:
+      'https://playertest.longtailvideo.com/adaptive/bipbop_16x9/bipbop_16x9_variant.m3u8',
+    description:
+      'Non-independent segments (missing key-frame at start) triggers backtracking',
+    abr: true,
+  },
   AppleAdvancedHevcAvcHls: {
     url:
       'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8',
