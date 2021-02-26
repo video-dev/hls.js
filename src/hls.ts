@@ -207,75 +207,17 @@ export default class Hls implements HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context?: Context
+    context: Context = this as any
   ) {
-    const hlsjs = this;
-    this._emitter.on(
-      event,
-      function (this: Context, ...args: unknown[]) {
-        if (hlsjs.config.debug) {
-          listener.apply(this, args);
-        } else {
-          try {
-            listener.apply(this, args);
-          } catch (e) {
-            logger.error(
-              'An internal error happened while handling event ' +
-                event +
-                '. Error message: "' +
-                e.message +
-                '". Here is a stacktrace:',
-              e
-            );
-            hlsjs.trigger(Events.ERROR, {
-              type: ErrorTypes.OTHER_ERROR,
-              details: ErrorDetails.INTERNAL_EXCEPTION,
-              fatal: false,
-              event: event,
-              error: e,
-            });
-          }
-        }
-      },
-      context
-    );
+    this._emitter.on(event, listener, context);
   }
 
   once<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context?: Context
+    context: Context = this as any
   ) {
-    const hlsjs = this;
-    this._emitter.once(
-      event,
-      function (this: Context, ...args: unknown[]) {
-        if (hlsjs.config.debug) {
-          listener.apply(this, args);
-        } else {
-          try {
-            listener.apply(this, args);
-          } catch (e) {
-            logger.error(
-              'An internal error happened while handling event ' +
-                event +
-                '. Error message: "' +
-                e.message +
-                '". Here is a stacktrace:',
-              e
-            );
-            hlsjs.trigger(Events.ERROR, {
-              type: ErrorTypes.OTHER_ERROR,
-              details: ErrorDetails.INTERNAL_EXCEPTION,
-              fatal: false,
-              event: event,
-              error: e,
-            });
-          }
-        }
-      },
-      context
-    );
+    this._emitter.once(event, listener, context);
   }
 
   removeAllListeners<E extends keyof HlsListeners>(event?: E | undefined) {
@@ -285,7 +227,7 @@ export default class Hls implements HlsEventEmitter {
   off<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener?: HlsListeners[E] | undefined,
-    context?: Context,
+    context: Context = this as any,
     once?: boolean | undefined
   ) {
     this._emitter.off(event, listener, context, once);
@@ -307,7 +249,30 @@ export default class Hls implements HlsEventEmitter {
     event: E,
     eventObject: Parameters<HlsListeners[E]>[1]
   ): boolean {
-    return this._emitter.emit(event, event, eventObject);
+    if (this.config.debug) {
+      return this.emit(event, event, eventObject);
+    } else {
+      try {
+        return this.emit(event, event, eventObject);
+      } catch (e) {
+        logger.error(
+          'An internal error happened while handling event ' +
+            event +
+            '. Error message: "' +
+            e.message +
+            '". Here is a stacktrace:',
+          e
+        );
+        this.trigger(Events.ERROR, {
+          type: ErrorTypes.OTHER_ERROR,
+          details: ErrorDetails.INTERNAL_EXCEPTION,
+          fatal: false,
+          event: event,
+          error: e,
+        });
+      }
+    }
+    return false;
   }
 
   listenerCount<E extends keyof HlsListeners>(event: E): number {
