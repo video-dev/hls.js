@@ -808,7 +808,7 @@ export default class BaseStreamController
     levelDetails: LevelDetails,
     fragments: Array<Fragment>
   ): Fragment | null {
-    const { config, fragPrevious } = this;
+    const fragPrevious = this.fragPrevious;
     let frag: Fragment | null = null;
     if (fragPrevious) {
       if (levelDetails.hasProgramDateTime) {
@@ -819,7 +819,7 @@ export default class BaseStreamController
         frag = findFragmentByPDT(
           fragments,
           fragPrevious.endProgramDateTime,
-          config.maxFragLookUpTolerance
+          this.config.maxFragLookUpTolerance
         );
       }
       if (!frag) {
@@ -853,14 +853,14 @@ export default class BaseStreamController
       }
     } else {
       // Find a new start fragment when fragPrevious is null
-      const liveStart =
-        this.hls.liveSyncPosition ||
-        levelDetails.edge - levelDetails.totalduration / 2;
-      frag = this.getFragmentAtPosition(
-        liveStart,
-        levelDetails.edge,
-        levelDetails
-      );
+      const liveStart = this.hls.liveSyncPosition;
+      if (liveStart !== null) {
+        frag = this.getFragmentAtPosition(
+          liveStart,
+          levelDetails.edge,
+          levelDetails
+        );
+      }
     }
 
     return frag;
