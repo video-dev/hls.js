@@ -83,15 +83,13 @@ export default class LatencyController implements ComponentAPI {
       return null;
     }
     const edge = levelDetails.edge;
-    return Math.min(
-      Math.max(
-        edge - levelDetails.totalduration,
-        liveEdge - targetLatency - this.edgeStalled
-      ),
+    const syncPosition = liveEdge - targetLatency - this.edgeStalled;
+    const min = edge - levelDetails.totalduration;
+    const max =
       edge -
-        ((this.config.lowLatencyMode && levelDetails.partTarget) ||
-          levelDetails.targetduration)
-    );
+      ((this.config.lowLatencyMode && levelDetails.partTarget) ||
+        levelDetails.targetduration);
+    return Math.min(Math.max(min, syncPosition), max);
   }
 
   get edgeStalled(): number {
