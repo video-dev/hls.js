@@ -375,11 +375,15 @@ export default class StreamController
     }
   }
 
-  private getAppendedFrag(position) {
-    return this.fragmentTracker.getAppendedFrag(
+  private getAppendedFrag(position): Fragment | null {
+    const fragOrPart = this.fragmentTracker.getAppendedFrag(
       position,
       PlaylistLevelType.MAIN
     );
+    if (fragOrPart && 'fragment' in fragOrPart) {
+      return fragOrPart.fragment;
+    }
+    return fragOrPart;
   }
 
   private getBufferedFrag(position) {
@@ -477,6 +481,7 @@ export default class StreamController
     if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
     }
+    this.nextLoadPosition = this.getLoadPosition();
     this.fragCurrent = null;
   }
 
@@ -836,6 +841,9 @@ export default class StreamController
           frag.level
         } finished buffering, but was aborted. state: ${this.state}`
       );
+      if (this.state === State.PARSED) {
+        this.state = State.IDLE;
+      }
       return;
     }
     const stats = part ? part.stats : frag.stats;
@@ -940,23 +948,13 @@ export default class StreamController
     event: Events.BUFFER_FLUSHED,
     { type }: BufferFlushedData
   ) {
-    /* after successful buffer flushing, filter flushed fragments from bufferedFrags
-      use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
-    */
-    const media =
-      (type === ElementaryStreamTypes.VIDEO
-        ? this.videoBuffer
-        : this.mediaBuffer) || this.media;
-    if (media && type !== ElementaryStreamTypes.AUDIO) {
-      this.fragmentTracker.detectEvictedFragments(
-        type,
-        BufferHelper.getBuffered(media)
-      );
+    if (type !== ElementaryStreamTypes.AUDIO) {
+      const media =
+        (type === ElementaryStreamTypes.VIDEO
+          ? this.videoBuffer
+          : this.mediaBuffer) || this.media;
+      this.afterBufferFlushed(media, type);
     }
-    // reset reference to frag
-    this.fragPrevious = null;
-    // move to IDLE once flush complete. this should trigger new fragment loading
-    this.state = State.IDLE;
   }
 
   private onLevelsUpdated(

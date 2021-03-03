@@ -669,22 +669,14 @@ class AudioStreamController
     }
   }
 
-  onBufferFlushed(event: Events.BUFFER_FLUSHED, { type }: BufferFlushedData) {
-    /* after successful buffer flushing, filter flushed fragments from bufferedFrags
-      use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
-    */
-    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    if (media && type === ElementaryStreamTypes.AUDIO) {
-      // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      this.fragmentTracker.detectEvictedFragments(
-        ElementaryStreamTypes.AUDIO,
-        BufferHelper.getBuffered(media)
-      );
+  private onBufferFlushed(
+    event: Events.BUFFER_FLUSHED,
+    { type }: BufferFlushedData
+  ) {
+    if (type === ElementaryStreamTypes.AUDIO) {
+      const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+      this.afterBufferFlushed(media, type);
     }
-    // reset reference to frag
-    this.fragPrevious = null;
-    // move to IDLE once flush complete. this should trigger new fragment loading
-    this.state = State.IDLE;
   }
 
   private _handleTransmuxComplete(transmuxResult: TransmuxerResult) {
