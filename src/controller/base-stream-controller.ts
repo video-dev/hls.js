@@ -1,6 +1,6 @@
 import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
-import { BufferHelper } from '../utils/buffer-helper';
+import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
 import { ErrorDetails } from '../errors';
@@ -211,7 +211,7 @@ export default class BaseStreamController
       const fragStartOffset = fragCurrent.start - tolerance;
       const fragEndOffset =
         fragCurrent.start + fragCurrent.duration + tolerance;
-      // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
+      // check if the seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
       if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
         if (fragCurrent.loader) {
           this.log(
@@ -294,43 +294,43 @@ export default class BaseStreamController
       this._handleFragmentLoadProgress(data);
     };
 
-    this._doFragLoad(
-      frag,
-      levelDetails,
-      targetBufferTime,
-      progressCallback
-    ).then((data) => {
-      if (!data) {
-        // if we're here we probably needed to backtrack or are waiting for more parts
-        return;
-      }
-      this.fragLoadError = 0;
-      if (this.fragContextChanged(frag)) {
-        if (
-          this.state === State.FRAG_LOADING ||
-          this.state === State.BACKTRACKING
-        ) {
-          this.fragmentTracker.removeFragment(frag);
-          this.state = State.IDLE;
-        }
-        return;
-      }
-
-      if ('payload' in data) {
-        this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
-        this.hls.trigger(Events.FRAG_LOADED, data);
-
-        // Tracker backtrack must be called after onFragLoaded to update the fragment entity state to BACKTRACKED
-        // This happens after handleTransmuxComplete when the worker or progressive is disabled
-        if (this.state === State.BACKTRACKING) {
-          this.fragmentTracker.backtrack(frag, data);
+    this._doFragLoad(frag, levelDetails, targetBufferTime, progressCallback)
+      .then((data) => {
+        if (!data) {
+          // if we're here we probably needed to backtrack or are waiting for more parts
           return;
         }
-      }
+        this.fragLoadError = 0;
+        if (this.fragContextChanged(frag)) {
+          if (
+            this.state === State.FRAG_LOADING ||
+            this.state === State.BACKTRACKING
+          ) {
+            this.fragmentTracker.removeFragment(frag);
+            this.state = State.IDLE;
+          }
+          return;
+        }
 
-      // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
-      this._handleFragmentLoadComplete(data);
-    });
+        if ('payload' in data) {
+          this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
+          this.hls.trigger(Events.FRAG_LOADED, data);
+
+          // Tracker backtrack must be called after onFragLoaded to update the fragment entity state to BACKTRACKED
+          // This happens after handleTransmuxComplete when the worker or progressive is disabled
+          if (this.state === State.BACKTRACKING) {
+            this.fragmentTracker.backtrack(frag, data);
+            return;
+          }
+        }
+
+        // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
+        this._handleFragmentLoadComplete(data);
+      })
+      .catch((reason) => {
+        this.warn(reason);
+        this.resetFragmentLoading(frag);
+      });
   }
 
   protected flushMainBuffer(
@@ -432,6 +432,7 @@ export default class BaseStreamController
       })
       .catch((reason) => {
         this.warn(reason);
+        this.resetFragmentLoading(frag);
       });
   }
 
@@ -595,15 +596,11 @@ export default class BaseStreamController
   }
 
   protected _handleTransmuxerFlush(chunkMeta: ChunkMetadata) {
-    if (this.state !== State.PARSING) {
-      this.warn(
-        `State is expected to be PARSING on transmuxer flush, but is ${this.state}.`
-      );
-      return;
-    }
-
     const context = this.getCurrentContext(chunkMeta);
-    if (!context) {
+    if (!context || this.state !== State.PARSING) {
+      if (!this.fragCurrent) {
+        this.state = State.IDLE;
+      }
       return;
     }
     const { frag, part, level } = context;
@@ -612,9 +609,7 @@ export default class BaseStreamController
     if (part) {
       part.stats.parsing.end = now;
     }
-    this.updateLevelTiming(frag, level, chunkMeta.partial);
-    this.state = State.PARSED;
-    this.hls.trigger(Events.FRAG_PARSED, { frag, part });
+    this.updateLevelTiming(frag, part, level, chunkMeta.partial);
   }
 
   protected getCurrentContext(
@@ -1074,19 +1069,18 @@ export default class BaseStreamController
 
   private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
     if (this.transmuxer && frag.sn !== 'initSegment') {
-      this.log(
-        `Fragment ${frag.sn} of level ${frag.level} was aborted, flushing transmuxer`
+      this.warn(
+        `Fragment ${frag.sn}${part ? ' part' + part.index : ''} of level ${
+          frag.level
+        } was aborted`
       );
-      this.transmuxer.flush(
-        new ChunkMetadata(
-          frag.level,
-          frag.sn,
-          frag.stats.chunkCount + 1,
-          0,
-          part ? part.index : -1,
-          true
-        )
-      );
+      this.resetFragmentLoading(frag);
+    }
+  }
+
+  private resetFragmentLoading(frag: Fragment) {
+    if (!this.fragCurrent || !this.fragContextChanged(frag)) {
+      this.state = State.IDLE;
     }
   }
 
@@ -1147,6 +1141,16 @@ export default class BaseStreamController
     }
   }
 
+  protected afterBufferFlushed(media: Bufferable, type: SourceBufferName) {
+    if (!media) {
+      return;
+    }
+    // After successful buffer flushing, filter flushed fragments from bufferedFrags use mediaBuffered instead of media
+    // (so that we will check against video.buffered ranges in case of alt audio track)
+    const bufferedTimeRanges = BufferHelper.getBuffered(media);
+    this.fragmentTracker.detectEvictedFragments(type, bufferedTimeRanges);
+  }
+
   protected resetLiveStartWhenNotLoaded(level: number): boolean {
     // if loadedmetadata is not set, it means that we are emergency switch down on first frag
     // in that case, reset startFragRequested flag
@@ -1165,45 +1169,65 @@ export default class BaseStreamController
     return false;
   }
 
-  private updateLevelTiming(frag: Fragment, level: Level, partial: boolean) {
+  private updateLevelTiming(
+    frag: Fragment,
+    part: Part | null,
+    level: Level,
+    partial: boolean
+  ) {
     const details = level.details as LevelDetails;
     console.assert(!!details, 'level.details must be defined');
-    Object.keys(frag.elementaryStreams).forEach((type) => {
-      const info = frag.elementaryStreams[type];
-      if (info) {
-        const parsedDuration = info.endPTS - info.startPTS;
-        if (parsedDuration <= 0) {
-          // Destroy the transmuxer after it's next time offset failed to advance because duration was <= 0.
-          // The new transmuxer will be configured with a time offset matching the next fragment start, preventing the timeline from shifting.
-          this.warn(
-            `Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration}) resetting transmuxer to fallback to playlist timing`
-          );
-          if (this.transmuxer) {
-            this.transmuxer.destroy();
-            this.transmuxer = null;
-          }
-        }
-        const drift = partial
-          ? 0
-          : LevelHelper.updateFragPTSDTS(
-              details,
-              frag,
-              info.startPTS,
-              info.endPTS,
-              info.startDTS,
-              info.endDTS
+    const parsed = Object.keys(frag.elementaryStreams).reduce(
+      (result, type) => {
+        const info = frag.elementaryStreams[type];
+        if (info) {
+          const parsedDuration = info.endPTS - info.startPTS;
+          if (parsedDuration <= 0) {
+            // Destroy the transmuxer after it's next time offset failed to advance because duration was <= 0.
+            // The new transmuxer will be configured with a time offset matching the next fragment start,
+            // preventing the timeline from shifting.
+            this.warn(
+              `Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration}) resetting transmuxer to fallback to playlist timing`
             );
-        this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
-          details,
-          level,
-          drift,
-          type,
-          frag,
-          start: info.startPTS,
-          end: info.endPTS,
-        });
-      }
-    });
+            if (this.transmuxer) {
+              this.transmuxer.destroy();
+              this.transmuxer = null;
+            }
+            return result || false;
+          }
+          const drift = partial
+            ? 0
+            : LevelHelper.updateFragPTSDTS(
+                details,
+                frag,
+                info.startPTS,
+                info.endPTS,
+                info.startDTS,
+                info.endDTS
+              );
+          this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
+            details,
+            level,
+            drift,
+            type,
+            frag,
+            start: info.startPTS,
+            end: info.endPTS,
+          });
+          return true;
+        }
+        return result;
+      },
+      false
+    );
+    if (parsed) {
+      this.state = State.PARSED;
+      this.hls.trigger(Events.FRAG_PARSED, { frag, part });
+    } else {
+      this.fragCurrent = null;
+      this.fragPrevious = null;
+      this.state = State.IDLE;
+    }
   }
 
   set state(nextState) {

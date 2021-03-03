@@ -18,10 +18,10 @@ import type {
   MediaAttachingData,
   ManifestParsedData,
   BufferCodecsData,
-  LevelPTSUpdatedData,
   BufferEOSData,
   BufferFlushingData,
   FragParsedData,
+  FragChangedData,
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
@@ -84,6 +84,7 @@ export default class BufferController implements ComponentAPI {
     hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.on(Events.FRAG_PARSED, this.onFragParsed, this);
+    hls.on(Events.FRAG_CHANGED, this.onFragChanged, this);
   }
 
   protected unregisterListeners() {
@@ -98,6 +99,7 @@ export default class BufferController implements ComponentAPI {
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.off(Events.FRAG_PARSED, this.onFragParsed, this);
+    hls.off(Events.FRAG_CHANGED, this.onFragChanged, this);
   }
 
   private _initSourceBuffer() {
@@ -482,6 +484,9 @@ export default class BufferController implements ComponentAPI {
     }
 
     this.blockBuffers(onUnblocked, buffersAppendedTo);
+  }
+
+  private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
     this.flushBackBuffer();
   }
 
@@ -547,8 +552,11 @@ export default class BufferController implements ComponentAPI {
     }
 
     const currentTime = media.currentTime;
+    const targetDuration = details.levelTargetDuration;
+    const maxBackBufferLength = Math.max(backBufferLength, targetDuration);
     const targetBackBufferPosition =
-      currentTime - Math.max(backBufferLength, details.levelTargetDuration);
+      Math.floor(currentTime / targetDuration) * targetDuration -
+      maxBackBufferLength;
     sourceBufferTypes.forEach((type: SourceBufferName) => {
       const sb = sourceBuffer[type];
       if (sb) {
@@ -563,9 +571,11 @@ export default class BufferController implements ComponentAPI {
           });
 
           // Support for deprecated event:
-          hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
-            bufferEnd: targetBackBufferPosition,
-          });
+          if (details.live) {
+            hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
+              bufferEnd: targetBackBufferPosition,
+            });
+          }
 
           hls.trigger(Events.BUFFER_FLUSHING, {
             startOffset: 0,
