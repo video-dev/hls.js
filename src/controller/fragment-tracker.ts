@@ -25,7 +25,7 @@ export enum FragmentState {
 
 export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;
-  private activePart: Part | null = null;
+  private activeParts: Part[] | null = null;
   private fragments: Partial<Record<string, FragmentEntity>> = Object.create(
     null
   );
@@ -71,18 +71,34 @@ export class FragmentTracker implements ComponentAPI {
   public getAppendedFrag(
     position: number,
     levelType: PlaylistLevelType
-  ): Fragment | null {
-    const { activeFragment } = this;
+  ): Fragment | Part | null {
+    const { activeFragment, activeParts } = this;
     if (!activeFragment) {
       return null;
     }
-    if (activeFragment.start <= position) {
-      const appendedPTS = this.activePart
-        ? this.activePart.end
-        : activeFragment.appendedPTS;
-      if (appendedPTS !== undefined && position <= appendedPTS) {
-        return activeFragment;
+    if (activeParts) {
+      for (let i = activeParts.length; i--; ) {
+        const activePart = activeParts[i];
+        const appendedPTS = activePart
+          ? activePart.end
+          : activeFragment.appendedPTS;
+        if (
+          activePart.start <= position &&
+          appendedPTS !== undefined &&
+          position <= appendedPTS
+        ) {
+          if (i > 0) {
+            this.activeParts = activeParts.slice(i);
+          }
+          return activePart;
+        }
       }
+    } else if (
+      activeFragment.start <= position &&
+      activeFragment.appendedPTS !== undefined &&
+      position <= activeFragment.appendedPTS
+    ) {
+      return activeFragment;
     }
     return this.getBufferedFrag(position, levelType);
   }
@@ -275,14 +291,20 @@ export class FragmentTracker implements ComponentAPI {
     return FragmentState.NOT_LOADED;
   }
 
-  public backtrack(frag: Fragment, data?: FragLoadedData) {
+  public backtrack(
+    frag: Fragment,
+    data?: FragLoadedData
+  ): FragLoadedData | null {
     const fragKey = getFragmentKey(frag);
     const fragmentEntity = this.fragments[fragKey];
     if (!fragmentEntity || fragmentEntity.backtrack) {
-      return;
+      return null;
     }
-    fragmentEntity.backtrack = data ? data : fragmentEntity.loaded;
+    const backtrack = (fragmentEntity.backtrack = data
+      ? data
+      : fragmentEntity.loaded);
     fragmentEntity.loaded = null;
+    return backtrack;
   }
 
   public getBacktrackData(fragment: Fragment): FragLoadedData | null {
@@ -348,7 +370,15 @@ export class FragmentTracker implements ComponentAPI {
   ) {
     const { frag, part, timeRanges } = data;
     this.activeFragment = frag;
-    this.activePart = part;
+    if (part) {
+      let activeParts = this.activeParts;
+      if (!activeParts) {
+        this.activeParts = activeParts = [];
+      }
+      activeParts.push(part);
+    } else {
+      this.activeParts = null;
+    }
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = timeRanges as { [key in SourceBufferName]: TimeRanges };
     Object.keys(timeRanges).forEach((elementaryStream: SourceBufferName) => {
@@ -380,6 +410,8 @@ export class FragmentTracker implements ComponentAPI {
 
   public removeAllFragments() {
     this.fragments = Object.create(null);
+    this.activeFragment = null;
+    this.activeParts = null;
   }
 }
 
