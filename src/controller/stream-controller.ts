@@ -1097,9 +1097,9 @@ export default class StreamController
             endDTS,
           };
         } else if (video.dropped && video.independent) {
-          // Backtrack if dropped frames create a gap at currentTime
+          // Backtrack if dropped frames create a gap after currentTime
           const pos = this.getLoadPosition() + this.config.maxBufferHole;
-          if (pos > frag.start && pos < startPTS) {
+          if (pos < startPTS) {
             this.backtrack(frag);
             return;
           }
@@ -1266,10 +1266,15 @@ export default class StreamController
     // Causes findFragments to backtrack through fragments to find the keyframe
     this.resetTransmuxer();
     this.flushBufferGap(frag);
-    this.fragmentTracker.backtrack(frag);
+    const data = this.fragmentTracker.backtrack(frag);
     this.fragPrevious = null;
     this.nextLoadPosition = frag.start;
-    this.state = State.BACKTRACKING;
+    if (data) {
+      this.resetFragmentLoading(frag);
+    } else {
+      // Change state to BACKTRACKING so that fragmentEntity.backtrack data can be added after _doFragLoad
+      this.state = State.BACKTRACKING;
+    }
   }
 
   private checkFragmentChanged() {

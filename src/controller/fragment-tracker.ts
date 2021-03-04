@@ -291,14 +291,20 @@ export class FragmentTracker implements ComponentAPI {
     return FragmentState.NOT_LOADED;
   }
 
-  public backtrack(frag: Fragment, data?: FragLoadedData) {
+  public backtrack(
+    frag: Fragment,
+    data?: FragLoadedData
+  ): FragLoadedData | null {
     const fragKey = getFragmentKey(frag);
     const fragmentEntity = this.fragments[fragKey];
     if (!fragmentEntity || fragmentEntity.backtrack) {
-      return;
+      return null;
     }
-    fragmentEntity.backtrack = data ? data : fragmentEntity.loaded;
+    const backtrack = (fragmentEntity.backtrack = data
+      ? data
+      : fragmentEntity.loaded);
     fragmentEntity.loaded = null;
+    return backtrack;
   }
 
   public getBacktrackData(fragment: Fragment): FragLoadedData | null {
