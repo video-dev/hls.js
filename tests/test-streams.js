@@ -168,7 +168,7 @@ module.exports = {
   },
   pdtDuplicate: {
     url: 'https://playertest.longtailvideo.com/adaptive/artbeats/manifest.m3u8',
-    description: 'Stream with duplicate sequential PDT values',
+    description: 'Duplicate sequential PDT values',
     abr: false,
   },
   pdtLargeGap: {

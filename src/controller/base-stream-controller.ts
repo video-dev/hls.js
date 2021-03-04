@@ -320,6 +320,7 @@ export default class BaseStreamController
           // This happens after handleTransmuxComplete when the worker or progressive is disabled
           if (this.state === State.BACKTRACKING) {
             this.fragmentTracker.backtrack(frag, data);
+            this.resetFragmentLoading(frag);
             return;
           }
         }
@@ -1078,7 +1079,7 @@ export default class BaseStreamController
     }
   }
 
-  private resetFragmentLoading(frag: Fragment) {
+  protected resetFragmentLoading(frag: Fragment) {
     if (!this.fragCurrent || !this.fragContextChanged(frag)) {
       this.state = State.IDLE;
     }
