@@ -244,17 +244,12 @@ describe('BufferController', function () {
 
   describe('onFragParsed', function () {
     it('should trigger FRAG_BUFFERED when all audio/video data has been buffered', function () {
-      const flushBackBufferSpy = sandbox.spy(
-        bufferController,
-        'flushBackBuffer'
-      );
       const frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
       frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 
       bufferController.onFragParsed(Events.FRAG_PARSED, { frag });
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;
-      expect(flushBackBufferSpy).to.have.been.calledOnce;
       return new Promise<void>((resolve, reject) => {
         hls.on(Events.FRAG_BUFFERED, (event, data) => {
           try {
@@ -426,7 +421,7 @@ describe('BufferController', function () {
       ).to.have.callCount(2);
     });
 
-    it('removes a maximum of one targetDuration from currentTime', function () {
+    it('removes a maximum of one targetDuration from currentTime at intervals of targetDuration', function () {
       mockMedia.currentTime = 25;
       hls.config.backBufferLength = 5;
       bufferController.flushBackBuffer();
@@ -436,7 +431,7 @@ describe('BufferController', function () {
           `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`
         ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
           startOffset: 0,
-          endOffset: 15,
+          endOffset: 10,
           type: name,
         });
       });
