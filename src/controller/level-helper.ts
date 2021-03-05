@@ -182,7 +182,12 @@ export function mergeDetails(
     oldDetails,
     newDetails,
     (oldFrag: Fragment, newFrag: Fragment) => {
-      ccOffset = oldFrag.cc - newFrag.cc;
+      if (oldFrag.relurl) {
+        // Do not compare CC if the old fragment has no url. This is a level.fragmentHint used by LL-HLS parts.
+        // It maybe be off by 1 if it was created before any parts or discontinuity tags were appended to the end
+        // of the playlist.
+        ccOffset = oldFrag.cc - newFrag.cc;
+      }
       if (
         Number.isFinite(oldFrag.startPTS) &&
         Number.isFinite(oldFrag.endPTS)
@@ -228,7 +233,7 @@ export function mergeDetails(
 
   const newFragments = newDetails.fragments;
   if (ccOffset) {
-    logger.log('discontinuity sliding from playlist, take drift into account');
+    logger.warn('discontinuity sliding from playlist, take drift into account');
     for (let i = 0; i < newFragments.length; i++) {
       newFragments[i].cc += ccOffset;
     }
