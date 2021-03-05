@@ -302,9 +302,7 @@ export class Part extends BaseSegment {
     super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');
     this.gap = partAttrs.bool('GAP');
-    this.independent = partAttrs.INDEPENDENT
-      ? partAttrs.bool('INDEPENDENT')
-      : true;
+    this.independent = partAttrs.INDEPENDENT === 'YES';
     this.relurl = partAttrs.enumeratedString('URI') as string;
     this.fragment = frag;
     this.index = index;
