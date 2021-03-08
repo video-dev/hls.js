@@ -70,6 +70,7 @@ export default class BaseStreamController
   protected media?: any;
   protected mediaBuffer?: any;
   protected config: HlsConfig;
+  protected bitrateTest: boolean = false;
   protected lastCurrentTime: number = 0;
   protected nextLoadPosition: number = 0;
   protected startPosition: number = 0;
@@ -732,7 +733,11 @@ export default class BaseStreamController
     let frag;
 
     // If an initSegment is present, it must be buffered first
-    if (levelDetails.initSegment && !levelDetails.initSegment.data) {
+    if (
+      levelDetails.initSegment &&
+      !levelDetails.initSegment.data &&
+      !this.bitrateTest
+    ) {
       frag = levelDetails.initSegment;
     } else if (levelDetails.live) {
       const initialLiveManifestSize = config.initialLiveManifestSize;
@@ -858,7 +863,7 @@ export default class BaseStreamController
       if (liveStart !== null) {
         frag = this.getFragmentAtPosition(
           liveStart,
-          levelDetails.edge,
+          this.bitrateTest ? levelDetails.fragmentEnd : levelDetails.edge,
           levelDetails
         );
       }
@@ -885,7 +890,7 @@ export default class BaseStreamController
       levelDetails.partList &&
       fragmentHint
     );
-    if (loadingParts && fragmentHint) {
+    if (loadingParts && fragmentHint && !this.bitrateTest) {
       // Include incomplete fragment with parts at end
       fragments = fragments.concat(fragmentHint);
       endSN = fragmentHint.sn as number;

@@ -43,7 +43,6 @@ export default class StreamController
   extends BaseStreamController
   implements NetworkComponentAPI {
   private audioCodecSwap: boolean = false;
-  private bitrateTest: boolean = false;
   private gapController: GapController | null = null;
   private level: number = -1;
   private _forceStartLoad: boolean = false;
@@ -250,7 +249,7 @@ export default class StreamController
 
     let frag = levelDetails.initSegment;
     let targetBufferTime = 0;
-    if (!frag || frag.data) {
+    if (!frag || frag.data || this.bitrateTest) {
       // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
       const levelBitrate = levelInfo.maxBitrate;
       let maxBufLen;
@@ -1026,17 +1025,10 @@ export default class StreamController
       this.state = State.IDLE;
       this.startFragRequested = false;
       this.bitrateTest = false;
-      frag.bitrateTest = false;
       const stats = frag.stats;
       // Bitrate tests fragments are neither parsed nor buffered
       stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = self.performance.now();
-      hls.trigger(Events.FRAG_BUFFERED, {
-        stats,
-        frag,
-        part: null,
-        id: 'main',
-      });
-      this.tick();
+      hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
     });
   }
 
