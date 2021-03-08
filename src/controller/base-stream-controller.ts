@@ -500,6 +500,9 @@ export default class BaseStreamController
     if (this.config.lowLatencyMode && details) {
       const partList = details.partList;
       if (partList && progressCallback) {
+        if (targetBufferTime > frag.end && details.fragmentHint) {
+          frag = details.fragmentHint;
+        }
         const partIndex = this.getNextPart(partList, frag, targetBufferTime);
         if (partIndex > -1) {
           const part = partList[partIndex];
@@ -769,15 +772,17 @@ export default class BaseStreamController
   ): number {
     let nextPart = -1;
     let contiguous = false;
+    let independentAttrOmitted = true;
     for (let i = 0, len = partList.length; i < len; i++) {
       const part = partList[i];
+      independentAttrOmitted = independentAttrOmitted && !part.independent;
       if (nextPart > -1 && targetBufferTime < part.start) {
         break;
       }
       const loaded = part.loaded;
       if (
         !loaded &&
-        (contiguous || part.independent) &&
+        (contiguous || part.independent || independentAttrOmitted) &&
         part.fragment === frag
       ) {
         nextPart = i;
