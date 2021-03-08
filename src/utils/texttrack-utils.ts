@@ -107,8 +107,8 @@ function getFirstCueIndexAfterTime(
 
     if (time < cues[mid].startTime) {
       right = mid - 1;
-    } else if (time > cues[mid].startTime) {
-      left = Math.min(len, mid + 1);
+    } else if (time > cues[mid].startTime && left < len) {
+      left = mid + 1;
     } else {
       // If it's not lower or higher, it must be equal.
       return mid;
