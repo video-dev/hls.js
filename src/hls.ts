@@ -556,7 +556,11 @@ export default class Hls implements HlsEventEmitter {
    * @type {number}
    */
   get bandwidthEstimate(): number {
-    return this.abrController.bwEstimator.getEstimate();
+    const { bwEstimator } = this.abrController;
+    if (!bwEstimator) {
+      return NaN;
+    }
+    return bwEstimator.getEstimate();
   }
 
   /**
