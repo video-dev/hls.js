@@ -113,7 +113,6 @@ export type StreamControllerConfig = {
   maxFragLookUpTolerance: number;
   maxMaxBufferLength: number;
   startFragPrefetch: boolean;
-  testBandwidth: boolean;
 };
 
 export type LatencyControllerConfig = {
@@ -257,7 +256,6 @@ export const hlsDefaultConfig: HlsConfig = {
   widevineLicenseUrl: undefined, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
-  testBandwidth: true,
   progressive: false,
   lowLatencyMode: true,
 

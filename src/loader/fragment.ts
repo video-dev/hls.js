@@ -135,8 +135,6 @@ export class Fragment extends BaseSegment {
   public stats: LoadStats = new LoadStats();
   public urlId: number = 0;
   public data?: Uint8Array;
-  // A flag indicating whether the segment was downloaded in order to test bitrate, and was not buffered
-  public bitrateTest: boolean = false;
   // #EXTINF  segment title
   public title: string | null = null;
 

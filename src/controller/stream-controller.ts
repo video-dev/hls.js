@@ -43,7 +43,6 @@ export default class StreamController
   extends BaseStreamController
   implements NetworkComponentAPI {
   private audioCodecSwap: boolean = false;
-  private bitrateTest: boolean = false;
   private gapController: GapController | null = null;
   private level: number = -1;
   private _forceStartLoad: boolean = false;
@@ -123,13 +122,7 @@ export default class StreamController
         // determine load level
         let startLevel = hls.startLevel;
         if (startLevel === -1) {
-          if (hls.config.testBandwidth) {
-            // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
-            startLevel = 0;
-            this.bitrateTest = true;
-          } else {
-            startLevel = hls.nextAutoLevel;
-          }
+          startLevel = hls.nextAutoLevel;
         }
         // set new level to playlist loader : this will trigger start level load
         // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
@@ -333,7 +326,7 @@ export default class StreamController
     let fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
     // Don't update nextLoadPosition for fragments which are not buffered
-    if (Number.isFinite(frag.sn as number) && !this.bitrateTest) {
+    if (Number.isFinite(frag.sn as number)) {
       this.nextLoadPosition = frag.start + frag.duration;
     }
 
@@ -354,12 +347,6 @@ export default class StreamController
     ) {
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
-      } else if (this.bitrateTest) {
-        frag.bitrateTest = true;
-        this.log(
-          `Fragment ${frag.sn} of level ${frag.level} is being downloaded to test bitrate and will not be buffered`
-        );
-        this._loadBitrateTestFrag(frag);
       } else {
         this.startFragRequested = true;
         super.loadFragment(frag, levelDetails, targetBufferTime);
@@ -1014,30 +1001,6 @@ export default class StreamController
     }
 
     return audioCodec;
-  }
-
-  private _loadBitrateTestFrag(frag: Fragment) {
-    this._doFragLoad(frag).then((data) => {
-      const { hls } = this;
-      if (!data || hls.nextLoadLevel || this.fragContextChanged(frag)) {
-        return;
-      }
-      this.fragLoadError = 0;
-      this.state = State.IDLE;
-      this.startFragRequested = false;
-      this.bitrateTest = false;
-      frag.bitrateTest = false;
-      const stats = frag.stats;
-      // Bitrate tests fragments are neither parsed nor buffered
-      stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = self.performance.now();
-      hls.trigger(Events.FRAG_BUFFERED, {
-        stats,
-        frag,
-        part: null,
-        id: 'main',
-      });
-      this.tick();
-    });
   }
 
   private _handleTransmuxComplete(transmuxResult: TransmuxerResult) {

@@ -26,7 +26,6 @@ class AbrController implements ComponentAPI {
   private onCheck: Function = this._abandonRulesCheck.bind(this);
   private fragCurrent: Fragment | null = null;
   private partCurrent: Part | null = null;
-  private bitrateTestDelay: number = 0;
 
   public readonly bwEstimator: EwmaBandWidthEstimator;
 
@@ -229,15 +228,6 @@ class AbrController implements ComponentAPI {
         level.loaded = { bytes: loadedBytes, duration: loadedDuration };
         level.realBitrate = Math.round((8 * loadedBytes) / loadedDuration);
       }
-      if (frag.bitrateTest) {
-        const fragBufferedData: FragBufferedData = {
-          stats,
-          frag,
-          part,
-          id: frag.type,
-        };
-        this.onFragBuffered(Events.FRAG_BUFFERED, fragBufferedData);
-      }
     }
   }
 
@@ -252,11 +242,7 @@ class AbrController implements ComponentAPI {
       return;
     }
     // Only count non-alt-audio frags which were actually buffered in our BW calculations
-    if (
-      frag.type !== PlaylistLevelType.MAIN ||
-      frag.sn === 'initSegment' ||
-      frag.bitrateTest
-    ) {
+    if (frag.type !== PlaylistLevelType.MAIN || frag.sn === 'initSegment') {
       return;
     }
     // Use the difference between parsing and request instead of buffering and request to compute fragLoadingProcessing;
@@ -265,11 +251,6 @@ class AbrController implements ComponentAPI {
     const processingMs = stats.parsing.end - stats.loading.start;
     this.bwEstimator.sample(processingMs, stats.loaded);
     stats.bwEstimate = this.bwEstimator.getEstimate();
-    if (frag.bitrateTest) {
-      this.bitrateTestDelay = processingMs / 1000;
-    } else {
-      this.bitrateTestDelay = 0;
-    }
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {
@@ -354,36 +335,12 @@ class AbrController implements ComponentAPI {
     );
     // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
     // if no matching level found, logic will return 0
-    let maxStarvationDelay = currentFragDuration
+    const maxStarvationDelay = currentFragDuration
       ? Math.min(currentFragDuration, config.maxStarvationDelay)
       : config.maxStarvationDelay;
-    let bwFactor = config.abrBandWidthFactor;
-    let bwUpFactor = config.abrBandWidthUpFactor;
+    const bwFactor = config.abrBandWidthFactor;
+    const bwUpFactor = config.abrBandWidthUpFactor;
 
-    if (!bufferStarvationDelay) {
-      // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
-      const bitrateTestDelay = this.bitrateTestDelay;
-      if (bitrateTestDelay) {
-        // if it is the case, then we need to adjust our max starvation delay using maxLoadingDelay config value
-        // max video loading delay used in  automatic start level selection :
-        // in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level +
-        // the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
-        // cap maxLoadingDelay and ensure it is not bigger 'than bitrate test' frag duration
-        const maxLoadingDelay = currentFragDuration
-          ? Math.min(currentFragDuration, config.maxLoadingDelay)
-          : config.maxLoadingDelay;
-        maxStarvationDelay = maxLoadingDelay - bitrateTestDelay;
-        logger.trace(
-          `bitrate test took ${Math.round(
-            1000 * bitrateTestDelay
-          )}ms, set first fragment max fetchDuration to ${Math.round(
-            1000 * maxStarvationDelay
-          )} ms`
-        );
-        // don't use conservative factor on bitrate test
-        bwFactor = bwUpFactor = 1;
-      }
-    }
     bestLevel = this.findBestLevel(
       avgbw,
       minAutoLevel,
@@ -460,10 +417,7 @@ class AbrController implements ComponentAPI {
         adjustedbw > bitrate &&
         // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
         // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
-        // special case to support startLevel = -1 (bitrateTest) on live streams : in that case we should not exit loop so that findBestLevel will return -1
-        (!fetchDuration ||
-          (live && !this.bitrateTestDelay) ||
-          fetchDuration < maxFetchDuration)
+        (!fetchDuration || live || fetchDuration < maxFetchDuration)
       ) {
         // as we are looping from highest to lowest, this will return the best achievable quality level
         return i;

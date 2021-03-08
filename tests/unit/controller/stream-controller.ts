@@ -442,26 +442,6 @@ describe('StreamController', function () {
         expect(streamController['startPosition']).to.equal(5);
         expect(streamController['lastCurrentTime']).to.equal(5);
       });
-
-      it('sets up for a bandwidth test if starting at auto', function () {
-        streamController['startFragRequested'] = false;
-        hls.startLevel = -1;
-
-        streamController.startLoad(-1);
-        expect(streamController['level']).to.equal(0);
-        expect(streamController['bitrateTest']).to.be.true;
-      });
-
-      it('should not signal a bandwidth test if config.testBandwidth is false', function () {
-        streamController['startFragRequested'] = false;
-        hls.startLevel = -1;
-        hls.nextAutoLevel = 3;
-        hls.config.testBandwidth = false;
-
-        streamController.startLoad(-1);
-        expect(streamController['level']).to.equal(hls.nextAutoLevel);
-        expect(streamController['bitrateTest']).to.be.false;
-      });
     });
   });
 });

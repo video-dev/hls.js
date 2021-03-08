@@ -688,8 +688,6 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     appendedPTS?: number;
     // (undocumented)
-    bitrateTest: boolean;
-    // (undocumented)
     cc: number;
     // (undocumented)
     clearElementaryStreamInfo(): void;
@@ -1960,7 +1958,6 @@ export type StreamControllerConfig = {
     maxFragLookUpTolerance: number;
     maxMaxBufferLength: number;
     startFragPrefetch: boolean;
-    testBandwidth: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)

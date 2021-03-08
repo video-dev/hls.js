@@ -348,8 +348,7 @@ export class FragmentTracker implements ComponentAPI {
   private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
     const { frag, part } = data;
     // don't track initsegment (for which sn is not a number)
-    // don't track frags used for bitrateTest, they're irrelevant.
-    if (frag.sn === 'initSegment' || frag.bitrateTest || part) {
+    if (frag.sn === 'initSegment' || part) {
       return;
     }
 
