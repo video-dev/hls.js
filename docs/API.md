@@ -893,6 +893,8 @@ Parameter should be a class providing 2 getters, 2 setters and a `destroy()` met
 - get/set `autoLevelCapping`: capping/max level value that could be used by ABR Controller
 - `destroy()`: should clean-up all used resources
 
+For `hls.bandwidthEstimate()` to return an estimate from your custom controller, it will also need to satisfy `abrController.bwEstimator.getEstimate()`.
+
 ### `bufferController`
 
 (default: internal buffer controller)
