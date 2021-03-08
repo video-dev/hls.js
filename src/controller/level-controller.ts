@@ -85,6 +85,7 @@ export default class LevelController extends BasePlaylistController {
     let bitrateStart: number | undefined;
     const levelSet: { [bitrate: number]: Level } = {};
     let levelFromSet: Level;
+    let resolutionFound = false;
     let videoCodecFound = false;
     let audioCodecFound = false;
 
@@ -92,6 +93,8 @@ export default class LevelController extends BasePlaylistController {
     data.levels.forEach((levelParsed: LevelParsed) => {
       const attributes = levelParsed.attrs;
 
+      resolutionFound =
+        resolutionFound || !!(levelParsed.width && levelParsed.height);
       videoCodecFound = videoCodecFound || !!levelParsed.videoCodec;
       audioCodecFound = audioCodecFound || !!levelParsed.audioCodec;
 
@@ -125,9 +128,11 @@ export default class LevelController extends BasePlaylistController {
       }
     });
 
-    // remove audio-only level if we also have levels with audio+video codecs signalled
-    if (videoCodecFound && audioCodecFound) {
-      levels = levels.filter(({ videoCodec }) => !!videoCodec);
+    // remove audio-only level if we also have levels with video codecs or RESOLUTION signalled
+    if ((resolutionFound || videoCodecFound) && audioCodecFound) {
+      levels = levels.filter(
+        ({ videoCodec, width, height }) => !!videoCodec || !!(width && height)
+      );
     }
 
     // only keep levels with supported audio/video codecs
