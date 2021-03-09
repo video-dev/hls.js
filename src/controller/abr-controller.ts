@@ -196,7 +196,11 @@ class AbrController implements ComponentAPI {
       )} s
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s`);
     hls.nextLoadLevel = nextLoadLevel;
-    this.bwEstimator.sample(requestDelay, stats.loaded);
+    this.bwEstimator.sample(
+      part ? part.duration : frag.duration,
+      requestDelay,
+      stats.loaded
+    );
     this.clearTimer();
     if (frag.loader) {
       this.fragCurrent = this.partCurrent = null;
@@ -263,7 +267,11 @@ class AbrController implements ComponentAPI {
     // rationale is that buffer appending only happens once media is attached. This can happen when config.startFragPrefetch
     // is used. If we used buffering in that case, our BW estimate sample will be very large.
     const processingMs = stats.parsing.end - stats.loading.start;
-    this.bwEstimator.sample(processingMs, stats.loaded);
+    this.bwEstimator.sample(
+      part ? part.duration : frag.duration,
+      processingMs,
+      stats.loaded
+    );
     stats.bwEstimate = this.bwEstimator.getEstimate();
     if (frag.bitrateTest) {
       this.bitrateTestDelay = processingMs / 1000;

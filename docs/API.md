@@ -1058,11 +1058,11 @@ parameter should be a boolean
 
 ### `abrEwmaFastLive`
 
-(default: `3.0`)
+(default: `0.5`)
 
 Fast bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
 Half of the estimate is based on the last abrEwmaFastLive seconds of sample history.
-Each of the sample is weighted by the fragment loading duration.
+Each of the sample is weighted by the fragment duration.
 
 parameter should be a float greater than 0
 
@@ -1072,7 +1072,7 @@ parameter should be a float greater than 0
 
 Slow bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
 Half of the estimate is based on the last abrEwmaSlowLive seconds of sample history.
-Each of the sample is weighted by the fragment loading duration.
+Each of the sample is weighted by the fragment duration.
 
 parameter should be a float greater than [abrEwmaFastLive](#abrewmafastlive)
 
@@ -1082,7 +1082,7 @@ parameter should be a float greater than [abrEwmaFastLive](#abrewmafastlive)
 
 Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
 Half of the estimate is based on the last abrEwmaFastVoD seconds of sample history.
-Each of the sample is weighted by the fragment loading duration.
+Each of the sample is weighted by the fragment duration.
 
 parameter should be a float greater than 0
 
@@ -1092,7 +1092,7 @@ parameter should be a float greater than 0
 
 Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
 Half of the estimate is based on the last abrEwmaSlowVoD seconds of sample history.
-Each of the sample is weighted by the fragment loading duration.
+Each of the sample is weighted by the fragment duration.
 
 parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
