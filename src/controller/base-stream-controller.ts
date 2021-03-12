@@ -964,24 +964,26 @@ export default class BaseStreamController
     }
     const liveSyncPosition = this.hls.liveSyncPosition;
     const currentTime = media.currentTime;
+    const start = levelDetails.fragments[0].start;
+    const end = levelDetails.edge;
+    // Continue if we can seek forward to sync position or if current time is outside of sliding window
     if (
       liveSyncPosition !== null &&
       media.duration > liveSyncPosition &&
-      liveSyncPosition > currentTime
+      (currentTime < liveSyncPosition ||
+        currentTime < start - config.maxFragLookUpTolerance ||
+        currentTime > end)
     ) {
+      // Continue if buffer is starving or if current time is behind max latency
       const maxLatency =
         config.liveMaxLatencyDuration !== undefined
           ? config.liveMaxLatencyDuration
           : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
-      const start = levelDetails.fragments[0].start;
-      const end = levelDetails.edge;
-      if (
-        currentTime <
-        Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)
-      ) {
+      if (media.readyState < 4 || currentTime < end - maxLatency) {
         if (!this.loadedmetadata) {
           this.nextLoadPosition = liveSyncPosition;
         }
+        // Only seek if ready and there is not a significant forward buffer available for playback
         if (media.readyState) {
           this.warn(
             `Playback: ${currentTime.toFixed(
