@@ -1,25 +1,10 @@
 name: Auto Merge Dependency Updates
 
 on:
-  - pull_request
+  - pull_request_target
 
 jobs:
-  config:
-    runs-on: ubuntu-latest
-    outputs:
-      hasSecret: ${{ steps.check_secret_access.outputs.result == 'true' }}
-    steps:
-      - name: check secret access
-        id: check_secret_access
-        run: |
-          if ! [[ -z "$SECRET" ]]; then
-            echo "::set-output name=result::true"
-          fi
-        env:
-          SECRET: ${{ secrets.CI_GITHUB_TOKEN }}
   run:
-    needs: config
-    if: needs.config.outputs.hasSecret == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: tjenkinson/gh-action-auto-merge-dependency-updates@791110cb91cf883fb4894ffd080ddbe36607cd31
