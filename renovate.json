@@ -1,5 +1,6 @@
 {
   "extends": ["config:base"],
+  "labels": ["dependencies"],
   "commitMessagePrefix": "[skip netlify]",
   "prHourlyLimit": 0
 }
