@@ -10,4 +10,4 @@ jobs:
       - uses: tjenkinson/gh-action-auto-merge-dependency-updates@791110cb91cf883fb4894ffd080ddbe36607cd31
         with:
           repo-token: ${{ secrets.CI_GITHUB_TOKEN }}
-          allowed-actors: dependabot[bot]
+          allowed-actors: renovate[bot]
