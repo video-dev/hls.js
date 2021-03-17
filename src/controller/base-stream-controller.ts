@@ -234,7 +234,7 @@ export default class BaseStreamController
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.loadedmetadata) {
+    if (!this.loadedmetadata && !bufferInfo.len) {
       this.nextLoadPosition = this.startPosition = currentTime;
     }
 
@@ -527,6 +527,7 @@ export default class BaseStreamController
               targetBufferTime.toFixed(3)
             )}`
           );
+          this.nextLoadPosition = part.start + part.duration;
           this.state = State.FRAG_LOADING;
           this.hls.trigger(Events.FRAG_LOADING, {
             frag,
@@ -556,7 +557,10 @@ export default class BaseStreamController
         frag.level
       }, target: ${parseFloat(targetBufferTime.toFixed(3))}`
     );
-
+    // Don't update nextLoadPosition for fragments which are not buffered
+    if (Number.isFinite(frag.sn as number) && !this.bitrateTest) {
+      this.nextLoadPosition = frag.start + frag.duration;
+    }
     this.state = State.FRAG_LOADING;
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
 

@@ -329,11 +329,6 @@ export default class StreamController
     // Check if fragment is not loaded
     let fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
-    // Don't update nextLoadPosition for fragments which are not buffered
-    if (Number.isFinite(frag.sn as number) && !this.bitrateTest) {
-      this.nextLoadPosition = frag.start + frag.duration;
-    }
-
     // Use data from loaded backtracked fragment if available
     if (fragState === FragmentState.BACKTRACKED) {
       const data = this.fragmentTracker.getBacktrackData(frag);
