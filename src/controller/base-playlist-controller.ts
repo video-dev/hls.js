@@ -20,8 +20,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   protected timer: number = -1;
   protected canLoad: boolean = false;
   protected retryCount: number = 0;
-  protected readonly log: (msg: any) => void;
-  protected readonly warn: (msg: any) => void;
+  protected log: (msg: any) => void;
+  protected warn: (msg: any) => void;
 
   constructor(hls: Hls, logPrefix: string) {
     this.log = logger.log.bind(logger, `${logPrefix}:`);
@@ -31,6 +31,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
   public destroy(): void {
     this.clearTimer();
+    // @ts-ignore
+    this.hls = this.log = this.warn = null;
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {

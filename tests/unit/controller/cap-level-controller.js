@@ -176,7 +176,6 @@ describe('CapLevelController', function () {
     });
 
     it('constructs with no restrictions', function () {
-      expect(capLevelController.levels).to.be.empty;
       expect(capLevelController.restrictedLevels).to.be.empty;
       expect(capLevelController.timer).to.not.exist;
       expect(capLevelController.autoLevelCapping).to.equal(
@@ -212,7 +211,6 @@ describe('CapLevelController', function () {
       };
 
       capLevelController.onManifestParsed(Events.MANIFEST_PARSED, data);
-      expect(capLevelController.levels).to.equal(data.levels);
       expect(capLevelController.firstLevel).to.equal(data.firstLevel);
       expect(capLevelController.restrictedLevels).to.be.empty;
     });

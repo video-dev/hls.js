@@ -46,7 +46,6 @@ export class SubtitleStreamController
     this.mediaBuffer = null;
     this.state = State.STOPPED;
     this.tracksBuffered = [];
-    this.fragmentLoader = new FragmentLoader(hls.config);
 
     this._registerListeners();
   }

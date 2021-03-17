@@ -87,8 +87,8 @@ export default class BaseStreamController
   protected onvended: EventListener | null = null;
 
   private readonly logPrefix: string = '';
-  protected readonly log: (msg: any) => void;
-  protected readonly warn: (msg: any) => void;
+  protected log: (msg: any) => void;
+  protected warn: (msg: any) => void;
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker, logPrefix: string) {
     super();
@@ -96,6 +96,7 @@ export default class BaseStreamController
     this.log = logger.log.bind(logger, `${logPrefix}:`);
     this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
+    this.fragmentLoader = new FragmentLoader(hls.config);
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls as HlsEventEmitter, hls.config);
@@ -112,11 +113,9 @@ export default class BaseStreamController
   public startLoad(startPosition: number): void {}
 
   public stopLoad() {
+    this.fragmentLoader.abort();
     const frag = this.fragCurrent;
     if (frag) {
-      if (frag.loader) {
-        frag.loader.abort();
-      }
       this.fragmentTracker.removeFragment(frag);
     }
     if (this.transmuxer) {
@@ -263,6 +262,14 @@ export default class BaseStreamController
   protected onHandlerDestroyed() {
     this.state = State.STOPPED;
     this.hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
+    if (this.fragmentLoader) {
+      this.fragmentLoader.destroy();
+    }
+    if (this.decrypter) {
+      this.decrypter.destroy();
+    }
+    // @ts-ignore
+    this.hls = this.log = this.warn = this.decrypter = this.fragmentLoader = this.fragmentTracker = null;
     super.onHandlerDestroyed();
   }
 
