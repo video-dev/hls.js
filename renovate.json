@@ -16,5 +16,6 @@
       "matchDepTypes": ["peerDependencies"],
       "rangeStrategy": "widen"
     }
-  ]
+  ],
+  "lockFileMaintenance": { "enabled": true }
 }
