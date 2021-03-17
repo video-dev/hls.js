@@ -150,9 +150,9 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onMediaDetaching() {
-    logger.log('[buffer-controller]: media source detaching');
     const { media, mediaSource, _objectUrl } = this;
     if (mediaSource) {
+      logger.log('[buffer-controller]: media source detaching');
       if (mediaSource.readyState === 'open') {
         try {
           // endOfStream could trigger exception if any sourcebuffer is in updating state

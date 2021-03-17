@@ -35,12 +35,16 @@ class XhrLoader implements Loader<LoaderContext> {
 
   abortInternal(): void {
     const loader = this.loader;
-    if (loader && loader.readyState !== 4) {
-      this.stats.aborted = true;
-      loader.abort();
-    }
     self.clearTimeout(this.requestTimeout);
     self.clearTimeout(this.retryTimeout);
+    if (loader) {
+      loader.onreadystatechange = null;
+      loader.onprogress = null;
+      if (loader.readyState !== 4) {
+        this.stats.aborted = true;
+        loader.abort();
+      }
+    }
   }
 
   abort(): void {
@@ -146,6 +150,8 @@ class XhrLoader implements Loader<LoaderContext> {
       }
 
       if (readyState === 4) {
+        xhr.onreadystatechange = null;
+        xhr.onprogress = null;
         const status = xhr.status;
         // http status between 200 to 299 are all successful
         if (status >= 200 && status < 300) {

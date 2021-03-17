@@ -128,13 +128,6 @@ export default class Hls implements HlsEventEmitter {
       fragmentTracker
     ));
 
-    // Level Controller initiates loading after all controllers have received MANIFEST_PARSED
-    levelController.onParsedComplete = () => {
-      if (config.autoStartLoad || streamController.forceStartLoad) {
-        this.startLoad(config.startPosition);
-      }
-    };
-
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
     // fpsController uses streamController to switch when frames are being dropped
@@ -286,11 +279,19 @@ export default class Hls implements HlsEventEmitter {
     logger.log('destroy');
     this.trigger(Events.DESTROYING, undefined);
     this.detachMedia();
-    this.networkControllers.forEach((component) => component.destroy());
-    this.coreComponents.forEach((component) => component.destroy());
-    this.url = null;
     this.removeAllListeners();
     this._autoLevelCapping = -1;
+    this.url = null;
+    if (this.networkControllers) {
+      this.networkControllers.forEach((component) => component.destroy());
+      // @ts-ignore
+      this.networkControllers = null;
+    }
+    if (this.coreComponents) {
+      this.coreComponents.forEach((component) => component.destroy());
+      // @ts-ignore
+      this.coreComponents = null;
+    }
   }
 
   /**
@@ -387,7 +388,8 @@ export default class Hls implements HlsEventEmitter {
    * @type {Level[]}
    */
   get levels(): Array<Level> {
-    return this.levelController.levels ? this.levelController.levels : [];
+    const levels = this.levelController.levels;
+    return levels ? levels : [];
   }
 
   /**
@@ -785,6 +787,14 @@ export default class Hls implements HlsEventEmitter {
    */
   get targetLatency(): number | null {
     return this.latencyController.targetLatency;
+  }
+
+  /**
+   * set to true when startLoad is called before MANIFEST_PARSED event
+   * @type {boolean}
+   */
+  get forceStartLoad(): boolean {
+    return this.streamController.forceStartLoad;
   }
 }
 

@@ -48,6 +48,8 @@ class AudioTrackController extends BasePlaylistController {
 
   public destroy() {
     this.unregisterListeners();
+    this.tracks.length = 0;
+    this.tracksInGroup.length = 0;
     super.destroy();
   }
 
