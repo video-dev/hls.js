@@ -123,7 +123,7 @@ type SidxInfo = {
 
 export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
   const moovBox = findBox(initSegment, ['moov']);
-  const moov = moovBox ? moovBox[0] : null;
+  const moov = moovBox[0];
   const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
 
   const sidxBox = findBox(initSegment, ['sidx']);

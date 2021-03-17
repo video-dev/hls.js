@@ -326,7 +326,6 @@ export default class AESDecryptor {
         (invSBOX[(s1 >> 8) & 0xff] << 8) ^
         invSBOX[s2 & 0xff] ^
         invKeySchedule[ksRow + 3];
-      ksRow = ksRow + 3;
 
       // Write
       outputInt32[offset] = swapWord(t0 ^ initVector0);

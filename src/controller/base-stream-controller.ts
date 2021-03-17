@@ -41,6 +41,9 @@ import type { HlsEventEmitter } from '../events';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { SourceBufferName } from '../types/buffer';
 
+type ResolveFragLoaded = (FragLoadedEndData) => void;
+type RejectFragLoaded = (LoadError) => void;
+
 export const State = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',
@@ -478,9 +481,8 @@ export default class BaseStreamController
     // If we did not load parts, or loaded all parts, we have complete (not partial) fragment data
     const complete =
       !partsLoaded ||
-      (partsLoaded &&
-        (partsLoaded.length === 0 ||
-          partsLoaded.some((fragLoaded) => !fragLoaded)));
+      partsLoaded.length === 0 ||
+      partsLoaded.some((fragLoaded) => !fragLoaded);
     const chunkMeta = new ChunkMetadata(
       frag.level,
       frag.sn as number,
@@ -570,7 +572,7 @@ export default class BaseStreamController
     progressCallback: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | null> {
     return new Promise(
-      (resolve: (FragLoadedEndData) => void, reject: (LoadError) => void) => {
+      (resolve: ResolveFragLoaded, reject: RejectFragLoaded) => {
         const partsLoaded: FragLoadedData[] = [];
         const loadPartIndex = (index: number) => {
           const part = partList[index];
