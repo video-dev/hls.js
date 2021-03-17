@@ -818,7 +818,6 @@ class AudioStreamController
         this.state = State.WAITING_INIT_PTS;
       } else {
         this.startFragRequested = true;
-        this.nextLoadPosition = frag.start + frag.duration;
         super.loadFragment(frag, trackDetails, targetBufferTime);
       }
     }
