@@ -96,7 +96,7 @@ export default class MP4Remuxer implements Remuxer {
       if (delta < -4294967296) {
         // 2^32, see PTSNormalize for reasoning, but we're hitting a rollover here, and we don't want that to impact the timeOffset calculation
         rolloverDetected = true;
-        return PTSNormalize(minPTS, sample.pts);
+        return normalizePts(minPTS, sample.pts);
       } else if (delta > 0) {
         return minPTS;
       } else {
@@ -182,7 +182,7 @@ export default class MP4Remuxer implements Remuxer {
           // drift between audio and video streams
           const startPTS = this.getVideoStartPts(videoTrack.samples);
           const tsDelta =
-            PTSNormalize(audioTrack.samples[0].pts, startPTS) - startPTS;
+            normalizePts(audioTrack.samples[0].pts, startPTS) - startPTS;
           const audiovideoTimestampDelta = tsDelta / videoTrack.inputTimeScale;
           audioTimeOffset += Math.max(0, audiovideoTimestampDelta);
           videoTimeOffset += Math.max(0, -audiovideoTimestampDelta);
@@ -334,7 +334,7 @@ export default class MP4Remuxer implements Remuxer {
         const startOffset = Math.round(timescale * timeOffset);
         initDTS = Math.min(
           initDTS as number,
-          PTSNormalize(videoSamples[0].dts, startPTS) - startOffset
+          normalizePts(videoSamples[0].dts, startPTS) - startOffset
         );
         initPTS = Math.min(initPTS as number, startPTS - startOffset);
       }
@@ -381,7 +381,7 @@ export default class MP4Remuxer implements Remuxer {
       const pts = timeOffset * timeScale;
       const cts =
         inputSamples[0].pts -
-        PTSNormalize(inputSamples[0].dts, inputSamples[0].pts);
+        normalizePts(inputSamples[0].dts, inputSamples[0].pts);
       // if not contiguous, let's use target timeOffset
       nextAvcDts = pts - cts;
     }
@@ -390,8 +390,8 @@ export default class MP4Remuxer implements Remuxer {
     // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
     for (let i = 0; i < nbSamples; i++) {
       const sample = inputSamples[i];
-      sample.pts = PTSNormalize(sample.pts - initPTS, nextAvcDts);
-      sample.dts = PTSNormalize(sample.dts - initPTS, nextAvcDts);
+      sample.pts = normalizePts(sample.pts - initPTS, nextAvcDts);
+      sample.dts = normalizePts(sample.dts - initPTS, nextAvcDts);
       if (sample.dts > sample.pts) {
         const PTS_DTS_SHIFT_TOLERANCE_90KHZ = 90000 * 0.2;
         ptsDtsShift = Math.max(
@@ -702,14 +702,14 @@ export default class MP4Remuxer implements Remuxer {
         ((accurateTimeOffset &&
           Math.abs(timeOffsetMpegTS - nextAudioPts) < 9000) ||
           Math.abs(
-            PTSNormalize(inputSamples[0].pts - initPTS, timeOffsetMpegTS) -
+            normalizePts(inputSamples[0].pts - initPTS, timeOffsetMpegTS) -
               nextAudioPts
           ) <
             20 * inputSampleDuration)) as boolean);
 
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
-      sample.pts = sample.dts = PTSNormalize(
+      sample.pts = sample.dts = normalizePts(
         sample.pts - initPTS,
         timeOffsetMpegTS
       );
@@ -1054,10 +1054,10 @@ export default class MP4Remuxer implements Remuxer {
       // setting id3 pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
       sample.pts =
-        PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale) /
+        normalizePts(sample.pts - initPTS, timeOffset * inputTimeScale) /
         inputTimeScale;
       sample.dts =
-        PTSNormalize(sample.dts - initDTS, timeOffset * inputTimeScale) /
+        normalizePts(sample.dts - initDTS, timeOffset * inputTimeScale) /
         inputTimeScale;
     }
     const samples = track.samples;
@@ -1083,7 +1083,7 @@ export default class MP4Remuxer implements Remuxer {
       // setting text pts, dts to relative time
       // using this._initPTS and this._initDTS to calculate relative time
       sample.pts =
-        PTSNormalize(sample.pts - initPTS, timeOffset * inputTimeScale) /
+        normalizePts(sample.pts - initPTS, timeOffset * inputTimeScale) /
         inputTimeScale;
     }
     track.samples.sort((a, b) => a.pts - b.pts);
@@ -1095,7 +1095,7 @@ export default class MP4Remuxer implements Remuxer {
   }
 }
 
-export function PTSNormalize(value: number, reference: number | null): number {
+export function normalizePts(value: number, reference: number | null): number {
   let offset;
   if (reference === null) {
     return value;
