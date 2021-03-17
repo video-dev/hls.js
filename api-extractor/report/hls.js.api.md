@@ -854,6 +854,7 @@ class Hls implements HlsEventEmitter {
     get firstLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "firstLevel" must appear on the getter, not the setter.
     set firstLevel(newLevel: number);
+    get forceStartLoad(): boolean;
     // (undocumented)
     static isSupported(): boolean;
     get latency(): number;

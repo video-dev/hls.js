@@ -31,6 +31,11 @@ export default class GapController {
     this.hls = hls;
   }
 
+  public destroy() {
+    // @ts-ignore
+    this.hls = this.fragmentTracker = this.media = null;
+  }
+
   /**
    * Checks if the playhead is stuck within a gap, and if so, attempts to free it.
    * A gap is an unbuffered range between two buffered ranges (or the start and the first buffered range).

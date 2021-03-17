@@ -20,6 +20,13 @@ export default class FragmentLoader {
     this.config = config;
   }
 
+  destroy() {
+    if (this.loader) {
+      this.loader.destroy();
+      this.loader = null;
+    }
+  }
+
   abort() {
     if (this.loader) {
       // Abort the loader for current fragment. Only one may load at any given time
@@ -53,6 +60,9 @@ export default class FragmentLoader {
     const DefaultILoader = config.loader;
 
     return new Promise((resolve, reject) => {
+      if (this.loader) {
+        this.loader.destroy();
+      }
       const loader = (this.loader = frag.loader = FragmentILoader
         ? new FragmentILoader(config)
         : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
@@ -139,6 +149,9 @@ export default class FragmentLoader {
     const DefaultILoader = config.loader;
 
     return new Promise((resolve, reject) => {
+      if (this.loader) {
+        this.loader.destroy();
+      }
       const loader = (this.loader = frag.loader = FragmentILoader
         ? new FragmentILoader(config)
         : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
@@ -246,6 +259,7 @@ export default class FragmentLoader {
       self.clearTimeout(this.partLoadTimeout);
       this.loader = null;
     }
+    loader.destroy();
   }
 }
 

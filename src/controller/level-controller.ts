@@ -59,9 +59,10 @@ export default class LevelController extends BasePlaylistController {
   }
 
   public destroy() {
-    super.destroy();
     this._unregisterListeners();
     this.manualLevelIndex = -1;
+    this._levels.length = 0;
+    super.destroy();
   }
 
   public startLoad(): void {
@@ -189,7 +190,10 @@ export default class LevelController extends BasePlaylistController {
       };
       this.hls.trigger(Events.MANIFEST_PARSED, edata);
 
-      this.onParsedComplete();
+      // Initiate loading after all controllers have received MANIFEST_PARSED
+      if (this.hls.config.autoStartLoad || this.hls.forceStartLoad) {
+        this.hls.startLoad(this.hls.config.startPosition);
+      }
     } else {
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,

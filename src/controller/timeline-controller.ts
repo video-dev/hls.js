@@ -58,8 +58,8 @@ export class TimelineController implements ComponentAPI {
   private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
-  private readonly cea608Parser1!: Cea608Parser;
-  private readonly cea608Parser2!: Cea608Parser;
+  private cea608Parser1!: Cea608Parser;
+  private cea608Parser2!: Cea608Parser;
   private lastSn: number = -1;
   private prevCC: number = -1;
   private vttCCs: VTTCCs = newVTTCCs();
@@ -103,11 +103,6 @@ export class TimelineController implements ComponentAPI {
       this.cea608Parser2 = new Cea608Parser(3, channel3, channel4);
     }
 
-    this._registerListeners();
-  }
-
-  private _registerListeners(): void {
-    const { hls } = this;
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
@@ -122,7 +117,7 @@ export class TimelineController implements ComponentAPI {
     hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
   }
 
-  private _unregisterListeners(): void {
+  public destroy(): void {
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
@@ -136,6 +131,8 @@ export class TimelineController implements ComponentAPI {
     hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
+    // @ts-ignore
+    this.hls = this.config = this.cea608Parser1 = this.cea608Parser2 = null;
   }
 
   public addCues(
@@ -276,10 +273,6 @@ export class TimelineController implements ComponentAPI {
       return;
     }
     return media.addTextTrack(kind, label, lang);
-  }
-
-  public destroy() {
-    this._unregisterListeners();
   }
 
   private onMediaAttaching(

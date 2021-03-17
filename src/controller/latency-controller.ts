@@ -12,7 +12,7 @@ import type Hls from '../hls';
 import type { HlsConfig } from '../config';
 
 export default class LatencyController implements ComponentAPI {
-  private readonly hls: Hls;
+  private hls: Hls;
   private readonly config: HlsConfig;
   private media: HTMLMediaElement | null = null;
   private levelDetails: LevelDetails | null = null;
@@ -117,6 +117,9 @@ export default class LatencyController implements ComponentAPI {
   public destroy(): void {
     this.unregisterListeners();
     this.onMediaDetaching();
+    this.levelDetails = null;
+    // @ts-ignore
+    this.hls = this.timeupdateHandler = null;
   }
 
   private registerListeners() {
