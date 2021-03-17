@@ -44,6 +44,7 @@
     "start": "npm run dev",
     "test": "npm run test:unit && npm run test:func",
     "test:unit": "karma start karma.conf.js",
+    "test:unit:debug": "DEBUG_UNIT_TESTS=1 karma start karma.conf.js --auto-watch --no-single-run --browsers Chrome",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "test:func:light": "BABEL_ENV=development HLSJS_LIGHT=1 mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
