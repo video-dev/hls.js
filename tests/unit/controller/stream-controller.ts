@@ -29,8 +29,8 @@ describe('StreamController', function () {
 
   beforeEach(function () {
     hls = new Hls({});
-    fragmentTracker = new FragmentTracker(hls);
-    streamController = new StreamController(hls, fragmentTracker);
+    streamController = hls['streamController'];
+    fragmentTracker = streamController['fragmentTracker'];
     streamController['startFragRequested'] = true;
   });
 

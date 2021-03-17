@@ -2,7 +2,7 @@ const { merge } = require('webpack-merge');
 const webpackConfig = require('./webpack.config')({ debug: true })[0];
 delete webpackConfig.entry;
 delete webpackConfig.output;
-const mergeConfig = merge(webpackConfig, {
+const karmaWebpack = {
   devtool: 'inline-source-map',
   module: {
     rules: [
@@ -24,7 +24,14 @@ const mergeConfig = merge(webpackConfig, {
   node: {
     global: true,
   },
-});
+};
+
+// Remove coverage post-processor for JavaScript debugging when running `test:unit:debug`
+if (process.env.DEBUG_UNIT_TESTS) {
+  karmaWebpack.module.rules = [];
+}
+
+const mergeConfig = merge(webpackConfig, karmaWebpack);
 
 module.exports = function (config) {
   config.set({
