@@ -1,12 +1,12 @@
 import { Events } from '../events';
 import { Fragment, Part } from '../loader/fragment';
+import { PlaylistLevelType } from '../types/loader';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   FragmentBufferedRange,
   FragmentEntity,
   FragmentTimeRange,
 } from '../types/fragment-tracker';
-import type { PlaylistLevelType } from '../types/loader';
 import type { ComponentAPI } from '../types/component-api';
 import type {
   BufferAppendedData,
@@ -72,33 +72,36 @@ export class FragmentTracker implements ComponentAPI {
     position: number,
     levelType: PlaylistLevelType
   ): Fragment | Part | null {
-    const { activeFragment, activeParts } = this;
-    if (!activeFragment) {
-      return null;
-    }
-    if (activeParts) {
-      for (let i = activeParts.length; i--; ) {
-        const activePart = activeParts[i];
-        const appendedPTS = activePart
-          ? activePart.end
-          : activeFragment.appendedPTS;
-        if (
-          activePart.start <= position &&
-          appendedPTS !== undefined &&
-          position <= appendedPTS
-        ) {
-          if (i > 0) {
-            this.activeParts = activeParts.slice(i);
-          }
-          return activePart;
-        }
+    if (levelType === PlaylistLevelType.MAIN) {
+      const { activeFragment, activeParts } = this;
+      if (!activeFragment) {
+        return null;
       }
-    } else if (
-      activeFragment.start <= position &&
-      activeFragment.appendedPTS !== undefined &&
-      position <= activeFragment.appendedPTS
-    ) {
-      return activeFragment;
+      if (activeParts) {
+        for (let i = activeParts.length; i--; ) {
+          const activePart = activeParts[i];
+          const appendedPTS = activePart
+            ? activePart.end
+            : activeFragment.appendedPTS;
+          if (
+            activePart.start <= position &&
+            appendedPTS !== undefined &&
+            position <= appendedPTS
+          ) {
+            // 9 is a magic number. remove parts from lookup after a match but keep some short seeks back.
+            if (i > 9) {
+              this.activeParts = activeParts.slice(i - 9);
+            }
+            return activePart;
+          }
+        }
+      } else if (
+        activeFragment.start <= position &&
+        activeFragment.appendedPTS !== undefined &&
+        position <= activeFragment.appendedPTS
+      ) {
+        return activeFragment;
+      }
     }
     return this.getBufferedFrag(position, levelType);
   }
@@ -349,6 +352,7 @@ export class FragmentTracker implements ComponentAPI {
     const { frag, part } = data;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
+    // don't track parts for memory efficiency
     if (frag.sn === 'initSegment' || frag.bitrateTest || part) {
       return;
     }
@@ -356,7 +360,6 @@ export class FragmentTracker implements ComponentAPI {
     const fragKey = getFragmentKey(frag);
     this.fragments[fragKey] = {
       body: frag,
-      part,
       loaded: data,
       backtrack: null,
       buffered: false,
@@ -369,15 +372,17 @@ export class FragmentTracker implements ComponentAPI {
     data: BufferAppendedData
   ) {
     const { frag, part, timeRanges } = data;
-    this.activeFragment = frag;
-    if (part) {
-      let activeParts = this.activeParts;
-      if (!activeParts) {
-        this.activeParts = activeParts = [];
+    if (frag.type === PlaylistLevelType.MAIN) {
+      this.activeFragment = frag;
+      if (part) {
+        let activeParts = this.activeParts;
+        if (!activeParts) {
+          this.activeParts = activeParts = [];
+        }
+        activeParts.push(part);
+      } else {
+        this.activeParts = null;
       }
-      activeParts.push(part);
-    } else {
-      this.activeParts = null;
     }
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = timeRanges as { [key in SourceBufferName]: TimeRanges };
