@@ -120,6 +120,7 @@ class EMEController implements ComponentAPI {
   private _requestLicenseFailureCount: number = 0;
 
   private mediaKeysPromise: Promise<MediaKeys> | null = null;
+  private _onMediaEncrypted = this.onMediaEncrypted.bind(this);
 
   /**
    * @constructs
@@ -141,6 +142,9 @@ class EMEController implements ComponentAPI {
 
   public destroy() {
     this._unregisterListeners();
+    // @ts-ignore
+    this.hls = this._onMediaEncrypted = null;
+    this._requestMediaKeySystemAccess = null;
   }
 
   private _registerListeners() {
@@ -318,7 +322,7 @@ class EMEController implements ComponentAPI {
    * @private
    * @param e {MediaEncryptedEvent}
    */
-  private _onMediaEncrypted = (e: MediaEncryptedEvent) => {
+  private onMediaEncrypted(e: MediaEncryptedEvent) {
     logger.log(`Media is encrypted using "${e.initDataType}" init data type`);
 
     if (!this.mediaKeysPromise) {
@@ -345,7 +349,7 @@ class EMEController implements ComponentAPI {
     this.mediaKeysPromise
       .then(finallySetKeyAndStartSession)
       .catch(finallySetKeyAndStartSession);
-  };
+  }
 
   /**
    * @private

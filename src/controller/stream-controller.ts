@@ -58,9 +58,6 @@ export default class StreamController
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[stream-controller]');
-    this.fragmentLoader = new FragmentLoader(hls.config);
-    this.state = State.STOPPED;
-
     this._registerListeners();
   }
 
@@ -109,6 +106,7 @@ export default class StreamController
 
   protected onHandlerDestroying() {
     this._unregisterListeners();
+    this.onMediaDetaching();
   }
 
   public startLoad(startPosition: number): void {
@@ -516,8 +514,13 @@ export default class StreamController
       media.removeEventListener('playing', this.onvplaying);
       media.removeEventListener('seeked', this.onvseeked);
       this.onvplaying = this.onvseeked = null;
+      this.videoBuffer = null;
     }
-
+    this.fragPlaying = null;
+    if (this.gapController) {
+      this.gapController.destroy();
+      this.gapController = null;
+    }
     super.onMediaDetaching();
   }
 

@@ -1630,16 +1630,6 @@ function addChartEventListeners(hls) {
     chart
   );
   hls.on(
-    Hls.Events.FRAG_LOADING,
-    () => {
-      // TODO: mutate level datasets
-      // Update loadLevel
-      chart.removeType('level');
-      chart.updateLevels(hls.levels);
-    },
-    chart
-  );
-  hls.on(
     Hls.Events.LEVEL_UPDATED,
     (eventName, { details }) => {
       chart.updateLevelOrTrack(details);

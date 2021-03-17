@@ -64,7 +64,7 @@ export class TimelineChart {
       options: Object.assign(getChartOptions(), chartJsOptions),
       plugins: [
         {
-          afterRender: () => {
+          afterRender: (chart) => {
             this.imageDataBuffer = null;
             this.drawCurrentTime();
           },
@@ -298,37 +298,41 @@ export class TimelineChart {
       details.fragments.forEach((fragment) => {
         // TODO: keep track of initial playlist start and duration so that we can show drift and pts offset
         // (Make that a feature of hls.js v1.0.0 fragments)
-        data.push(
-          Object.assign(
-            {
-              dataType: 'fragment',
-            },
-            fragment
-          )
+        const chartFragment = Object.assign(
+          {
+            dataType: 'fragment',
+          },
+          fragment,
+          // Remove loader references for GC
+          { loader: null }
         );
+        data.push(chartFragment);
       });
     }
     if (details.partList) {
       details.partList.forEach((part) => {
-        data.push(
-          Object.assign(
-            {
-              dataType: 'part',
-              start: part.fragment.start + part.fragOffset,
-            },
-            part
-          )
+        const chartPart = Object.assign(
+          {
+            dataType: 'part',
+            start: part.fragment.start + part.fragOffset,
+          },
+          part,
+          {
+            fragment: Object.assign({}, part.fragment, { loader: null }),
+          }
         );
+        data.push(chartPart);
       });
       if (details.fragmentHint) {
-        data.push(
-          Object.assign(
-            {
-              dataType: 'fragmentHint',
-            },
-            details.fragmentHint
-          )
+        const chartFragment = Object.assign(
+          {
+            dataType: 'fragmentHint',
+          },
+          details.fragmentHint,
+          // Remove loader references for GC
+          { loader: null }
         );
+        data.push(chartFragment);
       }
     }
     const start = getPlaylistStart(details);
@@ -339,6 +343,7 @@ export class TimelineChart {
     if (this.hidden) {
       return;
     }
+    self.cancelAnimationFrame(this.rafDebounceRequestId);
     this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
   }
 
@@ -394,6 +399,7 @@ export class TimelineChart {
     if (this.hidden) {
       return;
     }
+    self.cancelAnimationFrame(this.rafDebounceRequestId);
     this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
   }
 
@@ -591,13 +597,15 @@ export class TimelineChart {
       return;
     }
     self.cancelAnimationFrame(this.rafDebounceRequestId);
-    this.rafDebounceRequestId = self.requestAnimationFrame(() => {
-      this.update();
-    });
+    this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
   }
 
   drawCurrentTime() {
     const chart = this.chart;
+    // @ts-ignore
+    if (chart?.panning) {
+      return;
+    }
     if (self.hls?.media && chart.data.datasets!.length) {
       const currentTime = self.hls.media.currentTime;
       const scale = this.chartScales[X_AXIS_SECONDS];
@@ -821,6 +829,13 @@ function getChartOptions() {
           rangeMax: {
             x: null,
             y: null,
+          },
+          threshold: 100,
+          onPan: function ({ chart }) {
+            chart.panning = true;
+          },
+          onPanComplete: function ({ chart }) {
+            chart.panning = false;
           },
         },
         zoom: {
