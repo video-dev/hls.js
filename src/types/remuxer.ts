@@ -2,7 +2,6 @@ import type { TrackSet } from './track';
 import {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
-  DemuxedTrack,
   DemuxedUserdataTrack,
   DemuxedVideoTrack,
   MetadataSample,

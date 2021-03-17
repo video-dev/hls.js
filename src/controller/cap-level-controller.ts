@@ -244,7 +244,7 @@ class CapLevelController implements ComponentAPI {
     width: number,
     height: number
   ): number {
-    if (!levels || (levels && !levels.length)) {
+    if (!levels || !levels.length) {
       return -1;
     }
 

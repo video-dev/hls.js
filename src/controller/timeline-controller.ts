@@ -428,10 +428,8 @@ export class TimelineController implements ComponentAPI {
     if (data.frag.type === PlaylistLevelType.MAIN) {
       const sn = data.frag.sn;
       if (sn !== lastSn + 1) {
-        if (cea608Parser1 && cea608Parser2) {
-          cea608Parser1.reset();
-          cea608Parser2.reset();
-        }
+        cea608Parser1.reset();
+        cea608Parser2.reset();
       }
       this.lastSn = sn as number;
     }
