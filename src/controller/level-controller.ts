@@ -218,21 +218,29 @@ export default class LevelController extends BasePlaylistController {
 
   set level(newLevel: number) {
     const levels = this._levels;
+    if (levels.length === 0) {
+      return;
+    }
     if (this.currentLevelIndex === newLevel && levels[newLevel]?.details) {
       return;
     }
     // check if level idx is valid
     if (newLevel < 0 || newLevel >= levels.length) {
       // invalid level id given, trigger error
+      const fatal = newLevel < 0;
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
         details: ErrorDetails.LEVEL_SWITCH_ERROR,
         level: newLevel,
-        fatal: false,
+        fatal,
         reason: 'invalid level idx',
       });
-      return;
+      if (fatal) {
+        return;
+      }
+      newLevel = Math.min(newLevel, levels.length - 1);
     }
+
     // stopping live reloading timer if any
     this.clearTimer();
 
