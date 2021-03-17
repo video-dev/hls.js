@@ -58,13 +58,12 @@ class AudioStreamController
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[audio-stream-controller]');
-    this.fragmentLoader = new FragmentLoader(hls.config);
-
     this._registerListeners();
   }
 
   protected onHandlerDestroying() {
     this._unregisterListeners();
+    this.mainDetails = null;
   }
 
   private _registerListeners() {

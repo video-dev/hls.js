@@ -64,6 +64,9 @@ class AbrController implements ComponentAPI {
   public destroy() {
     this.unregisterListeners();
     this.clearTimer();
+    // @ts-ignore
+    this.hls = this.onCheck = null;
+    this.fragCurrent = this.partCurrent = null;
   }
 
   protected onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {

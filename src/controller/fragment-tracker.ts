@@ -59,9 +59,9 @@ export class FragmentTracker implements ComponentAPI {
   }
 
   public destroy() {
-    this.fragments = Object.create(null);
-    this.timeRanges = Object.create(null);
     this._unregisterListeners();
+    // @ts-ignore
+    this.fragments = this.timeRanges = null;
   }
 
   /**
