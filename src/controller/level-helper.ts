@@ -369,7 +369,7 @@ export function computeReloadInterval(
     timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;
   const roundTrip = stats.loading.end - stats.loading.start;
 
-  let estimatedTimeUntilUpdate = reloadInterval;
+  let estimatedTimeUntilUpdate;
   let availabilityDelay = newDetails.availabilityDelay;
   // let estimate = 'average';
 

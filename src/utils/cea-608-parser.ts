@@ -1299,7 +1299,7 @@ class Cea608Parser {
    * @returns {Object} pacData with style parameters.
    */
   interpretPAC(row: number, byte: number): PACData {
-    let pacIndex = byte;
+    let pacIndex;
     const pacData: PACData = {
       color: null,
       italics: false,
@@ -1353,7 +1353,7 @@ class Cea608Parser {
     }
     if (charCode1 >= 0x11 && charCode1 <= 0x13) {
       // Special character
-      let oneCode = b;
+      let oneCode;
       if (charCode1 === 0x11) {
         oneCode = b + 0x50;
       } else if (charCode1 === 0x12) {

@@ -457,7 +457,6 @@ export default class MP4Remuxer implements Remuxer {
         }
       }
       firstDTS = inputSamples[0].dts;
-      lastDTS = inputSamples[nbSamples - 1].dts;
     }
 
     // if fragment are contiguous, detect hole/overlapping between fragments
