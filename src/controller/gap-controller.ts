@@ -79,7 +79,6 @@ export default class GapController {
     if (
       media.paused ||
       media.ended ||
-      media.playbackRate === 0 ||
       !BufferHelper.getBuffered(media).length
     ) {
       return;
