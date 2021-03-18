@@ -1,6 +1,7 @@
 /* global $, Hls, __NETLIFY__ */
 /* eslint camelcase: 0 */
 
+import { pack } from 'jsonpack';
 import 'promise-polyfill/src/polyfill';
 import { sortObject, copyTextToClipboard } from './demo-utils';
 import { TimelineChart } from './chart/timeline-chart';
@@ -1259,7 +1260,7 @@ function hideCanvas() {
 
 function getMetrics() {
   const json = JSON.stringify(events);
-  const jsonpacked = self.jsonpack.pack(json);
+  const jsonpacked = pack(json);
   // console.log('packing JSON from ' + json.length + ' to ' + jsonpacked.length + ' bytes');
   return btoa(jsonpacked);
 }
