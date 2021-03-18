@@ -134,11 +134,7 @@ export interface BufferAppendedData {
     // (undocumented)
     part: Part | null;
     // (undocumented)
-    timeRanges: {
-        audio?: TimeRanges;
-        video?: TimeRanges;
-        audiovideo?: TimeRanges;
-    };
+    timeRanges: Partial<Record<SourceBufferName, TimeRanges>>;
     // (undocumented)
     type: SourceBufferName;
 }
