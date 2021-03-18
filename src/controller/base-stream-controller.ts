@@ -41,6 +41,9 @@ import type { HlsEventEmitter } from '../events';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { SourceBufferName } from '../types/buffer';
 
+type ResolveFragLoaded = (FragLoadedEndData) => void;
+type RejectFragLoaded = (LoadError) => void;
+
 export const State = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',
@@ -231,7 +234,7 @@ export default class BaseStreamController
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.loadedmetadata) {
+    if (!this.loadedmetadata && !bufferInfo.len) {
       this.nextLoadPosition = this.startPosition = currentTime;
     }
 
@@ -478,9 +481,8 @@ export default class BaseStreamController
     // If we did not load parts, or loaded all parts, we have complete (not partial) fragment data
     const complete =
       !partsLoaded ||
-      (partsLoaded &&
-        (partsLoaded.length === 0 ||
-          partsLoaded.some((fragLoaded) => !fragLoaded)));
+      partsLoaded.length === 0 ||
+      partsLoaded.some((fragLoaded) => !fragLoaded);
     const chunkMeta = new ChunkMetadata(
       frag.level,
       frag.sn as number,
@@ -525,6 +527,7 @@ export default class BaseStreamController
               targetBufferTime.toFixed(3)
             )}`
           );
+          this.nextLoadPosition = part.start + part.duration;
           this.state = State.FRAG_LOADING;
           this.hls.trigger(Events.FRAG_LOADING, {
             frag,
@@ -554,7 +557,10 @@ export default class BaseStreamController
         frag.level
       }, target: ${parseFloat(targetBufferTime.toFixed(3))}`
     );
-
+    // Don't update nextLoadPosition for fragments which are not buffered
+    if (Number.isFinite(frag.sn as number) && !this.bitrateTest) {
+      this.nextLoadPosition = frag.start + frag.duration;
+    }
     this.state = State.FRAG_LOADING;
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
 
@@ -570,7 +576,7 @@ export default class BaseStreamController
     progressCallback: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | null> {
     return new Promise(
-      (resolve: (FragLoadedEndData) => void, reject: (LoadError) => void) => {
+      (resolve: ResolveFragLoaded, reject: RejectFragLoaded) => {
         const partsLoaded: FragLoadedData[] = [];
         const loadPartIndex = (index: number) => {
           const part = partList[index];

@@ -251,9 +251,9 @@ class AudioStreamController
 
   private doTickIdle() {
     const { hls, levels, media, trackId } = this;
-
     const config = hls.config;
-    if (!levels) {
+
+    if (!levels || !levels[trackId]) {
       return;
     }
 
@@ -270,9 +270,6 @@ class AudioStreamController
       return;
     }
 
-    if (!levels || !levels[trackId]) {
-      return;
-    }
     const levelInfo = levels[trackId];
 
     const trackDetails = levelInfo.details;
@@ -821,7 +818,6 @@ class AudioStreamController
         this.state = State.WAITING_INIT_PTS;
       } else {
         this.startFragRequested = true;
-        this.nextLoadPosition = frag.start + frag.duration;
         super.loadFragment(frag, trackDetails, targetBufferTime);
       }
     }

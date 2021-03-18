@@ -182,11 +182,10 @@ var // this is the start of a huge multi-line var decl
           flags: new Uint8Array(data.subarray(1, 4)),
           handlerType: parseType(data.subarray(8, 12)),
           name: '',
-        },
-        i = 8;
+        };
 
       // parse out the name field
-      for (i = 24; i < data.byteLength; i++) {
+      for (var i = 24; i < data.byteLength; i++) {
         if (data[i] === 0x00) {
           // the name field is null-terminated
           i++;
