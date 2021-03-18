@@ -321,11 +321,9 @@ You can safely require this library in Node and **absolutely nothing will happen
 
 hls.js is released under [Apache 2.0 License](LICENSE)
 
-## Development and contributing - first steps
+## Development and getting started
 
-Pull requests are welcome. Here is a quick guide on how to start.
-
-- First, checkout the repository and install the required dependencies
+First, checkout the repository and install the required dependencies
 
 ```sh
 git clone https://github.com/video-dev/hls.js.git
@@ -338,9 +336,7 @@ npm run dev
 npm run lint
 ```
 
-- Use [EditorConfig](https://editorconfig.org) or at least stay consistent to the file formats defined in the `.editorconfig` file.
-- Develop in a topic branch, not master
-- Prettier should run automatically in the pre-commit hook, but if it doesn't, run `npm run prettier`.
+Before submitting a PR, please see our [contribution guidelines](CONTRIBUTING.md).
 
 ## Setup
 
