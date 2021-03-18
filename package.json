@@ -52,10 +52,6 @@
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch"
   },
-  "dependencies": {
-    "eventemitter3": "^4.0.7",
-    "url-toolkit": "^2.2.1"
-  },
   "devDependencies": {
     "@babel/core": "7.13.10",
     "@babel/helper-module-imports": "7.12.13",
@@ -90,6 +86,8 @@
     "eslint-plugin-mocha": "8.1.0",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "4.3.1",
+    "eventemitter3": "4.0.7",
+    "url-toolkit": "2.2.1",
     "http-server": "0.12.3",
     "husky": "4.3.8",
     "istanbul-instrumenter-loader": "3.0.1",
