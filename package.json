@@ -76,7 +76,7 @@
     "@typescript-eslint/parser": "4.18.0",
     "babel-loader": "8.2.2",
     "babel-plugin-transform-remove-console": "6.9.4",
-    "chai": "4.3.3",
+    "chai": "4.3.4",
     "chart.js": "2.9.4",
     "chartjs-plugin-zoom": "0.7.7",
     "chromedriver": "89.0.0",
