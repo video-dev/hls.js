@@ -1,7 +1,6 @@
 /*
  * compute an Exponential Weighted moving average
  * - https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
- *  - heavily inspired from shaka-player
  */
 
 class EWMA {
@@ -19,10 +18,9 @@ class EWMA {
     this.totalWeight_ = weight;
   }
 
-  sample(weight: number, value: number) {
-    const adjAlpha = Math.pow(this.alpha_, weight);
-    this.estimate_ = value * (1 - adjAlpha) + adjAlpha * this.estimate_;
-    this.totalWeight_ += weight;
+  sample(value: number) {
+    this.estimate_ = value * (1 - this.alpha_) + this.alpha_ * this.estimate_;
+    this.totalWeight_++;
   }
 
   getTotalWeight(): number {

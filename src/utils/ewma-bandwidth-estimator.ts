@@ -27,14 +27,13 @@ class EwmaBandWidthEstimator {
       transferMs = Math.max(transferMs, 2);
       // value is bandwidth in bits/s
       const bandwidthInBps = (8000 * numBytes) / transferMs;
-      this.fast_.sample(1, bandwidthInBps);
-      this.slow_.sample(1, bandwidthInBps);
+      this.fast_.sample(bandwidthInBps);
+      this.slow_.sample(bandwidthInBps);
     }
   }
 
   canEstimate(): boolean {
-    const fast = this.fast_;
-    return fast && fast.getTotalWeight() >= this.minWeight_;
+    return this.fast_.getTotalWeight() >= this.minWeight_;
   }
 
   getEstimate(): number {
