@@ -79,10 +79,8 @@
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
-  - [`abrEwmaFastLive`](#abrewmafastlive)
-  - [`abrEwmaSlowLive`](#abrewmaslowlive)
-  - [`abrEwmaFastVoD`](#abrewmafastvod)
-  - [`abrEwmaSlowVoD`](#abrewmaslowvod)
+  - [`abrEwmaFast`](#abrewmafast)
+  - [`abrEwmaSlow`](#abrewmaslow)
   - [`abrEwmaDefaultEstimate`](#abrewmadefaultestimate)
   - [`abrBandWidthFactor`](#abrbandwidthfactor)
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
@@ -375,10 +373,8 @@ var config = {
   stretchShortVideoTrack: false,
   maxAudioFramesDrift: 1,
   forceKeyFrameOnDiscontinuity: true,
-  abrEwmaFastLive: 3.0,
-  abrEwmaSlowLive: 9.0,
-  abrEwmaFastVoD: 3.0,
-  abrEwmaSlowVoD: 9.0,
+  abrEwmaFastLive: 0.5,
+  abrEwmaSlowLive: 1.5,
   abrEwmaDefaultEstimate: 500000,
   abrBandWidthFactor: 0.95,
   abrBandWidthUpFactor: 0.7,
@@ -1056,45 +1052,23 @@ Setting this parameter to false can also generate decoding weirdness when switch
 
 parameter should be a boolean
 
-### `abrEwmaFastLive`
+### `abrEwmaFast`
 
 (default: `0.5`)
 
 Fast bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
-Half of the estimate is based on the last abrEwmaFastLive seconds of sample history.
-Each of the sample is weighted by the fragment duration.
+Half of the estimate is based on the last abrEwmaFast fragments or parts of sample history.
 
 parameter should be a float greater than 0
 
-### `abrEwmaSlowLive`
+### `abrEwmaSlow`
 
-(default: `9.0`)
+(default: `1.5`)
 
 Slow bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
-Half of the estimate is based on the last abrEwmaSlowLive seconds of sample history.
-Each of the sample is weighted by the fragment duration.
+Half of the estimate is based on the last abrEwmaSlow fragments or parts of sample history.
 
-parameter should be a float greater than [abrEwmaFastLive](#abrewmafastlive)
-
-### `abrEwmaFastVoD`
-
-(default: `3.0`)
-
-Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
-Half of the estimate is based on the last abrEwmaFastVoD seconds of sample history.
-Each of the sample is weighted by the fragment duration.
-
-parameter should be a float greater than 0
-
-### `abrEwmaSlowVoD`
-
-(default: `9.0`)
-
-Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
-Half of the estimate is based on the last abrEwmaSlowVoD seconds of sample history.
-Each of the sample is weighted by the fragment duration.
-
-parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
+parameter should be a float greater than [abrEwmaFast](#abrewmafast)
 
 ### `abrEwmaDefaultEstimate`
 

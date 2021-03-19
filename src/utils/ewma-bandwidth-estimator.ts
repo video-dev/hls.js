@@ -16,28 +16,20 @@ class EwmaBandWidthEstimator {
 
   constructor(slow: number, fast: number, defaultEstimate: number) {
     this.defaultEstimate_ = defaultEstimate;
-    this.minWeight_ = 2.5;
+    this.minWeight_ = 1;
     this.slow_ = new EWMA(slow);
     this.fast_ = new EWMA(fast);
   }
 
-  update(slow: number, fast: number) {
-    const { slow_, fast_ } = this;
-    if (this.slow_.halfLife !== slow) {
-      this.slow_ = new EWMA(slow, slow_.getEstimate(), slow_.getTotalWeight());
-    }
-    if (this.fast_.halfLife !== fast) {
-      this.fast_ = new EWMA(fast, fast_.getEstimate(), fast_.getTotalWeight());
-    }
-  }
-
-  sample(durationS: number, transferMs: number, numBytes: number) {
+  sample(transferMs: number, numBytes: number) {
     // limit speed to mitigate uncertainty from very fast transfers
-    transferMs = Math.max(transferMs, 2);
-    // value is bandwidth in bits/s
-    const bandwidthInBps = (8000 * numBytes) / transferMs;
-    this.fast_.sample(durationS, bandwidthInBps);
-    this.slow_.sample(durationS, bandwidthInBps);
+    if (numBytes) {
+      transferMs = Math.max(transferMs, 2);
+      // value is bandwidth in bits/s
+      const bandwidthInBps = (8000 * numBytes) / transferMs;
+      this.fast_.sample(1, bandwidthInBps);
+      this.slow_.sample(1, bandwidthInBps);
+    }
   }
 
   canEstimate(): boolean {

@@ -24,10 +24,8 @@ import type {
 } from './types/loader';
 
 export type ABRControllerConfig = {
-  abrEwmaFastLive: number;
-  abrEwmaSlowLive: number;
-  abrEwmaFastVoD: number;
-  abrEwmaSlowVoD: number;
+  abrEwmaFast: number;
+  abrEwmaSlow: number;
   abrEwmaDefaultEstimate: number;
   abrBandWidthFactor: number;
   abrBandWidthUpFactor: number;
@@ -242,10 +240,8 @@ export const hlsDefaultConfig: HlsConfig = {
   stretchShortVideoTrack: false, // used by mp4-remuxer
   maxAudioFramesDrift: 1, // used by mp4-remuxer
   forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
-  abrEwmaFastLive: 0.5, // used by abr-controller
-  abrEwmaSlowLive: 9, // used by abr-controller
-  abrEwmaFastVoD: 3, // used by abr-controller
-  abrEwmaSlowVoD: 9, // used by abr-controller
+  abrEwmaFast: 0.5, // used by abr-controller
+  abrEwmaSlow: 1.5, // used by abr-controller
   abrEwmaDefaultEstimate: 5e5, // 500 kbps  // used by abr-controller
   abrBandWidthFactor: 0.95, // used by abr-controller
   abrBandWidthUpFactor: 0.7, // used by abr-controller

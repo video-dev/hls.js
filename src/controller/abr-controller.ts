@@ -14,7 +14,6 @@ import type {
   FragLoadedData,
   FragBufferedData,
   ErrorData,
-  LevelLoadedData,
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 
@@ -35,8 +34,8 @@ class AbrController implements ComponentAPI {
 
     const config = hls.config;
     this.bwEstimator = new EwmaBandWidthEstimator(
-      config.abrEwmaSlowVoD,
-      config.abrEwmaFastVoD,
+      config.abrEwmaSlow,
+      config.abrEwmaFast,
       config.abrEwmaDefaultEstimate
     );
 
@@ -48,7 +47,6 @@ class AbrController implements ComponentAPI {
     hls.on(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
-    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.on(Events.ERROR, this.onError, this);
   }
 
@@ -57,7 +55,6 @@ class AbrController implements ComponentAPI {
     hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
-    hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
   }
 
@@ -77,15 +74,6 @@ class AbrController implements ComponentAPI {
         this.partCurrent = data.part ?? null;
         this.timer = self.setInterval(this.onCheck, 100);
       }
-    }
-  }
-
-  protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
-    const config = this.hls.config;
-    if (data.details.live) {
-      this.bwEstimator.update(config.abrEwmaSlowLive, config.abrEwmaFastLive);
-    } else {
-      this.bwEstimator.update(config.abrEwmaSlowVoD, config.abrEwmaFastVoD);
     }
   }
 
@@ -196,11 +184,7 @@ class AbrController implements ComponentAPI {
       )} s
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s`);
     hls.nextLoadLevel = nextLoadLevel;
-    this.bwEstimator.sample(
-      part ? part.duration : frag.duration,
-      requestDelay,
-      stats.loaded
-    );
+    this.bwEstimator.sample(requestDelay, stats.loaded);
     this.clearTimer();
     if (frag.loader) {
       this.fragCurrent = this.partCurrent = null;
@@ -267,11 +251,7 @@ class AbrController implements ComponentAPI {
     // rationale is that buffer appending only happens once media is attached. This can happen when config.startFragPrefetch
     // is used. If we used buffering in that case, our BW estimate sample will be very large.
     const processingMs = stats.parsing.end - stats.loading.start;
-    this.bwEstimator.sample(
-      part ? part.duration : frag.duration,
-      processingMs,
-      stats.loaded
-    );
+    this.bwEstimator.sample(processingMs, stats.loaded);
     stats.bwEstimate = this.bwEstimator.getEstimate();
     if (frag.bitrateTest) {
       this.bitrateTestDelay = processingMs / 1000;
