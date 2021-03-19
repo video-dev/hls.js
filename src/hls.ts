@@ -546,6 +546,36 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * Get the current setting for playerSizeIgnoreDevicePixelRatio
+   *
+   * @type {boolean}
+   */
+  get playerSizeIgnoreDevicePixelRatio(): boolean {
+    return this.config.playerSizeIgnoreDevicePixelRatio;
+  }
+
+  /**
+   * set  dynamically set playerSizeIgnoreDevicePixelRatio against (`CapLevelController`)
+   *
+   * @type {boolean}
+   */
+  set playerSizeIgnoreDevicePixelRatio(shouldStartCapping: boolean) {
+    const newPlayerSizeIgnoreDevicePixelRatio = !!shouldStartCapping;
+
+    if (newPlayerSizeIgnoreDevicePixelRatio !== this.config.playerSizeIgnoreDevicePixelRatio) {
+      if (newPlayerSizeIgnoreDevicePixelRatio) {
+        this.capLevelController.startCapping(); // If capping occurs, nextLevelSwitch will happen based on size.
+      } else {
+        this.capLevelController.stopCapping();
+        this.autoLevelCapping = -1;
+        this.streamController.nextLevelSwitch(); // Now we're uncapped, get the next level asap.
+      }
+
+      this.config.playerSizeIgnoreDevicePixelRatio = newPlayerSizeIgnoreDevicePixelRatio;
+    }
+  }
+
+  /**
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
    * @type {number}
    */
