@@ -11,9 +11,12 @@ include your own Promise polyfill.
 
 ### Back Buffer Eviction
 
-The new `backBufferLength` setting defaults to 90 seconds, and applies to Live and VOD streams. `liveBackBufferLength` is
-still supported but marked as deprecated. Back buffer on VOD content will be cleared by hls.js rather than leaving it up
-to the browser. Set backBufferLength to `Infinity` and the deprecated `liveBackBufferLength` to 90 to enforce the old behavior.
+The new `backBufferLength` setting defaults to 90 seconds, and applies to Live and VOD streams. In version 1.0 and up,
+the back buffer on VOD content will be cleared by hls.js rather than leaving it up to the browser by default.
+
+Set `backBufferLength` to `Infinity` and `liveBackBufferLength` to `90` if you would like 1.0 to handle back buffer
+eviction for Live and VOD streams as older versions did. While `liveBackBufferLength` can still be used, it has been
+marked deprecated and may be removed in an upcoming minor release.
 
 ### Low Latency Streams
 
