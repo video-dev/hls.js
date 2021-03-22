@@ -4,15 +4,27 @@ This guide provides an overview to migrating an application using hls.js from v0
 
 ## Dependencies
 
-Promise support is now required. Please bring your own polyfill.
+Promise support is now required. If your app requires support for older browsers that do not include support for Promises,
+include your own Promise polyfill.
 
 ## Configuration Changes
 
-cleared by hls.js than leaving it up to the browser. Set `backBufferLength`
+### Back Buffer Eviction
 
-- `backBufferLength` default of 90 seconds applies to Live and VOD streams. `liveBackBufferLength` is still supported but marked as deprecated. Back buffer on VOD content will be to `Infinity` and the deprecated `liveBackBufferLength` to 90 to enforce the old behavior.
-- `lowLatencyMode` - set to `false` to disable Low-latency part loading and target latency playback rate adjustment
-- `progressive`- (experimental) set to `true` to stream and append loaded audio and video data before each segment load completion. Not recommended for production or small segments with only a single GoP or less.
+The new `backBufferLength` setting defaults to 90 seconds, and applies to Live and VOD streams. `liveBackBufferLength` is
+still supported but marked as deprecated. Back buffer on VOD content will be cleared by hls.js rather than leaving it up
+to the browser. Set backBufferLength to `Infinity` and the deprecated `liveBackBufferLength` to 90 to enforce the old behavior.
+
+### Low Latency Streams
+
+The new `lowLatencyMode` setting is enabled by default. Set to `false` to disable Low-latency part loading and target
+latency playback rate adjustment.
+
+### Chunked Transfer Support (experimental)
+
+The new experimental `progressive` setting is disabled by default. Set it to `true` to stream and append audio and
+video data as it streams for each segment before segment load completion. Not recommended for production or small segments
+with only a single GoP or less.
 
 ## Support for Group-Level Track Switching
 
