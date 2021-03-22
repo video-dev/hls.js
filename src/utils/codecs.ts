@@ -40,6 +40,7 @@ const sampleEntryCodesISO = {
     avc3: true,
     avc4: true,
     avcp: true,
+    av01: true,
     drac: true,
     dvav: true,
     dvhe: true,
