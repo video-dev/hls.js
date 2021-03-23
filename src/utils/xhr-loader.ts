@@ -170,17 +170,22 @@ class XhrLoader implements Loader<LoaderContext> {
           }
           stats.loaded = stats.total = len;
 
-          const onProgress = this.callbacks!.onProgress;
+          if (!this.callbacks) {
+            return;
+          }
+          const onProgress = this.callbacks.onProgress;
           if (onProgress) {
             onProgress(stats, context, data, xhr);
           }
-
+          if (!this.callbacks) {
+            return;
+          }
           const response = {
             url: xhr.responseURL,
             data: data,
           };
 
-          this.callbacks!.onSuccess(response, stats, context, xhr);
+          this.callbacks.onSuccess(response, stats, context, xhr);
         } else {
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
           if (
