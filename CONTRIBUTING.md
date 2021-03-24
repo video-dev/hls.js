@@ -1,16 +1,26 @@
-# CONTRIBUTING
+# Contributing to Hls.js
 
 Thanks for contributing to hls.js. Your time and input are appreciated. To get the most out of the project, please consider the following.
 
-## Code of Conduct
+## General Guidelines
+
+### API Reference
+
+Are you having trouble getting started with hls.js, configuration, or integration? If so, please check the [API reference](https://github.com/video-dev/hls.js/blob/master/docs/API.md)
+before submitting an issue here.
+
+### Code of Conduct
 
 Please review the project [Code of Conduct](https://github.com/video-dev/hls.js/blob/master/CODE_OF_CONDUCT.md) and adhere to the pledge and standards for behavior when filing issues, submitting changes or interacting with maintainers.
 
 ## Reporting bugs
 
-File bug reports using the [Bug report template](https://github.com/video-dev/hls.js/issues/new?template=bug_report.md) as part of your issue, making sure to include:
+First, if you found an issue, **ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/video-dev/hls.js/issues).
+
+If you're unable to find an open issue addressing the problem, open a new one using the [bug report template](https://github.com/video-dev/hls.js/issues/new?template=bug_report.md). As part of your issue, make sure to include:
 
 - Test stream/page (if possible)
+- hls.js configuration
 - Steps to reproduce
 - Expected behavior
 - Actual behavior
