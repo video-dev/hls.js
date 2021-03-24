@@ -53,6 +53,10 @@ Event order and content have changed in some places. See **Breaking Changes** be
   - `SUBTITLE_LOAD_ERROR`
   - `SUBTITLE_TRACK_LOAD_TIMEOUT`
   - `UNKNOWN`
+- Added additional error detail for streams that cannot start because source buffer(s) could not be created after parsing media codecs
+  - `BUFFER_INCOMPATIBLE_CODECS_ERROR` will fire instead of `BUFFER_CREATED` with an empty `tracks` list. This media error
+    is fatal and not recoverable. If you encounter this error make sure you include the correct CODECS string in
+    your manifest, as this is most likely to occur when attempting to play a fragmented mp4 playlist with unknown codecs.
 
 ### Fragment Stats
 
