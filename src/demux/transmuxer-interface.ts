@@ -77,15 +77,9 @@ export default class TransmuxerInterface {
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: true,
             event: 'demuxerWorker',
-            err: {
-              message:
-                event.message +
-                ' (' +
-                event.filename +
-                ':' +
-                event.lineno +
-                ')',
-            },
+            error: new Error(
+              `${event.message}  (${event.filename}:${event.lineno})`
+            ),
           });
         };
         worker.postMessage({

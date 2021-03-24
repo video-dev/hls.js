@@ -383,6 +383,8 @@ export enum ErrorDetails {
     // (undocumented)
     BUFFER_FULL_ERROR = "bufferFullError",
     // (undocumented)
+    BUFFER_INCOMPATIBLE_CODECS_ERROR = "bufferIncompatibleCodecsError",
+    // (undocumented)
     BUFFER_NUDGE_ON_STALL = "bufferNudgeOnStall",
     // (undocumented)
     BUFFER_SEEK_OVER_HOLE = "bufferSeekOverHole",

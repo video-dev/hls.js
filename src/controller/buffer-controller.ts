@@ -659,7 +659,17 @@ export default class BufferController implements ComponentAPI {
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
       // append any pending segments now !
-      Object.keys(this.sourceBuffer).forEach((type: SourceBufferName) => {
+      const buffers = Object.keys(this.sourceBuffer);
+      if (buffers.length === 0) {
+        this.hls.trigger(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR,
+          fatal: true,
+          reason: 'could not create source buffer for media codec(s)',
+        });
+        return;
+      }
+      buffers.forEach((type: SourceBufferName) => {
         operationQueue.executeNext(type);
       });
     }
@@ -670,7 +680,7 @@ export default class BufferController implements ComponentAPI {
     if (!mediaSource) {
       throw Error('createSourceBuffers called when mediaSource was null');
     }
-
+    let tracksCreated = 0;
     for (const trackName in tracks) {
       if (!sourceBuffer[trackName]) {
         const track = tracks[trackName as keyof TrackSet];
@@ -698,6 +708,7 @@ export default class BufferController implements ComponentAPI {
             levelCodec: track.levelCodec,
             id: track.id,
           };
+          tracksCreated++;
         } catch (err) {
           logger.error(
             `[buffer-controller]: error while trying to add sourceBuffer: ${err.message}`
@@ -712,7 +723,9 @@ export default class BufferController implements ComponentAPI {
         }
       }
     }
-    this.hls.trigger(Events.BUFFER_CREATED, { tracks: this.tracks });
+    if (tracksCreated) {
+      this.hls.trigger(Events.BUFFER_CREATED, { tracks: this.tracks });
+    }
   }
 
   // Keep as arrow functions so that we can directly reference these functions directly as event listeners

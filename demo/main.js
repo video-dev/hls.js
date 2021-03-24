@@ -807,7 +807,10 @@ function loadSelectedStream() {
         break;
       case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
         logError(
-          'Buffer add codec error for ' + data.mimeType + ':' + data.err.message
+          'Buffer add codec error for ' +
+            data.mimeType +
+            ':' +
+            data.error.message
         );
         break;
       case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
