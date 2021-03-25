@@ -546,33 +546,22 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * Get the current setting for playerSizeIgnoreDevicePixelRatio
-   *
-   * @type {boolean}
+   * Get the current devicePixelRatio
+   * @type {number}
    */
-  get playerSizeIgnoreDevicePixelRatio(): boolean {
-    return this.config.playerSizeIgnoreDevicePixelRatio;
-  }
-
-  /**
-   * set  dynamically set playerSizeIgnoreDevicePixelRatio against (`CapLevelController`)
-   *
-   * @type {boolean}
-   */
-  set playerSizeIgnoreDevicePixelRatio(shouldStartCapping: boolean) {
-    const newPlayerSizeIgnoreDevicePixelRatio = !!shouldStartCapping;
-
-    if (newPlayerSizeIgnoreDevicePixelRatio !== this.config.playerSizeIgnoreDevicePixelRatio) {
-      if (newPlayerSizeIgnoreDevicePixelRatio) {
-        this.capLevelController.startCapping(); // If capping occurs, nextLevelSwitch will happen based on size.
-      } else {
-        this.capLevelController.stopCapping();
-        this.autoLevelCapping = -1;
-        this.streamController.nextLevelSwitch(); // Now we're uncapped, get the next level asap.
-      }
-
-      this.config.playerSizeIgnoreDevicePixelRatio = newPlayerSizeIgnoreDevicePixelRatio;
+  get devicePixelRatio(): number {
+    if (this.config.ignoreDevicePixelRatio) {
+      return 1;
     }
+
+    let pixelRatio = 1;    
+    try {
+      pixelRatio = self.devicePixelRatio;
+    } catch (e) {
+      /* no-op */
+    }
+
+    return pixelRatio;
   }
 
   /**
