@@ -686,13 +686,17 @@ class PlaylistLoader {
       return;
     }
 
-    // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
-    const checkAgeHeader = this.checkAgeHeader && levelDetails.live;
-    const ageHeader: string | null = checkAgeHeader
-      ? loader.getResponseHeader('age')
-      : null;
-    levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
-    this.checkAgeHeader = !!ageHeader;
+    if (
+      this.checkAgeHeader &&
+      levelDetails.live &&
+      this.hls.config.lowLatencyMode
+    ) {
+      const ageHeader = loader.getResponseHeader('age');
+      levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
+      // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
+      // Add an "Access-Control-Expose-Headers: age" header to playlist responses to prevent this CORS error
+      this.checkAgeHeader = ageHeader !== null;
+    }
 
     switch (type) {
       case PlaylistContextType.MANIFEST:
