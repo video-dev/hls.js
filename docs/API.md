@@ -90,6 +90,8 @@
   - [`minAutoBitrate`](#minautobitrate)
   - [`emeEnabled`](#emeEnabled)
   - [`widevineLicenseUrl`](#widevineLicenseUrl)
+  - [`licenseXhrSetup`](#licenseXhrSetup)
+  - [`licenseResponseCallback`](#licenseResponseCallback)
   - [`drmSystemOptions`](#drmSystemOptions)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
@@ -386,6 +388,7 @@ var config = {
   minAutoBitrate: 0,
   emeEnabled: false,
   widevineLicenseUrl: undefined,
+  licenseXhrSetup: undefined,
   drmSystemOptions: {},
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess,
 };
@@ -890,6 +893,8 @@ Parameter should be a class providing 2 getters, 2 setters and a `destroy()` met
 - get/set `autoLevelCapping`: capping/max level value that could be used by ABR Controller
 - `destroy()`: should clean-up all used resources
 
+For `hls.bandwidthEstimate()` to return an estimate from your custom controller, it will also need to satisfy `abrController.bwEstimator.getEstimate()`.
+
 ### `bufferController`
 
 (default: internal buffer controller)
@@ -1139,6 +1144,18 @@ Set to `true` to enable DRM key system access and license retrieval.
 (default: `undefined`)
 
 The Widevine license server URL.
+
+### `licenseXhrSetup`
+
+(default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => void`)
+
+A pre-processor function for modifying the `XMLHttpRequest` and request url (using `xhr.open`) prior to sending the license request.
+
+### `licenseResponseCallback`
+
+(default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => data: ArrayBuffer`)
+
+A post-processor function for modifying the license response before passing it to the key-session (`MediaKeySession.update`).
 
 ### `drmSystemOptions`
 
@@ -1523,7 +1540,9 @@ Full list of errors is described below:
 - `Hls.ErrorDetails.FRAG_PARSING_ERROR` - raised when fragment parsing fails
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_PARSING_ERROR`, fatal : `true` or `false`, reason : failure reason }
 - `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR` - raised when MediaSource fails to add new sourceBuffer
-  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR`, fatal : `false`, err : error raised by MediaSource, mimeType: mimeType on which the failure happened }
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR`, fatal : `false`, error : error raised by MediaSource, mimeType: mimeType on which the failure happened }
+- `Hls.ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR` - raised when no MediaSource(s) could be created based on track codec(s)
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR`, fatal : `true`, reason : failure reason }
 - `Hls.ErrorDetails.BUFFER_APPEND_ERROR` - raised when exception is raised while calling buffer append
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_ERROR`, fatal : `true` or `false`, parent : parent stream controller }
 - `Hls.ErrorDetails.BUFFER_APPENDING_ERROR` - raised when exception is raised during buffer appending

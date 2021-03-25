@@ -54,11 +54,7 @@ export interface BufferAppendedData {
   part: Part | null;
   chunkMeta: ChunkMetadata;
   parent: PlaylistLevelType;
-  timeRanges: {
-    audio?: TimeRanges;
-    video?: TimeRanges;
-    audiovideo?: TimeRanges;
-  };
+  timeRanges: Partial<Record<SourceBufferName, TimeRanges>>;
 }
 
 export interface BufferEOSData {

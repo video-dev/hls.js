@@ -148,7 +148,12 @@ module.exports = {
       description:
         'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
       abr: true,
-      blacklist_ua: ['firefox', 'safari', 'internet explorer'],
+      blacklist_ua: [
+        'firefox',
+        'safari',
+        'internet explorer',
+        { name: 'chrome', version: '69.0' },
+      ],
     },
     {
       widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
@@ -163,7 +168,7 @@ module.exports = {
   },
   pdtDuplicate: {
     url: 'https://playertest.longtailvideo.com/adaptive/artbeats/manifest.m3u8',
-    description: 'Stream with duplicate sequential PDT values',
+    description: 'Duplicate sequential PDT values',
     abr: false,
   },
   pdtLargeGap: {

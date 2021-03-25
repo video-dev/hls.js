@@ -48,7 +48,6 @@ type WaitingForPTSData = {
 class AudioStreamController
   extends BaseStreamController
   implements NetworkComponentAPI {
-  private retryDate: number = 0;
   private videoBuffer: any | null = null;
   private videoTrackCC: number = -1;
   private waitingVideoCC: number = -1;
@@ -59,13 +58,12 @@ class AudioStreamController
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[audio-stream-controller]');
-    this.fragmentLoader = new FragmentLoader(hls.config);
-
     this._registerListeners();
   }
 
   protected onHandlerDestroying() {
     this._unregisterListeners();
+    this.mainDetails = null;
   }
 
   private _registerListeners() {
@@ -121,7 +119,7 @@ class AudioStreamController
     }
   }
 
-  startLoad(startPosition) {
+  startLoad(startPosition: number) {
     if (!this.levels) {
       this.startPosition = startPosition;
       this.state = State.STOPPED;
@@ -139,9 +137,6 @@ class AudioStreamController
       );
       this.state = State.IDLE;
     } else {
-      this.lastCurrentTime = this.startPosition
-        ? this.startPosition
-        : startPosition;
       this.loadedmetadata = false;
       this.state = State.WAITING_TRACK;
     }
@@ -256,9 +251,9 @@ class AudioStreamController
 
   private doTickIdle() {
     const { hls, levels, media, trackId } = this;
-
     const config = hls.config;
-    if (!levels) {
+
+    if (!levels || !levels[trackId]) {
       return;
     }
 
@@ -275,9 +270,6 @@ class AudioStreamController
       return;
     }
 
-    if (!levels || !levels[trackId]) {
-      return;
-    }
     const levelInfo = levels[trackId];
 
     const trackDetails = levelInfo.details;
@@ -419,7 +411,22 @@ class AudioStreamController
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     if (this.mainDetails === null) {
-      this.mainDetails = data.details;
+      const mainDetails = (this.mainDetails = data.details);
+      // compute start position if we haven't already
+      const trackId = this.levelLastLoaded;
+      if (
+        trackId !== null &&
+        this.levels &&
+        this.startPosition === -1 &&
+        mainDetails.live
+      ) {
+        const track = this.levels[trackId];
+        if (!track.details || !track.details.fragments[0]) {
+          return;
+        }
+        alignPDT(track.details, mainDetails);
+        this.setStartPosition(track.details, track.details.fragments[0].start);
+      }
     }
   }
 
@@ -457,8 +464,8 @@ class AudioStreamController
     track.details = newDetails;
     this.levelLastLoaded = trackId;
 
-    // compute start position
-    if (!this.startFragRequested) {
+    // compute start position if we are aligned with the main playlist
+    if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
       this.setStartPosition(track.details, sliding);
     }
     // only switch back to IDLE state if we were waiting for track to start downloading a new fragment
@@ -590,10 +597,12 @@ class AudioStreamController
       );
       return;
     }
-    this.fragPrevious = frag;
-    if (this.audioSwitch && frag.sn !== 'initSegment') {
-      this.audioSwitch = false;
-      this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: this.trackId });
+    if (frag.sn !== 'initSegment') {
+      this.fragPrevious = frag;
+      if (this.audioSwitch) {
+        this.audioSwitch = false;
+        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: this.trackId });
+      }
     }
     this.fragBufferedComplete(frag, part);
   }
@@ -604,48 +613,8 @@ class AudioStreamController
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-        if (!data.fatal) {
-          const frag = data.frag;
-          // don't handle frag error not related to audio fragment
-          if (!frag || frag.type !== PlaylistLevelType.AUDIO) {
-            return;
-          }
-          const fragCurrent = this.fragCurrent;
-          console.assert(
-            fragCurrent &&
-              frag.sn === fragCurrent.sn &&
-              frag.level === fragCurrent.level &&
-              frag.urlId === fragCurrent.urlId, // FIXME: audio-group id
-            'Frag load error must match current frag to retry'
-          );
-          const config = this.config;
-          if (this.fragLoadError + 1 <= this.config.fragLoadingMaxRetry) {
-            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            const delay = Math.min(
-              Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
-              config.fragLoadingMaxRetryTimeout
-            );
-            this.warn(`Frag loading failed, retry in ${delay} ms`);
-            this.retryDate = performance.now() + delay;
-            this.fragLoadError++;
-            this.state = State.FRAG_LOADING_WAITING_RETRY;
-          } else if (data.levelRetry) {
-            // Reset current fragment since audio track audio is essential and may not have a fail-over track
-            this.fragCurrent = null;
-            // Fragment errors that result in a level switch or redundant fail-over
-            // should reset the audio stream controller state to idle
-            this.fragLoadError = 0;
-            this.state = State.IDLE;
-          } else {
-            logger.error(
-              `${data.details} reaches max retry, redispatch as fatal ...`
-            );
-            // switch error to fatal
-            data.fatal = true;
-            this.hls.stopLoad();
-            this.state = State.ERROR;
-          }
-        }
+        // TODO: Skip fragments that do not belong to this.fragCurrent audio-group id
+        this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
         break;
       case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
       case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
@@ -696,22 +665,14 @@ class AudioStreamController
     }
   }
 
-  onBufferFlushed(event: Events.BUFFER_FLUSHED, { type }: BufferFlushedData) {
-    /* after successful buffer flushing, filter flushed fragments from bufferedFrags
-      use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
-    */
-    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    if (media && type === ElementaryStreamTypes.AUDIO) {
-      // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-      this.fragmentTracker.detectEvictedFragments(
-        ElementaryStreamTypes.AUDIO,
-        BufferHelper.getBuffered(media)
-      );
+  private onBufferFlushed(
+    event: Events.BUFFER_FLUSHED,
+    { type }: BufferFlushedData
+  ) {
+    if (type === ElementaryStreamTypes.AUDIO) {
+      const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+      this.afterBufferFlushed(media, type);
     }
-    // reset reference to frag
-    this.fragPrevious = null;
-    // move to IDLE once flush complete. this should trigger new fragment loading
-    this.state = State.IDLE;
   }
 
   private _handleTransmuxComplete(transmuxResult: TransmuxerResult) {
@@ -724,6 +685,7 @@ class AudioStreamController
       this.warn(
         `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
       );
+      this.resetLiveStartWhenNotLoaded(chunkMeta.level);
       return;
     }
     const { frag, part } = context;
@@ -856,7 +818,6 @@ class AudioStreamController
         this.state = State.WAITING_INIT_PTS;
       } else {
         this.startFragRequested = true;
-        this.nextLoadPosition = frag.start + frag.duration;
         super.loadFragment(frag, trackDetails, targetBufferTime);
       }
     }

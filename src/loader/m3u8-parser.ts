@@ -488,8 +488,12 @@ export default class M3U8Parser {
     if (prevFrag && !prevFrag.relurl) {
       fragments.pop();
       totalduration -= prevFrag.duration;
-      level.fragmentHint = prevFrag;
-    } else {
+      if (level.partList) {
+        level.fragmentHint = prevFrag;
+      }
+    } else if (level.partList) {
+      assignProgramDateTime(frag, prevFrag);
+      frag.cc = discontinuityCounter;
       level.fragmentHint = frag;
     }
     const fragmentLength = fragments.length;
@@ -527,7 +531,7 @@ export default class M3U8Parser {
       level.endSN = 0;
       level.startCC = 0;
     }
-    if (level.partList) {
+    if (level.fragmentHint) {
       totalduration += level.fragmentHint.duration;
     }
     level.totalduration = totalduration;

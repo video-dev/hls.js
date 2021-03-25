@@ -134,7 +134,7 @@ function alignDiscontinuities(
       lastLevel.details,
       details
     );
-    if (referenceFrag?.start) {
+    if (referenceFrag && Number.isFinite(referenceFrag.start)) {
       logger.log(
         `Adjusting PTS using last level due to CC increase within current level ${details.url}`
       );
