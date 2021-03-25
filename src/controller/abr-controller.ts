@@ -64,6 +64,9 @@ class AbrController implements ComponentAPI {
   public destroy() {
     this.unregisterListeners();
     this.clearTimer();
+    // @ts-ignore
+    this.hls = this.onCheck = null;
+    this.fragCurrent = this.partCurrent = null;
   }
 
   protected onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
@@ -237,6 +240,7 @@ class AbrController implements ComponentAPI {
           id: frag.type,
         };
         this.onFragBuffered(Events.FRAG_BUFFERED, fragBufferedData);
+        frag.bitrateTest = false;
       }
     }
   }
@@ -252,11 +256,7 @@ class AbrController implements ComponentAPI {
       return;
     }
     // Only count non-alt-audio frags which were actually buffered in our BW calculations
-    if (
-      frag.type !== PlaylistLevelType.MAIN ||
-      frag.sn === 'initSegment' ||
-      frag.bitrateTest
-    ) {
+    if (frag.type !== PlaylistLevelType.MAIN || frag.sn === 'initSegment') {
       return;
     }
     // Use the difference between parsing and request instead of buffering and request to compute fragLoadingProcessing;

@@ -1,5 +1,5 @@
 [![npm](https://img.shields.io/npm/v/hls.js.svg?style=flat)](https://npmjs.org/package/hls.js)
-[![npm](https://img.shields.io/npm/v/hls.js/alpha.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/alpha)
+[![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
 
@@ -179,7 +179,7 @@ The following players integrate hls.js for HLS playback:
 |                        [<img src="https://player.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)                        |             [<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)              |                         [<img src="https://avatars0.githubusercontent.com/u/5090060?s=200&v=4" width="120">](https://www.jwplayer.com)                         |                                                   [<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)                                                   |
 |                          [<img src="https://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)                          | [<img src="https://static3.1tv.ru/assets/web/logo-ac67852f1625b338f9d1fb96be089d03557d50bfc5790d5f48dc56799f59dec6.svg" width="120" height="120">](https://www.1tv.ru/) |       [<img src="https://user-images.githubusercontent.com/1480052/40482633-c013ebce-5f55-11e8-96d5-b776415de0ce.png" width="120">](https://www.zdf.de)        |                                              [<img src="https://github.com/cdnbye/hlsjs-p2p-engine/blob/master/figs/cdnbye.png" width="120">](https://github.com/cdnbye/hlsjs-p2p-engine)                                               |
 |                       [<img src="https://streaming.cdn77.com/live-streaming-logo-dark.png" width="120">](https://streaming.cdn77.com/)                       |                                  [<img src="https://avatars0.githubusercontent.com/u/7442371?s=200&v=4" width="120">](https://r7.com/)                                  | [<img src="https://raw.githubusercontent.com/Novage/p2p-media-loader/gh-pages/images/p2pml-logo.png" width="120">](https://github.com/Novage/p2p-media-loader) |                                                              [<img src="https://avatars3.githubusercontent.com/u/45617200?s=400" width="120">](https://kayosports.com.au)                                                               |
-|    [<img src="https://avatars1.githubusercontent.com/u/5279615?s=400&u=9771a216836c613f1edf4afe71cfc69d4c5657ed&v=4" width="120">](https://flosports.tv)     |                                                                                                                                                                         |                                                                                                                                                                |                                                                                                                                                                                                                                         |
+|    [<img src="https://avatars1.githubusercontent.com/u/5279615?s=400&u=9771a216836c613f1edf4afe71cfc69d4c5657ed&v=4" width="120">](https://flosports.tv)     |                  [<img src="https://www.logolynx.com/images/logolynx/c6/c67a2cb3ad33a82b5518f8ad8f124703.png" width="120">](https://global.axon.com/)                   |                                                                                                                                                                |                                                                                                                                                                                                                                         |
 
 ## Chrome/Firefox integration
 
@@ -199,10 +199,10 @@ Hls.js can be installed as a dependency using npm:
 npm install hls.js
 ```
 
-or for the version from master (alpha)
+or for the version from master (canary)
 
 ```
-npm install hls.js@alpha
+npm install hls.js@canary
 ```
 
 ## Installation
@@ -308,6 +308,7 @@ For a complete list of issues, see ["Top priorities" in the Release Planning and
 - `Emsg` Inband Timed Metadata for FMP4 (ID3 within Emsgv1) in "metadata" TextTracks [#2360](https://github.com/video-dev/hls.js/issues/2360)
 - `#EXT-X-DATERANGE` in "metadata" TextTracks [#2218](https://github.com/video-dev/hls.js/issues/2218)
 - `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
+- `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
 - Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
 - MP3 elementary stream audio in IE and Edge (<=18) on Windows 10 (See [#1641](https://github.com/video-dev/hls.js/issues/1641) and [Microsoft answers forum](https://answers.microsoft.com/en-us/ie/forum/all/ie11-on-windows-10-cannot-play-hls-with-mp3/2da994b5-8dec-4ae9-9201-7d138ede49d9))
@@ -320,11 +321,9 @@ You can safely require this library in Node and **absolutely nothing will happen
 
 hls.js is released under [Apache 2.0 License](LICENSE)
 
-## Development and contributing - first steps
+## Development and getting started
 
-Pull requests are welcome. Here is a quick guide on how to start.
-
-- First, checkout the repository and install the required dependencies
+First, checkout the repository and install the required dependencies
 
 ```sh
 git clone https://github.com/video-dev/hls.js.git
@@ -337,9 +336,7 @@ npm run dev
 npm run lint
 ```
 
-- Use [EditorConfig](https://editorconfig.org) or at least stay consistent to the file formats defined in the `.editorconfig` file.
-- Develop in a topic branch, not master
-- Prettier should run automatically in the pre-commit hook, but if it doesn't, run `npm run prettier`.
+Before submitting a PR, please see our [contribution guidelines](CONTRIBUTING.md).
 
 ## Setup
 

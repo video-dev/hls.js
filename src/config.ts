@@ -54,6 +54,7 @@ export type DRMSystemOptions = {
 
 export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+  licenseResponseCallback?: (xhr: XMLHttpRequest, url: string) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
   drmSystemOptions: DRMSystemOptions;
@@ -233,6 +234,7 @@ export const hlsDefaultConfig: HlsConfig = {
   pLoader: undefined, // used by playlist-loader
   xhrSetup: undefined, // used by xhr-loader
   licenseXhrSetup: undefined, // used by eme-controller
+  licenseResponseCallback: undefined, // used by eme-controller
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,

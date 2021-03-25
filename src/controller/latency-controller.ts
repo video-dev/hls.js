@@ -12,7 +12,7 @@ import type Hls from '../hls';
 import type { HlsConfig } from '../config';
 
 export default class LatencyController implements ComponentAPI {
-  private readonly hls: Hls;
+  private hls: Hls;
   private readonly config: HlsConfig;
   private media: HTMLMediaElement | null = null;
   private levelDetails: LevelDetails | null = null;
@@ -64,7 +64,7 @@ export default class LatencyController implements ComponentAPI {
           ? liveSyncDuration
           : liveSyncDurationCount * targetduration;
     }
-    const maxLiveSyncOnStallIncrease = levelDetails.targetduration;
+    const maxLiveSyncOnStallIncrease = targetduration;
     const liveSyncOnStallIncrease = 1.0;
     return (
       targetLatency +
@@ -78,17 +78,18 @@ export default class LatencyController implements ComponentAPI {
   get liveSyncPosition(): number | null {
     const liveEdge = this.estimateLiveEdge();
     const targetLatency = this.targetLatency;
-    if (
-      liveEdge === null ||
-      targetLatency === null ||
-      this.levelDetails === null
-    ) {
+    const levelDetails = this.levelDetails;
+    if (liveEdge === null || targetLatency === null || levelDetails === null) {
       return null;
     }
-    return Math.min(
-      this.levelDetails.edge,
-      liveEdge - targetLatency - this.edgeStalled
-    );
+    const edge = levelDetails.edge;
+    const syncPosition = liveEdge - targetLatency - this.edgeStalled;
+    const min = edge - levelDetails.totalduration;
+    const max =
+      edge -
+      ((this.config.lowLatencyMode && levelDetails.partTarget) ||
+        levelDetails.targetduration);
+    return Math.min(Math.max(min, syncPosition), max);
   }
 
   get edgeStalled(): number {
@@ -116,6 +117,9 @@ export default class LatencyController implements ComponentAPI {
   public destroy(): void {
     this.unregisterListeners();
     this.onMediaDetaching();
+    this.levelDetails = null;
+    // @ts-ignore
+    this.hls = this.timeupdateHandler = null;
   }
 
   private registerListeners() {

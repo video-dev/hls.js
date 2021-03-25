@@ -105,6 +105,10 @@ class EMEController implements ComponentAPI {
   private hls: Hls;
   private _widevineLicenseUrl?: string;
   private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+  private _licenseResponseCallback?: (
+    xhr: XMLHttpRequest,
+    url: string
+  ) => ArrayBuffer;
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: MediaKeyFunc | null;
   private _drmSystemOptions: DRMSystemOptions;
@@ -116,6 +120,7 @@ class EMEController implements ComponentAPI {
   private _requestLicenseFailureCount: number = 0;
 
   private mediaKeysPromise: Promise<MediaKeys> | null = null;
+  private _onMediaEncrypted = this.onMediaEncrypted.bind(this);
 
   /**
    * @constructs
@@ -127,6 +132,7 @@ class EMEController implements ComponentAPI {
 
     this._widevineLicenseUrl = this._config.widevineLicenseUrl;
     this._licenseXhrSetup = this._config.licenseXhrSetup;
+    this._licenseResponseCallback = this._config.licenseResponseCallback;
     this._emeEnabled = this._config.emeEnabled;
     this._requestMediaKeySystemAccess = this._config.requestMediaKeySystemAccessFunc;
     this._drmSystemOptions = this._config.drmSystemOptions;
@@ -136,6 +142,9 @@ class EMEController implements ComponentAPI {
 
   public destroy() {
     this._unregisterListeners();
+    // @ts-ignore
+    this.hls = this._onMediaEncrypted = null;
+    this._requestMediaKeySystemAccess = null;
   }
 
   private _registerListeners() {
@@ -313,7 +322,7 @@ class EMEController implements ComponentAPI {
    * @private
    * @param e {MediaEncryptedEvent}
    */
-  private _onMediaEncrypted = (e: MediaEncryptedEvent) => {
+  private onMediaEncrypted(e: MediaEncryptedEvent) {
     logger.log(`Media is encrypted using "${e.initDataType}" init data type`);
 
     if (!this.mediaKeysPromise) {
@@ -340,7 +349,7 @@ class EMEController implements ComponentAPI {
     this.mediaKeysPromise
       .then(finallySetKeyAndStartSession)
       .catch(finallySetKeyAndStartSession);
-  };
+  }
 
   /**
    * @private
@@ -458,28 +467,6 @@ class EMEController implements ComponentAPI {
     callback: (data: ArrayBuffer) => void
   ): XMLHttpRequest {
     const xhr = new XMLHttpRequest();
-    const licenseXhrSetup = this._licenseXhrSetup;
-
-    try {
-      if (licenseXhrSetup) {
-        try {
-          licenseXhrSetup(xhr, url);
-        } catch (e) {
-          // let's try to open before running setup
-          xhr.open('POST', url, true);
-          licenseXhrSetup(xhr, url);
-        }
-      }
-      // if licenseXhrSetup did not yet call open, let's do it now
-      if (!xhr.readyState) {
-        xhr.open('POST', url, true);
-      }
-    } catch (e) {
-      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      throw new Error(`issue setting up KeySystem license XHR ${e}`);
-    }
-
-    // Because we set responseType to ArrayBuffer here, callback is typed as handling only array buffers
     xhr.responseType = 'arraybuffer';
     xhr.onreadystatechange = this._onLicenseRequestReadyStageChange.bind(
       this,
@@ -488,6 +475,29 @@ class EMEController implements ComponentAPI {
       keyMessage,
       callback
     );
+
+    let licenseXhrSetup = this._licenseXhrSetup;
+    if (licenseXhrSetup) {
+      try {
+        licenseXhrSetup.call(this.hls, xhr, url);
+        licenseXhrSetup = undefined;
+      } catch (e) {
+        logger.error(e);
+      }
+    }
+    try {
+      // if licenseXhrSetup did not yet call open, let's do it now
+      if (!xhr.readyState) {
+        xhr.open('POST', url, true);
+      }
+      if (licenseXhrSetup) {
+        licenseXhrSetup.call(this.hls, xhr, url);
+      }
+    } catch (e) {
+      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+      throw new Error(`issue setting up KeySystem license XHR ${e}`);
+    }
+
     return xhr;
   }
 
@@ -509,13 +519,16 @@ class EMEController implements ComponentAPI {
         if (xhr.status === 200) {
           this._requestLicenseFailureCount = 0;
           logger.log('License request succeeded');
-
-          if (xhr.responseType !== 'arraybuffer') {
-            logger.warn(
-              'xhr response type was not set to the expected arraybuffer for license request'
-            );
+          let data: ArrayBuffer = xhr.response;
+          const licenseResponseCallback = this._licenseResponseCallback;
+          if (licenseResponseCallback) {
+            try {
+              data = licenseResponseCallback.call(this.hls, xhr, url);
+            } catch (e) {
+              logger.error(e);
+            }
           }
-          callback(xhr.response);
+          callback(data);
         } else {
           logger.error(
             `License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`

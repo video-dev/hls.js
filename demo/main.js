@@ -807,7 +807,10 @@ function loadSelectedStream() {
         break;
       case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
         logError(
-          'Buffer add codec error for ' + data.mimeType + ':' + data.err.message
+          'Buffer add codec error for ' +
+            data.mimeType +
+            ':' +
+            data.error.message
         );
         break;
       case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
@@ -1583,7 +1586,7 @@ function addChartEventListeners(hls) {
     chart
   );
   hls.on(
-    Hls.Events.MANIFEST_LOADED,
+    Hls.Events.MANIFEST_PARSED,
     (eventName, data) => {
       const { levels } = data;
       chart.removeType('level');
@@ -1621,16 +1624,6 @@ function addChartEventListeners(hls) {
   );
   hls.on(
     Hls.Events.LEVEL_LOADING,
-    () => {
-      // TODO: mutate level datasets
-      // Update loadLevel
-      chart.removeType('level');
-      chart.updateLevels(hls.levels);
-    },
-    chart
-  );
-  hls.on(
-    Hls.Events.FRAG_LOADING,
     () => {
       // TODO: mutate level datasets
       // Update loadLevel

@@ -1140,7 +1140,7 @@ fileSequence1151231.ts
 fileSequence1151232.ts
 #EXT-X-PART:DURATION=1.00000,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.1.ts"
 #EXT-X-PART:DURATION=0.99999,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.2.ts"
-#EXT-X-PART:DURATION=1.00000,INDEPENDENT=NO,URI="lowLatencyHLS.php?segment=filePart1151233.3.ts"
+#EXT-X-PART:DURATION=1.00000,URI="lowLatencyHLS.php?segment=filePart1151233.3.ts"
 #EXT-X-PART:DURATION=1.00000,GAP=YES,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.4.ts"
 #EXTINF:4.00000,
 fileSequence1151233.ts

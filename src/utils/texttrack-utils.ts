@@ -94,19 +94,20 @@ function getFirstCueIndexAfterTime(
     return 0;
   }
   // If the last cue ends before time there is no overlap
-  if (time > cues[cues.length - 1].endTime) {
+  const len = cues.length - 1;
+  if (time > cues[len].endTime) {
     return -1;
   }
 
   let left = 0;
-  let right = cues.length - 1;
+  let right = len;
 
   while (left <= right) {
     const mid = Math.floor((right + left) / 2);
 
     if (time < cues[mid].startTime) {
       right = mid - 1;
-    } else if (time > cues[mid].startTime) {
+    } else if (time > cues[mid].startTime && left < len) {
       left = mid + 1;
     } else {
       // If it's not lower or higher, it must be equal.

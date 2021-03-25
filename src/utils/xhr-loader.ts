@@ -35,12 +35,16 @@ class XhrLoader implements Loader<LoaderContext> {
 
   abortInternal(): void {
     const loader = this.loader;
-    if (loader && loader.readyState !== 4) {
-      this.stats.aborted = true;
-      loader.abort();
-    }
     self.clearTimeout(this.requestTimeout);
     self.clearTimeout(this.retryTimeout);
+    if (loader) {
+      loader.onreadystatechange = null;
+      loader.onprogress = null;
+      if (loader.readyState !== 4) {
+        this.stats.aborted = true;
+        loader.abort();
+      }
+    }
   }
 
   abort(): void {
@@ -146,6 +150,8 @@ class XhrLoader implements Loader<LoaderContext> {
       }
 
       if (readyState === 4) {
+        xhr.onreadystatechange = null;
+        xhr.onprogress = null;
         const status = xhr.status;
         // http status between 200 to 299 are all successful
         if (status >= 200 && status < 300) {
@@ -164,17 +170,22 @@ class XhrLoader implements Loader<LoaderContext> {
           }
           stats.loaded = stats.total = len;
 
-          const onProgress = this.callbacks!.onProgress;
+          if (!this.callbacks) {
+            return;
+          }
+          const onProgress = this.callbacks.onProgress;
           if (onProgress) {
             onProgress(stats, context, data, xhr);
           }
-
+          if (!this.callbacks) {
+            return;
+          }
           const response = {
             url: xhr.responseURL,
             data: data,
           };
 
-          this.callbacks!.onSuccess(response, stats, context, xhr);
+          this.callbacks.onSuccess(response, stats, context, xhr);
         } else {
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
           if (

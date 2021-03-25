@@ -128,13 +128,6 @@ export default class Hls implements HlsEventEmitter {
       fragmentTracker
     ));
 
-    // Level Controller initiates loading after all controllers have received MANIFEST_PARSED
-    levelController.onParsedComplete = () => {
-      if (config.autoStartLoad || streamController.forceStartLoad) {
-        this.startLoad(config.startPosition);
-      }
-    };
-
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
     // fpsController uses streamController to switch when frames are being dropped
@@ -207,75 +200,17 @@ export default class Hls implements HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context?: Context
+    context: Context = this as any
   ) {
-    const hlsjs = this;
-    this._emitter.on(
-      event,
-      function (this: Context, ...args: unknown[]) {
-        if (hlsjs.config.debug) {
-          listener.apply(this, args);
-        } else {
-          try {
-            listener.apply(this, args);
-          } catch (e) {
-            logger.error(
-              'An internal error happened while handling event ' +
-                event +
-                '. Error message: "' +
-                e.message +
-                '". Here is a stacktrace:',
-              e
-            );
-            hlsjs.trigger(Events.ERROR, {
-              type: ErrorTypes.OTHER_ERROR,
-              details: ErrorDetails.INTERNAL_EXCEPTION,
-              fatal: false,
-              event: event,
-              error: e,
-            });
-          }
-        }
-      },
-      context
-    );
+    this._emitter.on(event, listener, context);
   }
 
   once<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context?: Context
+    context: Context = this as any
   ) {
-    const hlsjs = this;
-    this._emitter.once(
-      event,
-      function (this: Context, ...args: unknown[]) {
-        if (hlsjs.config.debug) {
-          listener.apply(this, args);
-        } else {
-          try {
-            listener.apply(this, args);
-          } catch (e) {
-            logger.error(
-              'An internal error happened while handling event ' +
-                event +
-                '. Error message: "' +
-                e.message +
-                '". Here is a stacktrace:',
-              e
-            );
-            hlsjs.trigger(Events.ERROR, {
-              type: ErrorTypes.OTHER_ERROR,
-              details: ErrorDetails.INTERNAL_EXCEPTION,
-              fatal: false,
-              event: event,
-              error: e,
-            });
-          }
-        }
-      },
-      context
-    );
+    this._emitter.once(event, listener, context);
   }
 
   removeAllListeners<E extends keyof HlsListeners>(event?: E | undefined) {
@@ -285,7 +220,7 @@ export default class Hls implements HlsEventEmitter {
   off<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener?: HlsListeners[E] | undefined,
-    context?: Context,
+    context: Context = this as any,
     once?: boolean | undefined
   ) {
     this._emitter.off(event, listener, context, once);
@@ -307,7 +242,30 @@ export default class Hls implements HlsEventEmitter {
     event: E,
     eventObject: Parameters<HlsListeners[E]>[1]
   ): boolean {
-    return this._emitter.emit(event, event, eventObject);
+    if (this.config.debug) {
+      return this.emit(event, event, eventObject);
+    } else {
+      try {
+        return this.emit(event, event, eventObject);
+      } catch (e) {
+        logger.error(
+          'An internal error happened while handling event ' +
+            event +
+            '. Error message: "' +
+            e.message +
+            '". Here is a stacktrace:',
+          e
+        );
+        this.trigger(Events.ERROR, {
+          type: ErrorTypes.OTHER_ERROR,
+          details: ErrorDetails.INTERNAL_EXCEPTION,
+          fatal: false,
+          event: event,
+          error: e,
+        });
+      }
+    }
+    return false;
   }
 
   listenerCount<E extends keyof HlsListeners>(event: E): number {
@@ -321,11 +279,19 @@ export default class Hls implements HlsEventEmitter {
     logger.log('destroy');
     this.trigger(Events.DESTROYING, undefined);
     this.detachMedia();
-    this.networkControllers.forEach((component) => component.destroy());
-    this.coreComponents.forEach((component) => component.destroy());
-    this.url = null;
     this.removeAllListeners();
     this._autoLevelCapping = -1;
+    this.url = null;
+    if (this.networkControllers) {
+      this.networkControllers.forEach((component) => component.destroy());
+      // @ts-ignore
+      this.networkControllers = null;
+    }
+    if (this.coreComponents) {
+      this.coreComponents.forEach((component) => component.destroy());
+      // @ts-ignore
+      this.coreComponents = null;
+    }
   }
 
   /**
@@ -422,7 +388,8 @@ export default class Hls implements HlsEventEmitter {
    * @type {Level[]}
    */
   get levels(): Array<Level> {
-    return this.levelController.levels ? this.levelController.levels : [];
+    const levels = this.levelController.levels;
+    return levels ? levels : [];
   }
 
   /**
@@ -442,6 +409,7 @@ export default class Hls implements HlsEventEmitter {
   set currentLevel(newLevel: number) {
     logger.log(`set currentLevel:${newLevel}`);
     this.loadLevel = newLevel;
+    this.abrController.clearTimer();
     this.streamController.immediateLevelSwitch();
   }
 
@@ -590,7 +558,11 @@ export default class Hls implements HlsEventEmitter {
    * @type {number}
    */
   get bandwidthEstimate(): number {
-    return this.abrController.bwEstimator.getEstimate();
+    const { bwEstimator } = this.abrController;
+    if (!bwEstimator) {
+      return NaN;
+    }
+    return bwEstimator.getEstimate();
   }
 
   /**
@@ -815,6 +787,14 @@ export default class Hls implements HlsEventEmitter {
    */
   get targetLatency(): number | null {
     return this.latencyController.targetLatency;
+  }
+
+  /**
+   * set to true when startLoad is called before MANIFEST_PARSED event
+   * @type {boolean}
+   */
+  get forceStartLoad(): boolean {
+    return this.streamController.forceStartLoad;
   }
 }
 
