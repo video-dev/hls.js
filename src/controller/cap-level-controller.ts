@@ -215,25 +215,11 @@ class CapLevelController implements ComponentAPI {
   }
 
   get mediaWidth(): number {
-    return this.hls.config.playerSizeIgnoreDevicePixelRatio 
-      ? this.getDimensions().width
-      : this.getDimensions().width * CapLevelController.contentScaleFactor;
+    return this.getDimensions().width * this.hls.devicePixelRatio;
   }
 
   get mediaHeight(): number {
-    return this.hls.config.playerSizeIgnoreDevicePixelRatio
-      ? this.getDimensions().height
-      : this.getDimensions().height * CapLevelController.contentScaleFactor;
-  }
-
-  static get contentScaleFactor(): number {
-    let pixelRatio = 1;
-    try {
-      pixelRatio = self.devicePixelRatio;
-    } catch (e) {
-      /* no-op */
-    }
-    return pixelRatio;
+    return this.getDimensions().height * this.hls.devicePixelRatio;
   }
 
   static isLevelAllowed(
