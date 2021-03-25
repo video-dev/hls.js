@@ -18,7 +18,6 @@ import type {
   MediaAttachingData,
   ManifestParsedData,
   BufferCodecsData,
-  LevelPTSUpdatedData,
   BufferEOSData,
   BufferFlushingData,
   FragParsedData,
