@@ -686,10 +686,7 @@ class PlaylistLoader {
       return;
     }
 
-    if (
-      this.checkAgeHeader &&
-      levelDetails.live
-    ) {
+    if (this.checkAgeHeader && levelDetails.live) {
       const ageHeader = loader.getResponseHeader('age');
       levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
       // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
