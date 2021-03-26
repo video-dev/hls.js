@@ -688,8 +688,7 @@ class PlaylistLoader {
 
     if (
       this.checkAgeHeader &&
-      levelDetails.live &&
-      this.hls.config.lowLatencyMode
+      levelDetails.live
     ) {
       const ageHeader = loader.getResponseHeader('age');
       levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
