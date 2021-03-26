@@ -107,13 +107,16 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       const { textAlign } = styles;
       if (textAlign) {
         // cue.positionAlign not settable in FF~2016
-        cue.lineAlign = {
+        const lineAlign = {
           left: 'start',
           center: 'center',
           right: 'end',
           start: 'start',
           end: 'end',
         }[textAlign];
+        if (lineAlign) {
+          cue.lineAlign = lineAlign;
+        }
         cue.align = textAlign as AlignSetting;
       }
       Object.assign(cue, styles);
