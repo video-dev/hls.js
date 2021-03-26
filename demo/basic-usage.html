@@ -12,8 +12,8 @@
     </center>
 
     <script>
+      var video = document.getElementById('video');
       if (Hls.isSupported()) {
-        var video = document.getElementById('video');
         var hls = new Hls({
           debug: true,
         });
