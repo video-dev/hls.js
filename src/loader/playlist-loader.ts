@@ -70,8 +70,6 @@ class PlaylistLoader {
     [key: string]: Loader<LoaderContext>;
   } = Object.create(null);
 
-  private checkAgeHeader: boolean = true;
-
   constructor(hls: Hls) {
     this.hls = hls;
     this.registerListeners();
@@ -148,7 +146,6 @@ class PlaylistLoader {
     data: ManifestLoadingData
   ) {
     const { url } = data;
-    this.checkAgeHeader = true;
     this.load({
       id: null,
       groupId: null,
@@ -686,12 +683,9 @@ class PlaylistLoader {
       return;
     }
 
-    if (this.checkAgeHeader && levelDetails.live) {
+    if (levelDetails.live) {
       const ageHeader = loader.getResponseHeader('age');
       levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
-      // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
-      // Add an "Access-Control-Expose-Headers: age" header to playlist responses to prevent this CORS error
-      this.checkAgeHeader = ageHeader !== null;
     }
 
     switch (type) {
