@@ -1123,11 +1123,11 @@ export enum HlsSkip {
 //
 // @public (undocumented)
 export class HlsUrlParameters {
-    constructor(msn: number, part?: number, skip?: HlsSkip);
+    constructor(msn?: number, part?: number, skip?: HlsSkip);
     // (undocumented)
     addDirectives(uri: string): string | never;
     // (undocumented)
-    msn: number;
+    msn?: number;
     // (undocumented)
     part?: number;
     // (undocumented)
