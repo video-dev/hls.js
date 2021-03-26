@@ -52,7 +52,7 @@ function setupConsoleLogRedirection() {
 }
 
 // Object.assign polyfill
-function objectAssign(target, firstSource) {
+function objectAssign(target) {
   if (target === undefined || target === null) {
     throw new TypeError('Cannot convert first argument to object');
   }
@@ -72,7 +72,7 @@ function objectAssign(target, firstSource) {
     ) {
       var nextKey = keysArray[nextIndex];
       var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
-      if (desc !== undefined && desc.enumerable) {
+      if (desc?.enumerable) {
         to[nextKey] = nextSource[nextKey];
       }
     }
