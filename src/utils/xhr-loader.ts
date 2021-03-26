@@ -250,12 +250,8 @@ class XhrLoader implements Loader<LoaderContext> {
   }
 
   getResponseHeader(name: string): string | null {
-    if (this.loader) {
-      try {
-        return this.loader.getResponseHeader(name);
-      } catch (error) {
-        /* Could not get headers */
-      }
+    if (this.loader && this.loader.getAllResponseHeaders().indexOf(name) >= 0) {
+      return this.loader.getResponseHeader(name);
     }
     return null;
   }
