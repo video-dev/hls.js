@@ -11,6 +11,7 @@ import ChunkCache from '../demux/chunk-cache';
 
 export function fetchSupported() {
   if (
+    // @ts-ignore
     self.fetch &&
     self.AbortController &&
     self.ReadableStream &&
@@ -183,14 +184,14 @@ class FetchLoader implements Loader<LoaderContext> {
     const pump = () => {
       reader
         .read()
-        .then((data: { done: boolean; value: Uint8Array }) => {
+        .then((data) => {
           if (data.done) {
             if (chunkCache.dataLength) {
               onProgress(stats, context, chunkCache.flush(), response);
             }
             return;
           }
-          const chunk = data.value;
+          const chunk: Uint8Array = data.value;
           const len = chunk.length;
           stats.loaded += len;
           if (len < highWaterMark || chunkCache.dataLength) {
