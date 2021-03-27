@@ -13,7 +13,7 @@ const HMSF_REGEX = /^(\d{2,}):(\d{2}):(\d{2}):(\d{2})\.?(\d+)?$/;
 // Time format: hours, minutes, seconds, milliseconds, frames, ticks
 const TIME_UNIT_REGEX = /^(\d*(?:\.\d*)?)(h|m|s|ms|f|t)$/;
 
-const textAlignToLignAlign: Partial<Record<string, LineAlignSetting>> = {
+const textAlignToLineAlign: Partial<Record<string, LineAlignSetting>> = {
   left: 'start',
   center: 'center',
   right: 'end',
@@ -115,7 +115,7 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       const { textAlign } = styles;
       if (textAlign) {
         // cue.positionAlign not settable in FF~2016
-        const lineAlign = textAlignToLignAlign[textAlign];
+        const lineAlign = textAlignToLineAlign[textAlign];
         if (lineAlign) {
           cue.lineAlign = lineAlign;
         }
