@@ -652,10 +652,13 @@ function loadSelectedStream() {
     stats.tagList = data.frag.tagList;
 
     const level = data.frag.level;
-    const autoLevel = data.frag.autoLevel;
+    const autoLevel = hls.autoLevelEnabled;
     if (stats.levelStart === undefined) {
       stats.levelStart = level;
     }
+
+    stats.fragProgramDateTime = data.frag.programDateTime;
+    stats.fragStart = data.frag.start;
 
     if (autoLevel) {
       if (stats.fragChangedAuto) {
@@ -1211,9 +1214,22 @@ function checkBuffer() {
           'Live Stats:\n' +
           `  Max Latency: ${hls.maxLatency}\n` +
           `  Target Latency: ${hls.targetLatency}\n` +
-          `  Latency: ${hls.latency}\n` +
-          `  Edge Stall: ${hls.latencyController.edgeStalled}\n` +
+          `  Latency: ${hls.latency.toFixed(3)}\n` +
+          `  Drift: ${hls.latencyController.drift.toFixed(
+            3
+          )} (edge advance rate)\n` +
+          `  Edge Stall: ${hls.latencyController.edgeStalled} (playlist refresh over target duration/part)\n` +
           `  Playback rate: ${video.playbackRate.toFixed(2)}\n`;
+        if (stats.fragProgramDateTime) {
+          const currentPDT =
+            stats.fragProgramDateTime +
+            (video.currentTime - stats.fragStart) * 1000;
+          log += `  Program Date Time: ${new Date(currentPDT).toISOString()}`;
+          const pdtLatency = (Date.now() - currentPDT) / 1000;
+          if (pdtLatency > 0) {
+            log += ` (${pdtLatency.toFixed(3)} seconds ago)`;
+          }
+        }
       }
 
       $('#bufferedOut').text(log);

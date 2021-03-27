@@ -275,6 +275,23 @@ export function mergeDetails(
   if (newFragments.length) {
     newDetails.totalduration = newDetails.edge - newFragments[0].start;
   }
+
+  newDetails.driftStartTime = oldDetails.driftStartTime;
+  newDetails.driftStart = oldDetails.driftStart;
+  const advancedDateTime = newDetails.advancedDateTime;
+  if (newDetails.advanced && advancedDateTime) {
+    const edge = newDetails.edge;
+    if (!newDetails.driftStart) {
+      newDetails.driftStartTime = advancedDateTime;
+      newDetails.driftStart = edge;
+    }
+    newDetails.driftEndTime = advancedDateTime;
+    newDetails.driftEnd = edge;
+  } else {
+    newDetails.driftEndTime = oldDetails.driftEndTime;
+    newDetails.driftEnd = oldDetails.driftEnd;
+    newDetails.advancedDateTime = oldDetails.advancedDateTime;
+  }
 }
 
 export function mapPartIntersection(

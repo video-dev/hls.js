@@ -92,6 +92,14 @@ export default class LatencyController implements ComponentAPI {
     return Math.min(Math.max(min, syncPosition), max);
   }
 
+  get drift(): number {
+    const { levelDetails } = this;
+    if (levelDetails === null) {
+      return 1;
+    }
+    return levelDetails.drift;
+  }
+
   get edgeStalled(): number {
     const { levelDetails } = this;
     if (levelDetails === null) {

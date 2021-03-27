@@ -1313,6 +1313,16 @@ export class LevelDetails {
     // (undocumented)
     deltaUpdateFailed?: boolean;
     // (undocumented)
+    get drift(): number;
+    // (undocumented)
+    driftEnd: number;
+    // (undocumented)
+    driftEndTime: number;
+    // (undocumented)
+    driftStart: number;
+    // (undocumented)
+    driftStartTime: number;
+    // (undocumented)
     get edge(): number;
     // (undocumented)
     endCC: number;
