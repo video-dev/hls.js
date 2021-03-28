@@ -129,9 +129,6 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
         LevelHelper.mergeDetails(previousDetails, details);
-        if (!details.advanced) {
-          details.advancedDateTime = previousDetails.advancedDateTime;
-        }
       }
       if (!this.canLoad || !details.live) {
         return;
