@@ -554,7 +554,7 @@ export default class Hls implements HlsEventEmitter {
       return 1;
     }
 
-    let pixelRatio = 1;    
+    let pixelRatio = 1;
     try {
       pixelRatio = self.devicePixelRatio;
     } catch (e) {
