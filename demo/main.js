@@ -1213,12 +1213,14 @@ function checkBuffer() {
         log +=
           'Live Stats:\n' +
           `  Max Latency: ${hls.maxLatency}\n` +
-          `  Target Latency: ${hls.targetLatency}\n` +
+          `  Target Latency: ${hls.targetLatency.toFixed(3)}\n` +
           `  Latency: ${hls.latency.toFixed(3)}\n` +
           `  Drift: ${hls.latencyController.drift.toFixed(
             3
           )} (edge advance rate)\n` +
-          `  Edge Stall: ${hls.latencyController.edgeStalled} (playlist refresh over target duration/part)\n` +
+          `  Edge Stall: ${hls.latencyController.edgeStalled.toFixed(
+            3
+          )} (playlist refresh over target duration/part)\n` +
           `  Playback rate: ${video.playbackRate.toFixed(2)}\n`;
         if (stats.fragProgramDateTime) {
           const currentPDT =
