@@ -89,7 +89,7 @@
     "eventemitter3": "4.0.7",
     "url-toolkit": "2.2.1",
     "http-server": "0.12.3",
-    "husky": "4.3.8",
+    "husky": "5.2.0",
     "istanbul-instrumenter-loader": "3.0.1",
     "karma": "6.3.1",
     "karma-chrome-launcher": "3.1.0",
