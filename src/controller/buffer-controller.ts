@@ -493,25 +493,27 @@ export default class BufferController implements ComponentAPI {
   // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
   // an undefined data.type will mark all buffers as EOS.
   protected onBufferEos(event: Events.BUFFER_EOS, data: BufferEOSData) {
-    for (const type in this.sourceBuffer) {
+    const ended = this.getSourceBufferTypes().reduce((acc, type) => {
+      const sb = this.sourceBuffer[type];
       if (!data.type || data.type === type) {
-        const sb = this.sourceBuffer[type as SourceBufferName];
         if (sb && !sb.ended) {
           sb.ended = true;
           logger.log(`[buffer-controller]: ${type} sourceBuffer now EOS`);
         }
       }
-    }
+      return acc && !!(!sb || sb.ended);
+    }, true);
 
-    const endStream = () => {
-      const { mediaSource } = this;
-      if (!mediaSource || mediaSource.readyState !== 'open') {
-        return;
-      }
-      // Allow this to throw and be caught by the enqueueing function
-      mediaSource.endOfStream();
-    };
-    this.blockBuffers(endStream);
+    if (ended) {
+      this.blockBuffers(() => {
+        const { mediaSource } = this;
+        if (!mediaSource || mediaSource.readyState !== 'open') {
+          return;
+        }
+        // Allow this to throw and be caught by the enqueueing function
+        mediaSource.endOfStream();
+      });
+    }
   }
 
   protected onLevelUpdated(
