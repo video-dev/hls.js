@@ -127,12 +127,13 @@ class BaseAudioDemuxer implements Demuxer {
 
   flush(timeOffset: number): DemuxerResult {
     // Parse cache in case of remaining frames.
-    if (this.cachedData) {
-      this.demux(this.cachedData, 0);
+    const cachedData = this.cachedData;
+    if (cachedData) {
+      this.cachedData = null;
+      this.demux(cachedData, 0);
     }
 
     this.frameIndex = 0;
-    this.cachedData = null;
 
     return {
       audioTrack: this._audioTrack,
