@@ -790,6 +790,14 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * the rate at which the edge of the current live playlist is advancing or 1 if there is none
+   * @type {number}
+   */
+  get drift(): number | null {
+    return this.latencyController.drift;
+  }
+
+  /**
    * set to true when startLoad is called before MANIFEST_PARSED event
    * @type {boolean}
    */
