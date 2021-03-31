@@ -281,9 +281,6 @@ export default class MP4Remuxer implements Remuxer {
       // using audio sampling rate here helps having an integer MP4 frame duration
       // this avoids potential rounding issue and AV sync issue
       audioTrack.timescale = audioTrack.samplerate;
-      logger.log(
-        `[mp4-remuxer]: audio sampling rate : ${audioTrack.samplerate}`
-      );
       if (!audioTrack.isAAC) {
         if (typeSupported.mpeg) {
           // Chrome and Safari

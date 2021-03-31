@@ -227,7 +227,7 @@ export function isHeader(data: Uint8Array, offset: number): boolean {
 export function canParse(data: Uint8Array, offset: number): boolean {
   const headerSize = 4;
 
-  return isHeaderPattern(data, offset) && data.length - offset >= headerSize;
+  return isHeaderPattern(data, offset) && headerSize <= data.length - offset;
 }
 
 export function probe(data: Uint8Array, offset: number): boolean {
