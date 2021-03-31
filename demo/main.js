@@ -1215,9 +1215,7 @@ function checkBuffer() {
           `  Max Latency: ${hls.maxLatency}\n` +
           `  Target Latency: ${hls.targetLatency.toFixed(3)}\n` +
           `  Latency: ${hls.latency.toFixed(3)}\n` +
-          `  Drift: ${hls.latencyController.drift.toFixed(
-            3
-          )} (edge advance rate)\n` +
+          `  Drift: ${hls.drift.toFixed(3)} (edge advance rate)\n` +
           `  Edge Stall: ${hls.latencyController.edgeStalled.toFixed(
             3
           )} (playlist refresh over target duration/part)\n` +
