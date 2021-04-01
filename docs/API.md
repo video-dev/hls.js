@@ -1330,7 +1330,9 @@ get/set : if set to true the active subtitle track mode will be set to `showing`
 
 ### `hls.liveSyncPosition`
 
-get : position of live sync point (ie edge of live position minus safety delay defined by `hls.config.liveSyncDuration`)
+get : position of live sync point (ie edge of live position minus safety delay defined by `hls.config.liveSyncDuration`).
+If playback stalls outside the sliding window, or latency exceeds `liveMaxLatencyDuration` hls.js will seek ahead to
+`liveSyncPosition` to get back in sync with the stream stream.
 
 ### `hls.latency`
 
