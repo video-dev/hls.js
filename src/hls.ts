@@ -40,7 +40,7 @@ export default class Hls implements HlsEventEmitter {
   public readonly userConfig: Partial<HlsConfig>;
 
   private coreComponents: ComponentAPI[];
-  private networkControllers: NetworkComponentAPI[];
+  private networkControllers: NetworkComponentAPI[] | undefined;
 
   private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
@@ -284,8 +284,7 @@ export default class Hls implements HlsEventEmitter {
     this.url = null;
     if (this.networkControllers) {
       this.networkControllers.forEach((component) => component.destroy());
-      // @ts-ignore
-      this.networkControllers = null;
+      this.networkControllers = undefined;
     }
     if (this.coreComponents) {
       this.coreComponents.forEach((component) => component.destroy());
@@ -342,6 +341,9 @@ export default class Hls implements HlsEventEmitter {
    */
   startLoad(startPosition: number = -1) {
     logger.log(`startLoad(${startPosition})`);
+    if (!this.networkControllers) {
+      throw new Error('Cannot call `startLoad()` on destroyed instance of hls');
+    }
     this.networkControllers.forEach((controller) => {
       controller.startLoad(startPosition);
     });
@@ -352,9 +354,11 @@ export default class Hls implements HlsEventEmitter {
    */
   stopLoad() {
     logger.log('stopLoad');
-    this.networkControllers.forEach((controller) => {
-      controller.stopLoad();
-    });
+    if (this.networkControllers) {
+      this.networkControllers.forEach((controller) => {
+        controller.stopLoad();
+      });
+    }
   }
 
   /**
