@@ -22,7 +22,6 @@ const expect = chai.expect;
 
 class MockXhr implements Loader<LoaderContext> {
   context!: LoaderContext;
-  loader: any;
   stats: LoadStats;
   callbacks?: LoaderCallbacks<FragmentLoaderContext>;
 

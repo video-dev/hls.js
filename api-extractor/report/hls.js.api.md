@@ -1560,8 +1560,6 @@ export interface Loader<T extends LoaderContext> {
     // (undocumented)
     load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
     // (undocumented)
-    loader: any;
-    // (undocumented)
     stats: LoaderStats;
 }
 
