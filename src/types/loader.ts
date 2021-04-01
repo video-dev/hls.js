@@ -120,7 +120,11 @@ export interface Loader<T extends LoaderContext> {
     config: LoaderConfiguration,
     callbacks: LoaderCallbacks<T>
   ): void;
-  getResponseHeader(name: string): string | null;
+  /**
+   * Returns the time, in seconds, that this object has been in a proxy cache.
+   * For HTTP based loaders, this returns the value of the "age" HTTP header.
+   */
+  getCacheAge(): number;
   context: T;
   stats: LoaderStats;
 }

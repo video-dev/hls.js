@@ -684,8 +684,7 @@ class PlaylistLoader {
     }
 
     if (levelDetails.live) {
-      const ageHeader = loader.getResponseHeader('age');
-      levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
+      levelDetails.ageHeader = loader.getCacheAge();
     }
 
     switch (type) {
