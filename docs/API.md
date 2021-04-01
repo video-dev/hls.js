@@ -1,4 +1,4 @@
-# API
+# HLS.js v1 API
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -1346,6 +1346,10 @@ returns 0 before first playlist is loaded
 ### `hls.targetLatency`
 
 get : target distance from the edge as calculated by the latency controller
+
+### `hls.drift`
+
+get : the rate at which the edge of the current live playlist is advancing or 1 if there is none
 
 ## Runtime Events
 

@@ -312,10 +312,12 @@ export default class BaseStreamController
           return;
         }
         this.fragLoadError = 0;
+        const state = this.state;
         if (this.fragContextChanged(frag)) {
           if (
-            this.state === State.FRAG_LOADING ||
-            this.state === State.BACKTRACKING
+            state === State.FRAG_LOADING ||
+            state === State.BACKTRACKING ||
+            (!this.fragCurrent && state === State.PARSING)
           ) {
             this.fragmentTracker.removeFragment(frag);
             this.state = State.IDLE;

@@ -435,7 +435,7 @@ export class TimelineChart {
           sourceBuffer,
         })
       );
-      sourceBuffer.onupdate = () => {
+      sourceBuffer.addEventListener('update', () => {
         try {
           replaceTimeRangeTuples(sourceBuffer.buffered, data);
         } catch (error) {
@@ -445,7 +445,7 @@ export class TimelineChart {
         }
         replaceTimeRangeTuples(media.buffered, mediaBufferData);
         this.update();
-      };
+      });
     });
 
     if (trackTypes.length === 0) {
