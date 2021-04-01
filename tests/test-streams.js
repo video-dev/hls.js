@@ -4,29 +4,29 @@
  * @param {string} description
  * @param {boolean} [live]
  * @param {boolean} [abr]
- * @param {string[]} [blacklist_ua]
- * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
+ * @param {string[]} [skip_ua]
+ * @returns {{url: string, description: string, live: boolean, abr: boolean, skip_ua: string[]}}
  */
 function createTestStream(
   url,
   description,
   live = false,
   abr = true,
-  blacklist_ua = []
+  skip_ua = []
 ) {
   return {
-    url,
-    description,
-    live,
-    abr,
-    blacklist_ua,
+    url: url,
+    description: description,
+    live: live,
+    abr: abr,
+    skip_ua: skip_ua,
   };
 }
 
 /**
  * @param {Object} target
  * @param {Object} [config]
- * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
+ * @returns {{url: string, description: string, live: boolean, abr: boolean, skip_ua: string[]}}
  */
 function createTestStreamWithConfig(target, config) {
   if (typeof target !== 'object') {
@@ -38,7 +38,7 @@ function createTestStreamWithConfig(target, config) {
     target.description,
     target.live,
     target.abr,
-    target.blacklist_ua
+    target.skip_ua
   );
 
   testStream.config = config;
@@ -62,7 +62,7 @@ module.exports = {
       'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     description: 'Big Buck Bunny - 480p only',
     abr: false,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   arte: {
     url: 'https://test-streams.mux.dev/test_001/stream.m3u8',
@@ -74,7 +74,7 @@ module.exports = {
       'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
     description: 'Ad-insertion in event stream',
     abr: false,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   issue666: {
     url:
@@ -82,7 +82,7 @@ module.exports = {
     description:
       'Surveillance footage - https://github.com/video-dev/hls.js/issues/666',
     abr: false,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   closedCaptions: {
     url: 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
@@ -111,21 +111,21 @@ module.exports = {
     url: 'https://pl.streamingvideoprovider.com/mp3-playlist/playlist.m3u8',
     description: 'MPEG Audio Only demo',
     abr: false,
-    blacklist_ua: ['internet explorer', 'MicrosoftEdge', 'firefox'],
+    skip_ua: ['internet explorer', 'MicrosoftEdge', 'firefox'],
   },
   fmp4: {
     url:
       'https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8',
     description: 'HLS fMP4 Angel-One multiple audio-tracks',
     abr: true,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   fmp4Bitmovin: {
     url:
       'https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
     description: 'HLS fMP4 by Bitmovin',
     abr: true,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   fmp4BitmovinHevc: {
     url:
@@ -133,7 +133,7 @@ module.exports = {
     description:
       'HLS HEVC fMP4 by Bitmovin (Safari and Edge? only as of 2020-08)',
     abr: true,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
     skipFunctionalTests: true,
   },
   offset_pts: {
@@ -148,7 +148,7 @@ module.exports = {
       description:
         'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
       abr: true,
-      blacklist_ua: [
+      skip_ua: [
         'firefox',
         'safari',
         'internet explorer',
