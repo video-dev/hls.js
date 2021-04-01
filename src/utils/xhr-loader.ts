@@ -249,11 +249,16 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  getResponseHeader(name: string): string | null {
-    if (this.loader && this.loader.getAllResponseHeaders().indexOf(name) >= 0) {
-      return this.loader.getResponseHeader(name);
+  getCacheAge(): number {
+    let result: number = 0;
+    if (
+      this.loader &&
+      this.loader.getAllResponseHeaders().indexOf('age') >= 0
+    ) {
+      const ageHeader = this.loader.getResponseHeader('age');
+      result = ageHeader ? parseFloat(ageHeader) : 0;
     }
-    return null;
+    return result;
   }
 }
 
