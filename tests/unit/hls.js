@@ -1,5 +1,6 @@
 import Hls from '../../src/hls';
 import { hlsDefaultConfig } from '../../src/config';
+import { expect } from 'chai';
 
 describe('Hls', function () {
   describe('bandwidthEstimate', function () {
@@ -18,6 +19,22 @@ describe('Hls', function () {
       const hls = new Hls();
       expect(hls.bandwidthEstimate).to.equal(
         hlsDefaultConfig.abrEwmaDefaultEstimate
+      );
+    });
+  });
+
+  describe('destroy', function () {
+    it('should allow stopLoad() after destroy()', function () {
+      const hls = new Hls();
+      hls.destroy();
+      expect(() => hls.stopLoad()).to.not.throw();
+    });
+
+    it('should not allow startLoad() after destroy()', function () {
+      const hls = new Hls();
+      hls.destroy();
+      expect(() => hls.startLoad()).to.throw(
+        'Cannot call `startLoad()` on destroyed instance of hls'
       );
     });
   });
