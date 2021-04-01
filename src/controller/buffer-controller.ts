@@ -398,7 +398,7 @@ export default class BufferController implements ComponentAPI {
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
           */
           if (this.appendError > hls.config.appendErrorMaxRetry) {
-            logger.log(
+            logger.error(
               `[buffer-controller]: Failed ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`
             );
             event.fatal = true;
