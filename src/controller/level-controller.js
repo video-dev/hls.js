@@ -24,6 +24,7 @@ export default class LevelController extends EventHandler {
     this.currentLevelIndex = null;
     this.manualLevelIndex = -1;
     this.timer = null;
+    this._firstLevel = -1;
 
     chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
   }
