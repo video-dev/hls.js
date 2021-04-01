@@ -470,11 +470,11 @@ export default class StreamController
 
   private abortCurrentFrag() {
     const fragCurrent = this.fragCurrent;
+    this.fragCurrent = null;
     if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
     }
     this.nextLoadPosition = this.getLoadPosition();
-    this.fragCurrent = null;
   }
 
   protected flushMainBuffer(startOffset: number, endOffset: number) {
