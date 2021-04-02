@@ -274,8 +274,8 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
             hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12)
           );
           const type: HdlrType | undefined = {
-            soun: ElementaryStreamTypes.AUDIO,
-            vide: ElementaryStreamTypes.VIDEO,
+            soun: ElementaryStreamTypes.AUDIO as const,
+            vide: ElementaryStreamTypes.VIDEO as const,
           }[hdlrType];
           if (type) {
             // Parse codec details
