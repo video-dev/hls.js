@@ -129,21 +129,7 @@ export interface Loader<T extends LoaderContext> {
    *
    * @returns time object being lodaded
    */
-  getCacheAge?: () => number;
-  /**
-   * `getResponseHeader()` is called by hls.js to get the duration that a given
-   * object has been sitting in a proxy cache when playing live.
-   *
-   * For HTTP based loaders, this should just return the "age" header.  For
-   * non-HTTP based loaders, if the retrieved object has been cached, this
-   * should return the time the object has been in a cache, as a string, possibly
-   * with a decimal point.  Otherwise implementers should return "0" or null.
-   *
-   * Note that HLS.js will never call this for a header other than "age".
-   *
-   * @deprecated - Implement `getCacheAge()` instead.
-   */
-  getResponseHeader?: (name: 'age') => string | null;
+  getCacheAge?: () => number | null;
   context: T;
   loader: any;
   stats: LoaderStats;
