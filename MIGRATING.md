@@ -70,3 +70,9 @@ Event order and content have changed in some places. See **Breaking Changes** be
 ### LL-HLS Parts in events
 
 - FRAG\_\_\_\_ events are now fired for LL-HLS part events with a `part` property that include the part details.
+
+### TypeScript
+
+v0.x types are not compatible with v1.x. Type definitions are now exported with the build and npm package in
+`dist/hls.js.d.ts`. Please use these type definitions if you are having trouble with
+[DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) `@types/hls.js` and v1.x.
