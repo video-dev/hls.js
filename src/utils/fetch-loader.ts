@@ -160,11 +160,11 @@ class FetchLoader implements Loader<LoaderContext> {
       });
   }
 
-  getCacheAge(): number {
-    let result: number = 0;
+  getCacheAge(): number | null {
+    let result: number | null = null;
     if (this.response) {
       const ageHeader = this.response.headers.get('age');
-      result = ageHeader ? parseFloat(ageHeader) : 0;
+      result = ageHeader ? parseFloat(ageHeader) : null;
     }
     return result;
   }

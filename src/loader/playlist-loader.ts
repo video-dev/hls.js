@@ -685,11 +685,9 @@ class PlaylistLoader {
 
     if (levelDetails.live) {
       if (loader.getCacheAge) {
-        levelDetails.ageHeader = loader.getCacheAge();
-      } else if (loader.getResponseHeader) {
-        const ageHeaderStr = loader.getResponseHeader('age');
-        levelDetails.ageHeader = ageHeaderStr ? parseFloat(ageHeaderStr) : 0;
-      } else {
+        levelDetails.ageHeader = loader.getCacheAge() || 0;
+      }
+      if (!loader.getCacheAge || isNaN(levelDetails.ageHeader)) {
         levelDetails.ageHeader = 0;
       }
     }
