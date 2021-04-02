@@ -69,7 +69,7 @@
     "@itsjamie/esdoc-standard-plugin": "0.3.1",
     "@itsjamie/esdoc-typescript-plugin": "0.3.1",
     "@microsoft/api-extractor": "7.13.2",
-    "@types/chai": "4.2.15",
+    "@types/chai": "4.2.16",
     "@types/chart.js": "2.9.31",
     "@types/mocha": "8.2.2",
     "@types/sinon-chai": "3.2.5",
