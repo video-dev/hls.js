@@ -484,6 +484,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       }
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
+      capabilities.public = 'public restricted';
       capabilities.avoidProxy = true;
       capabilities['record-screenshots'] = 'false';
       browser = browser.usingServer(
