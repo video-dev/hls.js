@@ -131,7 +131,6 @@ export interface Loader<T extends LoaderContext> {
    */
   getCacheAge?: () => number | null;
   context: T;
-  loader: any;
   stats: LoaderStats;
 }
 

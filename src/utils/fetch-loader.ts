@@ -37,7 +37,7 @@ class FetchLoader implements Loader<LoaderContext> {
   private config: LoaderConfiguration | null = null;
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public stats: LoaderStats;
-  public loader: Response | null = null;
+  private loader: Response | null = null;
 
   constructor(config /* HlsConfig */) {
     this.fetchSetup = config.fetchSetup || getRequest;

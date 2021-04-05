@@ -17,7 +17,7 @@ class XhrLoader implements Loader<LoaderContext> {
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public context!: LoaderContext;
 
-  public loader: XMLHttpRequest | null = null;
+  private loader: XMLHttpRequest | null = null;
   public stats: LoaderStats;
 
   constructor(config /* HlsConfig */) {
