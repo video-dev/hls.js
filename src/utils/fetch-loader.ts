@@ -160,15 +160,13 @@ class FetchLoader implements Loader<LoaderContext> {
       });
   }
 
-  getResponseHeader(name: string): string | null {
+  getCacheAge(): number | null {
+    let result: number | null = null;
     if (this.response) {
-      try {
-        return this.response.headers.get(name);
-      } catch (error) {
-        /* Could not get header */
-      }
+      const ageHeader = this.response.headers.get('age');
+      result = ageHeader ? parseFloat(ageHeader) : null;
     }
-    return null;
+    return result;
   }
 
   private loadProgressively(
