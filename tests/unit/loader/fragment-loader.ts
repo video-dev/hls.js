@@ -36,9 +36,6 @@ class MockXhr implements Loader<LoaderContext> {
 
   abort() {}
   destroy(): void {}
-  getResponseHeader(name: string): string | null {
-    return null;
-  }
 }
 
 describe('FragmentLoader tests', function () {
