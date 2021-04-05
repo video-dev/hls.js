@@ -17,7 +17,7 @@ class XhrLoader implements Loader<LoaderContext> {
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public context!: LoaderContext;
 
-  public loader: XMLHttpRequest | null = null;
+  private loader: XMLHttpRequest | null = null;
   public stats: LoaderStats;
 
   constructor(config /* HlsConfig */) {
@@ -249,11 +249,16 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  getResponseHeader(name: string): string | null {
-    if (this.loader && this.loader.getAllResponseHeaders().indexOf(name) >= 0) {
-      return this.loader.getResponseHeader(name);
+  getCacheAge(): number | null {
+    let result: number | null = null;
+    if (
+      this.loader &&
+      this.loader.getAllResponseHeaders().indexOf('age') >= 0
+    ) {
+      const ageHeader = this.loader.getResponseHeader('age');
+      result = ageHeader ? parseFloat(ageHeader) : null;
     }
-    return null;
+    return result;
   }
 }
 

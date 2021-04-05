@@ -1555,12 +1555,9 @@ export interface Loader<T extends LoaderContext> {
     context: T;
     // (undocumented)
     destroy(): void;
-    // (undocumented)
-    getResponseHeader(name: string): string | null;
+    getCacheAge?: () => number | null;
     // (undocumented)
     load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
-    // (undocumented)
-    loader: any;
     // (undocumented)
     stats: LoaderStats;
 }
