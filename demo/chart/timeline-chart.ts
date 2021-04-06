@@ -666,6 +666,9 @@ export class TimelineChart {
 }
 
 function stripDeliveryDirectives(url: string): string {
+  if (url === '') {
+    return url;
+  }
   try {
     const webUrl: URL = new self.URL(url);
     webUrl.searchParams.delete('_HLS_msn');

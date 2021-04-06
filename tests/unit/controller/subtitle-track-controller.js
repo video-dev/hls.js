@@ -129,6 +129,7 @@ describe('SubtitleTrackController', function () {
         'hlsSubtitleTrackSwitch',
         {
           id: 1,
+          name: 'English',
           type: 'SUBTITLES',
           url: 'bar',
         }
@@ -163,6 +164,7 @@ describe('SubtitleTrackController', function () {
         'hlsSubtitleTrackSwitch',
         {
           id: 0,
+          name: 'English',
           type: 'SUBTITLES',
           url: 'baz',
         }
