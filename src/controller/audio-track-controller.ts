@@ -19,6 +19,7 @@ class AudioTrackController extends BasePlaylistController {
   private groupId: string | null = null;
   private tracksInGroup: MediaPlaylist[] = [];
   private trackId: number = -1;
+  private trackName: string = '';
   private selectDefaultTrack: boolean = true;
 
   constructor(hls: Hls) {
@@ -58,6 +59,7 @@ class AudioTrackController extends BasePlaylistController {
     this.groupId = null;
     this.tracksInGroup = [];
     this.trackId = -1;
+    this.trackName = '';
     this.selectDefaultTrack = true;
   }
 
@@ -169,8 +171,9 @@ class AudioTrackController extends BasePlaylistController {
 
   private setAudioTrack(newId: number): void {
     const tracks = this.tracksInGroup;
-    // noop on same audio track id as already set
-    if (this.trackId === newId && tracks[newId]?.details) {
+    const track = tracks[newId];
+    // noop on audio track already set
+    if (track?.details) {
       return;
     }
 
@@ -184,11 +187,12 @@ class AudioTrackController extends BasePlaylistController {
     this.clearTimer();
 
     const lastTrack = tracks[this.trackId];
-    const track = tracks[newId];
     this.log(`Now switching to audio-track index ${newId}`);
+    const { id, name, type, url } = track;
     this.trackId = newId;
-    const { url, type, id } = track;
-    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
+    this.trackName = name;
+    this.selectDefaultTrack = false;
+    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, name, type, url });
     const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
     this.loadPlaylist(hlsUrlParameters);
   }
@@ -199,7 +203,7 @@ class AudioTrackController extends BasePlaylistController {
       audioTracks.length,
       'Initial audio track should be selected when tracks are known'
     );
-    const currentAudioTrackName = audioTracks[this.trackId]?.name;
+    const currentAudioTrackName = this.trackName;
     const trackId =
       this.findTrackId(currentAudioTrackName) || this.findTrackId();
 

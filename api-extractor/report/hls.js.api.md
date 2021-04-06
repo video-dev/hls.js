@@ -84,6 +84,8 @@ export interface AudioTrackSwitchingData {
     // (undocumented)
     id: number;
     // (undocumented)
+    name: string;
+    // (undocumented)
     type: MediaPlaylistType | 'main';
     // (undocumented)
     url: string;
@@ -2007,6 +2009,8 @@ export interface SubtitleTracksUpdatedData {
 export interface SubtitleTrackSwitchData {
     // (undocumented)
     id: number;
+    // (undocumented)
+    name?: string;
     // (undocumented)
     type?: MediaPlaylistType | 'main';
     // (undocumented)
