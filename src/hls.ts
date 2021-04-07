@@ -282,16 +282,12 @@ export default class Hls implements HlsEventEmitter {
     this.removeAllListeners();
     this._autoLevelCapping = -1;
     this.url = null;
-    if (this.networkControllers) {
-      this.networkControllers.forEach((component) => component.destroy());
-      // @ts-ignore
-      this.networkControllers = null;
-    }
-    if (this.coreComponents) {
-      this.coreComponents.forEach((component) => component.destroy());
-      // @ts-ignore
-      this.coreComponents = null;
-    }
+
+    this.networkControllers.forEach((component) => component.destroy());
+    this.networkControllers.length = 0;
+
+    this.coreComponents.forEach((component) => component.destroy());
+    this.coreComponents.length = 0;
   }
 
   /**
