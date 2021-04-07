@@ -8,7 +8,6 @@ import { FragmentState } from './fragment-tracker';
 import type { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { Fragment, ElementaryStreamTypes } from '../loader/fragment';
-import FragmentLoader from '../loader/fragment-loader';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import type { TransmuxerResult } from '../types/transmuxer';
 import { ChunkMetadata } from '../types/transmuxer';
@@ -921,7 +920,7 @@ export default class StreamController
 
     if (!this.loadedmetadata && buffered.length) {
       this.loadedmetadata = true;
-      this._seekToStartPos();
+      this.seekToStartPos();
     } else {
       // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
       gapController.poll(this.lastCurrentTime);
@@ -969,7 +968,7 @@ export default class StreamController
    * Seeks to the set startPosition if not equal to the mediaElement's current time.
    * @private
    */
-  private _seekToStartPos() {
+  private seekToStartPos() {
     const { media } = this;
     const currentTime = media.currentTime;
     let startPosition = this.startPosition;
