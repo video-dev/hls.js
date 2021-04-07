@@ -20,11 +20,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "./scripts/precommit.sh"
-    }
-  },
   "scripts": {
     "build": "webpack --progress && npm run build:types",
     "build:ci": "webpack && tsc --build tsconfig-lib.json && api-extractor run",
@@ -51,7 +46,8 @@
     "test:func:sauce": "SAUCE=1 UA=safari OS='OS X 10.15' BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "test:func:sauce-ie": "SAUCE=1 UA='internet explorer' OS='Windows 10' BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "type-check": "tsc --noEmit",
-    "type-check:watch": "npm run type-check -- --watch"
+    "type-check:watch": "npm run type-check -- --watch",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@babel/core": "7.13.14",
@@ -89,7 +85,7 @@
     "eslint-plugin-promise": "4.3.1",
     "eventemitter3": "4.0.7",
     "http-server": "0.12.3",
-    "husky": "4.3.8",
+    "husky": "6.0.0",
     "istanbul-instrumenter-loader": "3.0.1",
     "jsonpack": "1.1.5",
     "karma": "6.3.2",
