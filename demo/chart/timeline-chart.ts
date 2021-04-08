@@ -283,12 +283,18 @@ export class TimelineChart {
   updateLevelOrTrack(details: LevelDetails) {
     const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
-    const levelDataSet = arrayFind(
+    let levelDataSet = arrayFind(
       datasets,
       (dataset) =>
         stripDeliveryDirectives(url) ===
         stripDeliveryDirectives(dataset.url || '')
     );
+    if (!levelDataSet) {
+      levelDataSet = arrayFind(
+        datasets,
+        (dataset) => details.fragments[0]?.level === dataset.level
+      );
+    }
     if (!levelDataSet) {
       return;
     }
@@ -381,10 +387,16 @@ export class TimelineChart {
   updateFragment(data: FragLoadedData | FragParsedData | FragChangedData) {
     const { datasets } = this.chart.data;
     const frag: Fragment = data.frag;
-    const levelDataSet = arrayFind(
+    let levelDataSet = arrayFind(
       datasets,
-      (dataset) => dataset.url === frag.baseurl
+      (dataset) => frag.baseurl === dataset.url
     );
+    if (!levelDataSet) {
+      levelDataSet = arrayFind(
+        datasets,
+        (dataset) => frag.level === dataset.level
+      );
+    }
     if (!levelDataSet) {
       return;
     }
