@@ -715,13 +715,6 @@ export default class StreamController
     );
   }
 
-  private resetTransmuxer() {
-    if (this.transmuxer) {
-      this.transmuxer.destroy();
-      this.transmuxer = null;
-    }
-  }
-
   private onAudioTrackSwitching(
     event: Events.AUDIO_TRACK_SWITCHING,
     data: AudioTrackSwitchingData
