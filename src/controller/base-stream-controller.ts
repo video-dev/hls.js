@@ -121,10 +121,7 @@ export default class BaseStreamController
     if (frag) {
       this.fragmentTracker.removeFragment(frag);
     }
-    if (this.transmuxer) {
-      this.transmuxer.destroy();
-      this.transmuxer = null;
-    }
+    this.resetTransmuxer();
     this.fragCurrent = null;
     this.fragPrevious = null;
     this.clearInterval();
@@ -1228,10 +1225,7 @@ export default class BaseStreamController
             this.warn(
               `Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration}) resetting transmuxer to fallback to playlist timing`
             );
-            if (this.transmuxer) {
-              this.transmuxer.destroy();
-              this.transmuxer = null;
-            }
+            this.resetTransmuxer();
             return result || false;
           }
           const drift = partial
@@ -1266,6 +1260,13 @@ export default class BaseStreamController
       this.fragCurrent = null;
       this.fragPrevious = null;
       this.state = State.IDLE;
+    }
+  }
+
+  protected resetTransmuxer() {
+    if (this.transmuxer) {
+      this.transmuxer.destroy();
+      this.transmuxer = null;
     }
   }
 

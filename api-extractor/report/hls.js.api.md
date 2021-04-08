@@ -82,6 +82,8 @@ export interface AudioTrackSwitchedData {
 // @public (undocumented)
 export interface AudioTrackSwitchingData {
     // (undocumented)
+    groupId: string;
+    // (undocumented)
     id: number;
     // (undocumented)
     name: string;
@@ -2007,6 +2009,8 @@ export interface SubtitleTracksUpdatedData {
 //
 // @public (undocumented)
 export interface SubtitleTrackSwitchData {
+    // (undocumented)
+    groupId?: string;
     // (undocumented)
     id: number;
     // (undocumented)
