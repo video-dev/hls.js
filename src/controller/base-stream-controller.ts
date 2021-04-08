@@ -766,8 +766,15 @@ export default class BaseStreamController
       // In order to discover the range, we load the best matching fragment for that level and demux it.
       // Do not load using live logic if the starting frag is requested - we want to use getFragmentAtPosition() so that
       // we get the fragment matching that start time
-      if (!levelDetails.PTSKnown && !this.startFragRequested) {
+      if (
+        !levelDetails.PTSKnown &&
+        !this.startFragRequested &&
+        this.startPosition === -1
+      ) {
         frag = this.getInitialLiveFragment(levelDetails, fragments);
+        this.startPosition = frag
+          ? this.hls.liveSyncPosition || frag.start
+          : pos;
       }
     } else if (pos <= start) {
       // VoD playlist: if loadPosition before start of playlist, load first fragment
@@ -981,20 +988,24 @@ export default class BaseStreamController
     const currentTime = media.currentTime;
     const start = levelDetails.fragments[0].start;
     const end = levelDetails.edge;
+    const withinSlidingWindow =
+      currentTime >= start - config.maxFragLookUpTolerance &&
+      currentTime <= end;
     // Continue if we can seek forward to sync position or if current time is outside of sliding window
     if (
       liveSyncPosition !== null &&
       media.duration > liveSyncPosition &&
-      (currentTime < liveSyncPosition ||
-        currentTime < start - config.maxFragLookUpTolerance ||
-        currentTime > end)
+      (currentTime < liveSyncPosition || !withinSlidingWindow)
     ) {
       // Continue if buffer is starving or if current time is behind max latency
       const maxLatency =
         config.liveMaxLatencyDuration !== undefined
           ? config.liveMaxLatencyDuration
           : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
-      if (media.readyState < 4 || currentTime < end - maxLatency) {
+      if (
+        (!withinSlidingWindow && media.readyState < 4) ||
+        currentTime < end - maxLatency
+      ) {
         if (!this.loadedmetadata) {
           this.nextLoadPosition = liveSyncPosition;
         }
@@ -1055,6 +1066,7 @@ export default class BaseStreamController
 
   protected setStartPosition(details: LevelDetails, sliding: number) {
     // compute start position if set to -1. use it straight away if value is defined
+    let startPosition = this.startPosition;
     if (this.startPosition === -1 || this.lastCurrentTime === -1) {
       // first, check if start time offset has been set in playlist, if yes, use this value
       let startTimeOffset = details.startTimeOffset!;
@@ -1068,18 +1080,17 @@ export default class BaseStreamController
         this.log(
           `Start time offset found in playlist, adjust startPosition to ${startTimeOffset}`
         );
-        this.startPosition = startTimeOffset;
+        this.startPosition = startPosition = startTimeOffset;
+      } else if (details.live) {
+        // Leave this.startPosition at -1, so that we can use `getInitialLiveFragment` logic when startPosition has
+        // not been specified via the config or an as an argument to startLoad (#3736).
+        startPosition = this.hls.liveSyncPosition || sliding;
       } else {
-        if (details.live) {
-          this.startPosition = this.hls.liveSyncPosition || sliding;
-          this.log(`Configure startPosition to ${this.startPosition}`);
-        } else {
-          this.startPosition = 0;
-        }
+        this.startPosition = startPosition = 0;
       }
-      this.lastCurrentTime = this.startPosition;
+      this.lastCurrentTime = startPosition;
     }
-    this.nextLoadPosition = this.startPosition;
+    this.nextLoadPosition = startPosition;
   }
 
   protected getLoadPosition(): number {

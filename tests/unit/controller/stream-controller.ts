@@ -114,6 +114,7 @@ describe('StreamController', function () {
 
     beforeEach(function () {
       streamController['fragPrevious'] = fragPrevious;
+      levelDetails.live = false;
       levelDetails.startSN = mockFragments[0].sn;
       levelDetails.endSN = mockFragments[mockFragments.length - 1].sn;
       levelDetails.fragments = mockFragments;
@@ -375,7 +376,7 @@ describe('StreamController', function () {
 
     it('should seek to start pos when metadata has not yet been loaded', function () {
       // @ts-ignore
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, 'seekToStartPos');
       streamController['loadedmetadata'] = false;
       streamController['checkBuffer']();
       expect(seekStub).to.have.been.calledOnce;
@@ -384,7 +385,7 @@ describe('StreamController', function () {
 
     it('should not seek to start pos when metadata has been loaded', function () {
       // @ts-ignore
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, 'seekToStartPos');
       streamController['loadedmetadata'] = true;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
@@ -393,24 +394,24 @@ describe('StreamController', function () {
 
     it('should not seek to start pos when nothing has been buffered', function () {
       // @ts-ignore
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, 'seekToStartPos');
       streamController['media'].buffered.length = 0;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
       expect(streamController['loadedmetadata']).to.be.false;
     });
 
-    describe('_seekToStartPos', function () {
+    describe('seekToStartPos', function () {
       it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
         streamController['startPosition'] = 5;
-        streamController['_seekToStartPos']();
+        streamController['seekToStartPos']();
         expect(streamController['media'].currentTime).to.equal(5);
       });
 
       it('should not seek to startPosition when it is buffered', function () {
         streamController['startPosition'] = 5;
         streamController['media'].currentTime = 5;
-        streamController['_seekToStartPos']();
+        streamController['seekToStartPos']();
         expect(streamController['media'].currentTime).to.equal(5);
       });
     });
@@ -434,13 +435,29 @@ describe('StreamController', function () {
         expect(streamController['lastCurrentTime']).to.equal(5);
       });
 
-      it('should set startPosition to lastCurrentTime if unset', function () {
+      it('should set startPosition to lastCurrentTime if unset and lastCurrentTime > 0', function () {
         streamController['lastCurrentTime'] = 5;
         streamController.startLoad(-1);
         assertStreamControllerStarted(streamController);
         expect(streamController['nextLoadPosition']).to.equal(5);
         expect(streamController['startPosition']).to.equal(5);
         expect(streamController['lastCurrentTime']).to.equal(5);
+      });
+
+      it('should set startPosition when passed as an argument', function () {
+        streamController.startLoad(123);
+        assertStreamControllerStarted(streamController);
+        expect(streamController['nextLoadPosition']).to.equal(123);
+        expect(streamController['startPosition']).to.equal(123);
+        expect(streamController['lastCurrentTime']).to.equal(123);
+      });
+
+      it('should set startPosition to -1 when passed as an argument', function () {
+        streamController.startLoad(-1);
+        assertStreamControllerStarted(streamController);
+        expect(streamController['nextLoadPosition']).to.equal(-1);
+        expect(streamController['startPosition']).to.equal(-1);
+        expect(streamController['lastCurrentTime']).to.equal(-1);
       });
 
       it('sets up for a bandwidth test if starting at auto', function () {
