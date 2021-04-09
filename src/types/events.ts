@@ -155,6 +155,7 @@ export interface LevelPTSUpdatedData {
 export interface AudioTrackSwitchingData {
   id: number;
   name: string;
+  groupId: string;
   type: MediaPlaylistType | 'main';
   url: string;
 }
@@ -176,6 +177,7 @@ export interface SubtitleTracksUpdatedData {
 export interface SubtitleTrackSwitchData {
   id: number;
   name?: string;
+  groupId?: string;
   type?: MediaPlaylistType | 'main';
   url?: string;
 }

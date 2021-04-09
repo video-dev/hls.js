@@ -188,11 +188,17 @@ class AudioTrackController extends BasePlaylistController {
 
     const lastTrack = tracks[this.trackId];
     this.log(`Now switching to audio-track index ${newId}`);
-    const { id, name, type, url } = track;
+    const { id, groupId = '', name, type, url } = track;
     this.trackId = newId;
     this.trackName = name;
     this.selectDefaultTrack = false;
-    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, name, type, url });
+    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, {
+      id,
+      groupId,
+      name,
+      type,
+      url,
+    });
     const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
     this.loadPlaylist(hlsUrlParameters);
   }
