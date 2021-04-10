@@ -409,7 +409,11 @@ class TSDemuxer implements Demuxer {
       id3Track,
       textTrack: this._txtTrack,
     };
-    this.extractRemainingSamples(demuxResult);
+
+    if (flush) {
+      this.extractRemainingSamples(demuxResult);
+    }
+
     return demuxResult;
   }
 
