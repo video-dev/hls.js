@@ -61,6 +61,10 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
 
 const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
 
+function isMP4Url(url: string): boolean {
+  return MP4_REGEX_SUFFIX.test(URLToolkit.parseURL(url)?.path ?? '');
+}
+
 export default class M3U8Parser {
   static findGroup(
     groups: Array<AudioGroup>,
@@ -511,8 +515,8 @@ export default class M3U8Parser {
           // if the fragments are TS or MP4, except if we download them :/
           // but this is to be able to handle SIDX.
           if (
-            level.fragments.every((frag) =>
-              MP4_REGEX_SUFFIX.test(frag.relurl as string)
+            level.fragments.every(
+              (frag) => frag.relurl && isMP4Url(frag.relurl)
             )
           ) {
             logger.warn(
