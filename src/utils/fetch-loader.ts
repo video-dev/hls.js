@@ -110,7 +110,7 @@ class FetchLoader implements Loader<LoaderContext> {
           stats.total = parseInt(response.headers.get('Content-Length') || '0');
 
           if (onProgress && Number.isFinite(config.highWaterMark)) {
-            this.loadProgressively(
+            return this.loadProgressively(
               response,
               stats,
               context,
@@ -175,19 +175,20 @@ class FetchLoader implements Loader<LoaderContext> {
     context: LoaderContext,
     highWaterMark: number = 0,
     onProgress: LoaderOnProgress<LoaderContext>
-  ) {
+  ): Promise<ArrayBuffer> {
     const chunkCache = new ChunkCache();
-    const reader = (response.clone().body as ReadableStream).getReader();
+    const reader = (response.body as ReadableStream).getReader();
 
-    const pump = () => {
-      reader
+    const pump = (): Promise<ArrayBuffer> => {
+      return reader
         .read()
         .then((data) => {
           if (data.done) {
             if (chunkCache.dataLength) {
               onProgress(stats, context, chunkCache.flush(), response);
             }
-            return;
+
+            return Promise.resolve(new ArrayBuffer(0));
           }
           const chunk: Uint8Array = data.value;
           const len = chunk.length;
@@ -205,14 +206,15 @@ class FetchLoader implements Loader<LoaderContext> {
             // just emit the progress event
             onProgress(stats, context, chunk, response);
           }
-          pump();
+          return pump();
         })
         .catch(() => {
           /* aborted */
+          return Promise.reject();
         });
     };
 
-    pump();
+    return pump();
   }
 }
 
