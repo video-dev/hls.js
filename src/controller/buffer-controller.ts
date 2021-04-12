@@ -67,6 +67,13 @@ export default class BufferController implements ComponentAPI {
     this.registerListeners();
   }
 
+  public hasSourceTypes(): boolean {
+    return (
+      this.getSourceBufferTypes().length > 0 ||
+      Object.keys(this.pendingTracks).length > 0
+    );
+  }
+
   public destroy() {
     this.unregisterListeners();
     this.details = null;

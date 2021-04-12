@@ -1,32 +1,29 @@
 import * as URLToolkit from 'url-toolkit';
-
-import { ErrorTypes, ErrorDetails } from './errors';
-
 import PlaylistLoader from './loader/playlist-loader';
 import KeyLoader from './loader/key-loader';
-
+import ID3TrackController from './controller/id3-track-controller';
+import LatencyController from './controller/latency-controller';
+import LevelController from './controller/level-controller';
 import { FragmentTracker } from './controller/fragment-tracker';
 import StreamController from './controller/stream-controller';
-import LevelController from './controller/level-controller';
-
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
-import type { HlsConfig } from './config';
-import { Events } from './events';
 import { EventEmitter } from 'eventemitter3';
-import { Level } from './types/level';
-import type { MediaPlaylist } from './types/media-playlist';
-import AudioTrackController from './controller/audio-track-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
-import ID3TrackController from './controller/id3-track-controller';
-import EMEController from './controller/eme-controller';
-import CapLevelController from './controller/cap-level-controller';
-import AbrController from './controller/abr-controller';
-import LatencyController from './controller/latency-controller';
-import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
+import { Events } from './events';
+import { ErrorTypes, ErrorDetails } from './errors';
 import type { HlsEventEmitter, HlsListeners } from './events';
-import { Fragment } from './loader/fragment';
+import type AudioTrackController from './controller/audio-track-controller';
+import type AbrController from './controller/abr-controller';
+import type BufferController from './controller/buffer-controller';
+import type CapLevelController from './controller/cap-level-controller';
+import type EMEController from './controller/eme-controller';
+import type SubtitleTrackController from './controller/subtitle-track-controller';
+import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
+import type { MediaPlaylist } from './types/media-playlist';
+import type { HlsConfig } from './config';
+import type { Level } from './types/level';
+import type { Fragment } from './loader/fragment';
 
 /**
  * @module Hls
@@ -45,6 +42,7 @@ export default class Hls implements HlsEventEmitter {
   private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
   private abrController: AbrController;
+  private bufferController: BufferController;
   private capLevelController: CapLevelController;
   private latencyController: LatencyController;
   private levelController: LevelController;
@@ -109,12 +107,20 @@ export default class Hls implements HlsEventEmitter {
     }
 
     // core controllers and network loaders
-    const abrController = (this.abrController = new config.abrController(this)); // eslint-disable-line new-cap
-    const bufferController = new config.bufferController(this); // eslint-disable-line new-cap
-    const capLevelController = (this.capLevelController = new config.capLevelController(
+    const {
+      abrController: ConfigAbrController,
+      bufferController: ConfigBufferController,
+      capLevelController: ConfigCapLevelController,
+      fpsController: ConfigFpsController,
+    } = config;
+    const abrController = (this.abrController = new ConfigAbrController(this));
+    const bufferController = (this.bufferController = new ConfigBufferController(
       this
-    )); // eslint-disable-line new-cap
-    const fpsController = new config.fpsController(this); // eslint-disable-line new-cap
+    ));
+    const capLevelController = (this.capLevelController = new ConfigCapLevelController(
+      this
+    ));
+    const fpsController = new ConfigFpsController(this);
     const playListLoader = new PlaylistLoader(this);
     const keyLoader = new KeyLoader(this);
     const id3TrackController = new ID3TrackController(this);
@@ -316,15 +322,24 @@ export default class Hls implements HlsEventEmitter {
   loadSource(url: string) {
     this.stopLoad();
     const media = this.media;
-    if (media && this.url) {
+    const loadedSource = this.url;
+    const loadingSource = (this.url = URLToolkit.buildAbsoluteURL(
+      self.location.href,
+      url,
+      {
+        alwaysNormalize: true,
+      }
+    ));
+    logger.log(`loadSource:${loadingSource}`);
+    if (
+      media &&
+      loadedSource &&
+      loadedSource !== loadingSource &&
+      this.bufferController.hasSourceTypes()
+    ) {
       this.detachMedia();
       this.attachMedia(media);
     }
-    url = URLToolkit.buildAbsoluteURL(self.location.href, url, {
-      alwaysNormalize: true,
-    });
-    logger.log(`loadSource:${url}`);
-    this.url = url;
     // when attaching to a source URL, trigger a playlist load
     this.trigger(Events.MANIFEST_LOADING, { url: url });
   }
