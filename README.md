@@ -59,18 +59,18 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
 
 hls.js is only compatible with browsers supporting MediaSource extensions (MSE) API with 'video/MP4' mime-type inputs.
 
-Hls.js is supported on:
+hls.js is supported on:
 
-- Chrome for Android 39+
-- Chrome for Desktop 39+
-- Firefox for Android 41+
-- Firefox for Desktop 42+
-- IE11+ for Windows 8.1+
+- Chrome 39+ for Android
+- Chrome 39+ for Desktop
+- Firefox 41+ for Android
+- Firefox 42+ for Desktop
+- IE11 for Windows 8.1+
 - Edge for Windows 10+
-- Opera for Desktop
-- Vivaldi for Desktop
-- Safari for Mac 8+ (beta)
+- Safari 8+ for MacOS 10.10+
 - Safari for ipadOS 13+
+
+A [Promise polyfill](https://github.com/taylorhakes/promise-polyfill) is required in browsers missing native promise support.
 
 **Please note:** iOS Safari on iPhone does not support the MediaSource API. This includes all browsers on iOS as well as apps using UIWebView and WKWebView.
 
@@ -193,7 +193,7 @@ made by [gramk](https://github.com/gramk/chrome-hls), plays hls from address bar
 No external JS libs are needed.
 Prepackaged builds are included [with each release](https://github.com/video-dev/hls.js/releases).
 
-Hls.js can be installed as a dependency using npm:
+hls.js can be installed as a dependency using npm:
 
 ```
 npm install hls.js

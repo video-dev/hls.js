@@ -354,8 +354,14 @@ class SubtitleTrackController extends BasePlaylistController {
     this.log(`Switching to subtitle track ${newId}`);
     this.trackId = newId;
     if (track) {
-      const { url, type, id } = track;
-      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id, type, url });
+      const { id, groupId = '', name, type, url } = track;
+      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
+        id,
+        groupId,
+        name,
+        type,
+        url,
+      });
       const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
       this.loadPlaylist(hlsUrlParameters);
     } else {

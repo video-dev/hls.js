@@ -82,7 +82,11 @@ export interface AudioTrackSwitchedData {
 // @public (undocumented)
 export interface AudioTrackSwitchingData {
     // (undocumented)
+    groupId: string;
+    // (undocumented)
     id: number;
+    // (undocumented)
+    name: string;
     // (undocumented)
     type: MediaPlaylistType | 'main';
     // (undocumented)
@@ -382,6 +386,8 @@ export enum ErrorDetails {
     BUFFER_APPENDING_ERROR = "bufferAppendingError",
     // (undocumented)
     BUFFER_FULL_ERROR = "bufferFullError",
+    // (undocumented)
+    BUFFER_INCOMPATIBLE_CODECS_ERROR = "bufferIncompatibleCodecsError",
     // (undocumented)
     BUFFER_NUDGE_ON_STALL = "bufferNudgeOnStall",
     // (undocumented)
@@ -840,6 +846,7 @@ class Hls implements HlsEventEmitter {
     destroy(): void;
     detachMedia(): void;
     get devicePixelRatio(): number;
+    get drift(): number | null;
     // (undocumented)
     emit<E extends keyof HlsListeners>(event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean;
     // (undocumented)
@@ -1123,11 +1130,11 @@ export enum HlsSkip {
 //
 // @public (undocumented)
 export class HlsUrlParameters {
-    constructor(msn: number, part?: number, skip?: HlsSkip);
+    constructor(msn?: number, part?: number, skip?: HlsSkip);
     // (undocumented)
     addDirectives(uri: string): string | never;
     // (undocumented)
-    msn: number;
+    msn?: number;
     // (undocumented)
     part?: number;
     // (undocumented)
@@ -1312,6 +1319,16 @@ export class LevelDetails {
     canSkipUntil: number;
     // (undocumented)
     deltaUpdateFailed?: boolean;
+    // (undocumented)
+    get drift(): number;
+    // (undocumented)
+    driftEnd: number;
+    // (undocumented)
+    driftEndTime: number;
+    // (undocumented)
+    driftStart: number;
+    // (undocumented)
+    driftStartTime: number;
     // (undocumented)
     get edge(): number;
     // (undocumented)
@@ -1544,12 +1561,9 @@ export interface Loader<T extends LoaderContext> {
     context: T;
     // (undocumented)
     destroy(): void;
-    // (undocumented)
-    getResponseHeader(name: string): string | null;
+    getCacheAge?: () => number | null;
     // (undocumented)
     load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
-    // (undocumented)
-    loader: any;
     // (undocumented)
     stats: LoaderStats;
 }
@@ -1998,7 +2012,11 @@ export interface SubtitleTracksUpdatedData {
 // @public (undocumented)
 export interface SubtitleTrackSwitchData {
     // (undocumented)
+    groupId?: string;
+    // (undocumented)
     id: number;
+    // (undocumented)
+    name?: string;
     // (undocumented)
     type?: MediaPlaylistType | 'main';
     // (undocumented)

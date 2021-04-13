@@ -151,13 +151,10 @@ async function testSmoothSwitch(url, config) {
   const result = await browser.executeAsyncScript(
     function (url, config) {
       const callback = arguments[arguments.length - 1];
-      self.startStream(
-        url,
-        self.objectAssign(config, {
-          startLevel: 0,
-        }),
-        callback
-      );
+      const startConfig = self.objectAssign(config, {
+        startLevel: 0,
+      });
+      self.startStream(url, startConfig, callback);
       self.hls.manualLevel = 0;
       const video = self.video;
       self.hls.once(self.Hls.Events.FRAG_CHANGED, function (eventName, data) {
@@ -167,7 +164,7 @@ async function testSmoothSwitch(url, config) {
         const highestLevel = self.hls.levels.length - 1;
         if (highestLevel === 0) {
           callback({
-            highestLevel,
+            highestLevel: highestLevel,
             currentTimeDelta: 0,
             message: 'No adaptive variants',
             logs: self.logString,
@@ -188,9 +185,9 @@ async function testSmoothSwitch(url, config) {
               '[test] > currentTime delta: ' + (newCurrentTime - currentTime)
             );
             callback({
-              highestLevel,
+              highestLevel: highestLevel,
               currentTimeDelta: newCurrentTime - currentTime,
-              paused,
+              paused: paused,
               logs: self.logString,
             });
           }, 2000);
@@ -249,7 +246,7 @@ async function testSeekOnVOD(url, config) {
           if (!isFinite(duration)) {
             callback({
               code: 'non-finite-duration',
-              duration,
+              duration: duration,
               logs: self.logString,
             });
           }
@@ -257,27 +254,18 @@ async function testSeekOnVOD(url, config) {
           video.onseeked = function () {
             console.log('[test] > video  "onseeked"');
             self.setTimeout(function () {
-              const { currentTime, paused } = video;
-              if (currentTime === 0 || paused) {
+              const currentTime = video.currentTime;
+              const paused = video.paused;
+              if (video.currentTime === 0 || paused) {
                 callback({
                   code: 'paused',
-                  currentTime,
-                  duration,
-                  paused,
+                  currentTime: currentTime,
+                  duration: duration,
+                  paused: paused,
                   logs: self.logString,
                 });
               }
-            }, 3000);
-            self.setTimeout(function () {
-              const { currentTime, paused } = video;
-              callback({
-                code: 'timeout-waiting-for-ended-event',
-                currentTime,
-                duration,
-                paused,
-                logs: self.logString,
-              });
-            }, 10000);
+            }, 5000);
           };
           const seekToTime = video.seekable.end(0) - 3;
           console.log(
@@ -287,6 +275,17 @@ async function testSeekOnVOD(url, config) {
               seekToTime
           );
           video.currentTime = seekToTime;
+          self.setTimeout(function () {
+            const currentTime = video.currentTime;
+            const paused = video.paused;
+            callback({
+              code: 'timeout-waiting-for-ended-event',
+              currentTime: currentTime,
+              duration: duration,
+              paused: paused,
+              logs: self.logString,
+            });
+          }, 12000);
         }, 3000);
       };
       // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
@@ -297,7 +296,7 @@ async function testSeekOnVOD(url, config) {
           callback({
             code: 'buffer-gaps',
             bufferedRanges: video.buffered.length,
-            duration,
+            duration: duration,
             logs: self.logString,
           });
         }
@@ -420,7 +419,7 @@ async function sauceConnect(tunnelIdentifier) {
     );
     sauceConnectLauncher(
       {
-        tunnelIdentifier,
+        tunnelIdentifier: tunnelIdentifier,
       },
       (err, sauceConnectProcess) => {
         if (err) {
@@ -485,6 +484,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       }
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
+      capabilities.public = 'public restricted';
       capabilities.avoidProxy = true;
       capabilities['record-screenshots'] = 'false';
       browser = browser.usingServer(
@@ -590,8 +590,8 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       const url = stream.url;
       const config = stream.config || {};
       if (
-        stream.blacklist_ua &&
-        stream.blacklist_ua.some((browserInfo) => {
+        stream.skip_ua &&
+        stream.skip_ua.some((browserInfo) => {
           if (typeof browserInfo === 'string') {
             return browserInfo === browserConfig.name;
           }

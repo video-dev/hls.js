@@ -11,6 +11,7 @@ import ChunkCache from '../demux/chunk-cache';
 
 export function fetchSupported() {
   if (
+    // @ts-ignore
     self.fetch &&
     self.AbortController &&
     self.ReadableStream &&
@@ -36,7 +37,7 @@ class FetchLoader implements Loader<LoaderContext> {
   private config: LoaderConfiguration | null = null;
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public stats: LoaderStats;
-  public loader: Response | null = null;
+  private loader: Response | null = null;
 
   constructor(config /* HlsConfig */) {
     this.fetchSetup = config.fetchSetup || getRequest;
@@ -159,15 +160,13 @@ class FetchLoader implements Loader<LoaderContext> {
       });
   }
 
-  getResponseHeader(name: string): string | null {
+  getCacheAge(): number | null {
+    let result: number | null = null;
     if (this.response) {
-      try {
-        return this.response.headers.get(name);
-      } catch (error) {
-        /* Could not get header */
-      }
+      const ageHeader = this.response.headers.get('age');
+      result = ageHeader ? parseFloat(ageHeader) : null;
     }
-    return null;
+    return result;
   }
 
   private loadProgressively(
@@ -183,14 +182,14 @@ class FetchLoader implements Loader<LoaderContext> {
     const pump = () => {
       reader
         .read()
-        .then((data: { done: boolean; value: Uint8Array }) => {
+        .then((data) => {
           if (data.done) {
             if (chunkCache.dataLength) {
               onProgress(stats, context, chunkCache.flush(), response);
             }
             return;
           }
-          const chunk = data.value;
+          const chunk: Uint8Array = data.value;
           const len = chunk.length;
           stats.loaded += len;
           if (len < highWaterMark || chunkCache.dataLength) {

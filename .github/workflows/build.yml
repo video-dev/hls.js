@@ -43,6 +43,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: check package-lock.json version
+        id: extract_tag
+        uses: actions/github-script@v3
+        with:
+          script: |
+            const fs = require('fs');
+            if (
+              JSON.parse(fs.readFileSync('./package-lock.json', { encoding: 'utf8' }))
+                .lockfileVersion !== 2
+            ) {
+              throw new Error(
+                'Expecting package-lock.json version to be 2. Please make sure you are using npm 7.'
+              );
+            }
+
       - name: cache node_modules
         uses: actions/cache@v2
         env:
@@ -58,7 +73,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: install
         run: |
@@ -118,7 +133,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -159,7 +174,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -196,7 +211,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -249,7 +264,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -303,7 +318,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -394,7 +409,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2

@@ -67,6 +67,13 @@ export default class BufferController implements ComponentAPI {
     this.registerListeners();
   }
 
+  public hasSourceTypes(): boolean {
+    return (
+      this.getSourceBufferTypes().length > 0 ||
+      Object.keys(this.pendingTracks).length > 0
+    );
+  }
+
   public destroy() {
     this.unregisterListeners();
     this.details = null;
@@ -398,7 +405,7 @@ export default class BufferController implements ComponentAPI {
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
           */
           if (this.appendError > hls.config.appendErrorMaxRetry) {
-            logger.log(
+            logger.error(
               `[buffer-controller]: Failed ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`
             );
             event.fatal = true;
@@ -493,25 +500,27 @@ export default class BufferController implements ComponentAPI {
   // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
   // an undefined data.type will mark all buffers as EOS.
   protected onBufferEos(event: Events.BUFFER_EOS, data: BufferEOSData) {
-    for (const type in this.sourceBuffer) {
+    const ended = this.getSourceBufferTypes().reduce((acc, type) => {
+      const sb = this.sourceBuffer[type];
       if (!data.type || data.type === type) {
-        const sb = this.sourceBuffer[type as SourceBufferName];
         if (sb && !sb.ended) {
           sb.ended = true;
           logger.log(`[buffer-controller]: ${type} sourceBuffer now EOS`);
         }
       }
-    }
+      return acc && !!(!sb || sb.ended);
+    }, true);
 
-    const endStream = () => {
-      const { mediaSource } = this;
-      if (!mediaSource || mediaSource.readyState !== 'open') {
-        return;
-      }
-      // Allow this to throw and be caught by the enqueueing function
-      mediaSource.endOfStream();
-    };
-    this.blockBuffers(endStream);
+    if (ended) {
+      this.blockBuffers(() => {
+        const { mediaSource } = this;
+        if (!mediaSource || mediaSource.readyState !== 'open') {
+          return;
+        }
+        // Allow this to throw and be caught by the enqueueing function
+        mediaSource.endOfStream();
+      });
+    }
   }
 
   protected onLevelUpdated(
@@ -659,7 +668,17 @@ export default class BufferController implements ComponentAPI {
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
       // append any pending segments now !
-      Object.keys(this.sourceBuffer).forEach((type: SourceBufferName) => {
+      const buffers = Object.keys(this.sourceBuffer);
+      if (buffers.length === 0) {
+        this.hls.trigger(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR,
+          fatal: true,
+          reason: 'could not create source buffer for media codec(s)',
+        });
+        return;
+      }
+      buffers.forEach((type: SourceBufferName) => {
         operationQueue.executeNext(type);
       });
     }
@@ -670,7 +689,7 @@ export default class BufferController implements ComponentAPI {
     if (!mediaSource) {
       throw Error('createSourceBuffers called when mediaSource was null');
     }
-
+    let tracksCreated = 0;
     for (const trackName in tracks) {
       if (!sourceBuffer[trackName]) {
         const track = tracks[trackName as keyof TrackSet];
@@ -698,6 +717,7 @@ export default class BufferController implements ComponentAPI {
             levelCodec: track.levelCodec,
             id: track.id,
           };
+          tracksCreated++;
         } catch (err) {
           logger.error(
             `[buffer-controller]: error while trying to add sourceBuffer: ${err.message}`
@@ -712,7 +732,9 @@ export default class BufferController implements ComponentAPI {
         }
       }
     }
-    this.hls.trigger(Events.BUFFER_CREATED, { tracks: this.tracks });
+    if (tracksCreated) {
+      this.hls.trigger(Events.BUFFER_CREATED, { tracks: this.tracks });
+    }
   }
 
   // Keep as arrow functions so that we can directly reference these functions directly as event listeners

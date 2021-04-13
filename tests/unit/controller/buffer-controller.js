@@ -169,6 +169,7 @@ describe('BufferController tests', function () {
       bufferController.onMediaAttaching(Events.MEDIA_ATTACHING, {
         media: video,
       });
+      sandbox.stub(bufferController.mediaSource, 'addSourceBuffer');
 
       hls.on(Hls.Events.BUFFER_CREATED, (event, data) => {
         const tracks = data.tracks;
@@ -177,7 +178,20 @@ describe('BufferController tests', function () {
         done();
       });
 
-      bufferController.pendingTracks = { video: { codec: 'testing' } };
+      hls.once(Hls.Events.ERROR, (event, data) => {
+        // Async timeout prevents assertion from throwing in event handler
+        self.setTimeout(() => {
+          expect(data.error.message).to.equal(null);
+          done();
+        });
+      });
+
+      bufferController.pendingTracks = {
+        video: {
+          container: 'video/mp4',
+          codec: 'avc1.42e01e',
+        },
+      };
       bufferController.checkPendingTracks();
 
       video = null;

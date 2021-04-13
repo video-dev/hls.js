@@ -287,6 +287,7 @@ design idea is pretty simple :
   - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.ts][] will trigger an emergency switch down to level 0.
   - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to `hls.startLoad()` could help recover it.
 - `BUFFER_ADD_CODEC_ERROR` is raised by [src/controller/buffer-controller.ts][] when an exception is raised when calling mediaSource.addSourceBuffer(). this error is non fatal.
+- `BUFFER_INCOMPATIBLE_CODECS_ERROR` is raised by [src/controller/buffer-controller.ts][] when an exception is raised when all attempts to add SourceBuffer(s) failed. this error is fatal.
 - `BUFFER_APPEND_ERROR` is raised by [src/controller/buffer-controller.ts][] when an exception is raised when calling sourceBuffer.appendBuffer(). this error is non fatal and become fatal after config.appendErrorMaxRetry retries. when fatal, a call to `hls.recoverMediaError()` could help recover it.
 - `BUFFER_APPENDING_ERROR` is raised by [src/controller/buffer-controller.ts][] after SourceBuffer appending error. this error is fatal and a call to `hls.recoverMediaError()` could help recover it.
 - `BUFFER_FULL_ERROR` is raised by [src/controller/buffer-controller.ts][] if sourcebuffer is full

@@ -43,6 +43,10 @@ export class LevelDetails {
   public renditionReports?: AttrList[];
   public tuneInGoal: number = 0;
   public deltaUpdateFailed?: boolean;
+  public driftStartTime: number = 0;
+  public driftEndTime: number = 0;
+  public driftStart: number = 0;
+  public driftEnd: number = 0;
 
   constructor(baseUrl) {
     this.fragments = [];
@@ -86,6 +90,15 @@ export class LevelDetails {
       this.targetduration ||
       DEFAULT_TARGET_DURATION
     );
+  }
+
+  get drift(): number {
+    const runTime = this.driftEndTime - this.driftStartTime;
+    if (runTime > 0) {
+      const runDuration = this.driftEnd - this.driftStart;
+      return (runDuration * 1000) / runTime;
+    }
+    return 1;
   }
 
   get edge(): number {
