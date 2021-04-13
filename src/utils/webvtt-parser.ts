@@ -166,7 +166,7 @@ export function parseWebVTT(
   };
 
   parser.onflush = function () {
-    if (parsingError && errorCallBack) {
+    if (parsingError) {
       errorCallBack(parsingError);
       return;
     }

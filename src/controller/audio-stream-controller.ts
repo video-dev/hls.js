@@ -7,7 +7,6 @@ import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { Fragment, ElementaryStreamTypes, Part } from '../loader/fragment';
-import FragmentLoader from '../loader/fragment-loader';
 import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import type { TransmuxerResult } from '../types/transmuxer';
@@ -364,6 +363,7 @@ class AudioStreamController
     event: Events.AUDIO_TRACKS_UPDATED,
     { audioTracks }: AudioTracksUpdatedData
   ) {
+    this.resetTransmuxer();
     this.levels = audioTracks.map((mediaPlaylist) => new Level(mediaPlaylist));
   }
 
@@ -374,7 +374,7 @@ class AudioStreamController
     // if any URL found on new audio track, it is an alternate audio track
     const altAudio = !!data.url;
     this.trackId = data.id;
-    const { fragCurrent, transmuxer } = this;
+    const { fragCurrent } = this;
 
     if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
@@ -383,10 +383,7 @@ class AudioStreamController
     this.clearWaitingFragment();
     // destroy useless transmuxer when switching audio to main
     if (!altAudio) {
-      if (transmuxer) {
-        transmuxer.destroy();
-        this.transmuxer = null;
-      }
+      this.resetTransmuxer();
     } else {
       // switching to audio track, start timer if not already started
       this.setInterval(TICK_INTERVAL);

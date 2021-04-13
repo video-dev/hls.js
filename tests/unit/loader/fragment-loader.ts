@@ -22,7 +22,6 @@ const expect = chai.expect;
 
 class MockXhr implements Loader<LoaderContext> {
   context!: LoaderContext;
-  loader: any;
   stats: LoadStats;
   callbacks?: LoaderCallbacks<FragmentLoaderContext>;
 
@@ -36,9 +35,6 @@ class MockXhr implements Loader<LoaderContext> {
 
   abort() {}
   destroy(): void {}
-  getResponseHeader(name: string): string | null {
-    return null;
-  }
 }
 
 describe('FragmentLoader tests', function () {

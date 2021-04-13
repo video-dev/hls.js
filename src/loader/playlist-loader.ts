@@ -70,8 +70,6 @@ class PlaylistLoader {
     [key: string]: Loader<LoaderContext>;
   } = Object.create(null);
 
-  private checkAgeHeader: boolean = true;
-
   constructor(hls: Hls) {
     this.hls = hls;
     this.registerListeners();
@@ -148,7 +146,6 @@ class PlaylistLoader {
     data: ManifestLoadingData
   ) {
     const { url } = data;
-    this.checkAgeHeader = true;
     this.load({
       id: null,
       groupId: null,
@@ -686,13 +683,14 @@ class PlaylistLoader {
       return;
     }
 
-    // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
-    const checkAgeHeader = this.checkAgeHeader && levelDetails.live;
-    const ageHeader: string | null = checkAgeHeader
-      ? loader.getResponseHeader('age')
-      : null;
-    levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
-    this.checkAgeHeader = !!ageHeader;
+    if (levelDetails.live) {
+      if (loader.getCacheAge) {
+        levelDetails.ageHeader = loader.getCacheAge() || 0;
+      }
+      if (!loader.getCacheAge || isNaN(levelDetails.ageHeader)) {
+        levelDetails.ageHeader = 0;
+      }
+    }
 
     switch (type) {
       case PlaylistContextType.MANIFEST:

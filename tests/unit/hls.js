@@ -1,5 +1,6 @@
 import Hls from '../../src/hls';
 import { hlsDefaultConfig } from '../../src/config';
+import { expect } from 'chai';
 
 describe('Hls', function () {
   describe('bandwidthEstimate', function () {
@@ -19,6 +20,20 @@ describe('Hls', function () {
       expect(hls.bandwidthEstimate).to.equal(
         hlsDefaultConfig.abrEwmaDefaultEstimate
       );
+    });
+  });
+
+  describe('destroy', function () {
+    it('should not crash on stopLoad() after destroy()', function () {
+      const hls = new Hls();
+      hls.destroy();
+      expect(() => hls.stopLoad()).to.not.throw();
+    });
+
+    it('should not crash on startLoad() after destroy()', function () {
+      const hls = new Hls();
+      hls.destroy();
+      expect(() => hls.startLoad()).to.not.throw();
     });
   });
 });

@@ -1,4 +1,4 @@
-# API
+# HLS.js v1 API
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -1338,7 +1338,9 @@ get/set : if set to true the active subtitle track mode will be set to `showing`
 
 ### `hls.liveSyncPosition`
 
-get : position of live sync point (ie edge of live position minus safety delay defined by `hls.config.liveSyncDuration`)
+get : position of live sync point (ie edge of live position minus safety delay defined by `hls.config.liveSyncDuration`).
+If playback stalls outside the sliding window, or latency exceeds `liveMaxLatencyDuration` hls.js will seek ahead to
+`liveSyncPosition` to get back in sync with the stream stream.
 
 ### `hls.latency`
 
@@ -1354,6 +1356,10 @@ returns 0 before first playlist is loaded
 ### `hls.targetLatency`
 
 get : target distance from the edge as calculated by the latency controller
+
+### `hls.drift`
+
+get : the rate at which the edge of the current live playlist is advancing or 1 if there is none
 
 ## Runtime Events
 
@@ -1548,7 +1554,9 @@ Full list of errors is described below:
 - `Hls.ErrorDetails.FRAG_PARSING_ERROR` - raised when fragment parsing fails
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_PARSING_ERROR`, fatal : `true` or `false`, reason : failure reason }
 - `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR` - raised when MediaSource fails to add new sourceBuffer
-  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR`, fatal : `false`, err : error raised by MediaSource, mimeType: mimeType on which the failure happened }
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR`, fatal : `false`, error : error raised by MediaSource, mimeType: mimeType on which the failure happened }
+- `Hls.ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR` - raised when no MediaSource(s) could be created based on track codec(s)
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR`, fatal : `true`, reason : failure reason }
 - `Hls.ErrorDetails.BUFFER_APPEND_ERROR` - raised when exception is raised while calling buffer append
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_ERROR`, fatal : `true` or `false`, parent : parent stream controller }
 - `Hls.ErrorDetails.BUFFER_APPENDING_ERROR` - raised when exception is raised during buffer appending

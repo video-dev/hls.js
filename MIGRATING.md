@@ -4,15 +4,30 @@ This guide provides an overview to migrating an application using hls.js from v0
 
 ## Dependencies
 
-Promise support is now required. Please bring your own polyfill.
+Promise support is now required. If your app requires support for older browsers that do not include support for Promises,
+include your own Promise polyfill.
 
 ## Configuration Changes
 
-cleared by hls.js than leaving it up to the browser. Set `backBufferLength`
+### Back Buffer Eviction
 
-- `backBufferLength` default of 90 seconds applies to Live and VOD streams. `liveBackBufferLength` is still supported but marked as deprecated. Back buffer on VOD content will be to `Infinity` and the deprecated `liveBackBufferLength` to 90 to enforce the old behavior.
-- `lowLatencyMode` - set to `false` to disable Low-latency part loading and target latency playback rate adjustment
-- `progressive`- (experimental) set to `true` to stream and append loaded audio and video data before each segment load completion. Not recommended for production or small segments with only a single GoP or less.
+The new `backBufferLength` setting defaults to 90 seconds, and applies to Live and VOD streams. In version 1.0 and up,
+the back buffer on VOD content will be cleared by hls.js rather than leaving it up to the browser by default.
+
+Set `backBufferLength` to `Infinity` and `liveBackBufferLength` to `90` if you would like 1.0 to handle back buffer
+eviction for Live and VOD streams as older versions did. While `liveBackBufferLength` can still be used, it has been
+marked deprecated and may be removed in an upcoming minor release.
+
+### Low Latency Streams
+
+The new `lowLatencyMode` setting is enabled by default. Set to `false` to disable Low-latency part loading and target
+latency playback rate adjustment.
+
+### Chunked Transfer Support (experimental)
+
+The new experimental `progressive` setting is disabled by default. Set it to `true` to stream and append audio and
+video data as it streams for each segment before segment load completion. Not recommended for production or small segments
+with only a single GoP or less.
 
 ## Support for Group-Level Track Switching
 
@@ -38,6 +53,10 @@ Event order and content have changed in some places. See **Breaking Changes** be
   - `SUBTITLE_LOAD_ERROR`
   - `SUBTITLE_TRACK_LOAD_TIMEOUT`
   - `UNKNOWN`
+- Added additional error detail for streams that cannot start because source buffer(s) could not be created after parsing media codecs
+  - `BUFFER_INCOMPATIBLE_CODECS_ERROR` will fire instead of `BUFFER_CREATED` with an empty `tracks` list. This media error
+    is fatal and not recoverable. If you encounter this error make sure you include the correct CODECS string in
+    your manifest, as this is most likely to occur when attempting to play a fragmented mp4 playlist with unknown codecs.
 
 ### Fragment Stats
 
@@ -51,3 +70,9 @@ Event order and content have changed in some places. See **Breaking Changes** be
 ### LL-HLS Parts in events
 
 - FRAG\_\_\_\_ events are now fired for LL-HLS part events with a `part` property that include the part details.
+
+### TypeScript
+
+v0.x types are not compatible with v1.x. Type definitions are now exported with the build and npm package in
+`dist/hls.js.d.ts`. Please use these type definitions if you are having trouble with
+[DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) `@types/hls.js` and v1.x.

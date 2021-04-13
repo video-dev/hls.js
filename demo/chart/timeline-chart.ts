@@ -283,12 +283,18 @@ export class TimelineChart {
   updateLevelOrTrack(details: LevelDetails) {
     const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
-    const levelDataSet = arrayFind(
+    let levelDataSet = arrayFind(
       datasets,
       (dataset) =>
         stripDeliveryDirectives(url) ===
         stripDeliveryDirectives(dataset.url || '')
     );
+    if (!levelDataSet) {
+      levelDataSet = arrayFind(
+        datasets,
+        (dataset) => details.fragments[0]?.level === dataset.level
+      );
+    }
     if (!levelDataSet) {
       return;
     }
@@ -381,10 +387,16 @@ export class TimelineChart {
   updateFragment(data: FragLoadedData | FragParsedData | FragChangedData) {
     const { datasets } = this.chart.data;
     const frag: Fragment = data.frag;
-    const levelDataSet = arrayFind(
+    let levelDataSet = arrayFind(
       datasets,
-      (dataset) => dataset.url === frag.baseurl
+      (dataset) => frag.baseurl === dataset.url
     );
+    if (!levelDataSet) {
+      levelDataSet = arrayFind(
+        datasets,
+        (dataset) => frag.level === dataset.level
+      );
+    }
     if (!levelDataSet) {
       return;
     }
@@ -435,7 +447,7 @@ export class TimelineChart {
           sourceBuffer,
         })
       );
-      sourceBuffer.onupdate = () => {
+      sourceBuffer.addEventListener('update', () => {
         try {
           replaceTimeRangeTuples(sourceBuffer.buffered, data);
         } catch (error) {
@@ -445,7 +457,7 @@ export class TimelineChart {
         }
         replaceTimeRangeTuples(media.buffered, mediaBufferData);
         this.update();
-      };
+      });
     });
 
     if (trackTypes.length === 0) {
@@ -666,6 +678,9 @@ export class TimelineChart {
 }
 
 function stripDeliveryDirectives(url: string): string {
+  if (url === '') {
+    return url;
+  }
   try {
     const webUrl: URL = new self.URL(url);
     webUrl.searchParams.delete('_HLS_msn');
