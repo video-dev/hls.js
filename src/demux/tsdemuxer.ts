@@ -486,7 +486,12 @@ class TSDemuxer implements Demuxer {
     keyData: KeyData,
     timeOffset: number
   ): Promise<DemuxerResult> {
-    const demuxResult = this.demux(data, timeOffset, true);
+    const demuxResult = this.demux(
+      data,
+      timeOffset,
+      true,
+      !this.config.progressive
+    );
     const sampleAes = (this.sampleAes = new SampleAesDecrypter(
       this.observer,
       this.config,
