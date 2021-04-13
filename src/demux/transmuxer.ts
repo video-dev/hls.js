@@ -347,7 +347,12 @@ export default class Transmuxer {
     chunkMeta: ChunkMetadata
   ): TransmuxerResult {
     const { audioTrack, avcTrack, id3Track, textTrack } = (this
-      .demuxer as Demuxer).demux(data, timeOffset, false);
+      .demuxer as Demuxer).demux(
+      data,
+      timeOffset,
+      false,
+      !this.config.progressive
+    );
     const remuxResult = this.remuxer!.remux(
       audioTrack,
       avcTrack,
