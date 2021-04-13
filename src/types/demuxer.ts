@@ -2,7 +2,8 @@ export interface Demuxer {
   demux(
     data: Uint8Array,
     timeOffset: number,
-    isSampleAes?: boolean
+    isSampleAes?: boolean,
+    flush?: boolean
   ): DemuxerResult;
   demuxSampleAes(
     data: Uint8Array,
