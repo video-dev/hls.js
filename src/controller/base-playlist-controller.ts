@@ -135,7 +135,6 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       }
       let msn: number | undefined = undefined;
       let part: number | undefined = undefined;
-      let skip;
       if (details.canBlockReload && details.endSN && details.advanced) {
         // Load level with LL-HLS delivery directives
         const lowLatencyMode = this.hls.config.lowLatencyMode;

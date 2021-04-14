@@ -585,7 +585,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   }
 
   entries
+    // eslint-disable-next-line no-unused-vars
     .filter(([name, stream]) => !stream.skipFunctionalTests)
+    // eslint-disable-next-line no-unused-vars
     .forEach(([name, stream]) => {
       const url = stream.url;
       const config = stream.config || {};
