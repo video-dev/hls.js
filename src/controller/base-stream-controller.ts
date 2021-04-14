@@ -184,7 +184,7 @@ export default class BaseStreamController
 
   protected onMediaSeeking() {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
-    const currentTime = media ? media.currentTime : null;
+    const currentTime: number = media ? media.currentTime : 0;
     const bufferInfo = BufferHelper.bufferInfo(
       mediaBuffer || media,
       currentTime,
@@ -198,13 +198,7 @@ export default class BaseStreamController
     );
 
     if (state === State.ENDED) {
-      // if seeking to unbuffered area, clean up fragPrevious
-      if (!bufferInfo.len) {
-        this.fragPrevious = null;
-        this.fragCurrent = null;
-      }
-      // switch to IDLE state to check for potential new fragment
-      this.state = State.IDLE;
+      this.resetLoadingState();
     } else if (fragCurrent && !bufferInfo.len) {
       // check if we are seeking to a unbuffered area AND if frag loading is in progress
       const tolerance = config.maxFragLookUpTolerance;
@@ -219,10 +213,7 @@ export default class BaseStreamController
           );
           fragCurrent.loader.abort();
         }
-        this.fragCurrent = null;
-        this.fragPrevious = null;
-        // switch to IDLE state to load new fragment
-        this.state = State.IDLE;
+        this.resetLoadingState();
       }
     }
 
@@ -1185,6 +1176,15 @@ export default class BaseStreamController
     // (so that we will check against video.buffered ranges in case of alt audio track)
     const bufferedTimeRanges = BufferHelper.getBuffered(media);
     this.fragmentTracker.detectEvictedFragments(type, bufferedTimeRanges);
+    if (this.state === State.ENDED) {
+      this.resetLoadingState();
+    }
+  }
+
+  protected resetLoadingState() {
+    this.fragCurrent = null;
+    this.fragPrevious = null;
+    this.state = State.IDLE;
   }
 
   protected resetLiveStartWhenNotLoaded(level: number): boolean {
@@ -1197,7 +1197,7 @@ export default class BaseStreamController
         // We can't afford to retry after a delay in a live scenario. Update the start position and return to IDLE.
         this.startPosition = -1;
         this.setStartPosition(details, 0);
-        this.state = State.IDLE;
+        this.resetLoadingState();
         return true;
       }
       this.nextLoadPosition = this.startPosition;
@@ -1257,9 +1257,7 @@ export default class BaseStreamController
       this.state = State.PARSED;
       this.hls.trigger(Events.FRAG_PARSED, { frag, part });
     } else {
-      this.fragCurrent = null;
-      this.fragPrevious = null;
-      this.state = State.IDLE;
+      this.resetLoadingState();
     }
   }
 
