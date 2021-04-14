@@ -738,12 +738,10 @@ export default class StreamController
           this.log('Switching to main audio track, cancel main fragment load');
           fragCurrent.loader.abort();
         }
-        this.fragCurrent = null;
-        this.fragPrevious = null;
         // destroy transmuxer to force init segment generation (following audio switch)
         this.resetTransmuxer();
         // switch to IDLE state to load new fragment
-        this.state = State.IDLE;
+        this.resetLoadingState();
       } else if (this.audioOnly) {
         // Reset audio transmuxer so when switching back to main audio we're not still appending where we left off
         this.resetTransmuxer();

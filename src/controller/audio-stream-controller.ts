@@ -648,12 +648,7 @@ class AudioStreamController
               'Buffer full error also media.currentTime is not buffered, flush audio buffer'
             );
             this.fragCurrent = null;
-            // flush everything
-            this.hls.trigger(Events.BUFFER_FLUSHING, {
-              startOffset: 0,
-              endOffset: Number.POSITIVE_INFINITY,
-              type: 'audio',
-            });
+            super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
           }
         }
         break;
@@ -824,11 +819,7 @@ class AudioStreamController
     const { hls, media, trackId } = this;
     if (media) {
       this.log('Switching audio track : flushing all audio');
-      hls.trigger(Events.BUFFER_FLUSHING, {
-        startOffset: 0,
-        endOffset: Number.POSITIVE_INFINITY,
-        type: 'audio',
-      });
+      super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
     }
     this.audioSwitch = false;
     hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: trackId });
