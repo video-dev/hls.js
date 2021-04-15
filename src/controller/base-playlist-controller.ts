@@ -138,16 +138,18 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       if (details.canBlockReload && details.endSN && details.advanced) {
         // Load level with LL-HLS delivery directives
         const lowLatencyMode = this.hls.config.lowLatencyMode;
+        const lastPartSn = details.lastPartSn;
+        const endSn = details.endSN;
         const lastPartIndex = details.lastPartIndex;
-        if (lowLatencyMode) {
-          msn = lastPartIndex !== -1 ? details.lastPartSn : details.endSN + 1;
-          part = lastPartIndex !== -1 ? lastPartIndex + 1 : undefined;
+        const hasParts = lastPartIndex !== -1;
+        const lastPart = lastPartSn === endSn;
+        // When low latency mode is disabled, we'll skip part requests once the last part index is found
+        const nextSnStartIndex = lowLatencyMode ? 0 : lastPartIndex;
+        if (hasParts) {
+          msn = lastPart ? endSn + 1 : lastPartSn;
+          part = lastPart ? nextSnStartIndex : lastPartIndex + 1;
         } else {
-          // This playlist update will be late by one part (0). There is no way to know the last part number,
-          // or request just the next sn without a part in most implementations.
-          msn =
-            lastPartIndex !== -1 ? details.lastPartSn + 1 : details.endSN + 1;
-          part = lastPartIndex !== -1 ? 0 : undefined;
+          msn = endSn + 1;
         }
         // Low-Latency CDN Tune-in: "age" header and time since load indicates we're behind by more than one part
         // Update directives to obtain the Playlist that has the estimated additional duration of media
