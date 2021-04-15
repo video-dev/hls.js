@@ -344,11 +344,7 @@ class AudioStreamController
     }
 
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.log(
-        `Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`
-      );
-      this.state = State.KEY_LOADING;
-      hls.trigger(Events.KEY_LOADING, { frag });
+      this.loadKey(frag, trackDetails);
     } else {
       this.loadFragment(frag, trackDetails, targetBufferTime);
     }
