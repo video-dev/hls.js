@@ -98,8 +98,14 @@ module.exports = {
   oceansAES: {
     url:
       'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
-    description: 'AES encrypted,ABR',
+    description: 'AES-128 encrypted, ABR',
     abr: true,
+  },
+  tracksWithAES: {
+    url:
+      'https://playertest.longtailvideo.com/adaptive/aes-with-tracks/master.m3u8',
+    description: 'AES-128 encrypted, TS main with AAC audio track',
+    abr: false,
   },
   mp3Audio: {
     url:
