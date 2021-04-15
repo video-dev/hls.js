@@ -236,12 +236,17 @@ export default class BaseStreamController
   }
 
   onKeyLoaded(event: Events.KEY_LOADED, data: KeyLoadedData) {
-    if (this.state === State.KEY_LOADING && this.levels) {
-      this.state = State.IDLE;
-      const levelDetails = this.levels[data.frag.level].details;
-      if (levelDetails) {
-        this.loadFragment(data.frag, levelDetails, data.frag.start);
-      }
+    if (
+      this.state !== State.KEY_LOADING ||
+      data.frag !== this.fragCurrent ||
+      !this.levels
+    ) {
+      return;
+    }
+    this.state = State.IDLE;
+    const levelDetails = this.levels[data.frag.level].details;
+    if (levelDetails) {
+      this.loadFragment(data.frag, levelDetails, data.frag.start);
     }
   }
 
@@ -262,6 +267,17 @@ export default class BaseStreamController
     // @ts-ignore
     this.hls = this.log = this.warn = this.decrypter = this.fragmentLoader = this.fragmentTracker = null;
     super.onHandlerDestroyed();
+  }
+
+  protected loadKey(frag: Fragment, details: LevelDetails) {
+    this.log(
+      `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${
+        this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+      } ${frag.level}`
+    );
+    this.state = State.KEY_LOADING;
+    this.fragCurrent = frag;
+    this.hls.trigger(Events.KEY_LOADING, { frag });
   }
 
   protected loadFragment(
