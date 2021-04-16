@@ -306,18 +306,10 @@ export default class StreamController
     // We want to load the key if we're dealing with an identity key, because we will decrypt
     // this content using the key we fetch. Other keys will be handled by the DRM CDM via EME.
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.log(
-        `Loading key for ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${level}`
-      );
-      this.loadKey(frag);
+      this.loadKey(frag, levelDetails);
     } else {
       this.loadFragment(frag, levelDetails, targetBufferTime);
     }
-  }
-
-  private loadKey(frag: Fragment) {
-    this.state = State.KEY_LOADING;
-    this.hls.trigger(Events.KEY_LOADING, { frag });
   }
 
   protected loadFragment(
@@ -472,6 +464,9 @@ export default class StreamController
     this.fragCurrent = null;
     if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
+    }
+    if (this.state === State.KEY_LOADING) {
+      this.state = State.IDLE;
     }
     this.nextLoadPosition = this.getLoadPosition();
   }
