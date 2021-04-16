@@ -191,13 +191,15 @@ class SubtitleTrackController extends BasePlaylistController {
       const lastTrack = this.tracksInGroup
         ? this.tracksInGroup[this.trackId]
         : undefined;
-      const initialTrackId =
-        this.findTrackId(lastTrack?.name) || this.findTrackId();
+
       const subtitleTracks = this.tracks.filter(
         (track): boolean => !textGroupId || track.groupId === textGroupId
       );
-      this.groupId = textGroupId;
       this.tracksInGroup = subtitleTracks;
+      const initialTrackId =
+        this.findTrackId(lastTrack?.name) || this.findTrackId();
+      this.groupId = textGroupId;
+
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
         subtitleTracks,
       };
@@ -213,9 +215,9 @@ class SubtitleTrackController extends BasePlaylistController {
   }
 
   private findTrackId(name?: string): number {
-    const audioTracks = this.tracksInGroup;
-    for (let i = 0; i < audioTracks.length; i++) {
-      const track = audioTracks[i];
+    const textTracks = this.tracksInGroup;
+    for (let i = 0; i < textTracks.length; i++) {
+      const track = textTracks[i];
       if (!this.selectDefaultTrack || track.default) {
         if (!name || name === track.name) {
           return track.id;
