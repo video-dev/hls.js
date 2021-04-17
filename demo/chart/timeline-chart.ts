@@ -654,7 +654,7 @@ export class TimelineChart {
 
   drawLineX(ctx, x: number, chartArea) {
     if (!this.imageDataBuffer) {
-      const devicePixelRatio = self.hls.devicePixelRatio || 1;
+      const devicePixelRatio = self.devicePixelRatio || 1;
       this.imageDataBuffer = ctx.getImageData(
         0,
         0,

@@ -193,7 +193,7 @@ export const hlsDefaultConfig: HlsConfig = {
   debug: false, // used by logger
   capLevelOnFPSDrop: false, // used by fps-controller
   capLevelToPlayerSize: false, // used by cap-level-controller
-  ignoreDevicePixelRatio: false, // used by devicePixelRatio
+  ignoreDevicePixelRatio: false, // used by cap-level-controller
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
   backBufferLength: Infinity, // used by buffer-controller

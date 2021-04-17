@@ -557,25 +557,6 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * Get the current devicePixelRatio
-   * @type {number}
-   */
-  get devicePixelRatio(): number {
-    if (this.config.ignoreDevicePixelRatio) {
-      return 1;
-    }
-
-    let pixelRatio = 1;
-    try {
-      pixelRatio = self.devicePixelRatio;
-    } catch (e) {
-      /* no-op */
-    }
-
-    return pixelRatio;
-  }
-
-  /**
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
    * @type {number}
    */
