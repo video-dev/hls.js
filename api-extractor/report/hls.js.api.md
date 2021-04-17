@@ -845,7 +845,6 @@ class Hls implements HlsEventEmitter {
     static set DefaultConfig(defaultConfig: HlsConfig);
     destroy(): void;
     detachMedia(): void;
-    get devicePixelRatio(): number;
     get drift(): number | null;
     // (undocumented)
     emit<E extends keyof HlsListeners>(event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean;
