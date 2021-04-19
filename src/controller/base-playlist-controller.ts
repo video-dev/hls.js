@@ -133,6 +133,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       if (!this.canLoad || !details.live) {
         return;
       }
+      let deliveryDirectives: HlsUrlParameters;
       let msn: number | undefined = undefined;
       let part: number | undefined = undefined;
       if (details.canBlockReload && details.endSN && details.advanced) {
@@ -186,24 +187,30 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           }
           details.tuneInGoal = currentGoal;
         }
-        const deliveryDirectives = this.getDeliveryDirectives(
+        deliveryDirectives = this.getDeliveryDirectives(
           details,
           data.deliveryDirectives,
           msn,
           part
         );
-        this.loadPlaylist(deliveryDirectives);
-        return;
+        if (lowLatencyMode || !lastPart) {
+          this.loadPlaylist(deliveryDirectives);
+          return;
+        }
+      } else {
+        deliveryDirectives = this.getDeliveryDirectives(
+          details,
+          data.deliveryDirectives,
+          msn,
+          part
+        );
       }
-      const reloadInterval = computeReloadInterval(details, stats);
+      let reloadInterval = computeReloadInterval(details, stats);
+      if (msn !== undefined && details.canBlockReload) {
+        reloadInterval -= details.partTarget || 1;
+      }
       this.log(
         `reload live playlist ${index} in ${Math.round(reloadInterval)} ms`
-      );
-      const deliveryDirectives = this.getDeliveryDirectives(
-        details,
-        data.deliveryDirectives,
-        msn,
-        part
       );
       this.timer = self.setTimeout(
         () => this.loadPlaylist(deliveryDirectives),
@@ -219,7 +226,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     previousDeliveryDirectives: HlsUrlParameters | null,
     msn?: number,
     part?: number
-  ) {
+  ): HlsUrlParameters {
     let skip = getSkipValue(details, msn);
     if (previousDeliveryDirectives?.skip && details.deltaUpdateFailed) {
       msn = previousDeliveryDirectives.msn;
