@@ -136,12 +136,19 @@ export class FragmentTracker implements ComponentAPI {
    */
   public detectEvictedFragments(
     elementaryStream: SourceBufferName,
-    timeRange: TimeRanges
+    timeRange: TimeRanges,
+    playlistType?: PlaylistLevelType
   ) {
     // Check if any flagged fragments have been unloaded
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
-      if (!fragmentEntity || !fragmentEntity.buffered) {
+      if (!fragmentEntity) {
+        return;
+      }
+      if (!fragmentEntity.buffered) {
+        if (fragmentEntity.body.type === playlistType) {
+          this.removeFragment(fragmentEntity.body);
+        }
         return;
       }
       const esData = fragmentEntity.range[elementaryStream];
