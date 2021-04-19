@@ -1184,14 +1184,22 @@ export default class BaseStreamController
     }
   }
 
-  protected afterBufferFlushed(media: Bufferable, type: SourceBufferName) {
+  protected afterBufferFlushed(
+    media: Bufferable,
+    bufferType: SourceBufferName,
+    playlistType: PlaylistLevelType
+  ) {
     if (!media) {
       return;
     }
     // After successful buffer flushing, filter flushed fragments from bufferedFrags use mediaBuffered instead of media
     // (so that we will check against video.buffered ranges in case of alt audio track)
     const bufferedTimeRanges = BufferHelper.getBuffered(media);
-    this.fragmentTracker.detectEvictedFragments(type, bufferedTimeRanges);
+    this.fragmentTracker.detectEvictedFragments(
+      bufferType,
+      bufferedTimeRanges,
+      playlistType
+    );
     if (this.state === State.ENDED) {
       this.resetLoadingState();
     }

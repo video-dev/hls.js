@@ -659,7 +659,7 @@ class AudioStreamController
   ) {
     if (type === ElementaryStreamTypes.AUDIO) {
       const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-      this.afterBufferFlushed(media, type);
+      this.afterBufferFlushed(media, type, PlaylistLevelType.AUDIO);
     }
   }
 
