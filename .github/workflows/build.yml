@@ -26,7 +26,7 @@ jobs:
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
       - name: extract tag
         id: extract_tag
-        uses: actions/github-script@v3
+        uses: actions/github-script@v4
         with:
           script: |
             const prefix = 'refs/tags/';
@@ -45,7 +45,7 @@ jobs:
 
       - name: check package-lock.json version
         id: extract_tag
-        uses: actions/github-script@v3
+        uses: actions/github-script@v4
         with:
           script: |
             const fs = require('fs');
