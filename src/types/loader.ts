@@ -2,7 +2,7 @@ import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type { HlsUrlParameters } from './level';
-import { NetworkDetails } from "./network-details";
+import { NetworkDetails } from './network-details';
 
 export interface LoaderContext {
   // target URL

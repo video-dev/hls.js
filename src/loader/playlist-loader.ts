@@ -34,7 +34,7 @@ import type {
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
-import { NetworkDetails } from "../types/network-details";
+import { NetworkDetails } from '../types/network-details';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext
