@@ -34,6 +34,7 @@ import type {
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
+import { NetworkDetails } from "../types/network-details";
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext
@@ -308,7 +309,7 @@ class PlaylistLoader {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any = null
+    networkDetails: NetworkDetails = null
   ): void {
     if (context.isSidxRequest) {
       this.handleSidxRequest(response, context);
@@ -346,7 +347,7 @@ class PlaylistLoader {
   private loaderror(
     response: LoaderResponse,
     context: PlaylistLoaderContext,
-    networkDetails: any = null
+    networkDetails: NetworkDetails = null
   ): void {
     this.handleNetworkError(context, networkDetails, false, response);
   }
@@ -354,7 +355,7 @@ class PlaylistLoader {
   private loadtimeout(
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any = null
+    networkDetails: NetworkDetails = null
   ): void {
     this.handleNetworkError(context, networkDetails, true);
   }
@@ -363,7 +364,7 @@ class PlaylistLoader {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any
+    networkDetails: NetworkDetails
   ): void {
     const hls = this.hls;
     const string = response.data as string;
@@ -458,7 +459,7 @@ class PlaylistLoader {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any
+    networkDetails: NetworkDetails
   ): void {
     const hls = this.hls;
     const { id, level, type } = context;
@@ -574,7 +575,7 @@ class PlaylistLoader {
     response: LoaderResponse,
     context: PlaylistLoaderContext,
     reason: string,
-    networkDetails: any
+    networkDetails: NetworkDetails
   ): void {
     this.hls.trigger(Events.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
@@ -590,7 +591,7 @@ class PlaylistLoader {
 
   private handleNetworkError(
     context: PlaylistLoaderContext,
-    networkDetails: any,
+    networkDetails: NetworkDetails,
     timeout = false,
     response?: LoaderResponse
   ): void {
@@ -658,7 +659,7 @@ class PlaylistLoader {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any
+    networkDetails: NetworkDetails
   ): void {
     const {
       type,
