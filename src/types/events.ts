@@ -21,7 +21,7 @@ import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
-import { NetworkDetails } from './network-details';
+import type { NetworkDetails } from './network-details';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
