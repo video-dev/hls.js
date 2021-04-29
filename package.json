@@ -75,7 +75,6 @@
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.3.4",
     "chart.js": "2.9.4",
-    "chartjs-plugin-zoom": "0.7.7",
     "chromedriver": "90.0.0",
     "eslint": "7.25.0",
     "eslint-config-prettier": "8.3.0",
