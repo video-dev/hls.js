@@ -322,19 +322,31 @@ describe('BufferController', function () {
       });
     });
 
-    it('dequeues the remove operation if the SourceBuffer does not exist during the operation', function () {
+    it('Does not queue remove operations when there are no SourceBuffers', function () {
       bufferController.sourceBuffer = {};
       bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
         startOffset: 0,
         endOffset: Infinity,
       });
 
-      expect(queueAppendSpy, 'Two remove operations should have been appended')
-        .to.have.been.calledTwice;
       expect(
-        shiftAndExecuteNextSpy,
-        'The queues should have been cycled'
-      ).to.have.callCount(2);
+        queueAppendSpy,
+        'No remove operations should have been appended'
+      ).to.have.callCount(0);
+    });
+
+    it('Only queues remove operations for existing SourceBuffers', function () {
+      bufferController.sourceBuffer = {
+        audiovideo: {},
+      };
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
+        startOffset: 0,
+        endOffset: Infinity,
+      });
+      expect(
+        queueAppendSpy,
+        'Queue one remove for muxed "audiovideo" SourceBuffer'
+      ).to.have.been.calledOnce;
     });
 
     it('dequeues the remove operation if the requested remove range is not valid', function () {
@@ -346,7 +358,7 @@ describe('BufferController', function () {
 
       expect(
         queueAppendSpy,
-        'Four remove operations should have been appended'
+        'Two remove operations should have been appended'
       ).to.have.callCount(2);
       expect(
         shiftAndExecuteNextSpy,
