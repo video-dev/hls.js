@@ -205,9 +205,10 @@ export default class BaseStreamController
       const fragStartOffset = fragCurrent.start - tolerance;
       const fragEndOffset =
         fragCurrent.start + fragCurrent.duration + tolerance;
-      // check if the seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
-      if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
-        if (fragCurrent.loader) {
+      const pastFragment = currentTime > fragEndOffset;
+      // check if the seek position is past current fragment, and if so abort loading
+      if (currentTime < fragStartOffset || pastFragment) {
+        if (pastFragment && fragCurrent.loader) {
           this.log(
             'seeking outside of buffer while fragment load in progress, cancel fragment load'
           );
@@ -226,8 +227,8 @@ export default class BaseStreamController
       this.nextLoadPosition = this.startPosition = currentTime;
     }
 
-    // tick to speed up processing
-    this.tick();
+    // Async tick to speed up processing
+    this.tickImmediate();
   }
 
   protected onMediaEnded() {
@@ -356,6 +357,9 @@ export default class BaseStreamController
     endOffset: number,
     type: SourceBufferName | null = null
   ) {
+    if (!(startOffset - endOffset)) {
+      return;
+    }
     // When alternate audio is playing, the audio-stream-controller is responsible for the audio buffer. Otherwise,
     // passing a null type flushes both buffers
     const flushScope: BufferFlushingData = { startOffset, endOffset, type };
@@ -1111,7 +1115,7 @@ export default class BaseStreamController
   }
 
   private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
-    if (this.transmuxer && frag.sn !== 'initSegment') {
+    if (this.transmuxer && frag.sn !== 'initSegment' && frag.stats.aborted) {
       this.warn(
         `Fragment ${frag.sn}${part ? ' part' + part.index : ''} of level ${
           frag.level
