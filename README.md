@@ -7,18 +7,18 @@
 
 Join the discussion via [video-dev.org](https://video-dev.org) in #hlsjs (our Slack channel)
 
-# ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
+# ![HLS.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
 
-hls.js is a JavaScript library that implements an [HTTP Live Streaming] client.
+HLS.js is a JavaScript library that implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
 It works by transmuxing MPEG-2 Transport Stream and AAC/MP3 streams into ISO BMFF (MP4) fragments.
 Transmuxing is performed asynchronously using a [Web Worker] when available in the browser.
-hls.js also supports HLS + fmp4, as announced during [WWDC2016](https://developer.apple.com/videos/play/wwdc2016/504/)
+HLS.js also supports HLS + fmp4, as announced during [WWDC2016](https://developer.apple.com/videos/play/wwdc2016/504/)
 
-hls.js works directly on top of a standard HTML`<video>` element.
+HLS.js works directly on top of a standard HTML`<video>` element.
 
-hls.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using the [TypeScript compiler].
+HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using the [TypeScript compiler].
 
 Modules written in TS and plain JS/ES6 can be interdependent and imported/required by each other.
 
@@ -57,9 +57,9 @@ Find the commit on [https://github.com/video-dev/hls.js/blob/deployments/README.
 
 ## Compatibility
 
-hls.js is only compatible with browsers supporting MediaSource extensions (MSE) API with 'video/MP4' mime-type inputs.
+HLS.js is only compatible with browsers supporting MediaSource extensions (MSE) API with 'video/MP4' mime-type inputs.
 
-hls.js is supported on:
+HLS.js is supported on:
 
 - Chrome 39+ for Android
 - Chrome 39+ for Desktop
@@ -74,15 +74,15 @@ A [Promise polyfill](https://github.com/taylorhakes/promise-polyfill) is require
 
 **Please note:** iOS Safari on iPhone does not support the MediaSource API. This includes all browsers on iOS as well as apps using UIWebView and WKWebView.
 
-Safari browsers (iOS, iPadOS, and macOS) have built-in HLS support through the plain video "tag" source URL. See the example below (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
+Safari browsers (iOS, iPadOS, and macOS) have built-in HLS support through the plain video "tag" source URL. See the example below (Using HLS.js) to run appropriate feature detection and choose between using HLS.js or natively built-in HLS support.
 
 When a platform has neither MediaSource nor native HLS support, the browser cannot play HLS.
 
-_Keep in mind that if the intention is to support HLS on multiple platforms, beyond those compatible with hls.js, the HLS streams need to strictly follow the specifications of RFC8216, especially if apps, smart TVs, and set-top boxes are to be supported._
+_Keep in mind that if the intention is to support HLS on multiple platforms, beyond those compatible with HLS.js, the HLS streams need to strictly follow the specifications of RFC8216, especially if apps, smart TVs, and set-top boxes are to be supported._
 
 Find a support matrix of the MediaSource API here: https://developer.mozilla.org/en-US/docs/Web/API/MediaSource
 
-## Getting Started
+## Using HLS.js
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -97,13 +97,13 @@ Find a support matrix of the MediaSource API here: https://developer.mozilla.org
     hls.loadSource(videoSrc);
     hls.attachMedia(video);
   }
-  // hls.js is not supported on platforms that do not have Media Source
+  // HLS.js is not supported on platforms that do not have Media Source
   // Extensions (MSE) enabled.
   //
   // When the browser has built-in HLS support (check using `canPlayType`),
   // we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video
   // element through the `src` property. This is using the built-in support
-  // of the plain video element, without using hls.js.
+  // of the plain video element, without using HLS.js.
   //
   // Note: it would be more normal to wait on the 'canplay' event below however
   // on Safari (where you are most likely to find built-in HLS support) the
@@ -118,7 +118,7 @@ Find a support matrix of the MediaSource API here: https://developer.mozilla.org
 
 #### Alternative setup
 
-Note that the example code above will check for hls.js support _first_ and then fallback to check if the browser natively supports HLS. To check for native browser support first and then fallback to Hls.js, swap these conditionals.
+Note that the example code above will check for HLS.js support _first_ and then fallback to check if the browser natively supports HLS. To check for native browser support first and then fallback to HLS.js, swap these conditionals.
 
 See [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-670021358) to understand some of the tradeoffs.
 
@@ -136,7 +136,7 @@ See [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-67
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = videoSrc;
     //
-    // If no native HLS support, check if hls.js is supported
+    // If no native HLS support, check if HLS.js is supported
     //
   } else if (Hls.isSupported()) {
     var hls = new Hls();
@@ -152,7 +152,7 @@ Video is controlled through HTML `<video>` element `HTMLVideoElement` methods, e
 
 ## Player Integration
 
-The following players integrate hls.js for HLS playback:
+The following players integrate HLS.js for HLS playback:
 
 - [JW Player](https://www.jwplayer.com)
 - [Akamai Adaptive Media Player (AMP)](https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
@@ -166,7 +166,7 @@ The following players integrate hls.js for HLS playback:
 - [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
 - [CDNBye](https://github.com/cdnbye/hlsjs-p2p-engine), a p2p engine for hls.js powered by WebRTC Datachannel.
 
-### They use hls.js in production!
+### They use HLS.js in production!
 
 |                                                                                                                                                              |                                                                                                                                                                         |                                                                                                                                                                |                                                                                                                                                                                                                                         |
 | :----------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
@@ -193,7 +193,7 @@ made by [gramk](https://github.com/gramk/chrome-hls), plays hls from address bar
 No external JS libs are needed.
 Prepackaged builds are included [with each release](https://github.com/video-dev/hls.js/releases).
 
-hls.js can be installed as a dependency using npm:
+HLS.js can be installed as a dependency using npm:
 
 ```
 npm install hls.js
@@ -315,11 +315,11 @@ For a complete list of issues, see ["Top priorities" in the Release Planning and
 
 ### Server-side-rendering (SSR) and `require` from a Node.js runtime
 
-You can safely require this library in Node and **absolutely nothing will happen**. A dummy object is exported so that requiring the library does not throw an error. Hls.js is not instantiable in Node.js. See [#1841](https://github.com/video-dev/hls.js/pull/1841) for more details.
+You can safely require this library in Node and **absolutely nothing will happen**. A dummy object is exported so that requiring the library does not throw an error. HLS.js is not instantiable in Node.js. See [#1841](https://github.com/video-dev/hls.js/pull/1841) for more details.
 
 ## License
 
-hls.js is released under [Apache 2.0 License](LICENSE)
+HLS.js is released under [Apache 2.0 License](LICENSE)
 
 ## Development and getting started
 
