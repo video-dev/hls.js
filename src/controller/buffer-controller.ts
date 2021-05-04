@@ -210,9 +210,8 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onBufferReset() {
-    const sourceBuffer = this.sourceBuffer;
     this.getSourceBufferTypes().forEach((type) => {
-      const sb = sourceBuffer[type];
+      const sb = this.sourceBuffer[type];
       try {
         if (sb) {
           this.removeBufferListeners(type);
@@ -221,7 +220,7 @@ export default class BufferController implements ComponentAPI {
           }
           // Synchronously remove the SB from the map before the next call in order to prevent an async function from
           // accessing it
-          sourceBuffer[type] = undefined;
+          this.sourceBuffer[type] = undefined;
         }
       } catch (err) {
         logger.warn(
@@ -237,7 +236,7 @@ export default class BufferController implements ComponentAPI {
     event: Events.BUFFER_CODECS,
     data: BufferCodecsData
   ) {
-    const sourceBufferCount = Object.keys(this.sourceBuffer).length;
+    const sourceBufferCount = this.getSourceBufferTypes().length;
 
     Object.keys(data).forEach((trackName) => {
       if (sourceBufferCount) {
@@ -422,7 +421,7 @@ export default class BufferController implements ComponentAPI {
     data: BufferFlushingData
   ) {
     const { operationQueue } = this;
-    const flushOperation = (type): BufferOperation => ({
+    const flushOperation = (type: SourceBufferName): BufferOperation => ({
       execute: this.removeExecutor.bind(
         this,
         type,
@@ -447,8 +446,9 @@ export default class BufferController implements ComponentAPI {
     if (data.type) {
       operationQueue.append(flushOperation(data.type), data.type);
     } else {
-      operationQueue.append(flushOperation('audio'), 'audio');
-      operationQueue.append(flushOperation('video'), 'video');
+      this.getSourceBufferTypes().forEach((type: SourceBufferName) => {
+        operationQueue.append(flushOperation(type), type);
+      });
     }
   }
 
@@ -668,7 +668,7 @@ export default class BufferController implements ComponentAPI {
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
       // append any pending segments now !
-      const buffers = Object.keys(this.sourceBuffer);
+      const buffers = this.getSourceBufferTypes();
       if (buffers.length === 0) {
         this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.MEDIA_ERROR,
