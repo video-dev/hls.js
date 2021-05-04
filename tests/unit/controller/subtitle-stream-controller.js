@@ -20,6 +20,7 @@ describe('SubtitleStreamController', function () {
 
   beforeEach(function () {
     hls = new Hls({});
+    mediaMock.currentTime = 0;
     fragmentTracker = new FragmentTracker(hls);
     subtitleStreamController = new SubtitleStreamController(
       hls,
@@ -126,7 +127,18 @@ describe('SubtitleStreamController', function () {
 
   describe('onMediaSeeking', function () {
     it('nulls fragPrevious when seeking away from fragCurrent', function () {
-      subtitleStreamController.fragCurrent = { start: 1000, duration: 10 };
+      subtitleStreamController.fragCurrent = {
+        start: 1000,
+        duration: 10,
+        loader: {
+          abort: () => {
+            this.state.aborted = true;
+          },
+          stats: {
+            aborted: false,
+          },
+        },
+      };
       subtitleStreamController.fragPrevious = {};
       subtitleStreamController.onMediaSeeking();
       expect(subtitleStreamController.fragPrevious).to.not.exist;

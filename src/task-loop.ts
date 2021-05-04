@@ -112,11 +112,15 @@ export default class TaskLoop {
       // -> schedule a call on the next main loop iteration to process this task processing request
       if (this._tickCallCount > 1) {
         // make sure only one timer exists at any time at max
-        this.clearNextTick();
-        this._tickTimer = self.setTimeout(this._boundTick, 0);
+        this.tickImmediate();
       }
       this._tickCallCount = 0;
     }
+  }
+
+  public tickImmediate(): void {
+    this.clearNextTick();
+    this._tickTimer = self.setTimeout(this._boundTick, 0);
   }
 
   /**
