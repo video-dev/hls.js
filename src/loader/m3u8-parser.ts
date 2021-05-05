@@ -198,6 +198,8 @@ export default class M3U8Parser {
   ): LevelDetails {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
+    // The most recent init segment seen (applies to all subsequent segments)
+    let currentInitSegment: Fragment | null = null;
     let currentSN = 0;
     let currentPart = 0;
     let totalduration = 0;
@@ -232,6 +234,9 @@ export default class M3U8Parser {
           frag.level = id;
           frag.cc = discontinuityCounter;
           frag.urlId = levelUrlId;
+          if (currentInitSegment) {
+            frag.initSegment = currentInitSegment;
+          }
           fragments.push(frag);
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
@@ -426,9 +431,9 @@ export default class M3U8Parser {
             if (levelkey) {
               frag.levelkey = levelkey;
             }
-            level.initSegment = frag;
+            currentInitSegment = frag;
             frag = new Fragment(type, baseurl);
-            frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
+            frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
             break;
           }
           case 'SERVER-CONTROL': {
@@ -510,7 +515,7 @@ export default class M3U8Parser {
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
       if (firstFragment) {
         level.startCC = firstFragment.cc;
-        if (!level.initSegment) {
+        if (!firstFragment.initSegment) {
           // this is a bit lurky but HLS really has no other way to tell us
           // if the fragments are TS or MP4, except if we download them :/
           // but this is to be able to handle SIDX.
@@ -526,7 +531,7 @@ export default class M3U8Parser {
             frag.relurl = lastFragment.relurl;
             frag.level = id;
             frag.sn = 'initSegment';
-            level.initSegment = frag;
+            firstFragment.initSegment = frag;
             level.needSidxRanges = true;
           }
         }
