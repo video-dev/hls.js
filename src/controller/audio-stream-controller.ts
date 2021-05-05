@@ -281,66 +281,59 @@ class AudioStreamController
       return;
     }
 
-    let frag = trackDetails.initSegment;
     let targetBufferTime = 0;
-    if (!frag || frag.data) {
-      const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
-      const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
-      const maxBufferHole =
-        pos < config.maxBufferHole
-          ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
-          : config.maxBufferHole;
-      const bufferInfo = BufferHelper.bufferInfo(
-        mediaBuffer,
-        pos,
-        maxBufferHole
-      );
-      const mainBufferInfo = BufferHelper.bufferInfo(
-        videoBuffer,
-        pos,
-        maxBufferHole
-      );
-      const bufferLen = bufferInfo.len;
-      const maxConfigBuffer = Math.min(
-        config.maxBufferLength,
-        config.maxMaxBufferLength
-      );
-      const maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len);
-      const audioSwitch = this.audioSwitch;
+    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
+    const maxBufferHole =
+      pos < config.maxBufferHole
+        ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
+        : config.maxBufferHole;
+    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer, pos, maxBufferHole);
+    const mainBufferInfo = BufferHelper.bufferInfo(
+      videoBuffer,
+      pos,
+      maxBufferHole
+    );
+    const bufferLen = bufferInfo.len;
+    const maxConfigBuffer = Math.min(
+      config.maxBufferLength,
+      config.maxMaxBufferLength
+    );
+    const maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len);
+    const audioSwitch = this.audioSwitch;
 
-      // if buffer length is less than maxBufLen try to load a new fragment
-      if (bufferLen >= maxBufLen && !audioSwitch) {
-        return;
-      }
+    // if buffer length is less than maxBufLen try to load a new fragment
+    if (bufferLen >= maxBufLen && !audioSwitch) {
+      return;
+    }
 
-      if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
-        hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
-        this.state = State.ENDED;
-        return;
-      }
+    if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
+      hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
+      this.state = State.ENDED;
+      return;
+    }
 
-      const fragments = trackDetails.fragments;
-      const start = fragments[0].start;
-      targetBufferTime = bufferInfo.end;
+    const fragments = trackDetails.fragments;
+    const start = fragments[0].start;
+    targetBufferTime = bufferInfo.end;
 
-      if (audioSwitch) {
-        targetBufferTime = pos;
-        // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
-        if (trackDetails.PTSKnown && pos < start) {
-          // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
-          if (bufferInfo.end > start || bufferInfo.nextStart) {
-            this.log(
-              'Alt audio track ahead of main track, seek to start of alt audio track'
-            );
-            media.currentTime = start + 0.05;
-          }
+    if (audioSwitch) {
+      targetBufferTime = pos;
+      // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
+      if (trackDetails.PTSKnown && pos < start) {
+        // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
+        if (bufferInfo.end > start || bufferInfo.nextStart) {
+          this.log(
+            'Alt audio track ahead of main track, seek to start of alt audio track'
+          );
+          media.currentTime = start + 0.05;
         }
       }
+    }
 
-      frag = this.getNextFragment(targetBufferTime, trackDetails);
-      if (!frag) {
-        return;
-      }
+    const frag = this.getNextFragment(targetBufferTime, trackDetails);
+    if (!frag) {
+      return;
     }
 
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
@@ -506,7 +499,7 @@ class AudioStreamController
     // Check if we have video initPTS
     // If not we need to wait for it
     const initPTS = this.initPTS[frag.cc];
-    const initSegmentData = details.initSegment?.data;
+    const initSegmentData = frag.initSegment?.data;
     if (initPTS !== undefined) {
       // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)

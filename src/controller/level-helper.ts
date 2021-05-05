@@ -166,8 +166,13 @@ export function mergeDetails(
   newDetails: LevelDetails
 ): void {
   // potentially retrieve cached initsegment
-  if (newDetails.initSegment && oldDetails.initSegment) {
-    newDetails.initSegment = oldDetails.initSegment;
+  const initMap = {};
+  const oldFragments = oldDetails.fragments;
+  for (let i = 0; i < oldFragments.length; i++) {
+    const oldInit = oldFragments[i].initSegment;
+    if (oldInit?.data && oldInit.relurl) {
+      initMap[oldInit.relurl] = oldInit;
+    }
   }
 
   if (oldDetails.fragmentHint) {
@@ -239,8 +244,12 @@ export function mergeDetails(
     }
   }
   if (newDetails.skippedSegments) {
-    if (!newDetails.initSegment) {
-      newDetails.initSegment = oldDetails.initSegment;
+    for (let i = 0; i < newFragments.length; i++) {
+      const newFrag = newFragments[i];
+      const initurl = newFrag.initSegment?.relurl;
+      if (initurl && initMap[initurl]) {
+        newFrag.initSegment = initMap[initurl];
+      }
     }
     newDetails.startCC = newDetails.fragments[0].cc;
   }
