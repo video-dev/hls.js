@@ -14,7 +14,6 @@ import type { Fragment } from '../loader/fragment';
 import type {
   ErrorData,
   FragLoadedData,
-  MediaAttachedData,
   SubtitleFragProcessed,
   SubtitleTracksUpdatedData,
   TrackLoadedData,
@@ -34,18 +33,10 @@ export class SubtitleStreamController
   protected levels: Array<Level> = [];
 
   private currentTrackId: number = -1;
-  private tracksBuffered: Array<TimeRange[]>;
+  private tracksBuffered: Array<TimeRange[]> = [];
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[subtitle-stream-controller]');
-    this.config = hls.config;
-    this.fragCurrent = null;
-    this.fragPrevious = null;
-    this.media = null;
-    this.mediaBuffer = null;
-    this.state = State.STOPPED;
-    this.tracksBuffered = [];
-
     this._registerListeners();
   }
 
@@ -84,7 +75,6 @@ export class SubtitleStreamController
   }
 
   onHandlerDestroyed() {
-    this.state = State.STOPPED;
     this._unregisterListeners();
     super.onHandlerDestroyed();
   }
@@ -126,26 +116,6 @@ export class SubtitleStreamController
       };
       buffered.push(timeRange);
     }
-  }
-
-  onMediaAttached(event: Events.MEDIA_ATTACHED, { media }: MediaAttachedData) {
-    this.media = media;
-    this.state = State.IDLE;
-  }
-
-  onMediaDetaching() {
-    if (!this.media) {
-      return;
-    }
-    this.fragmentTracker.removeAllFragments();
-    this.fragPrevious = null;
-    this.currentTrackId = -1;
-    this.levels.forEach((level: Level) => {
-      this.tracksBuffered[level.id] = [];
-    });
-    this.media = null;
-    this.mediaBuffer = null;
-    this.state = State.STOPPED;
   }
 
   // If something goes wrong, proceed to next frag, if we were processing one.
@@ -353,11 +323,6 @@ export class SubtitleStreamController
   ) {
     this.fragCurrent = frag;
     super.loadFragment(frag, levelDetails, targetBufferTime);
-  }
-
-  stopLoad() {
-    this.fragPrevious = null;
-    super.stopLoad();
   }
 
   get mediaBufferTimeRanges() {
