@@ -118,11 +118,11 @@ export default class MP4Remuxer implements Remuxer {
     accurateTimeOffset: boolean,
     flush: boolean
   ): RemuxerResult {
-    let video;
-    let audio;
-    let initSegment;
-    let text;
-    let id3;
+    let video: RemuxedTrack | undefined;
+    let audio: RemuxedTrack | undefined;
+    let initSegment: InitSegmentData | undefined;
+    let text: RemuxedUserdata | undefined;
+    let id3: RemuxedMetadata | undefined;
     let independent: boolean | undefined;
     let audioTimeOffset = timeOffset;
     let videoTimeOffset = timeOffset;
@@ -134,8 +134,9 @@ export default class MP4Remuxer implements Remuxer {
     // then we can remux one track without waiting for the other.
     const hasAudio = audioTrack.pid > -1;
     const hasVideo = videoTrack.pid > -1;
+    const length = videoTrack.samples.length;
     const enoughAudioSamples = audioTrack.samples.length > 0;
-    const enoughVideoSamples = videoTrack.samples.length > 1;
+    const enoughVideoSamples = length > 1;
     const canRemuxAvc =
       ((!hasAudio || enoughAudioSamples) &&
         (!hasVideo || enoughVideoSamples)) ||
@@ -148,29 +149,28 @@ export default class MP4Remuxer implements Remuxer {
       }
 
       const isVideoContiguous = this.isVideoContiguous;
-      if (
-        enoughVideoSamples &&
-        !isVideoContiguous &&
-        this.config.forceKeyFrameOnDiscontinuity
-      ) {
-        const length = videoTrack.samples.length;
-        const firstKeyFrameIndex = findKeyframeIndex(videoTrack.samples);
-        independent = true;
-        if (firstKeyFrameIndex > 0) {
-          logger.warn(
-            `[mp4-remuxer]: Dropped ${firstKeyFrameIndex} out of ${length} video samples due to a missing keyframe`
-          );
-          const startPTS = this.getVideoStartPts(videoTrack.samples);
-          videoTrack.samples = videoTrack.samples.slice(firstKeyFrameIndex);
-          videoTrack.dropped += firstKeyFrameIndex;
-          videoTimeOffset +=
-            (videoTrack.samples[0].pts - startPTS) /
-            (videoTrack.timescale || 90000);
-        } else if (firstKeyFrameIndex === -1) {
-          logger.warn(
-            `[mp4-remuxer]: No keyframe found out of ${length} video samples`
-          );
-          independent = false;
+      let firstKeyFrameIndex = -1;
+
+      if (enoughVideoSamples) {
+        firstKeyFrameIndex = findKeyframeIndex(videoTrack.samples);
+        if (!isVideoContiguous && this.config.forceKeyFrameOnDiscontinuity) {
+          independent = true;
+          if (firstKeyFrameIndex > 0) {
+            logger.warn(
+              `[mp4-remuxer]: Dropped ${firstKeyFrameIndex} out of ${length} video samples due to a missing keyframe`
+            );
+            const startPTS = this.getVideoStartPts(videoTrack.samples);
+            videoTrack.samples = videoTrack.samples.slice(firstKeyFrameIndex);
+            videoTrack.dropped += firstKeyFrameIndex;
+            videoTimeOffset +=
+              (videoTrack.samples[0].pts - startPTS) /
+              (videoTrack.timescale || 90000);
+          } else if (firstKeyFrameIndex === -1) {
+            logger.warn(
+              `[mp4-remuxer]: No keyframe found out of ${length} video samples`
+            );
+            independent = false;
+          }
         }
       }
 
@@ -196,7 +196,6 @@ export default class MP4Remuxer implements Remuxer {
               '[mp4-remuxer]: regenerate InitSegment as audio detected'
             );
             initSegment = this.generateIS(audioTrack, videoTrack, timeOffset);
-            delete initSegment.video;
           }
           audio = this.remuxAudio(
             audioTrack,
@@ -229,8 +228,9 @@ export default class MP4Remuxer implements Remuxer {
             0
           );
         }
-        if (video && independent !== undefined) {
-          video.independent = independent;
+        if (video) {
+          video.firstKeyFrame = firstKeyFrameIndex;
+          video.independent = firstKeyFrameIndex !== -1;
         }
       }
     }
