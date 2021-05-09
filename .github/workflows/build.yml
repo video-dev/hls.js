@@ -6,6 +6,8 @@ on:
     tags: ['v*']
   pull_request:
 
+permissions: {}
+
 jobs:
   config:
     runs-on: ubuntu-latest
@@ -205,6 +207,8 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v2
 
