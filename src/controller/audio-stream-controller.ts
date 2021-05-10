@@ -46,7 +46,8 @@ type WaitingForPTSData = {
 
 class AudioStreamController
   extends BaseStreamController
-  implements NetworkComponentAPI {
+  implements NetworkComponentAPI
+{
   private videoBuffer: any | null = null;
   private videoTrackCC: number = -1;
   private waitingVideoCC: number = -1;
@@ -139,7 +140,10 @@ class AudioStreamController
       this.loadedmetadata = false;
       this.state = State.WAITING_TRACK;
     }
-    this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
+    this.nextLoadPosition =
+      this.startPosition =
+      this.lastCurrentTime =
+        startPosition;
     this.tick();
   }
 

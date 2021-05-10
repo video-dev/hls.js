@@ -14,7 +14,8 @@ export class ChunkMetadata {
   public readonly id: number;
   public readonly size: number;
   public readonly partial: boolean;
-  public readonly transmuxing: HlsChunkPerformanceTiming = getNewPerformanceTiming();
+  public readonly transmuxing: HlsChunkPerformanceTiming =
+    getNewPerformanceTiming();
   public readonly buffering: {
     [key in SourceBufferName]: HlsChunkPerformanceTiming;
   } = {

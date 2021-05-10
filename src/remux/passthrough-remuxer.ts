@@ -156,11 +156,10 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     if (!Number.isFinite(initPTS!)) {
-      this.initPTS = initSegment.initPTS = initPTS = computeInitPTS(
-        initData,
-        data,
-        lastEndDTS
-      );
+      this.initPTS =
+        initSegment.initPTS =
+        initPTS =
+          computeInitPTS(initData, data, lastEndDTS);
     }
 
     const duration = getDuration(data, initData);

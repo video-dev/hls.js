@@ -62,7 +62,8 @@ export const State = {
 
 export default class BaseStreamController
   extends TaskLoop
-  implements NetworkComponentAPI {
+  implements NetworkComponentAPI
+{
   protected hls: Hls;
 
   protected fragPrevious: Fragment | null = null;
@@ -266,7 +267,13 @@ export default class BaseStreamController
       this.decrypter.destroy();
     }
     // @ts-ignore
-    this.hls = this.log = this.warn = this.decrypter = this.fragmentLoader = this.fragmentTracker = null;
+    this.hls =
+      this.log =
+      this.warn =
+      this.decrypter =
+      this.fragmentLoader =
+      this.fragmentTracker =
+        null;
     super.onHandlerDestroyed();
   }
 
