@@ -811,9 +811,7 @@ class TSDemuxer implements Demuxer {
     return lastUnit;
   }
 
-  private parseAVCNALu(
-    array: Uint8Array
-  ): Array<{
+  private parseAVCNALu(array: Uint8Array): Array<{
     data: Uint8Array;
     type: number;
     state?: number;

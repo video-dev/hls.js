@@ -40,7 +40,8 @@ const TICK_INTERVAL = 100; // how often to tick in ms
 
 export default class StreamController
   extends BaseStreamController
-  implements NetworkComponentAPI {
+  implements NetworkComponentAPI
+{
   private audioCodecSwap: boolean = false;
   private gapController: GapController | null = null;
   private level: number = -1;
@@ -143,7 +144,10 @@ export default class StreamController
         startPosition = lastCurrentTime;
       }
       this.state = State.IDLE;
-      this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
+      this.nextLoadPosition =
+        this.startPosition =
+        this.lastCurrentTime =
+          startPosition;
       this.tick();
     } else {
       this._forceStartLoad = true;
@@ -1027,7 +1031,11 @@ export default class StreamController
       this.bitrateTest = false;
       const stats = frag.stats;
       // Bitrate tests fragments are neither parsed nor buffered
-      stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = self.performance.now();
+      stats.parsing.start =
+        stats.parsing.end =
+        stats.buffering.start =
+        stats.buffering.end =
+          self.performance.now();
       hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
     });
   }

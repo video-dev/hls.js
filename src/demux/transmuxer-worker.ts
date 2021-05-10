@@ -35,14 +35,13 @@ export default function TransmuxerWorker(self) {
         break;
       }
       case 'demux': {
-        const transmuxResult:
-          | TransmuxerResult
-          | Promise<TransmuxerResult> = self.transmuxer.push(
-          data.data,
-          data.decryptdata,
-          data.chunkMeta,
-          data.state
-        );
+        const transmuxResult: TransmuxerResult | Promise<TransmuxerResult> =
+          self.transmuxer.push(
+            data.data,
+            data.decryptdata,
+            data.chunkMeta,
+            data.state
+          );
         if (isPromise(transmuxResult)) {
           transmuxResult.then((data) => {
             emitTransmuxComplete(self, data);

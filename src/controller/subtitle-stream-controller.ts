@@ -29,7 +29,8 @@ interface TimeRange {
 
 export class SubtitleStreamController
   extends BaseStreamController
-  implements NetworkComponentAPI {
+  implements NetworkComponentAPI
+{
   protected levels: Array<Level> = [];
 
   private currentTrackId: number = -1;

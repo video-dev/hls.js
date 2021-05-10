@@ -114,12 +114,10 @@ export default class Hls implements HlsEventEmitter {
       fpsController: ConfigFpsController,
     } = config;
     const abrController = (this.abrController = new ConfigAbrController(this));
-    const bufferController = (this.bufferController = new ConfigBufferController(
-      this
-    ));
-    const capLevelController = (this.capLevelController = new ConfigCapLevelController(
-      this
-    ));
+    const bufferController = (this.bufferController =
+      new ConfigBufferController(this));
+    const capLevelController = (this.capLevelController =
+      new ConfigCapLevelController(this));
     const fpsController = new ConfigFpsController(this);
     const playListLoader = new PlaylistLoader(this);
     const keyLoader = new KeyLoader(this);
