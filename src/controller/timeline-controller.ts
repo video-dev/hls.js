@@ -403,9 +403,8 @@ export class TimelineController implements ComponentAPI {
           return;
         }
         const trackName = `textTrack${instreamIdMatch[1]}`;
-        const trackProperties: TrackProperties = this.captionsProperties[
-          trackName
-        ];
+        const trackProperties: TrackProperties =
+          this.captionsProperties[trackName];
         if (!trackProperties) {
           return;
         }
@@ -591,13 +590,10 @@ export class TimelineController implements ComponentAPI {
     const { frag } = data;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
       if (!Number.isFinite(this.initPTS[frag.cc])) {
-        this.unparsedVttFrags.push((data as unknown) as FragLoadedData);
+        this.unparsedVttFrags.push(data as unknown as FragLoadedData);
         return;
       }
-      this.onFragLoaded(
-        Events.FRAG_LOADED,
-        (data as unknown) as FragLoadedData
-      );
+      this.onFragLoaded(Events.FRAG_LOADED, data as unknown as FragLoadedData);
     }
   }
 

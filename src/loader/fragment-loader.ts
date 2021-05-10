@@ -63,9 +63,12 @@ export default class FragmentLoader {
       if (this.loader) {
         this.loader.destroy();
       }
-      const loader = (this.loader = frag.loader = FragmentILoader
-        ? new FragmentILoader(config)
-        : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
+      const loader =
+        (this.loader =
+        frag.loader =
+          FragmentILoader
+            ? new FragmentILoader(config)
+            : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag);
       const loaderConfig: LoaderConfiguration = {
         timeout: config.fragLoadingTimeOut,
@@ -152,9 +155,12 @@ export default class FragmentLoader {
       if (this.loader) {
         this.loader.destroy();
       }
-      const loader = (this.loader = frag.loader = FragmentILoader
-        ? new FragmentILoader(config)
-        : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
+      const loader =
+        (this.loader =
+        frag.loader =
+          FragmentILoader
+            ? new FragmentILoader(config)
+            : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag, part);
       const loaderConfig: LoaderConfiguration = {
         timeout: config.fragLoadingTimeOut,

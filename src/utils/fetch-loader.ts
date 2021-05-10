@@ -94,40 +94,38 @@ class FetchLoader implements Loader<LoaderContext> {
 
     self
       .fetch(this.request)
-      .then(
-        (response: Response): Promise<string | ArrayBuffer> => {
-          this.response = this.loader = response;
+      .then((response: Response): Promise<string | ArrayBuffer> => {
+        this.response = this.loader = response;
 
-          if (!response.ok) {
-            const { status, statusText } = response;
-            throw new FetchError(
-              statusText || 'fetch, bad network response',
-              status,
-              response
-            );
-          }
-          stats.loading.first = Math.max(
-            self.performance.now(),
-            stats.loading.start
+        if (!response.ok) {
+          const { status, statusText } = response;
+          throw new FetchError(
+            statusText || 'fetch, bad network response',
+            status,
+            response
           );
-          stats.total = parseInt(response.headers.get('Content-Length') || '0');
-
-          if (onProgress && Number.isFinite(config.highWaterMark)) {
-            return this.loadProgressively(
-              response,
-              stats,
-              context,
-              config.highWaterMark,
-              onProgress
-            );
-          }
-
-          if (isArrayBuffer) {
-            return response.arrayBuffer();
-          }
-          return response.text();
         }
-      )
+        stats.loading.first = Math.max(
+          self.performance.now(),
+          stats.loading.start
+        );
+        stats.total = parseInt(response.headers.get('Content-Length') || '0');
+
+        if (onProgress && Number.isFinite(config.highWaterMark)) {
+          return this.loadProgressively(
+            response,
+            stats,
+            context,
+            config.highWaterMark,
+            onProgress
+          );
+        }
+
+        if (isArrayBuffer) {
+          return response.arrayBuffer();
+        }
+        return response.text();
+      })
       .then((responseData: string | ArrayBuffer) => {
         const { response } = this;
         self.clearTimeout(this.requestTimeout);

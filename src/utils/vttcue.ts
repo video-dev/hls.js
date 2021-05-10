@@ -378,5 +378,5 @@ export default (function () {
     return WebVTT.convertCueToDOMTree(self, this.text);
   };
   // this is a polyfill hack
-  return (VTTCue as any) as VTTCuePolyfill;
+  return VTTCue as any as VTTCuePolyfill;
 })();
