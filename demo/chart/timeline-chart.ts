@@ -56,22 +56,25 @@ export class TimelineChart {
         `Could not get CanvasRenderingContext2D from canvas: ${canvas}`
       );
     }
-    const chart = (this.chart = self.chart = new Chart(ctx, {
-      type: 'horizontalBar',
-      data: {
-        labels: [],
-        datasets: [],
-      },
-      options: Object.assign(getChartOptions(), chartJsOptions),
-      plugins: [
-        {
-          afterRender: (chart) => {
-            this.imageDataBuffer = null;
-            this.drawCurrentTime();
+    const chart =
+      (this.chart =
+      self.chart =
+        new Chart(ctx, {
+          type: 'horizontalBar',
+          data: {
+            labels: [],
+            datasets: [],
           },
-        },
-      ],
-    }));
+          options: Object.assign(getChartOptions(), chartJsOptions),
+          plugins: [
+            {
+              afterRender: (chart) => {
+                this.imageDataBuffer = null;
+                this.drawCurrentTime();
+              },
+            },
+          ],
+        }));
 
     applyChartInstanceOverrides(chart);
 

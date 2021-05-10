@@ -178,9 +178,10 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
 
-      expect(
-        triggerSpy.firstCall
-      ).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: -1 });
+      expect(triggerSpy.firstCall).to.have.been.calledWith(
+        'hlsSubtitleTrackSwitch',
+        { id: -1 }
+      );
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {

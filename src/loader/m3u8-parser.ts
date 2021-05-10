@@ -19,7 +19,8 @@ import type { LevelAttributes, LevelParsed } from '../types/level';
 type M3U8ParserFragments = Array<Fragment | null>;
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-SESSION-DATA:([^\r\n]*)[\r\n]+/g;
+const MASTER_PLAYLIST_REGEX =
+  /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-SESSION-DATA:([^\r\n]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
@@ -290,9 +291,8 @@ export default class M3U8Parser {
             break;
           case 'SKIP': {
             const skipAttrs = new AttrList(value1);
-            const skippedSegments = skipAttrs.decimalInteger(
-              'SKIPPED-SEGMENTS'
-            );
+            const skippedSegments =
+              skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
             if (Number.isFinite(skippedSegments)) {
               level.skippedSegments = skippedSegments;
               // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
@@ -305,9 +305,8 @@ export default class M3U8Parser {
               'RECENTLY-REMOVED-DATERANGES'
             );
             if (recentlyRemovedDateranges) {
-              level.recentlyRemovedDateranges = recentlyRemovedDateranges.split(
-                '\t'
-              );
+              level.recentlyRemovedDateranges =
+                recentlyRemovedDateranges.split('\t');
             }
             break;
           }
@@ -345,9 +344,8 @@ export default class M3U8Parser {
             const decryptmethod = keyAttrs.enumeratedString('METHOD');
             const decrypturi = keyAttrs.URI;
             const decryptiv = keyAttrs.hexadecimalInteger('IV');
-            const decryptkeyformatversions = keyAttrs.enumeratedString(
-              'KEYFORMATVERSIONS'
-            );
+            const decryptkeyformatversions =
+              keyAttrs.enumeratedString('KEYFORMATVERSIONS');
             const decryptkeyid = keyAttrs.enumeratedString('KEYID');
             // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
             const decryptkeyformat =
@@ -406,9 +404,8 @@ export default class M3U8Parser {
           }
           case 'START': {
             const startAttrs = new AttrList(value1);
-            const startTimeOffset = startAttrs.decimalFloatingPoint(
-              'TIME-OFFSET'
-            );
+            const startTimeOffset =
+              startAttrs.decimalFloatingPoint('TIME-OFFSET');
             // TIME-OFFSET can be 0
             if (Number.isFinite(startTimeOffset)) {
               level.startTimeOffset = startTimeOffset;
