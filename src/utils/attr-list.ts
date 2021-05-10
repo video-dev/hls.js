@@ -68,9 +68,7 @@ export class AttrList {
     return this[attrName] === 'YES';
   }
 
-  decimalResolution(
-    attrName: string
-  ):
+  decimalResolution(attrName: string):
     | {
         width: number;
         height: number;

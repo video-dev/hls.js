@@ -1151,6 +1151,20 @@ The Widevine license server URL.
 
 A pre-processor function for modifying the `XMLHttpRequest` and request url (using `xhr.open`) prior to sending the license request.
 
+```js
+var config = {
+  licenseXhrSetup: function (xhr, url) {
+    xhr.withCredentials = true; // do send cookies
+    if (!xhr.readyState) {
+      // Call open to change the method (default is POST) or modify the url
+      xhr.open('GET', url, true);
+      // Append headers after opening
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    }
+  },
+};
+```
+
 ### `licenseResponseCallback`
 
 (default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => data: ArrayBuffer`)

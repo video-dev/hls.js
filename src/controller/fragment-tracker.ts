@@ -26,9 +26,8 @@ export enum FragmentState {
 export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;
   private activeParts: Part[] | null = null;
-  private fragments: Partial<Record<string, FragmentEntity>> = Object.create(
-    null
-  );
+  private fragments: Partial<Record<string, FragmentEntity>> =
+    Object.create(null);
   private timeRanges:
     | {
         [key in SourceBufferName]: TimeRanges;

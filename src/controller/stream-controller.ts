@@ -40,7 +40,8 @@ const TICK_INTERVAL = 100; // how often to tick in ms
 
 export default class StreamController
   extends BaseStreamController
-  implements NetworkComponentAPI {
+  implements NetworkComponentAPI
+{
   private audioCodecSwap: boolean = false;
   private gapController: GapController | null = null;
   private level: number = -1;
@@ -52,6 +53,7 @@ export default class StreamController
   private onvseeked: EventListener | null = null;
   private fragLastKbps: number = 0;
   private stalled: boolean = false;
+  private couldBacktrack: boolean = false;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
 
@@ -142,7 +144,10 @@ export default class StreamController
         startPosition = lastCurrentTime;
       }
       this.state = State.IDLE;
-      this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
+      this.nextLoadPosition =
+        this.startPosition =
+        this.lastCurrentTime =
+          startPosition;
       this.tick();
     } else {
       this._forceStartLoad = true;
@@ -288,6 +293,19 @@ export default class StreamController
 
     targetBufferTime = bufferInfo.end;
     let frag = this.getNextFragment(targetBufferTime, levelDetails);
+    // Avoid backtracking after seeking or switching by loading an earlier segment in streams that could backtrack
+    if (
+      this.couldBacktrack &&
+      !this.fragPrevious &&
+      frag &&
+      frag.sn !== 'initSegment'
+    ) {
+      const fragIdx = frag.sn - levelDetails.startSN;
+      if (fragIdx > 1) {
+        frag = levelDetails.fragments[fragIdx - 1];
+        this.fragmentTracker.removeFragment(frag);
+      }
+    }
     // Avoid loop loading by using nextLoadPosition set for backtracking
     if (
       frag &&
@@ -299,7 +317,6 @@ export default class StreamController
     if (!frag) {
       return;
     }
-
     if (frag.initSegment && !frag.initSegment.data && !this.bitrateTest) {
       frag = frag.initSegment;
     }
@@ -535,7 +552,7 @@ export default class StreamController
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
     this.fragmentTracker.removeAllFragments();
-    this.stalled = false;
+    this.couldBacktrack = this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
     this.fragPlaying = null;
   }
@@ -924,7 +941,7 @@ export default class StreamController
       this.startFragRequested = false;
       this.nextLoadPosition = this.startPosition;
     }
-    this.tick();
+    this.tickImmediate();
   }
 
   private onBufferFlushed(
@@ -1014,7 +1031,11 @@ export default class StreamController
       this.bitrateTest = false;
       const stats = frag.stats;
       // Bitrate tests fragments are neither parsed nor buffered
-      stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = self.performance.now();
+      stats.parsing.start =
+        stats.parsing.end =
+        stats.buffering.start =
+        stats.buffering.end =
+          self.performance.now();
       hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
     });
   }
@@ -1075,22 +1096,27 @@ export default class StreamController
             startDTS,
             endDTS,
           };
-        } else if (video.dropped && video.independent) {
-          // Backtrack if dropped frames create a gap after currentTime
-          const pos = this.getLoadPosition() + this.config.maxBufferHole;
-          if (pos < startPTS) {
-            this.backtrack(frag);
-            return;
+        } else {
+          if (video.firstKeyFrame && video.independent) {
+            this.couldBacktrack = true;
           }
-          // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
-          frag.setElementaryStreamInfo(
-            video.type as ElementaryStreamTypes,
-            frag.start,
-            endPTS,
-            frag.start,
-            endDTS,
-            true
-          );
+          if (video.dropped && video.independent) {
+            // Backtrack if dropped frames create a gap after currentTime
+            const pos = this.getLoadPosition() + this.config.maxBufferHole;
+            if (pos < startPTS) {
+              this.backtrack(frag);
+              return;
+            }
+            // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
+            frag.setElementaryStreamInfo(
+              video.type as ElementaryStreamTypes,
+              frag.start,
+              endPTS,
+              frag.start,
+              endDTS,
+              true
+            );
+          }
         }
         frag.setElementaryStreamInfo(
           video.type as ElementaryStreamTypes,
@@ -1242,6 +1268,7 @@ export default class StreamController
   }
 
   private backtrack(frag: Fragment) {
+    this.couldBacktrack = true;
     // Causes findFragments to backtrack through fragments to find the keyframe
     this.resetTransmuxer();
     this.flushBufferGap(frag);
