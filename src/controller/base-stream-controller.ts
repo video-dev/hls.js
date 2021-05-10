@@ -266,14 +266,14 @@ export default class BaseStreamController
     if (this.decrypter) {
       this.decrypter.destroy();
     }
-    // @ts-ignore
+
     this.hls =
       this.log =
       this.warn =
       this.decrypter =
       this.fragmentLoader =
       this.fragmentTracker =
-        null;
+        null as any;
     super.onHandlerDestroyed();
   }
 
