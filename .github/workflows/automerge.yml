@@ -3,6 +3,10 @@ name: Auto Merge Dependency Updates
 on:
   - pull_request_target
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   run:
     runs-on: ubuntu-latest
