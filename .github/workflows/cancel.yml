@@ -4,6 +4,8 @@ on:
     workflows: ['automerge', 'build', 'codeql-analysis']
     types:
       - requested
+permissions:
+  actions: write
 jobs:
   cancel:
     runs-on: ubuntu-latest
