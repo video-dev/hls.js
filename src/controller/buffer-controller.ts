@@ -703,9 +703,8 @@ export default class BufferController implements ComponentAPI {
         const mimeType = `${track.container};codecs=${codec}`;
         logger.log(`[buffer-controller]: creating sourceBuffer(${mimeType})`);
         try {
-          const sb = (sourceBuffer[trackName] = mediaSource.addSourceBuffer(
-            mimeType
-          ));
+          const sb = (sourceBuffer[trackName] =
+            mediaSource.addSourceBuffer(mimeType));
           const sbName = trackName as SourceBufferName;
           this.addBufferListener(sbName, 'updatestart', this._onSBUpdateStart);
           this.addBufferListener(sbName, 'updateend', this._onSBUpdateEnd);

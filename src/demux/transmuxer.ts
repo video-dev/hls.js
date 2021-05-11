@@ -113,19 +113,17 @@ export default class Transmuxer {
       } else {
         this.decryptionPromise = decrypter
           .webCryptoDecrypt(uintData, keyData.key.buffer, keyData.iv.buffer)
-          .then(
-            (decryptedData): TransmuxerResult => {
-              // Calling push here is important; if flush() is called while this is still resolving, this ensures that
-              // the decrypted data has been transmuxed
-              const result = this.push(
-                decryptedData,
-                null,
-                chunkMeta
-              ) as TransmuxerResult;
-              this.decryptionPromise = null;
-              return result;
-            }
-          );
+          .then((decryptedData): TransmuxerResult => {
+            // Calling push here is important; if flush() is called while this is still resolving, this ensures that
+            // the decrypted data has been transmuxed
+            const result = this.push(
+              decryptedData,
+              null,
+              chunkMeta
+            ) as TransmuxerResult;
+            this.decryptionPromise = null;
+            return result;
+          });
         return this.decryptionPromise!;
       }
     }
@@ -346,13 +344,9 @@ export default class Transmuxer {
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata
   ): TransmuxerResult {
-    const { audioTrack, avcTrack, id3Track, textTrack } = (this
-      .demuxer as Demuxer).demux(
-      data,
-      timeOffset,
-      false,
-      !this.config.progressive
-    );
+    const { audioTrack, avcTrack, id3Track, textTrack } = (
+      this.demuxer as Demuxer
+    ).demux(data, timeOffset, false, !this.config.progressive);
     const remuxResult = this.remuxer!.remux(
       audioTrack,
       avcTrack,
