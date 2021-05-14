@@ -107,7 +107,7 @@ export class TimelineChart {
       if (pos.x > chartArea.left - 11) {
         const scale = this.chartScales[X_AXIS_SECONDS];
         if (event.deltaY) {
-          const direction = event.deltaY / Math.abs(event.deltaY);
+          const direction = -event.deltaY / Math.abs(event.deltaY);
           const normal = Math.min(333, Math.abs(event.deltaY)) / 1000;
           const ease = 1 - (1 - normal) * (1 - normal);
           this.zoom(scale, pos, ease * direction);
