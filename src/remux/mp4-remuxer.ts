@@ -12,6 +12,8 @@ import {
   RemuxedTrack,
   RemuxedUserdata,
 } from '../types/remuxer';
+import { PlaylistLevelType } from '../types/loader';
+import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
 import type {
   AudioSample,
   AvcSample,
@@ -24,7 +26,6 @@ import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
 import type { Fragment } from '../loader/fragment';
 import type { HlsConfig } from '../config';
-import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
@@ -116,7 +117,8 @@ export default class MP4Remuxer implements Remuxer {
     textTrack: DemuxedUserdataTrack,
     timeOffset: number,
     accurateTimeOffset: boolean,
-    flush: boolean
+    flush: boolean,
+    playlistType: PlaylistLevelType
   ): RemuxerResult {
     let video: RemuxedTrack | undefined;
     let audio: RemuxedTrack | undefined;
@@ -202,7 +204,11 @@ export default class MP4Remuxer implements Remuxer {
             audioTimeOffset,
             this.isAudioContiguous,
             accurateTimeOffset,
-            enoughVideoSamples ? videoTimeOffset : undefined
+            hasVideo ||
+              enoughVideoSamples ||
+              playlistType === PlaylistLevelType.AUDIO
+              ? videoTimeOffset
+              : undefined
           );
           if (enoughVideoSamples) {
             const audioTrackLength = audio ? audio.endPTS - audio.startPTS : 0;

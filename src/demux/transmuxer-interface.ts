@@ -14,6 +14,7 @@ import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type Hls from '../hls';
 import type { HlsEventEmitter } from '../events';
 import type { PlaylistLevelType } from '../types/loader';
+import type { TypeSupported } from './tsdemuxer';
 
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
@@ -54,7 +55,7 @@ export default class TransmuxerInterface {
     this.observer.on(Events.FRAG_DECRYPTED, forwardMessage);
     this.observer.on(Events.ERROR, forwardMessage);
 
-    const typeSupported = {
+    const typeSupported: TypeSupported = {
       mp4: MediaSource.isTypeSupported('video/mp4'),
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
       mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"'),
@@ -102,7 +103,8 @@ export default class TransmuxerInterface {
           this.observer,
           typeSupported,
           config,
-          vendor
+          vendor,
+          id
         );
         this.worker = null;
       }
@@ -111,7 +113,8 @@ export default class TransmuxerInterface {
         this.observer,
         typeSupported,
         config,
-        vendor
+        vendor,
+        id
       );
     }
   }
