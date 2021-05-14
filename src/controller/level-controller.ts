@@ -84,7 +84,7 @@ export default class LevelController extends BasePlaylistController {
     let audioTracks: MediaPlaylist[] = [];
     let subtitleTracks: MediaPlaylist[] = [];
     let bitrateStart: number | undefined;
-    const levelSet: { [bitrate: number]: Level } = {};
+    const levelSet: { [key: string]: Level } = {};
     let levelFromSet: Level;
     let resolutionFound = false;
     let videoCodecFound = false;
@@ -109,11 +109,12 @@ export default class LevelController extends BasePlaylistController {
         levelParsed.audioCodec = undefined;
       }
 
-      levelFromSet = levelSet[levelParsed.bitrate]; // FIXME: we would also have to match the resolution here
+      const levelKey = `${levelParsed.bitrate}-${levelParsed.attrs.RESOLUTION}-${levelParsed.attrs.CODECS}`;
+      levelFromSet = levelSet[levelKey];
 
       if (!levelFromSet) {
         levelFromSet = new Level(levelParsed);
-        levelSet[levelParsed.bitrate] = levelFromSet;
+        levelSet[levelKey] = levelFromSet;
         levels.push(levelFromSet);
       } else {
         levelFromSet.url.push(levelParsed.url);
