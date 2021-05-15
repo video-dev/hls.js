@@ -211,11 +211,26 @@ export default class M3U8Parser {
     let i: number;
     let levelkey: LevelKey | undefined;
     let firstPdtIndex = -1;
+    let createNextFrag = false;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
+      if (createNextFrag) {
+        createNextFrag = false;
+        frag = new Fragment(type, baseurl);
+        // setup the next fragment for part loading
+        frag.start = totalduration;
+        frag.sn = currentSN;
+        frag.cc = discontinuityCounter;
+        frag.level = id;
+        if (currentInitSegment) {
+          frag.initSegment = currentInitSegment;
+          frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+        }
+      }
+
       const duration = result[1];
       if (duration) {
         // INF
@@ -235,9 +250,6 @@ export default class M3U8Parser {
           frag.level = id;
           frag.cc = discontinuityCounter;
           frag.urlId = levelUrlId;
-          if (currentInitSegment) {
-            frag.initSegment = currentInitSegment;
-          }
           fragments.push(frag);
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
@@ -246,13 +258,7 @@ export default class M3U8Parser {
           totalduration += frag.duration;
           currentSN++;
           currentPart = 0;
-
-          frag = new Fragment(type, baseurl);
-          // setup the next fragment for part loading
-          frag.start = totalduration;
-          frag.sn = currentSN;
-          frag.cc = discontinuityCounter;
-          frag.level = id;
+          createNextFrag = true;
         }
       } else if (result[4]) {
         // X-BYTERANGE
@@ -428,9 +434,9 @@ export default class M3U8Parser {
             if (levelkey) {
               frag.levelkey = levelkey;
             }
+            frag.initSegment = null;
             currentInitSegment = frag;
-            frag = new Fragment(type, baseurl);
-            frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+            createNextFrag = true;
             break;
           }
           case 'SERVER-CONTROL': {
