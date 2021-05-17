@@ -24,7 +24,8 @@ export default function TransmuxerWorker(self) {
           observer,
           data.typeSupported,
           config,
-          data.vendor
+          data.vendor,
+          data.id
         );
         enableLogs(config.debug);
         forwardMessage('init', null);
