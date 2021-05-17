@@ -199,6 +199,8 @@ export default class M3U8Parser {
   ): LevelDetails {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
+    // The most recent init segment seen (applies to all subsequent segments)
+    let currentInitSegment: Fragment | null = null;
     let currentSN = 0;
     let currentPart = 0;
     let totalduration = 0;
@@ -209,11 +211,26 @@ export default class M3U8Parser {
     let i: number;
     let levelkey: LevelKey | undefined;
     let firstPdtIndex = -1;
+    let createNextFrag = false;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
+      if (createNextFrag) {
+        createNextFrag = false;
+        frag = new Fragment(type, baseurl);
+        // setup the next fragment for part loading
+        frag.start = totalduration;
+        frag.sn = currentSN;
+        frag.cc = discontinuityCounter;
+        frag.level = id;
+        if (currentInitSegment) {
+          frag.initSegment = currentInitSegment;
+          frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+        }
+      }
+
       const duration = result[1];
       if (duration) {
         // INF
@@ -241,13 +258,7 @@ export default class M3U8Parser {
           totalduration += frag.duration;
           currentSN++;
           currentPart = 0;
-
-          frag = new Fragment(type, baseurl);
-          // setup the next fragment for part loading
-          frag.start = totalduration;
-          frag.sn = currentSN;
-          frag.cc = discontinuityCounter;
-          frag.level = id;
+          createNextFrag = true;
         }
       } else if (result[4]) {
         // X-BYTERANGE
@@ -423,9 +434,9 @@ export default class M3U8Parser {
             if (levelkey) {
               frag.levelkey = levelkey;
             }
-            level.initSegment = frag;
-            frag = new Fragment(type, baseurl);
-            frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
+            frag.initSegment = null;
+            currentInitSegment = frag;
+            createNextFrag = true;
             break;
           }
           case 'SERVER-CONTROL': {
@@ -507,7 +518,7 @@ export default class M3U8Parser {
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
       if (firstFragment) {
         level.startCC = firstFragment.cc;
-        if (!level.initSegment) {
+        if (!firstFragment.initSegment) {
           // this is a bit lurky but HLS really has no other way to tell us
           // if the fragments are TS or MP4, except if we download them :/
           // but this is to be able to handle SIDX.
@@ -523,7 +534,7 @@ export default class M3U8Parser {
             frag.relurl = lastFragment.relurl;
             frag.level = id;
             frag.sn = 'initSegment';
-            level.initSegment = frag;
+            firstFragment.initSegment = frag;
             level.needSidxRanges = true;
           }
         }
