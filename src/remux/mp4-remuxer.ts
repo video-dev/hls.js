@@ -12,6 +12,8 @@ import {
   RemuxedTrack,
   RemuxedUserdata,
 } from '../types/remuxer';
+import { PlaylistLevelType } from '../types/loader';
+import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
 import type {
   AudioSample,
   AvcSample,
@@ -24,7 +26,6 @@ import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
 import type { Fragment } from '../loader/fragment';
 import type { HlsConfig } from '../config';
-import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
@@ -116,7 +117,8 @@ export default class MP4Remuxer implements Remuxer {
     textTrack: DemuxedUserdataTrack,
     timeOffset: number,
     accurateTimeOffset: boolean,
-    flush: boolean
+    flush: boolean,
+    playlistType: PlaylistLevelType
   ): RemuxerResult {
     let video: RemuxedTrack | undefined;
     let audio: RemuxedTrack | undefined;
@@ -202,7 +204,11 @@ export default class MP4Remuxer implements Remuxer {
             audioTimeOffset,
             this.isAudioContiguous,
             accurateTimeOffset,
-            enoughVideoSamples ? videoTimeOffset : undefined
+            hasVideo ||
+              enoughVideoSamples ||
+              playlistType === PlaylistLevelType.AUDIO
+              ? videoTimeOffset
+              : undefined
           );
           if (enoughVideoSamples) {
             const audioTrackLength = audio ? audio.endPTS - audio.startPTS : 0;
@@ -741,8 +747,9 @@ export default class MP4Remuxer implements Remuxer {
     // frame.
 
     if (track.isAAC) {
+      const alignedWithVideo = videoTimeOffset !== undefined;
       const maxAudioFramesDrift = this.config.maxAudioFramesDrift;
-      for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
+      for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; i++) {
         // First, let's see how far off this frame is from where we expect it to be
         const sample = inputSamples[i];
         const pts = sample.pts;
@@ -752,19 +759,9 @@ export default class MP4Remuxer implements Remuxer {
         // When remuxing with video, if we're overlapping by more than a duration, drop this sample to stay in sync
         if (
           delta <= -maxAudioFramesDrift * inputSampleDuration &&
-          videoTimeOffset !== undefined
+          alignedWithVideo
         ) {
-          if (contiguous || i > 0) {
-            logger.warn(
-              `[mp4-remuxer]: Dropping 1 audio frame @ ${(
-                nextPts / inputTimeScale
-              ).toFixed(3)}s due to ${Math.round(duration)} ms overlap.`
-            );
-            inputSamples.splice(i, 1);
-            // Don't touch nextPtsNorm or i
-          } else {
-            // When changing qualities we can't trust that audio has been appended up to nextAudioPts
-            // Warn about the overlap but do not drop samples as that can introduce buffer gaps
+          if (i === 0) {
             logger.warn(
               `Audio frame @ ${(pts / inputTimeScale).toFixed(
                 3
@@ -772,9 +769,9 @@ export default class MP4Remuxer implements Remuxer {
                 (1000 * delta) / inputTimeScale
               )} ms.`
             );
-            nextPts = pts + inputSampleDuration;
-            i++;
+            this.nextAudioPts = nextAudioPts = pts;
           }
+          nextPts = pts;
         } // eslint-disable-line brace-style
 
         // Insert missing frames if:
@@ -785,12 +782,19 @@ export default class MP4Remuxer implements Remuxer {
         else if (
           delta >= maxAudioFramesDrift * inputSampleDuration &&
           duration < MAX_SILENT_FRAME_DURATION &&
-          videoTimeOffset !== undefined
+          alignedWithVideo
         ) {
-          const missing = Math.floor(delta / inputSampleDuration);
+          let missing = Math.round(delta / inputSampleDuration);
           // Adjust nextPts so that silent samples are aligned with media pts. This will prevent media samples from
           // later being shifted if nextPts is based on timeOffset and delta is not a multiple of inputSampleDuration.
           nextPts = pts - missing * inputSampleDuration;
+          if (nextPts < 0) {
+            missing--;
+            nextPts += inputSampleDuration;
+          }
+          if (i === 0) {
+            this.nextAudioPts = nextAudioPts = nextPts;
+          }
           logger.warn(
             `[mp4-remuxer]: Injecting ${missing} audio frame @ ${(
               nextPts / inputTimeScale
@@ -818,17 +822,9 @@ export default class MP4Remuxer implements Remuxer {
             nextPts += inputSampleDuration;
             i++;
           }
-
-          // Adjust sample to next expected pts
-          sample.pts = sample.dts = nextPts;
-          nextPts += inputSampleDuration;
-          i++;
-        } else {
-          // Otherwise, just adjust pts
-          sample.pts = sample.dts = nextPts;
-          nextPts += inputSampleDuration;
-          i++;
         }
+        sample.pts = sample.dts = nextPts;
+        nextPts += inputSampleDuration;
       }
     }
     let firstPTS: number | null = null;
@@ -849,42 +845,7 @@ export default class MP4Remuxer implements Remuxer {
         const prevSample = outputSamples[j - 1];
         prevSample.duration = Math.round((pts - lastPTS) / scaleFactor);
       } else {
-        const delta = Math.round(
-          (1000 * (pts - nextAudioPts)) / inputTimeScale
-        );
-        let numMissingFrames = 0;
-        // if fragment are contiguous, detect hole/overlapping between fragments
-        // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
         if (contiguous && track.isAAC) {
-          if (delta > 0 && delta < MAX_SILENT_FRAME_DURATION) {
-            numMissingFrames = Math.round(
-              (pts - nextAudioPts) / inputSampleDuration
-            );
-            logger.log(
-              `[mp4-remuxer]: ${delta} ms hole between AAC samples detected,filling it`
-            );
-            if (numMissingFrames > 0) {
-              fillFrame = AAC.getSilentFrame(
-                track.manifestCodec || track.codec,
-                track.channelCount
-              );
-              if (!fillFrame) {
-                fillFrame = unit.subarray();
-              }
-
-              mdatSize += numMissingFrames * fillFrame.length;
-            }
-            // if we have frame overlap, overlapping for more than half a frame duraion
-          } else if (delta < -12) {
-            // drop overlapping audio frames... browser will deal with it
-            logger.log(
-              `[mp4-remuxer]: drop overlapping AAC sample, expected/parsed/delta:${(
-                nextAudioPts / inputTimeScale
-              ).toFixed(3)}s/${(pts / inputTimeScale).toFixed(3)}s/${-delta}ms`
-            );
-            mdatSize -= unit.byteLength;
-            continue;
-          }
           // set PTS/DTS to expected PTS/DTS
           pts = nextAudioPts;
         }
@@ -914,23 +875,6 @@ export default class MP4Remuxer implements Remuxer {
         } else {
           // no audio samples
           return;
-        }
-        for (let i = 0; i < numMissingFrames; i++) {
-          fillFrame = AAC.getSilentFrame(
-            track.manifestCodec || track.codec,
-            track.channelCount
-          );
-          if (!fillFrame) {
-            logger.log(
-              '[mp4-remuxer]: Unable to get silent frame for given audio codec; duplicating the current frame instead'
-            );
-            fillFrame = unit.subarray();
-          }
-          mdat.set(fillFrame, offset);
-          offset += fillFrame.byteLength;
-          outputSamples.push(
-            new Mp4Sample(true, AAC_SAMPLES_PER_FRAME, fillFrame.byteLength, 0)
-          );
         }
       }
       mdat.set(unit, offset);
