@@ -249,76 +249,76 @@ export default class StreamController
       return;
     }
 
-    let frag = levelDetails.initSegment;
     let targetBufferTime = 0;
-    if (!frag || frag.data || this.bitrateTest) {
-      // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-      const levelBitrate = levelInfo.maxBitrate;
-      let maxBufLen;
-      if (levelBitrate) {
-        maxBufLen = Math.max(
-          (8 * config.maxBufferSize) / levelBitrate,
-          config.maxBufferLength
-        );
-      } else {
-        maxBufLen = config.maxBufferLength;
-      }
-      maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
-
-      // determine next candidate fragment to be loaded, based on current position and end of buffer position
-      // ensure up to `config.maxMaxBufferLength` of buffer upfront
-      const maxBufferHole =
-        pos < config.maxBufferHole
-          ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
-          : config.maxBufferHole;
-      const bufferInfo = BufferHelper.bufferInfo(
-        this.mediaBuffer ? this.mediaBuffer : media,
-        pos,
-        maxBufferHole
+    // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
+    const levelBitrate = levelInfo.maxBitrate;
+    let maxBufLen;
+    if (levelBitrate) {
+      maxBufLen = Math.max(
+        (8 * config.maxBufferSize) / levelBitrate,
+        config.maxBufferLength
       );
-      const bufferLen = bufferInfo.len;
-      // Stay idle if we are still with buffer margins
-      if (bufferLen >= maxBufLen) {
-        return;
+    } else {
+      maxBufLen = config.maxBufferLength;
+    }
+    maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
+
+    // determine next candidate fragment to be loaded, based on current position and end of buffer position
+    // ensure up to `config.maxMaxBufferLength` of buffer upfront
+    const maxBufferHole =
+      pos < config.maxBufferHole
+        ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
+        : config.maxBufferHole;
+    const bufferInfo = BufferHelper.bufferInfo(
+      this.mediaBuffer ? this.mediaBuffer : media,
+      pos,
+      maxBufferHole
+    );
+    const bufferLen = bufferInfo.len;
+    // Stay idle if we are still with buffer margins
+    if (bufferLen >= maxBufLen) {
+      return;
+    }
+
+    if (this._streamEnded(bufferInfo, levelDetails)) {
+      const data: BufferEOSData = {};
+      if (this.altAudio) {
+        data.type = 'video';
       }
 
-      if (this._streamEnded(bufferInfo, levelDetails)) {
-        const data: BufferEOSData = {};
-        if (this.altAudio) {
-          data.type = 'video';
-        }
+      this.hls.trigger(Events.BUFFER_EOS, data);
+      this.state = State.ENDED;
+      return;
+    }
 
-        this.hls.trigger(Events.BUFFER_EOS, data);
-        this.state = State.ENDED;
-        return;
+    targetBufferTime = bufferInfo.end;
+    let frag = this.getNextFragment(targetBufferTime, levelDetails);
+    // Avoid backtracking after seeking or switching by loading an earlier segment in streams that could backtrack
+    if (
+      this.couldBacktrack &&
+      !this.fragPrevious &&
+      frag &&
+      frag.sn !== 'initSegment'
+    ) {
+      const fragIdx = frag.sn - levelDetails.startSN;
+      if (fragIdx > 1) {
+        frag = levelDetails.fragments[fragIdx - 1];
+        this.fragmentTracker.removeFragment(frag);
       }
-
-      targetBufferTime = bufferInfo.end;
-      frag = this.getNextFragment(targetBufferTime, levelDetails);
-      // Avoid backtracking after seeking or switching by loading an earlier segment in streams that could backtrack
-      if (
-        this.couldBacktrack &&
-        !this.fragPrevious &&
-        frag &&
-        frag.sn !== 'initSegment'
-      ) {
-        const fragIdx = frag.sn - levelDetails.startSN;
-        if (fragIdx > 1) {
-          frag = levelDetails.fragments[fragIdx - 1];
-          this.fragmentTracker.removeFragment(frag);
-        }
-      }
-      // Avoid loop loading by using nextLoadPosition set for backtracking
-      if (
-        frag &&
-        this.fragmentTracker.getState(frag) === FragmentState.OK &&
-        this.nextLoadPosition > targetBufferTime
-      ) {
-        frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
-      }
-      if (!frag) {
-        return;
-      }
+    }
+    // Avoid loop loading by using nextLoadPosition set for backtracking
+    if (
+      frag &&
+      this.fragmentTracker.getState(frag) === FragmentState.OK &&
+      this.nextLoadPosition > targetBufferTime
+    ) {
+      frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
+    }
+    if (!frag) {
+      return;
+    }
+    if (frag.initSegment && !frag.initSegment.data && !this.bitrateTest) {
+      frag = frag.initSegment;
     }
 
     // We want to load the key if we're dealing with an identity key, because we will decrypt
@@ -689,7 +689,7 @@ export default class StreamController
 
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
     const accurateTimeOffset = details.PTSKnown || !details.live;
-    const initSegmentData = details.initSegment?.data;
+    const initSegmentData = frag.initSegment?.data;
     const audioCodec = this._getAudioCodec(currentLevel);
 
     // transmux the MPEG-TS data to ISO-BMFF segments

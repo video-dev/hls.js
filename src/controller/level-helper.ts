@@ -165,9 +165,15 @@ export function mergeDetails(
   oldDetails: LevelDetails,
   newDetails: LevelDetails
 ): void {
-  // potentially retrieve cached initsegment
-  if (newDetails.initSegment && oldDetails.initSegment) {
-    newDetails.initSegment = oldDetails.initSegment;
+  // Track the last initSegment processed. Initialize it to the last one on the timeline.
+  let currentInitSegment: Fragment | null = null;
+  const oldFragments = oldDetails.fragments;
+  for (let i = oldFragments.length - 1; i >= 0; i--) {
+    const oldInit = oldFragments[i].initSegment;
+    if (oldInit) {
+      currentInitSegment = oldInit;
+      break;
+    }
   }
 
   if (oldDetails.fragmentHint) {
@@ -214,6 +220,15 @@ export function mergeDetails(
       newFrag.loader = oldFrag.loader;
       newFrag.stats = oldFrag.stats;
       newFrag.urlId = oldFrag.urlId;
+      if (oldFrag.initSegment) {
+        newFrag.initSegment = oldFrag.initSegment;
+        currentInitSegment = oldFrag.initSegment;
+      } else if (
+        !newFrag.initSegment ||
+        newFrag.initSegment.relurl == currentInitSegment?.relurl
+      ) {
+        newFrag.initSegment = currentInitSegment;
+      }
     }
   );
 
@@ -239,9 +254,6 @@ export function mergeDetails(
     }
   }
   if (newDetails.skippedSegments) {
-    if (!newDetails.initSegment) {
-      newDetails.initSegment = oldDetails.initSegment;
-    }
     newDetails.startCC = newDetails.fragments[0].cc;
   }
 

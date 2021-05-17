@@ -25,7 +25,6 @@ import type {
 } from '../types/loader';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { LevelDetails } from './level-details';
-import { Fragment } from './fragment';
 import type Hls from '../hls';
 import { AttrList } from '../utils/attr-list';
 import type {
@@ -517,7 +516,7 @@ class PlaylistLoader {
     // return early after calling load for
     // the SIDX box.
     if (levelDetails.needSidxRanges) {
-      const sidxUrl = (levelDetails.initSegment as Fragment).url as string;
+      const sidxUrl = levelDetails.fragments[0].initSegment?.url as string;
       this.load({
         url: sidxUrl,
         isSidxRequest: true,
@@ -564,10 +563,10 @@ class PlaylistLoader {
             String(segRefInfo.start)
         );
       }
+      if (frag.initSegment) {
+        frag.initSegment.setByteRange(String(sidxInfo.moovEndOffset) + '@0');
+      }
     });
-    (levelDetails.initSegment as Fragment).setByteRange(
-      String(sidxInfo.moovEndOffset) + '@0'
-    );
   }
 
   private handleManifestParsingError(

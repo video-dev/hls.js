@@ -715,6 +715,8 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     endPTS?: number;
     // (undocumented)
+    initSegment: Fragment | null;
+    // (undocumented)
     level: number;
     // (undocumented)
     levelkey?: LevelKey;
@@ -1343,8 +1345,6 @@ export class LevelDetails {
     get hasProgramDateTime(): boolean;
     // (undocumented)
     holdBack: number;
-    // (undocumented)
-    initSegment: Fragment | null;
     // (undocumented)
     get lastPartIndex(): number;
     // (undocumented)
