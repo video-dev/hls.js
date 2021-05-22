@@ -711,10 +711,7 @@ export default class MP4Remuxer implements Remuxer {
 
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
-      sample.pts = sample.dts = normalizePts(
-        sample.pts - initPTS,
-        timeOffsetMpegTS
-      );
+      sample.pts = normalizePts(sample.pts - initPTS, timeOffsetMpegTS);
     });
 
     if (!contiguous || nextAudioPts < 0) {
@@ -817,13 +814,12 @@ export default class MP4Remuxer implements Remuxer {
             inputSamples.splice(i, 0, {
               unit: fillFrame,
               pts: newStamp,
-              dts: newStamp,
             });
             nextPts += inputSampleDuration;
             i++;
           }
         }
-        sample.pts = sample.dts = nextPts;
+        sample.pts = nextPts;
         nextPts += inputSampleDuration;
       }
     }

@@ -381,20 +381,11 @@ describe('parseFrameHeader', function () {
     });
   });
 
-  it('should return undefined if there is only the header part', function () {
-    const data = new Uint8Array(new ArrayBuffer(9));
-    data[0] = 0xff;
-    data[1] = 0xf0; // protection_absent = 0
-    data[4] = 0x01;
-    data[5] = 0x40; // frame_length is 9
-    expect(parseFrameHeader(data, 0, 0, 0, 0)).to.be.undefined;
-  });
-
-  it('should return undefined if data does not contain the entire frame', function () {
+  it('should return undefined if frame length is 0', function () {
     const data = new Uint8Array(new ArrayBuffer(12));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
-    data[4] = 0x02; // frame_length is 16
+    data[4] = 0x00; // frame_length is 0
     expect(parseFrameHeader(data, 0, 0, 0, 0)).to.be.undefined;
   });
 });
@@ -411,29 +402,41 @@ describe('appendFrame', function () {
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
 
-    expect(appendFrame(track, data, 0, 0, 0)).to.deep.equal({
+    const frame = appendFrame(track, data, 0, 0, 0);
+    expect(frame, JSON.stringify(frame)).to.deep.equal({
       sample: {
         unit: data.subarray(9, 16),
         pts: 0,
-        dts: 0,
       },
       length: 16,
+      missing: 0,
     });
     expect(track.samples.length).to.equal(1);
   });
 
-  it('should not append sample if `parseFrameHeader` fails', function () {
+  it('should not append sample when incomplete (aac overflow or progressive streaming)', function () {
     const track = {
       samplerate: 64000,
       samples: [],
       len: 0,
     };
-    const data = new Uint8Array(new ArrayBuffer(12));
+    const data = new Uint8Array(new ArrayBuffer(20));
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
-    data[4] = 0x02; // frame_length is 16
+    data[4] = 0x03; // frame_length is 24
 
-    expect(appendFrame(track, data, 0, 0, 0)).to.be.undefined;
+    const frame = appendFrame(track, data, 0, 0, 0);
+    const unit = new Uint8Array(15);
+    unit.set(data.subarray(9, 20), 0);
+
+    expect(frame, JSON.stringify(frame)).to.deep.equal({
+      sample: {
+        unit,
+        pts: 0,
+      },
+      length: 24,
+      missing: 4,
+    });
     expect(track.samples.length).to.equal(0);
   });
 });
