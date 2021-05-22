@@ -287,22 +287,24 @@ export default class MP4Remuxer implements Remuxer {
       // using audio sampling rate here helps having an integer MP4 frame duration
       // this avoids potential rounding issue and AV sync issue
       audioTrack.timescale = audioTrack.samplerate;
-      if (!audioTrack.isAAC) {
-        if (typeSupported.mpeg) {
-          // Chrome and Safari
-          container = 'audio/mpeg';
-          audioTrack.codec = '';
-        } else if (typeSupported.mp3) {
-          // Firefox
-          audioTrack.codec = 'mp3';
-        }
+      switch (audioTrack.segmentCodec) {
+        case 'mp3':
+          if (typeSupported.mpeg) {
+            // Chrome and Safari
+            container = 'audio/mpeg';
+            audioTrack.codec = '';
+          } else if (typeSupported.mp3) {
+            // Firefox
+            audioTrack.codec = 'mp3';
+          }
+          break;
       }
       tracks.audio = {
         id: 'audio',
         container: container,
         codec: audioTrack.codec,
         initSegment:
-          !audioTrack.isAAC && typeSupported.mpeg
+          audioTrack.segmentCodec === 'mp3' && typeSupported.mpeg
             ? new Uint8Array(0)
             : MP4.initSegment([audioTrack]),
         metadata: {
@@ -673,12 +675,14 @@ export default class MP4Remuxer implements Remuxer {
       ? track.samplerate
       : inputTimeScale;
     const scaleFactor: number = inputTimeScale / mp4timeScale;
-    const mp4SampleDuration: number = track.isAAC
-      ? AAC_SAMPLES_PER_FRAME
-      : MPEG_AUDIO_SAMPLE_PER_FRAME;
+    const mp4SampleDuration: number =
+      track.segmentCodec === 'aac'
+        ? AAC_SAMPLES_PER_FRAME
+        : MPEG_AUDIO_SAMPLE_PER_FRAME;
     const inputSampleDuration: number = mp4SampleDuration * scaleFactor;
     const initPTS: number = this._initPTS;
-    const rawMPEG: boolean = !track.isAAC && this.typeSupported.mpeg;
+    const rawMPEG: boolean =
+      track.segmentCodec === 'mp3' && this.typeSupported.mpeg;
     const outputSamples: Array<Mp4Sample> = [];
 
     let inputSamples: Array<AudioSample> = track.samples;
@@ -746,7 +750,7 @@ export default class MP4Remuxer implements Remuxer {
     // When possible, we inject a silent frame; when that's not possible, we duplicate the last
     // frame.
 
-    if (track.isAAC) {
+    if (track.segmentCodec === 'aac') {
       const alignedWithVideo = videoTimeOffset !== undefined;
       const maxAudioFramesDrift = this.config.maxAudioFramesDrift;
       for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; i++) {
@@ -845,7 +849,7 @@ export default class MP4Remuxer implements Remuxer {
         const prevSample = outputSamples[j - 1];
         prevSample.duration = Math.round((pts - lastPTS) / scaleFactor);
       } else {
-        if (contiguous && track.isAAC) {
+        if (contiguous && track.segmentCodec === 'aac') {
           // set PTS/DTS to expected PTS/DTS
           pts = nextAudioPts;
         }
