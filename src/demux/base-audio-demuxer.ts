@@ -3,7 +3,7 @@ import type {
   DemuxerResult,
   Demuxer,
   DemuxedAudioTrack,
-  AppendedAudioFrame,
+  AudioFrame,
   DemuxedMetadataTrack,
   DemuxedAvcTrack,
   DemuxedUserdataTrack,
@@ -44,7 +44,7 @@ class BaseAudioDemuxer implements Demuxer {
     track: DemuxedAudioTrack,
     data: Uint8Array,
     offset: number
-  ): AppendedAudioFrame | void {}
+  ): AudioFrame | void {}
 
   // feed incoming data to the front of the parsing pipeline
   demux(data: Uint8Array, timeOffset: number): DemuxerResult {
