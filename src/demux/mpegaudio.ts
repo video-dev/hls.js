@@ -82,7 +82,7 @@ export function appendFrame(
     track.samplerate = header.sampleRate;
     track.samples.push(sample);
 
-    return { sample, length: header.frameLength };
+    return { sample, length: header.frameLength, missing: 0 };
   }
 }
 
