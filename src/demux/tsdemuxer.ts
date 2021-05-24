@@ -27,10 +27,12 @@ import type {
   Demuxer,
   DemuxerResult,
   AvcSample,
+  AvcSampleUnit,
   DemuxedMetadataTrack,
   DemuxedUserdataTrack,
   ElementaryStreamData,
   KeyData,
+  UserdataSample,
 } from '../types/demuxer';
 import { AudioFrame } from '../types/demuxer';
 
@@ -657,21 +659,19 @@ class TSDemuxer implements Demuxer {
                     // Raw CEA-608 bytes wrapped in CEA-708 packet
                     if (userDataType === 3) {
                       const firstByte = expGolombDecoder.readUByte();
-                      const secondByte = expGolombDecoder.readUByte();
 
-                      const totalCCs = 31 & firstByte;
-                      const byteArray = [firstByte, secondByte];
+                      // Total CCs = (31 & firstByte). There are 3 bytes per CC.
+                      const totalBytes = 2 + (31 & firstByte) * 3;
+                      const byteArray = new Uint8Array(totalBytes);
+                      byteArray[0] = firstByte;
 
-                      for (let i = 0; i < totalCCs; i++) {
-                        // 3 bytes per CC
-                        byteArray.push(expGolombDecoder.readUByte());
-                        byteArray.push(expGolombDecoder.readUByte());
-                        byteArray.push(expGolombDecoder.readUByte());
+                      for (let i = 1; i < totalBytes; i++) {
+                        byteArray[i] = expGolombDecoder.readUByte();
                       }
 
                       insertSampleInOrder(this._txtTrack.samples, {
                         type: 3,
-                        pts: pes.pts,
+                        pts: pes.pts as number,
                         bytes: byteArray,
                       });
                     }
@@ -700,7 +700,8 @@ class TSDemuxer implements Demuxer {
                 }
 
                 insertSampleInOrder(this._txtTrack.samples, {
-                  pts: pes.pts,
+                  pts: pes.pts as number,
+                  bytes: userDataPayloadBytes,
                   payloadType: payloadType,
                   uuid: uuidStrArray.join(''),
                   userData: utf8ArrayToStr(userDataPayloadBytes),
@@ -797,19 +798,21 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  private getLastNalUnit() {
+  private getLastNalUnit(): AvcSampleUnit | void {
     let avcSample = this.avcSample;
-    let lastUnit;
     // try to fallback to previous sample if current one is empty
     if (!avcSample || avcSample.units.length === 0) {
       const samples = this._avcTrack.samples;
-      avcSample = samples[samples.length - 1];
+      if (samples.length) {
+        avcSample = samples[samples.length - 1];
+      }
     }
-    if (avcSample?.units) {
+    if (avcSample !== null) {
       const units = avcSample.units;
-      lastUnit = units[units.length - 1];
+      if (units.length) {
+        return units[units.length - 1];
+      }
     }
-    return lastUnit;
   }
 
   private parseAVCNALu(array: Uint8Array): Array<{
@@ -821,15 +824,11 @@ class TSDemuxer implements Demuxer {
     const track = this._avcTrack;
     let state = track.naluState || 0;
     const lastState = state;
-    const units = [] as Array<{
-      data: Uint8Array;
-      type: number;
-      state?: number;
-    }>;
+    const units: AvcSampleUnit[] = [];
     let i = 0;
-    let value;
-    let overflow;
-    let unitType;
+    let value: number;
+    let overflow: number;
+    let unitType: number;
     let lastUnitStart = -1;
     let lastUnitType: number = 0;
     // logger.log('PES:' + Hex.hexDump(array));
@@ -858,9 +857,10 @@ class TSDemuxer implements Demuxer {
       if (!value) {
         state = 3;
       } else if (value === 1) {
+        overflow = i - state - 1;
         if (lastUnitStart >= 0) {
-          const unit = {
-            data: array.subarray(lastUnitStart, i - state - 1),
+          const unit: AvcSampleUnit = {
+            data: array.subarray(lastUnitStart, overflow),
             type: lastUnitType,
           };
           // logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
@@ -885,13 +885,12 @@ class TSDemuxer implements Demuxer {
               }
             }
             // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
-            overflow = i - state - 1;
             if (overflow > 0) {
               // logger.log('first NALU found with overflow:' + overflow);
-              const tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
-              tmp.set(lastUnit.data, 0);
-              tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
-              lastUnit.data = tmp;
+              lastUnit.data = joinByteArrays(
+                lastUnit.data,
+                array.subarray(0, overflow)
+              );
             }
           }
         }
@@ -911,7 +910,7 @@ class TSDemuxer implements Demuxer {
       }
     }
     if (lastUnitStart >= 0 && state >= 0) {
-      const unit = {
+      const unit: AvcSampleUnit = {
         data: array.subarray(lastUnitStart, len),
         type: lastUnitType,
         state: state,
@@ -924,10 +923,7 @@ class TSDemuxer implements Demuxer {
       // append pes.data to previous NAL unit
       const lastUnit = this.getLastNalUnit();
       if (lastUnit) {
-        const tmp = new Uint8Array(lastUnit.data.byteLength + array.byteLength);
-        tmp.set(lastUnit.data, 0);
-        tmp.set(array, lastUnit.data.byteLength);
-        lastUnit.data = tmp;
+        lastUnit.data = joinByteArrays(lastUnit.data, array);
       }
     }
     track.naluState = state;
@@ -1085,13 +1081,18 @@ function createAVCSample(
   };
 }
 
-function parsePAT(data, offset) {
+function parsePAT(data: Uint8Array, offset: number): number {
   // skip the PSI header and parse the first PMT entry
   return ((data[offset + 10] & 0x1f) << 8) | data[offset + 11];
   // logger.log('PMT PID:'  + this._pmtId);
 }
 
-function parsePMT(data, offset, mpegSupported, isSampleAes) {
+function parsePMT(
+  data: Uint8Array,
+  offset: number,
+  mpegSupported: boolean,
+  isSampleAes: boolean
+) {
   const result = { audio: -1, avc: -1, id3: -1, isAAC: true };
   const sectionLength = ((data[offset + 1] & 0x0f) << 8) | data[offset + 2];
   const tableEnd = offset + 3 + sectionLength - 4;
@@ -1190,10 +1191,7 @@ function parsePES(stream: ElementaryStreamData): PES | null {
   // if first chunk of data is less than 19 bytes, let's merge it with following ones until we get 19 bytes
   // usually only one merge is needed (and this is rare ...)
   while (data[0].length < 19 && data.length > 1) {
-    const newData = new Uint8Array(data[0].length + data[1].length);
-    newData.set(data[0]);
-    newData.set(data[1], data[0].length);
-    data[0] = newData;
+    data[0] = joinByteArrays(data[0], data[1]);
     data.splice(1, 1);
   }
   // retrieve PTS/DTS from first fragment
@@ -1298,7 +1296,7 @@ function pushAccessUnit(avcSample: ParsedAvcSample, avcTrack: DemuxedAvcTrack) {
   }
 }
 
-function insertSampleInOrder(arr, data) {
+function insertSampleInOrder(arr: UserdataSample[], data: UserdataSample) {
   const len = arr.length;
   if (len > 0) {
     if (data.pts >= arr[len - 1].pts) {
@@ -1355,6 +1353,13 @@ export function discardEPB(data: Uint8Array): Uint8Array {
     newData[i] = data[sourceIndex];
   }
   return newData;
+}
+
+function joinByteArrays(bytes1: Uint8Array, bytes2: Uint8Array): Uint8Array {
+  const joinedBytes = new Uint8Array(bytes1.byteLength + bytes2.byteLength);
+  joinedBytes.set(bytes1, 0);
+  joinedBytes.set(bytes2, bytes1.byteLength);
+  return joinedBytes;
 }
 
 export default TSDemuxer;
