@@ -155,7 +155,11 @@ class FetchLoader implements Loader<LoaderContext> {
         // when destroying, 'error' itself can be undefined
         const code: number = !error ? 0 : error.code || 0;
         const text: string = !error ? null : error.message;
-        callbacks.onError({ code, text }, context, error.details);
+        callbacks.onError(
+          { code, text },
+          context,
+          error ? error.details : null
+        );
       });
   }
 
