@@ -4,6 +4,38 @@
 
 ```ts
 
+// Warning: (ae-missing-release-tag) "AbrController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class AbrController implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    readonly bwEstimator: EwmaBandWidthEstimator;
+    // (undocumented)
+    clearTimer(): void;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    protected hls: Hls;
+    // (undocumented)
+    get nextAutoLevel(): number;
+    set nextAutoLevel(nextLevel: number);
+    // (undocumented)
+    protected onError(event: Events.ERROR, data: ErrorData): void;
+    // (undocumented)
+    protected onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
+    // (undocumented)
+    protected onFragLoaded(event: Events.FRAG_LOADED, { frag, part }: FragLoadedData): void;
+    // (undocumented)
+    protected onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData): void;
+    // (undocumented)
+    protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
+    // (undocumented)
+    protected registerListeners(): void;
+    // (undocumented)
+    protected unregisterListeners(): void;
+}
+
 // Warning: (ae-missing-release-tag) "ABRControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -55,6 +87,79 @@ export class AttrList {
 // @public (undocumented)
 export type AudioPlaylistType = 'AUDIO';
 
+// Warning: (ae-missing-release-tag) "AudioStreamController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
+    constructor(hls: Hls, fragmentTracker: FragmentTracker);
+    // (undocumented)
+    clearWaitingFragment(): void;
+    // (undocumented)
+    doTick(): void;
+    // (undocumented)
+    protected getMaxBufferLength(): number;
+    // (undocumented)
+    protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
+    // (undocumented)
+    _handleFragmentLoadProgress(data: FragLoadedData): void;
+    // (undocumented)
+    protected loadFragment(frag: Fragment, trackDetails: LevelDetails, targetBufferTime: number): void;
+    // (undocumented)
+    onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData): void;
+    // (undocumented)
+    onAudioTracksUpdated(event: Events.AUDIO_TRACKS_UPDATED, { audioTracks }: AudioTracksUpdatedData): void;
+    // (undocumented)
+    onAudioTrackSwitching(event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData): void;
+    // (undocumented)
+    onBufferCreated(event: Events.BUFFER_CREATED, data: BufferCreatedData): void;
+    // (undocumented)
+    onBufferReset(): void;
+    // (undocumented)
+    onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
+    // (undocumented)
+    protected onHandlerDestroying(): void;
+    // (undocumented)
+    onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS }: InitPTSFoundData): void;
+    // (undocumented)
+    onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
+    // (undocumented)
+    onManifestLoading(): void;
+    // (undocumented)
+    onMediaDetaching(): void;
+    // (undocumented)
+    protected onTickEnd(): void;
+    // (undocumented)
+    startLoad(startPosition: number): void;
+    }
+
+// Warning: (ae-missing-release-tag) "AudioTrackController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class AudioTrackController extends BasePlaylistController {
+    constructor(hls: Hls);
+    // (undocumented)
+    get audioTrack(): number;
+    set audioTrack(newId: number);
+    // (undocumented)
+    get audioTracks(): MediaPlaylist[];
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
+    // (undocumented)
+    protected onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void;
+    // (undocumented)
+    protected onError(event: Events.ERROR, data: ErrorData): void;
+    // (undocumented)
+    protected onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData): void;
+    // (undocumented)
+    protected onLevelSwitching(event: Events.LEVEL_SWITCHING, data: LevelSwitchingData): void;
+    // (undocumented)
+    protected onManifestLoading(): void;
+    // (undocumented)
+    protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
+    }
+
 // Warning: (ae-missing-release-tag) "AudioTrackLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -72,9 +177,7 @@ export interface AudioTracksUpdatedData {
 // Warning: (ae-missing-release-tag) "AudioTrackSwitchedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface AudioTrackSwitchedData {
-    // (undocumented)
-    id: number;
+export interface AudioTrackSwitchedData extends TrackSwitchedData {
 }
 
 // Warning: (ae-missing-release-tag) "AudioTrackSwitchingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -101,6 +204,45 @@ export interface BackBufferData {
     bufferEnd: number;
 }
 
+// Warning: (ae-missing-release-tag) "BasePlaylistController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class BasePlaylistController implements NetworkComponentAPI {
+    constructor(hls: Hls, logPrefix: string);
+    // (undocumented)
+    protected canLoad: boolean;
+    // (undocumented)
+    protected clearTimer(): void;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    protected hls: Hls;
+    // (undocumented)
+    protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
+    // (undocumented)
+    protected log: (msg: any) => void;
+    // (undocumented)
+    protected onError(event: Events.ERROR, data: ErrorData): void;
+    // (undocumented)
+    protected playlistLoaded(index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails): void;
+    // (undocumented)
+    protected retryCount: number;
+    // (undocumented)
+    protected retryLoadingOrFail(errorEvent: ErrorData): boolean;
+    // (undocumented)
+    protected shouldLoadTrack(track: MediaPlaylist): boolean;
+    // (undocumented)
+    startLoad(): void;
+    // (undocumented)
+    stopLoad(): void;
+    // (undocumented)
+    protected switchParams(playlistUri: string, previous?: LevelDetails): HlsUrlParameters | undefined;
+    // (undocumented)
+    protected timer: number;
+    // (undocumented)
+    protected warn: (msg: any) => void;
+}
+
 // Warning: (ae-missing-release-tag) "BaseSegment" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -124,6 +266,178 @@ export class BaseSegment {
     get url(): string;
     set url(value: string);
     }
+
+// Warning: (ae-forgotten-export) The symbol "TaskLoop" needs to be exported by the entry point hls.d.ts
+// Warning: (ae-missing-release-tag) "BaseStreamController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class BaseStreamController extends TaskLoop implements NetworkComponentAPI {
+    constructor(hls: Hls, fragmentTracker: FragmentTracker, logPrefix: string);
+    // (undocumented)
+    protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName, playlistType: PlaylistLevelType): void;
+    // (undocumented)
+    protected alignPlaylists(details: LevelDetails, previousDetails?: LevelDetails): number;
+    // (undocumented)
+    protected bitrateTest: boolean;
+    // Warning: (ae-forgotten-export) The symbol "RemuxedTrack" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected bufferFragmentData(data: RemuxedTrack, frag: Fragment, part: Part | null, chunkMeta: ChunkMetadata): void;
+    // (undocumented)
+    protected config: HlsConfig;
+    // Warning: (ae-forgotten-export) The symbol "Decrypter" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected decrypter: Decrypter;
+    // Warning: (ae-forgotten-export) The symbol "FragmentLoadProgressCallback" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected _doFragLoad(frag: Fragment, details?: LevelDetails, targetBufferTime?: number | null, progressCallback?: FragmentLoadProgressCallback): Promise<PartsLoadedData | FragLoadedData | null>;
+    // (undocumented)
+    protected doTick(): void;
+    // (undocumented)
+    protected flushBufferGap(frag: Fragment): void;
+    // (undocumented)
+    protected flushMainBuffer(startOffset: number, endOffset: number, type?: SourceBufferName | null): void;
+    // (undocumented)
+    protected fragBufferedComplete(frag: Fragment, part: Part | null): void;
+    // (undocumented)
+    protected fragContextChanged(frag: Fragment | null): boolean;
+    // (undocumented)
+    protected fragCurrent: Fragment | null;
+    // (undocumented)
+    protected fragLoadError: number;
+    // Warning: (ae-forgotten-export) The symbol "FragmentLoader" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected fragmentLoader: FragmentLoader;
+    // (undocumented)
+    protected fragmentTracker: FragmentTracker;
+    // (undocumented)
+    protected fragPrevious: Fragment | null;
+    // (undocumented)
+    protected getCurrentContext(chunkMeta: ChunkMetadata): {
+        frag: Fragment;
+        part: Part | null;
+        level: Level;
+    } | null;
+    // (undocumented)
+    protected getFragmentAtPosition(bufferEnd: number, end: number, levelDetails: LevelDetails): Fragment | null;
+    // Warning: (ae-forgotten-export) The symbol "Bufferable" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected getFwdBufferInfo(bufferable: Bufferable, type: PlaylistLevelType): {
+        len: number;
+        start: number;
+        end: number;
+        nextStart?: number;
+    } | null;
+    // (undocumented)
+    protected getInitialLiveFragment(levelDetails: LevelDetails, fragments: Array<Fragment>): Fragment | null;
+    // (undocumented)
+    protected getLoadPosition(): number;
+    // (undocumented)
+    protected getMaxBufferLength(levelBitrate?: number): number;
+    // (undocumented)
+    protected getNextFragment(pos: number, levelDetails: LevelDetails): Fragment | null;
+    // (undocumented)
+    getNextPart(partList: Part[], frag: Fragment, targetBufferTime: number): number;
+    // Warning: (ae-forgotten-export) The symbol "PartsLoadedData" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected _handleFragmentLoadComplete(fragLoadedEndData: PartsLoadedData): void;
+    // (undocumented)
+    protected _handleFragmentLoadProgress(frag: FragLoadedData): void;
+    // (undocumented)
+    protected _handleTransmuxerFlush(chunkMeta: ChunkMetadata): void;
+    // (undocumented)
+    protected hls: Hls;
+    // (undocumented)
+    protected initPTS: Array<number>;
+    // (undocumented)
+    protected lastCurrentTime: number;
+    // (undocumented)
+    protected levelLastLoaded: number | null;
+    // (undocumented)
+    protected levels: Array<Level> | null;
+    // (undocumented)
+    protected loadedmetadata: boolean;
+    // (undocumented)
+    protected loadFragment(frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number): void;
+    // (undocumented)
+    protected _loadInitSegment(frag: Fragment): void;
+    // (undocumented)
+    protected loadKey(frag: Fragment, details: LevelDetails): void;
+    // (undocumented)
+    protected log: (msg: any) => void;
+    // (undocumented)
+    protected media?: any;
+    // (undocumented)
+    protected mediaBuffer?: any;
+    // (undocumented)
+    protected nextLoadPosition: number;
+    // (undocumented)
+    protected onFragmentOrKeyLoadError(filterType: PlaylistLevelType, data: ErrorData): void;
+    // (undocumented)
+    protected onHandlerDestroyed(): void;
+    // (undocumented)
+    protected onHandlerDestroying(): void;
+    // (undocumented)
+    onKeyLoaded(event: Events.KEY_LOADED, data: KeyLoadedData): void;
+    // (undocumented)
+    protected onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachingData): void;
+    // (undocumented)
+    protected onMediaDetaching(): void;
+    // (undocumented)
+    protected onMediaEnded(): void;
+    // (undocumented)
+    protected onMediaSeeking(): void;
+    // (undocumented)
+    protected onTickEnd(): void;
+    // (undocumented)
+    protected onvended: EventListener | null;
+    // (undocumented)
+    protected onvseeking: EventListener | null;
+    // (undocumented)
+    protected reduceMaxBufferLength(threshold?: number): boolean;
+    // (undocumented)
+    protected resetFragmentLoading(frag: Fragment): void;
+    // (undocumented)
+    protected resetLiveStartWhenNotLoaded(level: number): boolean;
+    // (undocumented)
+    protected resetLoadingState(): void;
+    // (undocumented)
+    protected resetTransmuxer(): void;
+    // (undocumented)
+    protected retryDate: number;
+    // (undocumented)
+    protected setStartPosition(details: LevelDetails, sliding: number): void;
+    // (undocumented)
+    protected startFragRequested: boolean;
+    // (undocumented)
+    startLoad(startPosition: number): void;
+    // (undocumented)
+    protected startPosition: number;
+    set state(nextState: string);
+    // (undocumented)
+    get state(): string;
+    // (undocumented)
+    protected _state: string;
+    // (undocumented)
+    stopLoad(): void;
+    // (undocumented)
+    protected _streamEnded(bufferInfo: any, levelDetails: any): boolean;
+    // (undocumented)
+    protected synchronizeToLiveEdge(levelDetails: LevelDetails): void;
+    // Warning: (ae-forgotten-export) The symbol "TransmuxerInterface" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected transmuxer: TransmuxerInterface | null;
+    // (undocumented)
+    protected waitForCdnTuneIn(details: LevelDetails): boolean;
+    // (undocumented)
+    protected warn: (msg: any) => void;
+}
 
 // Warning: (ae-missing-release-tag) "BufferAppendedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -169,6 +483,67 @@ export interface BufferCodecsData {
     audio?: Track;
     // (undocumented)
     video?: Track;
+}
+
+// Warning: (ae-missing-release-tag) "BufferController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class BufferController implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    protected appendChangeType(type: any, mimeType: any): void;
+    // (undocumented)
+    appendError: number;
+    // (undocumented)
+    bufferCodecEventsExpected: number;
+    // (undocumented)
+    protected checkPendingTracks(): void;
+    // (undocumented)
+    protected createSourceBuffers(tracks: TrackSet): void;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    flushBackBuffer(): void;
+    // (undocumented)
+    hasSourceTypes(): boolean;
+    // (undocumented)
+    media: HTMLMediaElement | null;
+    // (undocumented)
+    mediaSource: MediaSource | null;
+    // (undocumented)
+    protected onBufferAppending(event: Events.BUFFER_APPENDING, eventData: BufferAppendingData): void;
+    // (undocumented)
+    protected onBufferCodecs(event: Events.BUFFER_CODECS, data: BufferCodecsData): void;
+    // (undocumented)
+    protected onBufferEos(event: Events.BUFFER_EOS, data: BufferEOSData): void;
+    // (undocumented)
+    protected onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData): void;
+    // (undocumented)
+    protected onBufferReset(): void;
+    // (undocumented)
+    protected onFragParsed(event: Events.FRAG_PARSED, data: FragParsedData): void;
+    // (undocumented)
+    protected onLevelUpdated(event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData): void;
+    // (undocumented)
+    protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
+    // (undocumented)
+    protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachingData): void;
+    // (undocumented)
+    protected onMediaDetaching(): void;
+    // (undocumented)
+    pendingTracks: TrackSet;
+    // (undocumented)
+    protected registerListeners(): void;
+    // Warning: (ae-forgotten-export) The symbol "SourceBuffers" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    sourceBuffer: SourceBuffers;
+    // (undocumented)
+    tracks: TrackSet;
+    // (undocumented)
+    protected unregisterListeners(): void;
+    // (undocumented)
+    updateSeekableRange(levelDetails: any): void;
 }
 
 // Warning: (ae-missing-release-tag) "BufferControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -219,6 +594,69 @@ export interface BufferFlushingData {
     type: SourceBufferName | null;
 }
 
+// Warning: (ae-missing-release-tag) "CapLevelController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class CapLevelController implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    autoLevelCapping: number;
+    // (undocumented)
+    clientRect: {
+        width: number;
+        height: number;
+    } | null;
+    // (undocumented)
+    static get contentScaleFactor(): number;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    detectPlayerSize(): void;
+    // (undocumented)
+    firstLevel: number;
+    // (undocumented)
+    getDimensions(): {
+        width: number;
+        height: number;
+    };
+    // (undocumented)
+    getMaxLevel(capLevelIndex: number): number;
+    // (undocumented)
+    static getMaxLevelByMediaSize(levels: Array<Level>, width: number, height: number): number;
+    // (undocumented)
+    static isLevelAllowed(level: number, restrictedLevels?: Array<number>): boolean;
+    // (undocumented)
+    media: HTMLVideoElement | null;
+    // (undocumented)
+    get mediaHeight(): number;
+    // (undocumented)
+    get mediaWidth(): number;
+    // (undocumented)
+    protected onBufferCodecs(event: Events.BUFFER_CODECS, data: BufferCodecsData): void;
+    // (undocumented)
+    protected onFpsDropLevelCapping(event: Events.FPS_DROP_LEVEL_CAPPING, data: FPSDropLevelCappingData): void;
+    // (undocumented)
+    protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
+    // (undocumented)
+    protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachingData): void;
+    // (undocumented)
+    protected onMediaDetaching(): void;
+    // (undocumented)
+    protected registerListeners(): void;
+    // (undocumented)
+    restrictedLevels: Array<number>;
+    // (undocumented)
+    setStreamController(streamController: StreamController): void;
+    // (undocumented)
+    startCapping(): void;
+    // (undocumented)
+    stopCapping(): void;
+    // (undocumented)
+    timer: number | undefined;
+    // (undocumented)
+    protected unregisterListener(): void;
+}
+
 // Warning: (ae-missing-release-tag) "CapLevelControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -249,6 +687,14 @@ export class ChunkMetadata {
     readonly sn: number;
     // (undocumented)
     readonly transmuxing: HlsChunkPerformanceTiming;
+}
+
+// Warning: (ae-missing-release-tag) "ComponentAPI" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface ComponentAPI {
+    // (undocumented)
+    destroy(): void;
 }
 
 // Warning: (ae-missing-release-tag) "CuesInterface" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -313,6 +759,25 @@ export enum ElementaryStreamTypes {
     // (undocumented)
     VIDEO = "video"
 }
+
+// Warning: (ae-missing-release-tag) "EMEController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public
+export class EMEController implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    getLicenseServerUrl(keySystem: KeySystems): string;
+    // (undocumented)
+    onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
+    // (undocumented)
+    onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void;
+    // (undocumented)
+    onMediaDetached(): void;
+    // (undocumented)
+    get requestMediaKeySystemAccess(): MediaKeyFunc;
+    }
 
 // Warning: (ae-missing-release-tag) "EMEControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -578,6 +1043,44 @@ export enum Events {
     SUBTITLE_TRACKS_UPDATED = "hlsSubtitleTracksUpdated"
 }
 
+// Warning: (ae-missing-release-tag) "EwmaBandWidthEstimator" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class EwmaBandWidthEstimator {
+    constructor(slow: number, fast: number, defaultEstimate: number);
+    // (undocumented)
+    canEstimate(): boolean;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    getEstimate(): number;
+    // (undocumented)
+    sample(durationMs: number, numBytes: number): void;
+    // (undocumented)
+    update(slow: number, fast: number): void;
+}
+
+// Warning: (ae-missing-release-tag) "FPSController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class FPSController implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    checkFPS(video: HTMLVideoElement, decodedFrames: number, droppedFrames: number): void;
+    // (undocumented)
+    checkFPSInterval(): void;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachingData): void;
+    // (undocumented)
+    protected registerListeners(): void;
+    // (undocumented)
+    setStreamController(streamController: StreamController): void;
+    // (undocumented)
+    protected unregisterListeners(): void;
+}
+
 // Warning: (ae-missing-release-tag) "FPSControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -777,6 +1280,35 @@ export interface FragmentLoaderContext extends LoaderContext {
     // (undocumented)
     part: Part | null;
 }
+
+// Warning: (ae-missing-release-tag) "FragmentTracker" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class FragmentTracker implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    backtrack(frag: Fragment, data?: FragLoadedData): FragLoadedData | null;
+    // (undocumented)
+    destroy(): void;
+    detectEvictedFragments(elementaryStream: SourceBufferName, timeRange: TimeRanges, playlistType?: PlaylistLevelType): void;
+    // (undocumented)
+    fragBuffered(frag: Fragment): void;
+    getAppendedFrag(position: number, levelType: PlaylistLevelType): Fragment | Part | null;
+    // (undocumented)
+    getBacktrackData(fragment: Fragment): FragLoadedData | null;
+    getBufferedFrag(position: number, levelType: PlaylistLevelType): Fragment | null;
+    getPartialFragment(time: number): Fragment | null;
+    // Warning: (ae-forgotten-export) The symbol "FragmentState" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    getState(fragment: Fragment): FragmentState;
+    // (undocumented)
+    removeAllFragments(): void;
+    // (undocumented)
+    removeFragment(fragment: Fragment): void;
+    // (undocumented)
+    removeFragmentsInRange(start: number, end: number, playlistType: PlaylistLevelType): void;
+    }
 
 // Warning: (ae-missing-release-tag) "FragParsedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1141,6 +1673,32 @@ export class HlsUrlParameters {
     part?: number;
     // (undocumented)
     skip?: HlsSkip;
+}
+
+// Warning: (ae-missing-release-tag) "ILogFunction" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface ILogFunction {
+    // (undocumented)
+    (message?: any, ...optionalParams: any[]): void;
+}
+
+// Warning: (ae-missing-release-tag) "ILogger" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface ILogger {
+    // (undocumented)
+    debug: ILogFunction;
+    // (undocumented)
+    error: ILogFunction;
+    // (undocumented)
+    info: ILogFunction;
+    // (undocumented)
+    log: ILogFunction;
+    // (undocumented)
+    trace: ILogFunction;
+    // (undocumented)
+    warn: ILogFunction;
 }
 
 // Warning: (ae-missing-release-tag) "InitPTSFoundData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1831,6 +2389,16 @@ export type MP4RemuxerConfig = {
     maxAudioFramesDrift: number;
 };
 
+// Warning: (ae-missing-release-tag) "NetworkComponentAPI" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface NetworkComponentAPI extends ComponentAPI {
+    // (undocumented)
+    startLoad(startPosition: number): void;
+    // (undocumented)
+    stopLoad(): void;
+}
+
 // Warning: (ae-missing-release-tag) "NonNativeTextTrack" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1956,6 +2524,48 @@ export interface PlaylistLoaderContext extends LoaderContext {
 // @public (undocumented)
 export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 
+// Warning: (ae-missing-release-tag) "StreamController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class StreamController extends BaseStreamController implements NetworkComponentAPI {
+    constructor(hls: Hls, fragmentTracker: FragmentTracker);
+    // (undocumented)
+    get currentLevel(): number;
+    // (undocumented)
+    protected doTick(): void;
+    // (undocumented)
+    protected flushMainBuffer(startOffset: number, endOffset: number): void;
+    // (undocumented)
+    get forceStartLoad(): boolean;
+    // (undocumented)
+    protected _handleFragmentLoadProgress(data: FragLoadedData): void;
+    // (undocumented)
+    immediateLevelSwitch(): void;
+    // (undocumented)
+    protected loadFragment(frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number): void;
+    // (undocumented)
+    get nextBufferedFrag(): Fragment | null;
+    // (undocumented)
+    get nextLevel(): number;
+    nextLevelSwitch(): void;
+    // (undocumented)
+    protected onHandlerDestroying(): void;
+    // (undocumented)
+    protected onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void;
+    // (undocumented)
+    protected onMediaDetaching(): void;
+    // (undocumented)
+    protected onTickEnd(): void;
+    // (undocumented)
+    startLoad(startPosition: number): void;
+    // (undocumented)
+    stopLoad(): void;
+    // (undocumented)
+    swapAudioCodec(): void;
+    // (undocumented)
+    protected _unregisterListeners(): void;
+    }
+
 // Warning: (ae-missing-release-tag) "StreamControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1993,6 +2603,79 @@ export interface SubtitleFragProcessedData {
 // @public (undocumented)
 export type SubtitlePlaylistType = 'SUBTITLES' | 'CLOSED-CAPTIONS';
 
+// Warning: (ae-missing-release-tag) "SubtitleStreamController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class SubtitleStreamController extends BaseStreamController implements NetworkComponentAPI {
+    constructor(hls: Hls, fragmentTracker: FragmentTracker);
+    // (undocumented)
+    doTick(): void;
+    // (undocumented)
+    _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
+    // (undocumented)
+    protected levels: Array<Level>;
+    // (undocumented)
+    protected loadFragment(frag: Fragment, levelDetails: LevelDetails, targetBufferTime: number): void;
+    // Warning: (ae-forgotten-export) The symbol "TimeRange" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    get mediaBufferTimeRanges(): TimeRange[];
+    // (undocumented)
+    onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData): void;
+    // (undocumented)
+    onError(event: Events.ERROR, data: ErrorData): void;
+    // (undocumented)
+    protected onHandlerDestroying(): void;
+    // (undocumented)
+    onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
+    // (undocumented)
+    onManifestLoading(): void;
+    // Warning: (ae-forgotten-export) The symbol "SubtitleFragProcessed" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    onSubtitleFragProcessed(event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessed): void;
+    // (undocumented)
+    onSubtitleTrackLoaded(event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void;
+    // (undocumented)
+    onSubtitleTracksUpdated(event: Events.SUBTITLE_TRACKS_UPDATED, { subtitleTracks }: SubtitleTracksUpdatedData): void;
+    // (undocumented)
+    onSubtitleTrackSwitch(event: Events.SUBTITLE_TRACK_SWITCH, data: SubtitleTrackSwitchData): void;
+    // (undocumented)
+    startLoad(): void;
+    }
+
+// Warning: (ae-missing-release-tag) "SubtitleTrackController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class SubtitleTrackController extends BasePlaylistController {
+    constructor(hls: Hls);
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
+    // (undocumented)
+    protected onError(event: Events.ERROR, data: ErrorData): void;
+    // (undocumented)
+    protected onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData): void;
+    // (undocumented)
+    protected onLevelSwitching(event: Events.LEVEL_SWITCHING, data: LevelSwitchingData): void;
+    // (undocumented)
+    protected onManifestLoading(): void;
+    // (undocumented)
+    protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
+    // (undocumented)
+    protected onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void;
+    // (undocumented)
+    protected onMediaDetaching(): void;
+    // (undocumented)
+    protected onSubtitleTrackLoaded(event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void;
+    // (undocumented)
+    subtitleDisplay: boolean;
+    get subtitleTrack(): number;
+    set subtitleTrack(newId: number);
+    get subtitleTracks(): MediaPlaylist[];
+    }
+
 // Warning: (ae-missing-release-tag) "SubtitleTrackLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2010,11 +2693,9 @@ export interface SubtitleTracksUpdatedData {
 // Warning: (ae-missing-release-tag) "SubtitleTrackSwitchData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface SubtitleTrackSwitchData {
+export interface SubtitleTrackSwitchData extends TrackSwitchedData {
     // (undocumented)
     groupId?: string;
-    // (undocumented)
-    id: number;
     // (undocumented)
     name?: string;
     // (undocumented)
@@ -2022,6 +2703,21 @@ export interface SubtitleTrackSwitchData {
     // (undocumented)
     url?: string;
 }
+
+// Warning: (ae-missing-release-tag) "TimelineController" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class TimelineController implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    addCues(trackName: string, startTime: number, endTime: number, screen: CaptionScreen, cueRanges: Array<[number, number]>): void;
+    // (undocumented)
+    createCaptionsTrack(trackName: string): void;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    onBufferFlushing(event: Events.BUFFER_FLUSHING, { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData): void;
+    }
 
 // Warning: (ae-missing-release-tag) "TimelineControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2106,6 +2802,14 @@ export interface TrackSet {
     video?: Track;
 }
 
+// Warning: (ae-missing-release-tag) "TrackSwitchedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface TrackSwitchedData {
+    // (undocumented)
+    id: number;
+}
+
 // Warning: (ae-missing-release-tag) "TSDemuxerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2123,20 +2827,6 @@ export interface UserdataSample {
     pts: number;
 }
 
-
-// Warnings were encountered during analysis:
-//
-// src/config.ts:149:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
-// src/config.ts:157:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:158:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:160:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:161:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:162:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:164:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:166:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:167:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:168:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:169:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -1,15 +1,11 @@
-/*
- * Level Controller
- */
-
 import {
   ManifestLoadedData,
   ManifestParsedData,
   LevelLoadedData,
-  TrackSwitchedData,
   FragLoadedData,
   ErrorData,
   LevelSwitchingData,
+  AudioTrackSwitchedData,
 } from '../types/events';
 import { Level } from '../types/level';
 import { Events } from '../events';
@@ -480,7 +476,7 @@ export default class LevelController extends BasePlaylistController {
 
   protected onAudioTrackSwitched(
     event: Events.AUDIO_TRACK_SWITCHED,
-    data: TrackSwitchedData
+    data: AudioTrackSwitchedData
   ) {
     const currentLevel = this.hls.levels[this.currentLevelIndex];
     if (!currentLevel) {

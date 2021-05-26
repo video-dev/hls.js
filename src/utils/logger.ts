@@ -1,4 +1,4 @@
-interface ILogFunction {
+export interface ILogFunction {
   (message?: any, ...optionalParams: any[]): void;
 }
 
