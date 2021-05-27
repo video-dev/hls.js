@@ -180,6 +180,7 @@ class AudioStreamController
           const { frag, part, cache, complete } = waitingData;
           if (this.initPTS[frag.cc] !== undefined) {
             this.waitingData = null;
+            this.waitingVideoCC = -1;
             this.state = State.FRAG_LOADING;
             const payload = cache.flush();
             const data: FragLoadedData = {
@@ -200,9 +201,10 @@ class AudioStreamController
             this.clearWaitingFragment();
           } else {
             // Drop waiting fragment if an earlier fragment is needed
+            const pos = this.getLoadPosition();
             const bufferInfo = BufferHelper.bufferInfo(
               this.mediaBuffer,
-              this.media.currentTime,
+              pos,
               this.config.maxBufferHole
             );
             const waitingFragmentAtPosition = fragmentWithinToleranceTest(
