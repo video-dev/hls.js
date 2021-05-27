@@ -7,11 +7,11 @@ import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
 import type { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
-import { Fragment, ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import type { TransmuxerResult } from '../types/transmuxer';
 import { ChunkMetadata } from '../types/transmuxer';
-import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
+import GapController from './gap-controller';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
@@ -19,21 +19,21 @@ import type { LevelDetails } from '../loader/level-details';
 import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
 import type {
-  MediaAttachedData,
-  BufferCreatedData,
-  ManifestParsedData,
-  LevelLoadingData,
-  LevelLoadedData,
-  LevelsUpdatedData,
-  AudioTrackSwitchingData,
   AudioTrackSwitchedData,
+  AudioTrackSwitchingData,
+  BufferCreatedData,
+  BufferEOSData,
+  BufferFlushedData,
+  ErrorData,
+  FragBufferedData,
   FragLoadedData,
   FragParsingMetadataData,
   FragParsingUserdataData,
-  FragBufferedData,
-  BufferFlushedData,
-  ErrorData,
-  BufferEOSData,
+  LevelLoadedData,
+  LevelLoadingData,
+  LevelsUpdatedData,
+  ManifestParsedData,
+  MediaAttachedData,
 } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -244,37 +244,18 @@ export default class StreamController
       return;
     }
 
-    const pos = this.getLoadPosition();
-    if (!Number.isFinite(pos)) {
+    const bufferInfo = this.getFwdBufferInfo(
+      this.mediaBuffer ? this.mediaBuffer : media,
+      PlaylistLevelType.MAIN
+    );
+    if (bufferInfo === null) {
       return;
     }
-
-    let targetBufferTime = 0;
-    // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-    const levelBitrate = levelInfo.maxBitrate;
-    let maxBufLen;
-    if (levelBitrate) {
-      maxBufLen = Math.max(
-        (8 * config.maxBufferSize) / levelBitrate,
-        config.maxBufferLength
-      );
-    } else {
-      maxBufLen = config.maxBufferLength;
-    }
-    maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
-
-    // determine next candidate fragment to be loaded, based on current position and end of buffer position
-    // ensure up to `config.maxMaxBufferLength` of buffer upfront
-    const maxBufferHole =
-      pos < config.maxBufferHole
-        ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
-        : config.maxBufferHole;
-    const bufferInfo = BufferHelper.bufferInfo(
-      this.mediaBuffer ? this.mediaBuffer : media,
-      pos,
-      maxBufferHole
-    );
     const bufferLen = bufferInfo.len;
+
+    // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
+    const maxBufLen = this.getMaxBufferLength(levelInfo.maxBitrate);
+
     // Stay idle if we are still with buffer margins
     if (bufferLen >= maxBufLen) {
       return;
@@ -291,7 +272,7 @@ export default class StreamController
       return;
     }
 
-    targetBufferTime = bufferInfo.end;
+    const targetBufferTime = bufferInfo.end;
     let frag = this.getNextFragment(targetBufferTime, levelDetails);
     // Avoid backtracking after seeking or switching by loading an earlier segment in streams that could backtrack
     if (
@@ -312,6 +293,12 @@ export default class StreamController
       this.fragmentTracker.getState(frag) === FragmentState.OK &&
       this.nextLoadPosition > targetBufferTime
     ) {
+      // Cleanup the fragment tracker before trying to find the next unbuffered fragment
+      const type =
+        this.audioOnly && !this.altAudio
+          ? ElementaryStreamTypes.AUDIO
+          : ElementaryStreamTypes.VIDEO;
+      this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
       frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
     }
     if (!frag) {
@@ -885,25 +872,27 @@ export default class StreamController
           data.parent === 'main' &&
           (this.state === State.PARSING || this.state === State.PARSED)
         ) {
+          let flushBuffer = true;
+          const bufferedInfo = this.getFwdBufferInfo(
+            this.media,
+            PlaylistLevelType.MAIN
+          );
           // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          const mediaBuffered =
-            !!this.media &&
-            BufferHelper.isBuffered(this.media, this.media.currentTime) &&
-            BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
           // reduce max buf len if current position is buffered
-          if (mediaBuffered) {
-            this.reduceMaxBufferLength();
-            this.state = State.IDLE;
-          } else {
+          if (bufferedInfo && bufferedInfo.len > 0.5) {
+            flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
+          }
+          if (flushBuffer) {
             // current position is not buffered, but browser is still complaining about buffer full error
             // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole buffer to recover
             this.warn(
-              'buffer full error also media.currentTime is not buffered, flush everything'
+              'buffer full error also media.currentTime is not buffered, flush main'
             );
-            // flush everything
+            // flush main buffer
             this.immediateLevelSwitch();
           }
+          this.resetLoadingState();
         }
         break;
       default:
