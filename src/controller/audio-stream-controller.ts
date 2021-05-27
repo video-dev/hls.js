@@ -13,7 +13,6 @@ import type { TransmuxerResult } from '../types/transmuxer';
 import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignPDT } from '../utils/discontinuities';
-import { MAX_START_GAP_JUMP } from './gap-controller';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
@@ -55,6 +54,7 @@ class AudioStreamController
   private trackId: number = -1;
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
+  private bufferFlushed: boolean = false;
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[audio-stream-controller]');
@@ -270,11 +270,6 @@ class AudioStreamController
       return;
     }
 
-    const pos = this.getLoadPosition();
-    if (!Number.isFinite(pos)) {
-      return;
-    }
-
     const levelInfo = levels[trackId];
 
     const trackDetails = levelInfo.details;
@@ -287,25 +282,24 @@ class AudioStreamController
       return;
     }
 
-    let targetBufferTime = 0;
-    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
-    const videoBuffer = this.videoBuffer ? this.videoBuffer : this.media;
-    const maxBufferHole =
-      pos < config.maxBufferHole
-        ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
-        : config.maxBufferHole;
-    const bufferInfo = BufferHelper.bufferInfo(mediaBuffer, pos, maxBufferHole);
-    const mainBufferInfo = BufferHelper.bufferInfo(
-      videoBuffer,
-      pos,
-      maxBufferHole
+    if (this.bufferFlushed) {
+      this.bufferFlushed = false;
+      this.afterBufferFlushed(
+        this.mediaBuffer ? this.mediaBuffer : this.media,
+        ElementaryStreamTypes.AUDIO,
+        PlaylistLevelType.AUDIO
+      );
+    }
+
+    const bufferInfo = this.getFwdBufferInfo(
+      this.mediaBuffer ? this.mediaBuffer : this.media,
+      PlaylistLevelType.AUDIO
     );
+    if (bufferInfo === null) {
+      return;
+    }
     const bufferLen = bufferInfo.len;
-    const maxConfigBuffer = Math.min(
-      config.maxBufferLength,
-      config.maxMaxBufferLength
-    );
-    const maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len);
+    const maxBufLen = this.getMaxBufferLength();
     const audioSwitch = this.audioSwitch;
 
     // if buffer length is less than maxBufLen try to load a new fragment
@@ -321,9 +315,10 @@ class AudioStreamController
 
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
-    targetBufferTime = bufferInfo.end;
+    let targetBufferTime = bufferInfo.end;
 
     if (audioSwitch) {
+      const pos = this.getLoadPosition();
       targetBufferTime = pos;
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
       if (trackDetails.PTSKnown && pos < start) {
@@ -339,6 +334,7 @@ class AudioStreamController
 
     const frag = this.getNextFragment(targetBufferTime, trackDetails);
     if (!frag) {
+      this.bufferFlushed = true;
       return;
     }
 
@@ -347,6 +343,18 @@ class AudioStreamController
     } else {
       this.loadFragment(frag, trackDetails, targetBufferTime);
     }
+  }
+
+  protected getMaxBufferLength(): number {
+    const maxConfigBuffer = super.getMaxBufferLength();
+    const mainBufferInfo = this.getFwdBufferInfo(
+      this.videoBuffer ? this.videoBuffer : this.media,
+      PlaylistLevelType.MAIN
+    );
+    if (mainBufferInfo === null) {
+      return maxConfigBuffer;
+    }
+    return Math.max(maxConfigBuffer, mainBufferInfo.len);
   }
 
   onMediaDetaching() {
@@ -399,6 +407,7 @@ class AudioStreamController
     this.mainDetails = null;
     this.fragmentTracker.removeAllFragments();
     this.startPosition = this.lastCurrentTime = 0;
+    this.bufferFlushed = false;
   }
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
@@ -625,17 +634,17 @@ class AudioStreamController
           data.parent === 'audio' &&
           (this.state === State.PARSING || this.state === State.PARSED)
         ) {
-          const media = this.mediaBuffer;
-          const currentTime = this.media.currentTime;
-          const mediaBuffered =
-            media &&
-            BufferHelper.isBuffered(media, currentTime) &&
-            BufferHelper.isBuffered(media, currentTime + 0.5);
+          let flushBuffer = true;
+          const bufferedInfo = this.getFwdBufferInfo(
+            this.mediaBuffer,
+            PlaylistLevelType.AUDIO
+          );
+          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
           // reduce max buf len if current position is buffered
-          if (mediaBuffered) {
-            this.reduceMaxBufferLength();
-            this.state = State.IDLE;
-          } else {
+          if (bufferedInfo && bufferedInfo.len > 0.5) {
+            flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
+          }
+          if (flushBuffer) {
             // current position is not buffered, but browser is still complaining about buffer full error
             // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole audio buffer to recover
@@ -645,6 +654,7 @@ class AudioStreamController
             this.fragCurrent = null;
             super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
           }
+          this.resetLoadingState();
         }
         break;
       default:
@@ -657,8 +667,7 @@ class AudioStreamController
     { type }: BufferFlushedData
   ) {
     if (type === ElementaryStreamTypes.AUDIO) {
-      const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-      this.afterBufferFlushed(media, type, PlaylistLevelType.AUDIO);
+      this.bufferFlushed = true;
     }
   }
 

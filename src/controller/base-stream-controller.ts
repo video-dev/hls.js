@@ -729,6 +729,53 @@ export default class BaseStreamController
     }
   }
 
+  protected getFwdBufferInfo(
+    bufferable: Bufferable,
+    type: PlaylistLevelType
+  ): {
+    len: number;
+    start: number;
+    end: number;
+    nextStart?: number;
+  } | null {
+    const { config } = this;
+    const pos = this.getLoadPosition();
+    if (!Number.isFinite(pos)) {
+      return null;
+    }
+    const bufferInfo = BufferHelper.bufferInfo(
+      bufferable,
+      pos,
+      config.maxBufferHole
+    );
+    // Workaround flaw in getting forward buffer when maxBufferHole is smaller than gap at current pos
+    if (bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
+      const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(pos, type);
+      if (bufferedFragAtPos && bufferInfo.nextStart < bufferedFragAtPos.end) {
+        return BufferHelper.bufferInfo(
+          bufferable,
+          pos,
+          Math.max(bufferInfo.nextStart, config.maxBufferHole)
+        );
+      }
+    }
+    return bufferInfo;
+  }
+
+  protected getMaxBufferLength(levelBitrate?: number): number {
+    const { config } = this;
+    let maxBufLen;
+    if (levelBitrate) {
+      maxBufLen = Math.max(
+        (8 * config.maxBufferSize) / levelBitrate,
+        config.maxBufferLength
+      );
+    } else {
+      maxBufLen = config.maxBufferLength;
+    }
+    return Math.min(maxBufLen, config.maxMaxBufferLength);
+  }
+
   protected reduceMaxBufferLength(threshold?: number) {
     const config = this.config;
     const minLength = threshold || config.maxBufferLength;
@@ -1105,7 +1152,7 @@ export default class BaseStreamController
     const { media } = this;
     // if we have not yet loaded any fragment, start loading from start position
     let pos = 0;
-    if (this.loadedmetadata) {
+    if (this.loadedmetadata && media) {
       pos = media.currentTime;
     } else if (this.nextLoadPosition) {
       pos = this.nextLoadPosition;
