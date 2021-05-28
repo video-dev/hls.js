@@ -446,7 +446,11 @@ export function computeReloadInterval(
   return Math.round(estimatedTimeUntilUpdate);
 }
 
-export function getFragmentWithSN(level: Level, sn: number): Fragment | null {
+export function getFragmentWithSN(
+  level: Level,
+  sn: number,
+  fragCurrent: Fragment | null
+): Fragment | null {
   if (!level || !level.details) {
     return null;
   }
@@ -459,6 +463,9 @@ export function getFragmentWithSN(level: Level, sn: number): Fragment | null {
   fragment = levelDetails.fragmentHint;
   if (fragment && fragment.sn === sn) {
     return fragment;
+  }
+  if (sn < levelDetails.startSN && fragCurrent && fragCurrent.sn === sn) {
+    return fragCurrent;
   }
   return null;
 }
