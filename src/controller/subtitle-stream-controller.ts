@@ -255,19 +255,16 @@ export class SubtitleStreamController
         return;
       }
 
-      const { maxBufferHole, maxFragLookUpTolerance } = config;
-      const maxConfigBuffer = Math.min(
-        config.maxBufferLength,
-        config.maxMaxBufferLength
-      );
       const bufferedInfo = BufferHelper.bufferedInfo(
         this.mediaBufferTimeRanges,
         media.currentTime,
-        maxBufferHole
+        config.maxBufferHole
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
 
-      if (bufferLen > maxConfigBuffer) {
+      const maxBufLen = this.getMaxBufferLength();
+
+      if (bufferLen > maxBufLen) {
         return;
       }
 
@@ -284,6 +281,7 @@ export class SubtitleStreamController
       let foundFrag;
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
+        const { maxFragLookUpTolerance } = config;
         if (fragPrevious && trackDetails.hasProgramDateTime) {
           foundFrag = findFragmentByPDT(
             fragments,

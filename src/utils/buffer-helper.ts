@@ -8,7 +8,7 @@
  * Also @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/buffered
  */
 
-import { logger } from '../utils/logger';
+import { logger } from './logger';
 
 type BufferTimeRange = {
   start: number;
