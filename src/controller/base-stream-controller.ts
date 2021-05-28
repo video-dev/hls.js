@@ -1122,20 +1122,25 @@ export default class BaseStreamController
   protected setStartPosition(details: LevelDetails, sliding: number) {
     // compute start position if set to -1. use it straight away if value is defined
     let startPosition = this.startPosition;
-    if (this.startPosition === -1 || this.lastCurrentTime === -1) {
+    if (startPosition < sliding) {
+      startPosition = -1;
+    }
+    if (startPosition === -1 || this.lastCurrentTime === -1) {
       // first, check if start time offset has been set in playlist, if yes, use this value
-      let startTimeOffset = details.startTimeOffset!;
+      const startTimeOffset = details.startTimeOffset!;
       if (Number.isFinite(startTimeOffset)) {
+        startPosition = sliding + startTimeOffset;
         if (startTimeOffset < 0) {
-          this.log(
-            `Negative start time offset ${startTimeOffset}, count from end of last fragment`
-          );
-          startTimeOffset = sliding + details.totalduration + startTimeOffset;
+          startPosition += details.totalduration;
         }
-        this.log(
-          `Start time offset found in playlist, adjust startPosition to ${startTimeOffset}`
+        startPosition = Math.min(
+          Math.max(sliding, startPosition),
+          sliding + details.totalduration
         );
-        this.startPosition = startPosition = startTimeOffset;
+        this.log(
+          `Start time offset ${startTimeOffset} found in playlist, adjust startPosition to ${startPosition}`
+        );
+        this.startPosition = startPosition;
       } else if (details.live) {
         // Leave this.startPosition at -1, so that we can use `getInitialLiveFragment` logic when startPosition has
         // not been specified via the config or an as an argument to startLoad (#3736).
