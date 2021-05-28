@@ -1,7 +1,7 @@
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
 import { getSkipValue, HlsSkip, HlsUrlParameters } from '../types/level';
-import { computeReloadInterval } from './level-helper';
+import { computeReloadInterval, mergeDetails } from './level-helper';
 import { logger } from '../utils/logger';
 import type { LevelDetails } from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
@@ -11,7 +11,6 @@ import type {
   TrackLoadedData,
 } from '../types/events';
 import { ErrorData } from '../types/events';
-import * as LevelHelper from './level-helper';
 import { Events } from '../events';
 import { ErrorTypes } from '../errors';
 
@@ -128,7 +127,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       }
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
-        LevelHelper.mergeDetails(previousDetails, details);
+        mergeDetails(previousDetails, details);
       }
       if (!this.canLoad || !details.live) {
         return;

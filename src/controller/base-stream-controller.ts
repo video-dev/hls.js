@@ -4,7 +4,6 @@ import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
 import { ErrorDetails } from '../errors';
-import * as LevelHelper from './level-helper';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { alignStream } from '../utils/discontinuities';
@@ -13,6 +12,11 @@ import {
   findFragmentByPTS,
   findFragWithCC,
 } from './fragment-finders';
+import {
+  getFragmentWithSN,
+  getPartWith,
+  updateFragPTSDTS,
+} from './level-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { Fragment, Part } from '../loader/fragment';
 import FragmentLoader, {
@@ -654,11 +658,10 @@ export default class BaseStreamController
       return null;
     }
     const level = levels[levelIndex];
-    const part =
-      partIndex > -1 ? LevelHelper.getPartWith(level, sn, partIndex) : null;
+    const part = partIndex > -1 ? getPartWith(level, sn, partIndex) : null;
     const frag = part
       ? part.fragment
-      : LevelHelper.getFragmentWithSN(level, sn);
+      : getFragmentWithSN(level, sn, this.fragCurrent);
     if (!frag) {
       return null;
     }
@@ -1088,7 +1091,7 @@ export default class BaseStreamController
       levelLastLoaded !== null ? levels![levelLastLoaded] : null;
 
     // FIXME: If not for `shouldAlignOnDiscontinuities` requiring fragPrevious.cc,
-    //  this could all go in LevelHelper.mergeDetails
+    //  this could all go in level-helper mergeDetails()
     let sliding = 0;
     if (previousDetails && details.fragments.length > 0) {
       sliding = details.fragments[0].start;
@@ -1310,7 +1313,7 @@ export default class BaseStreamController
           }
           const drift = partial
             ? 0
-            : LevelHelper.updateFragPTSDTS(
+            : updateFragPTSDTS(
                 details,
                 frag,
                 info.startPTS,
