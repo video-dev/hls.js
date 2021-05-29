@@ -1086,29 +1086,33 @@ export default class BaseStreamController
     details: LevelDetails,
     previousDetails?: LevelDetails
   ): number {
-    const { levels, levelLastLoaded } = this;
+    const { levels, levelLastLoaded, fragPrevious } = this;
     const lastLevel: Level | null =
       levelLastLoaded !== null ? levels![levelLastLoaded] : null;
 
     // FIXME: If not for `shouldAlignOnDiscontinuities` requiring fragPrevious.cc,
     //  this could all go in level-helper mergeDetails()
-    let sliding = 0;
-    if (previousDetails && details.fragments.length > 0) {
-      sliding = details.fragments[0].start;
-      if (details.alignedSliding && Number.isFinite(sliding)) {
-        this.log(`Live playlist sliding:${sliding.toFixed(3)}`);
-      } else if (!sliding) {
-        this.warn(
-          `[${this.constructor.name}] Live playlist - outdated PTS, unknown sliding`
-        );
-        alignStream(this.fragPrevious, lastLevel, details);
-      }
-    } else {
-      this.log('Live playlist - first load, unknown sliding');
-      alignStream(this.fragPrevious, lastLevel, details);
+    const length = details.fragments.length;
+    if (!length) {
+      this.warn(`No fragments in live playlist`);
+      return 0;
     }
-
-    return sliding;
+    const slidingStart = details.fragments[0].start;
+    const firstLevelLoad = !previousDetails;
+    const aligned = details.alignedSliding && Number.isFinite(slidingStart);
+    if (firstLevelLoad || (!aligned && !slidingStart)) {
+      alignStream(fragPrevious, lastLevel, details);
+      const alignedSlidingStart = details.fragments[0].start;
+      this.log(
+        `Live playlist sliding: ${alignedSlidingStart.toFixed(2)} start-sn: ${
+          previousDetails ? previousDetails.startSN : 'na'
+        }->${details.startSN} prev-sn: ${
+          fragPrevious ? fragPrevious.sn : 'na'
+        } fragments: ${length}`
+      );
+      return alignedSlidingStart;
+    }
+    return slidingStart;
   }
 
   protected waitForCdnTuneIn(details: LevelDetails) {
