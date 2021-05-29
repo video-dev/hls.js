@@ -288,16 +288,20 @@ export class SubtitleStreamController
             fragPrevious.endProgramDateTime,
             maxFragLookUpTolerance
           );
-          if (!foundFrag) {
-            foundFrag = findFragmentByPTS(
-              fragPrevious,
-              fragments,
-              targetBufferTime,
-              maxFragLookUpTolerance
-            );
-            if (!foundFrag && fragPrevious.start < fragments[0].start) {
-              foundFrag = fragments[0];
-            }
+        }
+        if (!foundFrag) {
+          foundFrag = findFragmentByPTS(
+            fragPrevious,
+            fragments,
+            targetBufferTime,
+            maxFragLookUpTolerance
+          );
+          if (
+            !foundFrag &&
+            fragPrevious &&
+            fragPrevious.start < fragments[0].start
+          ) {
+            foundFrag = fragments[0];
           }
         }
       } else {
