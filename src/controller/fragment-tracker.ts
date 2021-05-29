@@ -208,6 +208,15 @@ export class FragmentTracker implements ComponentAPI {
     }
   }
 
+  public fragBuffered(frag: Fragment) {
+    const fragKey = getFragmentKey(frag);
+    const fragmentEntity = this.fragments[fragKey];
+    if (fragmentEntity) {
+      fragmentEntity.backtrack = fragmentEntity.loaded = null;
+      fragmentEntity.buffered = true;
+    }
+  }
+
   private getBufferedTimes(
     fragment: Fragment,
     part: Part | null,
@@ -410,6 +419,29 @@ export class FragmentTracker implements ComponentAPI {
   private hasFragment(fragment: Fragment): boolean {
     const fragKey = getFragmentKey(fragment);
     return !!this.fragments[fragKey];
+  }
+
+  public removeFragmentsInRange(
+    start: number,
+    end: number,
+    playlistType: PlaylistLevelType
+  ) {
+    Object.keys(this.fragments).forEach((key) => {
+      const fragmentEntity = this.fragments[key];
+      if (!fragmentEntity) {
+        return;
+      }
+      if (fragmentEntity.buffered) {
+        const frag = fragmentEntity.body;
+        if (
+          frag.type === playlistType &&
+          frag.start < end &&
+          frag.end > start
+        ) {
+          this.removeFragment(frag);
+        }
+      }
+    });
   }
 
   public removeFragment(fragment: Fragment) {
