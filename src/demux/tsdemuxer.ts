@@ -941,9 +941,9 @@ class TSDemuxer implements Demuxer {
     const data = pes.data;
     if (aacOverFlow) {
       this.aacOverFlow = null;
-      const frameMissingBytes = aacOverFlow.missing;
-      const frameOverflowBytes =
-        aacOverFlow.sample.unit.byteLength - frameMissingBytes;
+      const sampleLength = aacOverFlow.sample.unit.byteLength;
+      const frameMissingBytes = Math.min(aacOverFlow.missing, sampleLength);
+      const frameOverflowBytes = sampleLength - frameMissingBytes;
       aacOverFlow.sample.unit.set(
         data.subarray(0, frameMissingBytes),
         frameOverflowBytes
@@ -951,7 +951,7 @@ class TSDemuxer implements Demuxer {
       track.samples.push(aacOverFlow.sample);
 
       // logger.log(`AAC: append overflowing ${frameOverflowBytes} bytes to beginning of new PES`);
-      startOffset = frameMissingBytes;
+      startOffset = aacOverFlow.missing;
     }
     // look for ADTS header (0xFFFx)
     let offset: number;
