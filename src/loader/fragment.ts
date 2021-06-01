@@ -139,6 +139,8 @@ export class Fragment extends BaseSegment {
   public bitrateTest: boolean = false;
   // #EXTINF  segment title
   public title: string | null = null;
+  // The Media Initialization Section for this segment
+  public initSegment: Fragment | null = null;
 
   constructor(type: PlaylistLevelType, baseurl: string) {
     super(baseurl);
@@ -302,9 +304,7 @@ export class Part extends BaseSegment {
     super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');
     this.gap = partAttrs.bool('GAP');
-    this.independent = partAttrs.INDEPENDENT
-      ? partAttrs.bool('INDEPENDENT')
-      : true;
+    this.independent = partAttrs.bool('INDEPENDENT');
     this.relurl = partAttrs.enumeratedString('URI') as string;
     this.fragment = frag;
     this.index = index;

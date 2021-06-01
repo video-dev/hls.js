@@ -29,8 +29,8 @@ describe('StreamController', function () {
 
   beforeEach(function () {
     hls = new Hls({});
-    fragmentTracker = new FragmentTracker(hls);
-    streamController = new StreamController(hls, fragmentTracker);
+    streamController = hls['streamController'];
+    fragmentTracker = streamController['fragmentTracker'];
     streamController['startFragRequested'] = true;
   });
 
@@ -106,9 +106,6 @@ describe('StreamController', function () {
     fragPrevious.cc = 0;
 
     const levelDetails = new LevelDetails('');
-    levelDetails.startSN = mockFragments[0].sn;
-    levelDetails.endSN = mockFragments[mockFragments.length - 1].sn;
-    levelDetails.fragments = mockFragments;
 
     const bufferEnd = fragPrevious.start + fragPrevious.duration;
     const end =
@@ -117,6 +114,15 @@ describe('StreamController', function () {
 
     beforeEach(function () {
       streamController['fragPrevious'] = fragPrevious;
+      levelDetails.live = false;
+      levelDetails.startSN = mockFragments[0].sn;
+      levelDetails.endSN = mockFragments[mockFragments.length - 1].sn;
+      levelDetails.fragments = mockFragments;
+      levelDetails.targetduration = mockFragments[0].duration;
+      levelDetails.totalduration = mockFragments.reduce(
+        (sum, frag) => sum + frag.duration,
+        0
+      );
     });
 
     it('PTS search choosing wrong fragment (3 instead of 2) after level loaded', function () {
@@ -149,21 +155,127 @@ describe('StreamController', function () {
       expect(actual).to.equal(mockFragments[mockFragments.length - 1]);
     });
 
-    describe('PDT Searching during a live stream', function () {
-      it('PDT search choosing fragment after level loaded', function () {
+    describe('getInitialLiveFragment', function () {
+      let fragPrevious;
+
+      beforeEach(function () {
+        // onLevelUpdated updates  latencyController.levelDetails used to get live sync position
+        hls['latencyController']['levelDetails'] = levelDetails;
+
+        fragPrevious = new Fragment(PlaylistLevelType.MAIN, '');
+        // Fragment with PDT 1505502681523 in level 1 does not have the same sn as in level 2 where cc is 1
+        fragPrevious.cc = 0;
+        fragPrevious.programDateTime = 1505502681523;
+        fragPrevious.duration = 5.0;
+        fragPrevious.level = 1;
+        fragPrevious.start = 15.0;
+        fragPrevious.sn = 3;
+        streamController['fragPrevious'] = fragPrevious;
+
         levelDetails.PTSKnown = false;
         levelDetails.alignedSliding = false;
         levelDetails.live = true;
+      });
 
-        const foundFragment = streamController['getInitialLiveFragment'](
-          levelDetails,
-          mockFragments
-        );
-        const resultSN = foundFragment ? foundFragment.sn : -1;
-        expect(foundFragment).to.equal(
-          mockFragments[2],
-          'Expected sn 2, found sn segment ' + resultSN
-        );
+      describe('with program-date-time', function () {
+        it('does PDT search, choosing fragment after level loaded', function () {
+          const foundFragment = streamController['getInitialLiveFragment'](
+            levelDetails,
+            mockFragments
+          );
+          expect(foundFragment).to.equal(
+            mockFragments[4],
+            `Expected sn 4, found sn segment ${
+              foundFragment ? foundFragment.sn : -1
+            }`
+          );
+        });
+      });
+
+      describe('without program-date-time', function () {
+        const fragmentsWithoutPdt = mockFragments.map((frag) => {
+          const newFragment = new Fragment(PlaylistLevelType.MAIN, '');
+          return Object.assign(newFragment, frag, {
+            programDateTime: null,
+          });
+        });
+
+        beforeEach(function () {
+          // For sn lookup, cc much match
+          fragPrevious.cc = 1;
+
+          levelDetails.PTSKnown = false;
+          levelDetails.alignedSliding = false;
+          levelDetails.live = true;
+          levelDetails.startSN = fragmentsWithoutPdt[0].sn;
+          levelDetails.endSN =
+            fragmentsWithoutPdt[fragmentsWithoutPdt.length - 1].sn;
+          levelDetails.fragments = fragmentsWithoutPdt;
+        });
+
+        it('finds the next fragment to load based on the last fragment buffered', function () {
+          fragPrevious.sn = 0;
+          let foundFragment = streamController['getInitialLiveFragment'](
+            levelDetails,
+            fragmentsWithoutPdt
+          );
+          expect(foundFragment).to.equal(
+            fragmentsWithoutPdt[1],
+            `Expected sn 1, found sn segment ${
+              foundFragment ? foundFragment.sn : -1
+            }`
+          );
+
+          fragPrevious.sn = 3;
+          foundFragment = streamController['getInitialLiveFragment'](
+            levelDetails,
+            fragmentsWithoutPdt
+          );
+          expect(foundFragment).to.equal(
+            fragmentsWithoutPdt[4],
+            `Expected sn 4, found sn segment ${
+              foundFragment ? foundFragment.sn : -1
+            }`
+          );
+        });
+
+        it('finds the first fragment to load when starting or re-syncing with a live stream', function () {
+          streamController['fragPrevious'] = null;
+
+          const foundFragment = streamController['getInitialLiveFragment'](
+            levelDetails,
+            fragmentsWithoutPdt
+          );
+          expect(foundFragment).to.equal(
+            fragmentsWithoutPdt[2],
+            `Expected sn 2, found sn segment ${
+              foundFragment ? foundFragment.sn : -1
+            }`
+          );
+        });
+
+        it('finds the fragment with the same cc when there is no sn match', function () {
+          fragPrevious.cc = 0;
+          const foundFragment = streamController['getInitialLiveFragment'](
+            levelDetails,
+            fragmentsWithoutPdt
+          );
+          expect(foundFragment).to.equal(
+            fragmentsWithoutPdt[0],
+            `Expected sn 0, found sn segment ${
+              foundFragment ? foundFragment.sn : -1
+            }`
+          );
+        });
+
+        it('returns null when there is no cc match with the previous segment', function () {
+          fragPrevious.cc = 2;
+          const foundFragment = streamController['getInitialLiveFragment'](
+            levelDetails,
+            fragmentsWithoutPdt
+          );
+          expect(foundFragment).to.equal(null);
+        });
       });
     });
   });
@@ -264,7 +376,7 @@ describe('StreamController', function () {
 
     it('should seek to start pos when metadata has not yet been loaded', function () {
       // @ts-ignore
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, 'seekToStartPos');
       streamController['loadedmetadata'] = false;
       streamController['checkBuffer']();
       expect(seekStub).to.have.been.calledOnce;
@@ -273,7 +385,7 @@ describe('StreamController', function () {
 
     it('should not seek to start pos when metadata has been loaded', function () {
       // @ts-ignore
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, 'seekToStartPos');
       streamController['loadedmetadata'] = true;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
@@ -282,24 +394,24 @@ describe('StreamController', function () {
 
     it('should not seek to start pos when nothing has been buffered', function () {
       // @ts-ignore
-      const seekStub = sandbox.stub(streamController, '_seekToStartPos');
+      const seekStub = sandbox.stub(streamController, 'seekToStartPos');
       streamController['media'].buffered.length = 0;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
       expect(streamController['loadedmetadata']).to.be.false;
     });
 
-    describe('_seekToStartPos', function () {
+    describe('seekToStartPos', function () {
       it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
         streamController['startPosition'] = 5;
-        streamController['_seekToStartPos']();
+        streamController['seekToStartPos']();
         expect(streamController['media'].currentTime).to.equal(5);
       });
 
       it('should not seek to startPosition when it is buffered', function () {
         streamController['startPosition'] = 5;
         streamController['media'].currentTime = 5;
-        streamController['_seekToStartPos']();
+        streamController['seekToStartPos']();
         expect(streamController['media'].currentTime).to.equal(5);
       });
     });
@@ -323,13 +435,29 @@ describe('StreamController', function () {
         expect(streamController['lastCurrentTime']).to.equal(5);
       });
 
-      it('should set startPosition to lastCurrentTime if unset', function () {
+      it('should set startPosition to lastCurrentTime if unset and lastCurrentTime > 0', function () {
         streamController['lastCurrentTime'] = 5;
         streamController.startLoad(-1);
         assertStreamControllerStarted(streamController);
         expect(streamController['nextLoadPosition']).to.equal(5);
         expect(streamController['startPosition']).to.equal(5);
         expect(streamController['lastCurrentTime']).to.equal(5);
+      });
+
+      it('should set startPosition when passed as an argument', function () {
+        streamController.startLoad(123);
+        assertStreamControllerStarted(streamController);
+        expect(streamController['nextLoadPosition']).to.equal(123);
+        expect(streamController['startPosition']).to.equal(123);
+        expect(streamController['lastCurrentTime']).to.equal(123);
+      });
+
+      it('should set startPosition to -1 when passed as an argument', function () {
+        streamController.startLoad(-1);
+        assertStreamControllerStarted(streamController);
+        expect(streamController['nextLoadPosition']).to.equal(-1);
+        expect(streamController['startPosition']).to.equal(-1);
+        expect(streamController['lastCurrentTime']).to.equal(-1);
       });
 
       it('sets up for a bandwidth test if starting at auto', function () {

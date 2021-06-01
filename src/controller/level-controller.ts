@@ -59,9 +59,10 @@ export default class LevelController extends BasePlaylistController {
   }
 
   public destroy() {
-    super.destroy();
     this._unregisterListeners();
     this.manualLevelIndex = -1;
+    this._levels.length = 0;
+    super.destroy();
   }
 
   public startLoad(): void {
@@ -83,8 +84,9 @@ export default class LevelController extends BasePlaylistController {
     let audioTracks: MediaPlaylist[] = [];
     let subtitleTracks: MediaPlaylist[] = [];
     let bitrateStart: number | undefined;
-    const levelSet: { [bitrate: number]: Level } = {};
+    const levelSet: { [key: string]: Level } = {};
     let levelFromSet: Level;
+    let resolutionFound = false;
     let videoCodecFound = false;
     let audioCodecFound = false;
 
@@ -92,6 +94,8 @@ export default class LevelController extends BasePlaylistController {
     data.levels.forEach((levelParsed: LevelParsed) => {
       const attributes = levelParsed.attrs;
 
+      resolutionFound =
+        resolutionFound || !!(levelParsed.width && levelParsed.height);
       videoCodecFound = videoCodecFound || !!levelParsed.videoCodec;
       audioCodecFound = audioCodecFound || !!levelParsed.audioCodec;
 
@@ -105,11 +109,12 @@ export default class LevelController extends BasePlaylistController {
         levelParsed.audioCodec = undefined;
       }
 
-      levelFromSet = levelSet[levelParsed.bitrate]; // FIXME: we would also have to match the resolution here
+      const levelKey = `${levelParsed.bitrate}-${levelParsed.attrs.RESOLUTION}-${levelParsed.attrs.CODECS}`;
+      levelFromSet = levelSet[levelKey];
 
       if (!levelFromSet) {
         levelFromSet = new Level(levelParsed);
-        levelSet[levelParsed.bitrate] = levelFromSet;
+        levelSet[levelKey] = levelFromSet;
         levels.push(levelFromSet);
       } else {
         levelFromSet.url.push(levelParsed.url);
@@ -125,9 +130,11 @@ export default class LevelController extends BasePlaylistController {
       }
     });
 
-    // remove audio-only level if we also have levels with audio+video codecs signalled
-    if (videoCodecFound && audioCodecFound) {
-      levels = levels.filter(({ videoCodec }) => !!videoCodec);
+    // remove audio-only level if we also have levels with video codecs or RESOLUTION signalled
+    if ((resolutionFound || videoCodecFound) && audioCodecFound) {
+      levels = levels.filter(
+        ({ videoCodec, width, height }) => !!videoCodec || !!(width && height)
+      );
     }
 
     // only keep levels with supported audio/video codecs
@@ -184,7 +191,10 @@ export default class LevelController extends BasePlaylistController {
       };
       this.hls.trigger(Events.MANIFEST_PARSED, edata);
 
-      this.onParsedComplete();
+      // Initiate loading after all controllers have received MANIFEST_PARSED
+      if (this.hls.config.autoStartLoad || this.hls.forceStartLoad) {
+        this.hls.startLoad(this.hls.config.startPosition);
+      }
     } else {
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
@@ -209,21 +219,29 @@ export default class LevelController extends BasePlaylistController {
 
   set level(newLevel: number) {
     const levels = this._levels;
+    if (levels.length === 0) {
+      return;
+    }
     if (this.currentLevelIndex === newLevel && levels[newLevel]?.details) {
       return;
     }
     // check if level idx is valid
     if (newLevel < 0 || newLevel >= levels.length) {
       // invalid level id given, trigger error
+      const fatal = newLevel < 0;
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
         details: ErrorDetails.LEVEL_SWITCH_ERROR,
         level: newLevel,
-        fatal: false,
+        fatal,
         reason: 'invalid level idx',
       });
-      return;
+      if (fatal) {
+        return;
+      }
+      newLevel = Math.min(newLevel, levels.length - 1);
     }
+
     // stopping live reloading timer if any
     this.clearTimer();
 

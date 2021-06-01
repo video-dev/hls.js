@@ -43,9 +43,9 @@ export enum HlsSkip {
   v2 = 'v2',
 }
 
-export function getSkipValue(details: LevelDetails, msn: number): HlsSkip {
+export function getSkipValue(details: LevelDetails, msn?: number): HlsSkip {
   const { canSkipUntil, canSkipDateRanges, endSN } = details;
-  const snChangeGoal = msn - endSN;
+  const snChangeGoal = msn !== undefined ? msn - endSN : 0;
   if (canSkipUntil && snChangeGoal < canSkipUntil) {
     if (canSkipDateRanges) {
       return HlsSkip.v2;
@@ -56,11 +56,11 @@ export function getSkipValue(details: LevelDetails, msn: number): HlsSkip {
 }
 
 export class HlsUrlParameters {
-  msn: number;
+  msn?: number;
   part?: number;
   skip?: HlsSkip;
 
-  constructor(msn: number, part?: number, skip?: HlsSkip) {
+  constructor(msn?: number, part?: number, skip?: HlsSkip) {
     this.msn = msn;
     this.part = part;
     this.skip = skip;
@@ -68,16 +68,15 @@ export class HlsUrlParameters {
 
   addDirectives(uri: string): string | never {
     const url: URL = new self.URL(uri);
-    const searchParams: URLSearchParams = url.searchParams;
-    searchParams.set('_HLS_msn', this.msn.toString());
+    if (this.msn !== undefined) {
+      url.searchParams.set('_HLS_msn', this.msn.toString());
+    }
     if (this.part !== undefined) {
-      searchParams.set('_HLS_part', this.part.toString());
+      url.searchParams.set('_HLS_part', this.part.toString());
     }
     if (this.skip) {
-      searchParams.set('_HLS_skip', this.skip);
+      url.searchParams.set('_HLS_skip', this.skip);
     }
-    searchParams.sort();
-    url.search = searchParams.toString();
     return url.toString();
   }
 }

@@ -13,17 +13,7 @@ export function removePadding(array: Uint8Array): Uint8Array {
 
 export default class AESDecryptor {
   private rcon: Array<number> = [
-    0x0,
-    0x1,
-    0x2,
-    0x4,
-    0x8,
-    0x10,
-    0x20,
-    0x40,
-    0x80,
-    0x1b,
-    0x36,
+    0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36,
   ];
   private subMix: Array<Uint32Array> = [
     new Uint32Array(256),
@@ -326,7 +316,6 @@ export default class AESDecryptor {
         (invSBOX[(s1 >> 8) & 0xff] << 8) ^
         invSBOX[s2 & 0xff] ^
         invKeySchedule[ksRow + 3];
-      ksRow = ksRow + 3;
 
       // Write
       outputInt32[offset] = swapWord(t0 ^ initVector0);

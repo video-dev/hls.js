@@ -208,6 +208,15 @@ describe('FragmentTracker', function () {
         ),
       ];
       // load fragments to buffered
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData([
+          {
+            startPTS: 0,
+            endPTS: 3,
+          },
+        ])
+      );
       fragments.forEach((fragment) => {
         triggerFragLoadedAndFragBuffered(hls, fragment);
       });
@@ -470,6 +479,15 @@ describe('FragmentTracker', function () {
         [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO]
       );
       // load fragments to buffered
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData([
+          {
+            startPTS: 0,
+            endPTS: 1,
+          },
+        ])
+      );
       triggerFragLoadedAndFragBuffered(hls, fragment);
       expect(fragmentTracker.hasFragment(fragment)).to.be.true;
       // Remove the fragment
@@ -524,18 +542,33 @@ describe('FragmentTracker', function () {
         ),
       ];
       // load fragments to buffered
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData([
+          {
+            startPTS: 0,
+            endPTS: 3,
+          },
+        ])
+      );
       fragments.forEach((fragment) => {
         triggerFragLoadedAndFragBuffered(hls, fragment);
       });
       // before
       fragments.forEach((fragment) => {
-        expect(fragmentTracker.hasFragment(fragment)).to.be.true;
+        expect(
+          fragmentTracker.hasFragment(fragment),
+          'has fragments before removing'
+        ).to.be.true;
       });
       // Remove all fragments
       fragmentTracker.removeAllFragments();
       // after
       fragments.forEach((fragment) => {
-        expect(fragmentTracker.hasFragment(fragment)).to.be.false;
+        expect(
+          fragmentTracker.hasFragment(fragment),
+          'has not fragments after removing'
+        ).to.be.false;
       });
     });
   });
@@ -569,6 +602,7 @@ function createBufferAppendedData(
     frag: new Fragment(PlaylistLevelType.MAIN, ''),
     part: null,
     parent: PlaylistLevelType.MAIN,
+    type: audio && video ? 'audiovideo' : video ? 'video' : 'audio',
     timeRanges: {
       video: createMockBuffer(video),
       audio: createMockBuffer(audio || video),

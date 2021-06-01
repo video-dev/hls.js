@@ -1,5 +1,7 @@
 import AudioTrackController from '../../../src/controller/audio-track-controller';
-import Hls from '../../../src/hls';
+import Hls, { MediaPlaylist } from '../../../src/hls';
+import { AttrList } from '../../../src/utils/attr-list';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { Events } from '../../../src/events';
 
 import * as sinon from 'sinon';
@@ -11,45 +13,83 @@ chai.use(sinonChai);
 const expect = chai.expect;
 
 describe('AudioTrackController', function () {
-  const tracks = [
+  const tracks: MediaPlaylist[] = [
     {
+      attrs: new AttrList({}),
+      bitrate: 0,
+      autoselect: false,
+      default: true,
+      forced: false,
       groupId: '1',
       id: 0,
-      default: true,
       name: 'A',
+      type: 'AUDIO',
+      url: '',
     },
     {
+      attrs: new AttrList({}),
+      bitrate: 0,
+      autoselect: false,
+      default: false,
+      forced: false,
       groupId: '1',
       id: 1,
-      default: false,
       name: 'B',
+      type: 'AUDIO',
+      url: '',
     },
     {
+      attrs: new AttrList({}),
+      bitrate: 0,
+      autoselect: false,
+      default: false,
+      forced: false,
       groupId: '1',
       id: 2,
       name: 'C',
+      type: 'AUDIO',
+      url: '',
     },
     {
+      attrs: new AttrList({}),
+      bitrate: 0,
+      autoselect: false,
+      default: true,
+      forced: false,
       groupId: '2',
       id: 0,
-      default: true,
       name: 'A',
+      type: 'AUDIO',
+      url: '',
     },
     {
+      attrs: new AttrList({}),
+      bitrate: 0,
+      autoselect: false,
+      default: false,
+      forced: false,
       groupId: '2',
       id: 1,
-      default: false,
       name: 'B',
+      type: 'AUDIO',
+      url: '',
     },
     {
+      attrs: new AttrList({}),
+      bitrate: 0,
+      autoselect: false,
+      default: false,
+      forced: false,
       groupId: '2',
       id: 2,
       name: 'C',
+      type: 'AUDIO',
+      url: '',
     },
   ];
 
-  let hls;
-  let audioTrackController;
+  let hls; //: Hls;
+  let audioTrackController; //: AudioTrackController;
 
   const levels = [
     {
@@ -79,16 +119,9 @@ describe('AudioTrackController', function () {
   });
 
   describe('onLevelLoading', function () {
-    it('should set the audioTracks contained in the event data and trigger AUDIO_TRACKS_UPDATED', function (done) {
-      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
-        expect(data.audioTracks).to.eql([
-          { groupId: '2', id: 0, default: true, name: 'A' },
-          { groupId: '2', id: 1, default: false, name: 'B' },
-          { groupId: '2', id: 2, name: 'C' },
-        ]);
-        expect(audioTrackController.tracks).to.equal(tracks);
-        done();
-      });
+    it('should set the audioTracks contained in the event data and trigger AUDIO_TRACKS_UPDATED', function () {
+      const audioTracksUpdatedCallback = sinon.spy();
+      hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, audioTracksUpdatedCallback);
 
       audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
         audioTracks: tracks,
@@ -96,6 +129,15 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0,
       });
+
+      expect(audioTrackController.tracks).to.equal(tracks);
+      expect(audioTracksUpdatedCallback).to.be.calledOnce;
+      expect(audioTracksUpdatedCallback).to.be.calledWith(
+        Events.AUDIO_TRACKS_UPDATED,
+        {
+          audioTracks: tracks.slice(3, 6),
+        }
+      );
     });
   });
 
@@ -117,16 +159,68 @@ describe('AudioTrackController', function () {
     // current track name
     const audioTrackName = tracks[audioTrackController.audioTrack].name;
 
-    audioTrackController.onManifestParsed({
+    audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
       audioTracks: tracks,
     });
 
     // group has switched
-    expect(audioTrackController.audioGroupId).to.equal(newGroupId);
+    expect(audioTrackController.groupId).to.equal(newGroupId);
     // name is still the same
     expect(tracks[audioTrackController.audioTrack].name).to.equal(
       audioTrackName
     );
+  });
+
+  it('should always switch tracks when audioTrack is set to a valid index', function () {
+    const audioTracksUpdatedCallback = sinon.spy();
+    const audioTrackSwitchingCallback = sinon.spy();
+    hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, audioTracksUpdatedCallback);
+    hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, audioTrackSwitchingCallback);
+
+    audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
+      audioTracks: tracks,
+    });
+    audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+      level: 0,
+    });
+    expect(audioTracksUpdatedCallback, 'AUDIO_TRACKS_UPDATED').to.have.been
+      .calledOnce;
+    expect(
+      audioTrackSwitchingCallback,
+      'AUDIO_TRACK_SWITCHING to initial track 0'
+    ).to.have.been.calledOnce;
+
+    audioTrackController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {
+      details: new LevelDetails(''),
+      id: 0,
+      groupId: '1',
+      networkDetails: null,
+      stats: { loading: {} },
+      deliveryDirectives: null,
+    });
+    expect(audioTrackController.tracksInGroup[0], 'tracksInGroup[0]')
+      .to.have.property('details')
+      .which.is.an('object');
+
+    audioTrackController.audioTrack = 1;
+    expect(audioTrackSwitchingCallback, 'AUDIO_TRACK_SWITCHING to track 1').to
+      .have.been.calledTwice;
+
+    audioTrackController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {
+      details: new LevelDetails(''),
+      id: 1,
+      groupId: '1',
+      networkDetails: null,
+      stats: { loading: {} },
+      deliveryDirectives: null,
+    });
+    expect(audioTrackController.tracksInGroup[1], 'tracksInGroup[1]')
+      .to.have.property('details')
+      .which.is.an('object');
+
+    audioTrackController.audioTrack = 0;
+    expect(audioTrackSwitchingCallback, 'AUDIO_TRACK_SWITCHING back to track 0')
+      .to.have.been.calledThrice;
   });
 
   describe('shouldLoadTrack', function () {
@@ -134,7 +228,7 @@ describe('AudioTrackController', function () {
       audioTrackController.canLoad = true;
       expect(audioTrackController.shouldLoadTrack({ details: { live: true } }))
         .to.be.false;
-      expect(audioTrackController.shouldLoadTrack({ details: null })).to.be
+      expect(audioTrackController.shouldLoadTrack({ details: undefined })).to.be
         .false;
     });
 
@@ -186,7 +280,7 @@ describe('AudioTrackController', function () {
       );
 
       // group has switched
-      expect(audioTrackController.audioGroupId).to.equal(newGroupId);
+      expect(audioTrackController.groupId).to.equal(newGroupId);
       // name is still the same
       expect(tracks[audioTrackController.audioTrack].name).to.equal(
         audioTrackName
@@ -229,14 +323,12 @@ describe('AudioTrackController', function () {
       expect(shouldLoadTrack).to.have.been.calledWith(trackWithUrl);
       expect(
         shouldLoadTrack.firstCall.returnValue,
-        false,
         'expected shouldLoadTrack to return false before startLoad() is called'
-      );
+      ).to.be.false;
       expect(
         shouldLoadTrack.secondCall.returnValue,
-        true,
         'expected shouldLoadTrack to return true after startLoad() is called'
-      );
+      ).to.be.true;
 
       expect(audioTrackLoadingCallback).to.have.been.calledOnce;
     });
@@ -265,7 +357,7 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0,
       });
-      audioTrackController.startLoad();
+      audioTrackController.startLoad(0);
 
       expect(shouldLoadTrack).to.have.been.calledTwice;
       expect(shouldLoadTrack).to.have.been.calledWith(trackWithOutUrl);

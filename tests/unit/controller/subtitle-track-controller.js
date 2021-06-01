@@ -129,6 +129,8 @@ describe('SubtitleTrackController', function () {
         'hlsSubtitleTrackSwitch',
         {
           id: 1,
+          groupId: 'default-text-group',
+          name: 'English',
           type: 'SUBTITLES',
           url: 'bar',
         }
@@ -163,6 +165,8 @@ describe('SubtitleTrackController', function () {
         'hlsSubtitleTrackSwitch',
         {
           id: 0,
+          groupId: 'default-text-group',
+          name: 'English',
           type: 'SUBTITLES',
           url: 'baz',
         }
@@ -174,9 +178,10 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.trackId = 0;
       subtitleTrackController.subtitleTrack = -1;
 
-      expect(
-        triggerSpy.firstCall
-      ).to.have.been.calledWith('hlsSubtitleTrackSwitch', { id: -1 });
+      expect(triggerSpy.firstCall).to.have.been.calledWith(
+        'hlsSubtitleTrackSwitch',
+        { id: -1 }
+      );
     });
 
     it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {

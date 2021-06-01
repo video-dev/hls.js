@@ -1,0 +1,16 @@
+name: Cancel
+on:
+  workflow_run:
+    workflows: ['automerge', 'build', 'codeql-analysis']
+    types:
+      - requested
+permissions:
+  actions: write
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@3d86a7cc43670094ac248017207be0295edbc31d
+        name: Cancel Previous Workflow Runs
+        with:
+          workflow_id: ${{ github.event.workflow.id }}

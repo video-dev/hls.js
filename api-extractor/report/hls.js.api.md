@@ -82,11 +82,23 @@ export interface AudioTrackSwitchedData {
 // @public (undocumented)
 export interface AudioTrackSwitchingData {
     // (undocumented)
+    groupId: string;
+    // (undocumented)
     id: number;
+    // (undocumented)
+    name: string;
     // (undocumented)
     type: MediaPlaylistType | 'main';
     // (undocumented)
     url: string;
+}
+
+// Warning: (ae-missing-release-tag) "BackBufferData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface BackBufferData {
+    // (undocumented)
+    bufferEnd: number;
 }
 
 // Warning: (ae-missing-release-tag) "BaseSegment" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -126,11 +138,9 @@ export interface BufferAppendedData {
     // (undocumented)
     part: Part | null;
     // (undocumented)
-    timeRanges: {
-        audio?: TimeRanges;
-        video?: TimeRanges;
-        audiovideo?: TimeRanges;
-    };
+    timeRanges: Partial<Record<SourceBufferName, TimeRanges>>;
+    // (undocumented)
+    type: SourceBufferName;
 }
 
 // Warning: (ae-missing-release-tag) "BufferAppendingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -143,6 +153,8 @@ export interface BufferAppendingData {
     data: Uint8Array;
     // (undocumented)
     frag: Fragment;
+    // (undocumented)
+    parent: PlaylistLevelType;
     // (undocumented)
     part: Part | null;
     // (undocumented)
@@ -164,8 +176,9 @@ export interface BufferCodecsData {
 // @public (undocumented)
 export type BufferControllerConfig = {
     appendErrorMaxRetry: number;
+    backBufferLength: number;
     liveDurationInfinity: boolean;
-    liveBackBufferLength: number;
+    liveBackBufferLength: number | null;
 };
 
 // Warning: (ae-missing-release-tag) "BufferCreatedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -304,6 +317,7 @@ export enum ElementaryStreamTypes {
 // @public (undocumented)
 export type EMEControllerConfig = {
     licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+    licenseResponseCallback?: (xhr: XMLHttpRequest, url: string) => ArrayBuffer;
     emeEnabled: boolean;
     widevineLicenseUrl?: string;
     drmSystemOptions: DRMSystemOptions;
@@ -372,6 +386,8 @@ export enum ErrorDetails {
     BUFFER_APPENDING_ERROR = "bufferAppendingError",
     // (undocumented)
     BUFFER_FULL_ERROR = "bufferFullError",
+    // (undocumented)
+    BUFFER_INCOMPATIBLE_CODECS_ERROR = "bufferIncompatibleCodecsError",
     // (undocumented)
     BUFFER_NUDGE_ON_STALL = "bufferNudgeOnStall",
     // (undocumented)
@@ -460,6 +476,8 @@ export enum Events {
     AUDIO_TRACK_SWITCHING = "hlsAudioTrackSwitching",
     // (undocumented)
     AUDIO_TRACKS_UPDATED = "hlsAudioTracksUpdated",
+    // (undocumented)
+    BACK_BUFFER_REACHED = "hlsBackBufferReached",
     // (undocumented)
     BUFFER_APPENDED = "hlsBufferAppended",
     // (undocumented)
@@ -697,6 +715,8 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     endPTS?: number;
     // (undocumented)
+    initSegment: Fragment | null;
+    // (undocumented)
     level: number;
     // (undocumented)
     levelkey?: LevelKey;
@@ -827,6 +847,7 @@ class Hls implements HlsEventEmitter {
     static set DefaultConfig(defaultConfig: HlsConfig);
     destroy(): void;
     detachMedia(): void;
+    get drift(): number | null;
     // (undocumented)
     emit<E extends keyof HlsListeners>(event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean;
     // (undocumented)
@@ -838,6 +859,7 @@ class Hls implements HlsEventEmitter {
     get firstLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "firstLevel" must appear on the getter, not the setter.
     set firstLevel(newLevel: number);
+    get forceStartLoad(): boolean;
     // (undocumented)
     static isSupported(): boolean;
     get latency(): number;
@@ -975,6 +997,8 @@ export interface HlsListeners {
     // (undocumented)
     [Events.AUDIO_TRACK_SWITCHING]: (event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData) => void;
     // (undocumented)
+    [Events.BACK_BUFFER_REACHED]: (event: Events.BACK_BUFFER_REACHED, data: BackBufferData) => void;
+    // (undocumented)
     [Events.BUFFER_APPENDED]: (event: Events.BUFFER_APPENDED, data: BufferAppendedData) => void;
     // (undocumented)
     [Events.BUFFER_APPENDING]: (event: Events.BUFFER_APPENDING, data: BufferAppendingData) => void;
@@ -1106,11 +1130,11 @@ export enum HlsSkip {
 //
 // @public (undocumented)
 export class HlsUrlParameters {
-    constructor(msn: number, part?: number, skip?: HlsSkip);
+    constructor(msn?: number, part?: number, skip?: HlsSkip);
     // (undocumented)
     addDirectives(uri: string): string | never;
     // (undocumented)
-    msn: number;
+    msn?: number;
     // (undocumented)
     part?: number;
     // (undocumented)
@@ -1296,6 +1320,16 @@ export class LevelDetails {
     // (undocumented)
     deltaUpdateFailed?: boolean;
     // (undocumented)
+    get drift(): number;
+    // (undocumented)
+    driftEnd: number;
+    // (undocumented)
+    driftEndTime: number;
+    // (undocumented)
+    driftStart: number;
+    // (undocumented)
+    driftStartTime: number;
+    // (undocumented)
     get edge(): number;
     // (undocumented)
     endCC: number;
@@ -1311,8 +1345,6 @@ export class LevelDetails {
     get hasProgramDateTime(): boolean;
     // (undocumented)
     holdBack: number;
-    // (undocumented)
-    initSegment: Fragment | null;
     // (undocumented)
     get lastPartIndex(): number;
     // (undocumented)
@@ -1513,10 +1545,8 @@ export interface LevelUpdatedData {
 
 // Warning: (ae-missing-release-tag) "LiveBackBufferData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public (undocumented)
-export interface LiveBackBufferData {
-    // (undocumented)
-    bufferEnd: number;
+// @public
+export interface LiveBackBufferData extends BackBufferData {
 }
 
 // Warning: (ae-missing-release-tag) "Loader" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1529,12 +1559,9 @@ export interface Loader<T extends LoaderContext> {
     context: T;
     // (undocumented)
     destroy(): void;
-    // (undocumented)
-    getResponseHeader(name: string): string | null;
+    getCacheAge?: () => number | null;
     // (undocumented)
     load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
-    // (undocumented)
-    loader: any;
     // (undocumented)
     stats: LoaderStats;
 }
@@ -1983,7 +2010,11 @@ export interface SubtitleTracksUpdatedData {
 // @public (undocumented)
 export interface SubtitleTrackSwitchData {
     // (undocumented)
+    groupId?: string;
+    // (undocumented)
     id: number;
+    // (undocumented)
+    name?: string;
     // (undocumented)
     type?: MediaPlaylistType | 'main';
     // (undocumented)
@@ -2093,16 +2124,16 @@ export interface UserdataSample {
 
 // Warnings were encountered during analysis:
 //
-// src/config.ts:153:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:154:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:156:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:157:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:158:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:160:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:162:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:163:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:164:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:165:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:156:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:157:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:159:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:160:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:161:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:163:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:165:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:166:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:167:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:168:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

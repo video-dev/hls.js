@@ -13,6 +13,14 @@ const HMSF_REGEX = /^(\d{2,}):(\d{2}):(\d{2}):(\d{2})\.?(\d+)?$/;
 // Time format: hours, minutes, seconds, milliseconds, frames, ticks
 const TIME_UNIT_REGEX = /^(\d*(?:\.\d*)?)(h|m|s|ms|f|t)$/;
 
+const textAlignToLineAlign: Partial<Record<string, LineAlignSetting>> = {
+  left: 'start',
+  center: 'center',
+  right: 'end',
+  start: 'start',
+  end: 'end',
+};
+
 export function parseIMSC1(
   payload: ArrayBuffer,
   initPTS: number,
@@ -107,13 +115,10 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       const { textAlign } = styles;
       if (textAlign) {
         // cue.positionAlign not settable in FF~2016
-        cue.lineAlign = {
-          left: 'start',
-          center: 'center',
-          right: 'end',
-          start: 'start',
-          end: 'end',
-        }[textAlign];
+        const lineAlign = textAlignToLineAlign[textAlign];
+        if (lineAlign) {
+          cue.lineAlign = lineAlign;
+        }
         cue.align = textAlign as AlignSetting;
       }
       Object.assign(cue, styles);
@@ -135,9 +140,9 @@ function getElementCollection(
   return [];
 }
 
-function collectionToDictionary(
-  elementsWithId: Array<HTMLElement>
-): { [id: string]: HTMLElement } {
+function collectionToDictionary(elementsWithId: Array<HTMLElement>): {
+  [id: string]: HTMLElement;
+} {
   return elementsWithId.reduce((dict, element: HTMLElement) => {
     const id = element.getAttribute('xml:id');
     if (id) {

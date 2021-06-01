@@ -165,9 +165,15 @@ export function mergeDetails(
   oldDetails: LevelDetails,
   newDetails: LevelDetails
 ): void {
-  // potentially retrieve cached initsegment
-  if (newDetails.initSegment && oldDetails.initSegment) {
-    newDetails.initSegment = oldDetails.initSegment;
+  // Track the last initSegment processed. Initialize it to the last one on the timeline.
+  let currentInitSegment: Fragment | null = null;
+  const oldFragments = oldDetails.fragments;
+  for (let i = oldFragments.length - 1; i >= 0; i--) {
+    const oldInit = oldFragments[i].initSegment;
+    if (oldInit) {
+      currentInitSegment = oldInit;
+      break;
+    }
   }
 
   if (oldDetails.fragmentHint) {
@@ -182,7 +188,12 @@ export function mergeDetails(
     oldDetails,
     newDetails,
     (oldFrag: Fragment, newFrag: Fragment) => {
-      ccOffset = oldFrag.cc - newFrag.cc;
+      if (oldFrag.relurl) {
+        // Do not compare CC if the old fragment has no url. This is a level.fragmentHint used by LL-HLS parts.
+        // It maybe be off by 1 if it was created before any parts or discontinuity tags were appended to the end
+        // of the playlist.
+        ccOffset = oldFrag.cc - newFrag.cc;
+      }
       if (
         Number.isFinite(oldFrag.startPTS) &&
         Number.isFinite(oldFrag.endPTS)
@@ -209,6 +220,15 @@ export function mergeDetails(
       newFrag.loader = oldFrag.loader;
       newFrag.stats = oldFrag.stats;
       newFrag.urlId = oldFrag.urlId;
+      if (oldFrag.initSegment) {
+        newFrag.initSegment = oldFrag.initSegment;
+        currentInitSegment = oldFrag.initSegment;
+      } else if (
+        !newFrag.initSegment ||
+        newFrag.initSegment.relurl == currentInitSegment?.relurl
+      ) {
+        newFrag.initSegment = currentInitSegment;
+      }
     }
   );
 
@@ -228,15 +248,12 @@ export function mergeDetails(
 
   const newFragments = newDetails.fragments;
   if (ccOffset) {
-    logger.log('discontinuity sliding from playlist, take drift into account');
+    logger.warn('discontinuity sliding from playlist, take drift into account');
     for (let i = 0; i < newFragments.length; i++) {
       newFragments[i].cc += ccOffset;
     }
   }
   if (newDetails.skippedSegments) {
-    if (!newDetails.initSegment) {
-      newDetails.initSegment = oldDetails.initSegment;
-    }
     newDetails.startCC = newDetails.fragments[0].cc;
   }
 
@@ -269,6 +286,23 @@ export function mergeDetails(
 
   if (newFragments.length) {
     newDetails.totalduration = newDetails.edge - newFragments[0].start;
+  }
+
+  newDetails.driftStartTime = oldDetails.driftStartTime;
+  newDetails.driftStart = oldDetails.driftStart;
+  const advancedDateTime = newDetails.advancedDateTime;
+  if (newDetails.advanced && advancedDateTime) {
+    const edge = newDetails.edge;
+    if (!newDetails.driftStart) {
+      newDetails.driftStartTime = advancedDateTime;
+      newDetails.driftStart = edge;
+    }
+    newDetails.driftEndTime = advancedDateTime;
+    newDetails.driftEnd = edge;
+  } else {
+    newDetails.driftEndTime = oldDetails.driftEndTime;
+    newDetails.driftEnd = oldDetails.driftEnd;
+    newDetails.advancedDateTime = oldDetails.advancedDateTime;
   }
 }
 
@@ -364,7 +398,7 @@ export function computeReloadInterval(
     timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;
   const roundTrip = stats.loading.end - stats.loading.start;
 
-  let estimatedTimeUntilUpdate = reloadInterval;
+  let estimatedTimeUntilUpdate;
   let availabilityDelay = newDetails.availabilityDelay;
   // let estimate = 'average';
 
@@ -412,7 +446,11 @@ export function computeReloadInterval(
   return Math.round(estimatedTimeUntilUpdate);
 }
 
-export function getFragmentWithSN(level: Level, sn: number): Fragment | null {
+export function getFragmentWithSN(
+  level: Level,
+  sn: number,
+  fragCurrent: Fragment | null
+): Fragment | null {
   if (!level || !level.details) {
     return null;
   }
@@ -425,6 +463,9 @@ export function getFragmentWithSN(level: Level, sn: number): Fragment | null {
   fragment = levelDetails.fragmentHint;
   if (fragment && fragment.sn === sn) {
     return fragment;
+  }
+  if (sn < levelDetails.startSN && fragCurrent && fragCurrent.sn === sn) {
+    return fragCurrent;
   }
   return null;
 }

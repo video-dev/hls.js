@@ -10,8 +10,8 @@ type Mp4BoxData = {
 const UINT32_MAX = Math.pow(2, 32) - 1;
 const push = [].push;
 
-export function bin2str(buffer: Uint8Array): string {
-  return String.fromCharCode.apply(null, buffer);
+export function bin2str(data: Uint8Array): string {
+  return String.fromCharCode.apply(null, data);
 }
 
 export function readUint16(
@@ -123,7 +123,7 @@ type SidxInfo = {
 
 export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
   const moovBox = findBox(initSegment, ['moov']);
-  const moov = moovBox ? moovBox[0] : null;
+  const moov = moovBox[0];
   const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
 
   const sidxBox = findBox(initSegment, ['sidx']);
@@ -230,7 +230,7 @@ export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
  * the init segment is malformed.
  */
 
-interface InitDataTrack {
+export interface InitDataTrack {
   timescale: number;
   id: number;
   codec: string;
@@ -273,19 +273,24 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
           const hdlrType = bin2str(
             hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12)
           );
-          const type: HdlrType = {
-            soun: ElementaryStreamTypes.AUDIO,
-            vide: ElementaryStreamTypes.VIDEO,
+          const type: HdlrType | undefined = {
+            soun: ElementaryStreamTypes.AUDIO as const,
+            vide: ElementaryStreamTypes.VIDEO as const,
           }[hdlrType];
           if (type) {
-            // TODO: Parse codec details to be able to build MIME type.
-            const codexBoxes = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);
+            // Parse codec details
+            const stsd = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
             let codec;
-            if (codexBoxes.length) {
-              const codecBox = codexBoxes[0];
+            if (stsd) {
               codec = bin2str(
-                codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16)
+                stsd.data.subarray(stsd.start + 12, stsd.start + 16)
               );
+              // TODO: Parse codec details to be able to build MIME type.
+              // stsd.start += 8;
+              // const codecBox = findBox(stsd, [codec])[0];
+              // if (codecBox) {
+              //   TODO: Codec parsing support for avc1, mp4a, hevc, av01...
+              // }
             }
             result[trackId] = { timescale, type };
             result[type] = { timescale, id: trackId, codec };

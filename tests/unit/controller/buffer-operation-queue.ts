@@ -12,14 +12,14 @@ const queueNames = ['audio', 'video'];
 describe('BufferOperationQueue tests', function () {
   const sandbox = sinon.createSandbox();
   let operationQueue;
-  const sbMock = ({
+  const sbMock = {
     audio: {
       updating: false,
     },
     video: {
       updating: false,
     },
-  } as any) as SourceBuffers;
+  } as any as SourceBuffers;
 
   beforeEach(function () {
     operationQueue = new BufferOperationQueue(sbMock);

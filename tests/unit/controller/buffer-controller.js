@@ -65,30 +65,30 @@ describe('BufferController tests', function () {
   //       }
   //     };
   //     bufferController._live = true;
-  //     hls.config.liveBackBufferLength = 10;
+  //     hls.config.backBufferLength = 10;
   //   });
   //
   //   it('exits early if not live', function () {
-  //     bufferController.flushLiveBackBuffer();
+  //     bufferController.flushBackBuffer();
   //     expect(removeStub).to.not.have.been.called;
   //   });
   //
-  //   it('exits early if liveBackBufferLength is not a finite number, or is less than 0', function () {
-  //     hls.config.liveBackBufferLength = 'foo';
-  //     bufferController.flushLiveBackBuffer();
+  //   it('exits early if backBufferLength is not a finite number, or is less than 0', function () {
+  //     hls.config.backBufferLength = 'foo';
+  //     bufferController.flushBackBuffer();
   //
-  //     hls.config.liveBackBufferLength = -1;
-  //     bufferController.flushLiveBackBuffer();
+  //     hls.config.backBufferLength = -1;
+  //     bufferController.flushBackBuffer();
   //
   //     expect(removeStub).to.not.have.been.called;
   //   });
   //
   //   it('does not flush if nothing is buffered', function () {
   //     delete mockSourceBuffer.buffered;
-  //     bufferController.flushLiveBackBuffer();
+  //     bufferController.flushBackBuffer();
   //
   //     mockSourceBuffer = null;
-  //     bufferController.flushLiveBackBuffer();
+  //     bufferController.flushBackBuffer();
   //
   //     expect(removeStub).to.not.have.been.called;
   //   });
@@ -96,30 +96,30 @@ describe('BufferController tests', function () {
   //   it('does not flush if no buffered range intersects with back buffer limit', function () {
   //     bufStart = 5;
   //     mockMedia.currentTime = 10;
-  //     bufferController.flushLiveBackBuffer();
+  //     bufferController.flushBackBuffer();
   //     expect(removeStub).to.not.have.been.called;
   //   });
   //
-  //   it('does not flush if the liveBackBufferLength is Infinity', function () {
-  //     hls.config.liveBackBufferLength = Infinity;
+  //   it('does not flush if the backBufferLength is Infinity', function () {
+  //     hls.config.backBufferLength = Infinity;
   //     mockMedia.currentTime = 15;
-  //     bufferController.flushLiveBackBuffer();
+  //     bufferController.flushBackBuffer();
   //     expect(removeStub).to.not.have.been.called;
   //   });
   //
   //   it('flushes up to the back buffer limit if the buffer intersects with that point', function () {
   //     mockMedia.currentTime = 15;
-  //     bufferController.flushLiveBackBuffer();
+  //     bufferController.flushBackBuffer();
   //     expect(removeStub).to.have.been.calledOnce;
   //     expect(bufferController.flushBufferCounter).to.equal(0);
   //     expect(removeStub).to.have.been.calledWith('video', mockSourceBuffer.video, 0, 5);
   //   });
   //
-  //   it('flushes to a max of one targetDuration from currentTime, regardless of liveBackBufferLength', function () {
+  //   it('flushes to a max of one targetDuration from currentTime, regardless of backBufferLength', function () {
   //     mockMedia.currentTime = 15;
   //     bufferController._levelTargetDuration = 5;
-  //     hls.config.liveBackBufferLength = 0;
-  //     bufferController.flushLiveBackBuffer();
+  //     hls.config.backBufferLength = 0;
+  //     bufferController.flushBackBuffer();
   //     expect(removeStub).to.have.been.calledWith('video', mockSourceBuffer.video, 0, 10);
   //   });
   //
@@ -169,6 +169,7 @@ describe('BufferController tests', function () {
       bufferController.onMediaAttaching(Events.MEDIA_ATTACHING, {
         media: video,
       });
+      sandbox.stub(bufferController.mediaSource, 'addSourceBuffer');
 
       hls.on(Hls.Events.BUFFER_CREATED, (event, data) => {
         const tracks = data.tracks;
@@ -177,7 +178,20 @@ describe('BufferController tests', function () {
         done();
       });
 
-      bufferController.pendingTracks = { video: { codec: 'testing' } };
+      hls.once(Hls.Events.ERROR, (event, data) => {
+        // Async timeout prevents assertion from throwing in event handler
+        self.setTimeout(() => {
+          expect(data.error.message).to.equal(null);
+          done();
+        });
+      });
+
+      bufferController.pendingTracks = {
+        video: {
+          container: 'video/mp4',
+          codec: 'avc1.42e01e',
+        },
+      };
       bufferController.checkPendingTracks();
 
       video = null;

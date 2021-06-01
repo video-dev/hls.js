@@ -1,7 +1,7 @@
 import { VTTParser } from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
 import { toMpegTsClockFromTimescale } from './timescale-conversion';
-import { PTSNormalize } from '../remux/mp4-remuxer';
+import { normalizePts } from '../remux/mp4-remuxer';
 import type { VTTCCs } from '../types/vtt';
 
 const LINEBREAKS = /\r\n|\n\r|\n|\r/g;
@@ -137,7 +137,7 @@ export function parseWebVTT(
     if (timestampMap) {
       const duration = cue.endTime - cue.startTime;
       const startTime =
-        PTSNormalize(
+        normalizePts(
           (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
           timeOffset * 90000
         ) / 90000;
@@ -166,7 +166,7 @@ export function parseWebVTT(
   };
 
   parser.onflush = function () {
-    if (parsingError && errorCallBack) {
+    if (parsingError) {
       errorCallBack(parsingError);
       return;
     }

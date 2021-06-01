@@ -6,6 +6,8 @@ on:
     tags: ['v*']
   pull_request:
 
+permissions: {}
+
 jobs:
   config:
     runs-on: ubuntu-latest
@@ -26,7 +28,7 @@ jobs:
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
       - name: extract tag
         id: extract_tag
-        uses: actions/github-script@v3
+        uses: actions/github-script@v4
         with:
           script: |
             const prefix = 'refs/tags/';
@@ -43,6 +45,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: check package-lock.json version
+        id: extract_tag
+        uses: actions/github-script@v4
+        with:
+          script: |
+            const fs = require('fs');
+            if (
+              JSON.parse(fs.readFileSync('./package-lock.json', { encoding: 'utf8' }))
+                .lockfileVersion !== 2
+            ) {
+              throw new Error(
+                'Expecting package-lock.json version to be 2. Please make sure you are using npm 7.'
+              );
+            }
+
       - name: cache node_modules
         uses: actions/cache@v2
         env:
@@ -56,9 +73,9 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: install
         run: |
@@ -116,9 +133,9 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -157,9 +174,9 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -190,13 +207,15 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v2
 
       - name: use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -247,9 +266,9 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -301,9 +320,9 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2
@@ -327,6 +346,7 @@ jobs:
       - name: run functional tests
         run: |
           npm run test:func
+          npm run test:func:light
         env:
           CI: true
           SAUCE_TUNNEL_ID: ${{ github.run_id }}-${{ matrix.config }}
@@ -391,9 +411,9 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '15'
 
       - name: download build
         uses: actions/download-artifact@v2

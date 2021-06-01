@@ -1,7 +1,7 @@
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
 import { getSkipValue, HlsSkip, HlsUrlParameters } from '../types/level';
-import { computeReloadInterval } from './level-helper';
+import { computeReloadInterval, mergeDetails } from './level-helper';
 import { logger } from '../utils/logger';
 import type { LevelDetails } from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
@@ -11,7 +11,6 @@ import type {
   TrackLoadedData,
 } from '../types/events';
 import { ErrorData } from '../types/events';
-import * as LevelHelper from './level-helper';
 import { Events } from '../events';
 import { ErrorTypes } from '../errors';
 
@@ -20,8 +19,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   protected timer: number = -1;
   protected canLoad: boolean = false;
   protected retryCount: number = 0;
-  protected readonly log: (msg: any) => void;
-  protected readonly warn: (msg: any) => void;
+  protected log: (msg: any) => void;
+  protected warn: (msg: any) => void;
 
   constructor(hls: Hls, logPrefix: string) {
     this.log = logger.log.bind(logger, `${logPrefix}:`);
@@ -31,6 +30,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
   public destroy(): void {
     this.clearTimer();
+    // @ts-ignore
+    this.hls = this.log = this.warn = null;
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {
@@ -126,29 +127,29 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       }
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
-        LevelHelper.mergeDetails(previousDetails, details);
-        if (!details.advanced) {
-          details.advancedDateTime = previousDetails.advancedDateTime;
-        }
+        mergeDetails(previousDetails, details);
       }
       if (!this.canLoad || !details.live) {
         return;
       }
+      let deliveryDirectives: HlsUrlParameters;
+      let msn: number | undefined = undefined;
+      let part: number | undefined = undefined;
       if (details.canBlockReload && details.endSN && details.advanced) {
         // Load level with LL-HLS delivery directives
         const lowLatencyMode = this.hls.config.lowLatencyMode;
+        const lastPartSn = details.lastPartSn;
+        const endSn = details.endSN;
         const lastPartIndex = details.lastPartIndex;
-        let msn;
-        let part;
-        if (lowLatencyMode) {
-          msn = lastPartIndex !== -1 ? details.lastPartSn : details.endSN + 1;
-          part = lastPartIndex !== -1 ? lastPartIndex + 1 : undefined;
+        const hasParts = lastPartIndex !== -1;
+        const lastPart = lastPartSn === endSn;
+        // When low latency mode is disabled, we'll skip part requests once the last part index is found
+        const nextSnStartIndex = lowLatencyMode ? 0 : lastPartIndex;
+        if (hasParts) {
+          msn = lastPart ? endSn + 1 : lastPartSn;
+          part = lastPart ? nextSnStartIndex : lastPartIndex + 1;
         } else {
-          // This playlist update will be late by one part (0). There is no way to know the last part number,
-          // or request just the next sn without a part in most implementations.
-          msn =
-            lastPartIndex !== -1 ? details.lastPartSn + 1 : details.endSN + 1;
-          part = lastPartIndex !== -1 ? 0 : undefined;
+          msn = endSn + 1;
         }
         // Low-Latency CDN Tune-in: "age" header and time since load indicates we're behind by more than one part
         // Update directives to obtain the Playlist that has the estimated additional duration of media
@@ -185,25 +186,53 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           }
           details.tuneInGoal = currentGoal;
         }
-        let skip = getSkipValue(details, msn);
-        if (data.deliveryDirectives?.skip) {
-          if (details.deltaUpdateFailed) {
-            msn = data.deliveryDirectives.msn;
-            part = data.deliveryDirectives.part;
-            skip = HlsSkip.No;
-          }
+        deliveryDirectives = this.getDeliveryDirectives(
+          details,
+          data.deliveryDirectives,
+          msn,
+          part
+        );
+        if (lowLatencyMode || !lastPart) {
+          this.loadPlaylist(deliveryDirectives);
+          return;
         }
-        this.loadPlaylist(new HlsUrlParameters(msn, part, skip));
-        return;
+      } else {
+        deliveryDirectives = this.getDeliveryDirectives(
+          details,
+          data.deliveryDirectives,
+          msn,
+          part
+        );
       }
-      const reloadInterval = computeReloadInterval(details, stats);
+      let reloadInterval = computeReloadInterval(details, stats);
+      if (msn !== undefined && details.canBlockReload) {
+        reloadInterval -= details.partTarget || 1;
+      }
       this.log(
         `reload live playlist ${index} in ${Math.round(reloadInterval)} ms`
       );
-      this.timer = self.setTimeout(() => this.loadPlaylist(), reloadInterval);
+      this.timer = self.setTimeout(
+        () => this.loadPlaylist(deliveryDirectives),
+        reloadInterval
+      );
     } else {
       this.clearTimer();
     }
+  }
+
+  private getDeliveryDirectives(
+    details: LevelDetails,
+    previousDeliveryDirectives: HlsUrlParameters | null,
+    msn?: number,
+    part?: number
+  ): HlsUrlParameters {
+    let skip = getSkipValue(details, msn);
+    if (previousDeliveryDirectives?.skip && details.deltaUpdateFailed) {
+      msn = previousDeliveryDirectives.msn;
+      part = previousDeliveryDirectives.part;
+      skip = HlsSkip.No;
+    }
+    return new HlsUrlParameters(msn, part, skip);
   }
 
   protected retryLoadingOrFail(errorEvent: ErrorData): boolean {

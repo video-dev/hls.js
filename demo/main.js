@@ -1,6 +1,7 @@
 /* global $, Hls, __NETLIFY__ */
 /* eslint camelcase: 0 */
 
+import { pack } from 'jsonpack';
 import 'promise-polyfill/src/polyfill';
 import { sortObject, copyTextToClipboard } from './demo-utils';
 import { TimelineChart } from './chart/timeline-chart';
@@ -29,7 +30,7 @@ const hlsjsDefaults = {
   debug: true,
   enableWorker: true,
   lowLatencyMode: true,
-  liveBackBufferLength: 60 * 1.5,
+  backBufferLength: 60 * 1.5,
 };
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
@@ -652,10 +653,13 @@ function loadSelectedStream() {
     stats.tagList = data.frag.tagList;
 
     const level = data.frag.level;
-    const autoLevel = data.frag.autoLevel;
+    const autoLevel = hls.autoLevelEnabled;
     if (stats.levelStart === undefined) {
       stats.levelStart = level;
     }
+
+    stats.fragProgramDateTime = data.frag.programDateTime;
+    stats.fragStart = data.frag.start;
 
     if (autoLevel) {
       if (stats.fragChangedAuto) {
@@ -807,7 +811,10 @@ function loadSelectedStream() {
         break;
       case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
         logError(
-          'Buffer add codec error for ' + data.mimeType + ':' + data.err.message
+          'Buffer add codec error for ' +
+            data.mimeType +
+            ':' +
+            data.error.message
         );
         break;
       case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
@@ -1207,10 +1214,23 @@ function checkBuffer() {
         log +=
           'Live Stats:\n' +
           `  Max Latency: ${hls.maxLatency}\n` +
-          `  Target Latency: ${hls.targetLatency}\n` +
-          `  Latency: ${hls.latency}\n` +
-          `  Edge Stall: ${hls.latencyController.edgeStalled}\n` +
+          `  Target Latency: ${hls.targetLatency.toFixed(3)}\n` +
+          `  Latency: ${hls.latency.toFixed(3)}\n` +
+          `  Drift: ${hls.drift.toFixed(3)} (edge advance rate)\n` +
+          `  Edge Stall: ${hls.latencyController.edgeStalled.toFixed(
+            3
+          )} (playlist refresh over target duration/part)\n` +
           `  Playback rate: ${video.playbackRate.toFixed(2)}\n`;
+        if (stats.fragProgramDateTime) {
+          const currentPDT =
+            stats.fragProgramDateTime +
+            (video.currentTime - stats.fragStart) * 1000;
+          log += `  Program Date Time: ${new Date(currentPDT).toISOString()}`;
+          const pdtLatency = (Date.now() - currentPDT) / 1000;
+          if (pdtLatency > 0) {
+            log += ` (${pdtLatency.toFixed(3)} seconds ago)`;
+          }
+        }
       }
 
       $('#bufferedOut').text(log);
@@ -1240,7 +1260,7 @@ function hideCanvas() {
 
 function getMetrics() {
   const json = JSON.stringify(events);
-  const jsonpacked = self.jsonpack.pack(json);
+  const jsonpacked = pack(json);
   // console.log('packing JSON from ' + json.length + ' to ' + jsonpacked.length + ' bytes');
   return btoa(jsonpacked);
 }
@@ -1583,7 +1603,7 @@ function addChartEventListeners(hls) {
     chart
   );
   hls.on(
-    Hls.Events.MANIFEST_LOADED,
+    Hls.Events.MANIFEST_PARSED,
     (eventName, data) => {
       const { levels } = data;
       chart.removeType('level');
@@ -1621,16 +1641,6 @@ function addChartEventListeners(hls) {
   );
   hls.on(
     Hls.Events.LEVEL_LOADING,
-    () => {
-      // TODO: mutate level datasets
-      // Update loadLevel
-      chart.removeType('level');
-      chart.updateLevels(hls.levels);
-    },
-    chart
-  );
-  hls.on(
-    Hls.Events.FRAG_LOADING,
     () => {
       // TODO: mutate level datasets
       // Update loadLevel
