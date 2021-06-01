@@ -19,6 +19,7 @@ class AudioTrackController extends BasePlaylistController {
   private groupId: string | null = null;
   private tracksInGroup: MediaPlaylist[] = [];
   private trackId: number = -1;
+  private trackName: string = '';
   private selectDefaultTrack: boolean = true;
 
   constructor(hls: Hls) {
@@ -48,6 +49,8 @@ class AudioTrackController extends BasePlaylistController {
 
   public destroy() {
     this.unregisterListeners();
+    this.tracks.length = 0;
+    this.tracksInGroup.length = 0;
     super.destroy();
   }
 
@@ -56,6 +59,7 @@ class AudioTrackController extends BasePlaylistController {
     this.groupId = null;
     this.tracksInGroup = [];
     this.trackId = -1;
+    this.trackName = '';
     this.selectDefaultTrack = true;
   }
 
@@ -167,10 +171,6 @@ class AudioTrackController extends BasePlaylistController {
 
   private setAudioTrack(newId: number): void {
     const tracks = this.tracksInGroup;
-    // noop on same audio track id as already set
-    if (this.trackId === newId && tracks[newId]?.details) {
-      return;
-    }
 
     // check if level idx is valid
     if (newId < 0 || newId >= tracks.length) {
@@ -182,11 +182,23 @@ class AudioTrackController extends BasePlaylistController {
     this.clearTimer();
 
     const lastTrack = tracks[this.trackId];
-    const track = tracks[newId];
     this.log(`Now switching to audio-track index ${newId}`);
+    const track = tracks[newId];
+    const { id, groupId = '', name, type, url } = track;
     this.trackId = newId;
-    const { url, type, id } = track;
-    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { id, type, url });
+    this.trackName = name;
+    this.selectDefaultTrack = false;
+    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, {
+      id,
+      groupId,
+      name,
+      type,
+      url,
+    });
+    // Do not reload track unless live
+    if (track.details && !track.details.live) {
+      return;
+    }
     const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
     this.loadPlaylist(hlsUrlParameters);
   }
@@ -197,7 +209,7 @@ class AudioTrackController extends BasePlaylistController {
       audioTracks.length,
       'Initial audio track should be selected when tracks are known'
     );
-    const currentAudioTrackName = audioTracks[this.trackId]?.name;
+    const currentAudioTrackName = this.trackName;
     const trackId =
       this.findTrackId(currentAudioTrackName) || this.findTrackId();
 

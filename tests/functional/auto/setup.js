@@ -9,6 +9,7 @@ require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
 const useSauce = !!process.env.SAUCE || !!process.env.SAUCE_TUNNEL_ID;
+const HlsjsLightBuild = !!process.env.HLSJS_LIGHT;
 const chai = require('chai');
 const expect = chai.expect;
 
@@ -150,12 +151,26 @@ async function testSmoothSwitch(url, config) {
   const result = await browser.executeAsyncScript(
     function (url, config) {
       const callback = arguments[arguments.length - 1];
-      self.startStream(url, config, callback);
+      const startConfig = self.objectAssign(config, {
+        startLevel: 0,
+      });
+      self.startStream(url, startConfig, callback);
+      self.hls.manualLevel = 0;
       const video = self.video;
       self.hls.once(self.Hls.Events.FRAG_CHANGED, function (eventName, data) {
         console.log(
           '[test] > ' + eventName + ' frag.level: ' + data.frag.level
         );
+        const highestLevel = self.hls.levels.length - 1;
+        if (highestLevel === 0) {
+          callback({
+            highestLevel: highestLevel,
+            currentTimeDelta: 0,
+            message: 'No adaptive variants',
+            logs: self.logString,
+          });
+          return;
+        }
         self.switchToHighestLevel('next');
       });
       self.hls.on(self.Hls.Events.LEVEL_SWITCHED, function (eventName, data) {
@@ -172,7 +187,7 @@ async function testSmoothSwitch(url, config) {
             callback({
               highestLevel: highestLevel,
               currentTimeDelta: newCurrentTime - currentTime,
-              paused,
+              paused: paused,
               logs: self.logString,
             });
           }, 2000);
@@ -231,7 +246,7 @@ async function testSeekOnVOD(url, config) {
           if (!isFinite(duration)) {
             callback({
               code: 'non-finite-duration',
-              duration,
+              duration: duration,
               logs: self.logString,
             });
           }
@@ -239,27 +254,18 @@ async function testSeekOnVOD(url, config) {
           video.onseeked = function () {
             console.log('[test] > video  "onseeked"');
             self.setTimeout(function () {
-              const { currentTime, paused } = video;
-              if (currentTime === 0 || paused) {
+              const currentTime = video.currentTime;
+              const paused = video.paused;
+              if (video.currentTime === 0 || paused) {
                 callback({
                   code: 'paused',
-                  currentTime,
-                  duration,
-                  paused,
+                  currentTime: currentTime,
+                  duration: duration,
+                  paused: paused,
                   logs: self.logString,
                 });
               }
-            }, 3000);
-            self.setTimeout(function () {
-              const { currentTime, paused } = video;
-              callback({
-                code: 'timeout-waiting-for-ended-event',
-                currentTime,
-                duration,
-                paused,
-                logs: self.logString,
-              });
-            }, 10000);
+            }, 5000);
           };
           const seekToTime = video.seekable.end(0) - 3;
           console.log(
@@ -269,6 +275,17 @@ async function testSeekOnVOD(url, config) {
               seekToTime
           );
           video.currentTime = seekToTime;
+          self.setTimeout(function () {
+            const currentTime = video.currentTime;
+            const paused = video.paused;
+            callback({
+              code: 'timeout-waiting-for-ended-event',
+              currentTime: currentTime,
+              duration: duration,
+              paused: paused,
+              logs: self.logString,
+            });
+          }, 12000);
         }, 3000);
       };
       // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
@@ -279,7 +296,7 @@ async function testSeekOnVOD(url, config) {
           callback({
             code: 'buffer-gaps',
             bufferedRanges: video.buffered.length,
-            duration,
+            duration: duration,
             logs: self.logString,
           });
         }
@@ -402,7 +419,7 @@ async function sauceConnect(tunnelIdentifier) {
     );
     sauceConnectLauncher(
       {
-        tunnelIdentifier,
+        tunnelIdentifier: tunnelIdentifier,
       },
       (err, sauceConnectProcess) => {
         if (err) {
@@ -467,6 +484,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       }
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
+      capabilities.public = 'public restricted';
       capabilities.avoidProxy = true;
       capabilities['record-screenshots'] = 'false';
       browser = browser.usingServer(
@@ -505,8 +523,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           console.log('Loading test page...');
         }
         try {
+          const testPageExt = HlsjsLightBuild ? '-light' : '';
           await browser.get(
-            `http://${hostname}:8000/tests/functional/auto/index.html`
+            `http://${hostname}:8000/tests/functional/auto/index${testPageExt}.html`
           );
         } catch (e) {
           throw new Error('failed to open test page');
@@ -560,55 +579,71 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     }
   });
 
-  Object.entries(streams)
+  const entries = Object.entries(streams);
+  if (HlsjsLightBuild) {
+    entries.length = 1;
+  }
+
+  entries
+    // eslint-disable-next-line no-unused-vars
     .filter(([name, stream]) => !stream.skipFunctionalTests)
+    // eslint-disable-next-line no-unused-vars
     .forEach(([name, stream]) => {
       const url = stream.url;
       const config = stream.config || {};
       if (
-        !stream.blacklist_ua ||
-        stream.blacklist_ua.indexOf(browserConfig.name) === -1
+        stream.skip_ua &&
+        stream.skip_ua.some((browserInfo) => {
+          if (typeof browserInfo === 'string') {
+            return browserInfo === browserConfig.name;
+          }
+          return (
+            browserInfo.name === browserConfig.name &&
+            browserInfo.version === browserConfig.version
+          );
+        })
       ) {
+        return;
+      }
+      it(
+        `should receive video loadeddata event for ${stream.description}`,
+        testLoadedData.bind(null, url, config)
+      );
+
+      if (stream.startSeek && !HlsjsLightBuild) {
         it(
-          `should receive video loadeddata event for ${stream.description}`,
-          testLoadedData.bind(null, url, config)
+          `seek back to start and play for ${stream.description}`,
+          testSeekBackToStart.bind(null, url, config)
         );
+      }
 
-        if (stream.startSeek) {
-          it(
-            `seek back to start and play for ${stream.description}`,
-            testSeekBackToStart.bind(null, url, config)
-          );
-        }
+      if (stream.abr && !HlsjsLightBuild) {
+        it(
+          `should "smooth switch" to highest level and still play after 2s for ${stream.description}`,
+          testSmoothSwitch.bind(null, url, config)
+        );
+      }
 
-        if (stream.abr) {
-          it(
-            `should "smooth switch" to highest level and still play(readyState === 4) after 12s for ${stream.description}`,
-            testSmoothSwitch.bind(null, url, config)
-          );
-        }
-
-        if (stream.live) {
-          it(
-            `should seek near the end and receive video seeked event for ${stream.description}`,
-            testSeekOnLive.bind(null, url, config)
-          );
-        } else {
-          it(
-            `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
-            testIdleBufferLength.bind(null, url, config)
-          );
-          it(
-            `should play ${stream.description}`,
-            testIsPlayingVOD.bind(null, url, config)
-          );
-          it(
-            `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
-            testSeekOnVOD.bind(null, url, config)
-          );
-          // TODO: Seeking to or past VOD duration should result in the video ending
-          // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
-        }
+      if (stream.live) {
+        it(
+          `should seek near the end and receive video seeked event for ${stream.description}`,
+          testSeekOnLive.bind(null, url, config)
+        );
+      } else if (!HlsjsLightBuild) {
+        it(
+          `should buffer up to maxBufferLength or video.duration for ${stream.description}`,
+          testIdleBufferLength.bind(null, url, config)
+        );
+        it(
+          `should play ${stream.description}`,
+          testIsPlayingVOD.bind(null, url, config)
+        );
+        it(
+          `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
+          testSeekOnVOD.bind(null, url, config)
+        );
+        // TODO: Seeking to or past VOD duration should result in the video ending
+        // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
       }
     });
 });

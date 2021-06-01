@@ -1,10 +1,11 @@
-import type { InitData } from '../utils/mp4-tools';
+import type { InitData, InitDataTrack } from '../utils/mp4-tools';
 import {
   getDuration,
   getStartDTS,
   offsetStartDTS,
   parseInitSegment,
 } from '../utils/mp4-tools';
+import { ElementaryStreamTypes } from '../loader/fragment';
 import { logger } from '../utils/logger';
 import type { TrackSet } from '../types/track';
 import type {
@@ -60,14 +61,19 @@ class PassThroughRemuxer implements Remuxer {
     }
     const initData = (this.initData = parseInitSegment(initSegment));
 
-    // default audio codec if nothing specified
-    // TODO : extract that from initSegment
+    // Get codec from initSegment or fallback to default
     if (!audioCodec) {
-      audioCodec = 'mp4a.40.5';
+      audioCodec = getParsedTrackCodec(
+        initData.audio,
+        ElementaryStreamTypes.AUDIO
+      );
     }
 
     if (!videoCodec) {
-      videoCodec = 'avc1.42e01e';
+      videoCodec = getParsedTrackCodec(
+        initData.video,
+        ElementaryStreamTypes.VIDEO
+      );
     }
 
     const tracks: TrackSet = {};
@@ -150,11 +156,10 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     if (!Number.isFinite(initPTS!)) {
-      this.initPTS = initSegment.initPTS = initPTS = computeInitPTS(
-        initData,
-        data,
-        lastEndDTS
-      );
+      this.initPTS =
+        initSegment.initPTS =
+        initPTS =
+          computeInitPTS(initData, data, lastEndDTS);
     }
 
     const duration = getDuration(data, initData);
@@ -207,4 +212,26 @@ class PassThroughRemuxer implements Remuxer {
 const computeInitPTS = (initData, data, timeOffset) =>
   getStartDTS(initData, data) - timeOffset;
 
+function getParsedTrackCodec(
+  track: InitDataTrack | undefined,
+  type: ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO
+): string {
+  const parsedCodec = track?.codec;
+  if (parsedCodec && parsedCodec.length > 4) {
+    return parsedCodec;
+  }
+  // Since mp4-tools cannot parse full codec string (see 'TODO: Parse codec details'... in mp4-tools)
+  // Provide defaults based on codec type
+  // This allows for some playback of some fmp4 playlists without CODECS defined in manifest
+  if (parsedCodec === 'hvc1') {
+    return 'hvc1.1.c.L120.90';
+  }
+  if (parsedCodec === 'av01') {
+    return 'av01.0.04M.08';
+  }
+  if (parsedCodec === 'avc1' || type === ElementaryStreamTypes.VIDEO) {
+    return 'avc1.42e01e';
+  }
+  return 'mp4a.40.5';
+}
 export default PassThroughRemuxer;

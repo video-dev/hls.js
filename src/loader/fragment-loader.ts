@@ -20,6 +20,13 @@ export default class FragmentLoader {
     this.config = config;
   }
 
+  destroy() {
+    if (this.loader) {
+      this.loader.destroy();
+      this.loader = null;
+    }
+  }
+
   abort() {
     if (this.loader) {
       // Abort the loader for current fragment. Only one may load at any given time
@@ -53,9 +60,15 @@ export default class FragmentLoader {
     const DefaultILoader = config.loader;
 
     return new Promise((resolve, reject) => {
-      const loader = (this.loader = frag.loader = FragmentILoader
-        ? new FragmentILoader(config)
-        : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
+      if (this.loader) {
+        this.loader.destroy();
+      }
+      const loader =
+        (this.loader =
+        frag.loader =
+          FragmentILoader
+            ? new FragmentILoader(config)
+            : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag);
       const loaderConfig: LoaderConfiguration = {
         timeout: config.fragLoadingTimeOut,
@@ -139,9 +152,15 @@ export default class FragmentLoader {
     const DefaultILoader = config.loader;
 
     return new Promise((resolve, reject) => {
-      const loader = (this.loader = frag.loader = FragmentILoader
-        ? new FragmentILoader(config)
-        : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
+      if (this.loader) {
+        this.loader.destroy();
+      }
+      const loader =
+        (this.loader =
+        frag.loader =
+          FragmentILoader
+            ? new FragmentILoader(config)
+            : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag, part);
       const loaderConfig: LoaderConfiguration = {
         timeout: config.fragLoadingTimeOut,
@@ -246,6 +265,7 @@ export default class FragmentLoader {
       self.clearTimeout(this.partLoadTimeout);
       this.loader = null;
     }
+    loader.destroy();
   }
 }
 

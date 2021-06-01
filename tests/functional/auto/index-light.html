@@ -1,0 +1,17 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="style.css" />
+    <script src="../../../node_modules/promise-polyfill/dist/polyfill.min.js"></script>
+    <script src="../../../dist/hls.light.min.js"></script>
+    <script src="testbench.js"></script>
+  </head>
+  <body id="hlsjs-functional-tests">
+    <video id="video"></video>
+    <div id="log">
+      <div class="inner"></div>
+    </div>
+    <script>
+      window.setupConsoleLogRedirection();
+    </script>
+  </body>
+</html>

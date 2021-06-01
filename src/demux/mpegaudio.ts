@@ -6,88 +6,15 @@ import { DemuxedAudioTrack } from '../types/demuxer';
 let chromeVersion: number | null = null;
 
 const BitratesMap = [
-  32,
-  64,
-  96,
-  128,
-  160,
-  192,
-  224,
-  256,
-  288,
-  320,
-  352,
-  384,
-  416,
-  448,
-  32,
-  48,
-  56,
-  64,
-  80,
-  96,
-  112,
-  128,
-  160,
-  192,
-  224,
-  256,
-  320,
-  384,
-  32,
-  40,
-  48,
-  56,
-  64,
-  80,
-  96,
-  112,
-  128,
-  160,
-  192,
-  224,
-  256,
-  320,
-  32,
-  48,
-  56,
-  64,
-  80,
-  96,
-  112,
-  128,
-  144,
-  160,
-  176,
-  192,
-  224,
-  256,
-  8,
-  16,
-  24,
-  32,
-  40,
-  48,
-  56,
-  64,
-  80,
-  96,
-  112,
-  128,
-  144,
+  32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 32, 48, 56,
+  64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 32, 40, 48, 56, 64, 80,
+  96, 112, 128, 160, 192, 224, 256, 320, 32, 48, 56, 64, 80, 96, 112, 128, 144,
+  160, 176, 192, 224, 256, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144,
   160,
 ];
 
 const SamplingRateMap = [
-  44100,
-  48000,
-  32000,
-  22050,
-  24000,
-  16000,
-  11025,
-  12000,
-  8000,
+  44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000,
 ];
 
 const SamplesCoefficients = [
@@ -155,7 +82,7 @@ export function appendFrame(
     track.samplerate = header.sampleRate;
     track.samples.push(sample);
 
-    return { sample, length: header.frameLength };
+    return { sample, length: header.frameLength, missing: 0 };
   }
 }
 
@@ -227,7 +154,7 @@ export function isHeader(data: Uint8Array, offset: number): boolean {
 export function canParse(data: Uint8Array, offset: number): boolean {
   const headerSize = 4;
 
-  return isHeaderPattern(data, offset) && data.length - offset >= headerSize;
+  return isHeaderPattern(data, offset) && headerSize <= data.length - offset;
 }
 
 export function probe(data: Uint8Array, offset: number): boolean {

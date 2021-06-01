@@ -344,6 +344,26 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     );
   });
 
+  it('handles a missing init segment for mp4 segment urls', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-TARGETDURATION:14
+#EXTINF:11.360,
+/something.mp4?abc
+#EXT-X-ENDLIST`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://example.invalid/playlist.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0
+    );
+    const initSegment = result.fragments[0].initSegment;
+    expect(initSegment).to.be.ok;
+    expect(initSegment.relurl).to.equal('/something.mp4?abc');
+  });
+
   it('parse level with single char fragment URI', function () {
     const level = `#EXTM3U
 #EXT-X-ALLOW-CACHE:NO
@@ -933,12 +953,43 @@ main.mp4`;
       'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',
       0
     );
-    expect(result.initSegment.url).to.equal(
+    const initSegment = result.fragments[0].initSegment;
+    expect(initSegment.url).to.equal(
       'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/main.mp4'
     );
-    expect(result.initSegment.byteRangeStartOffset).to.equal(0);
-    expect(result.initSegment.byteRangeEndOffset).to.equal(718);
-    expect(result.initSegment.sn).to.equal('initSegment');
+    expect(initSegment.byteRangeStartOffset).to.equal(0);
+    expect(initSegment.byteRangeEndOffset).to.equal(718);
+    expect(initSegment.sn).to.equal('initSegment');
+  });
+
+  it('parses multiple #EXT-X-MAP URI', function () {
+    const level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-MAP:URI="main.mp4"
+#EXTINF:6.00600,
+frag1.mp4
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI="alt.mp4"
+#EXTINF:4.0
+frag2.mp4
+`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://video.example.com/disc.m3u8',
+      0
+    );
+    expect(result.fragments[0].initSegment.url).to.equal(
+      'http://video.example.com/main.mp4'
+    );
+    expect(result.fragments[0].initSegment.sn).to.equal('initSegment');
+    expect(result.fragments[1].initSegment.url).to.equal(
+      'http://video.example.com/alt.mp4'
+    );
+    expect(result.fragments[1].initSegment.sn).to.equal('initSegment');
   });
 
   describe('PDT calculations', function () {
@@ -1140,7 +1191,7 @@ fileSequence1151231.ts
 fileSequence1151232.ts
 #EXT-X-PART:DURATION=1.00000,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.1.ts"
 #EXT-X-PART:DURATION=0.99999,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.2.ts"
-#EXT-X-PART:DURATION=1.00000,INDEPENDENT=NO,URI="lowLatencyHLS.php?segment=filePart1151233.3.ts"
+#EXT-X-PART:DURATION=1.00000,URI="lowLatencyHLS.php?segment=filePart1151233.3.ts"
 #EXT-X-PART:DURATION=1.00000,GAP=YES,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.4.ts"
 #EXTINF:4.00000,
 fileSequence1151233.ts

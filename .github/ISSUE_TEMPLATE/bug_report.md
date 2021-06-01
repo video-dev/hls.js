@@ -5,12 +5,23 @@ about: Create a report to help us improve
 
 ### What version of Hls.js are you using?
 
-### What browser and OS are you using?
+### What browser and OS (including versions) are you using?
 
 ### Test stream:
 
 <!-- If possible, please provide a test stream or page -->
 <!-- You can paste your stream into the demo and provide the permalink here -->
+
+### Configuration:
+
+<!-- Describe the hls.js configuration and any additional player setup steps -->
+
+```
+{
+  "debug": false,
+  "backBufferLength": 60
+}
+```
 
 ### Checklist
 
@@ -40,7 +51,7 @@ _What actually happened_
 ### Console output
 
 ```
-Paste the contents of the browser console here.
+Paste the contents of the browser console here (with `debug` enabled in your config).
 ```
 
 ```

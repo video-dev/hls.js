@@ -79,7 +79,12 @@ module.exports = {
         'no-unused-vars': 0,
         'no-undef': 0,
         'no-use-before-define': 'off',
-        '@typescript-eslint/no-unused-vars': 'warn',
+        '@typescript-eslint/no-unused-vars': [
+          'warn',
+          {
+            args: 'none',
+          },
+        ],
         '@typescript-eslint/prefer-optional-chain': 2,
         '@typescript-eslint/consistent-type-assertions': [
           2,

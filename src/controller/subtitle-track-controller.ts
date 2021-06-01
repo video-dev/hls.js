@@ -35,6 +35,10 @@ class SubtitleTrackController extends BasePlaylistController {
 
   public destroy() {
     this.unregisterListeners();
+    this.tracks.length = 0;
+    this.tracksInGroup.length = 0;
+    // @ts-ignore
+    this.trackChangeListener = null;
     super.destroy();
   }
 
@@ -187,13 +191,15 @@ class SubtitleTrackController extends BasePlaylistController {
       const lastTrack = this.tracksInGroup
         ? this.tracksInGroup[this.trackId]
         : undefined;
-      const initialTrackId =
-        this.findTrackId(lastTrack?.name) || this.findTrackId();
+
       const subtitleTracks = this.tracks.filter(
         (track): boolean => !textGroupId || track.groupId === textGroupId
       );
-      this.groupId = textGroupId;
       this.tracksInGroup = subtitleTracks;
+      const initialTrackId =
+        this.findTrackId(lastTrack?.name) || this.findTrackId();
+      this.groupId = textGroupId;
+
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
         subtitleTracks,
       };
@@ -209,9 +215,9 @@ class SubtitleTrackController extends BasePlaylistController {
   }
 
   private findTrackId(name?: string): number {
-    const audioTracks = this.tracksInGroup;
-    for (let i = 0; i < audioTracks.length; i++) {
-      const track = audioTracks[i];
+    const textTracks = this.tracksInGroup;
+    for (let i = 0; i < textTracks.length; i++) {
+      const track = textTracks[i];
       if (!this.selectDefaultTrack || track.default) {
         if (!name || name === track.name) {
           return track.id;
@@ -350,8 +356,14 @@ class SubtitleTrackController extends BasePlaylistController {
     this.log(`Switching to subtitle track ${newId}`);
     this.trackId = newId;
     if (track) {
-      const { url, type, id } = track;
-      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id, type, url });
+      const { id, groupId = '', name, type, url } = track;
+      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
+        id,
+        groupId,
+        name,
+        type,
+        url,
+      });
       const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
       this.loadPlaylist(hlsUrlParameters);
     } else {

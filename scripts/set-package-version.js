@@ -62,7 +62,9 @@ try {
     );
   }
   packageJson.version = newVersion;
-  fs.writeFileSync('./package.json', JSON.stringify(packageJson));
+  fs.writeFileSync('./package.json', JSON.stringify(packageJson), {
+    encoding: 'utf8',
+  });
   console.log('Set version: ' + newVersion);
 } catch (e) {
   console.error(e);

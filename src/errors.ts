@@ -60,8 +60,10 @@ export enum ErrorDetails {
   KEY_LOAD_ERROR = 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
   KEY_LOAD_TIMEOUT = 'keyLoadTimeOut',
-  // Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : {  err : exception , mimeType : mimeType }
+  // Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : { error : exception , mimeType : mimeType }
   BUFFER_ADD_CODEC_ERROR = 'bufferAddCodecError',
+  // Triggered when source buffer(s) could not be created using level (manifest CODECS attribute), parsed media, or best guess codec(s) - data: { reason : error reason }
+  BUFFER_INCOMPATIBLE_CODECS_ERROR = 'bufferIncompatibleCodecsError',
   // Identifier for a buffer append error - data: append error description
   BUFFER_APPEND_ERROR = 'bufferAppendError',
   // Identifier for a buffer appending error event - data: appending error description

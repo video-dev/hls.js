@@ -9,7 +9,7 @@ import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
 import { BufferAppendingData } from '../../../src/types/events';
 import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import { Fragment, ElementaryStreamTypes } from '../../../src/loader/fragment';
+import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { LevelDetails } from '../../../src/loader/level-details';
@@ -173,6 +173,7 @@ describe('BufferController', function () {
         const frag = new Fragment(PlaylistLevelType.MAIN, '');
         const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
         const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
           type: name,
           data: segmentData,
           frag,
@@ -200,6 +201,7 @@ describe('BufferController', function () {
           'BUFFER_APPENDED should be triggered upon completion of the operation'
         ).to.have.been.calledWith(Events.BUFFER_APPENDED, {
           parent: 'main',
+          type: name,
           timeRanges: {
             audio: buffers.audio.buffered,
             video: buffers.video.buffered,
@@ -242,17 +244,12 @@ describe('BufferController', function () {
 
   describe('onFragParsed', function () {
     it('should trigger FRAG_BUFFERED when all audio/video data has been buffered', function () {
-      const flushLiveBackBufferSpy = sandbox.spy(
-        bufferController,
-        'flushLiveBackBuffer'
-      );
       const frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
       frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 
       bufferController.onFragParsed(Events.FRAG_PARSED, { frag });
       expect(queueAppendBlockerSpy).to.have.been.calledTwice;
-      expect(flushLiveBackBufferSpy).to.have.been.calledOnce;
       return new Promise<void>((resolve, reject) => {
         hls.on(Events.FRAG_BUFFERED, (event, data) => {
           try {
@@ -325,19 +322,31 @@ describe('BufferController', function () {
       });
     });
 
-    it('dequeues the remove operation if the SourceBuffer does not exist during the operation', function () {
+    it('Does not queue remove operations when there are no SourceBuffers', function () {
       bufferController.sourceBuffer = {};
       bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
         startOffset: 0,
         endOffset: Infinity,
       });
 
-      expect(queueAppendSpy, 'Two remove operations should have been appended')
-        .to.have.been.calledTwice;
       expect(
-        shiftAndExecuteNextSpy,
-        'The queues should have been cycled'
-      ).to.have.callCount(2);
+        queueAppendSpy,
+        'No remove operations should have been appended'
+      ).to.have.callCount(0);
+    });
+
+    it('Only queues remove operations for existing SourceBuffers', function () {
+      bufferController.sourceBuffer = {
+        audiovideo: {},
+      };
+      bufferController.onBufferFlushing(Events.BUFFER_FLUSHING, {
+        startOffset: 0,
+        endOffset: Infinity,
+      });
+      expect(
+        queueAppendSpy,
+        'Queue one remove for muxed "audiovideo" SourceBuffer'
+      ).to.have.been.calledOnce;
     });
 
     it('dequeues the remove operation if the requested remove range is not valid', function () {
@@ -349,7 +358,7 @@ describe('BufferController', function () {
 
       expect(
         queueAppendSpy,
-        'Four remove operations should have been appended'
+        'Two remove operations should have been appended'
       ).to.have.callCount(2);
       expect(
         shiftAndExecuteNextSpy,
@@ -367,13 +376,12 @@ describe('BufferController', function () {
     });
   });
 
-  describe('flushLiveBackBuffer', function () {
+  describe('flushBackBuffer', function () {
     beforeEach(function () {
       bufferController.details = {
-        live: true,
         levelTargetDuration: 10,
       };
-      hls.config.liveBackBufferLength = 10;
+      hls.config.backBufferLength = 10;
       queueNames.forEach((name) => {
         const sb = bufferController.sourceBuffer[name];
         sb.setBuffered(0, 30);
@@ -383,34 +391,25 @@ describe('BufferController', function () {
 
     it('exits early if no media is defined', function () {
       delete bufferController.media;
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
     });
 
-    it('exits early if the stream is not live', function () {
-      bufferController.details = {
-        live: false,
-      };
-      bufferController.flushLiveBackBuffer();
-      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
-        .have.not.been.called;
-    });
-
-    it('exits early if the liveBackBufferLength config is not a finite number, or less than 0', function () {
-      hls.config.liveBackBufferLength = null;
-      bufferController.flushLiveBackBuffer();
-      hls.config.liveBackBufferLength = -1;
-      bufferController.flushLiveBackBuffer();
-      hls.config.liveBackBufferLength = Infinity;
-      bufferController.flushLiveBackBuffer();
+    it('exits early if the backBufferLength config is not a finite number, or less than 0', function () {
+      hls.config.backBufferLength = null;
+      bufferController.flushBackBuffer();
+      hls.config.backBufferLength = -1;
+      bufferController.flushBackBuffer();
+      hls.config.backBufferLength = Infinity;
+      bufferController.flushBackBuffer();
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
     });
 
     it('should execute a remove operation if flushing a valid backBuffer range', function () {
-      bufferController.flushLiveBackBuffer();
-      expect(triggerSpy).to.have.callCount(4);
+      bufferController.flushBackBuffer();
+      expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(2);
       queueNames.forEach((name) => {
         expect(
           triggerSpy,
@@ -423,17 +422,28 @@ describe('BufferController', function () {
       });
     });
 
-    it('removes a maximum of one targetDuration from currentTime', function () {
+    it('should support the deprecated liveBackBufferLength for live content', function () {
+      bufferController.details.live = true;
+      hls.config.backBufferLength = Infinity;
+      hls.config.liveBackBufferLength = 10;
+      bufferController.flushBackBuffer();
+
+      expect(
+        triggerSpy.withArgs(Events.LIVE_BACK_BUFFER_REACHED)
+      ).to.have.callCount(2);
+    });
+
+    it('removes a maximum of one targetDuration from currentTime at intervals of targetDuration', function () {
       mockMedia.currentTime = 25;
-      hls.config.liveBackBufferLength = 5;
-      bufferController.flushLiveBackBuffer();
+      hls.config.backBufferLength = 5;
+      bufferController.flushBackBuffer();
       queueNames.forEach((name) => {
         expect(
           triggerSpy,
           `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`
         ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
           startOffset: 0,
-          endOffset: 15,
+          endOffset: 10,
           type: name,
         });
       });
@@ -445,7 +455,7 @@ describe('BufferController', function () {
         const buffer = bufferController.sourceBuffer[name];
         buffer.setBuffered(10, 30);
       });
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
     });
@@ -455,10 +465,10 @@ describe('BufferController', function () {
         const buffer = bufferController.sourceBuffer[name];
         buffer.setBuffered(0, 0);
       });
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
 
       bufferController.sourceBuffer = {};
-      bufferController.flushLiveBackBuffer();
+      bufferController.flushBackBuffer();
 
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
@@ -470,7 +480,6 @@ describe('BufferController', function () {
     beforeEach(function () {
       const details = Object.assign(new LevelDetails(''), {
         averagetargetduration: 6,
-        live: true,
         totalduration: 5,
         fragments: [{ start: 5 }],
       });

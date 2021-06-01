@@ -11,6 +11,7 @@ import ChunkCache from '../demux/chunk-cache';
 
 export function fetchSupported() {
   if (
+    // @ts-ignore
     self.fetch &&
     self.AbortController &&
     self.ReadableStream &&
@@ -36,7 +37,7 @@ class FetchLoader implements Loader<LoaderContext> {
   private config: LoaderConfiguration | null = null;
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public stats: LoaderStats;
-  public loader: Response | null = null;
+  private loader: Response | null = null;
 
   constructor(config /* HlsConfig */) {
     this.fetchSetup = config.fetchSetup || getRequest;
@@ -50,8 +51,11 @@ class FetchLoader implements Loader<LoaderContext> {
   }
 
   abortInternal(): void {
-    this.stats.aborted = true;
-    this.controller.abort();
+    const response = this.response;
+    if (!response || !response.ok) {
+      this.stats.aborted = true;
+      this.controller.abort();
+    }
   }
 
   abort(): void {
@@ -90,40 +94,38 @@ class FetchLoader implements Loader<LoaderContext> {
 
     self
       .fetch(this.request)
-      .then(
-        (response: Response): Promise<string | ArrayBuffer> => {
-          this.response = this.loader = response;
+      .then((response: Response): Promise<string | ArrayBuffer> => {
+        this.response = this.loader = response;
 
-          if (!response.ok) {
-            const { status, statusText } = response;
-            throw new FetchError(
-              statusText || 'fetch, bad network response',
-              status,
-              response
-            );
-          }
-          stats.loading.first = Math.max(
-            self.performance.now(),
-            stats.loading.start
+        if (!response.ok) {
+          const { status, statusText } = response;
+          throw new FetchError(
+            statusText || 'fetch, bad network response',
+            status,
+            response
           );
-          stats.total = parseInt(response.headers.get('Content-Length') || '0');
-
-          if (onProgress && Number.isFinite(config.highWaterMark)) {
-            this.loadProgressively(
-              response,
-              stats,
-              context,
-              config.highWaterMark,
-              onProgress
-            );
-          }
-
-          if (isArrayBuffer) {
-            return response.arrayBuffer();
-          }
-          return response.text();
         }
-      )
+        stats.loading.first = Math.max(
+          self.performance.now(),
+          stats.loading.start
+        );
+        stats.total = parseInt(response.headers.get('Content-Length') || '0');
+
+        if (onProgress && Number.isFinite(config.highWaterMark)) {
+          return this.loadProgressively(
+            response,
+            stats,
+            context,
+            config.highWaterMark,
+            onProgress
+          );
+        }
+
+        if (isArrayBuffer) {
+          return response.arrayBuffer();
+        }
+        return response.text();
+      })
       .then((responseData: string | ArrayBuffer) => {
         const { response } = this;
         self.clearTimeout(this.requestTimeout);
@@ -159,15 +161,13 @@ class FetchLoader implements Loader<LoaderContext> {
       });
   }
 
-  getResponseHeader(name: string): string | null {
+  getCacheAge(): number | null {
+    let result: number | null = null;
     if (this.response) {
-      try {
-        return this.response.headers.get(name);
-      } catch (error) {
-        /* Could not get header */
-      }
+      const ageHeader = this.response.headers.get('age');
+      result = ageHeader ? parseFloat(ageHeader) : null;
     }
-    return null;
+    return result;
   }
 
   private loadProgressively(
@@ -176,21 +176,22 @@ class FetchLoader implements Loader<LoaderContext> {
     context: LoaderContext,
     highWaterMark: number = 0,
     onProgress: LoaderOnProgress<LoaderContext>
-  ) {
+  ): Promise<ArrayBuffer> {
     const chunkCache = new ChunkCache();
-    const reader = (response.clone().body as ReadableStream).getReader();
+    const reader = (response.body as ReadableStream).getReader();
 
-    const pump = () => {
-      reader
+    const pump = (): Promise<ArrayBuffer> => {
+      return reader
         .read()
-        .then((data: { done: boolean; value: Uint8Array }) => {
+        .then((data) => {
           if (data.done) {
             if (chunkCache.dataLength) {
               onProgress(stats, context, chunkCache.flush(), response);
             }
-            return;
+
+            return Promise.resolve(new ArrayBuffer(0));
           }
-          const chunk = data.value;
+          const chunk: Uint8Array = data.value;
           const len = chunk.length;
           stats.loaded += len;
           if (len < highWaterMark || chunkCache.dataLength) {
@@ -206,14 +207,15 @@ class FetchLoader implements Loader<LoaderContext> {
             // just emit the progress event
             onProgress(stats, context, chunk, response);
           }
-          pump();
+          return pump();
         })
         .catch(() => {
           /* aborted */
+          return Promise.reject();
         });
     };
 
-    pump();
+    return pump();
   }
 }
 

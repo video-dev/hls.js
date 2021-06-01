@@ -10,10 +10,11 @@ import FPSController from './controller/fps-controller';
 import EMEController from './controller/eme-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
-import { CuesInterface, newCue } from './utils/cues';
+import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { logger } from './utils/logger';
 
+import type { CuesInterface } from './utils/cues';
 import type { MediaKeyFunc } from './utils/mediakeys-helper';
 import type {
   FragmentLoaderContext,
@@ -37,8 +38,9 @@ export type ABRControllerConfig = {
 
 export type BufferControllerConfig = {
   appendErrorMaxRetry: number;
+  backBufferLength: number;
   liveDurationInfinity: boolean;
-  liveBackBufferLength: number;
+  liveBackBufferLength: number | null;
 };
 
 export type CapLevelControllerConfig = {
@@ -52,6 +54,7 @@ export type DRMSystemOptions = {
 
 export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+  licenseResponseCallback?: (xhr: XMLHttpRequest, url: string) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
   drmSystemOptions: DRMSystemOptions;
@@ -191,6 +194,7 @@ export const hlsDefaultConfig: HlsConfig = {
   capLevelToPlayerSize: false, // used by cap-level-controller
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
+  backBufferLength: Infinity, // used by buffer-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.1, // used by stream-controller
   highBufferWatchdogPeriod: 2, // used by stream-controller
@@ -203,7 +207,7 @@ export const hlsDefaultConfig: HlsConfig = {
   liveMaxLatencyDuration: undefined, // used by latency-controller
   maxLiveSyncPlaybackRate: 1, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
-  liveBackBufferLength: Infinity, // used by buffer-controller
+  liveBackBufferLength: null, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
   enableSoftwareAES: true, // used by decrypter
@@ -230,6 +234,7 @@ export const hlsDefaultConfig: HlsConfig = {
   pLoader: undefined, // used by playlist-loader
   xhrSetup: undefined, // used by xhr-loader
   licenseXhrSetup: undefined, // used by eme-controller
+  licenseResponseCallback: undefined, // used by eme-controller
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,
@@ -272,7 +277,7 @@ export const hlsDefaultConfig: HlsConfig = {
 
 function timelineConfig(): TimelineControllerConfig {
   return {
-    cueHandler: { newCue }, // used by timeline-controller
+    cueHandler: Cues, // used by timeline-controller
     enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
     enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
     enableIMSC1: __USE_SUBTITLES__, // used by timeline-controller

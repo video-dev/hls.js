@@ -41,22 +41,20 @@ export interface BufferCreatedData {
 
 export interface BufferAppendingData {
   type: SourceBufferName;
-  data: Uint8Array;
   frag: Fragment;
   part: Part | null;
   chunkMeta: ChunkMetadata;
+  parent: PlaylistLevelType;
+  data: Uint8Array;
 }
 
 export interface BufferAppendedData {
-  chunkMeta: ChunkMetadata;
+  type: SourceBufferName;
   frag: Fragment;
   part: Part | null;
+  chunkMeta: ChunkMetadata;
   parent: PlaylistLevelType;
-  timeRanges: {
-    audio?: TimeRanges;
-    video?: TimeRanges;
-    audiovideo?: TimeRanges;
-  };
+  timeRanges: Partial<Record<SourceBufferName, TimeRanges>>;
 }
 
 export interface BufferEOSData {
@@ -155,9 +153,11 @@ export interface LevelPTSUpdatedData {
 }
 
 export interface AudioTrackSwitchingData {
-  url: string;
-  type: MediaPlaylistType | 'main';
   id: number;
+  name: string;
+  groupId: string;
+  type: MediaPlaylistType | 'main';
+  url: string;
 }
 
 export interface AudioTrackSwitchedData {
@@ -175,9 +175,11 @@ export interface SubtitleTracksUpdatedData {
 }
 
 export interface SubtitleTrackSwitchData {
-  url?: string;
-  type?: MediaPlaylistType | 'main';
   id: number;
+  name?: string;
+  groupId?: string;
+  type?: MediaPlaylistType | 'main';
+  url?: string;
 }
 
 export interface SubtitleTrackLoadedData extends TrackLoadedData {}
@@ -335,6 +337,11 @@ export interface KeyLoadedData {
   frag: Fragment;
 }
 
-export interface LiveBackBufferData {
+export interface BackBufferData {
   bufferEnd: number;
 }
+
+/**
+ * Deprecated; please use BackBufferData
+ */
+export interface LiveBackBufferData extends BackBufferData {}

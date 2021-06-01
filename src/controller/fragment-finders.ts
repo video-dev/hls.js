@@ -63,7 +63,9 @@ export function findFragmentByPTS(
   let fragNext: Fragment | null = null;
   if (fragPrevious) {
     fragNext =
-      fragments[(fragPrevious.sn as number) - (fragments[0].sn as number) + 1];
+      fragments[
+        (fragPrevious.sn as number) - (fragments[0].sn as number) + 1
+      ] || null;
   } else if (bufferEnd === 0 && fragments[0].start === 0) {
     fragNext = fragments[0];
   }
@@ -157,11 +159,14 @@ export function pdtWithinToleranceTest(
   return endProgramDateTime - candidateLookupTolerance > pdtBufferEnd;
 }
 
-export function findFragWithCC(fragments, CC): Fragment | null {
+export function findFragWithCC(
+  fragments: Fragment[],
+  cc: number
+): Fragment | null {
   return BinarySearch.search(fragments, (candidate) => {
-    if (candidate.cc < CC) {
+    if (candidate.cc < cc) {
       return 1;
-    } else if (candidate.cc > CC) {
+    } else if (candidate.cc > cc) {
       return -1;
     } else {
       return 0;

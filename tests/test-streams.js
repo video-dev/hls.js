@@ -4,29 +4,29 @@
  * @param {string} description
  * @param {boolean} [live]
  * @param {boolean} [abr]
- * @param {string[]} [blacklist_ua]
- * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
+ * @param {string[]} [skip_ua]
+ * @returns {{url: string, description: string, live: boolean, abr: boolean, skip_ua: string[]}}
  */
 function createTestStream(
   url,
   description,
   live = false,
   abr = true,
-  blacklist_ua = []
+  skip_ua = []
 ) {
   return {
-    url,
-    description,
-    live,
-    abr,
-    blacklist_ua,
+    url: url,
+    description: description,
+    live: live,
+    abr: abr,
+    skip_ua: skip_ua,
   };
 }
 
 /**
  * @param {Object} target
  * @param {Object} [config]
- * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
+ * @returns {{url: string, description: string, live: boolean, abr: boolean, skip_ua: string[]}}
  */
 function createTestStreamWithConfig(target, config) {
   if (typeof target !== 'object') {
@@ -38,7 +38,7 @@ function createTestStreamWithConfig(target, config) {
     target.description,
     target.live,
     target.abr,
-    target.blacklist_ua
+    target.skip_ua
   );
 
   testStream.config = config;
@@ -58,11 +58,10 @@ module.exports = {
     abr: true,
   },
   bigBuckBunny480p: {
-    url:
-      'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
+    url: 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     description: 'Big Buck Bunny - 480p only',
     abr: false,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   arte: {
     url: 'https://test-streams.mux.dev/test_001/stream.m3u8',
@@ -70,19 +69,17 @@ module.exports = {
     abr: true,
   },
   deltatreDAI: {
-    url:
-      'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
+    url: 'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
     description: 'Ad-insertion in event stream',
     abr: false,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   issue666: {
-    url:
-      'https://playertest.longtailvideo.com/adaptive/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
     description:
       'Surveillance footage - https://github.com/video-dev/hls.js/issues/666',
     abr: false,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   closedCaptions: {
     url: 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
@@ -90,20 +87,22 @@ module.exports = {
     abr: false,
   },
   customIvBadDts: {
-    url:
-      'https://playertest.longtailvideo.com/adaptive/customIV/prog_index.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/customIV/prog_index.m3u8',
     description: 'Custom IV with bad PTS DTS',
     abr: false,
   },
   oceansAES: {
-    url:
-      'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
-    description: 'AES encrypted,ABR',
+    url: 'https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8',
+    description: 'AES-128 encrypted, ABR',
     abr: true,
   },
+  tracksWithAES: {
+    url: 'https://playertest.longtailvideo.com/adaptive/aes-with-tracks/master.m3u8',
+    description: 'AES-128 encrypted, TS main with AAC audio track',
+    abr: false,
+  },
   mp3Audio: {
-    url:
-      'https://playertest.longtailvideo.com/adaptive/vod-with-mp3/manifest.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/vod-with-mp3/manifest.m3u8',
     description: 'MP3 VOD demo',
     abr: false,
   },
@@ -111,29 +110,26 @@ module.exports = {
     url: 'https://pl.streamingvideoprovider.com/mp3-playlist/playlist.m3u8',
     description: 'MPEG Audio Only demo',
     abr: false,
-    blacklist_ua: ['internet explorer', 'MicrosoftEdge', 'firefox'],
+    skip_ua: ['internet explorer', 'MicrosoftEdge', 'firefox'],
   },
   fmp4: {
-    url:
-      'https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8',
+    url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8',
     description: 'HLS fMP4 Angel-One multiple audio-tracks',
     abr: true,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   fmp4Bitmovin: {
-    url:
-      'https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
+    url: 'https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
     description: 'HLS fMP4 by Bitmovin',
     abr: true,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
   },
   fmp4BitmovinHevc: {
-    url:
-      'https://bitmovin-a.akamaihd.net/content/dataset/multi-codec/hevc/stream_fmp4.m3u8',
+    url: 'https://bitmovin-a.akamaihd.net/content/dataset/multi-codec/hevc/stream_fmp4.m3u8',
     description:
       'HLS HEVC fMP4 by Bitmovin (Safari and Edge? only as of 2020-08)',
     abr: true,
-    blacklist_ua: ['internet explorer'],
+    skip_ua: ['internet explorer'],
     skipFunctionalTests: true,
   },
   offset_pts: {
@@ -143,12 +139,16 @@ module.exports = {
   },
   angelOneShakaWidevine: createTestStreamWithConfig(
     {
-      url:
-        'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8',
+      url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8',
       description:
         'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
       abr: true,
-      blacklist_ua: ['firefox', 'safari', 'internet explorer'],
+      skip_ua: [
+        'firefox',
+        'safari',
+        'internet explorer',
+        { name: 'chrome', version: '69.0' },
+      ],
     },
     {
       widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
@@ -156,14 +156,13 @@ module.exports = {
     }
   ),
   audioOnlyMultipleLevels: {
-    url:
-      'https://s3.amazonaws.com/qa.jwplayer.com/~alex/121628/new_master.m3u8',
+    url: 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/121628/new_master.m3u8',
     description: 'Multiple non-alternate audio levels',
     abr: true,
   },
   pdtDuplicate: {
     url: 'https://playertest.longtailvideo.com/adaptive/artbeats/manifest.m3u8',
-    description: 'Stream with duplicate sequential PDT values',
+    description: 'Duplicate sequential PDT values',
     abr: false,
   },
   pdtLargeGap: {
@@ -172,8 +171,7 @@ module.exports = {
     abr: false,
   },
   pdtBadValues: {
-    url:
-      'https://playertest.longtailvideo.com/adaptive/progdatime/playlist2.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/progdatime/playlist2.m3u8',
     description: 'PDTs with bad values',
     abr: false,
   },
@@ -184,8 +182,7 @@ module.exports = {
   },
   noTrackIntersection: createTestStreamWithConfig(
     {
-      url:
-        'https://s3.amazonaws.com/qa.jwplayer.com/~alex/123633/new_master.m3u8',
+      url: 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/123633/new_master.m3u8',
       description:
         'Audio/video track PTS values do not intersect; 10 second start gap',
       abr: false,
@@ -196,16 +193,14 @@ module.exports = {
   ),
   altAudioAndTracks: {
     // url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
-    url:
-      'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/index.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/index.m3u8',
     description: 'Alternate audio tracks, and multiple VTT tracks',
     vendor: 'wowza',
     abr: true,
   },
   altAudioAudioOnly: createTestStreamWithConfig(
     {
-      url:
-        'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/sintel/playlist.m3u8',
+      url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/sintel/playlist.m3u8',
       description: 'Audio only with alternate audio track (Sintel)',
       abr: false,
     },
@@ -217,8 +212,7 @@ module.exports = {
     }
   ),
   altAudioMultiAudioOnly: {
-    url:
-      'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/angel-one.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/angel-one.m3u8',
     description: 'Audio only with multiple alternate audio tracks (Angel One)',
     abr: false,
   },
@@ -228,16 +222,14 @@ module.exports = {
     abr: false,
   },
   altAudioWithPdtAndStartGap: {
-    url:
-      'https://playertest.longtailvideo.com/adaptive/hls-test-streams/test-audio-pdt/playlist.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/hls-test-streams/test-audio-pdt/playlist.m3u8',
     description: 'PDT before each segment, 1.59s start gap',
     // Disable smooth switch on this stream. Test is flakey because of what looks like (auto)play issue. To be expected with this large a gap (for now).
     // abr: true,
     startSeek: true,
   },
   AppleAdvancedHevcAvcHls: {
-    url:
-      'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8',
+    url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8',
     description:
       'Advanced stream (HEVC/H.264, AC-3/AAC,  WebVTT, fMP4 segments)',
   },
@@ -258,8 +250,7 @@ module.exports = {
     skipFunctionalTests: true,
   },
   redundantLevelsWithTrackGroups: {
-    url:
-      'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/redundant.m3u8',
+    url: 'https://playertest.longtailvideo.com/adaptive/elephants_dream_v4/redundant.m3u8',
     description: 'Redundant levels with subtitle and audio track groups',
     abr: true,
     skipFunctionalTests: true,

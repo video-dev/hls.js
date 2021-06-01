@@ -1,4 +1,4 @@
-# API
+# HLS.js v1 API
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -25,6 +25,7 @@
   - [`defaultAudioCodec`](#defaultaudiocodec)
   - [`initialLiveManifestSize`](#initiallivemanifestsize)
   - [`maxBufferLength`](#maxbufferlength)
+  - [`backBufferLength`](#backbufferlength)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
@@ -41,7 +42,7 @@
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`maxLiveSyncPlaybackRate`](#maxLiveSyncPlaybackRate)
   - [`liveDurationInfinity`](#livedurationinfinity)
-  - [`liveBackBufferLength`](#livebackbufferlength)
+  - [`liveBackBufferLength`](#livebackbufferlength) (deprecated)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -89,6 +90,8 @@
   - [`minAutoBitrate`](#minautobitrate)
   - [`emeEnabled`](#emeEnabled)
   - [`widevineLicenseUrl`](#widevineLicenseUrl)
+  - [`licenseXhrSetup`](#licenseXhrSetup)
+  - [`licenseResponseCallback`](#licenseResponseCallback)
   - [`drmSystemOptions`](#drmSystemOptions)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
@@ -324,6 +327,7 @@ var config = {
   initialLiveManifestSize: 1,
   maxBufferLength: 30,
   maxMaxBufferLength: 600,
+  backBufferLength: Infinity,
   maxBufferSize: 60 * 1000 * 1000,
   maxBufferHole: 0.5,
   highBufferWatchdogPeriod: 2,
@@ -333,7 +337,6 @@ var config = {
   liveSyncDurationCount: 3,
   liveMaxLatencyDurationCount: Infinity,
   liveDurationInfinity: false,
-  liveBackBufferLength: Infinity,
   enableWorker: true,
   enableSoftwareAES: true,
   manifestLoadingTimeOut: 10000,
@@ -385,6 +388,7 @@ var config = {
   minAutoBitrate: 0,
   emeEnabled: false,
   widevineLicenseUrl: undefined,
+  licenseXhrSetup: undefined,
   drmSystemOptions: {},
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess,
 };
@@ -459,6 +463,12 @@ number of segments needed to start a playback of Live stream. Buffering will beg
 
 Maximum buffer length in seconds. If buffer length is/become less than this value, a new fragment will be loaded.
 This is the guaranteed buffer length hls.js will try to reach, regardless of maxBufferSize.
+
+### `backBufferLength`
+
+(default: `Infinity`)
+
+The maximum duration of buffered media to keep once it has been played, in seconds. Any video buffered past this duration will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted.
 
 ### `maxBufferSize`
 
@@ -604,9 +614,7 @@ If you want to have a native Live UI in environments like iOS Safari, Safari, An
 
 ### `liveBackBufferLength`
 
-(default: `Infinity`)
-
-Sets the maximum length of the buffer, in seconds, to keep during a live stream. Any video buffered past this time will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted.
+`liveBackBufferLength` has been deprecated. Use `backBufferLength` instead.
 
 ### `enableWorker`
 
@@ -885,6 +893,8 @@ Parameter should be a class providing 2 getters, 2 setters and a `destroy()` met
 - get/set `autoLevelCapping`: capping/max level value that could be used by ABR Controller
 - `destroy()`: should clean-up all used resources
 
+For `hls.bandwidthEstimate()` to return an estimate from your custom controller, it will also need to satisfy `abrController.bwEstimator.getEstimate()`.
+
 ### `bufferController`
 
 (default: internal buffer controller)
@@ -1135,6 +1145,32 @@ Set to `true` to enable DRM key system access and license retrieval.
 
 The Widevine license server URL.
 
+### `licenseXhrSetup`
+
+(default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => void`)
+
+A pre-processor function for modifying the `XMLHttpRequest` and request url (using `xhr.open`) prior to sending the license request.
+
+```js
+var config = {
+  licenseXhrSetup: function (xhr, url) {
+    xhr.withCredentials = true; // do send cookies
+    if (!xhr.readyState) {
+      // Call open to change the method (default is POST) or modify the url
+      xhr.open('GET', url, true);
+      // Append headers after opening
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    }
+  },
+};
+```
+
+### `licenseResponseCallback`
+
+(default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => data: ArrayBuffer`)
+
+A post-processor function for modifying the license response before passing it to the key-session (`MediaKeySession.update`).
+
 ### `drmSystemOptions`
 
 (default: `{}`)
@@ -1308,7 +1344,9 @@ get/set : if set to true the active subtitle track mode will be set to `showing`
 
 ### `hls.liveSyncPosition`
 
-get : position of live sync point (ie edge of live position minus safety delay defined by `hls.config.liveSyncDuration`)
+get : position of live sync point (ie edge of live position minus safety delay defined by `hls.config.liveSyncDuration`).
+If playback stalls outside the sliding window, or latency exceeds `liveMaxLatencyDuration` hls.js will seek ahead to
+`liveSyncPosition` to get back in sync with the stream stream.
 
 ### `hls.latency`
 
@@ -1324,6 +1362,10 @@ returns 0 before first playlist is loaded
 ### `hls.targetLatency`
 
 get : target distance from the edge as calculated by the latency controller
+
+### `hls.drift`
+
+get : the rate at which the edge of the current live playlist is advancing or 1 if there is none
 
 ## Runtime Events
 
@@ -1359,9 +1401,9 @@ Full list of Events is available below:
   - data: { tracks : { audio? : `[Track]`, video? : `[Track]`, audiovideo?: `[Track]` } }
     interface Track { id: 'audio' | 'main', buffer?: SourceBuffer, container: string, codec?: string, initSegment?: Uint8Array, levelCodec?: string, metadata?: any }
 - `Hls.Events.BUFFER_APPENDING` - fired when we append a segment to the buffer
-- data: { type, data, frag, chunkMeta }
+- data: { parent, type, frag, part, chunkMeta, data }
 - `Hls.Events.BUFFER_APPENDED` - fired when we are done with appending a media segment to the buffer
-  - data: { frag, parent : playlist type triggered `BUFFER_APPENDING`, timeRanges : { video?: TimeRange, audio?: TimeRange, audiovideo?: TimeRange }, chunkMeta }
+  - data: { parent : playlist type triggered `BUFFER_APPENDING`, type, frag, part, chunkMeta, timeRanges : { video?: TimeRange, audio?: TimeRange, audiovideo?: TimeRange } }
 - `Hls.Events.BUFFER_EOS` - fired when the stream is finished and we want to notify the media buffer that there will be no more data
   - data: { type: SourceBufferName }
 - `Hls.Events.BUFFER_FLUSHING` - fired when the media buffer should be flushed
@@ -1518,7 +1560,9 @@ Full list of errors is described below:
 - `Hls.ErrorDetails.FRAG_PARSING_ERROR` - raised when fragment parsing fails
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_PARSING_ERROR`, fatal : `true` or `false`, reason : failure reason }
 - `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR` - raised when MediaSource fails to add new sourceBuffer
-  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR`, fatal : `false`, err : error raised by MediaSource, mimeType: mimeType on which the failure happened }
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR`, fatal : `false`, error : error raised by MediaSource, mimeType: mimeType on which the failure happened }
+- `Hls.ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR` - raised when no MediaSource(s) could be created based on track codec(s)
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR`, fatal : `true`, reason : failure reason }
 - `Hls.ErrorDetails.BUFFER_APPEND_ERROR` - raised when exception is raised while calling buffer append
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_ERROR`, fatal : `true` or `false`, parent : parent stream controller }
 - `Hls.ErrorDetails.BUFFER_APPENDING_ERROR` - raised when exception is raised during buffer appending

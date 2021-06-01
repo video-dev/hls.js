@@ -48,6 +48,11 @@ export default class Decrypter {
     }
   }
 
+  destroy() {
+    // @ts-ignore
+    this.observer = null;
+  }
+
   public isSync() {
     return this.config.enableSoftwareAES;
   }

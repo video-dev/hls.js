@@ -32,6 +32,7 @@ import type {
   ElementaryStreamData,
   KeyData,
 } from '../types/demuxer';
+import { AudioFrame } from '../types/demuxer';
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -87,7 +88,7 @@ class TSDemuxer implements Demuxer {
   private _audioTrack!: DemuxedAudioTrack;
   private _id3Track!: DemuxedMetadataTrack;
   private _txtTrack!: DemuxedUserdataTrack;
-  private aacOverFlow: Uint8Array | null = null;
+  private aacOverFlow: AudioFrame | null = null;
   private avcSample: ParsedAvcSample | null = null;
   private remainderData: Uint8Array | null = null;
 
@@ -403,12 +404,18 @@ class TSDemuxer implements Demuxer {
     audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
 
-    return {
+    const demuxResult: DemuxerResult = {
       audioTrack,
       avcTrack,
       id3Track,
       textTrack: this._txtTrack,
     };
+
+    if (flush) {
+      this.extractRemainingSamples(demuxResult);
+    }
+
+    return demuxResult;
   }
 
   public flush(): DemuxerResult | Promise<DemuxerResult> {
@@ -480,7 +487,12 @@ class TSDemuxer implements Demuxer {
     keyData: KeyData,
     timeOffset: number
   ): Promise<DemuxerResult> {
-    const demuxResult = this.demux(data, timeOffset, true);
+    const demuxResult = this.demux(
+      data,
+      timeOffset,
+      true,
+      !this.config.progressive
+    );
     const sampleAes = (this.sampleAes = new SampleAesDecrypter(
       this.observer,
       this.config,
@@ -800,9 +812,7 @@ class TSDemuxer implements Demuxer {
     return lastUnit;
   }
 
-  private parseAVCNALu(
-    array: Uint8Array
-  ): Array<{
+  private parseAVCNALu(array: Uint8Array): Array<{
     data: Uint8Array;
     type: number;
     state?: number;
@@ -925,17 +935,23 @@ class TSDemuxer implements Demuxer {
   }
 
   private parseAACPES(pes: PES) {
-    const startOffset = 0;
+    let startOffset = 0;
     const track = this._audioTrack;
-    const aacLastPTS = this.aacLastPTS;
     const aacOverFlow = this.aacOverFlow;
-    let data = pes.data;
+    const data = pes.data;
     if (aacOverFlow) {
-      const tmp = new Uint8Array(aacOverFlow.byteLength + data.byteLength);
-      tmp.set(aacOverFlow, 0);
-      tmp.set(data, aacOverFlow.byteLength);
-      // logger.log(`AAC: append overflowing ${aacOverFlow.byteLength} bytes to beginning of new PES`);
-      data = tmp;
+      this.aacOverFlow = null;
+      const sampleLength = aacOverFlow.sample.unit.byteLength;
+      const frameMissingBytes = Math.min(aacOverFlow.missing, sampleLength);
+      const frameOverflowBytes = sampleLength - frameMissingBytes;
+      aacOverFlow.sample.unit.set(
+        data.subarray(0, frameMissingBytes),
+        frameOverflowBytes
+      );
+      track.samples.push(aacOverFlow.sample);
+
+      // logger.log(`AAC: append overflowing ${frameOverflowBytes} bytes to beginning of new PES`);
+      startOffset = aacOverFlow.missing;
     }
     // look for ADTS header (0xFFFx)
     let offset: number;
@@ -946,7 +962,7 @@ class TSDemuxer implements Demuxer {
       }
     }
     // if ADTS header does not start straight from the beginning of the PES payload, raise an error
-    if (offset) {
+    if (offset !== startOffset) {
       let reason;
       let fatal;
       if (offset < len - 1) {
@@ -970,43 +986,33 @@ class TSDemuxer implements Demuxer {
 
     ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
 
-    let frameIndex = 0;
-    const frameDuration = ADTS.getFrameDuration(track.samplerate as number);
-
-    // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
-    // first sample PTS should be equal to last sample PTS + frameDuration
     let pts: number;
     if (pes.pts !== undefined) {
       pts = pes.pts;
-    } else if (aacLastPTS !== null) {
-      pts = aacLastPTS;
+    } else if (aacOverFlow) {
+      // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
+      // first sample PTS should be equal to last sample PTS + frameDuration
+      const frameDuration = ADTS.getFrameDuration(track.samplerate as number);
+      pts = aacOverFlow.sample.pts + frameDuration;
     } else {
       logger.warn('[tsdemuxer]: AAC PES unknown PTS');
       return;
     }
-    if (aacOverFlow && aacLastPTS !== null) {
-      const newPTS = aacLastPTS + frameDuration;
-      if (Math.abs(newPTS - pts) > 1) {
-        logger.log(
-          `[tsdemuxer]: AAC: align PTS for overlapping frames by ${Math.round(
-            (newPTS - pts) / 90
-          )}`
-        );
-        pts = newPTS;
-      }
-    }
 
     // scan for aac samples
-    let stamp: number | null = null;
+    let frameIndex = 0;
     while (offset < len) {
       if (ADTS.isHeader(data, offset)) {
         if (offset + 5 < len) {
           const frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
           if (frame) {
-            offset += frame.length;
-            stamp = frame.sample.pts;
-            frameIndex++;
-            continue;
+            if (frame.missing) {
+              this.aacOverFlow = frame;
+            } else {
+              offset += frame.length;
+              frameIndex++;
+              continue;
+            }
           }
         }
         // We are at an ADTS header, but do not have enough data for a frame
@@ -1017,9 +1023,6 @@ class TSDemuxer implements Demuxer {
         offset++;
       }
     }
-
-    this.aacOverFlow = offset < len ? data.subarray(offset, len) : null;
-    this.aacLastPTS = stamp;
   }
 
   private parseMPEGPES(pes: PES) {
