@@ -625,7 +625,7 @@ export class TimelineController implements ComponentAPI {
 
   onBufferFlushing(
     event: Events.BUFFER_FLUSHING,
-    { startOffset, endOffset, type }: BufferFlushingData
+    { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData
   ) {
     const { media } = this;
     if (!media || media.currentTime < endOffset) {
@@ -641,10 +641,14 @@ export class TimelineController implements ComponentAPI {
     }
     if (this.config.renderTextTracksNatively) {
       // Clear VTT/IMSC1 subtitle cues from the subtitle TextTracks when the back buffer is flushed
-      if (startOffset === 0 && endOffset !== Number.POSITIVE_INFINITY) {
+      if (startOffset === 0 && endOffsetSubtitles !== undefined) {
         const { textTracks } = this;
         Object.keys(textTracks).forEach((trackName) =>
-          removeCuesInRange(textTracks[trackName], startOffset, endOffset)
+          removeCuesInRange(
+            textTracks[trackName],
+            startOffset,
+            endOffsetSubtitles
+          )
         );
       }
     }
