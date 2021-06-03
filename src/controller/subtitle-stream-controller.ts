@@ -2,11 +2,13 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
-import type { FragmentTracker } from './fragment-tracker';
+import { alignPDT } from '../utils/discontinuities';
+import { adjustSliding } from './level-helper';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
+import type { FragmentTracker } from './fragment-tracker';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
@@ -19,6 +21,7 @@ import type {
   TrackLoadedData,
   TrackSwitchedData,
   BufferFlushingData,
+  LevelLoadedData,
 } from '../types/events';
 
 const TICK_INTERVAL = 500; // how often to tick in ms
@@ -36,16 +39,24 @@ export class SubtitleStreamController
 
   private currentTrackId: number = -1;
   private tracksBuffered: Array<TimeRange[]> = [];
+  private mainDetails: LevelDetails | null = null;
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[subtitle-stream-controller]');
     this._registerListeners();
   }
 
+  protected onHandlerDestroying() {
+    this._unregisterListeners();
+    this.mainDetails = null;
+  }
+
   private _registerListeners() {
     const { hls } = this;
     hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.on(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
@@ -58,6 +69,8 @@ export class SubtitleStreamController
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.off(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
@@ -70,17 +83,28 @@ export class SubtitleStreamController
     this.stopLoad();
     this.state = State.IDLE;
 
-    // Check if we already have a track with necessary details to load fragments
-    const currentTrack = this.levels[this.currentTrackId];
-    if (currentTrack?.details) {
-      this.setInterval(TICK_INTERVAL);
-      this.tick();
-    }
+    this.setInterval(TICK_INTERVAL);
+    this.tick();
   }
 
-  onHandlerDestroyed() {
-    this._unregisterListeners();
-    super.onHandlerDestroyed();
+  onManifestLoading() {
+    this.mainDetails = null;
+    this.fragmentTracker.removeAllFragments();
+  }
+
+  onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+    const mainDetails = data.details;
+    if (this.mainDetails === null) {
+      const trackId = this.levelLastLoaded;
+      if (trackId !== null && this.levels && mainDetails.live) {
+        const track = this.levels[trackId];
+        if (!track.details || !track.details.fragments[0]) {
+          return;
+        }
+        alignPDT(track.details, mainDetails);
+      }
+    }
+    this.mainDetails = mainDetails;
   }
 
   onSubtitleFragProcessed(
@@ -207,27 +231,39 @@ export class SubtitleStreamController
     event: Events.SUBTITLE_TRACK_LOADED,
     data: TrackLoadedData
   ) {
-    const { id, details } = data;
+    const { details: newDetails, id: trackId } = data;
     const { currentTrackId, levels } = this;
-    if (!levels.length || !details) {
+    if (!levels.length) {
       return;
     }
-    const currentTrack: Level = levels[currentTrackId];
-    if (id >= levels.length || id !== currentTrackId || !currentTrack) {
+    const track: Level = levels[currentTrackId];
+    if (trackId >= levels.length || trackId !== currentTrackId || !track) {
       return;
     }
     this.mediaBuffer = this.mediaBufferTimeRanges;
-    if (details.live || currentTrack.details?.live) {
-      if (details.deltaUpdateFailed) {
+    if (newDetails.live || track.details?.live) {
+      if (newDetails.deltaUpdateFailed) {
         return;
       }
-      // TODO: Subtitle Fragments should be assigned startPTS and endPTS once VTT/TTML is parsed
-      //  otherwise this depends on DISCONTINUITY or PROGRAM-DATE-TIME tags to align playlists
-      this.alignPlaylists(details, currentTrack.details);
+      if (!track.details) {
+        const mainDetails = this.mainDetails;
+        if (mainDetails) {
+          if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
+            alignPDT(newDetails, mainDetails);
+          } else {
+            // try aligning on SN
+            adjustSliding(mainDetails, newDetails);
+          }
+        }
+      } else {
+        this.alignPlaylists(newDetails, track.details);
+      }
     }
-    currentTrack.details = details;
-    this.levelLastLoaded = id;
-    this.setInterval(TICK_INTERVAL);
+    track.details = newDetails;
+    this.levelLastLoaded = trackId;
+
+    // trigger handler right now
+    this.tick();
   }
 
   _handleFragmentLoadComplete(fragLoadedData: FragLoadedData) {

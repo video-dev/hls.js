@@ -98,7 +98,6 @@ describe('SubtitleStreamController', function () {
         details: details,
       });
       expect(subtitleStreamController.levels[1].details).to.equal(details);
-      expect(subtitleStreamController.setInterval).to.have.been.calledOnce;
     });
 
     it('should ignore the event if the data does not match the current track', function () {

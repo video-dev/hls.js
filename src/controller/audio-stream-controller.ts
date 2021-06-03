@@ -1,20 +1,20 @@
 import BaseStreamController, { State } from './base-stream-controller';
-import type { NetworkComponentAPI } from '../types/component-api';
 import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
-import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { Fragment, ElementaryStreamTypes, Part } from '../loader/fragment';
 import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
-import type { TransmuxerResult } from '../types/transmuxer';
 import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignPDT } from '../utils/discontinuities';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import type { NetworkComponentAPI } from '../types/component-api';
+import type { FragmentTracker } from './fragment-tracker';
+import type { TransmuxerResult } from '../types/transmuxer';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
 import type { TrackSet } from '../types/track';
@@ -31,8 +31,8 @@ import type {
   FragParsingMetadataData,
   FragParsingUserdataData,
   FragBufferedData,
+  ErrorData,
 } from '../types/events';
-import type { ErrorData } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -453,8 +453,8 @@ class AudioStreamController
       }
       if (
         !track.details &&
-        this.mainDetails?.hasProgramDateTime &&
-        newDetails.hasProgramDateTime
+        newDetails.hasProgramDateTime &&
+        this.mainDetails?.hasProgramDateTime
       ) {
         alignPDT(newDetails, this.mainDetails);
         sliding = newDetails.fragments[0].start;
