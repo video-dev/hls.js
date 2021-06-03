@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
 import { alignPDT } from '../utils/discontinuities';
-import { adjustSliding } from './level-helper';
+import { addSliding } from './level-helper';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { PlaylistLevelType } from '../types/loader';
@@ -250,9 +250,9 @@ export class SubtitleStreamController
         if (mainDetails) {
           if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
             alignPDT(newDetails, mainDetails);
-          } else {
-            // try aligning on SN
-            adjustSliding(mainDetails, newDetails);
+          } else if (mainDetails.fragments[0]) {
+            // line up live playlist with main so that fragments in range are loaded
+            addSliding(newDetails, mainDetails.fragments[0].start);
           }
         }
       } else {
@@ -321,21 +321,23 @@ export class SubtitleStreamController
         return;
       }
 
+      // Expand range of subs loaded by one target-duration in either direction to make up for misaligned playlists
+      const trackDetails = levels[currentTrackId].details as LevelDetails;
+      const targetDuration = trackDetails.targetduration;
       const { config, media } = this;
       const bufferedInfo = BufferHelper.bufferedInfo(
         this.mediaBufferTimeRanges,
-        media.currentTime,
+        media.currentTime - targetDuration,
         config.maxBufferHole
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
 
-      const maxBufLen = this.getMaxBufferLength();
+      const maxBufLen = this.getMaxBufferLength() + targetDuration;
 
       if (bufferLen > maxBufLen) {
         return;
       }
 
-      const trackDetails = levels[currentTrackId].details as LevelDetails;
       console.assert(
         trackDetails,
         'Subtitle track details are defined on idle subtitle stream controller tick'
