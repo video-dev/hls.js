@@ -147,18 +147,31 @@ export class SubtitleStreamController
     this.fragmentTracker.fragBuffered(frag);
   }
 
-  onBufferFlushing(
-    event: Events.BUFFER_FLUSHING,
-    { startOffset, endOffset }: BufferFlushingData
-  ) {
+  onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {
+    const { startOffset, endOffset } = data;
     if (startOffset === 0 && endOffset !== Number.POSITIVE_INFINITY) {
+      const { currentTrackId, levels } = this;
+      if (
+        !levels.length ||
+        !levels[currentTrackId] ||
+        !levels[currentTrackId].details
+      ) {
+        return;
+      }
+      const trackDetails = levels[currentTrackId].details as LevelDetails;
+      const targetDuration = trackDetails.targetduration;
+      const endOffsetSubtitles = endOffset - targetDuration;
+      if (endOffsetSubtitles <= 0) {
+        return;
+      }
+      data.endOffsetSubtitles = Math.max(0, endOffsetSubtitles);
       this.tracksBuffered.forEach((buffered) => {
         for (let i = 0; i < buffered.length; ) {
-          if (buffered[i].end <= endOffset) {
+          if (buffered[i].end <= endOffsetSubtitles) {
             buffered.shift();
             continue;
-          } else if (buffered[i].start < endOffset) {
-            buffered[i].start = endOffset;
+          } else if (buffered[i].start < endOffsetSubtitles) {
+            buffered[i].start = endOffsetSubtitles;
           } else {
             break;
           }
@@ -167,7 +180,7 @@ export class SubtitleStreamController
       });
       this.fragmentTracker.removeFragmentsInRange(
         startOffset,
-        endOffset,
+        endOffsetSubtitles,
         PlaylistLevelType.SUBTITLE
       );
     }

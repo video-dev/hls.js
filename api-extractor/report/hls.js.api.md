@@ -212,6 +212,8 @@ export interface BufferFlushingData {
     // (undocumented)
     endOffset: number;
     // (undocumented)
+    endOffsetSubtitles?: number;
+    // (undocumented)
     startOffset: number;
     // (undocumented)
     type: SourceBufferName | null;
