@@ -51,11 +51,10 @@ export function clearCurrentCues(track: TextTrack) {
   if (mode === 'disabled') {
     track.mode = 'hidden';
   }
-  if (!track.cues) {
-    return;
-  }
-  for (let i = track.cues.length; i--; ) {
-    track.removeCue(track.cues[i]);
+  if (track.cues) {
+    for (let i = track.cues.length; i--; ) {
+      track.removeCue(track.cues[i]);
+    }
   }
   if (mode === 'disabled') {
     track.mode = mode;
@@ -71,12 +70,12 @@ export function removeCuesInRange(
   if (mode === 'disabled') {
     track.mode = 'hidden';
   }
-  if (!track.cues || !track.cues.length) {
-    return;
-  }
-  const cues = getCuesInRange(track.cues, start, end);
-  for (let i = 0; i < cues.length; i++) {
-    track.removeCue(cues[i]);
+
+  if (track.cues && track.cues.length > 0) {
+    const cues = getCuesInRange(track.cues, start, end);
+    for (let i = 0; i < cues.length; i++) {
+      track.removeCue(cues[i]);
+    }
   }
   if (mode === 'disabled') {
     track.mode = mode;
