@@ -245,18 +245,25 @@ export class SubtitleStreamController
       if (newDetails.deltaUpdateFailed) {
         return;
       }
+      const mainDetails = this.mainDetails;
+      const mainSlidingStartFragment = mainDetails
+        ? mainDetails.fragments[0]
+        : null;
       if (!track.details) {
-        const mainDetails = this.mainDetails;
         if (mainDetails) {
           if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
             alignPDT(newDetails, mainDetails);
-          } else if (mainDetails.fragments[0]) {
+          } else if (mainSlidingStartFragment) {
             // line up live playlist with main so that fragments in range are loaded
-            addSliding(newDetails, mainDetails.fragments[0].start);
+            addSliding(newDetails, mainSlidingStartFragment.start);
           }
         }
       } else {
-        this.alignPlaylists(newDetails, track.details);
+        const sliding = this.alignPlaylists(newDetails, track.details);
+        if (sliding === 0 && mainSlidingStartFragment) {
+          // realign with main when there is no overlap with last refresh
+          addSliding(newDetails, mainSlidingStartFragment.start);
+        }
       }
     }
     track.details = newDetails;
