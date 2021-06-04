@@ -64,6 +64,7 @@ export interface BufferEOSData {
 export interface BufferFlushingData {
   startOffset: number;
   endOffset: number;
+  endOffsetSubtitles?: number;
   type: SourceBufferName | null;
 }
 
