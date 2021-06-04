@@ -411,24 +411,7 @@ class AudioStreamController
   }
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
-    if (this.mainDetails === null) {
-      const mainDetails = (this.mainDetails = data.details);
-      // compute start position if we haven't already
-      const trackId = this.levelLastLoaded;
-      if (
-        trackId !== null &&
-        this.levels &&
-        this.startPosition === -1 &&
-        mainDetails.live
-      ) {
-        const track = this.levels[trackId];
-        if (!track.details || !track.details.fragments[0]) {
-          return;
-        }
-        alignPDT(track.details, mainDetails);
-        this.setStartPosition(track.details, track.details.fragments[0].start);
-      }
-    }
+    this.mainDetails = data.details;
   }
 
   onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData) {
@@ -445,18 +428,19 @@ class AudioStreamController
     const track = levels[trackId];
     let sliding = 0;
     if (newDetails.live || track.details?.live) {
+      const mainDetails = this.mainDetails;
       if (!newDetails.fragments[0]) {
         newDetails.deltaUpdateFailed = true;
       }
-      if (newDetails.deltaUpdateFailed) {
+      if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;
       }
       if (
         !track.details &&
         newDetails.hasProgramDateTime &&
-        this.mainDetails?.hasProgramDateTime
+        mainDetails.hasProgramDateTime
       ) {
-        alignPDT(newDetails, this.mainDetails);
+        alignPDT(newDetails, mainDetails);
         sliding = newDetails.fragments[0].start;
       } else {
         sliding = this.alignPlaylists(newDetails, track.details);
