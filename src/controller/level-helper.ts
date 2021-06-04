@@ -372,17 +372,20 @@ export function adjustSliding(
   const delta =
     newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
   const oldFragments = oldDetails.fragments;
-  const newFragments = newDetails.fragments;
   if (delta < 0 || delta >= oldFragments.length) {
     return;
   }
-  const playlistStartOffset = oldFragments[delta].start;
-  if (playlistStartOffset) {
-    for (let i = newDetails.skippedSegments; i < newFragments.length; i++) {
-      newFragments[i].start += playlistStartOffset;
+  addSliding(newDetails, oldFragments[delta].start);
+}
+
+export function addSliding(details: LevelDetails, start: number) {
+  if (start) {
+    const fragments = details.fragments;
+    for (let i = details.skippedSegments; i < fragments.length; i++) {
+      fragments[i].start += start;
     }
-    if (newDetails.fragmentHint) {
-      newDetails.fragmentHint.start += playlistStartOffset;
+    if (details.fragmentHint) {
+      details.fragmentHint.start += start;
     }
   }
 }
