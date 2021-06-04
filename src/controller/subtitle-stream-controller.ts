@@ -93,18 +93,7 @@ export class SubtitleStreamController
   }
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
-    const mainDetails = data.details;
-    if (this.mainDetails === null) {
-      const trackId = this.levelLastLoaded;
-      if (trackId !== null && this.levels && mainDetails.live) {
-        const track = this.levels[trackId];
-        if (!track.details || !track.details.fragments[0]) {
-          return;
-        }
-        alignPDT(track.details, mainDetails);
-      }
-    }
-    this.mainDetails = mainDetails;
+    this.mainDetails = data.details;
   }
 
   onSubtitleFragProcessed(
@@ -255,21 +244,17 @@ export class SubtitleStreamController
     }
     this.mediaBuffer = this.mediaBufferTimeRanges;
     if (newDetails.live || track.details?.live) {
-      if (newDetails.deltaUpdateFailed) {
+      const mainDetails = this.mainDetails;
+      if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;
       }
-      const mainDetails = this.mainDetails;
-      const mainSlidingStartFragment = mainDetails
-        ? mainDetails.fragments[0]
-        : null;
+      const mainSlidingStartFragment = mainDetails.fragments[0];
       if (!track.details) {
-        if (mainDetails) {
-          if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
-            alignPDT(newDetails, mainDetails);
-          } else if (mainSlidingStartFragment) {
-            // line up live playlist with main so that fragments in range are loaded
-            addSliding(newDetails, mainSlidingStartFragment.start);
-          }
+        if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
+          alignPDT(newDetails, mainDetails);
+        } else if (mainSlidingStartFragment) {
+          // line up live playlist with main so that fragments in range are loaded
+          addSliding(newDetails, mainSlidingStartFragment.start);
         }
       } else {
         const sliding = this.alignPlaylists(newDetails, track.details);
@@ -284,6 +269,25 @@ export class SubtitleStreamController
 
     // trigger handler right now
     this.tick();
+
+    // If playlist is misaligned because of bad PDT or drift, delete details to resync with main on reload
+    if (
+      newDetails.live &&
+      !this.fragCurrent &&
+      this.media &&
+      this.state === State.IDLE
+    ) {
+      const foundFrag = findFragmentByPTS(
+        null,
+        newDetails.fragments,
+        this.media.currentTime,
+        0
+      );
+      if (!foundFrag) {
+        this.warn('Subtitle playlist not aligned with playback');
+        track.details = undefined;
+      }
+    }
   }
 
   _handleFragmentLoadComplete(fragLoadedData: FragLoadedData) {
@@ -364,8 +368,7 @@ export class SubtitleStreamController
       );
       const fragments = trackDetails.fragments;
       const fragLen = fragments.length;
-      const end =
-        fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
+      const end = trackDetails.edge;
 
       let foundFrag;
       const fragPrevious = this.fragPrevious;
