@@ -683,7 +683,6 @@ export default class MP4Remuxer implements Remuxer {
 
     let inputSamples: Array<AudioSample> = track.samples;
     let offset: number = rawMPEG ? 0 : 8;
-    let fillFrame: any;
     let nextAudioPts: number = this.nextAudioPts || -1;
 
     // window.audioSamples ? window.audioSamples.push(inputSamples.map(s => s.pts)) : (window.audioSamples = [inputSamples.map(s => s.pts)]);
@@ -766,9 +765,8 @@ export default class MP4Remuxer implements Remuxer {
                 (1000 * delta) / inputTimeScale
               )} ms.`
             );
-            this.nextAudioPts = nextAudioPts = pts;
+            this.nextAudioPts = nextAudioPts = nextPts = pts;
           }
-          nextPts = pts;
         } // eslint-disable-line brace-style
 
         // Insert missing frames if:
@@ -801,7 +799,7 @@ export default class MP4Remuxer implements Remuxer {
           );
           for (let j = 0; j < missing; j++) {
             const newStamp = Math.max(nextPts as number, 0);
-            fillFrame = AAC.getSilentFrame(
+            let fillFrame = AAC.getSilentFrame(
               track.manifestCodec || track.codec,
               track.channelCount
             );
