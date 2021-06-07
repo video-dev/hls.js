@@ -13,10 +13,12 @@ const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
 
 const createDefinePlugin = (type) => {
   const buildConstants = {
+    // WISTIA HLS CHANGE: we don't ever want to compile the subtitles or
+    // drm stuff because we don't use it
     __VERSION__: JSON.stringify(pkgJson.version),
-    __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
+    __USE_SUBTITLES__: false,
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
-    __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport),
+    __USE_EME_DRM__: false,
   };
   return new webpack.DefinePlugin(buildConstants);
 };
@@ -118,6 +120,17 @@ const baseConfig = {
   },
 };
 
+function getAliasesForMainAndDebugDist() {
+  return {
+    './controller/abr-controller': './empty.js',
+    './controller/eme-controller': './empty.js',
+    './controller/subtitle-stream-controller': './empty.js',
+    './controller/subtitle-track-controller': './empty.js',
+    './controller/timeline-controller': './empty.js',
+    './utils/cues': './empty.js',
+  };
+}
+
 function getAliasesForLightDist() {
   let aliases = {};
 
@@ -147,6 +160,8 @@ function getAliasesForLightDist() {
 }
 
 const multiConfig = [
+  //  Wistia Note: the debug package is the one that is
+  //  actually included when we install via npm
   {
     name: 'debug',
     mode: 'development',
@@ -160,6 +175,9 @@ const multiConfig = [
       libraryTarget: 'umd',
       libraryExport: 'default',
       globalObject: 'this', // https://github.com/webpack/webpack/issues/6642#issuecomment-370222543
+    },
+    resolve: {
+      alias: getAliasesForMainAndDebugDist(),
     },
     plugins: mainPlugins,
     devtool: 'source-map',
@@ -176,6 +194,9 @@ const multiConfig = [
       libraryTarget: 'umd',
       libraryExport: 'default',
       globalObject: 'this',
+    },
+    resolve: {
+      alias: getAliasesForMainAndDebugDist(),
     },
     plugins: mainPlugins,
     devtool: 'source-map',

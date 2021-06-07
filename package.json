@@ -1,15 +1,15 @@
 {
-  "name": "hls.js",
+  "name": "@wistia/hls.js",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
   "authors": "Guillaume du Pontavice <g.du.pontavice@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/video-dev/hls.js"
+    "url": "https://github.com/wistia/hls.js"
   },
   "bugs": {
-    "url": "https://github.com/video-dev/hls.js/issues"
+    "url": "https://github.com/wistia/hls.js/issues"
   },
   "main": "./dist/hls.js",
   "types": "./dist/hls.js.d.ts",
@@ -47,7 +47,7 @@
     "test:func:sauce-ie": "SAUCE=1 UA='internet explorer' OS='Windows 10' BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
-    "prepare": "husky install"
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@babel/core": "7.14.3",
@@ -113,5 +113,6 @@
     "webpack-dev-server": "3.11.2",
     "webpack-merge": "5.7.3",
     "webworkify-webpack": "2.1.5"
-  }
+  },
+  "version": "1.0.6"
 }
