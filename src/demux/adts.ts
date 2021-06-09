@@ -243,9 +243,9 @@ export function initTrackConfig(
     track.channelCount = config.channelCount;
     track.codec = config.codec;
     track.manifestCodec = config.manifestCodec;
-    logger.log(
-      `parsed codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`
-    );
+    // logger.log(
+    //   `parsed codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`
+    // );
   }
 }
 

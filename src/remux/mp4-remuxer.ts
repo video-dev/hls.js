@@ -75,18 +75,18 @@ export default class MP4Remuxer implements Remuxer {
   destroy() {}
 
   resetTimeStamp(defaultTimeStamp) {
-    logger.log('[mp4-remuxer]: initPTS & initDTS reset');
+    // logger.log('[mp4-remuxer]: initPTS & initDTS reset');
     this._initPTS = this._initDTS = defaultTimeStamp;
   }
 
   resetNextTimestamp() {
-    logger.log('[mp4-remuxer]: reset next timestamp');
+    // logger.log('[mp4-remuxer]: reset next timestamp');
     this.isVideoContiguous = false;
     this.isAudioContiguous = false;
   }
 
   resetInitSegment() {
-    logger.log('[mp4-remuxer]: ISGenerated flag reset');
+    // logger.log('[mp4-remuxer]: ISGenerated flag reset');
     this.ISGenerated = false;
   }
 
