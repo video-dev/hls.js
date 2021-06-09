@@ -1,9 +1,9 @@
 template: |
   # Summary
-     HLS.js v$NEXT_PATCH_VERSION includes bug fixes and improvements over the last release.
+     HLS.js $NEXT_TAG includes bug fixes and improvements over the last release.
 
     ## Changes Since The Last Release
-    https://github.com/video-dev/hls.js/compare/$PREVIOUS_TAG...v$NEXT_PATCH_VERSION
+    https://github.com/video-dev/hls.js/compare/$PREVIOUS_TAG...$NEXT_TAG
 
     $CHANGES
 
