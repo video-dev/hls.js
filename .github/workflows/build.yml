@@ -216,9 +216,9 @@ jobs:
         id: draft_release
         uses: release-drafter/release-drafter@fe52e97d262833ae07d05efaf1a239df3f1b5cd4
         with:
-          replacers:
-            - search: '/$NEXT_TAG/g'
-              replace: '${{ needs.config.outputs.tag || "$NEXT_TAG" }}'
+          - replacers:
+              - search: '/$NEXT_TAG/g'
+                replace: '${{ needs.config.outputs.tag || "$NEXT_TAG" }}'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
