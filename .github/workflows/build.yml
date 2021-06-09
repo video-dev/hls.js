@@ -246,6 +246,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: draft release notes
+        uses: release-drafter/release-drafter@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   release_npm:
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
