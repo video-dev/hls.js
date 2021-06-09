@@ -16,6 +16,8 @@ template: |
     ## Feedback
     Please provide feedback via [Issues in GitHub](https://github.com/video-dev/hls.js/issues/new/choose). For more details on how to contribute to HLS.js, see our [CONTRIBUTING guide](https://github.com/video-dev/hls.js/blob/master/CONTRIBUTING.md).
 
+tag-template: 'v$RESOLVED_VERSION'
+
 version-resolver:
   major:
     labels:
