@@ -19,7 +19,7 @@ template: |
 tag-template: 'v$RESOLVED_VERSION'
 
 exclude-labels:
-  - 'skip-changelog'
+  - 'skip-change-log'
 
 version-resolver:
   major:
