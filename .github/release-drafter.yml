@@ -20,15 +20,3 @@ tag-template: 'v$RESOLVED_VERSION'
 
 exclude-labels:
   - 'skip-change-log'
-
-version-resolver:
-  major:
-    labels:
-      - 'major'
-  minor:
-    labels:
-      - 'minor'
-  patch:
-    labels:
-      - 'patch'
-  default: patch
