@@ -6,7 +6,7 @@ Releases are performed automatically with [GitHub actions](https://github.com/vi
 1. `git push`
 1. `git push --tag`
 1. Wait for the GitHub action to create a new draft GitHub release with the build attached. The publish to npm should happen around the same time from a different step.
-1. Add the release notes to the new draft GitHub release.
+1. Update the release notes to the new draft GitHub release if needed.
 1. Publish the GitHub release.
 
 ## Examples
