@@ -205,7 +205,7 @@ jobs:
 
   update_draft_release:
     needs: [config, test_unit]
-    if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
+    if: needs.config.outputs.tag
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.draft_release.outputs.upload_url }}
