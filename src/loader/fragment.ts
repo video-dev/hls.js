@@ -239,7 +239,11 @@ export class Fragment extends BaseSegment {
   ): LevelKey {
     let decryptdata = levelkey;
 
-    if (levelkey?.method === 'AES-128' && levelkey.uri && !levelkey.iv) {
+    if (
+      levelkey?.uri &&
+      !levelkey.iv &&
+      (levelkey.method === 'AES-128' || levelkey.method === 'SAMPLE-AES')
+    ) {
       decryptdata = LevelKey.fromURI(levelkey.uri);
       decryptdata.method = levelkey.method;
       decryptdata.iv = this.createInitializationVector(segmentNumber);
