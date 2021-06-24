@@ -42,7 +42,7 @@ body:
           "backBufferLength": 60
         }
       value: '{}'
-      render: javascript
+      render: JavaScript
     validations:
       required: true
   - type: textarea
