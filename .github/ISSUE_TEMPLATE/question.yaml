@@ -6,13 +6,11 @@ body:
     id: question
     attributes:
       label: What do you want to do with Hls.js?
-      render: markdown
     validations:
       required: true
   - type: textarea
     id: question
     attributes:
       label: What have you tried so far?
-      render: markdown
     validations:
       required: false
