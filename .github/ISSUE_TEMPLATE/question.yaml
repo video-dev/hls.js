@@ -1,6 +1,5 @@
 name: Question
 description: Need some help?
-title: '[Question]: '
 labels: [question, triage]
 body:
   - type: textarea
