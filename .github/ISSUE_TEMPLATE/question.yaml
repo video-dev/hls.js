@@ -9,7 +9,7 @@ body:
     validations:
       required: true
   - type: textarea
-    id: question
+    id: what_tried_so_far
     attributes:
       label: What have you tried so far?
     validations:
