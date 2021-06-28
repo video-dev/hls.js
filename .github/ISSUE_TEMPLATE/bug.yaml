@@ -101,5 +101,6 @@ body:
     attributes:
       label: Chrome media internals output
       description: For media errors reported on Chrome browser, please also paste the output of "chrome://media-internals"
+      render: shell
     validations:
       required: false
