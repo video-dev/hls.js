@@ -64,7 +64,7 @@
     "@itsjamie/esdoc-ecmascript-proposal-plugin": "0.3.1",
     "@itsjamie/esdoc-standard-plugin": "0.3.1",
     "@itsjamie/esdoc-typescript-plugin": "0.3.1",
-    "@microsoft/api-extractor": "7.16.1",
+    "@microsoft/api-extractor": "7.17.0",
     "@types/chai": "4.2.19",
     "@types/chart.js": "2.9.32",
     "@types/mocha": "8.2.2",
