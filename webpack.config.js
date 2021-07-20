@@ -122,7 +122,6 @@ const baseConfig = {
 
 function getAliasesForMainAndDebugDist() {
   return {
-    './controller/abr-controller': './empty.js',
     './controller/eme-controller': './empty.js',
     './controller/subtitle-stream-controller': './empty.js',
     './controller/subtitle-track-controller': './empty.js',
