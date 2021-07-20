@@ -114,5 +114,5 @@
     "webpack-merge": "5.8.0",
     "webworkify-webpack": "2.1.5"
   },
-  "version": "1.0.7"
+  "version": "1.0.7-1"
 }
