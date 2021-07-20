@@ -1,6 +1,6 @@
 {
   "extends": ["config:base"],
-  "labels": ["dependencies"],
+  "labels": ["dependencies", "skip-change-log"],
   "commitMessagePrefix": "[skip netlify]",
   "prHourlyLimit": 0,
   "packageRules": [
