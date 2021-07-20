@@ -5,6 +5,15 @@
 
 [comment]: <> ([![Sauce Test Status]&#40;https://saucelabs.com/browser-matrix/robwalch.svg&#41;]&#40;https://saucelabs.com/u/robwalch&#41;)
 
+# WISTIA HLS
+
+This is the Wistia Fork of HLS.js. We have forked HLS.js so that we can make tweaks to the HLS.js scripts as necessary so HLS.js can be optimized for Wistia playback.
+
+## Docs 📓
+
+- [Deploying 🚀](/docs/deploying.md)
+- [Developing Locally 👩‍💻](/docs/developing-locally.md)
+
 # ![HLS.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
 
 HLS.js is a JavaScript library that implements an [HTTP Live Streaming] client.

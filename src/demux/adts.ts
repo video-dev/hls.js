@@ -57,9 +57,9 @@ export function getAudioConfig(
   adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
   // byte 3
   adtsChanelConfig |= (data[offset + 3] & 0xc0) >>> 6;
-  logger.log(
-    `manifest codec:${audioCodec}, ADTS type:${adtsObjectType}, samplingIndex:${adtsSamplingIndex}`
-  );
+  // logger.log(
+  //   `manifest codec:${audioCodec}, ADTS type:${adtsObjectType}, samplingIndex:${adtsSamplingIndex}`
+  // );
   // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
   if (/firefox/i.test(userAgent)) {
     if (adtsSamplingIndex >= 6) {
@@ -243,9 +243,9 @@ export function initTrackConfig(
     track.channelCount = config.channelCount;
     track.codec = config.codec;
     track.manifestCodec = config.manifestCodec;
-    logger.log(
-      `parsed codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`
-    );
+    // logger.log(
+    //   `parsed codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`
+    // );
   }
 }
 

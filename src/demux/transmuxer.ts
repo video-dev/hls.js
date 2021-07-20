@@ -249,11 +249,11 @@ export default class Transmuxer {
   private flushRemux(transmuxResults, demuxResult, chunkMeta) {
     const { audioTrack, avcTrack, id3Track, textTrack } = demuxResult;
     const { accurateTimeOffset, timeOffset } = this.currentTransmuxState;
-    logger.log(
-      `[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${
-        chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''
-      } of level ${chunkMeta.level}`
-    );
+    // logger.log(
+    //   `[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${
+    //     chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''
+    //   } of level ${chunkMeta.level}`
+    // );
     const remuxResult = this.remuxer!.remux(
       audioTrack,
       avcTrack,
