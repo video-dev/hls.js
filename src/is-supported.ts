@@ -10,6 +10,9 @@ export function isSupported(): boolean {
   if (!mediaSource) {
     return false;
   }
+  if (!('Promise' in self)) {
+    return false;
+  }
   const sourceBuffer = getSourceBuffer();
   const isTypeSupported =
     mediaSource &&
