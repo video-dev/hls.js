@@ -14,7 +14,7 @@ class MP3Demuxer extends BaseAudioDemuxer {
     this._audioTrack = {
       container: 'audio/mpeg',
       type: 'audio',
-      id: 0,
+      id: 2,
       pid: -1,
       sequenceNumber: 0,
       isAAC: false,
