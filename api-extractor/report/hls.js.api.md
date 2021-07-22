@@ -2120,7 +2120,17 @@ export interface UserdataSample {
     // (undocumented)
     bytes: Uint8Array;
     // (undocumented)
+    payloadType?: number;
+    // (undocumented)
     pts: number;
+    // (undocumented)
+    type?: number;
+    // (undocumented)
+    userData?: string;
+    // (undocumented)
+    userDataBytes?: Uint8Array;
+    // (undocumented)
+    uuid?: string;
 }
 
 

@@ -16,7 +16,7 @@ export interface Demuxer {
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     duration: number
-  );
+  ): void;
   resetTimeStamp(defaultInitPTS?: number | null): void;
   resetContiguity(): void;
 }
@@ -94,6 +94,11 @@ export interface MetadataSample {
 export interface UserdataSample {
   pts: number;
   bytes: Uint8Array;
+  payloadType?: number;
+  type?: number;
+  userData?: string;
+  userDataBytes?: Uint8Array;
+  uuid?: string;
 }
 
 export interface AvcSample {
@@ -109,6 +114,7 @@ export interface AvcSample {
 export interface AvcSampleUnit {
   data: Uint8Array;
   type: number;
+  state?: number;
 }
 
 export type AudioSample = {
