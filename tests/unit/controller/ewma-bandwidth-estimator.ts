@@ -30,12 +30,12 @@ describe('EwmaBandWidthEstimator', function () {
     expect(bwEstimator.getEstimate()).to.equal(1000000);
     bwEstimator.sample(4000, 1000000);
     expect(bwEstimator.getEstimate()).to.closeTo(
-      1396480.1544736226,
+      1511550.3977404737,
       0.000000001
     );
     bwEstimator.sample(1000, 1000000);
     expect(bwEstimator.getEstimate()).to.closeTo(
-      2056826.9489827948,
+      3775044.041335162,
       0.000000001
     );
   });
@@ -47,45 +47,13 @@ describe('EwmaBandWidthEstimator', function () {
     expect(bwEstimator.getEstimate()).to.equal(1000000);
     bwEstimator.sample(4000, 1000000);
     expect(bwEstimator.getEstimate()).to.closeTo(
-      1439580.319105247,
+      1519244.5768252169,
       0.000000001
     );
     bwEstimator.sample(1000, 1000000);
     expect(bwEstimator.getEstimate()).to.closeTo(
-      2208342.324322311,
+      3847839.2697109017,
       0.000000001
     );
-  });
-
-  it('returns correct value after updating slow and fast', function () {
-    const defaultEstimate = 5e5;
-    const bwEstimator = new EwmaBandWidthEstimator(9, 3, defaultEstimate);
-    expect(bwEstimator.getEstimate()).to.equal(defaultEstimate);
-    bwEstimator.sample(8000, 1000000);
-    expect(bwEstimator.getEstimate()).to.equal(1000000);
-    bwEstimator.sample(4000, 1000000);
-    expect(bwEstimator.getEstimate()).to.closeTo(
-      1439580.319105247,
-      0.000000001
-    );
-    bwEstimator.update(15, 4);
-    expect(bwEstimator.getEstimate()).to.closeTo(
-      1878125.393685882,
-      0.000000001
-    );
-    bwEstimator.sample(1000, 1000000);
-    expect(bwEstimator.getEstimate()).to.closeTo(
-      2966543.443461984,
-      0.000000001
-    );
-  });
-
-  it('returns correct value when updating before a sample', function () {
-    const defaultEstimate = 5e5;
-    const bwEstimator = new EwmaBandWidthEstimator(9, 3, defaultEstimate);
-    bwEstimator.update(15, 4);
-    expect(bwEstimator.getEstimate()).to.equal(defaultEstimate);
-    bwEstimator.sample(8000, 1000000);
-    expect(bwEstimator.getEstimate()).to.equal(1000000);
   });
 });

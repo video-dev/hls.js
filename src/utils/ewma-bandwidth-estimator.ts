@@ -11,42 +11,29 @@ import EWMA from '../utils/ewma';
 class EwmaBandWidthEstimator {
   private defaultEstimate_: number;
   private minWeight_: number;
-  private minDelayMs_: number;
   private slow_: EWMA;
   private fast_: EWMA;
 
   constructor(slow: number, fast: number, defaultEstimate: number) {
     this.defaultEstimate_ = defaultEstimate;
-    this.minWeight_ = 0.001;
-    this.minDelayMs_ = 50;
+    this.minWeight_ = 1;
     this.slow_ = new EWMA(slow);
     this.fast_ = new EWMA(fast);
   }
 
-  update(slow: number, fast: number) {
-    const { slow_, fast_ } = this;
-    if (this.slow_.halfLife !== slow) {
-      this.slow_ = new EWMA(slow, slow_.getEstimate(), slow_.getTotalWeight());
+  sample(transferMs: number, numBytes: number) {
+    // limit speed to mitigate uncertainty from very fast transfers
+    if (numBytes) {
+      transferMs = Math.max(transferMs, 2);
+      // value is bandwidth in bits/s
+      const bandwidthInBps = (8000 * numBytes) / transferMs;
+      this.fast_.sample(bandwidthInBps);
+      this.slow_.sample(bandwidthInBps);
     }
-    if (this.fast_.halfLife !== fast) {
-      this.fast_ = new EWMA(fast, fast_.getEstimate(), fast_.getTotalWeight());
-    }
-  }
-
-  sample(durationMs: number, numBytes: number) {
-    durationMs = Math.max(durationMs, this.minDelayMs_);
-    const numBits = 8 * numBytes;
-    // weight is duration in seconds
-    const durationS = durationMs / 1000;
-    // value is bandwidth in bits/s
-    const bandwidthInBps = numBits / durationS;
-    this.fast_.sample(durationS, bandwidthInBps);
-    this.slow_.sample(durationS, bandwidthInBps);
   }
 
   canEstimate(): boolean {
-    const fast = this.fast_;
-    return fast && fast.getTotalWeight() >= this.minWeight_;
+    return this.fast_.getTotalWeight() >= this.minWeight_;
   }
 
   getEstimate(): number {
