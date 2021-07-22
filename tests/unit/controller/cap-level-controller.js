@@ -113,7 +113,7 @@ describe('CapLevelController', function () {
     it('gets width and height attributes when the media element is not in the DOM', function () {
       media.setAttribute('width', 320);
       media.setAttribute('height', 240);
-      const pixelRatio = CapLevelController.contentScaleFactor;
+      const pixelRatio = capLevelController.contentScaleFactor;
       const bounds = capLevelController.getDimensions();
       expect(bounds.width).to.equal(320);
       expect(bounds.height).to.equal(240);
@@ -125,7 +125,7 @@ describe('CapLevelController', function () {
       media.style.width = '1280px';
       media.style.height = '720px';
       document.querySelector('#test-fixture').appendChild(media);
-      const pixelRatio = CapLevelController.contentScaleFactor;
+      const pixelRatio = capLevelController.contentScaleFactor;
       const bounds = capLevelController.getDimensions();
       expect(bounds.width).to.equal(1280);
       expect(bounds.height).to.equal(720);
