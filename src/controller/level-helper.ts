@@ -256,6 +256,16 @@ export function mergeDetails(
   if (newDetails.skippedSegments) {
     newDetails.startCC = newDetails.fragments[0].cc;
   }
+  // Use existing init segment data for fragments not handled by mapFragmentIntersection (no corresponding oldFrag)
+  for (let i = 0; i < newFragments.length; i++) {
+    const newFrag = newFragments[i];
+    if (
+      newFrag.initSegment &&
+      newFrag.initSegment.relurl == currentInitSegment?.relurl
+    ) {
+      newFrag.initSegment = currentInitSegment;
+    }
+  }
 
   // Merge parts
   mapPartIntersection(
