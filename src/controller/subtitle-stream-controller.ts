@@ -17,9 +17,9 @@ import type {
   ErrorData,
   FragLoadedData,
   SubtitleFragProcessed,
+  SubtitleTrackSwitchData,
   SubtitleTracksUpdatedData,
   TrackLoadedData,
-  TrackSwitchedData,
   BufferFlushingData,
   LevelLoadedData,
 } from '../types/events';
@@ -209,7 +209,7 @@ export class SubtitleStreamController
 
   onSubtitleTrackSwitch(
     event: Events.SUBTITLE_TRACK_SWITCH,
-    data: TrackSwitchedData
+    data: SubtitleTrackSwitchData
   ) {
     this.currentTrackId = data.id;
 

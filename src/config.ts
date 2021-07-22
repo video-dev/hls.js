@@ -22,6 +22,7 @@ import type {
   LoaderContext,
   PlaylistLoaderContext,
 } from './types/loader';
+import type { ILogger } from './utils/logger';
 
 export type ABRControllerConfig = {
   abrEwmaFastLive: number;
@@ -145,7 +146,7 @@ export type TSDemuxerConfig = {
 };
 
 export type HlsConfig = {
-  debug: boolean;
+  debug: boolean | ILogger;
   enableWorker: boolean;
   enableSoftwareAES: boolean;
   minAutoBitrate: number;
@@ -331,7 +332,7 @@ export function mergeConfig(
   return Object.assign({}, defaultConfig, userConfig);
 }
 
-export function enableStreamingMode(config) {
+export function enableStreamingMode(config: HlsConfig) {
   const currentLoader = config.loader;
   if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
     // If a developer has configured their own loader, respect that choice

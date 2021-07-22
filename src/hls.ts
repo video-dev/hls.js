@@ -24,6 +24,13 @@ import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
 import type { Level } from './types/level';
 import type { Fragment } from './loader/fragment';
+import type BasePlaylistController from './controller/base-playlist-controller';
+import type BaseStreamController from './controller/base-stream-controller';
+import type AudioStreamController from './controller/audio-stream-controller';
+import type EwmaBandWidthEstimator from './utils/ewma-bandwidth-estimator';
+import type FPSController from './controller/fps-controller';
+import type { SubtitleStreamController } from './controller/subtitle-stream-controller';
+import type { TimelineController } from './controller/timeline-controller';
 
 /**
  * @module Hls
@@ -825,7 +832,26 @@ export type {
   HlsEventEmitter,
   HlsConfig,
   Fragment,
+  ComponentAPI,
+  NetworkComponentAPI,
+  AbrController,
+  EwmaBandWidthEstimator,
+  FragmentTracker,
+  BasePlaylistController,
+  BaseStreamController,
+  AudioStreamController,
+  AudioTrackController,
+  BufferController,
+  CapLevelController,
+  EMEController,
+  FPSController,
+  StreamController,
+  SubtitleStreamController,
+  SubtitleTrackController,
+  TimelineController,
 };
+
+export type { ILogger, ILogFunction } from './utils/logger';
 
 export type {
   ABRControllerConfig,
@@ -942,5 +968,6 @@ export type {
   SubtitleTrackLoadedData,
   SubtitleTracksUpdatedData,
   SubtitleTrackSwitchData,
+  TrackSwitchedData,
 } from './types/events';
 export type { AttrList } from './utils/attr-list';

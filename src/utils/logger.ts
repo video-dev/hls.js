@@ -1,8 +1,8 @@
-interface ILogFunction {
+export interface ILogFunction {
   (message?: any, ...optionalParams: any[]): void;
 }
 
-interface ILogger {
+export interface ILogger {
   trace: ILogFunction;
   debug: ILogFunction;
   log: ILogFunction;
