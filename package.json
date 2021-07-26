@@ -70,7 +70,7 @@
     "@types/mocha": "8.2.3",
     "@types/sinon-chai": "3.2.5",
     "@typescript-eslint/eslint-plugin": "4.28.5",
-    "@typescript-eslint/parser": "4.28.4",
+    "@typescript-eslint/parser": "4.28.5",
     "babel-loader": "8.2.2",
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.3.4",
