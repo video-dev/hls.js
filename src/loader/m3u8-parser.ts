@@ -212,6 +212,7 @@ export default class M3U8Parser {
     let levelkey: LevelKey | undefined;
     let firstPdtIndex = -1;
     let createNextFrag = false;
+    let createInitFrag = false;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
@@ -225,10 +226,6 @@ export default class M3U8Parser {
         frag.sn = currentSN;
         frag.cc = discontinuityCounter;
         frag.level = id;
-        if (currentInitSegment) {
-          frag.initSegment = currentInitSegment;
-          frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
-        }
       }
 
       const duration = result[1];
@@ -242,6 +239,10 @@ export default class M3U8Parser {
       } else if (result[3]) {
         // url
         if (Number.isFinite(frag.duration)) {
+          if (currentInitSegment && createInitFrag) {
+            frag.initSegment = currentInitSegment;
+            createInitFrag = false;
+          }
           frag.start = totalduration;
           if (levelkey) {
             frag.levelkey = levelkey;
@@ -425,18 +426,19 @@ export default class M3U8Parser {
           }
           case 'MAP': {
             const mapAttrs = new AttrList(value1);
-            frag.relurl = mapAttrs.URI;
+            const init = new Fragment(type, baseurl);
+            init.relurl = mapAttrs.URI;
             if (mapAttrs.BYTERANGE) {
-              frag.setByteRange(mapAttrs.BYTERANGE);
+              init.setByteRange(mapAttrs.BYTERANGE);
             }
-            frag.level = id;
-            frag.sn = 'initSegment';
+            init.level = id;
+            init.sn = 'initSegment';
             if (levelkey) {
-              frag.levelkey = levelkey;
+              init.levelkey = levelkey;
             }
-            frag.initSegment = null;
-            currentInitSegment = frag;
-            createNextFrag = true;
+            init.initSegment = null;
+            currentInitSegment = init;
+            createInitFrag = true;
             break;
           }
           case 'SERVER-CONTROL': {
