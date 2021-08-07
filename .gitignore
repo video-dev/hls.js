@@ -8,13 +8,33 @@ bower_components/*
 
 # NYC
 .nyc_output/
+
+# Coverage
 coverage/
 
 # JetBrains
-
 .idea/*
 
 # Build
+/lib
 /dist
+/dist.zip
 /netlify
 /api-docs
+
+# eslint
+.eslintcache
+
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+
+# Visual Studio 2017 auto generated files
+Generated\ Files/
+
+/web.config
+/vwd.webinfo
+
+# ReSharper is a .NET coding add-in
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user

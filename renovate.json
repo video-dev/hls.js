@@ -1,0 +1,21 @@
+{
+  "extends": ["config:base"],
+  "labels": ["dependencies", "skip-change-log"],
+  "commitMessagePrefix": "[skip netlify]",
+  "prHourlyLimit": 0,
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "matchDepTypes": ["peerDependencies"],
+      "rangeStrategy": "widen"
+    }
+  ],
+  "lockFileMaintenance": { "enabled": true }
+}

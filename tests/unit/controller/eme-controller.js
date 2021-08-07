@@ -2,11 +2,12 @@ import EMEController from '../../../src/controller/eme-controller';
 import HlsMock from '../../mocks/hls.mock';
 import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
+import { Events } from '../../../src/events';
 
 const sinon = require('sinon');
 
 const MediaMock = function () {
-  let media = new EventEmitter();
+  const media = new EventEmitter();
   media.setMediaKeys = sinon.spy();
   media.addEventListener = media.addListener.bind(media);
   media.removeEventListener = media.removeListener.bind(media);
@@ -15,11 +16,11 @@ const MediaMock = function () {
 
 const fakeLevels = [
   {
-    audioCodec: 'audio/foo'
+    audioCodec: 'audio/foo',
   },
   {
-    videoCoded: 'video/foo'
-  }
+    videoCodec: 'video/foo',
+  },
 ];
 
 let emeController;
@@ -37,21 +38,21 @@ describe('EMEController', function () {
   });
 
   it('should not do anything when `emeEnabled` is false (default)', function () {
-    let reqMediaKsAccessSpy = sinon.spy();
+    const reqMediaKsAccessSpy = sinon.spy();
 
     setupEach({
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
-    emeController.onMediaAttached({ media });
-    emeController.onManifestParsed({ media });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, { media });
 
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
   });
 
   it('should request keys when `emeEnabled` is true (but not set them)', function (done) {
-    let reqMediaKsAccessSpy = sinon.spy(function () {
+    const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
       });
@@ -59,17 +60,19 @@ describe('EMEController', function () {
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
-    emeController.onMediaAttached({ media });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
 
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
 
-    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, {
+      levels: fakeLevels,
+    });
 
-    setTimeout(function () {
+    self.setTimeout(function () {
       expect(media.setMediaKeys.callCount).to.equal(0);
       expect(reqMediaKsAccessSpy.callCount).to.equal(1);
       done();
@@ -77,7 +80,7 @@ describe('EMEController', function () {
   });
 
   it('should request keys with specified robustness options when `emeEnabled` is true', function (done) {
-    let reqMediaKsAccessSpy = sinon.spy(function () {
+    const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
       });
@@ -87,28 +90,37 @@ describe('EMEController', function () {
       emeEnabled: true,
       drmSystemOptions: {
         audioRobustness: 'HW_SECURE_ALL',
-        videoRobustness: 'HW_SECURE_ALL'
+        videoRobustness: 'HW_SECURE_ALL',
       },
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
-    emeController.onMediaAttached({ media });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
 
     expect(media.setMediaKeys.callCount).to.equal(0);
     expect(reqMediaKsAccessSpy.callCount).to.equal(0);
 
-    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, {
+      levels: fakeLevels,
+    });
 
-    setTimeout(function () {
+    self.setTimeout(function () {
+      expect(reqMediaKsAccessSpy.callCount).to.equal(1);
       const baseConfig = reqMediaKsAccessSpy.getCall(0).args[1][0];
-      expect(baseConfig.audioCapabilities[0]).to.have.property('robustness', 'HW_SECURE_ALL');
-      expect(baseConfig.videoCapabilities[0]).to.have.property('robustness', 'HW_SECURE_ALL');
+      expect(baseConfig.audioCapabilities[0]).to.have.property(
+        'robustness',
+        'HW_SECURE_ALL'
+      );
+      expect(baseConfig.videoCapabilities[0]).to.have.property(
+        'robustness',
+        'HW_SECURE_ALL'
+      );
       done();
     }, 0);
   });
 
   it('should trigger key system error(s) when bad encrypted data is received', function (done) {
-    let reqMediaKsAccessSpy = sinon.spy(function () {
+    const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
       });
@@ -116,49 +128,57 @@ describe('EMEController', function () {
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
-    let badData = {
+    const badData = {
       initDataType: 'cenc',
-      initData: 'bad data'
+      initData: 'bad data',
     };
 
-    emeController.onMediaAttached({ media });
-    emeController.onManifestParsed({ levels: fakeLevels });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, {
+      levels: fakeLevels,
+    });
 
     media.emit('encrypted', badData);
 
-    setTimeout(function () {
+    self.setTimeout(function () {
       expect(emeController.hls.trigger).to.have.been.calledTwice;
-      expect(emeController.hls.trigger.args[0][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_KEYS);
-      expect(emeController.hls.trigger.args[1][1].details).to.equal(ErrorDetails.KEY_SYSTEM_NO_SESSION);
+      expect(emeController.hls.trigger.args[0][1].details).to.equal(
+        ErrorDetails.KEY_SYSTEM_NO_KEYS
+      );
+      expect(emeController.hls.trigger.args[1][1].details).to.equal(
+        ErrorDetails.KEY_SYSTEM_NO_SESSION
+      );
       done();
     }, 0);
   });
 
   it('should close all media key sessions and remove media keys when media is detached', function (done) {
-    let reqMediaKsAccessSpy = sinon.spy(function () {
+    const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
       });
     });
-    let keySessionCloseSpy = sinon.spy(() => Promise.resolve());
+    const keySessionCloseSpy = sinon.spy(() => Promise.resolve());
 
     setupEach({
       emeEnabled: true,
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
-    emeController.onMediaAttached({ media });
-    emeController._mediaKeysList = [{
-      mediaKeysSession: {
-        close: keySessionCloseSpy
-      }
-    }];
-    emeController.onMediaDetached();
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
+    emeController._mediaKeysList = [
+      {
+        mediaKeysSession: {
+          close: keySessionCloseSpy,
+        },
+      },
+    ];
+    emeController.onMediaDetached(Events.MEDIA_DETACHED);
 
-    setTimeout(function () {
+    self.setTimeout(function () {
       expect(keySessionCloseSpy.callCount).to.equal(1);
       expect(emeController._mediaKeysList.length).to.equal(0);
       expect(media.setMediaKeys.calledWith(null)).to.be.true;

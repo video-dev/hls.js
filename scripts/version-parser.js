@@ -23,17 +23,20 @@ module.exports = {
     return semver.gte(newVersion, previousVersion);
   },
   // returns true if the provided version is definitely greater than any existing
-  // auto generated alpha versions
-  isDefinitelyGreaterThanAlphas: (version) => {
-    const parsed = semver.parse(version, { loose: false, includePrerelease: true });
+  // auto generated canary versions
+  isDefinitelyGreaterThanCanaries: (version) => {
+    const parsed = semver.parse(version, {
+      loose: false,
+      includePrerelease: true,
+    });
     if (!parsed) {
       throw new Error('Error parsing version.');
     }
 
-    // anything after a part of `0` must be greater than `alpha`
+    // anything after a part of `0` must be greater than `canary`
     let hadZero = false;
     return parsed.prerelease.every((part) => {
-      if (hadZero && part <= 'alpha') {
+      if (hadZero && part <= 'canary') {
         return false;
       } else {
         hadZero = false;
@@ -55,5 +58,5 @@ module.exports = {
       throw new Error('Invalid version.');
     }
     return match[1] || 'latest';
-  }
+  },
 };

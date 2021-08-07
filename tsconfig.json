@@ -1,24 +1,7 @@
 {
+  "extends": "./tsconfig-lib.json",
   "compilerOptions": {
-    "target": "esnext",
-    "module": "commonjs",
-    "declaration": true,
-    "sourceMap": true,
-    "strict": false,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "lib": [
-      "dom",
-      "es2015",
-    ],
-    "outDir": "./dist/",
+    "emitDeclarationOnly": false
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist/**/*",
-    "**/*.spec.*"
-  ]
+  "include": ["src/**/*", "tests/unit/**/*", "demo/**/*"]
 }

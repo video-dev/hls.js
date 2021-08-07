@@ -2,11 +2,7 @@
 
 [build]
   publish = "netlify"
-  command = "./scripts/travis.sh"
+  command = "./scripts/netlify.sh"
 
 [build.environment]
   NODE_VERSION = "lts/*"
-  TRAVIS_MODE = "netlifyBranch"
-
-[context.deploy-preview.environment]
-  TRAVIS_MODE = "netlifyPr"

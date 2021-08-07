@@ -1,4 +1,4 @@
-export function sortObject (obj) {
+export function sortObject(obj) {
   if (typeof obj !== 'object') {
     return obj;
   }
@@ -14,7 +14,7 @@ export function sortObject (obj) {
   return temp;
 }
 
-export function copyTextToClipboard (text) {
+export function copyTextToClipboard(text) {
   let textArea = document.createElement('textarea');
   textArea.value = text;
   document.body.appendChild(textArea);

@@ -1,72 +1,72 @@
-
 <!DOCTYPE html>
 
 <html lang="en">
-<head>
-  <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
 
-  <title>hls.js</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    .hlsjs {
-      position: relative;
-      width: 70%;
-    }
-    .ratio {
-      position: absolute;
-      padding-top: 75%;
-    }
-    video {
-      background-color: #ccc;
-      width: 100%;
-    }
+    <title>hls.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      .hlsjs {
+        position: relative;
+        width: 70%;
+      }
+      .ratio {
+        position: absolute;
+        padding-top: 75%;
+      }
+      video {
+        background-color: #ccc;
+        width: 100%;
+      }
+    </style>
 
-  </style>
+    <script src="../../../dist/hls.js"></script>
 
-<script src="../../../dist/hls.js"></script>
+    <script>
+      window.onload = function () {
+        if (Hls.isSupported()) {
+          var video1 = document.getElementById('video1'),
+            video2 = document.getElementById('video2'),
+            hls1 = new Hls({ debug: true }),
+            hls2 = new Hls({ debug: true });
 
-  <script>
-window.onload = function () {
-  if (Hls.isSupported()) {
-    var video1 = document.getElementById("video1"),
-        video2 = document.getElementById("video2"),
-        hls1 = new Hls({debug: true}),
-        hls2 = new Hls({debug: true});
+          hls1.on(Hls.Events.MEDIA_ATTACHED, function () {
+            hls1.loadSource(
+              'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8'
+            );
+          });
 
-    hls1.on(Hls.Events.MEDIA_ATTACHED, function () {
-      hls1.loadSource("https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8");
-    });
+          hls2.on(Hls.Events.MEDIA_ATTACHED, function () {
+            hls2.loadSource(
+              'http://www.streambox.fr/playlists/x31jrg1/x31jrg1.m3u8'
+            );
+          });
 
-    hls2.on(Hls.Events.MEDIA_ATTACHED, function () {
-      hls2.loadSource("http://www.streambox.fr/playlists/x31jrg1/x31jrg1.m3u8");
-    });
+          hls1.attachMedia(video1);
+          hls2.attachMedia(video2);
+        }
+      };
+    </script>
+  </head>
 
-    hls1.attachMedia(video1);
-    hls2.attachMedia(video2);
-  }
-};
-</script>
+  <body>
+    <h1>hls.js</h1>
 
-</head>
+    <h2>First instance</h2>
 
-<body>
-  <h1>hls.js</h1>
+    <div class="hlsjs">
+      <video id="video1" controls></video>
 
-  <h2>First instance</h2>
+      <div class="ratio"></div>
+    </div>
 
-  <div class="hlsjs">
-    <video id="video1" controls></video>
+    <h2>Second instance</h2>
 
-    <div class="ratio"></div>
-  </div>
+    <div class="hlsjs">
+      <video id="video2" controls></video>
 
-  <h2>Second instance</h2>
-
-  <div class="hlsjs">
-    <video id="video2" controls></video>
-
-    <div class="ratio"></div>
-  </div>
-
-</body>
+      <div class="ratio"></div>
+    </div>
+  </body>
 </html>

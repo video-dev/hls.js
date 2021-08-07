@@ -8,7 +8,7 @@ export enum ErrorTypes {
   // Identifier for a mux Error (demuxing/remuxing)
   MUX_ERROR = 'muxError',
   // Identifier for all other errors
-  OTHER_ERROR = 'otherError'
+  OTHER_ERROR = 'otherError',
 }
 
 /**
@@ -41,6 +41,10 @@ export enum ErrorDetails {
   AUDIO_TRACK_LOAD_ERROR = 'audioTrackLoadError',
   // Identifier for an audio track load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   AUDIO_TRACK_LOAD_TIMEOUT = 'audioTrackLoadTimeOut',
+  // Identifier for a subtitle track load error - data: { url : faulty URL, response : { code: error code, text: error text }}
+  SUBTITLE_LOAD_ERROR = 'subtitleTrackLoadError',
+  // Identifier for a subtitle track load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
+  SUBTITLE_TRACK_LOAD_TIMEOUT = 'subtitleTrackLoadTimeOut',
   // Identifier for fragment load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   FRAG_LOAD_ERROR = 'fragLoadError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
@@ -56,8 +60,10 @@ export enum ErrorDetails {
   KEY_LOAD_ERROR = 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
   KEY_LOAD_TIMEOUT = 'keyLoadTimeOut',
-  // Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : {  err : exception , mimeType : mimeType }
+  // Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : { error : exception , mimeType : mimeType }
   BUFFER_ADD_CODEC_ERROR = 'bufferAddCodecError',
+  // Triggered when source buffer(s) could not be created using level (manifest CODECS attribute), parsed media, or best guess codec(s) - data: { reason : error reason }
+  BUFFER_INCOMPATIBLE_CODECS_ERROR = 'bufferIncompatibleCodecsError',
   // Identifier for a buffer append error - data: append error description
   BUFFER_APPEND_ERROR = 'bufferAppendError',
   // Identifier for a buffer appending error event - data: appending error description
@@ -71,5 +77,9 @@ export enum ErrorDetails {
   // Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)
   BUFFER_NUDGE_ON_STALL = 'bufferNudgeOnStall',
   // Identifier for an internal exception happening inside hls.js while handling an event
-  INTERNAL_EXCEPTION = 'internalException'
+  INTERNAL_EXCEPTION = 'internalException',
+  // Identifier for an internal call to abort a loader
+  INTERNAL_ABORTED = 'aborted',
+  // Uncategorized error
+  UNKNOWN = 'unknown',
 }
