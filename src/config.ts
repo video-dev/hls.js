@@ -150,7 +150,7 @@ export type HlsConfig = {
   enableSoftwareAES: boolean;
   minAutoBitrate: number;
   loader: { new (confg: HlsConfig): Loader<LoaderContext> };
-  fetchSetup?: (context: any, initParams: any) => Request;
+  fetchSetup?: (context: LoaderContext, initParams: any) => Request;
   xhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
 
   // Alt Audio
