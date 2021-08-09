@@ -217,7 +217,6 @@ jobs:
         uses: release-drafter/release-drafter@fe52e97d262833ae07d05efaf1a239df3f1b5cd4
         with:
           tag: ${{ needs.config.outputs.tag }}
-          version: ${{ needs.config.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
