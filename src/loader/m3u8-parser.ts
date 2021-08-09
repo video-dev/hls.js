@@ -212,7 +212,6 @@ export default class M3U8Parser {
     let levelkey: LevelKey | undefined;
     let firstPdtIndex = -1;
     let createNextFrag = false;
-    let createInitFrag = false;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
@@ -239,9 +238,8 @@ export default class M3U8Parser {
       } else if (result[3]) {
         // url
         if (Number.isFinite(frag.duration)) {
-          if (currentInitSegment && createInitFrag) {
+          if (currentInitSegment) {
             frag.initSegment = currentInitSegment;
-            createInitFrag = false;
           }
           frag.start = totalduration;
           if (levelkey) {
@@ -438,7 +436,6 @@ export default class M3U8Parser {
             }
             init.initSegment = null;
             currentInitSegment = init;
-            createInitFrag = true;
             break;
           }
           case 'SERVER-CONTROL': {
