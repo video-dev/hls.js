@@ -33,14 +33,13 @@ export function parseIMSC1(
     errorCallBack(new Error('Could not parse IMSC1 mdat'));
     return;
   }
-  const mdat = results[0];
-  const ttml = utf8ArrayToStr(
-    new Uint8Array(payload, mdat.start, mdat.end - mdat.start)
+  const ttmlList = results.map((mdat) =>
+    utf8ArrayToStr(new Uint8Array(payload, mdat.start, mdat.end - mdat.start))
   );
   const syncTime = toTimescaleFromScale(initPTS, 1, timescale);
 
   try {
-    callBack(parseTTML(ttml, syncTime));
+    ttmlList.forEach((ttml) => callBack(parseTTML(ttml, syncTime)));
   } catch (error) {
     errorCallBack(error);
   }
