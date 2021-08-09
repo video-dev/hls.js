@@ -254,6 +254,7 @@ class EMEController implements ComponentAPI {
         logger.log(`Media-keys created for key-system "${keySystem}"`);
 
         this._onMediaKeysCreated();
+        this._attemptSetMediaKeys(mediaKeys);
 
         return mediaKeys;
       });
