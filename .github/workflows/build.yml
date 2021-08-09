@@ -246,7 +246,7 @@ jobs:
       - name: upload assets to github release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ needs.draft_release.outputs.upload_url }}
+          upload_url: ${{ needs.update_draft_release.outputs.upload_url }}
           asset_path: dist.zip
           asset_name: release.zip
           asset_content_type: application/zip
