@@ -214,7 +214,7 @@ jobs:
     steps:
       - name: draft release notes
         id: draft_release
-        uses: release-drafter/release-drafter@fe52e97d262833ae07d05efaf1a239df3f1b5cd4
+        uses: tjenkinson/release-drafter@7954e074789ff12fadab249cc399a53e54f1cc55
         with:
           tag: ${{ needs.config.outputs.tag }}
         env:
