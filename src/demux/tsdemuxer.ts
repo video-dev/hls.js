@@ -586,8 +586,8 @@ class TSDemuxer implements Demuxer {
             }
           }
           break;
-          // IDR
         }
+        // IDR
         case 5:
           push = true;
           // handle PES not starting with AUD
@@ -624,7 +624,7 @@ class TSDemuxer implements Demuxer {
           let endOfCaptions = false;
           let b = 0;
 
-          while (!endOfCaptions && expGolombDecoder.bytesAvailable > 1) {
+          while (expGolombDecoder.bytesAvailable > 1) {
             payloadType = 0;
             do {
               b = expGolombDecoder.readUByte();
@@ -638,9 +638,13 @@ class TSDemuxer implements Demuxer {
               payloadSize += b;
             } while (b === 0xff);
 
-            // TODO: there can be more than one payload in an SEI packet...
-            // TODO: need to read type and size in a while loop to get them all
-            if (payloadType === 4 && expGolombDecoder.bytesAvailable !== 0) {
+            if (
+              !endOfCaptions &&
+              payloadType === 4 &&
+              expGolombDecoder.bytesAvailable !== 0
+            ) {
+              // User data registered by Rec. ITU-T T.35 SEI message
+              // Only the first encountered SEI is taken into account
               endOfCaptions = true;
 
               const countryCode = expGolombDecoder.readUByte();
@@ -671,6 +675,7 @@ class TSDemuxer implements Demuxer {
 
                       insertSampleInOrder(this._txtTrack.samples, {
                         type: 3,
+                        payloadType: payloadType,
                         pts: pes.pts,
                         bytes: byteArray,
                       });
@@ -682,8 +687,7 @@ class TSDemuxer implements Demuxer {
               payloadType === 5 &&
               expGolombDecoder.bytesAvailable !== 0
             ) {
-              endOfCaptions = true;
-
+              // User data unregistered SEI message
               if (payloadSize > 16) {
                 const uuidStrArray: Array<string> = [];
                 for (let i = 0; i < 16; i++) {
@@ -714,8 +718,8 @@ class TSDemuxer implements Demuxer {
             }
           }
           break;
-          // SPS
         }
+        // SPS
         case 7:
           push = true;
           spsfound = true;
