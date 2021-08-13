@@ -203,8 +203,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
           NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
 
-  release_github:
+  update_draft_release:
     needs: [config, test_unit]
+    if: needs.config.outputs.tag
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.draft_release.outputs.upload_url }}
+    permissions:
+      contents: write
+    steps:
+      - name: draft release notes
+        id: draft_release
+        uses: tjenkinson/release-drafter@48835fbc42b1c062a828995f9cb8301e6bdae677
+        with:
+          tag: ${{ needs.config.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release_github:
+    needs: [config, test_unit, update_draft_release]
     if: needs.config.outputs.tag
     runs-on: ubuntu-latest
     permissions:
@@ -226,20 +243,10 @@ jobs:
         run: |
           zip -r dist.zip dist
 
-      - name: create github release
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: upload assets to github release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.update_draft_release.outputs.upload_url }}
           asset_path: dist.zip
           asset_name: release.zip
           asset_content_type: application/zip
