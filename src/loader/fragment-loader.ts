@@ -169,8 +169,8 @@ export default class FragmentLoader {
         maxRetryDelay: config.fragLoadingMaxRetryTimeout,
         highWaterMark: MIN_CHUNK_SIZE,
       };
-      // Assign part stats to the loader's stats reference
-      part.stats = loader.stats;
+      // Assign loader stats to the part's stats reference
+      loader.stats = part.stats;
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
