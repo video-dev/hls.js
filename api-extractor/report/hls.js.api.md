@@ -123,7 +123,7 @@ export class BaseSegment {
     // (undocumented)
     get url(): string;
     set url(value: string);
-}
+    }
 
 // Warning: (ae-missing-release-tag) "BufferAppendedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -925,6 +925,7 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     static get version(): string;
 }
+
 export default Hls;
 
 // Warning: (ae-missing-release-tag) "HlsChunkPerformanceTiming" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -941,7 +942,7 @@ export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
 //
 // @public (undocumented)
 export type HlsConfig = {
-    debug: boolean;
+    debug: boolean | ILogger;
     enableWorker: boolean;
     enableSoftwareAES: boolean;
     minAutoBitrate: number;
@@ -1425,7 +1426,7 @@ export class LevelKey {
     method: string | null;
     // (undocumented)
     get uri(): string | null;
-}
+    }
 
 // Warning: (ae-missing-release-tag) "LevelLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2123,8 +2124,10 @@ export interface UserdataSample {
     pts: number;
 }
 
+
 // Warnings were encountered during analysis:
 //
+// src/config.ts:148:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
 // src/config.ts:157:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
 // src/config.ts:158:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
 // src/config.ts:160:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
