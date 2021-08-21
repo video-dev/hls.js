@@ -12,7 +12,7 @@ import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
-import { logger } from './utils/logger';
+import { ILogger, logger } from './utils/logger';
 
 import type { CuesInterface } from './utils/cues';
 import type { MediaKeyFunc } from './utils/mediakeys-helper';
@@ -145,7 +145,7 @@ export type TSDemuxerConfig = {
 };
 
 export type HlsConfig = {
-  debug: boolean;
+  debug: boolean | ILogger;
   enableWorker: boolean;
   enableSoftwareAES: boolean;
   minAutoBitrate: number;
