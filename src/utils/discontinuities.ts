@@ -173,3 +173,24 @@ export function alignPDT(details: LevelDetails, lastDetails: LevelDetails) {
     adjustSlidingStart(sliding, details);
   }
 }
+
+export function alignByPDT(details: LevelDetails, refDetails: LevelDetails) {
+  // This check protects the unsafe "!" usage below for null program date time access.
+  if (
+    !refDetails.fragments.length ||
+    !details.hasProgramDateTime ||
+    !refDetails.hasProgramDateTime
+  ) {
+    return;
+  }
+  const refPDT = refDetails.fragments[0].programDateTime!; // hasProgramDateTime check above makes this safe.
+  const refStart = refDetails.fragments[0].start;
+  const delta = refPDT - refStart;
+  details.fragments.forEach((frag) => {
+    const { programDateTime } = frag;
+    if (!programDateTime) return;
+    const start = (programDateTime - delta) / 1000;
+    frag.start = frag.startPTS = start;
+    frag.endPTS = start + frag.duration;
+  });
+}
