@@ -691,7 +691,8 @@ class TSDemuxer implements Demuxer {
               if (payloadSize > 16) {
                 const uuidStrArray: Array<string> = [];
                 for (let i = 0; i < 16; i++) {
-                  uuidStrArray.push(expGolombDecoder.readUByte().toString(16));
+                  const b = expGolombDecoder.readUByte().toString(16);
+                  uuidStrArray.push(b.length == 1 ? '0' + b : b);
 
                   if (i === 3 || i === 5 || i === 7 || i === 9) {
                     uuidStrArray.push('-');
