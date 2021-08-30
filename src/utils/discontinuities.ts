@@ -174,6 +174,19 @@ export function alignPDT(details: LevelDetails, lastDetails: LevelDetails) {
   }
 }
 
+export function alignFragmentByPDTDelta(frag: Fragment, delta: number) {
+  const { programDateTime } = frag;
+  if (!programDateTime) return;
+  const start = (programDateTime - delta) / 1000;
+  frag.start = frag.startPTS = start;
+  frag.endPTS = start + frag.duration;
+}
+
+/**
+ * Ensures appropriate time-alignment between renditions based on PDT.
+ * @param details - The details of the rendition you'd like to time-align (e.g. an audio rendition).
+ * @param refDetails - The details of the reference rendition with start and PDT times for alignment.
+ */
 export function alignByPDT(details: LevelDetails, refDetails: LevelDetails) {
   // This check protects the unsafe "!" usage below for null program date time access.
   if (
@@ -185,12 +198,20 @@ export function alignByPDT(details: LevelDetails, refDetails: LevelDetails) {
   }
   const refPDT = refDetails.fragments[0].programDateTime!; // hasProgramDateTime check above makes this safe.
   const refStart = refDetails.fragments[0].start;
-  const delta = refPDT - refStart;
+  // Use the delta between the reference details' presentation timeline's start time and its PDT
+  // to align the other rendtion's timeline.
+  const delta = refPDT - refStart * 1000;
+  // Per spec: "If any Media Playlist in a Master Playlist contains an EXT-X-PROGRAM-DATE-TIME tag, then all
+  // Media Playlists in that Master Playlist MUST contain EXT-X-PROGRAM-DATE-TIME tags with consistent mappings
+  // of date and time to media timestamps."
+  // So we should be able to use each rendition's PDT as a reference time and use the delta to compute our relevant
+  // start and end times.
+  // NOTE: This code assumes each level/details timelines have already been made "internally consistent"
   details.fragments.forEach((frag) => {
-    const { programDateTime } = frag;
-    if (!programDateTime) return;
-    const start = (programDateTime - delta) / 1000;
-    frag.start = frag.startPTS = start;
-    frag.endPTS = start + frag.duration;
+    alignFragmentByPDTDelta(frag, delta);
   });
+  if (details.fragmentHint) {
+    alignFragmentByPDTDelta(details.fragmentHint, delta);
+  }
+  details.alignedSliding = true;
 }

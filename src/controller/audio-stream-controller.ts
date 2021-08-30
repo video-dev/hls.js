@@ -441,6 +441,8 @@ class AudioStreamController
         newDetails.hasProgramDateTime &&
         mainDetails.hasProgramDateTime
       ) {
+        // Make sure our audio rendition is aligned with the "main" rendition, using
+        // pdt as our reference times.
         alignByPDT(newDetails, mainDetails);
         sliding = newDetails.fragments[0].start;
       } else {
