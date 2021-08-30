@@ -61,6 +61,7 @@ export class TimelineController implements ComponentAPI {
   private cea608Parser1!: Cea608Parser;
   private cea608Parser2!: Cea608Parser;
   private lastSn: number = -1;
+  private lastPartIndex: number = -1;
   private prevCC: number = -1;
   private vttCCs: VTTCCs = newVTTCCs();
   private captionsProperties: {
@@ -294,6 +295,7 @@ export class TimelineController implements ComponentAPI {
 
   private onManifestLoading() {
     this.lastSn = -1; // Detect discontinuity in fragment parsing
+    this.lastPartIndex = -1;
     this.prevCC = -1;
     this.vttCCs = newVTTCCs(); // Detect discontinuity in subtitle manifests
     this._cleanTracks();
@@ -419,18 +421,25 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
-    const { cea608Parser1, cea608Parser2, lastSn } = this;
+    const { cea608Parser1, cea608Parser2, lastSn, lastPartIndex } = this;
     if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
       return;
     }
     // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
     if (data.frag.type === PlaylistLevelType.MAIN) {
       const sn = data.frag.sn;
-      if (sn !== lastSn + 1) {
+      const partIndex = data?.part?.index ?? -1;
+      if (
+        !(
+          sn === lastSn + 1 ||
+          (sn === lastSn && partIndex === lastPartIndex + 1)
+        )
+      ) {
         cea608Parser1.reset();
         cea608Parser2.reset();
       }
       this.lastSn = sn as number;
+      this.lastPartIndex = partIndex;
     }
   }
 
