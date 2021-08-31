@@ -256,6 +256,16 @@ export function mergeDetails(
   if (newDetails.skippedSegments) {
     newDetails.startCC = newDetails.fragments[0].cc;
   }
+  // Avoid reset init-segment repeatly for ll-hls stream.
+  for (let i = newFragments.length - 1; i >= 0; i--) {
+    const newInit = newFragments[i].initSegment;
+    if (newInit) {
+      if (newDetails.fragmentHint && newInit) {
+        newDetails.fragmentHint.initSegment = newInit;
+      }
+      break;
+    }
+  }
 
   // Merge parts
   mapPartIntersection(
