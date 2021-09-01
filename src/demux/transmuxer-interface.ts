@@ -173,7 +173,7 @@ export default class TransmuxerInterface {
       part.stats.parsing.start = now;
     }
     const initSegmentChange = !(
-      lastFrag && frag.initSegment === lastFrag.initSegment
+      lastFrag && frag.initSegment?.url === lastFrag.initSegment?.url
     );
     const state = new TransmuxState(
       discontinuity,
