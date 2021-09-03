@@ -183,11 +183,22 @@ export function alignFragmentByPDTDelta(frag: Fragment, delta: number) {
 }
 
 /**
- * Ensures appropriate time-alignment between renditions based on PDT.
+ * Ensures appropriate time-alignment between renditions based on PDT. Unlike `alignPDT`, which adjusts
+ * the timeline based on the delta between PDTs of the 0th fragment of two playlists/`LevelDetails`,
+ * this function assumes the timelines represented in `refDetails` are accurate, including the PDTs,
+ * and uses the "wallclock"/PDT timeline as a cross-reference to `details`, adjusting the presentation
+ * times/timelines of `details` accordingly.
+ * Given the asynchronous nature of fetches and initial loads of live `main` and audio/subtitle tracks,
+ * the primary purpose of this function is to ensure the "local timelines" of audio/subtitle tracks
+ * are aligned to the main/video timeline, using PDT as the cross-reference/"anchor" that should
+ * be consistent across playlists, per the HLS spec.
  * @param details - The details of the rendition you'd like to time-align (e.g. an audio rendition).
  * @param refDetails - The details of the reference rendition with start and PDT times for alignment.
  */
-export function alignByPDT(details: LevelDetails, refDetails: LevelDetails) {
+export function alignMediaPlaylistByPDT(
+  details: LevelDetails,
+  refDetails: LevelDetails
+) {
   // This check protects the unsafe "!" usage below for null program date time access.
   if (
     !refDetails.fragments.length ||
