@@ -2,7 +2,7 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
-import { alignPDT } from '../utils/discontinuities';
+import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { addSliding } from './level-helper';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
@@ -251,7 +251,7 @@ export class SubtitleStreamController
       const mainSlidingStartFragment = mainDetails.fragments[0];
       if (!track.details) {
         if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
-          alignPDT(newDetails, mainDetails);
+          alignMediaPlaylistByPDT(newDetails, mainDetails);
         } else if (mainSlidingStartFragment) {
           // line up live playlist with main so that fragments in range are loaded
           addSliding(newDetails, mainSlidingStartFragment.start);

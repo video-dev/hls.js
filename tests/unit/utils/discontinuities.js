@@ -3,7 +3,7 @@ import {
   findDiscontinuousReferenceFrag,
   adjustSlidingStart,
   alignPDT,
-  alignByPDT,
+  alignMediaPlaylistByPDT,
 } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
@@ -163,7 +163,7 @@ describe('level-helper', function () {
       alignedSliding: true,
       hasProgramDateTime: true,
     };
-    alignByPDT(lastLevel.details, refDetails);
+    alignMediaPlaylistByPDT(lastLevel.details, refDetails);
     expect(
       lastLevel.details,
       `actual:\n\n${JSON.stringify(
