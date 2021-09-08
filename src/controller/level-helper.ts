@@ -352,6 +352,7 @@ export function mapFragmentIntersection(
     ? oldDetails.fragments.concat(oldDetails.fragmentHint)
     : oldDetails.fragments;
 
+  let lastSameSegment: Fragment | null = null;
   for (let i = start; i <= end; i++) {
     const oldFrag = oldFrags[delta + i];
     let newFrag = newFrags[i];
@@ -360,7 +361,12 @@ export function mapFragmentIntersection(
       newFrag = newDetails.fragments[i] = oldFrag;
     }
     if (oldFrag && newFrag) {
+      lastSameSegment = oldFrag;
       intersectionFn(oldFrag, newFrag);
+    } else if (newFrag && lastSameSegment) {
+      if (newFrag.initSegment?.relurl == lastSameSegment?.initSegment?.relurl) {
+        newFrag.initSegment = lastSameSegment.initSegment;
+      }
     }
   }
 }
