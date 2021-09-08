@@ -225,6 +225,10 @@ export default class M3U8Parser {
         frag.sn = currentSN;
         frag.cc = discontinuityCounter;
         frag.level = id;
+        if (currentInitSegment) {
+          frag.initSegment = currentInitSegment;
+          frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+        }
       }
 
       const duration = result[1];
@@ -238,9 +242,6 @@ export default class M3U8Parser {
       } else if (result[3]) {
         // url
         if (Number.isFinite(frag.duration)) {
-          if (currentInitSegment) {
-            frag.initSegment = currentInitSegment;
-          }
           frag.start = totalduration;
           if (levelkey) {
             frag.levelkey = levelkey;
@@ -424,18 +425,21 @@ export default class M3U8Parser {
           }
           case 'MAP': {
             const mapAttrs = new AttrList(value1);
-            const init = new Fragment(type, baseurl);
-            init.relurl = mapAttrs.URI;
-            if (mapAttrs.BYTERANGE) {
-              init.setByteRange(mapAttrs.BYTERANGE);
+            if (frag.duration) {
+              // Initial segment tag is after segment duration tag.
+              //   #EXTINF: 6.0
+              //   #EXT-X-MAP:URI="init.mp4
+              const init = new Fragment(type, baseurl);
+              setInitSegment(init, mapAttrs, id, levelkey);
+              currentInitSegment = init;
+              frag.initSegment = currentInitSegment;
+              frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+            } else {
+              // Initial segment tag is before segment duration tag
+              setInitSegment(frag, mapAttrs, id, levelkey);
+              currentInitSegment = frag;
+              createNextFrag = true;
             }
-            init.level = id;
-            init.sn = 'initSegment';
-            if (levelkey) {
-              init.levelkey = levelkey;
-            }
-            init.initSegment = null;
-            currentInitSegment = init;
             break;
           }
           case 'SERVER-CONTROL': {
@@ -620,4 +624,22 @@ function assignProgramDateTime(frag, prevFrag) {
     frag.programDateTime = null;
     frag.rawProgramDateTime = null;
   }
+}
+
+function setInitSegment(
+  frag: Fragment,
+  mapAttrs: AttrList,
+  id: number,
+  levelkey: LevelKey | undefined
+) {
+  frag.relurl = mapAttrs.URI;
+  if (mapAttrs.BYTERANGE) {
+    frag.setByteRange(mapAttrs.BYTERANGE);
+  }
+  frag.level = id;
+  frag.sn = 'initSegment';
+  if (levelkey) {
+    frag.levelkey = levelkey;
+  }
+  frag.initSegment = null;
 }
