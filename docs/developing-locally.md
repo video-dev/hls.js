@@ -15,8 +15,6 @@ To change and develop HLS.js locally, the follow steps are required
 
 ## When you're finished
 
-https://classic.yarnpkg.com/en/docs/cli/unlink
-
 1. stop your player-modern server and the hls.js server
 1. run `npm unlink @wistia/hls.js` from player-modern
 1. run `yarn` in player-modern before restarting
