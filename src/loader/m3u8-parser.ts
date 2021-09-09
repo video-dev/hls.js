@@ -508,9 +508,6 @@ export default class M3U8Parser {
       frag.cc = discontinuityCounter;
       level.fragmentHint = frag;
     }
-    if (level.fragmentHint && currentInitSegment) {
-      level.fragmentHint.initSegment = currentInitSegment;
-    }
     const fragmentLength = fragments.length;
     const firstFragment = fragments[0];
     const lastFragment = fragments[fragmentLength - 1];
