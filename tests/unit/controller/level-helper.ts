@@ -17,6 +17,19 @@ import { AttrList } from '../../../src/utils/attr-list';
 chai.use(sinonChai);
 const expect = chai.expect;
 
+const addInit = (playlist, withData = false) => {
+  const init = new Fragment(PlaylistLevelType.MAIN, 'base');
+  init.sn = 'initSegment';
+  init.relurl = 'init';
+  if (withData) {
+    init.data = new Uint8Array(0);
+  }
+  playlist.fragments.forEach((fragment) => {
+    // @ts-ignore
+    fragment.initSegment = init;
+  });
+};
+
 const generatePlaylist = (sequenceNumbers, offset = 0) => {
   const playlist = new LevelDetails('');
   playlist.startSN = sequenceNumbers[0];
@@ -162,6 +175,24 @@ describe('LevelHelper Tests', function () {
       mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([5, 10, 15, 20]);
+    });
+
+    it('copies cached init segments to new live fragments', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3, 4]);
+      addInit(oldPlaylist, true);
+      const newPlaylist = generatePlaylist([2, 3, 4, 5, 6]);
+      addInit(newPlaylist);
+      expect(newPlaylist.fragments[3].initSegment?.data).to.not.exist;
+
+      // give last fragment a different init segment
+      const init2 = new Fragment(PlaylistLevelType.MAIN, 'base');
+      init2.sn = 'initSegment';
+      init2.relurl = 'init2';
+      newPlaylist.fragments[4].initSegment = init2;
+
+      mergeDetails(oldPlaylist, newPlaylist);
+      expect(newPlaylist.fragments[3].initSegment?.data).to.exist;
+      expect(newPlaylist.fragments[4].initSegment?.data).to.not.exist;
     });
 
     it('does not change start times when there is no segment overlap', function () {
