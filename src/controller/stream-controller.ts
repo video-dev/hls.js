@@ -980,7 +980,11 @@ export default class StreamController
       const buffered = BufferHelper.getBuffered(media);
       const bufferStart = buffered.length ? buffered.start(0) : 0;
       const delta = bufferStart - startPosition;
-      if (delta > 0 && delta < this.config.maxBufferHole) {
+      if (
+        delta > 0 &&
+        (delta < this.config.maxBufferHole ||
+          delta < this.config.maxFragLookUpTolerance)
+      ) {
         logger.log(
           `adjusting start position by ${delta} to match buffer start`
         );
