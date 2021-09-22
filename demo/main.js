@@ -235,6 +235,9 @@ $(document).ready(function () {
       toggleTab($('.demo-tab-btn')[parseInt(indexString) || 0], true);
     });
   }
+  $(window).on('popstate', function () {
+    location.reload();
+  });
 });
 
 function setupGlobals() {
@@ -1481,6 +1484,9 @@ function onDemoConfigChanged() {
   )}&demoConfig=${serializedDemoConfig}`;
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
+  if (window.location !== permalinkURL) {
+    history.pushState(null, null, permalinkURL);
+  }
 }
 
 function onConfigPersistenceChanged(event) {
