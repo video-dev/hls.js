@@ -1484,7 +1484,7 @@ function onDemoConfigChanged(firstLoad) {
   )}&demoConfig=${serializedDemoConfig}`;
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
-  if (!firstLoad && window.location.toString() !== permalinkURL) {
+  if (!firstLoad && window.location.href !== permalinkURL) {
     window.history.pushState(null, null, permalinkURL);
   }
 }
