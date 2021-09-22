@@ -60,7 +60,7 @@
     "@babel/preset-typescript": "7.15.0",
     "@babel/register": "7.15.3",
     "@itsjamie/esdoc-cli": "0.3.1",
-    "@itsjamie/esdoc-core": "0.3.1",
+    "@itsjamie/esdoc-core": "0.3.2",
     "@itsjamie/esdoc-ecmascript-proposal-plugin": "0.3.1",
     "@itsjamie/esdoc-standard-plugin": "0.3.1",
     "@itsjamie/esdoc-typescript-plugin": "0.3.1",
