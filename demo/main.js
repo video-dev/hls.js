@@ -337,7 +337,7 @@ function loadSelectedStream() {
     updateConfigEditorValue(hlsConfig);
   }
 
-  onDemoConfigChanged();
+  onDemoConfigChanged(true);
   console.log('Using Hls.js config:', hlsConfig);
 
   self.hls = hls = new Hls(hlsConfig);
@@ -1462,8 +1462,7 @@ function getURLParam(sParam, defaultValue) {
   return defaultValue;
 }
 
-let firstLoad = true;
-function onDemoConfigChanged() {
+function onDemoConfigChanged(firstLoad) {
   demoConfig = {
     enableStreaming,
     autoRecoverError,
@@ -1488,7 +1487,6 @@ function onDemoConfigChanged() {
   if (!firstLoad && window.location !== permalinkURL) {
     window.history.pushState(null, null, permalinkURL);
   }
-  firstLoad = false;
 }
 
 function onConfigPersistenceChanged(event) {
