@@ -204,7 +204,7 @@ $(document).ready(function () {
       .attr('rel', 'noopener noreferrer')
       .attr('href', getVersionLink(version))
       .text('v' + version);
-    $('.title').append($a);
+    $('.title').append(' ').append($a);
   }
 
   $('#streamURL').val(sourceURL);
