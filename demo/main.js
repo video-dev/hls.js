@@ -1462,6 +1462,7 @@ function getURLParam(sParam, defaultValue) {
   return defaultValue;
 }
 
+let firstLoad = true;
 function onDemoConfigChanged() {
   demoConfig = {
     enableStreaming,
@@ -1484,9 +1485,10 @@ function onDemoConfigChanged() {
   )}&demoConfig=${serializedDemoConfig}`;
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
-  if (window.location !== permalinkURL) {
+  if (!firstLoad && window.location !== permalinkURL) {
     window.history.pushState(null, null, permalinkURL);
   }
+  firstLoad = false;
 }
 
 function onConfigPersistenceChanged(event) {
