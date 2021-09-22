@@ -236,7 +236,7 @@ $(document).ready(function () {
     });
   }
   $(window).on('popstate', function () {
-    location.reload();
+    window.location.reload();
   });
 });
 
@@ -1485,7 +1485,7 @@ function onDemoConfigChanged() {
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
   if (window.location !== permalinkURL) {
-    history.pushState(null, null, permalinkURL);
+    window.history.pushState(null, null, permalinkURL);
   }
 }
 
