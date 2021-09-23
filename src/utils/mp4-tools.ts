@@ -135,10 +135,10 @@ export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
   const references: any[] = [];
   const sidx = sidxBox[0];
 
-  const version = sidx.data[0];
+  const version = sidx.data[sidx.start];
 
   // set initial offset, we skip the reference ID (not needed)
-  let index = version === 0 ? 8 : 16;
+  let index = 8;
 
   const timescale = readUint32(sidx, index);
   index += 4;
