@@ -425,11 +425,10 @@ export function getDuration(data: Uint8Array, initData: InitData) {
     const timescale = track.timescale || 90e3;
     const truns = findBox(traf, ['trun']);
     for (let j = 0; j < truns.length; j++) {
-      if (sampleDuration) {
+      rawDuration = computeRawDurationFromSamples(truns[j]);
+      if (!rawDuration && sampleDuration) {
         const sampleCount = readUint32(truns[j], 4);
         rawDuration = sampleDuration * sampleCount;
-      } else {
-        rawDuration = computeRawDurationFromSamples(truns[j]);
       }
       if (track.type === ElementaryStreamTypes.VIDEO) {
         videoDuration += rawDuration / timescale;
