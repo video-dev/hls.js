@@ -6,7 +6,7 @@ import { BufferHelper } from '../utils/buffer-helper';
 import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
 import type { Level } from '../types/level';
-import { PlaylistLevelType } from '../types/loader';
+import { FragmentLoaderContextSetup, PlaylistLevelType } from '../types/loader';
 import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import type { TransmuxerResult } from '../types/transmuxer';
@@ -57,8 +57,12 @@ export default class StreamController
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
 
-  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker, '[stream-controller]');
+  constructor(
+    hls: Hls,
+    fragmentTracker: FragmentTracker,
+    contextSetup: FragmentLoaderContextSetup
+  ) {
+    super(hls, fragmentTracker, contextSetup, '[stream-controller]');
     this._registerListeners();
   }
 

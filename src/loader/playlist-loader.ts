@@ -22,6 +22,7 @@ import type {
   LoaderResponse,
   LoaderStats,
   PlaylistLoaderContext,
+  PlaylistLoaderContextSetup,
 } from '../types/loader';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { LevelDetails } from './level-details';
@@ -33,6 +34,7 @@ import type {
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
+import CMCDController from '../controller/cmcd-controller';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext
@@ -65,12 +67,14 @@ function getResponseUrl(
 
 class PlaylistLoader {
   private readonly hls: Hls;
+  private readonly contextSetup: PlaylistLoaderContextSetup;
   private readonly loaders: {
     [key: string]: Loader<LoaderContext>;
   } = Object.create(null);
 
-  constructor(hls: Hls) {
+  constructor(hls: Hls, contextSetup: PlaylistLoaderContextSetup) {
     this.hls = hls;
+    this.contextSetup = contextSetup;
     this.registerListeners();
   }
 
@@ -300,6 +304,7 @@ class PlaylistLoader {
 
     // logger.debug(`[playlist-loader]: Calling internal loader delegate for URL: ${context.url}`);
 
+    this.contextSetup?.(context);
     loader.load(context, loaderConfig, loaderCallbacks);
   }
 

@@ -8,6 +8,8 @@ export interface LoaderContext {
   url: string;
   // loader response type (arraybuffer or default response type for playlist)
   responseType: string;
+  // headers
+  headers?: Record<string, string>;
   // start byte range offset
   rangeStart?: number;
   // end byte range offset
@@ -19,6 +21,10 @@ export interface LoaderContext {
 export interface FragmentLoaderContext extends LoaderContext {
   frag: Fragment;
   part: Part | null;
+}
+
+export interface FragmentLoaderContextSetup {
+  (context: FragmentLoaderContext): void;
 }
 
 export interface LoaderConfiguration {
@@ -163,4 +169,8 @@ export interface PlaylistLoaderContext extends LoaderContext {
   levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url
   deliveryDirectives: HlsUrlParameters | null;
+}
+
+export interface PlaylistLoaderContextSetup {
+  (context: PlaylistLoaderContext): void;
 }

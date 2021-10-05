@@ -4,23 +4,31 @@ import {
   Loader,
   LoaderConfiguration,
   FragmentLoaderContext,
+  FragmentLoaderContextSetup,
 } from '../types/loader';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
 import type { FragLoadedData } from '../types/events';
+import Hls from '../hls';
+import CMCDController from '../controller/cmcd-controller';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
 export default class FragmentLoader {
   private readonly config: HlsConfig;
+  private contextSetup: FragmentLoaderContextSetup;
   private loader: Loader<FragmentLoaderContext> | null = null;
   private partLoadTimeout: number = -1;
 
-  constructor(config: HlsConfig) {
+  constructor(config: HlsConfig, contextSetup: FragmentLoaderContextSetup) {
     this.config = config;
+    this.contextSetup = contextSetup;
   }
 
   destroy() {
+    // @ts-ignore
+    this.hls = this.cmcdController = null;
+
     if (this.loader) {
       this.loader.destroy();
       this.loader = null;
@@ -79,6 +87,9 @@ export default class FragmentLoader {
       };
       // Assign frag stats to the loader's stats reference
       frag.stats = loader.stats;
+
+      this.contextSetup?.(loaderContext);
+
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
@@ -279,6 +290,7 @@ function createLoaderContext(
     part,
     responseType: 'arraybuffer',
     url: segment.url,
+    headers: {},
     rangeStart: 0,
     rangeEnd: 0,
   };

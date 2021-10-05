@@ -85,6 +85,13 @@ class XhrLoader implements Loader<LoaderContext> {
     const xhrSetup = this.xhrSetup;
 
     try {
+      const headers = this.context.headers;
+      if (headers) {
+        for (const header in headers) {
+          xhr.setRequestHeader(header, headers[header]);
+        }
+      }
+
       if (xhrSetup) {
         try {
           xhrSetup(xhr, context.url);

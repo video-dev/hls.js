@@ -47,6 +47,13 @@ export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
+export type CMCDControllerConfig = {
+  cmcdEnabled: boolean;
+  cmcdSessionId?: string;
+  cmcdContentId?: string;
+  cmcdUseHeaders: boolean;
+};
+
 export type DRMSystemOptions = {
   audioRobustness?: string;
   videoRobustness?: string;
@@ -172,6 +179,7 @@ export type HlsConfig = {
 } & ABRControllerConfig &
   BufferControllerConfig &
   CapLevelControllerConfig &
+  CMCDControllerConfig &
   EMEControllerConfig &
   FPSControllerConfig &
   FragmentLoaderConfig &
@@ -261,6 +269,10 @@ export const hlsDefaultConfig: HlsConfig = {
   testBandwidth: true,
   progressive: false,
   lowLatencyMode: true,
+  cmcdEnabled: false,
+  cmcdSessionId: undefined,
+  cmcdContentId: undefined,
+  cmcdUseHeaders: false,
 
   // Dynamic Modules
   ...timelineConfig(),

@@ -6,7 +6,7 @@ import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { addSliding } from './level-helper';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
-import { PlaylistLevelType } from '../types/loader';
+import { FragmentLoaderContextSetup, PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
 import type { FragmentTracker } from './fragment-tracker';
 import type { NetworkComponentAPI } from '../types/component-api';
@@ -41,8 +41,12 @@ export class SubtitleStreamController
   private tracksBuffered: Array<TimeRange[]> = [];
   private mainDetails: LevelDetails | null = null;
 
-  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker, '[subtitle-stream-controller]');
+  constructor(
+    hls: Hls,
+    fragmentTracker: FragmentTracker,
+    contextSetup: FragmentLoaderContextSetup
+  ) {
+    super(hls, fragmentTracker, contextSetup, '[subtitle-stream-controller]');
     this._registerListeners();
   }
 
