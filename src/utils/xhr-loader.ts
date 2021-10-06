@@ -84,6 +84,8 @@ class XhrLoader implements Loader<LoaderContext> {
     stats.loaded = 0;
     const xhrSetup = this.xhrSetup;
 
+    xhr.onreadystatechange = this.readystatechange.bind(this);
+
     try {
       if (xhrSetup) {
         try {
@@ -115,7 +117,6 @@ class XhrLoader implements Loader<LoaderContext> {
       );
     }
 
-    xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
     // setup timeout before we perform request
