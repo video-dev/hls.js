@@ -1,8 +1,8 @@
-import { CMCDControllerConfig } from '../config';
 import type Hls from '../hls';
 import {
   Fragment,
   FragmentLoaderContext,
+  HlsConfig,
   LoaderContext,
   MediaAttachedData,
 } from '../hls';
@@ -27,7 +27,7 @@ import { BufferHelper } from '../utils/buffer-helper';
  */
 export default class CMCDController implements ComponentAPI {
   private hls: Hls;
-  private config: CMCDControllerConfig;
+  private config: HlsConfig;
   private media?: HTMLMediaElement;
   private sid: string;
   private initialized: boolean = false;
@@ -308,9 +308,13 @@ export default class CMCDController implements ComponentAPI {
       return NaN;
     }
 
-    const buffered = BufferHelper.getBuffered(media);
-    const end = buffered.end(buffered.length - 1);
-    return (end - media.currentTime) * 1000;
+    const info = BufferHelper.bufferInfo(
+      media,
+      media.currentTime,
+      this.config.maxBufferHole
+    );
+
+    return info.len * 1000;
   }
 
   /**
