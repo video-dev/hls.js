@@ -34,7 +34,6 @@ import type {
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
-import CMCDController from '../controller/cmcd-controller';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext

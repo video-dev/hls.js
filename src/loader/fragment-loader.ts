@@ -9,8 +9,6 @@ import {
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
 import type { FragLoadedData } from '../types/events';
-import Hls from '../hls';
-import CMCDController from '../controller/cmcd-controller';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 

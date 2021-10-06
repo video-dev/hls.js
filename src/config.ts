@@ -51,7 +51,7 @@ export type CMCDControllerConfig = {
   cmcdEnabled: boolean;
   cmcdSessionId?: string;
   cmcdContentId?: string;
-  cmcdUseHeaders: boolean;
+  cmcdUseHeaders?: boolean;
 };
 
 export type DRMSystemOptions = {

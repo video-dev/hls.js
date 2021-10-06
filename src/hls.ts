@@ -851,6 +851,7 @@ export type {
   ABRControllerConfig,
   BufferControllerConfig,
   CapLevelControllerConfig,
+  CMCDControllerConfig,
   EMEControllerConfig,
   DRMSystemOptions,
   FPSControllerConfig,

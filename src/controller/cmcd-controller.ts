@@ -7,11 +7,11 @@ import {
   MediaAttachedData,
 } from '../hls';
 import {
-  Cmcd,
-  CmcdHeaders,
-  CmcdObjectType,
-  CmcdStreamingFormat,
-  CmcdVersion,
+  CMCD,
+  CMCDHeaders,
+  CMCDObjectType,
+  CMCDStreamingFormat,
+  CMCDVersion,
 } from '../types/cmcd';
 import type { ComponentAPI } from '../types/component-api';
 import { logger } from '../utils/logger';
@@ -125,13 +125,13 @@ export default class CMCDController implements ComponentAPI {
   /**
    * Create baseline CMCD data
    *
-   * @return {Cmcd}
+   * @return {CMCD}
    * @private
    */
   private createData() {
     return {
-      v: CmcdVersion,
-      sf: CmcdStreamingFormat.HLS,
+      v: CMCDVersion,
+      sf: CMCDStreamingFormat.HLS,
       sid: this.sid,
       cid: this.config.cmcdContentId,
       pr: this.media?.playbackRate,
@@ -149,20 +149,16 @@ export default class CMCDController implements ComponentAPI {
    */
   private apply(
     context: LoaderContext,
-    data: Cmcd = {},
+    data: CMCD = {},
     useHeaders = this.config.cmcdUseHeaders
   ) {
-    if (!this.config.cmcdEnabled) {
-      return;
-    }
-
     // apply baseline data
     Object.assign(data, this.createData());
 
     const isVideo =
-      data.ot === CmcdObjectType.INIT ||
-      data.ot === CmcdObjectType.VIDEO ||
-      data.ot === CmcdObjectType.MUXED;
+      data.ot === CMCDObjectType.INIT ||
+      data.ot === CMCDObjectType.VIDEO ||
+      data.ot === CMCDObjectType.MUXED;
 
     if (this.starved && isVideo) {
       data.bs = true;
@@ -204,8 +200,12 @@ export default class CMCDController implements ComponentAPI {
    */
   applyPlaylistData(context: LoaderContext) {
     try {
+      if (!this.config.cmcdEnabled) {
+        return;
+      }
+
       this.apply(context, {
-        ot: CmcdObjectType.MANIFEST,
+        ot: CMCDObjectType.MANIFEST,
         su: !this.initialized,
       });
     } catch (error) {
@@ -220,17 +220,21 @@ export default class CMCDController implements ComponentAPI {
    */
   applyFragmentData(context: FragmentLoaderContext) {
     try {
+      if (!this.config.cmcdEnabled) {
+        return;
+      }
+
       const fragment = context.frag;
       const level = this.hls.levels[fragment.level];
       const ot = this.getObjectType(fragment);
-      const data: Cmcd = {
+      const data: CMCD = {
         d: fragment.duration * 1000,
         ot,
       };
 
       // Not sure where to find these values for audio and text streams,
       // so only apply them to video types
-      if (ot === CmcdObjectType.VIDEO || ot == CmcdObjectType.MUXED) {
+      if (ot === CMCDObjectType.VIDEO || ot == CMCDObjectType.MUXED) {
         data.br = level.bitrate / 1000;
         data.tb = this.getTopBandwidth();
         data.bl = this.getBufferLength();
@@ -246,28 +250,28 @@ export default class CMCDController implements ComponentAPI {
    * The CMCD object type.
    *
    * @param {FrameRequestCallback} fragment
-   * @returns {CmcdObjectType?}
+   * @returns {CMCDObjectType?}
    * @private
    */
-  private getObjectType(fragment: Fragment): CmcdObjectType | undefined {
+  private getObjectType(fragment: Fragment): CMCDObjectType | undefined {
     const { type } = fragment;
 
     if (type === 'subtitle') {
-      return CmcdObjectType.TIMED_TEXT;
+      return CMCDObjectType.TIMED_TEXT;
     }
 
     // TODO: Make sure this isn't falsely reporting init segments for non-CMAF content
     if (fragment.initSegment == null) {
-      return CmcdObjectType.INIT;
+      return CMCDObjectType.INIT;
     }
 
     if (type === 'audio') {
-      return CmcdObjectType.AUDIO;
+      return CMCDObjectType.AUDIO;
     }
 
     if (type === 'main') {
       // TODO: How to tell muxed from demuxed?
-      return CmcdObjectType.VIDEO;
+      return CMCDObjectType.VIDEO;
     }
 
     return undefined;
@@ -326,10 +330,10 @@ export default class CMCDController implements ComponentAPI {
    * section 3.2 of
    * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
    *
-   * @param {Cmcd} data The CMCD data object
+   * @param {CMCD} data The CMCD data object
    * @returns {string}
    */
-  static serialize(data: Cmcd): string {
+  static serialize(data: CMCD): string {
     const results: string[] = [];
     const isValid = (value: any) =>
       !Number.isNaN(value) && value != null && value !== '' && value !== false;
@@ -398,10 +402,10 @@ export default class CMCDController implements ComponentAPI {
    * defined in the section 2.1 and 3.2 of
    * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
    *
-   * @param {Cmcd} data The CMCD data object
-   * @returns {CmcdHeaders}
+   * @param {CMCD} data The CMCD data object
+   * @returns {CMCDHeaders}
    */
-  static toHeaders(data: Cmcd): Partial<CmcdHeaders> {
+  static toHeaders(data: CMCD): Partial<CMCDHeaders> {
     const keys = Object.keys(data);
     const headers = {};
     const headerNames = ['Object', 'Request', 'Session', 'Status'];
@@ -448,10 +452,10 @@ export default class CMCDController implements ComponentAPI {
    * defined in the section 2.2 and 3.2 of
    * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
    *
-   * @param {Cmcd} data The CMCD data object
+   * @param {CMCD} data The CMCD data object
    * @returns {string}
    */
-  static toQuery(data: Cmcd): string {
+  static toQuery(data: CMCD): string {
     return `CMCD=${encodeURIComponent(CMCDController.serialize(data))}`;
   }
 

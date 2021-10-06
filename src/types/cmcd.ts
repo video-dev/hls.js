@@ -1,12 +1,12 @@
 /**
  * CMCD spec version
  */
-export const CmcdVersion = 1;
+export const CMCDVersion = 1;
 
 /**
  * CMCD Object Type
  */
-export enum CmcdObjectType {
+export enum CMCDObjectType {
   MANIFEST = 'm',
   AUDIO = 'a',
   VIDEO = 'v',
@@ -21,7 +21,7 @@ export enum CmcdObjectType {
 /**
  * CMCD Streaming Format
  */
-export enum CmcdStreamingFormat {
+export enum CMCDStreamingFormat {
   DASH = 'd',
   HLS = 'h',
   SMOOTH = 's',
@@ -31,7 +31,7 @@ export enum CmcdStreamingFormat {
 /**
  * CMCD Streaming Type
  */
-export enum CmcdStreamType {
+export enum CMCDStreamType {
   VOD = 'v',
   LIVE = 'l',
 }
@@ -39,7 +39,7 @@ export enum CmcdStreamType {
 /**
  * CMCD Headers
  */
-export interface CmcdHeaders {
+export interface CMCDHeaders {
   'CMCD-Object': string;
   'CMCD-Request': string;
   'CMCD-Session': string;
@@ -49,7 +49,7 @@ export interface CmcdHeaders {
 /**
  * CMCD
  */
-export interface Cmcd {
+export interface CMCD {
   /////////////////
   // CMCD Object //
   /////////////////
@@ -92,7 +92,7 @@ export interface Cmcd {
    *
    * If the object type being requested is unknown, then this key MUST NOT be used.
    */
-  ot?: CmcdObjectType;
+  ot?: CMCDObjectType;
 
   /**
    * Top bitrate
@@ -212,7 +212,7 @@ export interface Cmcd {
    *
    * If the streaming format being requested is unknown, then this key MUST NOT be used.
    */
-  sf?: CmcdStreamingFormat;
+  sf?: CMCDStreamingFormat;
 
   /**
    * Session ID
@@ -229,7 +229,7 @@ export interface Cmcd {
    * - `v` = all segments are available – e.g., VOD
    * - `l` = segments become available over time – e.g., LIVE
    */
-  st?: CmcdStreamType;
+  st?: CMCDStreamType;
 
   /**
    * CMCD version
