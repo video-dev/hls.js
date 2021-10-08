@@ -172,7 +172,7 @@ export default class Hls implements HlsEventEmitter {
       config.audioStreamController,
       fragmentTracker,
       networkControllers,
-      cmcdController
+      fragmentLoaderContextSetup
     );
     // subtitleTrackController must be defined before  because the order of event handling is important
     this.subtitleTrackController = this.createController(

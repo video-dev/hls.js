@@ -260,8 +260,7 @@ export default class CMCDController implements ComponentAPI {
       return CMCDObjectType.TIMED_TEXT;
     }
 
-    // TODO: Make sure this isn't falsely reporting init segments for non-CMAF content
-    if (fragment.initSegment == null) {
+    if (fragment.sn === 'initSegment') {
       return CMCDObjectType.INIT;
     }
 
@@ -270,7 +269,10 @@ export default class CMCDController implements ComponentAPI {
     }
 
     if (type === 'main') {
-      // TODO: How to tell muxed from demuxed?
+      if (!this.hls.audioTracks.length) {
+        return CMCDObjectType.MUXED;
+      }
+
       return CMCDObjectType.VIDEO;
     }
 
