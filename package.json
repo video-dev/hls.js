@@ -83,7 +83,7 @@
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "5.1.0",
     "eventemitter3": "4.0.7",
-    "http-server": "13.0.0",
+    "http-server": "13.0.2",
     "husky": "6.0.0",
     "istanbul-instrumenter-loader": "3.0.1",
     "jsonpack": "1.1.5",
