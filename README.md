@@ -41,7 +41,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
   - Packetized metadata (ID3v2.3.0) Elementary Stream
 - AAC container (audio only streams)
 - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
-- Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
+- Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS and FMP4 Emsg)
 - AES-128 decryption
 - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
 - Encrypted media extensions (EME) support for DRM (digital rights management)
@@ -114,7 +114,6 @@ The following tags are added to their respective fragment's attribute list but a
 For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
 - CMAF CC support [#2623](https://github.com/video-dev/hls.js/issues/2623)
-- `Emsg` Inband Timed Metadata for FMP4 (ID3 within Emsgv1) in "metadata" TextTracks [#2360](https://github.com/video-dev/hls.js/issues/2360)
 - `#EXT-X-DATERANGE` in "metadata" TextTracks [#2218](https://github.com/video-dev/hls.js/issues/2218)
 - `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
