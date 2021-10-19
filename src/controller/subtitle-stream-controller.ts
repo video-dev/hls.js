@@ -404,12 +404,15 @@ export class SubtitleStreamController
         logger.log(`Loading key for ${foundFrag.sn}`);
         this.state = State.KEY_LOADING;
         this.hls.trigger(Events.KEY_LOADING, { frag: foundFrag });
-      } else if (
-        foundFrag &&
-        this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
-      ) {
-        // only load if fragment is not loaded
-        this.loadFragment(foundFrag, trackDetails, targetBufferTime);
+      } else if (foundFrag) {
+        if (
+          this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
+        ) {
+          // only load if fragment is not loaded
+          this.loadFragment(foundFrag, trackDetails, targetBufferTime);
+        } else {
+          this.fragPrevious = foundFrag;
+        }
       }
     }
   }
