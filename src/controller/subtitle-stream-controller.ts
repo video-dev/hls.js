@@ -212,6 +212,7 @@ export class SubtitleStreamController
     data: TrackSwitchedData
   ) {
     this.currentTrackId = data.id;
+    this.fragPrevious = null;
 
     if (!this.levels.length || this.currentTrackId === -1) {
       this.clearInterval();
