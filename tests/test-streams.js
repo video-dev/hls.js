@@ -235,7 +235,8 @@ module.exports = {
   },
   MuxLowLatencyHls: {
     url: 'https://stream.mux.com/v69RSHhFelSm4701snP22dYz2jICy4E4FUyk02rW4gxRM.m3u8',
-    description: 'Big Buck Bunny loop and a timer. Restarts every 12 hours.',
+    description:
+      'Low-Latency HLS sample of Big Buck Bunny loop and a timer. Restarts every 12 hours. (fMP4 segments)',
     live: true,
   },
   //   AppleLowLatencyHls: {
