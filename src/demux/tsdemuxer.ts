@@ -878,10 +878,11 @@ class TSDemuxer implements Demuxer {
               // check if lastUnit had a state different from zero
               if (lastUnit.state) {
                 // strip last bytes
-                lastUnit.data = lastUnit.data.subarray(
-                  0,
-                  lastUnit.data.byteLength - lastState
-                );
+                console.log('start delimiter overlapping');
+                // lastUnit.data = lastUnit.data.subarray(
+                //   0,
+                //   lastUnit.data.byteLength - lastState
+                // );
               }
             }
             // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
