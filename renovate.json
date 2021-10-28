@@ -3,6 +3,9 @@
   "labels": ["dependencies", "skip-change-log"],
   "commitMessagePrefix": "[skip netlify]",
   "prHourlyLimit": 0,
+  "prCreation": "not-pending",
+  "stabilityDays": 7,
+  "vulnerabilityAlerts": true,
   "packageRules": [
     {
       "matchPackagePatterns": ["*"],
@@ -16,6 +19,5 @@
       "matchDepTypes": ["peerDependencies"],
       "rangeStrategy": "widen"
     }
-  ],
-  "lockFileMaintenance": { "enabled": true }
+  ]
 }
