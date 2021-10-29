@@ -433,7 +433,9 @@ export default class M3U8Parser {
               setInitSegment(init, mapAttrs, id, levelkey);
               currentInitSegment = init;
               frag.initSegment = currentInitSegment;
-              frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+              if (currentInitSegment.rawProgramDateTime && !frag.rawProgramDateTime) {
+                frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+              }
             } else {
               // Initial segment tag is before segment duration tag
               setInitSegment(frag, mapAttrs, id, levelkey);
