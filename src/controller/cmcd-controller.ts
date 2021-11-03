@@ -1,5 +1,6 @@
 import type Hls from '../hls';
 import {
+  BufferCreatedData,
   Fragment,
   FragmentLoaderContext,
   HlsConfig,
@@ -33,6 +34,8 @@ export default class CMCDController implements ComponentAPI {
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
+  private audioBuffer: any;
+  private videoBuffer: any;
 
   /**
    * @constructs
@@ -51,6 +54,7 @@ export default class CMCDController implements ComponentAPI {
   private registerListeners() {
     this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
   }
 
   /**
@@ -58,7 +62,8 @@ export default class CMCDController implements ComponentAPI {
    */
   private unregisterListeners() {
     this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    this.hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
 
     this.onMediaDetached();
   }
@@ -70,7 +75,7 @@ export default class CMCDController implements ComponentAPI {
     this.unregisterListeners();
 
     // @ts-ignore
-    this.hls = this.config = null;
+    this.hls = this.config = this.audioBuffer = this.videoBuffer = null;
   }
 
   /**
@@ -98,6 +103,17 @@ export default class CMCDController implements ComponentAPI {
 
     // @ts-ignore
     this.media = null;
+  }
+
+  /**
+   * @private
+   */
+  private onBufferCreated(
+    event: Events.BUFFER_CREATED,
+    data: BufferCreatedData
+  ) {
+    this.audioBuffer = data.tracks.audio?.buffer;
+    this.videoBuffer = data.tracks.video?.buffer;
   }
 
   /**
@@ -232,12 +248,14 @@ export default class CMCDController implements ComponentAPI {
         ot,
       };
 
-      // Not sure where to find these values for audio and text streams,
-      // so only apply them to video types
-      if (ot === CMCDObjectType.VIDEO || ot == CMCDObjectType.MUXED) {
+      if (
+        ot === CMCDObjectType.VIDEO ||
+        ot === CMCDObjectType.AUDIO ||
+        ot == CMCDObjectType.MUXED
+      ) {
         data.br = level.bitrate / 1000;
-        data.tb = this.getTopBandwidth();
-        data.bl = this.getBufferLength();
+        data.tb = this.getTopBandwidth(ot);
+        data.bl = this.getBufferLength(ot);
       }
 
       this.apply(context, data);
@@ -285,16 +303,19 @@ export default class CMCDController implements ComponentAPI {
    * @returns {number}
    * @private
    */
-  private getTopBandwidth() {
-    let bitrate;
+  private getTopBandwidth(type: CMCDObjectType) {
+    let bitrate: number = 0;
 
-    for (const level of this.hls.levels) {
+    const levels =
+      type === CMCDObjectType.AUDIO ? this.hls.audioTracks : this.hls.levels;
+
+    for (const level of levels) {
       if (level.bitrate > bitrate) {
         bitrate = level.bitrate;
       }
     }
 
-    return bitrate;
+    return bitrate > 0 ? bitrate : NaN;
   }
 
   /**
@@ -304,14 +325,17 @@ export default class CMCDController implements ComponentAPI {
    * @return {number}
    * @private
    */
-  private getBufferLength() {
+  private getBufferLength(type: CMCDObjectType) {
     const media = this.hls.media;
-    if (!media) {
+    const buffer =
+      type === CMCDObjectType.AUDIO ? this.audioBuffer : this.videoBuffer;
+
+    if (!buffer || !media) {
       return NaN;
     }
 
     const info = BufferHelper.bufferInfo(
-      media,
+      buffer,
       media.currentTime,
       this.config.maxBufferHole
     );
