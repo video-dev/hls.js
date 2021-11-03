@@ -7,7 +7,7 @@ import { LevelKey } from './level-key';
 import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import type { CodecType } from '../utils/codecs';
-import { isCodecType } from '../utils/codecs';
+import { isCodecType, isCodecSupportedInMp4 } from '../utils/codecs';
 import type {
   MediaPlaylist,
   AudioGroup,
@@ -571,10 +571,9 @@ function setCodecs(codecs: Array<string>, level: LevelParsed) {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
     if (filtered.length) {
       const preferred = filtered.filter((codec) => {
-        return (
-          codec.lastIndexOf('avc1', 0) === 0 ||
-          codec.lastIndexOf('mp4a', 0) === 0
-        );
+        if (isCodecSupportedInMp4(codec, type)) {
+          return 0;
+        }
       });
       level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
 
