@@ -22,7 +22,6 @@ import type {
   LoaderResponse,
   LoaderStats,
   PlaylistLoaderContext,
-  PlaylistLoaderContextSetup,
 } from '../types/loader';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { LevelDetails } from './level-details';
@@ -66,14 +65,12 @@ function getResponseUrl(
 
 class PlaylistLoader {
   private readonly hls: Hls;
-  private readonly contextSetup: PlaylistLoaderContextSetup;
   private readonly loaders: {
     [key: string]: Loader<LoaderContext>;
   } = Object.create(null);
 
-  constructor(hls: Hls, contextSetup: PlaylistLoaderContextSetup) {
+  constructor(hls: Hls) {
     this.hls = hls;
-    this.contextSetup = contextSetup;
     this.registerListeners();
   }
 
@@ -303,7 +300,6 @@ class PlaylistLoader {
 
     // logger.debug(`[playlist-loader]: Calling internal loader delegate for URL: ${context.url}`);
 
-    this.contextSetup?.(context);
     loader.load(context, loaderConfig, loaderCallbacks);
   }
 

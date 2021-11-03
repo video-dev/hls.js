@@ -1,6 +1,7 @@
 import * as URLToolkit from 'url-toolkit';
 import PlaylistLoader from './loader/playlist-loader';
 import KeyLoader from './loader/key-loader';
+import CMCDController from './controller/cmcd-controller';
 import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
@@ -24,8 +25,6 @@ import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
 import type { Level } from './types/level';
 import type { Fragment } from './loader/fragment';
-import CMCDController from './controller/cmcd-controller';
-import { FragmentLoaderContext, PlaylistLoaderContext } from './types/loader';
 
 /**
  * @module Hls
@@ -121,15 +120,10 @@ export default class Hls implements HlsEventEmitter {
       new ConfigBufferController(this));
     const capLevelController = (this.capLevelController =
       new ConfigCapLevelController(this));
+
     const cmcdController = (this.cmcdController = new CMCDController(this));
-    const playlistLoaderContextSetup = (context: PlaylistLoaderContext) => {
-      this.cmcdController.applyPlaylistData(context);
-    };
-    const fragmentLoaderContextSetup = (context: FragmentLoaderContext) => {
-      this.cmcdController.applyFragmentData(context);
-    };
     const fpsController = new ConfigFpsController(this);
-    const playListLoader = new PlaylistLoader(this, playlistLoaderContextSetup);
+    const playListLoader = new PlaylistLoader(this);
     const keyLoader = new KeyLoader(this);
     const id3TrackController = new ID3TrackController(this);
 
@@ -139,8 +133,7 @@ export default class Hls implements HlsEventEmitter {
     const fragmentTracker = new FragmentTracker(this);
     const streamController = (this.streamController = new StreamController(
       this,
-      fragmentTracker,
-      fragmentLoaderContextSetup
+      fragmentTracker
     ));
 
     // Cap level controller uses streamController to flush the buffer
@@ -171,21 +164,18 @@ export default class Hls implements HlsEventEmitter {
     this.createController(
       config.audioStreamController,
       fragmentTracker,
-      networkControllers,
-      fragmentLoaderContextSetup
+      networkControllers
     );
     // subtitleTrackController must be defined before  because the order of event handling is important
     this.subtitleTrackController = this.createController(
       config.subtitleTrackController,
       null,
-      networkControllers,
-      fragmentLoaderContextSetup
+      networkControllers
     );
     this.createController(
       config.subtitleStreamController,
       fragmentTracker,
-      networkControllers,
-      fragmentLoaderContextSetup
+      networkControllers
     );
     this.createController(config.timelineController, null, coreComponents);
     this.emeController = this.createController(

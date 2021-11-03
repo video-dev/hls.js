@@ -35,7 +35,7 @@ import {
 } from '../types/events';
 import Decrypter from '../crypt/decrypter';
 import TimeRanges from '../utils/time-ranges';
-import { FragmentLoaderContextSetup, PlaylistLevelType } from '../types/loader';
+import { PlaylistLevelType } from '../types/loader';
 import type { FragmentTracker } from './fragment-tracker';
 import type { Level } from '../types/level';
 import type { RemuxedTrack } from '../types/remuxer';
@@ -93,25 +93,18 @@ export default class BaseStreamController
   protected initPTS: Array<number> = [];
   protected onvseeking: EventListener | null = null;
   protected onvended: EventListener | null = null;
-  protected contextSetup: FragmentLoaderContextSetup;
 
   private readonly logPrefix: string = '';
   protected log: (msg: any) => void;
   protected warn: (msg: any) => void;
 
-  constructor(
-    hls: Hls,
-    fragmentTracker: FragmentTracker,
-    contextSetup: FragmentLoaderContextSetup,
-    logPrefix: string
-  ) {
+  constructor(hls: Hls, fragmentTracker: FragmentTracker, logPrefix: string) {
     super();
     this.logPrefix = logPrefix;
     this.log = logger.log.bind(logger, `${logPrefix}:`);
     this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
-    this.contextSetup = contextSetup;
-    this.fragmentLoader = new FragmentLoader(hls.config, contextSetup);
+    this.fragmentLoader = new FragmentLoader(hls.config);
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls as HlsEventEmitter, hls.config);

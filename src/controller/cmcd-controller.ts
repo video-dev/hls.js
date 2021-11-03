@@ -4,8 +4,11 @@ import {
   Fragment,
   FragmentLoaderContext,
   HlsConfig,
+  LoaderCallbacks,
+  LoaderConfiguration,
   LoaderContext,
   MediaAttachedData,
+  PlaylistLoaderContext,
 } from '../hls';
 import {
   CMCD,
@@ -18,6 +21,10 @@ import type { ComponentAPI } from '../types/component-api';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
+import {
+  FragmentLoaderConstructor,
+  PlaylistLoaderConstructor,
+} from '../config';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -44,6 +51,9 @@ export default class CMCDController implements ComponentAPI {
   constructor(hls: Hls) {
     this.hls = hls;
     this.config = hls.config;
+    this.config.pLoader = this.createPlaylistLoader();
+    this.config.fLoader = this.createFragmentLoader();
+
     this.sid = this.config.cmcdSessionId || CMCDController.uuid();
     this.registerListeners();
   }
@@ -144,7 +154,7 @@ export default class CMCDController implements ComponentAPI {
    * @return {CMCD}
    * @private
    */
-  private createData() {
+  private createData(): CMCD {
     return {
       v: CMCDVersion,
       sf: CMCDStreamingFormat.HLS,
@@ -214,7 +224,7 @@ export default class CMCDController implements ComponentAPI {
    *
    * @param {!LoaderContext} context The loader context
    */
-  applyPlaylistData(context: LoaderContext) {
+  private applyPlaylistData = (context: LoaderContext) => {
     try {
       if (!this.config.cmcdEnabled) {
         return;
@@ -227,14 +237,14 @@ export default class CMCDController implements ComponentAPI {
     } catch (error) {
       logger.warn('Could not generate manifest CMCD data.', error);
     }
-  }
+  };
 
   /**
    * Apply CMCD data to a segment request
    *
    * @param {!LoaderContext} context
    */
-  applyFragmentData(context: FragmentLoaderContext) {
+  private applyFragmentData = (context: FragmentLoaderContext) => {
     try {
       if (!this.config.cmcdEnabled) {
         return;
@@ -262,7 +272,7 @@ export default class CMCDController implements ComponentAPI {
     } catch (error) {
       logger.warn('Could not generate segment CMCD data.', error);
     }
-  }
+  };
 
   /**
    * The CMCD object type.
@@ -341,6 +351,62 @@ export default class CMCDController implements ComponentAPI {
     );
 
     return info.len * 1000;
+  }
+
+  /**
+   * Create a playlist loader
+   *
+   * @returns {PlaylistLoaderConstructor | undefined}
+   */
+  private createPlaylistLoader(): PlaylistLoaderConstructor | undefined {
+    const { pLoader } = this.config;
+
+    if (!this.config.cmcdEnabled) {
+      return pLoader;
+    }
+
+    const PlayListLoader =
+      pLoader || (this.config.loader as PlaylistLoaderConstructor);
+    const apply = this.applyPlaylistData;
+
+    return class CMCDPlaylistLoader extends PlayListLoader {
+      load(
+        context: PlaylistLoaderContext,
+        config: LoaderConfiguration,
+        callbacks: LoaderCallbacks<PlaylistLoaderContext>
+      ) {
+        apply(context);
+        super.load(context, config, callbacks);
+      }
+    };
+  }
+
+  /**
+   * Create a playlist loader
+   *
+   * @returns {FragmentLoaderConstructor | undefined}
+   */
+  private createFragmentLoader(): FragmentLoaderConstructor | undefined {
+    const { fLoader } = this.config;
+
+    if (!this.config.cmcdEnabled) {
+      return fLoader;
+    }
+
+    const FragmentLoader =
+      fLoader || (this.config.loader as FragmentLoaderConstructor);
+    const apply = this.applyFragmentData;
+
+    return class CMCDFragmentLoader extends FragmentLoader {
+      load(
+        context: FragmentLoaderContext,
+        config: LoaderConfiguration,
+        callbacks: LoaderCallbacks<FragmentLoaderContext>
+      ) {
+        apply(context);
+        super.load(context, config, callbacks);
+      }
+    };
   }
 
   /**

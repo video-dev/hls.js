@@ -4,7 +4,6 @@ import {
   Loader,
   LoaderConfiguration,
   FragmentLoaderContext,
-  FragmentLoaderContextSetup,
 } from '../types/loader';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
@@ -14,13 +13,11 @@ const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
 export default class FragmentLoader {
   private readonly config: HlsConfig;
-  private contextSetup: FragmentLoaderContextSetup;
   private loader: Loader<FragmentLoaderContext> | null = null;
   private partLoadTimeout: number = -1;
 
-  constructor(config: HlsConfig, contextSetup: FragmentLoaderContextSetup) {
+  constructor(config: HlsConfig) {
     this.config = config;
-    this.contextSetup = contextSetup;
   }
 
   destroy() {
@@ -85,8 +82,6 @@ export default class FragmentLoader {
       };
       // Assign frag stats to the loader's stats reference
       frag.stats = loader.stats;
-
-      this.contextSetup?.(loaderContext);
 
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails) => {

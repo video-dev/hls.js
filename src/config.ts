@@ -68,8 +68,12 @@ export type EMEControllerConfig = {
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
 
+export interface FragmentLoaderConstructor {
+  new (confg: HlsConfig): Loader<FragmentLoaderContext>;
+}
+
 export type FragmentLoaderConfig = {
-  fLoader?: { new (confg: HlsConfig): Loader<FragmentLoaderContext> };
+  fLoader?: FragmentLoaderConstructor;
 
   fragLoadingTimeOut: number;
   fragLoadingMaxRetry: number;
@@ -92,8 +96,12 @@ export type MP4RemuxerConfig = {
   maxAudioFramesDrift: number;
 };
 
+export interface PlaylistLoaderConstructor {
+  new (confg: HlsConfig): Loader<PlaylistLoaderContext>;
+}
+
 export type PlaylistLoaderConfig = {
-  pLoader?: { new (confg: HlsConfig): Loader<PlaylistLoaderContext> };
+  pLoader?: PlaylistLoaderConstructor;
 
   manifestLoadingTimeOut: number;
   manifestLoadingMaxRetry: number;
