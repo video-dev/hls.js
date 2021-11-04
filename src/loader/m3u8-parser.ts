@@ -571,9 +571,7 @@ function setCodecs(codecs: Array<string>, level: LevelParsed) {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
     if (filtered.length) {
       const preferred = filtered.filter((codec) => {
-        if (isCodecSupportedInMp4(codec, type)) {
-          return 0;
-        }
+        return isCodecSupportedInMp4(codec, type);
       });
       level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
 
