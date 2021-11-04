@@ -48,8 +48,7 @@ describe('FragmentLoader tests', function () {
   let networkDetails;
   beforeEach(function () {
     fragmentLoader = new FragmentLoader(
-      mergeConfig(hlsDefaultConfig, { loader: MockXhr }),
-      () => {}
+      mergeConfig(hlsDefaultConfig, { loader: MockXhr })
     );
     frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.url = 'foo';

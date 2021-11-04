@@ -3,7 +3,7 @@ import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
-import { FragmentLoaderContextSetup, PlaylistLevelType } from '../types/loader';
+import { PlaylistLevelType } from '../types/loader';
 import { Fragment, ElementaryStreamTypes, Part } from '../loader/fragment';
 import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
@@ -56,12 +56,8 @@ class AudioStreamController
   private mainDetails: LevelDetails | null = null;
   private bufferFlushed: boolean = false;
 
-  constructor(
-    hls: Hls,
-    fragmentTracker: FragmentTracker,
-    contextSetup: FragmentLoaderContextSetup
-  ) {
-    super(hls, fragmentTracker, contextSetup, '[audio-stream-controller]');
+  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
+    super(hls, fragmentTracker, '[audio-stream-controller]');
     this._registerListeners();
   }
 

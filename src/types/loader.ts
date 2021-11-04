@@ -23,10 +23,6 @@ export interface FragmentLoaderContext extends LoaderContext {
   part: Part | null;
 }
 
-export interface FragmentLoaderContextSetup {
-  (context: FragmentLoaderContext): void;
-}
-
 export interface LoaderConfiguration {
   // Max number of load retries
   maxRetry: number;
@@ -169,8 +165,4 @@ export interface PlaylistLoaderContext extends LoaderContext {
   levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url
   deliveryDirectives: HlsUrlParameters | null;
-}
-
-export interface PlaylistLoaderContextSetup {
-  (context: PlaylistLoaderContext): void;
 }

@@ -97,11 +97,8 @@ describe('CMCDController', function () {
 
         const c = Object.assign({}, context);
 
-        cmcdController.applyPlaylistData(c);
-        expect(c.url).to.equal(context.url);
-
-        cmcdController.applyFragmentData(c);
-        expect(c.url).to.equal(context.url);
+        expect(cmcdController.hls.config.pLoader).to.equal(undefined);
+        expect(cmcdController.hls.config.fLoader).to.equal(undefined);
       });
 
       it('generates a session id if not provided', function () {
