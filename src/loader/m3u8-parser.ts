@@ -569,10 +569,16 @@ export default class M3U8Parser {
 function setCodecs(codecs: Array<string>, level: LevelParsed) {
   ['video', 'audio', 'text'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
+    let preferred: string[] = [];
     if (filtered.length) {
-      const preferred = filtered.filter((codec) => {
-        return isCodecSupportedInMp4(codec, type);
-      });
+      for (let i = 0; i < filtered.length; i++) {
+        const codec = filtered[i];
+        preferred.push(codec);
+        if (!isCodecSupportedInMp4(codec, type)) {
+          preferred = [];
+          break;
+        }
+      }
       level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
 
       // remove from list
