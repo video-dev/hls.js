@@ -569,20 +569,40 @@ export default class M3U8Parser {
 function setCodecs(codecs: Array<string>, level: LevelParsed) {
   ['video', 'audio', 'text'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
-    let preferred: string[] = [];
     if (filtered.length) {
-      for (let i = 0; i < filtered.length; i++) {
-        const codec = filtered[i];
-        preferred.push(codec);
-        if (!isCodecSupportedInMp4(codec, type)) {
-          preferred = [];
-          break;
+      const allMp4Supported = codecs.filter((codec) =>
+        isCodecSupportedInMp4(codec, type)
+      );
+      const filteredAndSupported = codecs
+        .filter((codec) => isCodecType(codec, type))
+        .filter((codec) => isCodecSupportedInMp4(codec, type));
+      if (filteredAndSupported) {
+        const preferredAndSupported = allMp4Supported.filter((codec) => {
+          return (
+            codec.lastIndexOf('avc1', 0) === 0 ||
+            codec.lastIndexOf('mp4a', 0) === 0
+          );
+        });
+        if (filteredAndSupported.length) {
+          level[`${type}Codec`] =
+            preferredAndSupported.length > 0
+              ? preferredAndSupported[0]
+              : filteredAndSupported[0];
+          codecs = codecs.filter(
+            (codec) => preferredAndSupported.indexOf(codec) === -1
+          );
+        } else {
+          const preferred = filtered.filter((codec) => {
+            return (
+              codec.lastIndexOf('avc1', 0) === 0 ||
+              codec.lastIndexOf('mp4a', 0) === 0
+            );
+          });
+          level[`${type}Codec`] =
+            preferred.length > 0 ? preferred[0] : filtered[0];
+          codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
         }
       }
-      level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
-
-      // remove from list
-      codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
     }
   });
 
