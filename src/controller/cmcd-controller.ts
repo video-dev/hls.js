@@ -35,7 +35,7 @@ export default class CMCDController implements ComponentAPI {
   private hls: Hls;
   private config: HlsConfig;
   private media?: HTMLMediaElement;
-  private sid: string;
+  private sid?: string;
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
@@ -49,11 +49,14 @@ export default class CMCDController implements ComponentAPI {
   constructor(hls: Hls) {
     this.hls = hls;
     this.config = hls.config;
-    this.config.pLoader = this.createPlaylistLoader();
-    this.config.fLoader = this.createFragmentLoader();
 
-    this.sid = this.config.cmcdSessionId || CMCDController.uuid();
-    this.registerListeners();
+    if (this.config.cmcdEnabled === true) {
+      this.config.pLoader = this.createPlaylistLoader();
+      this.config.fLoader = this.createFragmentLoader();
+
+      this.sid = this.config.cmcdSessionId || CMCDController.uuid();
+      this.registerListeners();
+    }
   }
 
   /**
@@ -223,12 +226,7 @@ export default class CMCDController implements ComponentAPI {
    * @param {!LoaderContext} context The loader context
    */
   private applyPlaylistData = (context: PlaylistLoaderContext) => {
-    console.log('applyPlaylistData', context);
     try {
-      if (!this.config.cmcdEnabled) {
-        return;
-      }
-
       this.apply(context, {
         ot: CMCDObjectType.MANIFEST,
         su: !this.initialized,
@@ -245,10 +243,6 @@ export default class CMCDController implements ComponentAPI {
    */
   private applyFragmentData = (context: FragmentLoaderContext) => {
     try {
-      if (!this.config.cmcdEnabled) {
-        return;
-      }
-
       const fragment = context.frag;
       const level = this.hls.levels[fragment.level];
       const ot = this.getObjectType(fragment);
@@ -359,17 +353,12 @@ export default class CMCDController implements ComponentAPI {
    */
   private createPlaylistLoader(): PlaylistLoaderConstructor | undefined {
     const { pLoader } = this.config;
-
-    if (!this.config.cmcdEnabled) {
-      return pLoader;
-    }
-
     const apply = this.applyPlaylistData;
-    const ctor = pLoader || (this.config.loader as PlaylistLoaderConstructor);
+    const Ctor = pLoader || (this.config.loader as PlaylistLoaderConstructor);
 
     // @ts-ignore
     return function (config: HlsConfig) {
-      const loader = new ctor(config);
+      const loader = new Ctor(config);
       this.abort = () => loader.abort();
       this.destroy = () => loader.destroy();
       this.load = (
@@ -390,20 +379,19 @@ export default class CMCDController implements ComponentAPI {
    */
   private createFragmentLoader(): FragmentLoaderConstructor | undefined {
     const { fLoader } = this.config;
-
-    if (!this.config.cmcdEnabled) {
-      return fLoader;
-    }
-
     const apply = this.applyFragmentData;
-    const ctor = fLoader || (this.config.loader as FragmentLoaderConstructor);
+    const Ctor = fLoader || (this.config.loader as FragmentLoaderConstructor);
 
     // @ts-ignore
     return function (config: HlsConfig) {
-      const loader = new ctor(config);
+      const loader = new Ctor(config);
       this.abort = () => loader.abort();
       this.destroy = () => loader.destroy();
-      this.load = (context, config, callbacks) => {
+      this.load = (
+        context: FragmentLoaderContext,
+        config: LoaderConfiguration,
+        callbacks: LoaderCallbacks<FragmentLoaderContext>
+      ) => {
         apply(context);
         loader.load(context, config, callbacks);
       };
