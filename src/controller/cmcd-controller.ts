@@ -1,15 +1,10 @@
-import type Hls from '../hls';
 import {
-  BufferCreatedData,
-  Fragment,
-  FragmentLoaderContext,
+  FragmentLoaderConstructor,
   HlsConfig,
-  LoaderCallbacks,
-  LoaderConfiguration,
-  LoaderContext,
-  MediaAttachedData,
-  PlaylistLoaderContext,
-} from '../hls';
+  PlaylistLoaderConstructor,
+} from '../config';
+import { Events } from '../events';
+import Hls, { Fragment } from '../hls';
 import {
   CMCD,
   CMCDHeaders,
@@ -17,14 +12,17 @@ import {
   CMCDStreamingFormat,
   CMCDVersion,
 } from '../types/cmcd';
-import type { ComponentAPI } from '../types/component-api';
-import { logger } from '../utils/logger';
-import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
+import { ComponentAPI } from '../types/component-api';
+import { BufferCreatedData, MediaAttachedData } from '../types/events';
 import {
-  FragmentLoaderConstructor,
-  PlaylistLoaderConstructor,
-} from '../config';
+  FragmentLoaderContext,
+  LoaderCallbacks,
+  LoaderConfiguration,
+  LoaderContext,
+  PlaylistLoaderContext,
+} from '../types/loader';
+import { BufferHelper } from '../utils/buffer-helper';
+import { logger } from '../utils/logger';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -224,7 +222,8 @@ export default class CMCDController implements ComponentAPI {
    *
    * @param {!LoaderContext} context The loader context
    */
-  private applyPlaylistData = (context: LoaderContext) => {
+  private applyPlaylistData = (context: PlaylistLoaderContext) => {
+    console.log('applyPlaylistData', context);
     try {
       if (!this.config.cmcdEnabled) {
         return;
@@ -365,19 +364,22 @@ export default class CMCDController implements ComponentAPI {
       return pLoader;
     }
 
-    const PlayListLoader =
-      pLoader || (this.config.loader as PlaylistLoaderConstructor);
     const apply = this.applyPlaylistData;
+    const ctor = pLoader || (this.config.loader as PlaylistLoaderConstructor);
 
-    return class CMCDPlaylistLoader extends PlayListLoader {
-      load(
+    // @ts-ignore
+    return function (config: HlsConfig) {
+      const loader = new ctor(config);
+      this.abort = () => loader.abort();
+      this.destroy = () => loader.destroy();
+      this.load = (
         context: PlaylistLoaderContext,
         config: LoaderConfiguration,
         callbacks: LoaderCallbacks<PlaylistLoaderContext>
-      ) {
+      ) => {
         apply(context);
-        super.load(context, config, callbacks);
-      }
+        loader.load(context, config, callbacks);
+      };
     };
   }
 
@@ -393,19 +395,21 @@ export default class CMCDController implements ComponentAPI {
       return fLoader;
     }
 
-    const FragmentLoader =
-      fLoader || (this.config.loader as FragmentLoaderConstructor);
     const apply = this.applyFragmentData;
+    const ctor = fLoader || (this.config.loader as FragmentLoaderConstructor);
 
-    return class CMCDFragmentLoader extends FragmentLoader {
-      load(
-        context: FragmentLoaderContext,
-        config: LoaderConfiguration,
-        callbacks: LoaderCallbacks<FragmentLoaderContext>
-      ) {
+    // @ts-ignore
+    return function (config: HlsConfig) {
+      const loader = new ctor(config);
+      this.abort = () => loader.abort();
+      this.destroy = () => loader.destroy();
+      this.load = (context, config, callbacks) => {
         apply(context);
-        super.load(context, config, callbacks);
-      }
+        loader.load(context, config, callbacks);
+      };
+      Object.defineProperty(this, 'stats', {
+        get: () => loader.stats,
+      });
     };
   }
 
