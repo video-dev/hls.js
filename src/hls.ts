@@ -192,15 +192,10 @@ export default class Hls implements HlsEventEmitter {
     this.coreComponents = coreComponents;
   }
 
-  createController(
-    ControllerClass,
-    fragmentTracker,
-    components,
-    loaderContextSetup?
-  ) {
+  createController(ControllerClass, fragmentTracker, components) {
     if (ControllerClass) {
       const controllerInstance = fragmentTracker
-        ? new ControllerClass(this, fragmentTracker, loaderContextSetup)
+        ? new ControllerClass(this, fragmentTracker)
         : new ControllerClass(this);
       if (components) {
         components.push(controllerInstance);
@@ -846,9 +841,11 @@ export type {
   DRMSystemOptions,
   FPSControllerConfig,
   FragmentLoaderConfig,
+  FragmentLoaderConstructor,
   LevelControllerConfig,
   MP4RemuxerConfig,
   PlaylistLoaderConfig,
+  PlaylistLoaderConstructor,
   StreamControllerConfig,
   LatencyControllerConfig,
   TimelineControllerConfig,

@@ -21,9 +21,6 @@ export default class FragmentLoader {
   }
 
   destroy() {
-    // @ts-ignore
-    this.hls = this.cmcdController = null;
-
     if (this.loader) {
       this.loader.destroy();
       this.loader = null;
@@ -82,7 +79,6 @@ export default class FragmentLoader {
       };
       // Assign frag stats to the loader's stats reference
       frag.stats = loader.stats;
-
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
