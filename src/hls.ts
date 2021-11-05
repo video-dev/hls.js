@@ -1,7 +1,6 @@
 import * as URLToolkit from 'url-toolkit';
 import PlaylistLoader from './loader/playlist-loader';
 import KeyLoader from './loader/key-loader';
-import CMCDController from './controller/cmcd-controller';
 import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
@@ -18,6 +17,7 @@ import type AudioTrackController from './controller/audio-track-controller';
 import type AbrController from './controller/abr-controller';
 import type BufferController from './controller/buffer-controller';
 import type CapLevelController from './controller/cap-level-controller';
+import type CMCDController from './controller/cmcd-controller';
 import type EMEController from './controller/eme-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
 import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
@@ -121,7 +121,6 @@ export default class Hls implements HlsEventEmitter {
     const capLevelController = (this.capLevelController =
       new ConfigCapLevelController(this));
 
-    const cmcdController = (this.cmcdController = new CMCDController(this));
     const fpsController = new ConfigFpsController(this);
     const playListLoader = new PlaylistLoader(this);
     const keyLoader = new KeyLoader(this);
@@ -153,7 +152,6 @@ export default class Hls implements HlsEventEmitter {
       fpsController,
       id3TrackController,
       fragmentTracker,
-      cmcdController,
     ];
 
     this.audioTrackController = this.createController(
@@ -180,6 +178,11 @@ export default class Hls implements HlsEventEmitter {
     this.createController(config.timelineController, null, coreComponents);
     this.emeController = this.createController(
       config.emeController,
+      null,
+      coreComponents
+    );
+    this.cmcdController = this.createController(
+      config.cmcdController,
       null,
       coreComponents
     );
