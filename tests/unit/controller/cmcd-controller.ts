@@ -95,8 +95,6 @@ describe('CMCDController', function () {
       it('does not modify requests when disabled', function () {
         setupEach();
 
-        const c = Object.assign({}, context);
-
         expect(cmcdController.hls.config.pLoader).to.equal(undefined);
         expect(cmcdController.hls.config.fLoader).to.equal(undefined);
       });
