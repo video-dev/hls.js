@@ -162,11 +162,11 @@ design idea is pretty simple :
   - tracks which parts of the buffer is not loaded correctly
   - tracks which parts of the buffer was unloaded by the coded frame eviction algorithm
 - [src/loader/fragment-loader.ts][]
-  - in charge of loading fragments, use xhr-loader if not overrided by user config
+  - in charge of loading fragments, use xhr-loader if not overridden by user config
 - [src/loader/key-loader.ts][]
   - in charge of loading decryption key
 - [src/loader/playlist-loader.ts][]
-  - in charge of loading manifest, and level playlists, use xhr-loader if not overrided by user config.
+  - in charge of loading manifest, and level playlists, use xhr-loader if not overridden by user config.
 - [src/remux/aac-helper.ts][]
   - helper class to create silent AAC frames (useful to handle streams with audio holes)
 - [src/remux/mp4-generator.ts][]
@@ -204,7 +204,7 @@ design idea is pretty simple :
   - logging utils, useful for debug
 - [src/utils/xhr-loader.ts][]
   - XmlHttpRequest wrapper. it handles standard HTTP GET but also retries and timeout.
-  - retries : if xhr fails, HTTP GET will be retried after a predetermined delay. this delay is increasing following an exponential backoff. after a predetemined max number of retries, an error callback will be triggered.
+  - retries : if xhr fails, HTTP GET will be retried after a predetermined delay. this delay is increasing following an exponential backoff. after a predetermined max number of retries, an error callback will be triggered.
   - timeout: if load exceeds max allowed duration, a timeout callback will be triggered. it is up to the callback to decides whether the connection should be cancelled or not.
 
 [src/config.ts]: ../src/config.ts
