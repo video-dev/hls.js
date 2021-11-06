@@ -470,7 +470,7 @@ export default class CMCDController implements ComponentAPI {
       let result: string;
 
       if (type === 'string' && key !== 'ot' && key !== 'sf' && key !== 'st') {
-        result = `${key}="${value.replace(/"/g, '"')}"`;
+        result = `${key}="${value.replace(/"/g, '\\"')}"`;
       } else if (type === 'boolean') {
         result = key;
       } else if (type === 'symbol') {
