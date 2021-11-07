@@ -39,8 +39,8 @@ export default class CMCDController implements ComponentAPI {
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
-  private audioBuffer: any;
-  private videoBuffer: any;
+  private audioBuffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
+  private videoBuffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
 
   /**
    * @constructs
