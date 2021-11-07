@@ -170,7 +170,7 @@ export default class CMCDController implements ComponentAPI {
    * Apply CMCD data to a request.
    *
    * @param {!LoaderContext} context The loader context
-   * @param {!shaka.util.CmcdManager.Data} data The data object
+   * @param {!CMCD} data The data object
    * @param {boolean} useHeaders Send data via request headers
    * @private
    */
