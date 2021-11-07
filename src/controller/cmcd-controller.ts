@@ -16,6 +16,7 @@ import { ComponentAPI } from '../types/component-api';
 import { BufferCreatedData, MediaAttachedData } from '../types/events';
 import {
   FragmentLoaderContext,
+  Loader,
   LoaderCallbacks,
   LoaderConfiguration,
   LoaderContext,
@@ -27,9 +28,6 @@ import { logger } from '../utils/logger';
 /**
  * Controller to deal with Common Media Client Data (CMCD)
  * @see https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf
- *
- * @class
- * @constructor
  */
 export default class CMCDController implements ComponentAPI {
   private hls: Hls;
@@ -42,10 +40,6 @@ export default class CMCDController implements ComponentAPI {
   private audioBuffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
   private videoBuffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
 
-  /**
-   * @constructs
-   * @param {Hls} hls Our Hls.js instance
-   */
   constructor(hls: Hls) {
     this.hls = hls;
     this.config = hls.config;
@@ -127,8 +121,6 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * Create baseline CMCD data
-   *
-   * @return {CMCD}
    */
   private createData(): CMCD {
     return {
@@ -143,10 +135,6 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * Apply CMCD data to a request.
-   *
-   * @param {!LoaderContext} context The loader context
-   * @param {!CMCD} data The data object
-   * @param {boolean} useHeaders Send data via request headers
    */
   private apply(
     context: LoaderContext,
@@ -196,8 +184,6 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * Apply CMCD data to a manifest request.
-   *
-   * @param {!LoaderContext} context The loader context
    */
   private applyPlaylistData = (context: PlaylistLoaderContext) => {
     try {
@@ -212,8 +198,6 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * Apply CMCD data to a segment request
-   *
-   * @param {!LoaderContext} context
    */
   private applyFragmentData = (context: FragmentLoaderContext) => {
     try {
@@ -243,9 +227,6 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * The CMCD object type.
-   *
-   * @param {FrameRequestCallback} fragment
-   * @returns {CMCDObjectType?}
    */
   private getObjectType(fragment: Fragment): CMCDObjectType | undefined {
     const { type } = fragment;
@@ -275,8 +256,6 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * Get the highest bitrate.
-   *
-   * @returns {number}
    */
   private getTopBandwidth(type: CMCDObjectType) {
     let bitrate: number = 0;
@@ -295,9 +274,6 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * Get the buffer length for a media type in milliseconds
-   *
-   * @param {string} type
-   * @return {number}
    */
   private getBufferLength(type: CMCDObjectType) {
     const media = this.hls.media;
@@ -319,56 +295,85 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * Create a playlist loader
-   *
-   * @returns {PlaylistLoaderConstructor | undefined}
    */
   private createPlaylistLoader(): PlaylistLoaderConstructor | undefined {
     const { pLoader } = this.config;
     const apply = this.applyPlaylistData;
     const Ctor = pLoader || (this.config.loader as PlaylistLoaderConstructor);
 
-    // @ts-ignore
-    return function (config: HlsConfig) {
-      const loader = new Ctor(config);
-      this.abort = () => loader.abort();
-      this.destroy = () => loader.destroy();
-      this.load = (
+    return class CmcdPlaylistLoader {
+      private loader: Loader<PlaylistLoaderContext>;
+
+      constructor(config: HlsConfig) {
+        this.loader = new Ctor(config);
+      }
+
+      get stats() {
+        return this.loader.stats;
+      }
+
+      get context() {
+        return this.loader.context;
+      }
+
+      destroy() {
+        this.loader.destroy();
+      }
+
+      abort() {
+        this.loader.abort();
+      }
+
+      load(
         context: PlaylistLoaderContext,
         config: LoaderConfiguration,
         callbacks: LoaderCallbacks<PlaylistLoaderContext>
-      ) => {
+      ) {
         apply(context);
-        loader.load(context, config, callbacks);
-      };
+        this.loader.load(context, config, callbacks);
+      }
     };
   }
 
   /**
    * Create a playlist loader
-   *
-   * @returns {FragmentLoaderConstructor | undefined}
    */
   private createFragmentLoader(): FragmentLoaderConstructor | undefined {
     const { fLoader } = this.config;
     const apply = this.applyFragmentData;
     const Ctor = fLoader || (this.config.loader as FragmentLoaderConstructor);
 
-    // @ts-ignore
-    return function (config: HlsConfig) {
-      const loader = new Ctor(config);
-      this.abort = () => loader.abort();
-      this.destroy = () => loader.destroy();
-      this.load = (
+    return class CmcdFragmentLoader {
+      private loader: Loader<FragmentLoaderContext>;
+
+      constructor(config: HlsConfig) {
+        this.loader = new Ctor(config);
+      }
+
+      get stats() {
+        return this.loader.stats;
+      }
+
+      get context() {
+        return this.loader.context;
+      }
+
+      destroy() {
+        this.loader.destroy();
+      }
+
+      abort() {
+        this.loader.abort();
+      }
+
+      load(
         context: FragmentLoaderContext,
         config: LoaderConfiguration,
         callbacks: LoaderCallbacks<FragmentLoaderContext>
-      ) => {
+      ) {
         apply(context);
-        loader.load(context, config, callbacks);
-      };
-      Object.defineProperty(this, 'stats', {
-        get: () => loader.stats,
-      });
+        this.loader.load(context, config, callbacks);
+      }
     };
   }
 
@@ -388,9 +393,6 @@ export default class CMCDController implements ComponentAPI {
    * Serialize a CMCD data object according to the rules defined in the
    * section 3.2 of
    * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
-   *
-   * @param {CMCD} data The CMCD data object
-   * @returns {string}
    */
   static serialize(data: CMCD): string {
     const results: string[] = [];
@@ -460,9 +462,6 @@ export default class CMCDController implements ComponentAPI {
    * Convert a CMCD data object to request headers according to the rules
    * defined in the section 2.1 and 3.2 of
    * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
-   *
-   * @param {CMCD} data The CMCD data object
-   * @returns {CMCDHeaders}
    */
   static toHeaders(data: CMCD): Partial<CMCDHeaders> {
     const keys = Object.keys(data);
@@ -510,9 +509,6 @@ export default class CMCDController implements ComponentAPI {
    * Convert a CMCD data object to query args according to the rules
    * defined in the section 2.2 and 3.2 of
    * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
-   *
-   * @param {CMCD} data The CMCD data object
-   * @returns {string}
    */
   static toQuery(data: CMCD): string {
     return `CMCD=${encodeURIComponent(CMCDController.serialize(data))}`;
@@ -520,10 +516,6 @@ export default class CMCDController implements ComponentAPI {
 
   /**
    * Append query args to a uri.
-   *
-   * @param {string} uri
-   * @param {string} query
-   * @returns {string}
    */
   static appendQueryToUri(uri, query) {
     if (!query) {
