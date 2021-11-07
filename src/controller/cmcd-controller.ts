@@ -59,18 +59,12 @@ export default class CMCDController implements ComponentAPI {
     }
   }
 
-  /**
-   * @private
-   */
   private registerListeners() {
     this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     this.hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
   }
 
-  /**
-   * @private
-   */
   private unregisterListeners() {
     this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
@@ -79,9 +73,6 @@ export default class CMCDController implements ComponentAPI {
     this.onMediaDetached();
   }
 
-  /**
-   *
-   */
   destroy() {
     this.unregisterListeners();
 
@@ -89,9 +80,6 @@ export default class CMCDController implements ComponentAPI {
     this.hls = this.config = this.audioBuffer = this.videoBuffer = null;
   }
 
-  /**
-   * @private
-   */
   private onMediaAttached(
     event: Events.MEDIA_ATTACHED,
     data: MediaAttachedData
@@ -101,9 +89,6 @@ export default class CMCDController implements ComponentAPI {
     this.media.addEventListener('playing', this.onPlaying);
   }
 
-  /**
-   * @private
-   */
   private onMediaDetached() {
     if (!this.media) {
       return;
@@ -116,9 +101,6 @@ export default class CMCDController implements ComponentAPI {
     this.media = null;
   }
 
-  /**
-   * @private
-   */
   private onBufferCreated(
     event: Events.BUFFER_CREATED,
     data: BufferCreatedData
@@ -127,9 +109,6 @@ export default class CMCDController implements ComponentAPI {
     this.videoBuffer = data.tracks.video?.buffer;
   }
 
-  /**
-   * @private
-   */
   private onWaiting = () => {
     if (this.initialized) {
       this.starved = true;
@@ -138,9 +117,6 @@ export default class CMCDController implements ComponentAPI {
     this.buffering = true;
   };
 
-  /**
-   * @private
-   */
   private onPlaying = () => {
     if (!this.initialized) {
       this.initialized = true;
@@ -153,7 +129,6 @@ export default class CMCDController implements ComponentAPI {
    * Create baseline CMCD data
    *
    * @return {CMCD}
-   * @private
    */
   private createData(): CMCD {
     return {
@@ -172,7 +147,6 @@ export default class CMCDController implements ComponentAPI {
    * @param {!LoaderContext} context The loader context
    * @param {!CMCD} data The data object
    * @param {boolean} useHeaders Send data via request headers
-   * @private
    */
   private apply(
     context: LoaderContext,
@@ -272,7 +246,6 @@ export default class CMCDController implements ComponentAPI {
    *
    * @param {FrameRequestCallback} fragment
    * @returns {CMCDObjectType?}
-   * @private
    */
   private getObjectType(fragment: Fragment): CMCDObjectType | undefined {
     const { type } = fragment;
@@ -304,7 +277,6 @@ export default class CMCDController implements ComponentAPI {
    * Get the highest bitrate.
    *
    * @returns {number}
-   * @private
    */
   private getTopBandwidth(type: CMCDObjectType) {
     let bitrate: number = 0;
@@ -326,7 +298,6 @@ export default class CMCDController implements ComponentAPI {
    *
    * @param {string} type
    * @return {number}
-   * @private
    */
   private getBufferLength(type: CMCDObjectType) {
     const media = this.hls.media;
