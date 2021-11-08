@@ -29,8 +29,8 @@ const data = {
   'com.test-token': Symbol('s'),
 };
 
-const setupEach = function (config?: CMCDControllerConfig) {
-  cmcdController = new CMCDController(new HlsMock(config));
+const setupEach = function (cmcd?: CMCDControllerConfig) {
+  cmcdController = new CMCDController(new HlsMock({ cmcd }));
 };
 
 describe('CMCDController', function () {
@@ -95,14 +95,13 @@ describe('CMCDController', function () {
       it('does not modify requests when disabled', function () {
         setupEach();
 
-        expect(cmcdController.hls.config.pLoader).to.equal(undefined);
-        expect(cmcdController.hls.config.fLoader).to.equal(undefined);
+        const { config } = cmcdController.hls;
+        expect(config.pLoader).to.equal(undefined);
+        expect(config.fLoader).to.equal(undefined);
       });
 
       it('generates a session id if not provided', function () {
-        setupEach({
-          cmcdEnabled: true,
-        });
+        setupEach({});
 
         const c = Object.assign({ frag: {} }, context);
 

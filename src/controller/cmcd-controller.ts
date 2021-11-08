@@ -34,6 +34,8 @@ export default class CMCDController implements ComponentAPI {
   private config: HlsConfig;
   private media?: HTMLMediaElement;
   private sid?: string;
+  private cid?: string;
+  private useHeaders: boolean = false;
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
@@ -43,12 +45,15 @@ export default class CMCDController implements ComponentAPI {
   constructor(hls: Hls) {
     this.hls = hls;
     const config = (this.config = hls.config);
+    const { cmcd } = config;
 
-    if (config.cmcdEnabled === true) {
+    if (cmcd != null) {
       config.pLoader = this.createPlaylistLoader();
       config.fLoader = this.createFragmentLoader();
 
-      this.sid = config.cmcdSessionId || CMCDController.uuid();
+      this.sid = cmcd.sessionId || CMCDController.uuid();
+      this.cid = cmcd.contentId;
+      this.useHeaders = cmcd.useHeaders === true;
       this.registerListeners();
     }
   }
@@ -129,7 +134,7 @@ export default class CMCDController implements ComponentAPI {
       v: CMCDVersion,
       sf: CMCDStreamingFormat.HLS,
       sid: this.sid,
-      cid: this.config.cmcdContentId,
+      cid: this.cid,
       pr: this.media?.playbackRate,
       mtp: this.hls.bandwidthEstimate / 1000,
     };
@@ -159,7 +164,7 @@ export default class CMCDController implements ComponentAPI {
 
     // TODO: Implement rtp, nrr, nor, dl
 
-    if (this.config.cmcdUseHeaders) {
+    if (this.useHeaders) {
       const headers = CMCDController.toHeaders(data);
       if (!Object.keys(headers).length) {
         return;
