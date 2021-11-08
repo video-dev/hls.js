@@ -138,11 +138,7 @@ export default class CMCDController implements ComponentAPI {
   /**
    * Apply CMCD data to a request.
    */
-  private apply(
-    context: LoaderContext,
-    data: CMCD = {},
-    useHeaders = this.config.cmcdUseHeaders
-  ) {
+  private apply(context: LoaderContext, data: CMCD = {}) {
     // apply baseline data
     Object.assign(data, this.createData());
 
@@ -163,7 +159,7 @@ export default class CMCDController implements ComponentAPI {
 
     // TODO: Implement rtp, nrr, nor, dl
 
-    if (useHeaders) {
+    if (this.config.cmcdUseHeaders) {
       const headers = CMCDController.toHeaders(data);
       if (!Object.keys(headers).length) {
         return;
