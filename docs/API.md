@@ -94,10 +94,7 @@
   - [`licenseResponseCallback`](#licenseResponseCallback)
   - [`drmSystemOptions`](#drmSystemOptions)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
-  - [`cmcdEnabled`](#cmcdEnabled)
-  - [`cmcdSessionId`](#cmcdSessionId)
-  - [`cmcdContentId`](#cmcdContentId)
-  - [`cmcdUseHeaders`](#cmcdUseHeaders)
+  - [`cmcd`](#cmcd)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -395,10 +392,7 @@ var config = {
   licenseXhrSetup: undefined,
   drmSystemOptions: {},
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess,
-  cmcdEnabled: false,
-  cmcdSessionId: undefined,
-  cmcdContentId: undefined,
-  cmcdUseHeaders: false,
+  cmcd: undefined,
 };
 
 var hls = new Hls(config);
@@ -1200,22 +1194,14 @@ With the default argument, `''` will be specified for each option (_i.e. no spec
 
 Allows for the customization of `window.navigator.requestMediaKeySystemAccess`.
 
-### `cmcdEnabled`
+### `cmcd`
 
-Enabled the passing of [Common Media Client Data (CMCD)](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf)
-on all media requests (manifests, playlists, a/v segments, timed text).
+When the `cmcd` object is defined, [Common Media Client Data (CMCD)](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf)
+data will be passed on all media requests (manifests, playlists, a/v segments, timed text). It's configuration values are:
 
-### `cmcdSession`
-
-The CMCD session id. One will be automatically generated if none is provided.
-
-### `cmcdContent`
-
-The CMCD content id.
-
-### `cmcdUseHeaders`
-
-Send CMCD data in request headers instead of as query args.
+- `sessionId`: The CMCD session id. One will be automatically generated if none is provided.
+- `contentId`: The CMCD content id.
+- `useHeaders`: Send CMCD data in request headers instead of as query args. Defaults to `false`.
 
 ## Video Binding/Unbinding API
 
