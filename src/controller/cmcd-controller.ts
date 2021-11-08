@@ -442,7 +442,9 @@ export default class CMCDController implements ComponentAPI {
       const type = typeof value;
       let result: string;
 
-      if (type === 'string' && key !== 'ot' && key !== 'sf' && key !== 'st') {
+      if (key === 'ot' || key === 'sf' || key === 'st') {
+        result = `${key}=${value}`;
+      } else if (type === 'string') {
         result = `${key}=${JSON.stringify(value)}`;
       } else if (type === 'boolean') {
         result = key;
