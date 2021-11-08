@@ -49,10 +49,9 @@ export type CapLevelControllerConfig = {
 };
 
 export type CMCDControllerConfig = {
-  cmcdEnabled: boolean;
-  cmcdSessionId?: string;
-  cmcdContentId?: string;
-  cmcdUseHeaders?: boolean;
+  sessionId?: string;
+  contentId?: string;
+  useHeaders?: boolean;
 };
 
 export type DRMSystemOptions = {
@@ -179,6 +178,7 @@ export type HlsConfig = {
   // EME
   emeController?: typeof EMEController;
   // CMCD
+  cmcd?: CMCDControllerConfig;
   cmcdController?: typeof CMCDController;
 
   abrController: typeof AbrController;
@@ -190,7 +190,6 @@ export type HlsConfig = {
 } & ABRControllerConfig &
   BufferControllerConfig &
   CapLevelControllerConfig &
-  CMCDControllerConfig &
   EMEControllerConfig &
   FPSControllerConfig &
   FragmentLoaderConfig &
@@ -280,10 +279,7 @@ export const hlsDefaultConfig: HlsConfig = {
   testBandwidth: true,
   progressive: false,
   lowLatencyMode: true,
-  cmcdEnabled: false,
-  cmcdSessionId: undefined,
-  cmcdContentId: undefined,
-  cmcdUseHeaders: false,
+  cmcd: undefined,
 
   // Dynamic Modules
   ...timelineConfig(),
