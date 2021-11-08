@@ -42,27 +42,29 @@ export default class CMCDController implements ComponentAPI {
 
   constructor(hls: Hls) {
     this.hls = hls;
-    this.config = hls.config;
+    const config = (this.config = hls.config);
 
-    if (this.config.cmcdEnabled === true) {
-      this.config.pLoader = this.createPlaylistLoader();
-      this.config.fLoader = this.createFragmentLoader();
+    if (config.cmcdEnabled === true) {
+      config.pLoader = this.createPlaylistLoader();
+      config.fLoader = this.createFragmentLoader();
 
-      this.sid = this.config.cmcdSessionId || CMCDController.uuid();
+      this.sid = config.cmcdSessionId || CMCDController.uuid();
       this.registerListeners();
     }
   }
 
   private registerListeners() {
-    this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    this.hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
-    this.hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
+    const hls = this.hls;
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
   }
 
   private unregisterListeners() {
-    this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    this.hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
-    this.hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
+    const hls = this.hls;
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
 
     this.onMediaDetached();
   }
