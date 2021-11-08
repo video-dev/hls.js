@@ -447,14 +447,12 @@ export default class CMCDController implements ComponentAPI {
 
       if (key === 'ot' || key === 'sf' || key === 'st') {
         result = `${key}=${value}`;
-      } else if (type === 'string') {
-        result = `${key}=${JSON.stringify(value)}`;
       } else if (type === 'boolean') {
         result = key;
-      } else if (type === 'symbol') {
-        result = `${key}=${value.description}`;
-      } else {
+      } else if (type === 'number') {
         result = `${key}=${value}`;
+      } else {
+        result = `${key}=${JSON.stringify(value)}`;
       }
 
       results.push(result);
