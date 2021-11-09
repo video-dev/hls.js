@@ -26,7 +26,6 @@ const data = {
   'com.test-testing': 1234,
   'com.test-exists': true,
   'com.test-notExists': false,
-  'com.test-token': Symbol('s'),
 };
 
 const setupEach = function (cmcd?: CMCDControllerConfig) {
@@ -40,7 +39,7 @@ describe('CMCDController', function () {
       const result =
         'CMCD=br%3D52317%2Cbs%2Ccid%3D%22xyz%22%2C' +
         'com.test-exists%2Ccom.test-hello%3D%22world%22%2C' +
-        'com.test-testing%3D1234%2Ccom.test-token%3Ds%2C' +
+        'com.test-testing%3D1234%2C' +
         'd%3D6067%2Cmtp%3D10000%2C' +
         'nor%3D%22..%252Ftesting%252F3.m4v%22%2C' +
         'nrr%3D%220-99%22%2C' +
@@ -72,7 +71,7 @@ describe('CMCDController', function () {
         'CMCD-Object': 'br=52317,d=6067',
         'CMCD-Request':
           'com.test-exists,com.test-hello="world",' +
-          'com.test-testing=1234,com.test-token=s,mtp=10000,' +
+          'com.test-testing=1234,mtp=10000,' +
           'nor="..%2Ftesting%2F3.m4v",nrr="0-99"',
         'CMCD-Session': 'cid="xyz",sid="c936730c-031e-4a73-976f-92bc34039c60"',
         'CMCD-Status': 'bs',
