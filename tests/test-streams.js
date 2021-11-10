@@ -233,16 +233,22 @@ module.exports = {
     description:
       'Advanced stream (HEVC/H.264, AC-3/AAC,  WebVTT, fMP4 segments)',
   },
-  AppleLowLatencyHls: {
-    url: 'https://ll-hls-test.apple.com/master.m3u8',
-    description: 'Apple Low-Latency HLS sample (TS segments)',
+  MuxLowLatencyHls: {
+    url: 'https://stream.mux.com/v69RSHhFelSm4701snP22dYz2jICy4E4FUyk02rW4gxRM.m3u8',
+    description:
+      'Low-Latency HLS sample of Big Buck Bunny loop and a timer. Restarts every 12 hours. (fMP4 segments)',
     live: true,
   },
-  AppleLowLatencyCmafHls: {
-    url: 'https://ll-hls-test.apple.com/cmaf/master.m3u8',
-    description: 'Apple Low-Latency HLS sample (fMP4 segments)',
-    live: true,
-  },
+  //   AppleLowLatencyHls: {
+  //     url: 'https://ll-hls-test.apple.com/master.m3u8',
+  //     description: 'Apple Low-Latency HLS sample (TS segments)',
+  //     live: true,
+  //   },
+  //   AppleLowLatencyCmafHls: {
+  //     url: 'https://ll-hls-test.apple.com/cmaf/master.m3u8',
+  //     description: 'Apple Low-Latency HLS sample (fMP4 segments)',
+  //     live: true,
+  //   },
   groupIds: {
     url: 'https://mtoczko.github.io/hls-test-streams/test-group/playlist.m3u8',
     description: 'Group-id: subtitle and audio',

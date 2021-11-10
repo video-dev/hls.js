@@ -9,7 +9,7 @@ import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
-import { alignPDT } from '../utils/discontinuities';
+import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import type { NetworkComponentAPI } from '../types/component-api';
@@ -144,6 +144,7 @@ class AudioStreamController
       this.startPosition =
       this.lastCurrentTime =
         startPosition;
+
     this.tick();
   }
 
@@ -440,7 +441,9 @@ class AudioStreamController
         newDetails.hasProgramDateTime &&
         mainDetails.hasProgramDateTime
       ) {
-        alignPDT(newDetails, mainDetails);
+        // Make sure our audio rendition is aligned with the "main" rendition, using
+        // pdt as our reference times.
+        alignMediaPlaylistByPDT(newDetails, mainDetails);
         sliding = newDetails.fragments[0].start;
       } else {
         sliding = this.alignPlaylists(newDetails, track.details);
