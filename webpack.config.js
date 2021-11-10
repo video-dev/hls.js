@@ -20,7 +20,7 @@ const createDefinePlugin = (type) => {
     __USE_SUBTITLES__: false,
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
     __USE_EME_DRM__: false,
-    __USE_CMCD__: JSON.stringify(type === 'main' || addCMCDSupport),
+    __USE_CMCD__: false,
   };
   return new webpack.DefinePlugin(buildConstants);
 };
