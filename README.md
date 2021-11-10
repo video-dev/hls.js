@@ -185,7 +185,7 @@ npm run build -- --env dist # replace "dist" by other configuration name, see ab
 
 Note: The "demo" config is always built.
 
-**NOTE:** `hls.light.*.js` dist files do not include EME, subtitles, or alternate-audio support. In addition,
+**NOTE:** `hls.light.*.js` dist files do not include EME, subtitles, CMCD, or alternate-audio support. In addition,
 the following types are not available in the light build:
 
 - `AudioStreamController`
@@ -195,6 +195,7 @@ the following types are not available in the light build:
 - `SubtitleStreamController`
 - `SubtitleTrackController`
 - `TimelineController`
+- `CmcdController`
 
 ### Linter (ESlint)
 

@@ -8,6 +8,7 @@ import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
 import EMEController from './controller/eme-controller';
+import CMCDController from './controller/cmcd-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import Cues from './utils/cues';
@@ -47,6 +48,12 @@ export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
+export type CMCDControllerConfig = {
+  sessionId?: string;
+  contentId?: string;
+  useHeaders?: boolean;
+};
+
 export type DRMSystemOptions = {
   audioRobustness?: string;
   videoRobustness?: string;
@@ -61,8 +68,12 @@ export type EMEControllerConfig = {
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
 
+export interface FragmentLoaderConstructor {
+  new (confg: HlsConfig): Loader<FragmentLoaderContext>;
+}
+
 export type FragmentLoaderConfig = {
-  fLoader?: { new (confg: HlsConfig): Loader<FragmentLoaderContext> };
+  fLoader?: FragmentLoaderConstructor;
 
   fragLoadingTimeOut: number;
   fragLoadingMaxRetry: number;
@@ -85,8 +96,12 @@ export type MP4RemuxerConfig = {
   maxAudioFramesDrift: number;
 };
 
+export interface PlaylistLoaderConstructor {
+  new (confg: HlsConfig): Loader<PlaylistLoaderContext>;
+}
+
 export type PlaylistLoaderConfig = {
-  pLoader?: { new (confg: HlsConfig): Loader<PlaylistLoaderContext> };
+  pLoader?: PlaylistLoaderConstructor;
 
   manifestLoadingTimeOut: number;
   manifestLoadingMaxRetry: number;
@@ -162,6 +177,9 @@ export type HlsConfig = {
   timelineController?: typeof TimelineController;
   // EME
   emeController?: typeof EMEController;
+  // CMCD
+  cmcd?: CMCDControllerConfig;
+  cmcdController?: typeof CMCDController;
 
   abrController: typeof AbrController;
   bufferController: typeof BufferController;
@@ -261,6 +279,7 @@ export const hlsDefaultConfig: HlsConfig = {
   testBandwidth: true,
   progressive: false,
   lowLatencyMode: true,
+  cmcd: undefined,
 
   // Dynamic Modules
   ...timelineConfig(),
@@ -274,6 +293,7 @@ export const hlsDefaultConfig: HlsConfig = {
   audioStreamController: __USE_ALT_AUDIO__ ? AudioStreamController : undefined,
   audioTrackController: __USE_ALT_AUDIO__ ? AudioTrackController : undefined,
   emeController: __USE_EME_DRM__ ? EMEController : undefined,
+  cmcdController: __USE_CMCD__ ? CMCDController : undefined,
 };
 
 function timelineConfig(): TimelineControllerConfig {
