@@ -228,6 +228,7 @@ export default class M3U8Parser {
         if (currentInitSegment) {
           frag.initSegment = currentInitSegment;
           frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+          currentInitSegment.rawProgramDateTime = null;
         }
       }
 
