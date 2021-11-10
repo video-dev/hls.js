@@ -10,6 +10,7 @@ const env = process.env;
 const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES;
 const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
 const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
+const addCMCDSupport = !!env.CMCD || !!env.USE_CMCD;
 
 const createDefinePlugin = (type) => {
   const buildConstants = {
@@ -19,6 +20,7 @@ const createDefinePlugin = (type) => {
     __USE_SUBTITLES__: false,
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
     __USE_EME_DRM__: false,
+    __USE_CMCD__: JSON.stringify(type === 'main' || addCMCDSupport),
   };
   return new webpack.DefinePlugin(buildConstants);
 };
@@ -136,6 +138,12 @@ function getAliasesForLightDist() {
   if (!addEMESupport) {
     aliases = Object.assign({}, aliases, {
       './controller/eme-controller': './empty.js',
+    });
+  }
+
+  if (!addCMCDSupport) {
+    aliases = Object.assign({}, aliases, {
+      './controller/cmcd-controller': './empty.js',
     });
   }
 
