@@ -1,9 +1,9 @@
 template: |
   # Summary
-  HLS.js $RESOLVED_VERSION includes bug fixes and improvements over the last release.
+  HLS.js v$INPUT_VERSION includes bug fixes and improvements over the last release.
 
   ## Changes Since The Last Release
-  https://github.com/video-dev/hls.js/compare/$PREVIOUS_TAG...$RESOLVED_VERSION
+  https://github.com/video-dev/hls.js/compare/$PREVIOUS_TAG...v$INPUT_VERSION
 
   $CHANGES
 
@@ -16,7 +16,6 @@ template: |
   ## Feedback
   Please provide feedback via [Issues in GitHub](https://github.com/video-dev/hls.js/issues/new/choose). For more details on how to contribute to HLS.js, see our [CONTRIBUTING guide](https://github.com/video-dev/hls.js/blob/master/CONTRIBUTING.md).
 
-tag-template: 'v$RESOLVED_VERSION'
-
+version-template: $COMPLETE
 exclude-labels:
   - 'skip-change-log'

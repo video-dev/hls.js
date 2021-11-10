@@ -94,6 +94,7 @@
   - [`licenseResponseCallback`](#licenseResponseCallback)
   - [`drmSystemOptions`](#drmSystemOptions)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
+  - [`cmcd`](#cmcd)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -391,6 +392,7 @@ var config = {
   licenseXhrSetup: undefined,
   drmSystemOptions: {},
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess,
+  cmcd: undefined,
 };
 
 var hls = new Hls(config);
@@ -437,7 +439,7 @@ A logger object could also be provided for custom logging: `config.debug = custo
 (default -1)
 
 - if set to -1, playback will start from initialTime=0 for VoD and according to `liveSyncDuration/liveSyncDurationCount` config params for Live
-- Otherwise, playback will start from predefined value. (unless stated otherwise in `autoStartLoad=false` mode : in that case startPosition can be overrided using `hls.startLoad(startPosition)`).
+- Otherwise, playback will start from predefined value. (unless stated otherwise in `autoStartLoad=false` mode : in that case startPosition can be overridden using `hls.startLoad(startPosition)`).
 
 ### `defaultAudioCodec`
 
@@ -813,7 +815,7 @@ var customPlaylistLoader = function () {
 };
 ```
 
-if you want to just make slight adjustements to existing loader implementation, you can also eventually override it, see an example below :
+if you want to just make slight adjustments to existing loader implementation, you can also eventually override it, see an example below :
 
 ```js
 // special playlist post processing function
@@ -925,7 +927,7 @@ Enable the default fps controller by setting `capLevelOnFPSDrop` to `true`.
 
 (default: internal track timeline controller)
 
-Customized text track syncronization controller.
+Customized text track synchronization controller.
 
 Parameter should be a class with a `destroy()` method:
 
@@ -1192,6 +1194,15 @@ With the default argument, `''` will be specified for each option (_i.e. no spec
 
 Allows for the customization of `window.navigator.requestMediaKeySystemAccess`.
 
+### `cmcd`
+
+When the `cmcd` object is defined, [Common Media Client Data (CMCD)](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf)
+data will be passed on all media requests (manifests, playlists, a/v segments, timed text). It's configuration values are:
+
+- `sessionId`: The CMCD session id. One will be automatically generated if none is provided.
+- `contentId`: The CMCD content id.
+- `useHeaders`: Send CMCD data in request headers instead of as query args. Defaults to `false`.
+
 ## Video Binding/Unbinding API
 
 ### `hls.attachMedia(videoElement)`
@@ -1217,7 +1228,7 @@ Calling this method will:
 ## Quality switch Control API
 
 By default, hls.js handles quality switch automatically, using heuristics based on fragment loading bitrate and quality level bandwidth exposed in the variant manifest.
-It is also possible to manually control quality swith using below API.
+It is also possible to manually control quality switch using below API.
 
 ### `hls.levels`
 
@@ -1257,7 +1268,7 @@ Set to `-1` for automatic level selection.
 ### `hls.startLevel`
 
 - get/set: Start level index (level of first fragment that will be played back).
-  - if not overrided by user: first level appearing in manifest will be used as start level.
+  - if not overridden by user: first level appearing in manifest will be used as start level.
   - if -1: automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment).
 
 Default value is `hls.firstLevel`.
@@ -1387,7 +1398,7 @@ Full list of Events is available below:
 
 - `Hls.Events.MEDIA_ATTACHING` - fired before MediaSource is attaching to media element
   - data: { media }
-- `Hls.Events.MEDIA_ATTACHED` - fired when MediaSource has been succesfully attached to media element
+- `Hls.Events.MEDIA_ATTACHED` - fired when MediaSource has been successfully attached to media element
   - data: { media }
 - `Hls.Events.MEDIA_DETACHING` - fired before detaching MediaSource from media element
   - data: { }
