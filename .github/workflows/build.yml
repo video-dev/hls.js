@@ -28,7 +28,7 @@ jobs:
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
       - name: extract tag
         id: extract_tag
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
             const prefix = 'refs/tags/';
@@ -47,7 +47,7 @@ jobs:
 
       - name: check package-lock.json version
         id: extract_tag
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
             const fs = require('fs');
@@ -217,6 +217,7 @@ jobs:
         uses: tjenkinson/release-drafter@48835fbc42b1c062a828995f9cb8301e6bdae677
         with:
           tag: ${{ needs.config.outputs.tag }}
+          name: ${{ needs.config.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

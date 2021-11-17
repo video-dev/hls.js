@@ -279,6 +279,7 @@ function createLoaderContext(
     part,
     responseType: 'arraybuffer',
     url: segment.url,
+    headers: {},
     rangeStart: 0,
     rangeEnd: 0,
   };
