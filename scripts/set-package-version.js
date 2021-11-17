@@ -83,7 +83,7 @@ function getCommitHash() {
 function getLatestVersionTag() {
   let commitish = '';
   while (true) {
-    const tag = exec('git describe --abbrev=0 --match="v*" ' + commitish);
+    const tag = exec('git describe --tag --abbrev=0 --match="v*" ' + commitish);
     if (!tag) {
       throw new Error('Could not find tag.');
     }

@@ -38,3 +38,6 @@ Generated\ Files/
 _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
+
+# VSCode custom workspace settings
+.vscode/settings.json
