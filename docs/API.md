@@ -94,6 +94,7 @@
   - [`licenseResponseCallback`](#licenseResponseCallback)
   - [`drmSystemOptions`](#drmSystemOptions)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
+  - [`cmcd`](#cmcd)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -391,6 +392,7 @@ var config = {
   licenseXhrSetup: undefined,
   drmSystemOptions: {},
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess,
+  cmcd: undefined,
 };
 
 var hls = new Hls(config);
@@ -1191,6 +1193,15 @@ With the default argument, `''` will be specified for each option (_i.e. no spec
 (default: A function that returns the result of `window.navigator.requestMediaKeySystemAccess.bind(window.navigator)` or `null`)
 
 Allows for the customization of `window.navigator.requestMediaKeySystemAccess`.
+
+### `cmcd`
+
+When the `cmcd` object is defined, [Common Media Client Data (CMCD)](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf)
+data will be passed on all media requests (manifests, playlists, a/v segments, timed text). It's configuration values are:
+
+- `sessionId`: The CMCD session id. One will be automatically generated if none is provided.
+- `contentId`: The CMCD content id.
+- `useHeaders`: Send CMCD data in request headers instead of as query args. Defaults to `false`.
 
 ## Video Binding/Unbinding API
 
