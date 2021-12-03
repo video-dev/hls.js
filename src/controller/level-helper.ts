@@ -232,6 +232,20 @@ export function mergeDetails(
     }
   );
 
+  if (currentInitSegment) {
+    const fragmentsToCheck = newDetails.fragmentHint
+      ? newDetails.fragments.concat(newDetails.fragmentHint)
+      : newDetails.fragments;
+    fragmentsToCheck.forEach((frag) => {
+      if (
+        !frag.initSegment ||
+        frag.initSegment.relurl === currentInitSegment?.relurl
+      ) {
+        frag.initSegment = currentInitSegment;
+      }
+    });
+  }
+
   if (newDetails.skippedSegments) {
     newDetails.deltaUpdateFailed = newDetails.fragments.some((frag) => !frag);
     if (newDetails.deltaUpdateFailed) {
