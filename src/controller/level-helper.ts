@@ -223,11 +223,6 @@ export function mergeDetails(
       if (oldFrag.initSegment) {
         newFrag.initSegment = oldFrag.initSegment;
         currentInitSegment = oldFrag.initSegment;
-      } else if (
-        !newFrag.initSegment ||
-        newFrag.initSegment.relurl == currentInitSegment?.relurl
-      ) {
-        newFrag.initSegment = currentInitSegment;
       }
     }
   );
