@@ -11,7 +11,7 @@ import PassThroughRemuxer from '../remux/passthrough-remuxer';
 import ChunkCache from './chunk-cache';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { logger } from '../utils/logger';
-import type { Demuxer, KeyData } from '../types/demuxer';
+import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
 import type { Remuxer } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import type { HlsConfig } from '../config';
@@ -202,7 +202,7 @@ export default class Transmuxer {
       });
     }
 
-    const transmuxResults: Array<TransmuxerResult> = [];
+    const transmuxResults: TransmuxerResult[] = [];
     const { timeOffset } = currentTransmuxState;
     if (decrypter) {
       // The decrypter may have data cached, which needs to be demuxed. In this case we'll have two TransmuxResults
@@ -247,8 +247,12 @@ export default class Transmuxer {
     return transmuxResults;
   }
 
-  private flushRemux(transmuxResults, demuxResult, chunkMeta) {
-    const { audioTrack, avcTrack, id3Track, textTrack } = demuxResult;
+  private flushRemux(
+    transmuxResults: TransmuxerResult[],
+    demuxResult: DemuxerResult,
+    chunkMeta: ChunkMetadata
+  ) {
+    const { audioTrack, videoTrack, id3Track, textTrack } = demuxResult;
     const { accurateTimeOffset, timeOffset } = this.currentTransmuxState;
     logger.log(
       `[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${
@@ -257,7 +261,7 @@ export default class Transmuxer {
     );
     const remuxResult = this.remuxer!.remux(
       audioTrack,
-      avcTrack,
+      videoTrack,
       id3Track,
       textTrack,
       timeOffset,
@@ -295,13 +299,18 @@ export default class Transmuxer {
     initSegmentData: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    duration: number
+    trackDuration: number
   ) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
     }
-    demuxer.resetInitSegment(audioCodec, videoCodec, duration);
+    demuxer.resetInitSegment(
+      initSegmentData,
+      audioCodec,
+      videoCodec,
+      trackDuration
+    );
     remuxer.resetInitSegment(initSegmentData, audioCodec, videoCodec);
   }
 
@@ -349,12 +358,12 @@ export default class Transmuxer {
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata
   ): TransmuxerResult {
-    const { audioTrack, avcTrack, id3Track, textTrack } = (
+    const { audioTrack, videoTrack, id3Track, textTrack } = (
       this.demuxer as Demuxer
     ).demux(data, timeOffset, false, !this.config.progressive);
     const remuxResult = this.remuxer!.remux(
       audioTrack,
-      avcTrack,
+      videoTrack,
       id3Track,
       textTrack,
       timeOffset,
@@ -380,7 +389,7 @@ export default class Transmuxer {
       .then((demuxResult) => {
         const remuxResult = this.remuxer!.remux(
           demuxResult.audioTrack,
-          demuxResult.avcTrack,
+          demuxResult.videoTrack,
           demuxResult.id3Track,
           demuxResult.textTrack,
           timeOffset,

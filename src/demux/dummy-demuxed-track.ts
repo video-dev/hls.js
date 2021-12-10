@@ -1,11 +1,11 @@
 import type { DemuxedTrack } from '../types/demuxer';
 
-export function dummyTrack(): DemuxedTrack {
+export function dummyTrack(type = '', inputTimeScale = 90000): DemuxedTrack {
   return {
-    type: '',
+    type,
     id: -1,
     pid: -1,
-    inputTimeScale: 90000,
+    inputTimeScale,
     sequenceNumber: -1,
     samples: [],
     dropped: 0,
