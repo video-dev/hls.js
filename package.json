@@ -76,7 +76,7 @@
     "chai": "4.3.4",
     "chart.js": "2.9.4",
     "chromedriver": "96.0.0",
-    "eslint": "8.1.0",
+    "eslint": "8.4.1",
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-import": "2.25.3",
     "eslint-plugin-mocha": "9.0.0",
