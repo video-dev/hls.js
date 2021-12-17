@@ -23,7 +23,7 @@ class BaseAudioDemuxer implements Demuxer {
   resetInitSegment(audioCodec: string, videoCodec: string, duration: number) {
     this._id3Track = {
       type: 'id3',
-      id: 0,
+      id: 3,
       pid: -1,
       inputTimeScale: 90000,
       sequenceNumber: 0,

@@ -217,7 +217,7 @@ jobs:
         uses: tjenkinson/release-drafter@48835fbc42b1c062a828995f9cb8301e6bdae677
         with:
           tag: ${{ needs.config.outputs.tag }}
-          name: v${{ needs.config.outputs.tag }}
+          name: ${{ needs.config.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

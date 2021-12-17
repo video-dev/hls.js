@@ -8,6 +8,8 @@ export interface LoaderContext {
   url: string;
   // loader response type (arraybuffer or default response type for playlist)
   responseType: string;
+  // headers
+  headers?: Record<string, string>;
   // start byte range offset
   rangeStart?: number;
   // end byte range offset

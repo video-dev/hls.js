@@ -261,4 +261,11 @@ module.exports = {
     abr: true,
     skipFunctionalTests: true,
   },
+  startDelimiterOverlappingBetweenPESPackets: {
+    url: 'https://hlsjs-test-streams-wistia.s3.amazonaws.com/start-delimiter.m3u8',
+    description: `A stream with the start delimiter overlapping between PES packets.
+       Related to https://github.com/video-dev/hls.js/issues/3834, where Apple Silicon chips throw decoding errors if
+       NAL units are not starting right at the beginning of the PES packet when using hardware accelerated decoding.`,
+    abr: false,
+  },
 };
