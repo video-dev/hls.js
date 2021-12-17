@@ -222,9 +222,11 @@ export class SubtitleStreamController
     const currentTrack = this.levels[this.currentTrackId];
     if (currentTrack?.details) {
       this.mediaBuffer = this.mediaBufferTimeRanges;
-      this.setInterval(TICK_INTERVAL);
     } else {
       this.mediaBuffer = null;
+    }
+    if (currentTrack) {
+      this.setInterval(TICK_INTERVAL);
     }
   }
 

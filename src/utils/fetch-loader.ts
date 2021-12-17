@@ -225,12 +225,14 @@ function getRequestParameters(context: LoaderContext, signal): any {
     mode: 'cors',
     credentials: 'same-origin',
     signal,
+    headers: new self.Headers(Object.assign({}, context.headers)),
   };
 
   if (context.rangeEnd) {
-    initParams.headers = new self.Headers({
-      Range: 'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1),
-    });
+    initParams.headers.set(
+      'Range',
+      'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1)
+    );
   }
 
   return initParams;
