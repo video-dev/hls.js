@@ -40,7 +40,7 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
     /#EXT-X-(PLAYLIST-TYPE):(.+)/.source,
     /#EXT-X-(MEDIA-SEQUENCE): *(\d+)/.source,
     /#EXT-X-(SKIP):(.+)/.source,
-    /#EXT-X-(TARGETDURATION): *(\d+)/.source,
+    /#EXT-X-(TARGETDURATION): *(\d+\.\d+)/.source,
     /#EXT-X-(KEY):(.+)/.source,
     /#EXT-X-(START):(.+)/.source,
     /#EXT-X-(ENDLIST)/.source,
