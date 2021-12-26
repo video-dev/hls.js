@@ -232,6 +232,9 @@ function getParsedTrackCodec(
   if (parsedCodec === 'avc1' || type === ElementaryStreamTypes.VIDEO) {
     return 'avc1.42e01e';
   }
+  if (parsedCodec === 'Opus') {
+    return 'opus';
+  }
   return 'mp4a.40.5';
 }
 export default PassThroughRemuxer;
